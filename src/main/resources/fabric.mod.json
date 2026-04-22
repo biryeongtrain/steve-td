@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "semion-td",
+  "version": "${version}",
+  "name": "semion-td",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/semion-td/icon.png",
+  "environment": "server",
+  "entrypoints": {
+    "main": [
+      "kim.biryeong.semionTd.SemionTd"
+    ]
+  },
+  "mixins": [
+    "semion-td.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
