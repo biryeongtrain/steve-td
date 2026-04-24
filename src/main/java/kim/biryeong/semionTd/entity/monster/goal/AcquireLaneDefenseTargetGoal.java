@@ -1,0 +1,61 @@
+package kim.biryeong.semionTd.entity.monster.goal;
+
+import java.util.EnumSet;
+import java.util.Comparator;
+import kim.biryeong.semionTd.entity.defender.LaneDefenseEntity;
+import kim.biryeong.semionTd.entity.monster.SemionMonsterEntity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.phys.AABB;
+
+public final class AcquireLaneDefenseTargetGoal extends Goal {
+    private final SemionMonsterEntity monster;
+
+    public AcquireLaneDefenseTargetGoal(SemionMonsterEntity monster) {
+        this.monster = monster;
+        setFlags(EnumSet.of(Flag.TARGET));
+    }
+
+    @Override
+    public boolean canUse() {
+        return monster.isAlive() && monster.getTarget() == null && findTarget() != null;
+    }
+
+    @Override
+    public void start() {
+        LivingEntity target = findTarget();
+        if (target != null) {
+            monster.setTarget(target);
+        }
+    }
+
+    @Override
+    public boolean canContinueToUse() {
+        return false;
+    }
+
+    private LivingEntity findTarget() {
+        if (monster.runtimeMonster() == null) {
+            return null;
+        }
+
+        double searchRange = Math.max(2.5, monster.getAttributeValue(Attributes.FOLLOW_RANGE));
+        AABB searchBox = monster.getBoundingBox().inflate(searchRange);
+        return monster.level().getEntities(
+                        monster,
+                        searchBox,
+                        entity -> entity instanceof LivingEntity livingEntity
+                                && entity instanceof LaneDefenseEntity laneDefenseEntity
+                                && entity.isAlive()
+                                && laneDefenseEntity.defendsLane(monster.runtimeMonster().targetLaneId())
+                ).stream()
+                .filter(LivingEntity.class::isInstance)
+                .map(LivingEntity.class::cast)
+                .sorted(Comparator
+                        .comparingInt((LivingEntity entity) -> ((LaneDefenseEntity) entity).aggroPriority()).reversed()
+                        .thenComparingDouble(monster::distanceToSqr))
+                .findFirst()
+                .orElse(null);
+    }
+}

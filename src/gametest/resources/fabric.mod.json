@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "semion-td-gametest",
+  "version": "1.0.0",
+  "name": "semion-td-gametest",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-gametest": [
+      "kim.biryeong.semionTd.gametest.SemionParticipantGameTest"
+    ]
+  }
+}
