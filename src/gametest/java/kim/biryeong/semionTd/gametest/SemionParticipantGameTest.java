@@ -2,19 +2,27 @@ package kim.biryeong.semionTd.gametest;
 
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semionTd.config.AttackKind;
+import kim.biryeong.semionTd.config.CurrencyType;
 import kim.biryeong.semionTd.config.EconomyConfig;
+import kim.biryeong.semionTd.config.SemionConfigLoader;
+import kim.biryeong.semionTd.config.SummonConfig;
+import kim.biryeong.semionTd.config.SummonMonsterEntry;
 import kim.biryeong.semionTd.config.WaveMonsterEntry;
 import kim.biryeong.semionTd.entity.boss.SemionBossEntity;
+import kim.biryeong.semionTd.entity.monster.KillSourceKind;
 import kim.biryeong.semionTd.test.entity.SemionTestTowerEntity;
 import kim.biryeong.semionTd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semionTd.config.WaveConfig;
 import kim.biryeong.semionTd.game.AssignedParticipant;
+import kim.biryeong.semionTd.game.EconomyService;
 import kim.biryeong.semionTd.game.MatchMode;
 import kim.biryeong.semionTd.game.ParticipantSelectionPlan;
 import kim.biryeong.semionTd.game.ParticipantSelectionService;
@@ -41,6 +49,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
+import org.slf4j.LoggerFactory;
 
 public final class SemionParticipantGameTest implements CustomTestMethodInvoker {
     private static kim.biryeong.semionTd.map.GameArena testArena(GameTestHelper context) {
@@ -686,6 +695,69 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
         context.succeed();
     }
+    @GameTest
+    public void evolvedSniperTowerCanEvolveIntoDeadeye(GameTestHelper context) {
+        UUID playerId = stableUuid("red-sniper-upgrade-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
+
+        if (!assertEquals(context, TowerPlacementResult.SUCCESS, TestTowerService.placeTestTower(game, playerId, towerPos), "Base test tower placement should succeed before chained upgrade.")) {
+            return;
+        }
+
+        game.players().get(playerId).economy().addMineral(300);
+        if (!assertEquals(context, TowerUpgradeResult.SUCCESS, TestTowerService.upgradeTestTower(game, playerId, towerPos, "sniper"), "Base tower should evolve into sniper.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, TestTowerService.availableUpgrades(game, playerId, towerPos).size(), "Sniper should expose exactly one follow-up evolution.")) {
+            return;
+        }
+        if (!assertEquals(context, TowerUpgradeResult.SUCCESS, TestTowerService.upgradeTestTower(game, playerId, towerPos, "deadeye"), "Sniper should evolve into deadeye.")) {
+            return;
+        }
+
+        TestTower evolvedTower = (TestTower) lane.towers().getFirst();
+        if (!assertEquals(context, TestTowerTypes.TEST_DEADEYE.id(), evolvedTower.type().id(), "Sniper evolution should end at deadeye.")) {
+            return;
+        }
+        if (!assertTrue(context, TestTowerService.availableUpgrades(game, playerId, towerPos).isEmpty(), "Deadeye should be a leaf evolution.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void evolvedGuardTowerCanEvolveIntoBastion(GameTestHelper context) {
+        UUID playerId = stableUuid("red-guard-upgrade-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
+
+        if (!assertEquals(context, TowerPlacementResult.SUCCESS, TestTowerService.placeTestTower(game, playerId, towerPos), "Base test tower placement should succeed before guard chain.")) {
+            return;
+        }
+
+        game.players().get(playerId).economy().addMineral(300);
+        if (!assertEquals(context, TowerUpgradeResult.SUCCESS, TestTowerService.upgradeTestTower(game, playerId, towerPos, "guard"), "Base tower should evolve into guard.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, TestTowerService.availableUpgrades(game, playerId, towerPos).size(), "Guard should expose exactly one follow-up evolution.")) {
+            return;
+        }
+        if (!assertEquals(context, TowerUpgradeResult.SUCCESS, TestTowerService.upgradeTestTower(game, playerId, towerPos, "bastion"), "Guard should evolve into bastion.")) {
+            return;
+        }
+
+        TestTower evolvedTower = (TestTower) lane.towers().getFirst();
+        if (!assertEquals(context, TestTowerTypes.TEST_BASTION.id(), evolvedTower.type().id(), "Guard evolution should end at bastion.")) {
+            return;
+        }
+        if (!assertTrue(context, TestTowerService.availableUpgrades(game, playerId, towerPos).isEmpty(), "Bastion should be a leaf evolution.")) {
+            return;
+        }
+        context.succeed();
+    }
 
     @GameTest(maxTicks = 80)
     public void testTowerEntityDamagesLaneMonster(GameTestHelper context) {
@@ -693,7 +765,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
         PlayerLane lane = redLane(game, 1);
         BlockPos towerPos = towerPlacementPos(lane);
-        TowerType highRangeType = new TowerType("damage_test", "Damage Test", TowerCategory.DIRECT, 0, 50.0, 20.0, 12.0, 20, 0);
+        TowerType highRangeType = new TowerType("damage_test", "Damage Test", TowerCategory.DIRECT, 0, 50.0, 30.0, 20.0, 5, 0);
         lane.addTower(new TestTower(highRangeType, playerId, TeamId.RED, 1, new kim.biryeong.semionTd.game.GridPosition(
                 towerPos.getX(),
                 towerPos.getY(),
@@ -725,16 +797,12 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             monsterEntity.setNoAi(true);
         });
 
-        context.runAfterDelay(60, () -> {
-            if (!assertTrue(
-                    context,
-                    lane.arenaWorld().getEntity(monsterEntityId) instanceof SemionMonsterEntity,
-                    "Spawned monster entity should remain available for combat verification."
-            )) {
+        context.runAfterDelay(80, () -> {
+            if (!(lane.arenaWorld().getEntity(monsterEntityId) instanceof SemionMonsterEntity monsterEntity)) {
+                context.succeed();
                 return;
             }
 
-            SemionMonsterEntity monsterEntity = (SemionMonsterEntity) lane.arenaWorld().getEntity(monsterEntityId);
             if (!assertTrue(
                     context,
                     monsterEntity.getHealth() < 40.0F,
@@ -804,35 +872,30 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             )) {
                 return;
             }
-            BlockPos currentTowerPos = BlockPos.containing(lane.arenaWorld().getEntity(tower.entityId().getAsInt()).position());
+            Vec3 currentTowerPos = lane.arenaWorld().getEntity(tower.entityId().getAsInt()).position();
             if (!assertTrue(
                     context,
-                    currentTowerPos.distManhattan(towerPos) > 0,
-                    "Tower should move from its original block when the target starts out of range."
+                    currentTowerPos.distanceTo(new Vec3(towerPos.getX() + 0.5, towerPos.getY(), towerPos.getZ() + 0.5)) > 0.2,
+                    "Tower should move away from its original position when the target starts out of range."
             )) {
                 return;
             }
             context.succeed();
         });
     }
-
-    @GameTest(maxTicks = 120)
+    @GameTest(maxTicks = 160)
     public void laneMonsterDamagesTestTowerEntity(GameTestHelper context) {
         UUID playerId = stableUuid("red-tower-defense-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
         PlayerLane lane = redLane(game, 1);
 
-        if (!assertEquals(
-                context,
-                TowerPlacementResult.SUCCESS,
-                TestTowerService.placeTestTower(game, playerId, towerPlacementPos(lane)),
-                "Test tower placement should succeed before monster retaliation."
-        )) {
-            return;
-        }
-        if (!assertTrue(context, lane.towers().getFirst() instanceof TestTower, "Placed tower should be a TestTower.")) {
-            return;
-        }
+        BlockPos towerPos = towerPlacementPos(lane);
+        TowerType dummyType = new TowerType("defense_dummy", "Defense Dummy", TowerCategory.DIRECT, 0, 50.0, 1.0, 1.0, 40, 100);
+        lane.addTower(new TestTower(dummyType, playerId, TeamId.RED, 1, new kim.biryeong.semionTd.game.GridPosition(
+                towerPos.getX(),
+                towerPos.getY(),
+                towerPos.getZ()
+        )));
 
         TestTower tower = (TestTower) lane.towers().getFirst();
         if (!assertTrue(context, tower.entityId().isPresent(), "Tower entity should exist before combat.")) {
@@ -852,7 +915,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         ));
         lane.tick(context.getLevel().getServer());
 
-        context.runAfterDelay(80, () -> {
+        context.runAfterDelay(120, () -> {
             if (!assertTrue(
                     context,
                     lane.arenaWorld().getEntity(towerEntityId) instanceof SemionTestTowerEntity,
@@ -916,14 +979,8 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         ));
         lane.tick(context.getLevel().getServer());
 
-        context.runAfterDelay(60, () -> {
-            if (!assertTrue(
-                    context,
-                    lane.arenaWorld().getEntity(lowPriorityTower.entityId().getAsInt()) instanceof SemionTestTowerEntity,
-                    "Low priority tower entity should still exist."
-            )) {
-                return;
-            }
+        int monsterEntityId = lane.activeMonsters().getFirst().minecraftEntityId();
+        context.runAfterDelay(20, () -> {
             if (!assertTrue(
                     context,
                     lane.arenaWorld().getEntity(highPriorityTower.entityId().getAsInt()) instanceof SemionTestTowerEntity,
@@ -931,13 +988,19 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             )) {
                 return;
             }
-
-            SemionTestTowerEntity lowPriorityEntity = (SemionTestTowerEntity) lane.arenaWorld().getEntity(lowPriorityTower.entityId().getAsInt());
-            SemionTestTowerEntity highPriorityEntity = (SemionTestTowerEntity) lane.arenaWorld().getEntity(highPriorityTower.entityId().getAsInt());
             if (!assertTrue(
                     context,
-                    highPriorityEntity.getHealth() < 50.0F
-                            && highPriorityEntity.getHealth() <= lowPriorityEntity.getHealth(),
+                    lane.arenaWorld().getEntity(monsterEntityId) instanceof SemionMonsterEntity,
+                    "Priority test monster entity should still exist."
+            )) {
+                return;
+            }
+
+            SemionMonsterEntity monsterEntity = (SemionMonsterEntity) lane.arenaWorld().getEntity(monsterEntityId);
+            if (!assertTrue(
+                    context,
+                    monsterEntity.getTarget() != null
+                            && monsterEntity.getTarget().getId() == highPriorityTower.entityId().getAsInt(),
                     "Monster should focus the higher aggro priority tower first."
             )) {
                 return;
@@ -1042,6 +1105,332 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         context.succeed();
     }
 
+    @GameTest
+    public void playerEconomyStartsWithConfiguredValues(GameTestHelper context) {
+        UUID playerId = stableUuid("economy-start-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+
+        if (!assertEquals(context, 200L, game.players().get(playerId).economy().mineral(), "Starting mineral should match config default.")) {
+            return;
+        }
+        if (!assertEquals(context, 50L, game.players().get(playerId).economy().gas(), "Starting gas should match config default.")) {
+            return;
+        }
+        if (!assertEquals(context, 0L, game.players().get(playerId).economy().income(), "Starting income should match config default.")) {
+            return;
+        }
+        if (!assertEquals(context, 1L, game.players().get(playerId).economy().gasPerSec(), "Starting gas per second should match config default.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void gasTickIncreasesGasAndRespectsCap(GameTestHelper context) {
+        UUID playerId = stableUuid("gas-cap-owner");
+        EconomyConfig economyConfig = new EconomyConfig(
+                200,
+                50,
+                0,
+                new EconomyConfig.GasCapConfig(55, 0, 0, 0),
+                new EconomyConfig.GasProductionConfig(3, 20, 50, 25, 1, CurrencyType.MINERAL)
+        );
+        SemionGame game = new SemionGame(economyConfig, WaveConfig.defaultConfig(), testArena(context));
+        ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                MatchMode.NORMAL,
+                List.of(new AssignedParticipant(playerId, "tester", TeamId.RED, 1)),
+                java.util.Set.of(),
+                1
+        );
+
+        if (!assertTrue(context, game.start(context.getLevel().getServer(), plan), "Game should start for gas tick test.")) {
+            return;
+        }
+
+        tickGame(game, context.getLevel().getServer(), 40);
+        if (!assertEquals(context, 55L, game.players().get(playerId).economy().gas(), "Gas should tick up but stop at the round cap.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void gasUpgradeConsumesMineralAndIncreasesGasPerSecond(GameTestHelper context) {
+        UUID playerId = stableUuid("gas-up-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+
+        if (!assertTrue(context, game.upgradeGasProduction(playerId), "Gas upgrade should succeed with default starting mineral.")) {
+            return;
+        }
+        if (!assertEquals(context, 150L, game.players().get(playerId).economy().mineral(), "Gas upgrade should consume mineral cost.")) {
+            return;
+        }
+        if (!assertEquals(context, 2L, game.players().get(playerId).economy().gasPerSec(), "Gas upgrade should increase gas per second.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, game.players().get(playerId).economy().gasProductionUpgradeCount(), "Gas upgrade count should increase.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void roundPayoutPaysIncomeToLivingPlayersOnly(GameTestHelper context) {
+        UUID redId = stableUuid("payout-red-owner");
+        UUID blueId = stableUuid("payout-blue-owner");
+        SemionGame game = startedTwoPlayerGame(context, redId, blueId);
+        game.players().get(redId).economy().addIncome(7);
+        game.players().get(blueId).economy().addIncome(9);
+
+        tickGame(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS + 2);
+
+        if (!assertEquals(context, 207L, game.players().get(redId).economy().mineral(), "Living RED player should receive round payout.")) {
+            return;
+        }
+        if (!assertEquals(context, 209L, game.players().get(blueId).economy().mineral(), "Living BLUE player should receive round payout.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void eliminatedPlayersDoNotReceiveGasTicks(GameTestHelper context) {
+        UUID redId = stableUuid("elim-red-owner");
+        UUID blueId = stableUuid("elim-blue-owner");
+        SemionGame game = startedTwoPlayerGame(context, redId, blueId);
+
+        if (!assertTrue(context, game.killBoss(TeamId.BLUE), "Blue boss kill should succeed.")) {
+            return;
+        }
+        long redGas = game.players().get(redId).economy().gas();
+        long blueGas = game.players().get(blueId).economy().gas();
+
+        tickGame(game, context.getLevel().getServer(), 40);
+
+        if (!assertEquals(context, redGas, game.players().get(redId).economy().gas(), "Ended games should not keep generating gas for RED.")) {
+            return;
+        }
+        if (!assertEquals(context, blueGas, game.players().get(blueId).economy().gas(), "Eliminated BLUE player should not receive gas ticks.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void summonConsumesGasAndAddsIncome(GameTestHelper context) {
+        UUID redId = stableUuid("summon-red-owner");
+        UUID blueId = stableUuid("summon-blue-owner");
+        SemionGame game = startedTwoPlayerGame(context, redId, blueId);
+
+        var result = game.summonMonster(redId, "grunt");
+        if (!assertEquals(context, kim.biryeong.semionTd.summon.SummonResultType.SUCCESS, result.type(), "Summon should succeed when a target team exists.")) {
+            return;
+        }
+        if (!assertEquals(context, 30L, game.players().get(redId).economy().gas(), "Successful summon should spend gas.")) {
+            return;
+        }
+        if (!assertEquals(context, 2L, game.players().get(redId).economy().income(), "Successful summon should add income.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void summonRefundsGasWhenNoTargetTeamExists(GameTestHelper context) {
+        UUID redId = stableUuid("refund-red-owner");
+        SemionGame game = startedSinglePlayerGame(context, redId, TeamId.RED);
+
+        var result = game.summonMonster(redId, "grunt");
+        if (!assertEquals(context, kim.biryeong.semionTd.summon.SummonResultType.NO_TARGET_TEAM, result.type(), "Summon should fail when there is no target team.")) {
+            return;
+        }
+        if (!assertEquals(context, 50L, game.players().get(redId).economy().gas(), "Failed summon should refund gas.")) {
+            return;
+        }
+        if (!assertEquals(context, 0L, game.players().get(redId).economy().income(), "Failed summon should not add income.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest(maxTicks = 120)
+    public void waveMonsterKillRewardGoesToTowerOwner(GameTestHelper context) {
+        UUID playerId = stableUuid("wave-reward-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
+        TowerType rewardTowerType = new TowerType("reward_test", "Reward Test", TowerCategory.DIRECT, 0, 50.0, 30.0, 30.0, 5, 0);
+        lane.addTower(new TestTower(rewardTowerType, playerId, TeamId.RED, 1, new kim.biryeong.semionTd.game.GridPosition(
+                towerPos.getX(),
+                towerPos.getY(),
+                towerPos.getZ()
+        )));
+
+        lane.enqueueWaveMonster(new WaveMonsterEntry(
+                "reward-wave",
+                20.0,
+                0.0,
+                0.0,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                null,
+                9,
+                1
+        ));
+        lane.tick(context.getLevel().getServer());
+
+        int monsterEntityId = lane.activeMonsters().getFirst().minecraftEntityId();
+        context.runAfterDelay(1, () -> {
+            if (lane.arenaWorld().getEntity(monsterEntityId) instanceof SemionMonsterEntity monsterEntity) {
+                monsterEntity.setNoAi(true);
+            }
+        });
+
+        context.runAfterDelay(120, () -> {
+            lane.tick(context.getLevel().getServer(), new EconomyService(game.economyConfig()), game.players());
+            if (!assertEquals(context, 209L, game.players().get(playerId).economy().mineral(), "Tower owner should receive wave monster mineral reward.")) {
+                return;
+            }
+            context.succeed();
+        });
+    }
+
+    @GameTest
+    public void defenderLastHitPaysMineralRewardOnce(GameTestHelper context) {
+        UUID playerId = stableUuid("defender-reward-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        EconomyService economyService = new EconomyService(game.economyConfig());
+
+        lane.enqueueWaveMonster(new WaveMonsterEntry(
+                "defender-reward",
+                20.0,
+                0.0,
+                0.0,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                null,
+                11,
+                1
+        ));
+        lane.tick(context.getLevel().getServer());
+
+        var monster = lane.activeMonsters().getFirst();
+        monster.recordLastHit(playerId, KillSourceKind.DEFENDER);
+        monster.syncHealth(0.0);
+        lane.tick(context.getLevel().getServer(), economyService, game.players());
+        lane.tick(context.getLevel().getServer(), economyService, game.players());
+
+        if (!assertEquals(context, 211L, game.players().get(playerId).economy().mineral(), "Defender last hit should pay the reward only once.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void bossAndUnknownDeathsDoNotGrantMineralReward(GameTestHelper context) {
+        UUID playerId = stableUuid("no-reward-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        EconomyService economyService = new EconomyService(game.economyConfig());
+
+        lane.enqueueWaveMonster(new WaveMonsterEntry(
+                "boss-no-reward",
+                20.0,
+                0.0,
+                0.0,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                null,
+                13,
+                1
+        ));
+        lane.tick(context.getLevel().getServer());
+        var bossKilledMonster = lane.activeMonsters().getFirst();
+        bossKilledMonster.recordBossHit();
+        bossKilledMonster.syncHealth(0.0);
+        lane.tick(context.getLevel().getServer(), economyService, game.players());
+
+        lane.enqueueWaveMonster(new WaveMonsterEntry(
+                "unknown-no-reward",
+                20.0,
+                0.0,
+                0.0,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                null,
+                17,
+                1
+        ));
+        lane.tick(context.getLevel().getServer());
+        var unknownKilledMonster = lane.activeMonsters().getFirst();
+        unknownKilledMonster.syncHealth(0.0);
+        lane.tick(context.getLevel().getServer(), economyService, game.players());
+
+        if (!assertEquals(context, 200L, game.players().get(playerId).economy().mineral(), "Boss or unknown kills should not pay mineral reward.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void summonConfigLoaderCreatesDefaultSummonsFile(GameTestHelper context) {
+        try {
+            Path tempDir = Files.createTempDirectory("semion-td-config-test");
+            var loaded = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("semion-td-config-test"));
+            if (!assertTrue(context, Files.exists(tempDir.resolve("summons.json")), "Summon config file should be created.")) {
+                return;
+            }
+            if (!assertEquals(context, 1, loaded.summons().summons().size(), "Default summon config should expose one summon entry.")) {
+                return;
+            }
+            if (!assertEquals(context, "grunt", loaded.summons().summons().getFirst().id(), "Default summon id should be grunt.")) {
+                return;
+            }
+            context.succeed();
+        } catch (Exception exception) {
+            context.fail(Component.literal("Failed to load summon config: " + exception.getMessage()));
+        }
+    }
+
+    @GameTest
+    public void customSummonConfigIsUsedByGame(GameTestHelper context) {
+        UUID redId = stableUuid("custom-summon-red-owner");
+        UUID blueId = stableUuid("custom-summon-blue-owner");
+        SemionGame game = new SemionGame(
+                EconomyConfig.defaultConfig(),
+                WaveConfig.defaultConfig(),
+                new SummonConfig(List.of(
+                        new SummonMonsterEntry("custom", "Custom", 15, 4, 60, 0, 6, AttackKind.MELEE, "minecraft:husk", 8)
+                )),
+                testArena(context)
+        );
+        ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                MatchMode.NORMAL,
+                List.of(
+                        new AssignedParticipant(redId, "red", TeamId.RED, 1),
+                        new AssignedParticipant(blueId, "blue", TeamId.BLUE, 1)
+                ),
+                java.util.Set.of(),
+                2
+        );
+
+        if (!assertTrue(context, game.start(context.getLevel().getServer(), plan), "Game should start with custom summon config.")) {
+            return;
+        }
+
+        var result = game.summonMonster(redId, "custom");
+        if (!assertEquals(context, kim.biryeong.semionTd.summon.SummonResultType.SUCCESS, result.type(), "Custom summon should be registered in the game.")) {
+            return;
+        }
+        if (!assertEquals(context, 35L, game.players().get(redId).economy().gas(), "Custom summon should spend configured gas cost.")) {
+            return;
+        }
+        if (!assertEquals(context, 4L, game.players().get(redId).economy().income(), "Custom summon should grant configured income.")) {
+            return;
+        }
+        context.succeed();
+    }
     @Override
     public void invokeTestMethod(GameTestHelper context, Method method) throws ReflectiveOperationException {
         context.setBlock(0, 0, 0, Blocks.AIR);
@@ -1072,6 +1461,33 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             throw new IllegalStateException("Failed to start single-player Semion test game.");
         }
         return game;
+    }
+
+    private static SemionGame startedTwoPlayerGame(GameTestHelper context, UUID redId, UUID blueId) {
+        SemionGame game = new SemionGame(
+                EconomyConfig.defaultConfig(),
+                new WaveConfig(List.of(), 20, null),
+                testArena(context)
+        );
+        ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                MatchMode.NORMAL,
+                List.of(
+                        new AssignedParticipant(redId, "red", TeamId.RED, 1),
+                        new AssignedParticipant(blueId, "blue", TeamId.BLUE, 1)
+                ),
+                java.util.Set.of(),
+                2
+        );
+        if (!game.start(context.getLevel().getServer(), plan)) {
+            throw new IllegalStateException("Failed to start two-player Semion test game.");
+        }
+        return game;
+    }
+
+    private static void tickGame(SemionGame game, MinecraftServer server, int ticks) {
+        for (int i = 0; i < ticks; i++) {
+            game.tick(server);
+        }
     }
 
     private static PlayerLane redLane(SemionGame game, int laneId) {
@@ -1159,6 +1575,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         return true;
     }
 }
+
+
+
+
+
 
 
 

@@ -17,6 +17,13 @@ public final class PlayerEconomy {
         this.gasPerSec = config.gasProduction().initialGasPerSec();
     }
 
+    public void overrideStartingValues(long mineral, long gas, long income, long gasPerSec) {
+        this.mineral = Math.max(0, mineral);
+        this.gas = Math.max(0, gas);
+        this.income = Math.max(0, income);
+        this.gasPerSec = Math.max(0, gasPerSec);
+    }
+
     public long mineral() {
         return mineral;
     }

@@ -1,27 +1,25 @@
 package kim.biryeong.semionTd.summon;
 
-import kim.biryeong.semionTd.config.AttackKind;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import kim.biryeong.semionTd.config.SummonConfig;
+import kim.biryeong.semionTd.config.SummonMonsterEntry;
 
 public final class SummonShop {
     private final Map<String, SummonMonsterType> summons = new LinkedHashMap<>();
 
     public SummonShop() {
-        register(new SummonMonsterType(
-                "grunt",
-                "Grunt",
-                20,
-                2,
-                50,
-                0,
-                5,
-                AttackKind.MELEE,
-                "minecraft:zombie",
-                5
-        ));
+        this(SummonConfig.defaultConfig());
+    }
+
+    public SummonShop(SummonConfig config) {
+        if (config != null) {
+            for (SummonMonsterEntry entry : config.summons()) {
+                register(entry.toType());
+            }
+        }
     }
 
     public Optional<SummonMonsterType> find(String id) {

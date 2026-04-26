@@ -40,7 +40,7 @@ public final class TestTower extends Tower {
     @Override
     public void onPlaced(PlayerLane lane) {
         SemionTestTowerEntity entity = new SemionTestTowerEntity(SemionEntityTypes.TEST_TOWER, lane.arenaWorld());
-        entity.configure(this);
+        entity.configure(this, lane.laneLayout());
         entity.setPos(
                 position().x() + 0.5,
                 position().y(),
@@ -100,4 +100,5 @@ public final class TestTower extends Tower {
         return false;
     }
 }
+
 

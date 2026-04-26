@@ -1,10 +1,11 @@
 package kim.biryeong.semionTd.game;
 
-import kim.biryeong.semionTd.entity.boss.BossMonster;
-import kim.biryeong.semionTd.map.LaneRegionLayout;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import kim.biryeong.semionTd.entity.boss.BossMonster;
+import kim.biryeong.semionTd.map.LaneRegionLayout;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 
@@ -65,10 +66,14 @@ public final class SemionTeam {
     }
 
     public void tick(MinecraftServer server) {
+        tick(server, null, Map.of());
+    }
+
+    public void tick(MinecraftServer server, EconomyService economyService, Map<UUID, SemionPlayer> players) {
         if (!active || eliminated) {
             return;
         }
-        laneGroup.tick(server);
+        laneGroup.tick(server, economyService, players);
         if (!laneGroup.boss().isAlive()) {
             eliminate();
         }

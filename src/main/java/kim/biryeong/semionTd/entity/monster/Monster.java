@@ -1,11 +1,11 @@
 package kim.biryeong.semionTd.entity.monster;
 
+import java.util.Optional;
+import java.util.UUID;
 import kim.biryeong.semionTd.config.AttackKind;
 import kim.biryeong.semionTd.config.WaveMonsterEntry;
 import kim.biryeong.semionTd.game.TeamId;
 import kim.biryeong.semionTd.summon.SummonMonsterType;
-import java.util.Optional;
-import java.util.UUID;
 
 public final class Monster {
     private static final double DEFAULT_PROGRESS_PER_TICK = 0.004;
@@ -28,6 +28,9 @@ public final class Monster {
     private double spawnY;
     private double spawnZ;
     private MonsterState state = MonsterState.SPAWNING;
+    private Optional<UUID> lastHitPlayerId = Optional.empty();
+    private KillSourceKind lastHitSourceKind = KillSourceKind.UNKNOWN;
+    private boolean rewardGranted;
 
     public Monster(
             String id,
@@ -68,7 +71,7 @@ public final class Monster {
                 entry.attackDamage(),
                 entry.attackKind(),
                 entry.entityType(),
-                0
+                entry.mineralReward()
         );
     }
 
@@ -122,6 +125,10 @@ public final class Monster {
         return attackDamage;
     }
 
+    public AttackKind attackKind() {
+        return attackKind;
+    }
+
     public long mineralReward() {
         return mineralReward;
     }
@@ -152,6 +159,18 @@ public final class Monster {
 
     public MonsterState state() {
         return state;
+    }
+
+    public Optional<UUID> lastHitPlayerId() {
+        return lastHitPlayerId;
+    }
+
+    public KillSourceKind lastHitSourceKind() {
+        return lastHitSourceKind;
+    }
+
+    public boolean rewardGranted() {
+        return rewardGranted;
     }
 
     public boolean isAlive() {
@@ -202,6 +221,20 @@ public final class Monster {
         if (health <= 0) {
             state = MonsterState.DEAD;
         }
+    }
+
+    public void recordLastHit(UUID playerId, KillSourceKind sourceKind) {
+        lastHitPlayerId = Optional.ofNullable(playerId);
+        lastHitSourceKind = sourceKind == null ? KillSourceKind.UNKNOWN : sourceKind;
+    }
+
+    public void recordBossHit() {
+        lastHitPlayerId = Optional.empty();
+        lastHitSourceKind = KillSourceKind.BOSS;
+    }
+
+    public void markRewardGranted() {
+        rewardGranted = true;
     }
 
     public void markRemoved() {

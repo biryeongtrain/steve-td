@@ -1,5 +1,10 @@
 package kim.biryeong.semionTd.game;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import kim.biryeong.semionTd.config.WaveMonsterEntry;
 import kim.biryeong.semionTd.entity.SemionEntityTypes;
 import kim.biryeong.semionTd.entity.defender.DefenderEntity;
@@ -9,10 +14,6 @@ import kim.biryeong.semionTd.entity.monster.MonsterState;
 import kim.biryeong.semionTd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semionTd.map.LaneRegionLayout;
 import kim.biryeong.semionTd.tower.Tower;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -136,6 +137,10 @@ public final class PlayerLane {
     }
 
     public List<Monster> tick(MinecraftServer server) {
+        return tick(server, null, Map.of());
+    }
+
+    public List<Monster> tick(MinecraftServer server, EconomyService economyService, Map<UUID, SemionPlayer> players) {
         spawnQueuedMonster(waveMonsterSpawnQueue);
         spawnQueuedMonster(summonedMonsterSpawnQueue);
 
@@ -150,6 +155,15 @@ public final class PlayerLane {
         while (iterator.hasNext()) {
             Monster monster = iterator.next();
             syncMonsterEntityState(monster);
+            if (monster.state() == MonsterState.DEAD) {
+                if (economyService != null) {
+                    economyService.awardMonsterKillReward(monster, players);
+                }
+                discardMinecraftEntity(monster);
+                monster.markRemoved();
+                iterator.remove();
+                continue;
+            }
             if (monster.isRemoved()) {
                 discardMinecraftEntity(monster);
                 iterator.remove();
@@ -248,14 +262,19 @@ public final class PlayerLane {
         }
 
         var entity = arenaWorld.getEntity(monster.minecraftEntityId());
-        if (!(entity instanceof SemionMonsterEntity monsterEntity) || entity.isRemoved()) {
-            monster.markRemoved();
+        if (monster.state() == MonsterState.DEAD) {
+            if (entity instanceof SemionMonsterEntity monsterEntity && !entity.isRemoved()) {
+                monsterEntity.discard();
+            }
             return;
         }
 
-        if (monster.state() == MonsterState.DEAD) {
-            monsterEntity.discard();
-            monster.markRemoved();
+        if (!(entity instanceof SemionMonsterEntity monsterEntity) || entity.isRemoved()) {
+            if (monster.health() <= 0) {
+                monster.syncHealth(0);
+            } else {
+                monster.markRemoved();
+            }
             return;
         }
 

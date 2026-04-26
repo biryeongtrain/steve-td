@@ -21,7 +21,13 @@ public final class SemionConfigLoader {
             Files.createDirectories(configDir);
         } catch (IOException exception) {
             logger.warn("Failed to create config directory {}; using defaults.", configDir, exception);
-            return new LoadedConfigs(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(), MapConfig.defaultConfig());
+            return new LoadedConfigs(
+                    EconomyConfig.defaultConfig(),
+                    WaveConfig.defaultConfig(),
+                    MapConfig.defaultConfig(),
+                    SummonConfig.defaultConfig(),
+                    ProgressionConfig.defaultConfig()
+            );
         }
 
         EconomyConfig economy = loadOrCreate(
@@ -30,7 +36,8 @@ public final class SemionConfigLoader {
                 EconomyConfig.class,
                 logger
         );
-        WaveConfig waves = loadOrCreate(
+        WaveConfig waves = loadOrCreateWithLegacy(
+                configDir.resolve("wave.json"),
                 configDir.resolve("waves.json"),
                 WaveConfig.defaultConfig(),
                 WaveConfig.class,
@@ -42,7 +49,19 @@ public final class SemionConfigLoader {
                 MapConfig.class,
                 logger
         );
-        return new LoadedConfigs(economy, waves, map);
+        SummonConfig summons = loadOrCreate(
+                configDir.resolve("summons.json"),
+                SummonConfig.defaultConfig(),
+                SummonConfig.class,
+                logger
+        );
+        ProgressionConfig progression = loadOrCreate(
+                configDir.resolve("progression.json"),
+                ProgressionConfig.defaultConfig(),
+                ProgressionConfig.class,
+                logger
+        );
+        return new LoadedConfigs(economy, waves, map, summons, progression);
     }
 
     private static <T> T loadOrCreate(Path path, T defaults, Class<T> type, Logger logger) {
@@ -60,6 +79,17 @@ public final class SemionConfigLoader {
         }
     }
 
+    private static <T> T loadOrCreateWithLegacy(Path preferred, Path legacy, T defaults, Class<T> type, Logger logger) {
+        if (Files.exists(preferred)) {
+            return loadOrCreate(preferred, defaults, type, logger);
+        }
+        if (Files.exists(legacy)) {
+            return loadOrCreate(legacy, defaults, type, logger);
+        }
+        write(preferred, defaults, logger);
+        return defaults;
+    }
+
     private static void write(Path path, Object value, Logger logger) {
         try (Writer writer = Files.newBufferedWriter(path)) {
             GSON.toJson(value, writer);
@@ -68,6 +98,12 @@ public final class SemionConfigLoader {
         }
     }
 
-    public record LoadedConfigs(EconomyConfig economy, WaveConfig waves, MapConfig map) {
+    public record LoadedConfigs(
+            EconomyConfig economy,
+            WaveConfig waves,
+            MapConfig map,
+            SummonConfig summons,
+            ProgressionConfig progression
+    ) {
     }
 }

@@ -7,6 +7,18 @@ import kim.biryeong.semionTd.tower.TowerType;
 import kim.biryeong.semionTd.tower.TowerUpgradeOption;
 
 public final class TestTowerTypes {
+    public static final TowerType TEST_DEADEYE = new TowerType(
+            "test_deadeye",
+            "Test Deadeye Tower",
+            TowerCategory.DIRECT,
+            420,
+            75.0,
+            18.0,
+            34.0,
+            34,
+            -20
+    );
+
     public static final TowerType TEST_SNIPER = new TowerType(
             "test_sniper",
             "Test Sniper Tower",
@@ -16,7 +28,22 @@ public final class TestTowerTypes {
             14.0,
             24.0,
             30,
-            -10
+            -10,
+            java.util.List.of(
+                    new TowerUpgradeOption("deadeye", "Deadeye Evolution", TEST_DEADEYE.id(), 170)
+            )
+    );
+
+    public static final TowerType TEST_BASTION = new TowerType(
+            "test_bastion",
+            "Test Bastion Tower",
+            TowerCategory.DIRECT,
+            400,
+            170.0,
+            7.0,
+            18.0,
+            10,
+            75
     );
 
     public static final TowerType TEST_GUARD = new TowerType(
@@ -28,7 +55,10 @@ public final class TestTowerTypes {
             6.0,
             10.0,
             12,
-            35
+            35,
+            java.util.List.of(
+                    new TowerUpgradeOption("bastion", "Bastion Evolution", TEST_BASTION.id(), 180)
+            )
     );
 
     public static final TowerType TEST_DIRECT = new TowerType(
@@ -49,8 +79,10 @@ public final class TestTowerTypes {
 
     private static final Map<String, TowerType> TYPES = Map.of(
             TEST_DIRECT.id(), TEST_DIRECT,
+            TEST_DEADEYE.id(), TEST_DEADEYE,
             TEST_SNIPER.id(), TEST_SNIPER,
-            TEST_GUARD.id(), TEST_GUARD
+            TEST_GUARD.id(), TEST_GUARD,
+            TEST_BASTION.id(), TEST_BASTION
     );
 
     private TestTowerTypes() {
@@ -60,4 +92,3 @@ public final class TestTowerTypes {
         return Optional.ofNullable(TYPES.get(typeId));
     }
 }
-

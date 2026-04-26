@@ -1,7 +1,9 @@
 package kim.biryeong.semionTd.test.entity;
 
 import eu.pb4.polymer.core.api.entity.PolymerEntity;
+import java.util.UUID;
 import kim.biryeong.semionTd.entity.defender.LaneDefenseEntity;
+import kim.biryeong.semionTd.map.LaneRegionLayout;
 import kim.biryeong.semionTd.test.entity.goal.TestTowerAttackMonsterGoal;
 import kim.biryeong.semionTd.test.tower.TestTower;
 import net.minecraft.network.chat.Component;
@@ -10,13 +12,17 @@ import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import xyz.nucleoid.packettweaker.PacketContext;
 
 public final class SemionTestTowerEntity extends PathfinderMob implements PolymerEntity, LaneDefenseEntity {
     private static final double DEFAULT_MOVE_SPEED = 0.23;
     private static final double DEFAULT_TARGET_ACQUIRE_RANGE = 24.0;
+    private static final double TARGET_SEARCH_HORIZONTAL_PADDING = 8.0;
+    private static final double TARGET_SEARCH_VERTICAL_PADDING = 3.0;
 
     private int laneId;
+    private UUID ownerPlayer;
     private double attackRange;
     private double attackDamage;
     private int attackIntervalTicks;
@@ -24,6 +30,7 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Polyme
     private boolean finalDefense;
     private double targetAcquireRange;
     private double moveSpeed;
+    private LaneRegionLayout laneLayout;
 
     public SemionTestTowerEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
@@ -38,8 +45,10 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Polyme
         goalSelector.addGoal(1, new TestTowerAttackMonsterGoal(this));
     }
 
-    public void configure(TestTower tower) {
+    public void configure(TestTower tower, LaneRegionLayout laneLayout) {
+        this.laneLayout = laneLayout;
         laneId = tower.laneId();
+        ownerPlayer = tower.ownerPlayer();
         attackRange = tower.type().range();
         attackDamage = tower.type().damage();
         attackIntervalTicks = tower.type().attackIntervalTicks();
@@ -60,6 +69,10 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Polyme
         return laneId;
     }
 
+    public UUID ownerPlayer() {
+        return ownerPlayer;
+    }
+
     @Override
     public boolean defendsLane(int targetLaneId) {
         return finalDefense || laneId == targetLaneId;
@@ -76,6 +89,13 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Polyme
 
     public double targetAcquireRange() {
         return targetAcquireRange;
+    }
+
+    public AABB targetSearchBox() {
+        if (laneLayout == null) {
+            return getBoundingBox().inflate(targetAcquireRange);
+        }
+        return laneLayout.defenseSearchBox(position(), TARGET_SEARCH_HORIZONTAL_PADDING, TARGET_SEARCH_VERTICAL_PADDING);
     }
 
     public double moveSpeedAmount() {

@@ -2,6 +2,8 @@ package kim.biryeong.semionTd.test.entity.goal;
 
 import java.util.Comparator;
 import java.util.EnumSet;
+import kim.biryeong.semionTd.entity.monster.KillSourceKind;
+import kim.biryeong.semionTd.entity.monster.Monster;
 import kim.biryeong.semionTd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semionTd.test.entity.SemionTestTowerEntity;
 import net.minecraft.server.level.ServerLevel;
@@ -33,7 +35,7 @@ public final class TestTowerAttackMonsterGoal extends Goal {
             cooldownTicks--;
         }
 
-        AABB searchBox = tower.getBoundingBox().inflate(tower.targetAcquireRange());
+        AABB searchBox = tower.targetSearchBox();
         SemionMonsterEntity target = tower.level().getEntities(
                         tower,
                         searchBox,
@@ -64,6 +66,11 @@ public final class TestTowerAttackMonsterGoal extends Goal {
             return;
         }
 
+        Monster runtimeMonster = target.runtimeMonster();
+        if (runtimeMonster != null) {
+            runtimeMonster.recordLastHit(tower.ownerPlayer(), KillSourceKind.TOWER);
+        }
+
         float previousHealth = target.getHealth();
         boolean damaged = tower.level() instanceof ServerLevel serverLevel
                 && tower.doHurtTarget(serverLevel, target);
@@ -74,9 +81,14 @@ public final class TestTowerAttackMonsterGoal extends Goal {
         if (!damaged || target.getHealth() >= previousHealth - 0.01F) {
             float nextHealth = Math.max(0.0F, previousHealth - (float) tower.attackDamageAmount());
             target.setHealth(nextHealth);
+            if (runtimeMonster != null) {
+                runtimeMonster.syncHealth(nextHealth);
+            }
             if (nextHealth <= 0.0F) {
                 target.discard();
             }
+        } else if (runtimeMonster != null) {
+            runtimeMonster.syncHealth(target.getHealth());
         }
         cooldownTicks = tower.attackIntervalTicks();
     }
@@ -96,4 +108,3 @@ public final class TestTowerAttackMonsterGoal extends Goal {
         tower.setPos(current.x + moveX, tower.getY(), current.z + moveZ);
     }
 }
-

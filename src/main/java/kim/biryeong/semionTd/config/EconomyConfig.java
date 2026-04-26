@@ -58,12 +58,12 @@ public record EconomyConfig(
                 throw new IllegalArgumentException("Gas production config values cannot be negative.");
             }
             if (upgradeCurrency == null) {
-                upgradeCurrency = CurrencyType.GAS;
+                upgradeCurrency = CurrencyType.MINERAL;
             }
         }
 
         public static GasProductionConfig defaultConfig() {
-            return new GasProductionConfig(1, 20, 50, 25, 1, CurrencyType.GAS);
+            return new GasProductionConfig(1, 20, 50, 25, 1, CurrencyType.MINERAL);
         }
 
         public long upgradeCost(int currentUpgradeCount) {

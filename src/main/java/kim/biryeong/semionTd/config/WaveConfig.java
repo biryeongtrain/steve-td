@@ -24,6 +24,7 @@ public record WaveConfig(List<RoundWaveConfig> rounds, int infiniteFromRound, Ro
                 AttackKind.MELEE,
                 "minecraft:zombie",
                 null,
+                4,
                 12
         );
         WaveMonsterEntry infiniteMonster = new WaveMonsterEntry(
@@ -34,6 +35,7 @@ public record WaveConfig(List<RoundWaveConfig> rounds, int infiniteFromRound, Ro
                 AttackKind.MELEE,
                 "minecraft:husk",
                 null,
+                30,
                 30
         );
         return new WaveConfig(

@@ -1,13 +1,14 @@
 package kim.biryeong.semionTd.game;
 
-import kim.biryeong.semionTd.entity.boss.BossMonster;
-import kim.biryeong.semionTd.entity.boss.SemionBossEntity;
-import kim.biryeong.semionTd.entity.SemionEntityTypes;
-import kim.biryeong.semionTd.entity.defender.DefenderEntity;
-import kim.biryeong.semionTd.entity.monster.Monster;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import kim.biryeong.semionTd.entity.SemionEntityTypes;
+import kim.biryeong.semionTd.entity.boss.BossMonster;
+import kim.biryeong.semionTd.entity.boss.SemionBossEntity;
+import kim.biryeong.semionTd.entity.defender.DefenderEntity;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
@@ -60,8 +61,12 @@ public final class TeamLaneGroup {
     }
 
     public void tick(MinecraftServer server) {
+        tick(server, null, Map.of());
+    }
+
+    public void tick(MinecraftServer server, EconomyService economyService, Map<UUID, SemionPlayer> players) {
         for (PlayerLane lane : lanes) {
-            lane.tick(server);
+            lane.tick(server, economyService, players);
             if (lane.clearedThisRound()) {
                 lane.moveTowersToFinalDefense();
                 List<DefenderEntity> defenders = lane.releaseDefendersToFinalDefense();

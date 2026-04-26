@@ -3,6 +3,7 @@ package kim.biryeong.semionTd.map;
 import java.util.ArrayList;
 import java.util.List;
 import kim.biryeong.semionTd.game.GridPosition;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
@@ -25,6 +26,23 @@ public record LaneRegionLayout(
         points.addAll(waypoints);
         points.add(bossPosition);
         return points;
+    }
+
+    public AABB defenseSearchBox(Vec3 currentPosition, double horizontalPadding, double verticalPadding) {
+        BlockBounds bounds = laneArea;
+        AABB searchBox = new AABB(
+                bounds.min().getX(),
+                bounds.min().getY(),
+                bounds.min().getZ(),
+                bounds.max().getX() + 1.0,
+                bounds.max().getY() + 1.0,
+                bounds.max().getZ() + 1.0
+        );
+        for (Vec3 point : pathPoints()) {
+            searchBox = includePoint(searchBox, point);
+        }
+        searchBox = includePoint(searchBox, currentPosition);
+        return searchBox.inflate(horizontalPadding, verticalPadding, horizontalPadding);
     }
 
     public Vec3 positionAt(double progress) {
@@ -93,5 +111,16 @@ public record LaneRegionLayout(
             distance += points.get(i).distanceTo(points.get(i + 1));
         }
         return distance;
+    }
+
+    private static AABB includePoint(AABB box, Vec3 point) {
+        return new AABB(
+                Math.min(box.minX, point.x),
+                Math.min(box.minY, point.y),
+                Math.min(box.minZ, point.z),
+                Math.max(box.maxX, point.x),
+                Math.max(box.maxY, point.y),
+                Math.max(box.maxZ, point.z)
+        );
     }
 }

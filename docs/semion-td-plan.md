@@ -1223,7 +1223,7 @@ Verified:
 - `compileJava` succeeds with Gradle 9.2.1.
 - `build` succeeds with Gradle 9.2.1.
 - Fabric GameTest is configured through Loom `configureTests`.
-- 27 server-side Fabric GameTests pass:
+- 29 server-side Fabric GameTests pass:
   - 1v1 selection in `TEST` mode
   - `4 -> 2/2`
   - `6 -> 3/3`

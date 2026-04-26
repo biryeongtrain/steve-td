@@ -1,12 +1,11 @@
 package kim.biryeong.semionTd.entity.monster.goal;
 
-import java.util.EnumSet;
 import java.util.Comparator;
+import java.util.EnumSet;
 import kim.biryeong.semionTd.entity.defender.LaneDefenseEntity;
 import kim.biryeong.semionTd.entity.monster.SemionMonsterEntity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.phys.AABB;
 
 public final class AcquireLaneDefenseTargetGoal extends Goal {
@@ -19,7 +18,16 @@ public final class AcquireLaneDefenseTargetGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return monster.isAlive() && monster.getTarget() == null && findTarget() != null;
+        if (!monster.isAlive() || monster.runtimeMonster() == null) {
+            return false;
+        }
+
+        LivingEntity target = findTarget();
+        if (target == null) {
+            return false;
+        }
+
+        return monster.getTarget() == null || !(monster.getTarget() instanceof LaneDefenseEntity);
     }
 
     @Override
@@ -40,8 +48,7 @@ public final class AcquireLaneDefenseTargetGoal extends Goal {
             return null;
         }
 
-        double searchRange = Math.max(2.5, monster.getAttributeValue(Attributes.FOLLOW_RANGE));
-        AABB searchBox = monster.getBoundingBox().inflate(searchRange);
+        AABB searchBox = monster.defenseSearchBox();
         return monster.level().getEntities(
                         monster,
                         searchBox,

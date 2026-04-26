@@ -7,7 +7,10 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import kim.biryeong.semionTd.SemionTd;
 import kim.biryeong.semionTd.game.*;
+import kim.biryeong.semionTd.job.JobRegistry;
+import kim.biryeong.semionTd.job.SemionJob;
 import kim.biryeong.semionTd.map.ArenaLoadException;
 import kim.biryeong.semionTd.summon.SummonMonsterType;
 import kim.biryeong.semionTd.summon.SummonResult;
@@ -17,8 +20,10 @@ import kim.biryeong.semionTd.tower.TowerUpgradeOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
 public final class SemionCommands {
@@ -53,6 +58,20 @@ public final class SemionCommands {
                         .executes(context -> autojoin(context.getSource(), gameManager)))
                 .then(literal("economy")
                         .executes(context -> economy(context.getSource(), gameManager)))
+                .then(literal("profile")
+                        .executes(context -> profile(context.getSource(), gameManager)))
+                .then(literal("job")
+                        .then(literal("list")
+                                .executes(context -> listJobs(context.getSource())))
+                        .then(literal("current")
+                                .executes(context -> currentJob(context.getSource(), gameManager)))
+                        .then(literal("select")
+                                .then(argument("id", StringArgumentType.word())
+                                        .executes(context -> selectJob(
+                                                context.getSource(),
+                                                gameManager,
+                                                StringArgumentType.getString(context, "id")
+                                        )))))
                 .then(literal("tower")
                         .then(literal("test")
                                 .executes(context -> placeTestTower(context.getSource(), gameManager)))
@@ -85,13 +104,16 @@ public final class SemionCommands {
                                         StringArgumentType.getString(context, "team")
                                 ))))
                 .then(literal("status")
-                        .executes(context -> status(context.getSource(), gameManager))));
+                        .executes(context -> status(context.getSource(), gameManager)))
+                .then(literal("ui")
+                        .executes(context -> statusDialog(context.getSource(), gameManager))));
     }
 
     private static int createGame(CommandSourceStack source, SemionGameManager gameManager) {
         try {
             gameManager.createGame(source.getServer());
-            source.sendSuccess(() -> Component.literal("Created Semion TD game arena from MapTemplate."), false);
+            gameManager.sendAllPlayersToLobby(source.getServer());
+            source.sendSuccess(() -> Component.literal("Created Semion TD lobby and game arena from MapTemplate."), false);
             return 1;
         } catch (ArenaLoadException exception) {
             source.sendFailure(Component.literal("Failed to create Semion TD arena: " + exception.getMessage()));
@@ -117,12 +139,14 @@ public final class SemionCommands {
             return 0;
         }
 
+        String lobbyLoaded = gameManager.lobbyWorld().isPresent() ? ", lobbyLoaded=true" : ", lobbyLoaded=false";
         source.sendSuccess(() -> Component.literal("Started Semion TD game. Active="
                 + plan.get().activePlayerCount()
                 + ", teams=" + plan.get().activeTeamCount()
                 + ", composition=" + plan.get().compositionSummary()
                 + ", spectators=" + plan.get().spectatorCount()
-                + ", mode=" + gameManager.matchMode()), false);
+                + ", mode=" + gameManager.matchMode()
+                + lobbyLoaded), false);
         return 1;
     }
 
@@ -163,12 +187,14 @@ public final class SemionCommands {
         }
 
         applyPlanToVanillaTeams(source, plan.get());
+        String lobbyLoaded = gameManager.lobbyWorld().isPresent() ? ", lobbyLoaded=true" : ", lobbyLoaded=false";
         source.sendSuccess(() -> Component.literal("Assigned teams for next start. Active="
                 + plan.get().activePlayerCount()
                 + ", teams=" + plan.get().activeTeamCount()
                 + ", composition=" + plan.get().compositionSummary()
                 + ", spectators=" + plan.get().spectatorCount()
-                + ", mode=" + gameManager.matchMode()), false);
+                + ", mode=" + gameManager.matchMode()
+                + lobbyLoaded), false);
         return plan.get().activePlayerCount();
     }
 
@@ -200,8 +226,19 @@ public final class SemionCommands {
 
     private static int status(CommandSourceStack source, SemionGameManager gameManager) {
         SemionGame game = gameManager.activeGame().orElse(null);
+        boolean lobbyLoaded = gameManager.lobbyWorld().isPresent();
         if (game == null) {
-            source.sendSuccess(() -> Component.literal("No active Semion TD game."), false);
+            var lastResult = gameManager.lastMatchResult();
+            if (lastResult.isPresent()) {
+                String winners = lastResult.get().winningTeams().isEmpty()
+                        ? "none"
+                        : lastResult.get().winningTeams().stream().map(Enum::name).sorted().collect(java.util.stream.Collectors.joining(", "));
+                source.sendSuccess(() -> Component.literal("No active Semion TD game. lobbyLoaded=" + lobbyLoaded
+                        + ", lastWinners=" + winners
+                        + ", lastRound=" + lastResult.get().finalRound()), false);
+                return 1;
+            }
+            source.sendSuccess(() -> Component.literal("No active Semion TD game. lobbyLoaded=" + lobbyLoaded), false);
             return 1;
         }
 
@@ -210,7 +247,8 @@ public final class SemionCommands {
                 + ", players=" + game.players().size()
                 + ", spectators=" + game.spectatorCount()
                 + ", rosterLocked=" + game.rosterLocked()
-                + ", mode=" + gameManager.matchMode()), false);
+                + ", mode=" + gameManager.matchMode()
+                + ", lobbyLoaded=" + lobbyLoaded), false);
         for (SemionTeam team : game.teams().values()) {
             source.sendSuccess(() -> Component.literal(" - " + team.id()
                     + " active=" + team.active()
@@ -219,6 +257,26 @@ public final class SemionCommands {
                     + ", bossHp=" + Math.round(team.laneGroup().boss().health())), false);
         }
         return 1;
+    }
+
+    private static int statusDialog(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGame game = gameManager.activeGame().orElse(null);
+        if (game != null) {
+            gameManager.dialogService().showGameStatus(player, game);
+            source.sendSuccess(() -> Component.literal("Opened Semion TD status dialog."), false);
+            return 1;
+        }
+
+        Optional<MatchResult> lastResult = gameManager.lastMatchResult();
+        if (lastResult.isPresent()) {
+            gameManager.dialogService().showLastResult(player, lastResult.get());
+            source.sendSuccess(() -> Component.literal("Opened Semion TD last result dialog."), false);
+            return 1;
+        }
+
+        source.sendFailure(Component.literal("No active Semion TD game or previous result."));
+        return 0;
     }
 
     private static int economy(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
@@ -235,11 +293,85 @@ public final class SemionCommands {
         }
 
         PlayerEconomy economy = player.economy();
+        long nextGasUpgradeCost = nextGasUpgradeCost(game, economy);
         source.sendSuccess(() -> Component.literal("Economy mineral=" + economy.mineral()
                 + ", gas=" + economy.gas()
                 + ", income=" + economy.income()
                 + ", gasPerSec=" + economy.gasPerSec()
-                + ", gasUpgrades=" + economy.gasProductionUpgradeCount()), false);
+                + ", gasUpgrades=" + economy.gasProductionUpgradeCount()
+                + ", nextGasUpCost=" + (nextGasUpgradeCost >= 0 ? nextGasUpgradeCost : "capped")), false);
+        return 1;
+    }
+
+    private static int profile(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        var profile = gameManager.profile(source.getServer(), player.getUUID(), player.getGameProfile().getName());
+        source.sendSuccess(() -> Component.literal("Profile cosmetics=" + profile.cosmeticCurrency()
+                + ", games=" + profile.gamesPlayed()
+                + ", wins=" + profile.wins()
+                + ", losses=" + profile.losses()), false);
+        return 1;
+    }
+
+    private static int listJobs(CommandSourceStack source) {
+        source.sendSuccess(() -> Component.literal("Available Semion TD jobs:"), false);
+        for (SemionJob job : JobRegistry.all()) {
+            source.sendSuccess(() -> Component.literal(" - " + job.id()
+                    + " => " + job.displayName().getString()), false);
+            for (Component line : job.description()) {
+                source.sendSuccess(() -> Component.literal("   " + line.getString()), false);
+            }
+        }
+        return JobRegistry.all().size();
+    }
+
+    private static int currentJob(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGame game = activeOrCreate(source, gameManager).orElse(null);
+        if (game == null) {
+            return 0;
+        }
+
+        SemionPlayer semionPlayer = game.players().get(player.getUUID());
+        SemionJob job = semionPlayer != null
+                ? semionPlayer.job().orElse(JobRegistry.defaultJob())
+                : game.selectedJobOrDefault(player.getUUID());
+        source.sendSuccess(() -> Component.literal("Current Semion TD job: "
+                + job.id()
+                + " => "
+                + job.displayName().getString()), false);
+        return 1;
+    }
+
+    private static int selectJob(CommandSourceStack source, SemionGameManager gameManager, String rawJobId)
+            throws CommandSyntaxException {
+        SemionGame game = activeOrCreate(source, gameManager).orElse(null);
+        if (game == null) {
+            return 0;
+        }
+        if (!game.canConfigureRoster()) {
+            source.sendFailure(Component.literal("Cannot select a job after the match roster has been locked."));
+            return 0;
+        }
+
+        ResourceLocation jobId;
+        try {
+            jobId = parseJobId(rawJobId);
+        } catch (IllegalArgumentException exception) {
+            source.sendFailure(Component.literal(exception.getMessage()));
+            return 0;
+        }
+        if (!game.selectJob(source.getPlayerOrException().getUUID(), jobId)) {
+            source.sendFailure(Component.literal("Unknown Semion TD job: " + jobId + ". Use /semiontd job list."));
+            return 0;
+        }
+
+        SemionJob job = game.selectedJobOrDefault(source.getPlayerOrException().getUUID());
+        source.sendSuccess(() -> Component.literal("Selected Semion TD job "
+                + job.id()
+                + " => "
+                + job.displayName().getString()
+                + "."), false);
         return 1;
     }
 
@@ -250,13 +382,18 @@ public final class SemionCommands {
             return 0;
         }
 
-        boolean upgraded = game.upgradeGasProduction(source.getPlayerOrException().getUUID());
+        UUID playerId = source.getPlayerOrException().getUUID();
+        boolean upgraded = game.upgradeGasProduction(playerId);
         if (!upgraded) {
             source.sendFailure(Component.literal("Failed to upgrade gas production."));
             return 0;
         }
 
-        source.sendSuccess(() -> Component.literal("Gas production upgraded."), false);
+        PlayerEconomy economy = game.players().get(playerId).economy();
+        long nextGasUpgradeCost = nextGasUpgradeCost(game, economy);
+        source.sendSuccess(() -> Component.literal("Gas production upgraded. gasPerSec=" + economy.gasPerSec()
+                + ", gasUpgrades=" + economy.gasProductionUpgradeCount()
+                + ", nextCost=" + (nextGasUpgradeCost >= 0 ? nextGasUpgradeCost : "capped")), false);
         return 1;
     }
 
@@ -374,7 +511,7 @@ public final class SemionCommands {
             return 0;
         }
 
-        boolean killed = game.killBoss(teamId);
+        boolean killed = game.killBoss(source.getServer(), teamId);
         if (!killed) {
             source.sendFailure(Component.literal("Failed to kill boss for team " + teamId + "."));
             return 0;
@@ -386,6 +523,18 @@ public final class SemionCommands {
 
     private static TeamId parseTeam(String teamName) {
         return TeamId.valueOf(teamName.toUpperCase());
+    }
+
+    private static ResourceLocation parseJobId(String rawJobId) {
+        ResourceLocation parsed = ResourceLocation.tryParse(rawJobId);
+        if (parsed != null && rawJobId.contains(":")) {
+            return parsed;
+        }
+        ResourceLocation defaulted = ResourceLocation.tryBuild(SemionTd.MOD_ID, rawJobId);
+        if (defaulted == null) {
+            throw new IllegalArgumentException("Invalid job id: " + rawJobId);
+        }
+        return defaulted;
     }
 
     private static boolean ensureWaitingSetup(CommandSourceStack source, SemionGame game, String action) {
@@ -427,12 +576,21 @@ public final class SemionCommands {
         }
     }
 
+    private static long nextGasUpgradeCost(SemionGame game, PlayerEconomy economy) {
+        var gasProduction = game.economyConfig().gasProduction();
+        if (economy.gasProductionUpgradeCount() >= gasProduction.maxUpgradeCount()) {
+            return -1;
+        }
+        return gasProduction.upgradeCost(economy.gasProductionUpgradeCount());
+    }
+
     private static String placementFailureMessage(TowerPlacementResult result) {
         return switch (result) {
             case INVALID_PHASE -> "tower placement is only allowed during prepare phase";
             case PLAYER_NOT_IN_GAME -> "you are not an active player in this match";
             case PLAYER_TEAM_ELIMINATED -> "your team is eliminated";
             case UNKNOWN_LANE -> "your lane is not active";
+            case TOWER_NOT_ALLOWED_BY_JOB -> "your job cannot use that tower";
             case OUTSIDE_LANE_AREA -> "stand inside your lane_path region";
             case OCCUPIED -> "that block already has a tower";
             case NOT_ENOUGH_MINERAL -> "not enough mineral";
@@ -450,10 +608,12 @@ public final class SemionCommands {
             case TOWER_NOT_UPGRADABLE -> "that tower has no available evolution path";
             case UNKNOWN_UPGRADE -> "unknown upgrade id for that tower";
             case UNKNOWN_TARGET_TYPE -> "tower evolution target type is not registered";
+            case TOWER_NOT_ALLOWED_BY_JOB -> "your job cannot use that tower evolution";
             case NOT_ENOUGH_MINERAL -> "not enough mineral";
             case SUCCESS -> "success";
         };
     }
 }
+
 
 
