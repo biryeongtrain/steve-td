@@ -1,0 +1,156 @@
+package kim.biryeong.semiontd.game;
+
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
+public final class ParticipantSelectionService {
+    private static final List<TeamId> TEAM_ORDER = List.of(TeamId.RED, TeamId.BLUE, TeamId.GREEN, TeamId.YELLOW);
+    private static final int MAX_ACTIVE_PLAYERS = SemionTeam.MAX_PLAYERS * TEAM_ORDER.size();
+
+    private ParticipantSelectionService() {
+    }
+
+    public static Optional<ParticipantSelectionPlan> select(List<StartCandidate> candidates, MatchMode mode) {
+        SelectionShape shape = shapeFor(candidates.size(), mode);
+        if (shape == null) {
+            return Optional.empty();
+        }
+
+        List<StartCandidate> activeCandidates = candidates.subList(0, shape.activePlayerCount());
+        List<TeamId> activeTeams = TEAM_ORDER.subList(0, shape.activeTeamCount());
+        Map<TeamId, Integer> capacities = capacitiesByTeam(activeTeams, shape.teamCapacities());
+        Map<TeamId, List<StartCandidate>> assigned = new EnumMap<>(TeamId.class);
+        for (TeamId teamId : activeTeams) {
+            assigned.put(teamId, new ArrayList<>());
+        }
+
+        List<StartCandidate> unassigned = new ArrayList<>();
+        for (StartCandidate candidate : activeCandidates) {
+            Optional<TeamId> preferredTeam = candidate.preferredTeam()
+                    .filter(activeTeams::contains);
+            if (preferredTeam.isPresent() && assigned.get(preferredTeam.get()).size() < capacities.get(preferredTeam.get())) {
+                assigned.get(preferredTeam.get()).add(candidate);
+            } else {
+                unassigned.add(candidate);
+            }
+        }
+
+        for (StartCandidate candidate : unassigned) {
+            Optional<TeamId> targetTeam = leastFilledAvailableTeam(assigned, capacities, activeTeams);
+            if (targetTeam.isEmpty()) {
+                break;
+            }
+            assigned.get(targetTeam.get()).add(candidate);
+        }
+
+        List<AssignedParticipant> activeParticipants = new ArrayList<>(shape.activePlayerCount());
+        Set<UUID> spectatorIds = new HashSet<>();
+
+        for (TeamId teamId : activeTeams) {
+            List<StartCandidate> teamCandidates = assigned.get(teamId);
+            for (int i = 0; i < teamCandidates.size(); i++) {
+                StartCandidate candidate = teamCandidates.get(i);
+                activeParticipants.add(new AssignedParticipant(candidate.uuid(), candidate.name(), teamId, i + 1));
+            }
+        }
+
+        for (int i = shape.activePlayerCount(); i < candidates.size(); i++) {
+            spectatorIds.add(candidates.get(i).uuid());
+        }
+
+        return Optional.of(new ParticipantSelectionPlan(
+                mode,
+                activeParticipants,
+                spectatorIds,
+                shape.activeTeamCount()
+        ));
+    }
+
+    private static Map<TeamId, Integer> capacitiesByTeam(List<TeamId> activeTeams, List<Integer> teamCapacities) {
+        Map<TeamId, Integer> capacities = new EnumMap<>(TeamId.class);
+        for (int i = 0; i < activeTeams.size(); i++) {
+            capacities.put(activeTeams.get(i), teamCapacities.get(i));
+        }
+        return capacities;
+    }
+
+    private static Optional<TeamId> leastFilledAvailableTeam(
+            Map<TeamId, List<StartCandidate>> assigned,
+            Map<TeamId, Integer> capacities,
+            List<TeamId> activeTeams
+    ) {
+        TeamId bestTeam = null;
+        double bestRatio = Double.MAX_VALUE;
+        int bestSize = Integer.MAX_VALUE;
+        for (TeamId teamId : activeTeams) {
+            int currentSize = assigned.get(teamId).size();
+            int capacity = capacities.get(teamId);
+            if (currentSize >= capacity) {
+                continue;
+            }
+            double ratio = (double) currentSize / capacity;
+            if (ratio < bestRatio || (ratio == bestRatio && currentSize < bestSize)) {
+                bestTeam = teamId;
+                bestRatio = ratio;
+                bestSize = currentSize;
+            }
+        }
+        return Optional.ofNullable(bestTeam);
+    }
+
+    private static SelectionShape shapeFor(int playerCount, MatchMode mode) {
+        if (mode == MatchMode.TEST) {
+            return playerCount >= 2 ? new SelectionShape(2, List.of(1, 1)) : null;
+        }
+
+        if (playerCount < 4) {
+            return null;
+        }
+
+        int activePlayerCount = Math.min(playerCount, MAX_ACTIVE_PLAYERS);
+        SelectionShape fallback = null;
+        int maxTeams = Math.min(TEAM_ORDER.size(), activePlayerCount);
+        for (int teamCount = 2; teamCount <= maxTeams; teamCount++) {
+            int maxTeamSize = (activePlayerCount + teamCount - 1) / teamCount;
+            if (maxTeamSize > SemionTeam.MAX_PLAYERS) {
+                continue;
+            }
+
+            int minTeamSize = activePlayerCount / teamCount;
+            List<Integer> capacities = distributedCapacities(activePlayerCount, teamCount);
+            if (minTeamSize >= 3) {
+                return new SelectionShape(activePlayerCount, capacities);
+            }
+            if (minTeamSize >= 2 && fallback == null) {
+                fallback = new SelectionShape(activePlayerCount, capacities);
+            }
+        }
+        return fallback;
+    }
+
+    private static List<Integer> distributedCapacities(int activePlayerCount, int teamCount) {
+        List<Integer> capacities = new ArrayList<>(teamCount);
+        int base = activePlayerCount / teamCount;
+        int remainder = activePlayerCount % teamCount;
+        for (int i = 0; i < teamCount; i++) {
+            capacities.add(base + (i < remainder ? 1 : 0));
+        }
+        return capacities;
+    }
+
+    private record SelectionShape(int activePlayerCount, List<Integer> teamCapacities) {
+        private SelectionShape {
+            teamCapacities = List.copyOf(teamCapacities);
+        }
+
+        private int activeTeamCount() {
+            return teamCapacities.size();
+        }
+    }
+}

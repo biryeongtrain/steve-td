@@ -1,7 +1,7 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "kim.biryeong.semionTd.mixin",
+  "package": "kim.biryeong.semiontd.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
   ],

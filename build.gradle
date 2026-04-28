@@ -79,6 +79,7 @@ dependencies {
     modImplementation include("eu.pb4:sidebar-api:${project.sidebar_api_version}")
     modImplementation include("de.tomalbrc:avatar-renderer:${project.avatar_renderer_version}")
     modImplementation include("eu.pb4:map-canvas-api:${project.map_canvas_api_version}")
+    modImplementation include("de.tomalbrc:blockbench-import-library:${project.bli_version}")
 
     modImplementation include("kim.biryeong:danta-shader:1.0.2+1.21.8")
     modImplementation include("eu.pb4:player-data-api:0.8.0+1.21.6")

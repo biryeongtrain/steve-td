@@ -46,6 +46,11 @@ The target game is not a normal cooperative tower defense. It is a four-team com
 - Monster waves must be configurable from config files.
 - Configured monster waves spawn per player lane.
 - From round 20 onward, infinite rounds can use one repeated monster type.
+- Simultaneous elimination has no special tie rule; one server tick still resolves teams in deterministic iteration order.
+- Tower-produced defender entities reset at the next round instead of persisting across rounds.
+- Summon monster limits are owned by the summoning tower implementation, not by the global game loop.
+- Monsters that reach the boss position stay active and fight the team boss through normal entity combat.
+- If a wave runs past the 90-second timeout, remaining lane monsters and lane towers are forced toward the final defense area.
 
 ## Working Currency Names
 
@@ -414,17 +419,23 @@ Rules:
 Monster definition:
 
 ```text
-MonsterType
+SummonMonsterType
   id
   displayName
   gasCost
   incomeGain
+  tier             // T1 through T5
+  roles            // RUSH, TANK, SWARM, DISRUPTOR, SUPPORT, SIEGE
   maxHealth
-  speed
   armor
+  resistance
+  attackDamage
+  attackKind
+  damageType       // PHYSICAL, MAGIC, TRUE
+  entityTypeId
+  blockbenchModelId
   mineralReward
-  bossDamage
-  tags
+  abilityActivations // PASSIVE, CONDITIONAL, COOLDOWN
 ```
 
 Monster instance:
@@ -436,10 +447,70 @@ Monster
   targetLane
   lanePosition
   health
+  armor
+  resistance
+  damageType
+  summonTier
+  summonRoles
   state
   ownerPlayer
   senderTeam
 ```
+
+Confirmed summon design policy:
+
+- Summon monsters are ability-focused rather than pure stat upgrades.
+- Authoring guide: `docs/summon-authoring-guide.ko.md`
+- Roles:
+  - `RUSH`: fast pressure, low defense.
+  - `TANK`: high armor or high resistance, designed to draw fire and protect support units.
+  - `SWARM`: many weak bodies, anti-single-target pressure.
+  - `DISRUPTOR`: indirect low-tier disruption, high-tier tower debuffs.
+  - `SUPPORT`: monster healing, shielding, speed, or defense support.
+  - `SIEGE`: slow high-threat boss/final-line pressure.
+- Price tiers:
+  - `T1`: 10-35 gas, high income efficiency, simple abilities.
+  - `T2`: 40-80 gas, tactical units and low-tier support/disruptor cooldowns.
+  - `T3`: 90-160 gas, composition core and normal cooldown ability access.
+  - `T4`: 180-320 gas, high-threat specialist units.
+  - `T5`: 350+ gas, decisive late-game pressure.
+- Income efficiency falls as tier and combat utility rise.
+- Low-tier `SUPPORT` and `DISRUPTOR` may use cooldown abilities, but their effects should stay modest.
+- Same buff/debuff effect uses only the strongest active source. Different effect types can coexist.
+- Global effect caps:
+  - tower attack-speed reduction: max 40%
+  - tower range reduction: max 30%
+  - monster damage reduction: max 35%
+  - monster movement-speed bonus: max 30%
+  - healing, shield, and target-priority manipulation use only the strongest active source.
+
+Confirmed summon targeting policy:
+
+```text
+targetScore = laneProgress * 100 + rolePriority + threatBonus
+```
+
+Role priorities:
+
+```text
+SWARM      0
+RUSH       5
+SIEGE      15
+SUPPORT    35
+TANK       45
+DISRUPTOR  45
+```
+
+Additional rule:
+
+- `SIEGE` gains +30 target score at 80% lane progress or later.
+- `TANK` intentionally outranks `SUPPORT` at the same lane progress so tank summons can screen support summons.
+
+Confirmed damage policy:
+
+- `PHYSICAL` damage is reduced by `armor`.
+- `MAGIC` damage is reduced by `resistance`.
+- `TRUE` damage ignores both.
 
 Monster states:
 
@@ -563,11 +634,12 @@ Rules:
 
 Initial targeting mode:
 
-- Target the enemy with the highest lane progress.
+- Target the enemy with the highest target score.
+- Current target score starts from lane progress and adds role-based threat for summoned attack monsters.
 
 Reason:
 
-- This matches tower defense expectations better than nearest-target targeting.
+- This keeps the tower defense expectation that near-leaking enemies are dangerous, while still letting tanks, disruptors, supports, and siege units affect targeting.
 
 ## Round Model
 
@@ -578,12 +650,13 @@ Round responsibilities:
 - Run player placement and attack monster summon time for about 20-30 seconds.
 - Spawn configured monster waves into each player lane.
 - Track whether each active player lane has cleared its wave.
-- Move surviving tower-produced entities and tower summons from cleared lanes to the team's final defense line.
+- Move surviving tower-produced entities and tower summons from cleared lanes to the team's final defense line during the current round.
 - Let leaked monsters keep moving along their lane when the lane fails to clear.
-- Let leaked monsters and the final boss fight when leaked monsters reach the final defense line.
+- Let monsters that reach the boss position fight the final boss through normal entity combat.
+- After the 90-second wave timeout, force remaining lane monsters and lane towers toward the final defense area.
 - Wait until every non-eliminated team has cleared the round or has been eliminated.
 - Trigger income payout.
-- Possibly unlock stronger summon monsters or towers.
+- Keep all registered attack summons available; there is no tier unlock gate in the current policy.
 - From round 20 onward, switch to an infinite repeated monster wave if configured.
 
 Round payout:
@@ -605,6 +678,7 @@ PREPARE_AND_SUMMON
 LANE_WAVE
   -> configured wave monsters spawn in each active player lane
   -> towers, tower-produced entities, and tower summons defend each lane
+  -> after the 90-second wave timeout, remaining monsters and lane towers are forced toward final defense
 
 LANE_CLEARED
   -> if a lane clears all wave monsters, remaining tower-produced entities and tower summons move to the team's final defense line
@@ -613,9 +687,9 @@ LANE_LEAKED
   -> if a lane fails to clear, remaining enemy monsters continue moving along the lane
 
 FINAL_DEFENSE
-  -> leaked monsters that reach the final defense line fight the team boss
-  -> the team boss attacks leaked monsters
-  -> the system only detects combat result and boss death
+  -> monsters that reach the boss position remain active and attack the team boss
+  -> the team boss attacks and can kill reached monsters
+  -> the system detects boss death and team elimination
 
 ROUND_WAIT
   -> teams that cleared wait until all other living teams also clear or die
@@ -627,17 +701,15 @@ ROUND_PAYOUT
 
 Open decisions:
 
-- Exact prepare/summon phase duration between 20 and 30 seconds.
-- Whether eliminated players still receive payouts.
-- Whether stronger summon tiers unlock by round number.
-- Whether summoned monsters and configured round-wave monsters share the same stat model.
+- Exact per-tower summon limit values and cooldown rules for summoning towers.
 
 Current recommendation:
 
 - Keep round payout simple first.
 - Configured automatic waves are part of the core game.
-- Final defense combat should use normal monster and boss combat behavior.
-- Unlock summon tiers by round later.
+- Configured wave monsters and summoned attack monsters share the runtime `Monster` model, but summoned monsters add role, tier, and ability metadata.
+- Boss-reaching monsters should use normal entity combat rather than instant lane-resolution damage.
+- Summoning tower limits should stay local to tower definitions so special towers can have different caps.
 
 ## Wave Config Model
 
@@ -664,15 +736,16 @@ WaveMonsterEntry
   attackDamage
   attackKind        // MELEE or RANGED
   entityType        // vanilla or modded entity id, such as minecraft:zombie
-  bliModelId        // optional Blockbench/BLI visual model identifier
+  blockbenchModelId // optional Blockbench visual model identifier
   count
 ```
 
 Visual selection rule:
 
-- If `bliModelId` is set, use the BLI/Blockbench model visual.
+- If `blockbenchModelId` is set, load the model through Blockbench Import Library (BIL) and attach a `LivingEntityHolder` to the runtime entity.
 - Otherwise use `entityType`.
-- A config entry must provide at least one of `entityType` or `bliModelId`.
+- A config entry must provide at least one of `entityType` or `blockbenchModelId`.
+- Runtime combat entities expose `idle`, `walk`, and `attack` animation states so Blockbench animation playback can be connected at the visual layer.
 
 Draft `waves.json` shape:
 
@@ -690,7 +763,7 @@ Draft `waves.json` shape:
             "attackDamage": 4,
             "attackKind": "MELEE",
             "entityType": "minecraft:zombie",
-            "bliModelId": null,
+            "blockbenchModelId": null,
             "count": 12
           }
         ],
@@ -713,7 +786,7 @@ Draft `waves.json` shape:
           "attackDamage": 25,
           "attackKind": "MELEE",
           "entityType": "minecraft:husk",
-          "bliModelId": null,
+          "blockbenchModelId": null,
           "count": 30
         }
       ]
@@ -772,7 +845,8 @@ Defender entity responsibilities:
 - Help defend a player's lane during the lane wave.
 - Survive after lane clear if not killed.
 - Move to the team's final defense line after that player lane is cleared.
-- Help the final boss fight leaked monsters at the final defense line.
+- Help cover the final defense area during the current round.
+- Reset and be removed when the next round starts.
 
 Initial model:
 
@@ -1090,7 +1164,6 @@ Implemented first compile-safe skeleton:
   - `economy.json`
   - `wave.json`
   - `map.json`
-  - `summons.json`
   - `progression.json`
   - legacy `waves.json` is still accepted when `wave.json` does not exist
 - Added game state model:
@@ -1115,7 +1188,10 @@ Implemented first compile-safe skeleton:
 - Added Polymer-backed server entity type:
   - registered custom `semion-td:monster`
   - marks the entity type as Polymer server-side only
-  - uses config/summon `entityType` as the client-visible Polymer replacement
+  - wave monsters, summoned attack monsters, and towers now carry either vanilla `entityType` or `blockbenchModelId`
+  - vanilla `entityType` is used as the client-visible Polymer replacement
+  - Blockbench visuals keep their model id and attach through BIL `AnimatedEntity`/`LivingEntityHolder` when a `.bbmodel` or `.ajmodel` resource exists
+  - monster and tower entities expose `IDLE`, `WALK`, and `ATTACK` animation state transitions from their AI goals
 - Added MapTemplate/Fantasy arena skeleton:
   - `map.json` default config generation
   - creates one Fantasy temporary runtime world per team
@@ -1175,8 +1251,18 @@ Implemented first compile-safe skeleton:
 - Added first summon loop:
   - `SummonShop`
   - `SummonMonsterType`
+  - `SummonRegistry`
+  - `SummonContext`
   - `SummonResult`
-  - default `grunt` summon
+  - default `GruntSummon`
+  - summon definitions are code classes, not `summons.json` entries
+  - summon classes can override monster creation and post-summon hooks for special abilities
+  - summon classes can define a vanilla entity visual or Blockbench model id
+  - summon definitions now carry `SummonTier`, `SummonRole`, `DamageType`, `resistance`, and ability activation metadata
+  - registered baseline summon content now covers rush, swarm, armor tank, resistance tank, disruptor, support, and siege roles
+  - runtime summon monsters keep role/tier metadata for target-priority scoring
+  - target priority now uses lane progress plus role priority, with tank summons outranking support summons at equal progress
+  - physical, magic, and true damage handling exists on runtime monsters
   - summon only allowed during `PREPARE_AND_SUMMON`
   - spends gas
   - increases income
@@ -1241,6 +1327,14 @@ Implemented first compile-safe skeleton:
   - DisplayHud-based in-match status HUD
   - DialogUtils status dialog through `/semiontd ui`
   - DialogUtils match result dialog at match end
+- Added current game-policy enforcement:
+  - eliminated teams immediately discard active and queued lane monsters without kill rewards
+  - summoned attack monsters never target eliminated teams
+  - all registered attack summons are available without round-based tier unlock
+  - tower-produced defender entities are removed on next-round reset
+  - monsters reaching the boss position remain active and fight the boss through normal entity combat
+  - bosses can attack and kill reached monsters
+  - 90-second wave timeout forces remaining lane monsters and lane towers toward the final defense area
 
 Verified:
 
@@ -1250,9 +1344,9 @@ Verified:
   - `gradle/wrapper/gradle-wrapper.jar`
   - `gradle/wrapper/gradle-wrapper.properties`
 - `./gradlew --version` runs Gradle 9.2.1.
-- `./gradlew build` succeeds with Gradle 9.2.1 on 2026-04-27.
+- `./gradlew build` succeeds with Gradle 9.2.1 on 2026-04-28.
 - Fabric GameTest is configured through Loom `configureTests`.
-- 43 required server-side Fabric GameTests pass through the `runGameTest` task during `./gradlew build`.
+- 54 required server-side Fabric GameTests pass through the `runGameTest` task during `./gradlew build`.
 - GameTest logs are written under `build/run/gameTest/logs/`.
 - Current verified GameTest coverage includes:
   - 1v1 selection in `TEST` mode
@@ -1280,6 +1374,9 @@ Verified:
   - monster prefers higher aggro priority tower
   - cleared lane moves test tower to final defense
   - round reset returns test tower to its lane position
+  - tower-produced defender entities reset and are removed on the next round
+  - monsters reaching the boss position stay active, damage the boss through combat, and can be killed by the boss
+  - 90-second wave timeout forces remaining lane monsters and lane towers toward final defense
   - synthetic arena exposes ordered 7x7 final defense slots
   - roster lock on game start
   - configured starting economy
@@ -1287,7 +1384,9 @@ Verified:
   - gas production upgrade cost and gas-per-second increase
   - round payout for living players only
   - eliminated players stop receiving economy ticks
-  - summon gas spending, income gain, no-target refund, eliminated-team target exclusion, and custom summon config loading
+  - summon gas spending, income gain, no-target refund, eliminated-team target exclusion, class-based summon registry defaults, no `summons.json` generation, custom summon class hooks, Blockbench summon visual preservation, role/tier catalog metadata, runtime summon combat metadata, damage-type defense handling, and summon target-priority scoring
+  - wave monster Blockbench visual preservation and idle/walk animation state exposure
+  - tower vanilla visual fallback, BIL Blockbench model id preservation, and attack animation state exposure
   - eliminated target teams discard active and queued lane monsters without kill rewards
   - wave monster kill reward for the tower owner
   - defender last-hit reward is paid once
@@ -1298,17 +1397,17 @@ Verified:
 
 Known verification notes:
 
-- Polymer/DialogUtils resource-pack generation can log vanilla client jar access errors in the local GameTest environment, but the server continues and all 43 required GameTests pass.
+- Polymer/DialogUtils resource-pack generation can log vanilla client jar access errors in the local GameTest environment, but the server continues and all 54 required GameTests pass.
 - A later `./gradlew tasks --all` attempt hit a sandbox permission error while opening the Gradle wrapper distribution lock file in the user Gradle cache. This did not affect the successful `./gradlew build` run.
 
 Not implemented yet:
 
 - Actual exported `data/semion-td/map_template/arena.nbt` asset.
 - Actual exported `data/semion-td/map_template/lobby.nbt` asset.
-- Full summon shop content. A config-driven summon shop exists, but only minimal default content is present.
+- Full summon unit catalog. A class-based summon registry exists with baseline role coverage through T3, but the final T1-T5 production catalog is not complete.
 - Full production tower catalog. Current player-facing tower gameplay still uses hardcoded test tower content.
 - Full job catalog. The framework exists, but only the default `recruit` job is registered in production code.
-- BLI/Blockbench visual binding for monsters, towers, bosses, and job/theme presentation.
+- BIL/Blockbench visual binding for bosses and job/theme presentation. Monster, summon, and test tower entities now use BIL holders when model resources are present.
 - Sidebar-style UI polish. DisplayHud and Dialog UI exist, but a final production UI pass is still needed.
 - Full 20-player game flow testing.
 
@@ -1318,7 +1417,7 @@ Some earlier questions have now been fixed by code. They are recorded here so fu
 
 1. What are the final replacement names for mineral, gas, and income?
 2. Which concrete producer/summoner tower types should create `DefenderEntity` or summoned entities?
-3. Do tower-produced entities persist across rounds or reset after each round?
+3. What exact per-tower summon limits and cooldowns should summoning towers use?
 
 Settled in current code:
 
@@ -1328,9 +1427,19 @@ Settled in current code:
 - Kill mineral currently goes to the tower or defender last-hit owner. Boss and unknown deaths do not grant mineral.
 - Eliminated players become spectators for the current match.
 - When a team is eliminated, active and queued monsters targeting that team's lanes are discarded without kill rewards.
-- Wave and summon configs are separate.
+- Wave monsters remain config-driven; summoned attack monsters are class-driven through `SummonRegistry`.
+- Summoned attack monsters use the six confirmed roles: `RUSH`, `TANK`, `SWARM`, `DISRUPTOR`, `SUPPORT`, and `SIEGE`.
+- Summoned attack monsters use five gas-price tiers from `T1` through `T5`.
+- Summon targeting uses lane progress plus role priority. `TANK` outranks `SUPPORT` at equal progress, and `SIEGE` gains extra priority near the boss line.
+- Runtime monster damage supports `PHYSICAL`, `MAGIC`, and `TRUE`; armor reduces physical damage, resistance reduces magic damage, and true damage ignores both.
 - Summoned monsters target a random living enemy team and then a random active lane on that team.
-- All configured attack summons are available; there is no tier unlock gate in the current policy.
+- All registered attack summons are available; there is no tier unlock gate in the current policy.
+- Simultaneous elimination uses normal tick order and has no special tie-break rule.
+- Tower-produced defender entities reset at the next round.
+- Summon monster limits are managed by the summoning tower implementation.
+- Monsters that reach the boss position remain active and fight the boss through normal entity combat.
+- Bosses can attack and kill reached monsters.
+- Wave timeout is currently 90 seconds and forces remaining lane monsters and lane towers toward the final defense area.
 - `lane_N` wave entries are lane-specific overrides; default entries are used when a lane-specific entry is absent.
 - Gas production upgrade currency is config-driven and defaults to mineral.
 - Boss defaults are implemented in `BossMonster.defaultBoss`.
