@@ -421,7 +421,7 @@ Monster definition:
 ```text
 SummonMonsterType
   id
-  displayName
+  displayName      // editable from SummonDisplayNames
   gasCost
   incomeGain
   tier             // T1 through T5
@@ -434,6 +434,7 @@ SummonMonsterType
   damageType       // PHYSICAL, MAGIC, TRUE
   entityTypeId
   blockbenchModelId
+  dimensions
   mineralReward
   abilityActivations // PASSIVE, CONDITIONAL, COOLDOWN
 ```
@@ -461,6 +462,7 @@ Confirmed summon design policy:
 
 - Summon monsters are ability-focused rather than pure stat upgrades.
 - Authoring guide: `docs/summon-authoring-guide.ko.md`
+- Summon display names are centralized in `SummonDisplayNames` so visible names can be renamed without hunting through each summon class.
 - Roles:
   - `RUSH`: fast pressure, low defense.
   - `TANK`: high armor or high resistance, designed to draw fire and protect support units.
@@ -737,6 +739,7 @@ WaveMonsterEntry
   attackKind        // MELEE or RANGED
   entityType        // vanilla or modded entity id, such as minecraft:zombie
   blockbenchModelId // optional Blockbench visual model identifier
+  dimensions        // optional gameplay hitbox: { "width": 0.6, "height": 1.95 }
   count
 ```
 
@@ -745,6 +748,7 @@ Visual selection rule:
 - If `blockbenchModelId` is set, load the model through Blockbench Import Library (BIL) and attach a `LivingEntityHolder` to the runtime entity.
 - Otherwise use `entityType`.
 - A config entry must provide at least one of `entityType` or `blockbenchModelId`.
+- `dimensions` is explicit gameplay data. It is not inferred from a Blockbench model and defaults to `0.6 x 1.95` when omitted.
 - Runtime combat entities expose `idle`, `walk`, and `attack` animation states so Blockbench animation playback can be connected at the visual layer.
 
 Draft `waves.json` shape:
@@ -764,6 +768,7 @@ Draft `waves.json` shape:
             "attackKind": "MELEE",
             "entityType": "minecraft:zombie",
             "blockbenchModelId": null,
+            "dimensions": { "width": 0.6, "height": 1.95 },
             "count": 12
           }
         ],
@@ -787,6 +792,7 @@ Draft `waves.json` shape:
           "attackKind": "MELEE",
           "entityType": "minecraft:husk",
           "blockbenchModelId": null,
+          "dimensions": { "width": 0.6, "height": 1.95 },
           "count": 30
         }
       ]
@@ -1189,6 +1195,7 @@ Implemented first compile-safe skeleton:
   - registered custom `semion-td:monster`
   - marks the entity type as Polymer server-side only
   - wave monsters, summoned attack monsters, and towers now carry either vanilla `entityType` or `blockbenchModelId`
+  - wave monsters and summoned attack monsters can declare per-monster gameplay hitbox dimensions
   - vanilla `entityType` is used as the client-visible Polymer replacement
   - Blockbench visuals keep their model id and attach through BIL `AnimatedEntity`/`LivingEntityHolder` when a `.bbmodel` or `.ajmodel` resource exists
   - monster and tower entities expose `IDLE`, `WALK`, and `ATTACK` animation state transitions from their AI goals
@@ -1404,7 +1411,7 @@ Not implemented yet:
 
 - Actual exported `data/semion-td/map_template/arena.nbt` asset.
 - Actual exported `data/semion-td/map_template/lobby.nbt` asset.
-- Full summon unit catalog. A class-based summon registry exists with baseline role coverage through T3, but the final T1-T5 production catalog is not complete.
+- Full summon unit catalog. A class-based summon registry exists with full T1 role coverage and one T5 siege baseline, but the final T1-T5 production catalog is not complete.
 - Full production tower catalog. Current player-facing tower gameplay still uses hardcoded test tower content.
 - Full job catalog. The framework exists, but only the default `recruit` job is registered in production code.
 - BIL/Blockbench visual binding for bosses and job/theme presentation. Monster, summon, and test tower entities now use BIL holders when model resources are present.
@@ -1429,7 +1436,10 @@ Settled in current code:
 - When a team is eliminated, active and queued monsters targeting that team's lanes are discarded without kill rewards.
 - Wave monsters remain config-driven; summoned attack monsters are class-driven through `SummonRegistry`.
 - Summoned attack monsters use the six confirmed roles: `RUSH`, `TANK`, `SWARM`, `DISRUPTOR`, `SUPPORT`, and `SIEGE`.
+- Wave monsters and summoned attack monsters declare gameplay hitbox dimensions explicitly; Blockbench model scale is visual-only and does not drive server collision.
 - Summoned attack monsters use five gas-price tiers from `T1` through `T5`.
+- T1 now has baseline coverage for all six summon roles: `grunt`/`Zip Bun`, `skitter_swarm`/`Button Mites`, `quilt_guard`, `static_bobbin`, `button_nurse`, and `popper_pod`.
+- The existing tank-like siege Blockbench model has been promoted to the T5 `siege_breaker` slot and uses `semion-td:summon/t5_siege`.
 - Summon targeting uses lane progress plus role priority. `TANK` outranks `SUPPORT` at equal progress, and `SIEGE` gains extra priority near the boss line.
 - Runtime monster damage supports `PHYSICAL`, `MAGIC`, and `TRUE`; armor reduces physical damage, resistance reduces magic damage, and true damage ignores both.
 - Summoned monsters target a random living enemy team and then a random active lane on that team.

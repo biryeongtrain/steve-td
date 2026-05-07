@@ -23,23 +23,61 @@ T5: 350+ gas
 ```text
 grunt             T1  RUSH
 skitter_swarm     T1  SWARM
+quilt_guard       T1  TANK
+static_bobbin     T1  DISRUPTOR
+button_nurse      T1  SUPPORT
+popper_pod        T1  SIEGE
 ironclad_tank     T2  TANK
 ward_tank         T2  TANK
 static_disruptor  T2  DISRUPTOR
 pulse_support     T2  SUPPORT
-siege_breaker     T3  SIEGE
+gale_ferret       T3  RUSH
+bulwark_bison     T3  TANK
+wizard_cat        T3  DISRUPTOR
+grove_alpaca      T3  SUPPORT
+bombard_toad      T4  SIEGE
+storm_lynx        T4  RUSH
+aegis_golem       T4  TANK
+null_imp          T4  DISRUPTOR
+elder_sprite      T4  SUPPORT
+siege_breaker     T5  SIEGE
+apex_warden       T5  TANK, DISRUPTOR
+oracle_phoenix    T5  SUPPORT, DISRUPTOR
 ```
 
-즉, `T4`, `T5` production summon catalog는 아직 비어 있다.
+현재 Blockbench 모델 리소스:
+
+```text
+grunt             semion-td:summon/t1_fox_kit
+skitter_swarm     semion-td:summon/t1_honey_bee
+quilt_guard       semion-td:summon/t1_shell_turtle
+static_bobbin     semion-td:summon/t1_spark_axolotl
+button_nurse      semion-td:summon/t1_medic_duck
+popper_pod        semion-td:summon/t1_pincer_crab
+ironclad_tank     semion-td:summon/t2_ironclad_boar
+ward_tank         semion-td:summon/t2_ward_ram
+static_disruptor  semion-td:summon/t2_static_owl
+pulse_support     semion-td:summon/t2_pulse_fawn
+gale_ferret       semion-td:summon/t3_gale_ferret
+bulwark_bison     semion-td:summon/t3_bulwark_bison
+wizard_cat        semion-td:summon/t3_wizard_cat
+grove_alpaca      semion-td:summon/t3_grove_alpaca
+siege_breaker     semion-td:summon/t5_siege
+```
+
+즉, T1/T2는 전체 역할군 초안과 모델 리소스가 채워졌고, T3는 rush/tank/disruptor/support 중간 티어 초안이 채워졌다.
+T4/T5는 Java class 기반 gameplay catalog만 먼저 채웠으며, 새 Blockbench 모델은 아직 만들지 않았다.
+T5는 기존 전차형 siege 모델을 사용하는 `siege_breaker`만 모델 리소스를 가진다.
 
 ## 추가 절차
 
 1. `src/main/java/kim/biryeong/semiontd/summon/` 아래에 새 class를 만든다.
 2. `SummonMonsterType`을 상속한다.
 3. 생성자에서 소환수의 스탯, 역할, 티어, 시각 정보, 능력 발동 타입을 넘긴다.
-4. 필요하면 `createMonster(...)` 또는 `onSummoned(...)`를 override한다.
-5. `SummonRegistry`에 등록한다.
-6. GameTest를 추가한다.
+4. 표시 이름은 `SummonDisplayNames`에 상수로 추가하고 생성자에서 그 상수를 사용한다.
+5. 필요하면 `createMonster(...)`, `onSummoned(...)`, `createAbilityGoals(...)`를 override한다.
+6. `SummonRegistry`에 등록한다.
+7. GameTest를 추가한다.
 
 ## 기본 예시
 
@@ -49,6 +87,7 @@ package kim.biryeong.semiontd.summon;
 import java.util.List;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.entity.monster.DamageType;
+import kim.biryeong.semiontd.entity.monster.MonsterDimensions;
 
 public final class ExampleRushSummon extends SummonMonsterType {
     public ExampleRushSummon() {
@@ -63,6 +102,7 @@ public final class ExampleRushSummon extends SummonMonsterType {
                 AttackKind.MELEE,
                 "minecraft:zombie",
                 null,
+                MonsterDimensions.DEFAULT,
                 DamageType.PHYSICAL,
                 0,
                 SummonTier.T1,
@@ -94,6 +134,7 @@ id
 
 displayName
   UI와 명령 출력에 쓸 표시명.
+  나중에 수정하기 쉽도록 `SummonDisplayNames`의 상수를 사용한다.
 
 gasCost
   소환 비용.
@@ -119,6 +160,11 @@ entityTypeId
 blockbenchModelId
   BIL이 로드할 Blockbench 모델 id.
   리소스 위치는 src/main/resources/model/<namespace>/<path>.bbmodel 또는 .ajmodel.
+
+dimensions
+  서버 gameplay hitbox.
+  생략하거나 null이면 기본값 0.6 x 1.95를 사용한다.
+  Blockbench 모델 크기에서 자동 추론하지 않는다.
 
 damageType
   PHYSICAL, MAGIC, TRUE.
@@ -246,6 +292,12 @@ blockbenchModelId
 예를 들어 `semion-td:summon/custom_model`은 `src/main/resources/model/semion-td/summon/custom_model.bbmodel` 또는 `.ajmodel`을 찾는다.
 모델 파일이 없으면 테스트 환경에서는 BIL holder를 만들지 않고 모델 ID만 보존한다.
 
+`dimensions`는 렌더링 크기가 아니라 서버 hitbox다. 큰 전차형 소환수처럼 모델이 바닐라 좀비보다 크면 `MonsterDimensions.of(width, height)`를 명시한다.
+폭과 높이는 finite 양수여야 하며, 잘못된 값은 등록/설정 로드 시 예외로 처리한다.
+
+게임플레이 id와 모델 id는 분리한다. 예를 들어 T5 전차형 siege는 게임플레이 id `siege_breaker`를 유지하되 모델은 `semion-td:summon/t5_siege`를 사용한다.
+새 T1 siege 모델을 만들 때는 `popper_pod` 같은 별도 게임플레이 id와 `semion-td:summon/t1_pincer_crab` 같은 tier 포함 모델 id를 쓴다.
+
 ## 테스트 체크리스트
 
 새 소환수를 추가하면 최소한 다음을 테스트한다.
@@ -253,10 +305,12 @@ blockbenchModelId
 ```text
 SummonRegistry.find(id)가 성공하는가
 tier와 roles가 의도대로 들어갔는가
+displayName이 `SummonDisplayNames`의 상수를 사용하는가
 gasCost와 incomeGain이 정책 범위에 맞는가
 createMonster(...) 후 runtime Monster에 tier/roles/damageType/resistance가 보존되는가
 특수 능력이 있다면 onSummoned 또는 능력 시스템에서 적용되는가
 entityTypeId 또는 blockbenchModelId가 보존되는가
+dimensions가 runtime Monster와 SemionMonsterEntity hitbox에 반영되는가
 ```
 
 기존 테스트 위치:
