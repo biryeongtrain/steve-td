@@ -1,5 +1,7 @@
 package kim.biryeong.semiontd.config;
 
+import kim.biryeong.semiontd.entity.monster.MonsterDimensions;
+
 public record WaveMonsterEntry(
         String id,
         double health,
@@ -8,6 +10,7 @@ public record WaveMonsterEntry(
         AttackKind attackKind,
         String entityType,
         String blockbenchModelId,
+        MonsterDimensions dimensions,
         long mineralReward,
         int count
 ) {
@@ -21,7 +24,35 @@ public record WaveMonsterEntry(
             String blockbenchModelId,
             int count
     ) {
-        this(id, health, armor, attackDamage, attackKind, entityType, blockbenchModelId, 0, count);
+        this(id, health, armor, attackDamage, attackKind, entityType, blockbenchModelId, MonsterDimensions.DEFAULT, 0, count);
+    }
+
+    public WaveMonsterEntry(
+            String id,
+            double health,
+            double armor,
+            double attackDamage,
+            AttackKind attackKind,
+            String entityType,
+            String blockbenchModelId,
+            long mineralReward,
+            int count
+    ) {
+        this(id, health, armor, attackDamage, attackKind, entityType, blockbenchModelId, MonsterDimensions.DEFAULT, mineralReward, count);
+    }
+
+    public WaveMonsterEntry(
+            String id,
+            double health,
+            double armor,
+            double attackDamage,
+            AttackKind attackKind,
+            String entityType,
+            String blockbenchModelId,
+            MonsterDimensions dimensions,
+            int count
+    ) {
+        this(id, health, armor, attackDamage, attackKind, entityType, blockbenchModelId, dimensions, 0, count);
     }
 
     public WaveMonsterEntry {
@@ -37,6 +68,7 @@ public record WaveMonsterEntry(
         if (attackKind == null) {
             attackKind = AttackKind.MELEE;
         }
+        dimensions = MonsterDimensions.orDefault(dimensions);
         boolean hasEntityType = entityType != null && !entityType.isBlank();
         boolean hasBlockbenchModel = blockbenchModelId != null && !blockbenchModelId.isBlank();
         if (!hasEntityType && !hasBlockbenchModel) {

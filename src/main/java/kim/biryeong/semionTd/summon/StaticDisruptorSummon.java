@@ -8,7 +8,7 @@ public final class StaticDisruptorSummon extends SummonMonsterType {
     public StaticDisruptorSummon() {
         super(
                 "static_disruptor",
-                "Static Disruptor",
+                SummonDisplayNames.STATIC_OWL,
                 65,
                 4,
                 55,
@@ -16,7 +16,7 @@ public final class StaticDisruptorSummon extends SummonMonsterType {
                 4,
                 AttackKind.RANGED,
                 "minecraft:witch",
-                null,
+                "semion-td:summon/t2_static_owl",
                 DamageType.MAGIC,
                 3,
                 SummonTier.T2,

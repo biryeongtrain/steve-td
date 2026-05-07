@@ -8,7 +8,7 @@ public final class GruntSummon extends SummonMonsterType {
     public GruntSummon() {
         super(
                 "grunt",
-                "Grunt",
+                SummonDisplayNames.FOX_KIT,
                 20,
                 2,
                 50,
@@ -16,7 +16,7 @@ public final class GruntSummon extends SummonMonsterType {
                 5,
                 AttackKind.MELEE,
                 "minecraft:zombie",
-                null,
+                "semion-td:summon/t1_fox_kit",
                 DamageType.PHYSICAL,
                 0,
                 SummonTier.T1,

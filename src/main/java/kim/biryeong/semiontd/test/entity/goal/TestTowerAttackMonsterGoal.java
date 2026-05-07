@@ -7,7 +7,6 @@ import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.visual.SemionAnimationState;
 import kim.biryeong.semiontd.test.entity.SemionTestTowerEntity;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.phys.AABB;
 
@@ -75,16 +74,13 @@ public final class TestTowerAttackMonsterGoal extends Goal {
         if (runtimeMonster != null) {
             runtimeMonster.recordLastHit(tower.ownerPlayer(), KillSourceKind.TOWER);
         }
+        double damageAmount = target.towerDamageTaken(tower.attackDamageAmount());
 
         float previousHealth = target.getHealth();
-        boolean damaged = tower.level() instanceof ServerLevel serverLevel
-                && tower.doHurtTarget(serverLevel, target);
-        if (!damaged) {
-            target.hurt(tower.damageSources().mobAttack(tower), (float) tower.attackDamageAmount());
-            damaged = target.getHealth() < previousHealth - 0.01F;
-        }
+        target.hurt(tower.damageSources().mobAttack(tower), (float) damageAmount);
+        boolean damaged = target.getHealth() < previousHealth - 0.01F;
         if (!damaged || target.getHealth() >= previousHealth - 0.01F) {
-            float nextHealth = Math.max(0.0F, previousHealth - (float) tower.attackDamageAmount());
+            float nextHealth = Math.max(0.0F, previousHealth - (float) damageAmount);
             target.setHealth(nextHealth);
             if (runtimeMonster != null) {
                 runtimeMonster.syncHealth(nextHealth);

@@ -4,6 +4,7 @@
   "package": "kim.biryeong.semiontd.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "BezierInterpolatorMixin"
   ],
   "client": [
   ],

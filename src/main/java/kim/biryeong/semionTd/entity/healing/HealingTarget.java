@@ -8,4 +8,7 @@ public interface HealingTarget {
     double missingHealingHealth();
 
     boolean receiveHealing(double amount);
+
+    default void playHealingAnimation() {
+    }
 }

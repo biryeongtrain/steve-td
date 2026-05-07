@@ -7,6 +7,8 @@ import eu.pb4.polymer.virtualentity.api.attachment.EntityAttachment;
 import java.util.ArrayList;
 import java.util.List;
 import kim.biryeong.semiontd.config.AttackKind;
+import kim.biryeong.semiontd.effect.TimedEffectSet;
+import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.defender.LaneDefenseEntity;
 import kim.biryeong.semiontd.entity.healing.HealingTarget;
 import kim.biryeong.semiontd.entity.model.SemionBilModelCache;
@@ -20,8 +22,10 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -42,8 +46,10 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
     private Monster runtimeMonster;
     private LaneRegionLayout laneLayout;
     private String blockbenchModelId;
+    private EntityDimensions runtimeDimensions = MonsterDimensions.DEFAULT.toEntityDimensions();
     private SemionAnimationState animationState = SemionAnimationState.IDLE;
     private final List<Goal> summonAbilityGoals = new ArrayList<>();
+    private final TimedEffectSet timedEffects = new TimedEffectSet();
     private LivingEntityHolder<SemionMonsterEntity> holder;
     private EntityAttachment holderAttachment;
 
@@ -86,6 +92,8 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         this.runtimeMonster = monster;
         this.laneLayout = laneLayout;
         this.blockbenchModelId = monster.blockbenchModelId().orElse(null);
+        this.runtimeDimensions = monster.dimensions().toEntityDimensions();
+        refreshDimensions();
         setCustomName(Component.literal(monster.id()));
         setCustomNameVisible(true);
         setPolymerEntityType(monster.entityTypeId());
@@ -100,8 +108,14 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
     }
 
     @Override
+    protected EntityDimensions getDefaultDimensions(Pose pose) {
+        return runtimeDimensions.scale(getAgeScale());
+    }
+
+    @Override
     public void aiStep() {
         super.aiStep();
+        timedEffects.tick();
 
         if (getTarget() instanceof LaneDefenseEntity defenseEntity && runtimeMonster != null) {
             if (!getTarget().isAlive() || !defenseEntity.defendsLane(runtimeMonster.targetLaneId())) {
@@ -177,6 +191,11 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         return true;
     }
 
+    @Override
+    public void playHealingAnimation() {
+        playAnimation(SemionAnimationState.HEAL);
+    }
+
     public String blockbenchModelId() {
         return blockbenchModelId;
     }
@@ -193,13 +212,13 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         if (animationState == null) {
             return;
         }
-        if (holder != null && (this.animationState != animationState || animationState == SemionAnimationState.ATTACK)) {
+        if (holder != null && (this.animationState != animationState || animationState == SemionAnimationState.ATTACK || animationState == SemionAnimationState.HEAL)) {
             for (SemionAnimationState state : SemionAnimationState.values()) {
                 if (state != animationState) {
                     holder.getAnimator().pauseAnimation(state.animationId());
                 }
             }
-            holder.getAnimator().playAnimation(animationState.animationId(), animationState == SemionAnimationState.ATTACK ? 10 : 1, true);
+            holder.getAnimator().playAnimation(animationState.animationId(), animationState == SemionAnimationState.ATTACK || animationState == SemionAnimationState.HEAL ? 10 : 1, true);
         }
         this.animationState = animationState;
     }
@@ -213,6 +232,27 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
 
     public int attackIntervalTicks() {
         return DEFAULT_ATTACK_INTERVAL_TICKS;
+    }
+
+    public void applyTimedEffect(TimedEffectType type, double magnitude, int durationTicks) {
+        timedEffects.apply(type, magnitude, durationTicks);
+    }
+
+    public double activeTimedEffectMagnitude(TimedEffectType type) {
+        return timedEffects.magnitude(type);
+    }
+
+    public int activeTimedEffectTicks(TimedEffectType type) {
+        return timedEffects.remainingTicks(type);
+    }
+
+    public double movementSpeedMultiplier() {
+        return 1.0 + timedEffects.magnitude(TimedEffectType.MONSTER_MOVE_SPEED_BONUS);
+    }
+
+    public double towerDamageTaken(double baseDamage) {
+        double damageReduction = timedEffects.magnitude(TimedEffectType.MONSTER_DAMAGE_REDUCTION);
+        return Math.max(0.0, baseDamage) * (1.0 - damageReduction);
     }
 
     private double followRangeFor(Monster monster) {

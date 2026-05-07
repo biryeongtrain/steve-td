@@ -8,7 +8,7 @@ public final class SkitterSwarmSummon extends SummonMonsterType {
     public SkitterSwarmSummon() {
         super(
                 "skitter_swarm",
-                "Skitter Swarm",
+                SummonDisplayNames.HONEY_BEE,
                 30,
                 3,
                 24,
@@ -16,7 +16,7 @@ public final class SkitterSwarmSummon extends SummonMonsterType {
                 3,
                 AttackKind.MELEE,
                 "minecraft:silverfish",
-                null,
+                "semion-td:summon/t1_honey_bee",
                 DamageType.PHYSICAL,
                 0,
                 SummonTier.T1,

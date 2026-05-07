@@ -8,7 +8,7 @@ public final class WardTankSummon extends SummonMonsterType {
     public WardTankSummon() {
         super(
                 "ward_tank",
-                "Ward Tank",
+                SummonDisplayNames.WARD_RAM,
                 75,
                 5,
                 115,
@@ -16,7 +16,7 @@ public final class WardTankSummon extends SummonMonsterType {
                 6,
                 AttackKind.MELEE,
                 "minecraft:zombie_villager",
-                null,
+                "semion-td:summon/t2_ward_ram",
                 DamageType.MAGIC,
                 8,
                 SummonTier.T2,

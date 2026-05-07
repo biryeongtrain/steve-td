@@ -12,7 +12,7 @@ public final class PulseSupportSummon extends SummonMonsterType {
     public PulseSupportSummon() {
         super(
                 "pulse_support",
-                "Pulse Support",
+                SummonDisplayNames.PULSE_FAWN,
                 75,
                 5,
                 60,
@@ -20,7 +20,7 @@ public final class PulseSupportSummon extends SummonMonsterType {
                 3,
                 AttackKind.RANGED,
                 "minecraft:evoker",
-                null,
+                "semion-td:summon/t2_pulse_fawn",
                 DamageType.MAGIC,
                 4,
                 SummonTier.T2,

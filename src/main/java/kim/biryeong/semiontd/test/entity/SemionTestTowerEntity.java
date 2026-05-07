@@ -5,6 +5,8 @@ import de.tomalbrc.bil.api.AnimatedEntityHolder;
 import de.tomalbrc.bil.core.holder.entity.living.LivingEntityHolder;
 import eu.pb4.polymer.virtualentity.api.attachment.EntityAttachment;
 import java.util.UUID;
+import kim.biryeong.semiontd.effect.TimedEffectSet;
+import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.defender.LaneDefenseEntity;
 import kim.biryeong.semiontd.entity.healing.HealingTarget;
 import kim.biryeong.semiontd.entity.model.SemionBilModelCache;
@@ -45,6 +47,7 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
     private String blockbenchModelId;
     private SemionAnimationState animationState = SemionAnimationState.IDLE;
     private EntityType<?> polymerEntityType = EntityType.ARMOR_STAND;
+    private final TimedEffectSet timedEffects = new TimedEffectSet();
     private LivingEntityHolder<SemionTestTowerEntity> holder;
     private EntityAttachment holderAttachment;
 
@@ -105,12 +108,18 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
     }
 
     @Override
+    public void aiStep() {
+        super.aiStep();
+        timedEffects.tick();
+    }
+
+    @Override
     public int aggroPriority() {
         return aggroPriority;
     }
 
     public double attackRange() {
-        return attackRange;
+        return attackRange * (1.0 - timedEffects.magnitude(TimedEffectType.TOWER_RANGE_REDUCTION));
     }
 
     public double targetAcquireRange() {
@@ -133,7 +142,20 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
     }
 
     public int attackIntervalTicks() {
-        return attackIntervalTicks;
+        double attackSpeedMultiplier = 1.0 - timedEffects.magnitude(TimedEffectType.TOWER_ATTACK_SPEED_REDUCTION);
+        return Math.max(1, (int) Math.ceil(attackIntervalTicks / Math.max(0.01, attackSpeedMultiplier)));
+    }
+
+    public void applyTimedEffect(TimedEffectType type, double magnitude, int durationTicks) {
+        timedEffects.apply(type, magnitude, durationTicks);
+    }
+
+    public double activeTimedEffectMagnitude(TimedEffectType type) {
+        return timedEffects.magnitude(type);
+    }
+
+    public int activeTimedEffectTicks(TimedEffectType type) {
+        return timedEffects.remainingTicks(type);
     }
 
     public String blockbenchModelId() {
@@ -148,17 +170,22 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
         return animationState;
     }
 
+    @Override
+    public void playHealingAnimation() {
+        playAnimation(SemionAnimationState.HEAL);
+    }
+
     public void playAnimation(SemionAnimationState animationState) {
         if (animationState == null) {
             return;
         }
-        if (holder != null && (this.animationState != animationState || animationState == SemionAnimationState.ATTACK)) {
+        if (holder != null && (this.animationState != animationState || animationState == SemionAnimationState.ATTACK || animationState == SemionAnimationState.HEAL)) {
             for (SemionAnimationState state : SemionAnimationState.values()) {
                 if (state != animationState) {
                     holder.getAnimator().pauseAnimation(state.animationId());
                 }
             }
-            holder.getAnimator().playAnimation(animationState.animationId(), animationState == SemionAnimationState.ATTACK ? 10 : 1, true);
+            holder.getAnimator().playAnimation(animationState.animationId(), animationState == SemionAnimationState.ATTACK || animationState == SemionAnimationState.HEAL ? 10 : 1, true);
         }
         this.animationState = animationState;
     }

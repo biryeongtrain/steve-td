@@ -39,7 +39,11 @@ public final class AreaAllyHealGoal<T extends PathfinderMob & HealingTarget> ext
                 break;
             }
         }
-        return healedTargets > 0;
+        if (healedTargets <= 0) {
+            return false;
+        }
+        caster.playHealingAnimation();
+        return true;
     }
 
     private boolean canHeal(T candidate) {

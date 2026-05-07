@@ -8,7 +8,7 @@ public final class IroncladTankSummon extends SummonMonsterType {
     public IroncladTankSummon() {
         super(
                 "ironclad_tank",
-                "Ironclad Tank",
+                SummonDisplayNames.IRONCLAD_BOAR,
                 70,
                 5,
                 130,
@@ -16,7 +16,7 @@ public final class IroncladTankSummon extends SummonMonsterType {
                 7,
                 AttackKind.MELEE,
                 "minecraft:husk",
-                null,
+                "semion-td:summon/t2_ironclad_boar",
                 DamageType.PHYSICAL,
                 1,
                 SummonTier.T2,

@@ -27,6 +27,7 @@ public final class Monster {
     private final DamageType damageType;
     private final String entityTypeId;
     private final String blockbenchModelId;
+    private final MonsterDimensions dimensions;
     private final long mineralReward;
     private final SummonTier summonTier;
     private final List<SummonRole> summonRoles;
@@ -68,6 +69,43 @@ public final class Monster {
                 null,
                 DamageType.PHYSICAL,
                 0,
+                MonsterDimensions.DEFAULT,
+                null,
+                List.of(),
+                mineralReward
+        );
+    }
+
+    public Monster(
+            String id,
+            TeamId targetTeam,
+            int targetLaneId,
+            Optional<UUID> ownerPlayer,
+            Optional<TeamId> senderTeam,
+            double maxHealth,
+            double armor,
+            double attackDamage,
+            AttackKind attackKind,
+            String entityTypeId,
+            String blockbenchModelId,
+            MonsterDimensions dimensions,
+            long mineralReward
+    ) {
+        this(
+                id,
+                targetTeam,
+                targetLaneId,
+                ownerPlayer,
+                senderTeam,
+                maxHealth,
+                armor,
+                attackDamage,
+                attackKind,
+                entityTypeId,
+                blockbenchModelId,
+                DamageType.PHYSICAL,
+                0,
+                dimensions,
                 null,
                 List.of(),
                 mineralReward
@@ -102,6 +140,7 @@ public final class Monster {
                 blockbenchModelId,
                 DamageType.PHYSICAL,
                 0,
+                MonsterDimensions.DEFAULT,
                 null,
                 List.of(),
                 mineralReward
@@ -126,6 +165,46 @@ public final class Monster {
             List<SummonRole> summonRoles,
             long mineralReward
     ) {
+        this(
+                id,
+                targetTeam,
+                targetLaneId,
+                ownerPlayer,
+                senderTeam,
+                maxHealth,
+                armor,
+                attackDamage,
+                attackKind,
+                entityTypeId,
+                blockbenchModelId,
+                damageType,
+                resistance,
+                MonsterDimensions.DEFAULT,
+                summonTier,
+                summonRoles,
+                mineralReward
+        );
+    }
+
+    public Monster(
+            String id,
+            TeamId targetTeam,
+            int targetLaneId,
+            Optional<UUID> ownerPlayer,
+            Optional<TeamId> senderTeam,
+            double maxHealth,
+            double armor,
+            double attackDamage,
+            AttackKind attackKind,
+            String entityTypeId,
+            String blockbenchModelId,
+            DamageType damageType,
+            double resistance,
+            MonsterDimensions dimensions,
+            SummonTier summonTier,
+            List<SummonRole> summonRoles,
+            long mineralReward
+    ) {
         this.id = id;
         this.targetTeam = targetTeam;
         this.targetLaneId = targetLaneId;
@@ -140,6 +219,7 @@ public final class Monster {
         String normalizedEntityTypeId = SemionBilModelCache.normalize(entityTypeId);
         this.blockbenchModelId = SemionBilModelCache.normalize(blockbenchModelId);
         this.entityTypeId = normalizedEntityTypeId == null && this.blockbenchModelId == null ? "minecraft:zombie" : normalizedEntityTypeId;
+        this.dimensions = MonsterDimensions.orDefault(dimensions);
         this.mineralReward = mineralReward;
         this.summonTier = summonTier;
         this.summonRoles = summonRoles == null ? List.of() : List.copyOf(summonRoles);
@@ -159,6 +239,7 @@ public final class Monster {
                 entry.attackKind(),
                 entry.entityType(),
                 entry.blockbenchModelId(),
+                entry.dimensions(),
                 entry.mineralReward()
         );
     }
@@ -241,6 +322,10 @@ public final class Monster {
 
     public Optional<String> blockbenchModelId() {
         return Optional.ofNullable(blockbenchModelId);
+    }
+
+    public MonsterDimensions dimensions() {
+        return dimensions;
     }
 
     public int minecraftEntityId() {

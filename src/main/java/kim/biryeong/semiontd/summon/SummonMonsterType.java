@@ -7,6 +7,7 @@ import java.util.UUID;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.Monster;
+import kim.biryeong.semiontd.entity.monster.MonsterDimensions;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.model.SemionBilModelCache;
 import kim.biryeong.semiontd.game.TeamId;
@@ -25,6 +26,7 @@ public abstract class SummonMonsterType {
     private final DamageType damageType;
     private final String entityTypeId;
     private final String blockbenchModelId;
+    private final MonsterDimensions dimensions;
     private final long mineralReward;
     private final SummonTier tier;
     private final List<SummonRole> roles;
@@ -53,6 +55,7 @@ public abstract class SummonMonsterType {
                 attackKind,
                 entityTypeId,
                 null,
+                MonsterDimensions.DEFAULT,
                 DamageType.PHYSICAL,
                 0,
                 SummonTier.T1,
@@ -86,6 +89,7 @@ public abstract class SummonMonsterType {
                 attackKind,
                 entityTypeId,
                 blockbenchModelId,
+                MonsterDimensions.DEFAULT,
                 DamageType.PHYSICAL,
                 0,
                 SummonTier.T1,
@@ -113,6 +117,46 @@ public abstract class SummonMonsterType {
             List<SummonAbilityActivation> abilityActivations,
             long mineralReward
     ) {
+        this(
+                id,
+                displayName,
+                gasCost,
+                incomeGain,
+                maxHealth,
+                armor,
+                attackDamage,
+                attackKind,
+                entityTypeId,
+                blockbenchModelId,
+                MonsterDimensions.DEFAULT,
+                damageType,
+                resistance,
+                tier,
+                roles,
+                abilityActivations,
+                mineralReward
+        );
+    }
+
+    protected SummonMonsterType(
+            String id,
+            String displayName,
+            long gasCost,
+            long incomeGain,
+            double maxHealth,
+            double armor,
+            double attackDamage,
+            AttackKind attackKind,
+            String entityTypeId,
+            String blockbenchModelId,
+            MonsterDimensions dimensions,
+            DamageType damageType,
+            double resistance,
+            SummonTier tier,
+            List<SummonRole> roles,
+            List<SummonAbilityActivation> abilityActivations,
+            long mineralReward
+    ) {
         if (id == null || id.isBlank()) {
             throw new IllegalArgumentException("Summon monster id cannot be blank.");
         }
@@ -133,6 +177,7 @@ public abstract class SummonMonsterType {
         String normalizedEntityTypeId = SemionBilModelCache.normalize(entityTypeId);
         this.blockbenchModelId = SemionBilModelCache.normalize(blockbenchModelId);
         this.entityTypeId = normalizedEntityTypeId == null && this.blockbenchModelId == null ? "minecraft:zombie" : normalizedEntityTypeId;
+        this.dimensions = MonsterDimensions.orDefault(dimensions);
         this.mineralReward = mineralReward;
         this.tier = tier == null ? SummonTier.T1 : tier;
         this.roles = roles == null || roles.isEmpty() ? List.of(SummonRole.RUSH) : List.copyOf(roles);
@@ -187,6 +232,10 @@ public abstract class SummonMonsterType {
         return Optional.ofNullable(blockbenchModelId);
     }
 
+    public final MonsterDimensions dimensions() {
+        return dimensions;
+    }
+
     public final long mineralReward() {
         return mineralReward;
     }
@@ -229,6 +278,7 @@ public abstract class SummonMonsterType {
                 blockbenchModelId,
                 damageType,
                 resistance,
+                dimensions,
                 tier,
                 roles,
                 mineralReward

@@ -14,15 +14,22 @@ import kim.biryeong.semiontd.config.CurrencyType;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.SemionConfigLoader;
 import kim.biryeong.semiontd.config.WaveMonsterEntry;
+import kim.biryeong.semiontd.effect.TimedEffectSet;
+import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
 import kim.biryeong.semiontd.entity.boss.SemionBossEntity;
+import kim.biryeong.semiontd.entity.boss.BossMonster;
 import kim.biryeong.semiontd.entity.defender.DefenderEntity;
 import kim.biryeong.semiontd.entity.defender.DefenderEntityState;
 import kim.biryeong.semiontd.entity.goal.AreaAllyHealGoal;
+import kim.biryeong.semiontd.entity.goal.ApplyTowerTimedEffectGoal;
+import kim.biryeong.semiontd.entity.goal.SiegeTrueDamageGoal;
 import kim.biryeong.semiontd.entity.goal.SingleAllyHealGoal;
+import kim.biryeong.semiontd.entity.model.SemionBilModelCache;
 import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.KillSourceKind;
 import kim.biryeong.semiontd.entity.monster.Monster;
+import kim.biryeong.semiontd.entity.monster.MonsterDimensions;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.visual.SemionAnimationState;
 import kim.biryeong.semiontd.config.WaveConfig;
@@ -48,6 +55,7 @@ import kim.biryeong.semiontd.test.tower.TestTower;
 import kim.biryeong.semiontd.summon.SummonAbilityActivation;
 import kim.biryeong.semiontd.summon.SummonBalancePolicy;
 import kim.biryeong.semiontd.summon.SummonContext;
+import kim.biryeong.semiontd.summon.SummonDisplayNames;
 import kim.biryeong.semiontd.summon.SummonMonsterType;
 import kim.biryeong.semiontd.summon.SummonRegistry;
 import kim.biryeong.semiontd.summon.SummonRole;
@@ -1625,12 +1633,39 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     @GameTest
     public void summonRegistryProvidesPlannedRoleTierCatalog(GameTestHelper context) {
         var swarm = SummonRegistry.find("skitter_swarm");
+        var quiltGuard = SummonRegistry.find("quilt_guard");
+        var staticBobbin = SummonRegistry.find("static_bobbin");
+        var buttonNurse = SummonRegistry.find("button_nurse");
+        var popperPod = SummonRegistry.find("popper_pod");
         var tank = SummonRegistry.find("ironclad_tank");
         var wardTank = SummonRegistry.find("ward_tank");
         var disruptor = SummonRegistry.find("static_disruptor");
         var support = SummonRegistry.find("pulse_support");
+        var galeFerret = SummonRegistry.find("gale_ferret");
+        var bulwarkBison = SummonRegistry.find("bulwark_bison");
+        var wizardCat = SummonRegistry.find("wizard_cat");
+        var groveAlpaca = SummonRegistry.find("grove_alpaca");
+        var stormLynx = SummonRegistry.find("storm_lynx");
+        var aegisGolem = SummonRegistry.find("aegis_golem");
+        var nullImp = SummonRegistry.find("null_imp");
+        var elderSprite = SummonRegistry.find("elder_sprite");
+        var bombardToad = SummonRegistry.find("bombard_toad");
         var siege = SummonRegistry.find("siege_breaker");
+        var apexWarden = SummonRegistry.find("apex_warden");
+        var oraclePhoenix = SummonRegistry.find("oracle_phoenix");
         if (!assertPresent(context, swarm, "Summon registry should provide T1 swarm content.")) {
+            return;
+        }
+        if (!assertPresent(context, quiltGuard, "Summon registry should provide T1 tank content.")) {
+            return;
+        }
+        if (!assertPresent(context, staticBobbin, "Summon registry should provide T1 disruptor content.")) {
+            return;
+        }
+        if (!assertPresent(context, buttonNurse, "Summon registry should provide T1 support content.")) {
+            return;
+        }
+        if (!assertPresent(context, popperPod, "Summon registry should provide T1 siege content.")) {
             return;
         }
         if (!assertPresent(context, tank, "Summon registry should provide armor tank content.")) {
@@ -1645,10 +1680,70 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertPresent(context, support, "Summon registry should provide low-tier support content.")) {
             return;
         }
+        if (!assertPresent(context, galeFerret, "Summon registry should provide T3 rush content.")) {
+            return;
+        }
+        if (!assertPresent(context, bulwarkBison, "Summon registry should provide T3 tank content.")) {
+            return;
+        }
+        if (!assertPresent(context, wizardCat, "Summon registry should provide T3 disruptor content.")) {
+            return;
+        }
+        if (!assertPresent(context, groveAlpaca, "Summon registry should provide T3 support content.")) {
+            return;
+        }
+        if (!assertPresent(context, stormLynx, "Summon registry should provide T4 rush content.")) {
+            return;
+        }
+        if (!assertPresent(context, aegisGolem, "Summon registry should provide T4 tank content.")) {
+            return;
+        }
+        if (!assertPresent(context, nullImp, "Summon registry should provide T4 disruptor content.")) {
+            return;
+        }
+        if (!assertPresent(context, elderSprite, "Summon registry should provide T4 support content.")) {
+            return;
+        }
+        if (!assertPresent(context, bombardToad, "Summon registry should provide T4 siege content.")) {
+            return;
+        }
         if (!assertPresent(context, siege, "Summon registry should provide siege content.")) {
             return;
         }
+        if (!assertPresent(context, apexWarden, "Summon registry should provide T5 tank/disruptor content.")) {
+            return;
+        }
+        if (!assertPresent(context, oraclePhoenix, "Summon registry should provide T5 support/disruptor content.")) {
+            return;
+        }
         if (!assertEquals(context, SummonTier.T1, swarm.get().tier(), "Swarm baseline should be a T1 pressure summon.")) {
+            return;
+        }
+        if (!assertEquals(context, SummonTier.T1, quiltGuard.get().tier(), "Quilt guard should be the T1 tank baseline.")) {
+            return;
+        }
+        if (!assertTrue(context, quiltGuard.get().roles().contains(SummonRole.TANK), "Quilt guard should be a tank role summon.")) {
+            return;
+        }
+        if (!assertEquals(context, SummonTier.T1, staticBobbin.get().tier(), "Static bobbin should be the T1 disruptor baseline.")) {
+            return;
+        }
+        if (!assertTrue(context, staticBobbin.get().roles().contains(SummonRole.DISRUPTOR), "Static bobbin should be a disruptor role summon.")) {
+            return;
+        }
+        if (!assertEquals(context, SummonTier.T1, buttonNurse.get().tier(), "Button nurse should be the T1 support baseline.")) {
+            return;
+        }
+        if (!assertTrue(context, buttonNurse.get().abilityActivations().contains(SummonAbilityActivation.COOLDOWN), "Button nurse should use cooldown support abilities.")) {
+            return;
+        }
+        if (!assertEquals(context, SummonTier.T1, popperPod.get().tier(), "Popper pod should be the T1 siege baseline.")) {
+            return;
+        }
+        if (!assertTrue(context, popperPod.get().roles().contains(SummonRole.SIEGE), "Popper pod should be a siege role summon.")) {
+            return;
+        }
+        if (!assertEquals(context, SummonDisplayNames.PINCER_CRAB, popperPod.get().displayName(), "Summon display names should be editable from the central name catalog.")) {
             return;
         }
         if (!assertTrue(context, tank.get().roles().contains(SummonRole.TANK), "Ironclad should be a tank role summon.")) {
@@ -1663,7 +1758,88 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertTrue(context, support.get().abilityActivations().contains(SummonAbilityActivation.COOLDOWN), "Low-tier support should be allowed to use cooldown abilities.")) {
             return;
         }
-        if (!assertEquals(context, SummonTier.T3, siege.get().tier(), "Siege baseline should start at T3.")) {
+        if (!assertEquals(context, SummonTier.T3, galeFerret.get().tier(), "Gale ferret should be the T3 rush baseline.")) {
+            return;
+        }
+        if (!assertTrue(context, galeFerret.get().roles().contains(SummonRole.RUSH), "Gale ferret should be a rush role summon.")) {
+            return;
+        }
+        if (!assertEquals(context, SummonTier.T3, bulwarkBison.get().tier(), "Bulwark bison should be the T3 tank baseline.")) {
+            return;
+        }
+        if (!assertEquals(context, MonsterDimensions.of(1.35, 1.15), bulwarkBison.get().dimensions(), "Bulwark bison should define its larger gameplay hitbox.")) {
+            return;
+        }
+        if (!assertEquals(context, SummonTier.T3, wizardCat.get().tier(), "Wizard cat should be the T3 disruptor baseline.")) {
+            return;
+        }
+        if (!assertTrue(context, wizardCat.get().abilityActivations().contains(SummonAbilityActivation.COOLDOWN), "T3 disruptor should use cooldown abilities.")) {
+            return;
+        }
+        if (!assertEquals(context, SummonTier.T3, groveAlpaca.get().tier(), "Grove alpaca should be the T3 support baseline.")) {
+            return;
+        }
+        if (!assertTrue(context, groveAlpaca.get().abilityActivations().contains(SummonAbilityActivation.COOLDOWN), "T3 support should use cooldown abilities.")) {
+            return;
+        }
+        if (!assertEquals(context, SummonTier.T4, stormLynx.get().tier(), "Storm lynx should be the T4 rush baseline.")) {
+            return;
+        }
+        if (!assertTrue(context, stormLynx.get().blockbenchModelId().isEmpty(), "T4 rush should not require an authored Blockbench model yet.")) {
+            return;
+        }
+        if (!assertEquals(context, SummonTier.T4, aegisGolem.get().tier(), "Aegis golem should be the T4 tank baseline.")) {
+            return;
+        }
+        if (!assertEquals(context, MonsterDimensions.of(1.4, 2.2), aegisGolem.get().dimensions(), "Aegis golem should define a larger vanilla fallback hitbox.")) {
+            return;
+        }
+        if (!assertEquals(context, SummonTier.T4, nullImp.get().tier(), "Null imp should be the T4 disruptor baseline.")) {
+            return;
+        }
+        if (!assertTrue(context, nullImp.get().abilityActivations().contains(SummonAbilityActivation.COOLDOWN), "T4 disruptor should use cooldown abilities.")) {
+            return;
+        }
+        if (!assertEquals(context, SummonTier.T4, elderSprite.get().tier(), "Elder sprite should be the T4 support baseline.")) {
+            return;
+        }
+        if (!assertTrue(context, elderSprite.get().blockbenchModelId().isEmpty(), "T4 support should use vanilla visuals until a model is authored.")) {
+            return;
+        }
+        if (!assertEquals(context, SummonTier.T4, bombardToad.get().tier(), "Bombard toad should be the T4 siege baseline.")) {
+            return;
+        }
+        if (!assertTrue(context, bombardToad.get().roles().contains(SummonRole.SIEGE), "Bombard toad should be a siege role summon.")) {
+            return;
+        }
+        if (!assertEquals(context, SummonTier.T5, siege.get().tier(), "Siege breaker should be promoted to the T5 tank model slot.")) {
+            return;
+        }
+        if (!assertEquals(context, MonsterDimensions.of(2.0, 1.35), siege.get().dimensions(), "Siege baseline should define a larger gameplay hitbox.")) {
+            return;
+        }
+        if (!assertEquals(context, SummonTier.T5, apexWarden.get().tier(), "Apex warden should be the T5 tank/disruptor baseline.")) {
+            return;
+        }
+        if (!assertTrue(context, apexWarden.get().roles().contains(SummonRole.TANK), "Apex warden should keep the tank role.")) {
+            return;
+        }
+        if (!assertTrue(context, apexWarden.get().roles().contains(SummonRole.DISRUPTOR), "Apex warden should keep the disruptor role.")) {
+            return;
+        }
+        if (!assertTrue(context, apexWarden.get().blockbenchModelId().isEmpty(), "New T5 tank/disruptor should not require an authored Blockbench model yet.")) {
+            return;
+        }
+        if (!assertEquals(context, SummonTier.T5, oraclePhoenix.get().tier(), "Oracle phoenix should be the T5 support/disruptor baseline.")) {
+            return;
+        }
+        if (!assertTrue(context, oraclePhoenix.get().roles().contains(SummonRole.SUPPORT), "Oracle phoenix should keep the support role.")) {
+            return;
+        }
+        if (!assertTrue(context, oraclePhoenix.get().roles().contains(SummonRole.DISRUPTOR), "Oracle phoenix should keep the disruptor role.")) {
+            return;
+        }
+        if (!assertTrue(context, oraclePhoenix.get().blockbenchModelId().isEmpty(), "New T5 support/disruptor should not require an authored Blockbench model yet.")) {
             return;
         }
         context.succeed();
@@ -1789,6 +1965,9 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
         new SingleAllyHealGoal<>(caster, SemionMonsterEntity.class, 8.0, 12.0, 80, 10).tick();
 
+        if (!assertEquals(context, SemionAnimationState.HEAL, caster.animationState(), "Successful single heal should play the caster heal animation.")) {
+            return;
+        }
         if (!assertEquals(context, 90.0, lightInjury.runtimeMonster().health(), "Single heal should not heal the less injured friendly summon.")) {
             return;
         }
@@ -1826,6 +2005,166 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertEquals(context, 90.0, enemy.runtimeMonster().health(), "Area heal should ignore another sender team's summon.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void timedEffectsKeepStrongestMagnitudeCapAndRefreshDuration(GameTestHelper context) {
+        TimedEffectSet effects = new TimedEffectSet();
+        effects.apply(TimedEffectType.MONSTER_MOVE_SPEED_BONUS, 0.50, 10);
+        if (!assertEquals(context, 0.30, effects.magnitude(TimedEffectType.MONSTER_MOVE_SPEED_BONUS), "Timed effects should clamp to the balance cap.")) {
+            return;
+        }
+        effects.apply(TimedEffectType.MONSTER_MOVE_SPEED_BONUS, 0.20, 50);
+        if (!assertEquals(context, 0.30, effects.magnitude(TimedEffectType.MONSTER_MOVE_SPEED_BONUS), "Lower magnitude should not replace a stronger active effect.")) {
+            return;
+        }
+        if (!assertEquals(context, 10, effects.remainingTicks(TimedEffectType.MONSTER_MOVE_SPEED_BONUS), "Lower magnitude should not refresh the stronger effect duration.")) {
+            return;
+        }
+        effects.apply(TimedEffectType.MONSTER_MOVE_SPEED_BONUS, 0.30, 40);
+        if (!assertEquals(context, 40, effects.remainingTicks(TimedEffectType.MONSTER_MOVE_SPEED_BONUS), "Equal magnitude should refresh the active effect duration.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void nullImpDebuffsOnlyNearestTargetLaneTower(GameTestHelper context) {
+        Vec3 origin = Vec3.atCenterOf(context.absolutePos(BlockPos.ZERO));
+        SemionMonsterEntity caster = spawnSummonEntity(context, "null_imp", TeamId.RED, TeamId.BLUE, 1, origin, 100.0, 0.0);
+        SemionTestTowerEntity wrongTeam = spawnTowerEntity(context, TeamId.RED, 1, origin.add(1.0, 0.0, 0.0), TestTowerTypes.TEST_DIRECT);
+        SemionTestTowerEntity wrongLane = spawnTowerEntity(context, TeamId.BLUE, 2, origin.add(2.0, 0.0, 0.0), TestTowerTypes.TEST_DIRECT);
+        SemionTestTowerEntity target = spawnTowerEntity(context, TeamId.BLUE, 1, origin.add(3.0, 0.0, 0.0), TestTowerTypes.TEST_DIRECT);
+        SemionTestTowerEntity fartherTarget = spawnTowerEntity(context, TeamId.BLUE, 1, origin.add(4.0, 0.0, 0.0), TestTowerTypes.TEST_DIRECT);
+
+        new ApplyTowerTimedEffectGoal(
+                caster,
+                TimedEffectType.TOWER_RANGE_REDUCTION,
+                SummonBalancePolicy.NULL_IMP_RANGE_REDUCTION,
+                SummonBalancePolicy.NULL_IMP_RANGE_RADIUS,
+                SummonBalancePolicy.NULL_IMP_RANGE_DURATION_TICKS,
+                SummonBalancePolicy.NULL_IMP_RANGE_COOLDOWN_TICKS,
+                SummonBalancePolicy.SUPPORT_HEAL_RETRY_TICKS,
+                1
+        ).tick();
+
+        if (!assertEquals(context, 0.0, wrongTeam.activeTimedEffectMagnitude(TimedEffectType.TOWER_RANGE_REDUCTION), "Null imp should ignore towers from the sender team.")) {
+            return;
+        }
+        if (!assertEquals(context, 0.0, wrongLane.activeTimedEffectMagnitude(TimedEffectType.TOWER_RANGE_REDUCTION), "Null imp should ignore towers on another lane.")) {
+            return;
+        }
+        if (!assertEquals(context, SummonBalancePolicy.NULL_IMP_RANGE_REDUCTION, target.activeTimedEffectMagnitude(TimedEffectType.TOWER_RANGE_REDUCTION), "Null imp should debuff the nearest target-lane enemy tower.")) {
+            return;
+        }
+        if (!assertEquals(context, 0.0, fartherTarget.activeTimedEffectMagnitude(TimedEffectType.TOWER_RANGE_REDUCTION), "Null imp should affect only one tower.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void apexWardenSlowsTowersAndReducesFriendlyTowerDamage(GameTestHelper context) {
+        Vec3 origin = Vec3.atCenterOf(context.absolutePos(BlockPos.ZERO));
+        SemionMonsterEntity caster = spawnSummonEntity(context, "apex_warden", TeamId.RED, TeamId.BLUE, 1, origin, 200.0, 0.0);
+        SemionMonsterEntity ally = spawnSummonEntity(context, "apex_ally", TeamId.RED, TeamId.BLUE, 1, origin.add(1.0, 0.0, 0.0), 100.0, 0.0);
+        SemionMonsterEntity enemy = spawnSummonEntity(context, "apex_enemy", TeamId.GREEN, TeamId.BLUE, 1, origin.add(2.0, 0.0, 0.0), 100.0, 0.0);
+        SemionTestTowerEntity tower = spawnTowerEntity(context, TeamId.BLUE, 1, origin.add(3.0, 0.0, 0.0), TestTowerTypes.TEST_DIRECT);
+
+        for (var goal : SummonRegistry.find("apex_warden").orElseThrow().createAbilityGoals(caster)) {
+            goal.tick();
+        }
+
+        if (!assertEquals(context, 31, tower.attackIntervalTicks(), "Apex warden should slow tower attack intervals by attack speed reduction.")) {
+            return;
+        }
+        if (!assertEquals(context, SummonBalancePolicy.APEX_WARDEN_DAMAGE_REDUCTION, ally.activeTimedEffectMagnitude(TimedEffectType.MONSTER_DAMAGE_REDUCTION), "Apex warden should protect friendly summons.")) {
+            return;
+        }
+        if (!assertEquals(context, 70.0, ally.towerDamageTaken(100.0), "Apex protection should reduce incoming tower damage.")) {
+            return;
+        }
+        if (!assertEquals(context, 0.0, enemy.activeTimedEffectMagnitude(TimedEffectType.MONSTER_DAMAGE_REDUCTION), "Apex warden should not protect another sender team's summons.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void oraclePhoenixHealsBlessesAlliesAndReducesTowerRange(GameTestHelper context) {
+        Vec3 origin = Vec3.atCenterOf(context.absolutePos(BlockPos.ZERO));
+        SemionMonsterEntity caster = spawnSummonEntity(context, "oracle_phoenix", TeamId.RED, TeamId.BLUE, 1, origin, 200.0, 0.0);
+        SemionMonsterEntity ally = spawnSummonEntity(context, "oracle_ally", TeamId.RED, TeamId.BLUE, 1, origin.add(1.0, 0.0, 0.0), 100.0, 20.0);
+        SemionMonsterEntity enemy = spawnSummonEntity(context, "oracle_enemy", TeamId.GREEN, TeamId.BLUE, 1, origin.add(2.0, 0.0, 0.0), 100.0, 20.0);
+        SemionTestTowerEntity tower = spawnTowerEntity(context, TeamId.BLUE, 1, origin.add(3.0, 0.0, 0.0), TestTowerTypes.TEST_DIRECT);
+
+        for (var goal : SummonRegistry.find("oracle_phoenix").orElseThrow().createAbilityGoals(caster)) {
+            goal.tick();
+        }
+
+        if (!assertTrue(context, ally.runtimeMonster().health() > 80.0, "Oracle phoenix should keep its existing support healing behavior.")) {
+            return;
+        }
+        if (!assertEquals(context, 80.0, enemy.runtimeMonster().health(), "Oracle phoenix should not heal another sender team's summon.")) {
+            return;
+        }
+        if (!assertEquals(context, 1.25, ally.movementSpeedMultiplier(), "Oracle phoenix should bless friendly summons with move speed.")) {
+            return;
+        }
+        if (!assertEquals(context, 6.0, tower.attackRange(), "Oracle phoenix should reduce target-team tower range.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void siegeSummonsDealConditionalTrueBonusDamage(GameTestHelper context) {
+        Vec3 origin = Vec3.atCenterOf(context.absolutePos(BlockPos.ZERO));
+        SemionMonsterEntity bombard = spawnSummonEntity(context, "bombard_toad", TeamId.RED, TeamId.BLUE, 1, origin, 100.0, 0.0);
+        SemionTestTowerEntity tower = spawnTowerEntity(context, TeamId.BLUE, 1, origin.add(1.0, 0.0, 0.0), TestTowerTypes.TEST_DIRECT);
+        bombard.setTarget(tower);
+
+        new SiegeTrueDamageGoal(
+                bombard,
+                SummonBalancePolicy.BOMBARD_TOAD_PROGRESS_THRESHOLD,
+                SummonBalancePolicy.BOMBARD_TOAD_TRUE_DAMAGE,
+                SummonBalancePolicy.BOMBARD_TOAD_TRUE_DAMAGE_COOLDOWN_TICKS,
+                SummonBalancePolicy.SUPPORT_HEAL_RETRY_TICKS
+        ).tick();
+        if (!assertEquals(context, 50.0F, tower.getHealth(), "Bombard toad should not bonus-damage towers before its progress condition.")) {
+            return;
+        }
+
+        bombard.runtimeMonster().syncLaneProgress(SummonBalancePolicy.BOMBARD_TOAD_PROGRESS_THRESHOLD);
+        new SiegeTrueDamageGoal(
+                bombard,
+                SummonBalancePolicy.BOMBARD_TOAD_PROGRESS_THRESHOLD,
+                SummonBalancePolicy.BOMBARD_TOAD_TRUE_DAMAGE,
+                SummonBalancePolicy.BOMBARD_TOAD_TRUE_DAMAGE_COOLDOWN_TICKS,
+                SummonBalancePolicy.SUPPORT_HEAL_RETRY_TICKS
+        ).tick();
+        if (!assertEquals(context, 30.0F, tower.getHealth(), "Bombard toad should bonus-damage towers after its progress condition.")) {
+            return;
+        }
+
+        SemionMonsterEntity siege = spawnSummonEntity(context, "siege_breaker", TeamId.RED, TeamId.BLUE, 1, origin.add(2.0, 0.0, 0.0), 100.0, 0.0);
+        SemionBossEntity boss = new SemionBossEntity(SemionEntityTypes.BOSS, context.getLevel());
+        boss.configure(TeamId.BLUE, BossMonster.defaultBoss(TeamId.BLUE));
+        boss.setPos(origin.add(3.0, 0.0, 0.0));
+        context.getLevel().addFreshEntity(boss);
+        siege.setTarget(boss);
+
+        new SiegeTrueDamageGoal(
+                siege,
+                SummonBalancePolicy.SIEGE_BREAKER_PROGRESS_THRESHOLD,
+                SummonBalancePolicy.SIEGE_BREAKER_TRUE_DAMAGE,
+                SummonBalancePolicy.SIEGE_BREAKER_TRUE_DAMAGE_COOLDOWN_TICKS,
+                SummonBalancePolicy.SUPPORT_HEAL_RETRY_TICKS
+        ).tick();
+        if (!assertEquals(context, 955.0F, boss.getHealth(), "Siege breaker should bonus-damage boss targets even before lane progress threshold.")) {
             return;
         }
         context.succeed();
@@ -1893,6 +2232,9 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertEquals(context, "minecraft:zombie", monster.entityTypeId(), "Blockbench-only monsters should keep gameplay fallback entity data separate from BIL rendering.")) {
             return;
         }
+        if (!assertEquals(context, MonsterDimensions.DEFAULT, monster.dimensions(), "Wave monsters should default to the shared monster hitbox.")) {
+            return;
+        }
 
         SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
         entity.configureFrom(monster, null);
@@ -1907,6 +2249,181 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
         entity.playAnimation(SemionAnimationState.WALK);
         if (!assertEquals(context, SemionAnimationState.WALK, entity.animationState(), "Monster should expose walk animation state.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void t5SiegeBlockbenchModelLoadsWithCombatAnimations(GameTestHelper context) {
+        var model = SemionBilModelCache.load("semion-td:summon/t5_siege");
+        if (!assertPresent(context, model, "T5 siege Blockbench model should load through BIL.")) {
+            return;
+        }
+        if (!assertTrue(context, model.get().animations().containsKey("idle"), "T5 siege model should provide idle animation.")) {
+            return;
+        }
+        if (!assertTrue(context, model.get().animations().containsKey("walk"), "T5 siege model should provide walk animation.")) {
+            return;
+        }
+        if (!assertTrue(context, model.get().animations().containsKey("attack"), "T5 siege model should provide attack animation.")) {
+            return;
+        }
+
+        Monster monster = new Monster(
+                "t5_siege_model",
+                TeamId.BLUE,
+                1,
+                Optional.empty(),
+                Optional.of(TeamId.RED),
+                70,
+                2,
+                8,
+                AttackKind.MELEE,
+                null,
+                "semion-td:summon/t5_siege",
+                DamageType.PHYSICAL,
+                0,
+                MonsterDimensions.of(2.0, 1.35),
+                SummonTier.T5,
+                List.of(SummonRole.SIEGE),
+                6
+        );
+        SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
+        entity.configureFrom(monster, null);
+        if (!assertTrue(context, entity.hasBilModelHolder(), "T5 siege runtime entity should attach a BIL holder when the model resource exists.")) {
+            return;
+        }
+        entity.playAnimation(SemionAnimationState.ATTACK);
+        if (!assertEquals(context, SemionAnimationState.ATTACK, entity.animationState(), "T5 siege entity should expose attack animation state.")) {
+            return;
+        }
+        if (!assertClose(context, 2.0, entity.getBbWidth(), "T5 siege hitbox width should match its authored dimensions.")) {
+            return;
+        }
+        if (!assertClose(context, 1.35, entity.getBbHeight(), "T5 siege hitbox height should match its authored dimensions.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void earlyTierSummonBlockbenchModelsLoadWithCombatAnimations(GameTestHelper context) {
+        Map<String, String> summonModels = Map.ofEntries(
+                Map.entry("grunt", "semion-td:summon/t1_fox_kit"),
+                Map.entry("skitter_swarm", "semion-td:summon/t1_honey_bee"),
+                Map.entry("quilt_guard", "semion-td:summon/t1_shell_turtle"),
+                Map.entry("static_bobbin", "semion-td:summon/t1_spark_axolotl"),
+                Map.entry("button_nurse", "semion-td:summon/t1_medic_duck"),
+                Map.entry("popper_pod", "semion-td:summon/t1_pincer_crab"),
+                Map.entry("ironclad_tank", "semion-td:summon/t2_ironclad_boar"),
+                Map.entry("ward_tank", "semion-td:summon/t2_ward_ram"),
+                Map.entry("static_disruptor", "semion-td:summon/t2_static_owl"),
+                Map.entry("pulse_support", "semion-td:summon/t2_pulse_fawn"),
+                Map.entry("gale_ferret", "semion-td:summon/t3_gale_ferret"),
+                Map.entry("bulwark_bison", "semion-td:summon/t3_bulwark_bison"),
+                Map.entry("wizard_cat", "semion-td:summon/t3_wizard_cat"),
+                Map.entry("grove_alpaca", "semion-td:summon/t3_grove_alpaca")
+        );
+
+        for (Map.Entry<String, String> entry : summonModels.entrySet()) {
+            SummonMonsterType summon = SummonRegistry.find(entry.getKey()).orElseThrow();
+            if (!assertEquals(context, Optional.of(entry.getValue()), summon.blockbenchModelId(), "Summon should point at its Blockbench model.")) {
+                return;
+            }
+
+            var model = SemionBilModelCache.load(entry.getValue());
+            if (!assertPresent(context, model, entry.getValue() + " should load through BIL.")) {
+                return;
+            }
+            if (!assertTrue(context, model.get().animations().containsKey("idle"), entry.getValue() + " should provide idle animation.")) {
+                return;
+            }
+            if (!assertTrue(context, model.get().animations().containsKey("walk"), entry.getValue() + " should provide walk animation.")) {
+                return;
+            }
+            if (!assertTrue(context, model.get().animations().containsKey("attack"), entry.getValue() + " should provide attack animation.")) {
+                return;
+            }
+            boolean healer = "button_nurse".equals(entry.getKey())
+                    || "pulse_support".equals(entry.getKey())
+                    || "grove_alpaca".equals(entry.getKey());
+            if (healer && !assertTrue(context, model.get().animations().containsKey("heal"), entry.getValue() + " should provide heal animation.")) {
+                return;
+            }
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void monsterDimensionsAreAuthoredAndAppliedAtRuntime(GameTestHelper context) {
+        MonsterDimensions waveDimensions = MonsterDimensions.of(1.25, 0.9);
+        WaveMonsterEntry entry = new WaveMonsterEntry(
+                "wide_wave",
+                25,
+                0,
+                3,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                null,
+                waveDimensions,
+                1
+        );
+        Monster waveMonster = Monster.fromWaveEntry(entry, TeamId.RED, 1);
+        if (!assertEquals(context, waveDimensions, waveMonster.dimensions(), "Wave monster should keep authored dimensions.")) {
+            return;
+        }
+
+        SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
+        entity.configureFrom(waveMonster, null);
+        if (!assertClose(context, 1.25, entity.getBbWidth(), "Runtime monster width should refresh from authored dimensions.")) {
+            return;
+        }
+        if (!assertClose(context, 0.9, entity.getBbHeight(), "Runtime monster height should refresh from authored dimensions.")) {
+            return;
+        }
+        if (!assertClose(context, 0.9, entity.getBoundingBox().getYsize(), "Runtime monster AABB should refresh from authored dimensions.")) {
+            return;
+        }
+
+        SummonMonsterType summon = new SummonMonsterType(
+                "wide_custom",
+                "Wide Custom",
+                10,
+                1,
+                40,
+                0,
+                4,
+                AttackKind.MELEE,
+                "minecraft:husk",
+                null,
+                MonsterDimensions.of(1.7, 1.1),
+                DamageType.PHYSICAL,
+                0,
+                SummonTier.T1,
+                List.of(SummonRole.RUSH),
+                List.of(SummonAbilityActivation.PASSIVE),
+                6
+        ) {
+        };
+        Monster summonMonster = summon.createMonster(
+                new SummonContext(
+                        new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(), testArena(context)),
+                        new SemionPlayer(
+                                stableUuid("wide-custom-owner"),
+                                "owner",
+                                TeamId.RED,
+                                1,
+                                new PlayerEconomy(EconomyConfig.defaultConfig())
+                        )
+                ),
+                TeamId.BLUE,
+                1
+        );
+        if (!assertEquals(context, MonsterDimensions.of(1.7, 1.1), summonMonster.dimensions(), "Summon monster should keep authored dimensions.")) {
+            return;
+        }
+        if (!assertInvalidDimensionsRejected(context)) {
             return;
         }
         context.succeed();
@@ -2197,6 +2714,27 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         return entity;
     }
 
+    private static SemionTestTowerEntity spawnTowerEntity(
+            GameTestHelper context,
+            TeamId teamId,
+            int laneId,
+            Vec3 position,
+            TowerType towerType
+    ) {
+        TestTower tower = new TestTower(
+                towerType,
+                stableUuid("tower-" + teamId.name() + "-" + laneId + "-" + position),
+                teamId,
+                laneId,
+                new kim.biryeong.semiontd.game.GridPosition((int) Math.floor(position.x), (int) Math.floor(position.y), (int) Math.floor(position.z))
+        );
+        SemionTestTowerEntity entity = new SemionTestTowerEntity(SemionEntityTypes.TEST_TOWER, context.getLevel());
+        entity.configure(tower, null);
+        entity.setPos(position);
+        context.getLevel().addFreshEntity(entity);
+        return entity;
+    }
+
     private static UUID stableUuid(String value) {
         return UUID.nameUUIDFromBytes(value.getBytes(StandardCharsets.UTF_8));
     }
@@ -2264,6 +2802,24 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return false;
         }
         return true;
+    }
+
+    private static boolean assertClose(GameTestHelper context, double expected, double actual, String message) {
+        if (Math.abs(expected - actual) > 0.0001) {
+            context.fail(Component.literal(message + " Expected=" + expected + ", actual=" + actual));
+            return false;
+        }
+        return true;
+    }
+
+    private static boolean assertInvalidDimensionsRejected(GameTestHelper context) {
+        try {
+            MonsterDimensions.of(0, 1);
+            context.fail(Component.literal("Monster dimensions should reject non-positive width."));
+            return false;
+        } catch (IllegalArgumentException expected) {
+            return true;
+        }
     }
 
     private static boolean assertEquals(GameTestHelper context, Object expected, Object actual, String message) {

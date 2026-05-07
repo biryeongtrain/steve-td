@@ -78,8 +78,9 @@ public final class LaneFollowGoal extends Goal {
         }
 
         monster.playAnimation(SemionAnimationState.WALK);
-        monster.getNavigation().moveTo(targetPoint.x, targetPoint.y, targetPoint.z, speedModifier);
-        monster.getMoveControl().setWantedPosition(targetPoint.x, targetPoint.y, targetPoint.z, speedModifier);
+        double adjustedSpeed = speedModifier * monster.movementSpeedMultiplier();
+        monster.getNavigation().moveTo(targetPoint.x, targetPoint.y, targetPoint.z, adjustedSpeed);
+        monster.getMoveControl().setWantedPosition(targetPoint.x, targetPoint.y, targetPoint.z, adjustedSpeed);
         monster.getLookControl().setLookAt(targetPoint.x, targetPoint.y, targetPoint.z);
     }
 

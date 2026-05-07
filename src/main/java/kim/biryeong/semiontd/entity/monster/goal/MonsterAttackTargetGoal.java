@@ -46,8 +46,9 @@ public final class MonsterAttackTargetGoal extends Goal {
         double distanceSqr = monster.distanceToSqr(target);
         if (distanceSqr > attackRangeSqr) {
             monster.playAnimation(SemionAnimationState.WALK);
-            monster.getNavigation().moveTo(target, speedModifier);
-            monster.getMoveControl().setWantedPosition(target.getX(), target.getY(), target.getZ(), speedModifier);
+            double adjustedSpeed = speedModifier * monster.movementSpeedMultiplier();
+            monster.getNavigation().moveTo(target, adjustedSpeed);
+            monster.getMoveControl().setWantedPosition(target.getX(), target.getY(), target.getZ(), adjustedSpeed);
             return;
         }
 

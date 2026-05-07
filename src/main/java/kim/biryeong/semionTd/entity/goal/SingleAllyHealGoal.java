@@ -40,7 +40,11 @@ public final class SingleAllyHealGoal<T extends PathfinderMob & HealingTarget> e
             }
         }
 
-        return target != null && target.receiveHealing(healAmount);
+        if (target == null || !target.receiveHealing(healAmount)) {
+            return false;
+        }
+        caster.playHealingAnimation();
+        return true;
     }
 
     private boolean canHeal(T candidate) {
