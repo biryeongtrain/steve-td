@@ -23,11 +23,15 @@ import kim.biryeong.semiontd.game.MatchMode;
 import kim.biryeong.semiontd.game.MatchParticipantResult;
 import kim.biryeong.semiontd.game.MatchResult;
 import kim.biryeong.semiontd.game.ParticipantSelectionPlan;
+import kim.biryeong.semiontd.game.PlayerEconomy;
 import kim.biryeong.semiontd.game.RoundPhase;
 import kim.biryeong.semiontd.game.SemionGame;
 import kim.biryeong.semiontd.game.SemionGameManager;
+import kim.biryeong.semiontd.game.SemionPlayer;
 import kim.biryeong.semiontd.game.PlayerLane;
+import kim.biryeong.semiontd.game.StartPlacement;
 import kim.biryeong.semiontd.game.TeamId;
+import kim.biryeong.semiontd.game.TowerPlacementResult;
 import kim.biryeong.semiontd.job.JobContext;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.SemionJob;
@@ -36,6 +40,10 @@ import kim.biryeong.semiontd.map.GameArenaLoader;
 import kim.biryeong.semiontd.map.LobbyWorld;
 import kim.biryeong.semiontd.progression.MatchProgressionReward;
 import kim.biryeong.semiontd.progression.ProgressionService;
+import kim.biryeong.semiontd.summon.SummonResult;
+import kim.biryeong.semiontd.summon.SummonResultType;
+import kim.biryeong.semiontd.test.TestTowerService;
+import kim.biryeong.semiontd.test.tower.TestTowerTypes;
 import net.fabricmc.fabric.api.gametest.v1.CustomTestMethodInvoker;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
@@ -280,6 +288,150 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
             context.succeed();
         } catch (Exception exception) {
             context.fail(Component.literal("Manager template lifecycle should work: " + exception.getMessage()));
+        } finally {
+            manager.shutdown();
+        }
+    }
+
+    @GameTest(maxTicks = 700)
+    public void actualArenaSupportsMinimumPlayableActionLoop(GameTestHelper context) {
+        MinecraftServer server = context.getLevel().getServer();
+        SemionGameManager manager = new SemionGameManager();
+        Path storePath;
+        try {
+            storePath = Files.createTempDirectory("semion-manager-playable-loop").resolve("profiles.json");
+        } catch (java.io.IOException exception) {
+            context.fail(Component.literal("Failed to create temporary progression store path."));
+            return;
+        }
+        manager.configure(
+                EconomyConfig.defaultConfig(),
+                new WaveConfig(List.of(), 20, null),
+                MapConfig.defaultConfig(),
+                ProgressionConfig.defaultConfig(),
+                storePath
+        );
+
+        try {
+            SemionGame game = manager.createGame(server);
+            UUID redId = playerId("playable-loop-red");
+            UUID blueId = playerId("playable-loop-blue");
+            game.markReady(redId);
+            game.markReady(blueId);
+
+            ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                    MatchMode.NORMAL,
+                    List.of(
+                            new AssignedParticipant(redId, "playable-loop-red", TeamId.RED, 1),
+                            new AssignedParticipant(blueId, "playable-loop-blue", TeamId.BLUE, 1)
+                    ),
+                    Set.of(),
+                    2
+            );
+            if (!assertTrue(context, game.start(server, plan), "Actual arena game should start from admin-created setup.")) {
+                return;
+            }
+
+            SemionPlayer red = game.players().get(redId);
+            SemionPlayer blue = game.players().get(blueId);
+            if (!assertTrue(context, red != null && blue != null, "Started game should register both active players.")) {
+                return;
+            }
+            if (!assertEquals(context, TeamId.RED, red.teamId(), "RED player should keep assigned team.")) {
+                return;
+            }
+            if (!assertEquals(context, 1, red.laneId(), "RED player should keep assigned lane.")) {
+                return;
+            }
+            Vec3 redSpawn = game.arena().teamArena(TeamId.RED)
+                    .map(teamArena -> StartPlacement.activePlayerSpawn(teamArena.layout(), red.laneId()))
+                    .orElse(null);
+            if (!assertTrue(context, redSpawn != null, "RED active player spawn should resolve from the actual arena layout.")) {
+                return;
+            }
+
+            PlayerLane redLane = game.teams().get(TeamId.RED).laneGroup().lane(1).orElseThrow();
+            BlockPos towerPos = redLane.laneLayout().laneArea().min();
+            if (!assertEquals(
+                    context,
+                    TowerPlacementResult.SUCCESS,
+                    TestTowerService.placeTestTower(game, redId, towerPos),
+                    "Test tower placement should work in the actual arena during prepare."
+            )) {
+                return;
+            }
+            PlayerEconomy redEconomy = red.economy();
+            if (!assertEquals(
+                    context,
+                    EconomyConfig.defaultConfig().startingDiamond() - TestTowerTypes.TEST_DIRECT.mineralCost(),
+                    redEconomy.diamond(),
+                    "Tower placement should spend diamond."
+            )) {
+                return;
+            }
+            if (!assertTrue(context, game.upgradeGasProduction(redId), "Emerald production upgrade should work during the playable loop.")) {
+                return;
+            }
+            if (!assertEquals(context, 2L, redEconomy.emeraldPerSec(), "Emerald production upgrade should increase emerald per second.")) {
+                return;
+            }
+
+            long emeraldBeforeSummon = redEconomy.emerald();
+            long incomeBeforeSummon = redEconomy.income();
+            SummonResult summon = game.summonMonster(redId, "grunt");
+            if (!assertEquals(context, SummonResultType.SUCCESS, summon.type(), "Grunt summon should succeed during prepare.")) {
+                return;
+            }
+            if (!assertEquals(context, TeamId.BLUE, summon.targetTeam().orElse(null), "RED summon should target BLUE in a two-team game.")) {
+                return;
+            }
+            if (!assertEquals(context, 1, summon.targetLaneId().orElse(-1), "RED summon should target BLUE lane 1.")) {
+                return;
+            }
+            if (!assertEquals(context, emeraldBeforeSummon - 20, redEconomy.emerald(), "Summon should spend emerald.")) {
+                return;
+            }
+            if (!assertEquals(context, incomeBeforeSummon + 2, redEconomy.income(), "Summon should increase income.")) {
+                return;
+            }
+
+            for (int i = 0; i < SemionGame.DEFAULT_PREPARE_TICKS + 1; i++) {
+                manager.tick(server);
+            }
+            if (!assertEquals(context, RoundPhase.LANE_WAVE, game.phase(), "Prepare should advance into wave phase.")) {
+                return;
+            }
+            PlayerLane blueLane = game.teams().get(TeamId.BLUE).laneGroup().lane(1).orElseThrow();
+            if (!assertEquals(context, 1, blueLane.activeMonsters().size(), "Queued summon should spawn on the target lane during wave.")) {
+                return;
+            }
+            if (!assertEquals(context, "grunt", blueLane.activeMonsters().getFirst().id(), "Spawned monster should preserve summon id.")) {
+                return;
+            }
+            if (!(blueLane.arenaWorld().getEntity(blueLane.activeMonsters().getFirst().minecraftEntityId()) instanceof SemionMonsterEntity)) {
+                context.fail(Component.literal("Spawned summon should have a live Minecraft entity in the actual arena world."));
+                return;
+            }
+
+            blueLane.activeMonsters().getFirst().damage(10_000.0);
+            manager.tick(server);
+            if (!assertEquals(context, RoundPhase.ROUND_PAYOUT, game.phase(), "Cleared wave should advance to payout.")) {
+                return;
+            }
+            long diamondBeforePayout = redEconomy.diamond();
+            manager.tick(server);
+            if (!assertEquals(context, RoundPhase.PREPARE_AND_SUMMON, game.phase(), "Payout should advance to next prepare phase.")) {
+                return;
+            }
+            if (!assertEquals(context, 2, game.currentRound(), "Playable loop should reach round 2.")) {
+                return;
+            }
+            if (!assertTrue(context, redEconomy.diamond() > diamondBeforePayout, "Round payout should add diamond income.")) {
+                return;
+            }
+            context.succeed();
+        } catch (Exception exception) {
+            context.fail(Component.literal("Actual arena playable loop should work: " + exception.getMessage()));
         } finally {
             manager.shutdown();
         }
