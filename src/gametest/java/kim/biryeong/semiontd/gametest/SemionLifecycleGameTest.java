@@ -5,15 +5,19 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.MapConfig;
 import kim.biryeong.semiontd.config.ProgressionConfig;
 import kim.biryeong.semiontd.config.WaveConfig;
+import kim.biryeong.semiontd.config.WaveMonsterEntry;
+import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.game.AssignedParticipant;
 import kim.biryeong.semiontd.game.MatchMode;
 import kim.biryeong.semiontd.game.MatchParticipantResult;
@@ -22,10 +26,13 @@ import kim.biryeong.semiontd.game.ParticipantSelectionPlan;
 import kim.biryeong.semiontd.game.RoundPhase;
 import kim.biryeong.semiontd.game.SemionGame;
 import kim.biryeong.semiontd.game.SemionGameManager;
+import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.job.JobContext;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.SemionJob;
+import kim.biryeong.semiontd.map.GameArena;
+import kim.biryeong.semiontd.map.GameArenaLoader;
 import kim.biryeong.semiontd.map.LobbyWorld;
 import kim.biryeong.semiontd.progression.MatchProgressionReward;
 import kim.biryeong.semiontd.progression.ProgressionService;
@@ -36,6 +43,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
@@ -65,6 +73,139 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
             return baseGasPerSec + 2;
         }
     });
+
+    @GameTest
+    public void defaultArenaMapTemplateLoads(GameTestHelper context) {
+        GameArena arena = null;
+        try {
+            arena = GameArenaLoader.load(context.getLevel().getServer(), MapConfig.defaultConfig());
+            if (!assertTrue(context, arena.teamArena(TeamId.RED).isPresent(), "Default arena should create a red arena.")) {
+                return;
+            }
+            if (!assertTrue(context, arena.lane(TeamId.RED, 1).isPresent(), "Default arena should expose lane 1.")) {
+                return;
+            }
+            if (!assertTrue(context, arena.lane(TeamId.RED, 5).isPresent(), "Default arena should expose lane 5.")) {
+                return;
+            }
+            if (!assertEquals(
+                    context,
+                    49,
+                    arena.lane(TeamId.RED, 1).orElseThrow().finalDefenseTowerSlots().size(),
+                    "Default arena should expose the shared 7x7 final defense slots."
+            )) {
+                return;
+            }
+            context.succeed();
+        } catch (Exception exception) {
+            context.fail(Component.literal("Default arena map template should load: " + exception.getMessage()));
+        } finally {
+            if (arena != null) {
+                arena.unload();
+            }
+        }
+    }
+
+    @GameTest(maxTicks = 900)
+    public void defaultArenaLaneMonstersConvergeNearBoss(GameTestHelper context) {
+        GameArena arena;
+        try {
+            arena = GameArenaLoader.load(context.getLevel().getServer(), MapConfig.defaultConfig());
+        } catch (Exception exception) {
+            context.fail(Component.literal("Default arena map template should load for convergence test: " + exception.getMessage()));
+            return;
+        }
+
+        List<PlayerLane> lanes = new ArrayList<>();
+        List<SemionMonsterEntity> monsters = new ArrayList<>();
+        try {
+            var redArena = arena.teamArena(TeamId.RED).orElseThrow();
+            for (int laneId = 1; laneId <= 5; laneId++) {
+                PlayerLane lane = new PlayerLane(
+                        TeamId.RED,
+                        laneId,
+                        playerId("arena-converge-" + laneId),
+                        redArena.world(),
+                        redArena.layout().lane(laneId).orElseThrow()
+                );
+                lane.enqueueWaveMonster(new WaveMonsterEntry(
+                        "arena-converge-" + laneId,
+                        1000.0,
+                        0.0,
+                        0.0,
+                        AttackKind.MELEE,
+                        "minecraft:zombie",
+                        null,
+                        0,
+                        1
+                ));
+                lane.tick(context.getLevel().getServer());
+                if (!assertEquals(context, 1, lane.activeMonsters().size(), "Lane " + laneId + " should spawn one test monster.")) {
+                    arena.unload();
+                    return;
+                }
+                if (!(redArena.world().getEntity(lane.activeMonsters().getFirst().minecraftEntityId()) instanceof SemionMonsterEntity monsterEntity)) {
+                    arena.unload();
+                    context.fail(Component.literal("Lane " + laneId + " monster entity should exist."));
+                    return;
+                }
+                monsterEntity.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.5);
+                lanes.add(lane);
+                monsters.add(monsterEntity);
+            }
+
+            Vec3 commonFinalWaypoint = null;
+            Vec3 commonBossPoint = null;
+            for (int i = 0; i < monsters.size(); i++) {
+                List<Vec3> path = monsters.get(i).pathPoints();
+                if (!assertTrue(context, path.size() >= 2, "Lane " + (i + 1) + " should have final waypoint and boss path points.")) {
+                    arena.unload();
+                    return;
+                }
+                Vec3 finalWaypoint = path.get(path.size() - 2);
+                Vec3 bossPoint = path.getLast();
+                if (commonFinalWaypoint == null) {
+                    commonFinalWaypoint = finalWaypoint;
+                    commonBossPoint = bossPoint;
+                } else {
+                    if (!assertEquals(context, commonFinalWaypoint, finalWaypoint, "Every lane should share the same final waypoint.")) {
+                        arena.unload();
+                        return;
+                    }
+                    if (!assertEquals(context, commonBossPoint, bossPoint, "Every lane should path to the same boss point.")) {
+                        arena.unload();
+                        return;
+                    }
+                }
+            }
+
+            Vec3 bossPoint = commonBossPoint;
+            context.runAfterDelay(700, () -> {
+                try {
+                    for (int i = 0; i < lanes.size(); i++) {
+                        lanes.get(i).tick(context.getLevel().getServer());
+                        SemionMonsterEntity monster = monsters.get(i);
+                        if (!assertTrue(context, monster.isAlive(), "Lane " + (i + 1) + " monster should remain alive while converging.")) {
+                            return;
+                        }
+                        if (!assertTrue(
+                                context,
+                                monster.position().distanceTo(bossPoint) < 8.0,
+                                "Lane " + (i + 1) + " monster should converge near the shared boss side."
+                        )) {
+                            return;
+                        }
+                    }
+                    context.succeed();
+                } finally {
+                    arena.unload();
+                }
+            });
+        } catch (RuntimeException exception) {
+            arena.unload();
+            context.fail(Component.literal("Default arena convergence test failed: " + exception.getMessage()));
+        }
+    }
 
     @GameTest
     public void matchResultRecordsWinnerAndLoser(GameTestHelper context) {

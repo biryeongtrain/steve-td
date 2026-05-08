@@ -74,6 +74,11 @@ dependencies {
     modImplementation include("xyz.nucleoid:stimuli:${project.stimuli_version}")
     modImplementation include("de.tomalbrc:DialogUtils:${project.dialogutils_version}")
 
+    modImplementation include("net.kyori:adventure-platform-fabric:${project.adventure_platform_version}")
+    implementation "net.kyori:adventure-text-minimessage:${project.adventure_api_version}"
+    implementation "net.kyori:adventure-api:${project.adventure_api_version}"
+
+
     modImplementation include("xyz.nucleoid:fantasy:${project.fantasy_version}")
     modImplementation include("xyz.nucleoid:map-templates:${project.map_templates}")
     modImplementation include("eu.pb4:sidebar-api:${project.sidebar_api_version}")
@@ -82,6 +87,7 @@ dependencies {
     modImplementation include("de.tomalbrc:blockbench-import-library:${project.bli_version}")
 
     modImplementation include("kim.biryeong:danta-shader:1.0.2+1.21.8")
+    modImplementation include("kim.biryeong:GCB-server:1.0.1+1.21.8")
     modImplementation include("eu.pb4:player-data-api:0.8.0+1.21.6")
 }
 

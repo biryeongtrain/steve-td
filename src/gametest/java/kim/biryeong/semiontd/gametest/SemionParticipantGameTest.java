@@ -13,6 +13,7 @@ import java.util.UUID;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.CurrencyType;
 import kim.biryeong.semiontd.config.EconomyConfig;
+import kim.biryeong.semiontd.config.MapConfig;
 import kim.biryeong.semiontd.config.SemionConfigLoader;
 import kim.biryeong.semiontd.config.WaveMonsterEntry;
 import kim.biryeong.semiontd.effect.TimedEffectSet;
@@ -50,6 +51,7 @@ import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.game.TowerPlacementResult;
 import kim.biryeong.semiontd.game.TowerUpgradeResult;
 import kim.biryeong.semiontd.game.VanillaTeamBridge;
+import kim.biryeong.semiontd.map.ArenaLayout;
 import kim.biryeong.semiontd.test.TestTowerService;
 import kim.biryeong.semiontd.test.entity.SemionTestTowerEntity;
 import kim.biryeong.semiontd.test.tower.TestTower;
@@ -68,6 +70,7 @@ import net.minecraft.core.BlockPos;
 import net.fabricmc.fabric.api.gametest.v1.CustomTestMethodInvoker;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.EntityType;
@@ -75,6 +78,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
 import org.slf4j.LoggerFactory;
+import xyz.nucleoid.map_templates.BlockBounds;
+import xyz.nucleoid.map_templates.MapTemplate;
 
 public final class SemionParticipantGameTest implements CustomTestMethodInvoker {
     private static kim.biryeong.semiontd.map.GameArena testArena(GameTestHelper context) {
@@ -435,6 +440,92 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         context.succeed();
+    }
+
+    @GameTest
+    public void mapConfigUsesPlainRegionMarkerNames(GameTestHelper context) {
+        MapConfig.RegionMarkers markers = MapConfig.defaultConfig().regions();
+
+        if (!assertEquals(context, "team_spawn", markers.teamSpawn(), "Team spawn marker should not require a namespace.")) {
+            return;
+        }
+        if (!assertEquals(context, "lane_spawn", markers.laneSpawn(), "Lane spawn marker should not require a namespace.")) {
+            return;
+        }
+        if (!assertEquals(context, "lane_path", markers.lanePath(), "Lane path marker should not require a namespace.")) {
+            return;
+        }
+        if (!assertEquals(context, "final_waypoint", markers.finalWaypoint(), "Final waypoint marker should not require a namespace.")) {
+            return;
+        }
+        if (!assertEquals(context, "boss_spawn", markers.bossSpawn(), "Boss spawn marker should not require a namespace.")) {
+            return;
+        }
+        if (!assertEquals(context, "final_defense_lane", markers.finalDefenseTower(), "Final defense marker should not require a namespace.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void arenaLayoutUsesSharedFinalDefenseRegionForEveryLane(GameTestHelper context) {
+        MapTemplate template = MapTemplate.createEmpty();
+        template.getMetadata().addRegion("team_spawn", BlockBounds.ofBlock(new BlockPos(0, 64, 0)));
+        template.getMetadata().addRegion("boss_spawn", BlockBounds.ofBlock(new BlockPos(20, 64, 0)));
+        template.getMetadata().addRegion("final_defense_lane", BlockBounds.of(10, 64, -1, 12, 64, 1));
+        template.getMetadata().addRegion("final_waypoint", BlockBounds.ofBlock(new BlockPos(8, 64, 0)), orderData(1));
+        template.getMetadata().addRegion("final_waypoint", BlockBounds.ofBlock(new BlockPos(6, 64, 0)), orderData(0));
+        for (int laneId = 1; laneId <= 5; laneId++) {
+            template.getMetadata().addRegion(
+                    "lane_spawn",
+                    BlockBounds.ofBlock(new BlockPos(-10, 64, laneId)),
+                    laneData(laneId)
+            );
+            template.getMetadata().addRegion(
+                    "lane_path",
+                    BlockBounds.of(-10, 64, laneId, 20, 64, laneId),
+                    laneData(laneId)
+            );
+        }
+        template.getMetadata().addRegion(
+                "lane_waypoint",
+                BlockBounds.ofBlock(new BlockPos(-5, 64, 1)),
+                laneData(1, 0)
+        );
+
+        try {
+            ArenaLayout layout = ArenaLayout.fromTemplate(
+                    template,
+                    BlockPos.ZERO,
+                    MapConfig.RegionMarkers.defaultMarkers()
+            );
+            List<?> laneOneSlots = layout.lane(1).orElseThrow().finalDefenseTowerSlots();
+            List<?> laneFiveSlots = layout.lane(5).orElseThrow().finalDefenseTowerSlots();
+            if (!assertEquals(context, 9, laneOneSlots.size(), "Shared final defense region should expose all slots.")) {
+                return;
+            }
+            if (!assertEquals(context, laneOneSlots, laneFiveSlots, "Every lane should share unlaned final defense slots.")) {
+                return;
+            }
+            List<Vec3> laneOneWaypoints = layout.lane(1).orElseThrow().waypoints();
+            List<Vec3> laneFiveWaypoints = layout.lane(5).orElseThrow().waypoints();
+            if (!assertEquals(context, List.of(
+                    new Vec3(-4.5, 64.0, 1.5),
+                    new Vec3(6.5, 64.0, 0.5),
+                    new Vec3(8.5, 64.0, 0.5)
+            ), laneOneWaypoints, "Lane waypoints should be followed by shared final waypoints.")) {
+                return;
+            }
+            if (!assertEquals(context, List.of(
+                    new Vec3(6.5, 64.0, 0.5),
+                    new Vec3(8.5, 64.0, 0.5)
+            ), laneFiveWaypoints, "Lanes without lane waypoints should still use shared final waypoints.")) {
+                return;
+            }
+            context.succeed();
+        } catch (Exception exception) {
+            context.fail(Component.literal("Shared final defense region should be accepted: " + exception.getMessage()));
+        }
     }
 
     @GameTest
@@ -1221,7 +1312,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
         lane.enqueueWaveMonster(new WaveMonsterEntry(
                 "boss-reacher",
-                40.0,
+                60.0,
                 0.0,
                 37.0,
                 AttackKind.MELEE,
@@ -2931,6 +3022,24 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             String message
     ) {
         return assertTrue(context, optional.isPresent(), message);
+    }
+
+    private static CompoundTag laneData(int laneId) {
+        CompoundTag data = new CompoundTag();
+        data.putInt("lane", laneId);
+        return data;
+    }
+
+    private static CompoundTag laneData(int laneId, int order) {
+        CompoundTag data = laneData(laneId);
+        data.putInt("order", order);
+        return data;
+    }
+
+    private static CompoundTag orderData(int order) {
+        CompoundTag data = new CompoundTag();
+        data.putInt("order", order);
+        return data;
     }
 
     private static boolean assertTrue(GameTestHelper context, boolean condition, String message) {

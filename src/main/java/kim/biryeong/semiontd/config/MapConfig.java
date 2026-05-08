@@ -31,21 +31,26 @@ public record MapConfig(
             String laneSpawn,
             String lanePath,
             String laneWaypoint,
+            String finalWaypoint,
             String bossSpawn,
             String finalDefenseTower
     ) {
-        private static final String DEFAULT_TEAM_SPAWN = "semion:team_spawn";
-        private static final String DEFAULT_LANE_SPAWN = "semion:lane_spawn";
-        private static final String DEFAULT_LANE_PATH = "semion:lane_path";
-        private static final String DEFAULT_LANE_WAYPOINT = "semion:lane_waypoint";
-        private static final String DEFAULT_BOSS_SPAWN = "semion:boss_spawn";
-        private static final String DEFAULT_FINAL_DEFENSE_TOWER = "semion:final_defense_tower";
+        private static final String DEFAULT_TEAM_SPAWN = "team_spawn";
+        private static final String DEFAULT_LANE_SPAWN = "lane_spawn";
+        private static final String DEFAULT_LANE_PATH = "lane_path";
+        private static final String DEFAULT_LANE_WAYPOINT = "lane_waypoint";
+        private static final String DEFAULT_FINAL_WAYPOINT = "final_waypoint";
+        private static final String DEFAULT_BOSS_SPAWN = "boss_spawn";
+        private static final String DEFAULT_FINAL_DEFENSE_TOWER = "final_defense_lane";
 
         public RegionMarkers {
             teamSpawn = teamSpawn == null || teamSpawn.isBlank() ? DEFAULT_TEAM_SPAWN : teamSpawn;
             laneSpawn = laneSpawn == null || laneSpawn.isBlank() ? DEFAULT_LANE_SPAWN : laneSpawn;
             lanePath = lanePath == null || lanePath.isBlank() ? DEFAULT_LANE_PATH : lanePath;
             laneWaypoint = laneWaypoint == null || laneWaypoint.isBlank() ? DEFAULT_LANE_WAYPOINT : laneWaypoint;
+            finalWaypoint = finalWaypoint == null || finalWaypoint.isBlank()
+                    ? DEFAULT_FINAL_WAYPOINT
+                    : finalWaypoint;
             bossSpawn = bossSpawn == null || bossSpawn.isBlank() ? DEFAULT_BOSS_SPAWN : bossSpawn;
             finalDefenseTower = finalDefenseTower == null || finalDefenseTower.isBlank()
                     ? DEFAULT_FINAL_DEFENSE_TOWER
@@ -58,6 +63,7 @@ public record MapConfig(
                     DEFAULT_LANE_SPAWN,
                     DEFAULT_LANE_PATH,
                     DEFAULT_LANE_WAYPOINT,
+                    DEFAULT_FINAL_WAYPOINT,
                     DEFAULT_BOSS_SPAWN,
                     DEFAULT_FINAL_DEFENSE_TOWER
             );

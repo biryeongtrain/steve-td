@@ -21,6 +21,9 @@ public record ArenaLayout(
         Vec3 bossSpawn,
         Map<Integer, LaneRegionLayout> lanes
 ) {
+    private static final String FINAL_DEFENSE_LANE_MARKER = "final_defense_lane";
+    private static final String LEGACY_FINAL_DEFENSE_TOWER_MARKER = "final_defense_tower";
+
     public ArenaLayout {
         lanes = Map.copyOf(lanes);
     }
@@ -32,7 +35,8 @@ public record ArenaLayout(
         Map<Integer, Vec3> laneSpawns = readLanePoints(template, origin, markers.laneSpawn());
         Map<Integer, BlockBounds> laneAreas = readLaneBounds(template, origin, markers.lanePath());
         Map<Integer, List<OrderedPoint>> laneWaypoints = readLaneWaypoints(template, origin, markers.laneWaypoint());
-        Map<Integer, List<GridPosition>> finalDefenseTowerSlots = readFinalDefenseTowerSlots(
+        List<Vec3> finalWaypoints = readOrderedPoints(template, origin, markers.finalWaypoint());
+        FinalDefenseTowerSlots finalDefenseTowerSlots = readFinalDefenseTowerSlots(
                 template,
                 origin,
                 markers.finalDefenseTower(),
@@ -46,8 +50,9 @@ public record ArenaLayout(
             List<Vec3> waypoints = laneWaypoints.getOrDefault(laneId, List.of()).stream()
                     .sorted(Comparator.comparingInt(OrderedPoint::order))
                     .map(OrderedPoint::point)
-                    .toList();
-            List<GridPosition> slots = requiredLaneSlots(finalDefenseTowerSlots, laneId, markers.finalDefenseTower());
+                    .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
+            waypoints.addAll(finalWaypoints);
+            List<GridPosition> slots = requiredFinalDefenseSlots(finalDefenseTowerSlots, laneId, markers.finalDefenseTower());
             lanes.put(laneId, new LaneRegionLayout(laneId, laneSpawn, waypoints, bossSpawn, laneArea, slots));
         }
 
@@ -94,27 +99,56 @@ public record ArenaLayout(
         return waypoints;
     }
 
-    private static Map<Integer, List<GridPosition>> readFinalDefenseTowerSlots(
+    private static List<Vec3> readOrderedPoints(MapTemplate template, BlockPos origin, String marker) {
+        List<OrderedPoint> points = new ArrayList<>();
+        template.getMetadata().getRegions(marker).forEach(region -> {
+            int order = dataOrEmpty(region).getIntOr("order", points.size());
+            points.add(new OrderedPoint(order, centerBottom(region, origin)));
+        });
+        return points.stream()
+                .sorted(Comparator.comparingInt(OrderedPoint::order))
+                .map(OrderedPoint::point)
+                .toList();
+    }
+
+    private static FinalDefenseTowerSlots readFinalDefenseTowerSlots(
             MapTemplate template,
             BlockPos origin,
             String marker,
             Vec3 bossSpawn
     ) {
-        Map<Integer, List<GridPosition>> slots = new HashMap<>();
-        template.getMetadata().getRegions(marker).forEach(region -> readLane(dataOrEmpty(region)).ifPresent(laneId -> {
-            BlockBounds bounds = region.getBounds().offset(origin);
-            int floorY = bounds.min().getY();
-            List<GridPosition> regionSlots = new ArrayList<>();
-            for (BlockPos blockPos : bounds) {
-                if (blockPos.getY() != floorY) {
-                    continue;
-                }
-                regionSlots.add(GridPosition.from(blockPos));
-            }
-            regionSlots.sort(finalDefenseSlotComparator(bossSpawn));
-            slots.put(laneId, List.copyOf(regionSlots));
+        List<GridPosition> sharedSlots = new ArrayList<>();
+        Map<Integer, List<GridPosition>> laneSlots = new HashMap<>();
+        List<TemplateRegion> regions = finalDefenseRegions(template, marker);
+        regions.forEach(region -> readLane(dataOrEmpty(region)).ifPresent(laneId -> {
+            List<GridPosition> regionSlots = finalDefenseSlots(region.getBounds().offset(origin), bossSpawn);
+            laneSlots.put(laneId, regionSlots);
         }));
-        return slots;
+        regions.stream().filter(region -> readLane(dataOrEmpty(region)).isEmpty())
+                .forEach(region -> sharedSlots.addAll(finalDefenseSlots(region.getBounds().offset(origin), bossSpawn)));
+        sharedSlots.sort(finalDefenseSlotComparator(bossSpawn));
+        return new FinalDefenseTowerSlots(List.copyOf(sharedSlots), laneSlots);
+    }
+
+    private static List<TemplateRegion> finalDefenseRegions(MapTemplate template, String marker) {
+        List<TemplateRegion> regions = template.getMetadata().getRegions(marker).toList();
+        if (!regions.isEmpty() || !FINAL_DEFENSE_LANE_MARKER.equals(marker)) {
+            return regions;
+        }
+        return template.getMetadata().getRegions(LEGACY_FINAL_DEFENSE_TOWER_MARKER).toList();
+    }
+
+    private static List<GridPosition> finalDefenseSlots(BlockBounds bounds, Vec3 bossSpawn) {
+        int floorY = bounds.min().getY();
+        List<GridPosition> slots = new ArrayList<>();
+        for (BlockPos blockPos : bounds) {
+            if (blockPos.getY() != floorY) {
+                continue;
+            }
+            slots.add(GridPosition.from(blockPos));
+        }
+        slots.sort(finalDefenseSlotComparator(bossSpawn));
+        return List.copyOf(slots);
     }
 
     private static Optional<Integer> readLane(CompoundTag data) {
@@ -147,11 +181,15 @@ public record ArenaLayout(
         return value;
     }
 
-    private static List<GridPosition> requiredLaneSlots(Map<Integer, List<GridPosition>> slots, int laneId, String marker)
+    private static List<GridPosition> requiredFinalDefenseSlots(
+            FinalDefenseTowerSlots slots,
+            int laneId,
+            String marker
+    )
             throws ArenaLoadException {
-        List<GridPosition> value = slots.get(laneId);
+        List<GridPosition> value = slots.forLane(laneId);
         if (value == null || value.isEmpty()) {
-            throw new ArenaLoadException("Missing map region " + marker + " for lane " + laneId + ".");
+            throw new ArenaLoadException("Missing map region " + marker + ".");
         }
         return value;
     }
@@ -171,5 +209,19 @@ public record ArenaLayout(
     }
 
     private record OrderedPoint(int order, Vec3 point) {
+    }
+
+    private record FinalDefenseTowerSlots(
+            List<GridPosition> shared,
+            Map<Integer, List<GridPosition>> byLane
+    ) {
+        private FinalDefenseTowerSlots {
+            shared = List.copyOf(shared);
+            byLane = Map.copyOf(byLane);
+        }
+
+        private List<GridPosition> forLane(int laneId) {
+            return byLane.getOrDefault(laneId, shared);
+        }
     }
 }
