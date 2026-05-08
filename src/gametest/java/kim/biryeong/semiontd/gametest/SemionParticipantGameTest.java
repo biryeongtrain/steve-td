@@ -1327,6 +1327,136 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void twoPlayerGameLifecycleProgressesThroughRoundSummonAndVictory(GameTestHelper context) {
+        UUID redId = stableUuid("lifecycle-red-owner");
+        UUID blueId = stableUuid("lifecycle-blue-owner");
+        SemionGame game = new SemionGame(
+                EconomyConfig.defaultConfig(),
+                new WaveConfig(List.of(), 20, null),
+                testArena(context)
+        );
+        ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                MatchMode.NORMAL,
+                List.of(
+                        new AssignedParticipant(redId, "red", TeamId.RED, 1),
+                        new AssignedParticipant(blueId, "blue", TeamId.BLUE, 1)
+                ),
+                java.util.Set.of(),
+                2
+        );
+
+        if (!assertTrue(context, game.start(context.getLevel().getServer(), plan), "Lifecycle game should start with two players.")) {
+            return;
+        }
+        if (!assertEquals(context, RoundPhase.PREPARE_AND_SUMMON, game.phase(), "Lifecycle game should enter prepare phase after start.")) {
+            return;
+        }
+        if (!assertTrue(context, game.rosterLocked(), "Lifecycle game should lock the roster after start.")) {
+            return;
+        }
+        if (!assertTrue(context, game.teams().get(TeamId.RED).active(), "RED should be active after lifecycle start.")) {
+            return;
+        }
+        if (!assertTrue(context, game.teams().get(TeamId.BLUE).active(), "BLUE should be active after lifecycle start.")) {
+            return;
+        }
+        if (!assertTrue(context, game.teams().get(TeamId.RED).laneGroup().hasBossEntity(), "RED boss entity should exist after lifecycle start.")) {
+            return;
+        }
+        if (!assertTrue(context, game.teams().get(TeamId.BLUE).laneGroup().hasBossEntity(), "BLUE boss entity should exist after lifecycle start.")) {
+            return;
+        }
+        if (!assertEquals(context, kim.biryeong.semiontd.job.JobRegistry.defaultJob().id(), game.selectedJobOrDefault(redId).id(), "RED should use the default job when none is selected.")) {
+            return;
+        }
+
+        long redGasBeforePrepareTick = game.players().get(redId).economy().gas();
+        tickGame(game, context.getLevel().getServer(), 40);
+        if (!assertEquals(context, redGasBeforePrepareTick + 2, game.players().get(redId).economy().gas(), "Prepare phase should tick gas production.")) {
+            return;
+        }
+
+        game.players().get(redId).economy().addIncome(7);
+        game.players().get(blueId).economy().addIncome(9);
+        tickGame(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS - 40 + 2);
+        if (!assertEquals(context, RoundPhase.PREPARE_AND_SUMMON, game.phase(), "Empty first wave should resolve into the next prepare phase.")) {
+            return;
+        }
+        if (!assertEquals(context, 2, game.currentRound(), "Lifecycle game should advance to round 2 after first payout.")) {
+            return;
+        }
+        if (!assertEquals(context, 207L, game.players().get(redId).economy().mineral(), "Round payout should pay RED's accumulated income.")) {
+            return;
+        }
+        if (!assertEquals(context, 209L, game.players().get(blueId).economy().mineral(), "Round payout should pay BLUE's accumulated income.")) {
+            return;
+        }
+
+        long redGasBeforeSummon = game.players().get(redId).economy().gas();
+        long redIncomeBeforeSummon = game.players().get(redId).economy().income();
+        var summonResult = game.summonMonster(redId, "grunt");
+        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.SUCCESS, summonResult.type(), "Round 2 prepare should allow RED to summon.")) {
+            return;
+        }
+        if (!assertEquals(context, TeamId.BLUE, summonResult.targetTeam().orElse(null), "RED summon should target BLUE in a two-player game.")) {
+            return;
+        }
+        if (!assertEquals(context, redGasBeforeSummon - 20, game.players().get(redId).economy().gas(), "Successful lifecycle summon should spend grunt gas cost.")) {
+            return;
+        }
+        if (!assertEquals(context, redIncomeBeforeSummon + 2, game.players().get(redId).economy().income(), "Successful lifecycle summon should add grunt income.")) {
+            return;
+        }
+
+        if (!assertPresent(context, summonResult.targetLaneId(), "Successful lifecycle summon should report a target lane.")) {
+            return;
+        }
+        PlayerLane blueTargetLane = lane(game, TeamId.BLUE, summonResult.targetLaneId().get());
+        tickGame(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS + 2);
+        if (!assertEquals(context, RoundPhase.LANE_WAVE, game.phase(), "Queued lifecycle summon should keep round 2 in wave phase after spawning.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, blueTargetLane.activeMonsters().size(), "BLUE target lane should spawn the queued lifecycle summon.")) {
+            return;
+        }
+        Monster lifecycleSummon = blueTargetLane.activeMonsters().getFirst();
+        if (!assertEquals(context, "grunt", lifecycleSummon.id(), "Spawned lifecycle summon should preserve its summon id.")) {
+            return;
+        }
+        if (!assertTrue(context, lifecycleSummon.hasMinecraftEntity(), "Spawned lifecycle summon should have a runtime entity.")) {
+            return;
+        }
+
+        if (!assertTrue(context, game.killBoss(TeamId.BLUE), "Killing BLUE boss should finish the lifecycle game.")) {
+            return;
+        }
+        if (!assertEquals(context, RoundPhase.ENDED, game.phase(), "Lifecycle game should end when only RED remains.")) {
+            return;
+        }
+        if (!assertTrue(context, game.teams().get(TeamId.BLUE).eliminated(), "BLUE should be eliminated after boss death.")) {
+            return;
+        }
+        if (!assertEquals(context, 0, blueTargetLane.activeMonsters().size(), "Eliminated BLUE lane should clear active lifecycle summons.")) {
+            return;
+        }
+
+        var matchResult = game.matchResult();
+        if (!assertPresent(context, matchResult, "Ended lifecycle game should expose a match result.")) {
+            return;
+        }
+        if (!assertTrue(context, matchResult.get().winningTeams().contains(TeamId.RED), "Lifecycle match result should mark RED as winner.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, matchResult.get().winnerCount(), "Lifecycle match should have one winner.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, matchResult.get().loserCount(), "Lifecycle match should have one loser.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void playerEconomyStartsWithConfiguredValues(GameTestHelper context) {
         UUID playerId = stableUuid("economy-start-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
