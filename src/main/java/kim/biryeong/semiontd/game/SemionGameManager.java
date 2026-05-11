@@ -137,6 +137,19 @@ public final class SemionGameManager {
         return activeGame;
     }
 
+    public boolean resetToLobby(MinecraftServer server) throws ArenaLoadException {
+        ensureLobby(server);
+        boolean hadActiveGame = activeGame != null;
+        displayHudService.clear(server);
+        if (activeGame != null) {
+            activeGame.close();
+            activeGame = null;
+        }
+        lastMatchResult = null;
+        sendAllPlayersToLobby(server);
+        return hadActiveGame;
+    }
+
     public Optional<SemionGame> activeGame() {
         return Optional.ofNullable(activeGame);
     }

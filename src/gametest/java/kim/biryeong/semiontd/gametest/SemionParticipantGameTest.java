@@ -14,6 +14,7 @@ import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.CurrencyType;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.MapConfig;
+import kim.biryeong.semiontd.config.ProgressionConfig;
 import kim.biryeong.semiontd.config.SemionConfigLoader;
 import kim.biryeong.semiontd.config.WaveMonsterEntry;
 import kim.biryeong.semiontd.effect.TimedEffectSet;
@@ -45,6 +46,7 @@ import kim.biryeong.semiontd.game.PlayerEconomy;
 import kim.biryeong.semiontd.game.RoundPhase;
 import kim.biryeong.semiontd.game.SemionPlayer;
 import kim.biryeong.semiontd.game.SemionGame;
+import kim.biryeong.semiontd.game.SemionGameManager;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.StartPlacement;
 import kim.biryeong.semiontd.game.StartCandidate;
@@ -387,6 +389,90 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         context.succeed();
+    }
+
+    @GameTest
+    public void managerStartSpectateAndResetFlowWorks(GameTestHelper context) {
+        MinecraftServer server = context.getLevel().getServer();
+        SemionGameManager manager = new SemionGameManager();
+        Path storePath;
+        try {
+            storePath = Files.createTempDirectory("semion-manager-reset-flow").resolve("profiles.json");
+        } catch (java.io.IOException exception) {
+            context.fail(Component.literal("Failed to create temporary progression store path."));
+            return;
+        }
+
+        manager.configure(
+                EconomyConfig.defaultConfig(),
+                new WaveConfig(List.of(), 20, null),
+                MapConfig.defaultConfig(),
+                ProgressionConfig.defaultConfig(),
+                storePath
+        );
+
+        try {
+            SemionGame game = manager.createGame(server);
+            if (!assertTrue(context, manager.lobbyWorld().isPresent(), "Create should load lobby.")) {
+                return;
+            }
+
+            UUID redId = stableUuid("manager-reset-red");
+            UUID blueId = stableUuid("manager-reset-blue");
+            UUID lateSpectatorId = stableUuid("manager-reset-late-spectator");
+            if (!assertTrue(context, game.markReady(redId), "Red player should ready before admin start.")) {
+                return;
+            }
+            if (!assertTrue(context, game.markReady(blueId), "Blue player should ready before admin start.")) {
+                return;
+            }
+
+            ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                    MatchMode.NORMAL,
+                    List.of(
+                            new AssignedParticipant(redId, "manager-reset-red", TeamId.RED, 1),
+                            new AssignedParticipant(blueId, "manager-reset-blue", TeamId.BLUE, 1)
+                    ),
+                    Set.of(),
+                    2
+            );
+            if (!assertTrue(context, game.start(server, plan), "Game should start from the admin flow.")) {
+                return;
+            }
+            if (!assertTrue(context, manager.activeGame().isPresent(), "Manager should retain the active game after start.")) {
+                return;
+            }
+            if (!assertEquals(context, RoundPhase.PREPARE_AND_SUMMON, game.phase(), "Started game should enter prepare.")) {
+                return;
+            }
+            if (!assertTrue(context, game.addLateSpectator(lateSpectatorId), "Late joiner should be able to spectate an active match.")) {
+                return;
+            }
+            if (!assertEquals(context, 1, game.spectatorCount(), "Late spectator should be tracked in the active match.")) {
+                return;
+            }
+
+            if (!assertTrue(context, manager.resetToLobby(server), "Reset should report an active game was closed.")) {
+                return;
+            }
+            if (!assertTrue(context, manager.activeGame().isEmpty(), "Reset should clear the active game.")) {
+                return;
+            }
+            if (!assertTrue(context, manager.lobbyWorld().isPresent(), "Reset should keep or load the lobby world.")) {
+                return;
+            }
+            if (!assertTrue(context, manager.lastMatchResult().isEmpty(), "Reset should clear stale match results.")) {
+                return;
+            }
+            if (!assertTrue(context, !manager.resetToLobby(server), "Second reset should report no active game.")) {
+                return;
+            }
+            context.succeed();
+        } catch (Exception exception) {
+            context.fail(Component.literal("Manager start/spectate/reset flow should work: " + exception.getMessage()));
+        } finally {
+            manager.shutdown();
+        }
     }
 
     @GameTest

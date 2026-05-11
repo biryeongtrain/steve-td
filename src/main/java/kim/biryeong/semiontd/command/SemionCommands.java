@@ -38,6 +38,12 @@ public final class SemionCommands {
                 .then(literal("start")
                         .requires(source -> source.hasPermission(2))
                         .executes(context -> startGame(context.getSource(), gameManager)))
+                .then(literal("end")
+                        .requires(source -> source.hasPermission(2))
+                        .executes(context -> resetGame(context.getSource(), gameManager, "강제 종료")))
+                .then(literal("reset")
+                        .requires(source -> source.hasPermission(2))
+                        .executes(context -> resetGame(context.getSource(), gameManager, "리셋")))
                 .then(literal("testmode")
                         .requires(source -> source.hasPermission(2))
                         .then(argument("enabled", BoolArgumentType.bool())
@@ -118,6 +124,18 @@ public final class SemionCommands {
             return 1;
         } catch (ArenaLoadException exception) {
             source.sendFailure(Component.literal("Semion TD 아레나 생성 실패: " + exception.getMessage()));
+            return 0;
+        }
+    }
+
+    private static int resetGame(CommandSourceStack source, SemionGameManager gameManager, String actionLabel) {
+        try {
+            boolean hadActiveGame = gameManager.resetToLobby(source.getServer());
+            String suffix = hadActiveGame ? "" : " 진행 중인 게임은 없었습니다.";
+            source.sendSuccess(() -> Component.literal("Semion TD 게임을 " + actionLabel + "하고 모두 로비로 이동했습니다." + suffix), true);
+            return 1;
+        } catch (ArenaLoadException exception) {
+            source.sendFailure(Component.literal("Semion TD 로비 이동 실패: " + exception.getMessage()));
             return 0;
         }
     }
