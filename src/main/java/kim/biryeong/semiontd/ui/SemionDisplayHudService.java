@@ -3,6 +3,8 @@ package kim.biryeong.semiontd.ui;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import kim.biryeong.dantashader.displayhud.DisplayHud;
 import kim.biryeong.dantashader.displayhud.DisplayHud.HudAlignment;
 import kim.biryeong.dantashader.displayhud.DisplayHudManager;
@@ -124,7 +126,27 @@ public final class SemionDisplayHudService {
     }
 
     private static Component matchTextFor(ServerPlayer viewer, SemionGame game, MatchMode matchMode) {
+        return miniMessage(matchMarkupFor(viewer.getUUID(), viewingTeam(viewer, game), game, matchMode));
+    }
+
+    public static String matchMarkupFor(UUID viewerId, Optional<SemionTeam> viewingTeam, SemionGame game, MatchMode matchMode) {
         StringBuilder text = new StringBuilder();
+        appendMatchHeader(text, game, matchMode);
+
+        SemionPlayer player = game.players().get(viewerId);
+        SemionTeam playerTeam = player == null ? null : game.teams().get(player.teamId());
+        if (player != null && playerTeam != null && playerTeam.eliminated()) {
+            appendEliminatedPlayerHud(text, player, playerTeam, viewingTeam);
+        } else if (player != null) {
+            appendActivePlayerHud(text, player, playerTeam);
+            appendTeamBossSummary(text, game);
+        } else {
+            appendSpectatorHud(text, viewingTeam);
+        }
+        return text.toString();
+    }
+
+    private static void appendMatchHeader(StringBuilder text, SemionGame game, MatchMode matchMode) {
         text.append("<gradient:#67e8f9:#a78bfa><bold>Semion TD</bold></gradient>\n");
         text.append("<gray>상태</gray> <yellow>").append(phaseLabel(game.phase())).append("</yellow>\n");
         text.append("<gray>게임 모드</gray> <aqua>").append(matchModeLabel(matchMode)).append("</aqua>\n");
@@ -136,74 +158,89 @@ public final class SemionDisplayHudService {
                     .append("초</green>");
         }
         text.append('\n');
+    }
 
-        SemionPlayer player = game.players().get(viewer.getUUID());
-        if (player != null) {
-            PlayerEconomy economy = player.economy();
-            SemionTeam team = game.teams().get(player.teamId());
-            text.append("<gray>팀/라인</gray> ")
-                    .append(teamColor(player.teamId()))
-                    .append(player.teamId().name())
-                    .append("</")
-                    .append(teamColorName(player.teamId()))
-                    .append(">")
-                    .append(" <dark_gray>/</dark_gray> <white>")
-                    .append(player.laneId())
-                    .append("</white>\n");
-            text.append("<gray>다이아</gray> <aqua>")
-                    .append(economy.diamond())
-                    .append("</aqua> <gray>에메랄드</gray> <green>")
-                    .append(economy.emerald())
-                    .append("</green>\n");
-            text.append("<gray>수입</gray> <gold>")
-                    .append(economy.income())
-                    .append("</gold> <gray>에메랄드/s</gray> <green>")
-                    .append(economy.emeraldPerSec())
-                    .append("</green>\n");
-            if (team != null) {
-                text.append("<gray>보스</gray> ")
-                        .append(bossHealthText(team))
-                        .append('\n');
-            }
-        } else {
-            text.append("<gray>준비 상태</gray> <yellow>관전 중</yellow>\n");
-            java.util.Optional<SemionTeam> viewingTeam = viewingTeam(viewer, game);
-            if (viewingTeam.isPresent()) {
-                SemionTeam team = viewingTeam.get();
-                text.append("<gray>관전 팀</gray> ")
-                        .append(teamColor(team.id()))
-                        .append(team.id().name())
-                        .append("</")
-                        .append(teamColorName(team.id()))
-                        .append(">\n");
-                text.append("<gray>보스</gray> ")
-                        .append(bossHealthText(team))
-                        .append('\n');
-            }
+    private static void appendActivePlayerHud(StringBuilder text, SemionPlayer player, SemionTeam team) {
+        PlayerEconomy economy = player.economy();
+        text.append("<gray>팀/라인</gray> ")
+                .append(teamNameText(player.teamId()))
+                .append(" <dark_gray>/</dark_gray> <white>")
+                .append(player.laneId())
+                .append("</white>\n");
+        text.append("<gray>다이아</gray> <aqua>")
+                .append(economy.diamond())
+                .append("</aqua> <gray>에메랄드</gray> <green>")
+                .append(economy.emerald())
+                .append("</green>\n");
+        text.append("<gray>수입</gray> <gold>")
+                .append(economy.income())
+                .append("</gold> <gray>에메랄드/s</gray> <green>")
+                .append(economy.emeraldPerSec())
+                .append("</green>\n");
+        if (team != null) {
+            text.append("<gray>내 팀 보스</gray> ")
+                    .append(bossHealthText(team))
+                    .append('\n');
         }
+    }
 
+    private static void appendSpectatorHud(StringBuilder text, Optional<SemionTeam> viewingTeam) {
+        text.append("<gray>준비 상태</gray> <yellow>관전 중</yellow>\n");
+        viewingTeam.ifPresent(team -> {
+            text.append("<gray>관전 팀</gray> ")
+                    .append(teamNameText(team.id()))
+                    .append('\n');
+            text.append("<gray>관전 팀 보스</gray> ")
+                    .append(bossHealthText(team))
+                    .append('\n');
+        });
+    }
+
+    private static void appendEliminatedPlayerHud(
+            StringBuilder text,
+            SemionPlayer player,
+            SemionTeam playerTeam,
+            Optional<SemionTeam> viewingTeam
+    ) {
+        text.append("<gray>준비 상태</gray> <red>탈락 후 관전 중</red>\n");
+        text.append("<gray>소속 팀</gray> ")
+                .append(teamNameText(player.teamId()))
+                .append(" <dark_gray>/</dark_gray> <white>")
+                .append(player.laneId())
+                .append("</white>\n");
+        text.append("<gray>소속 팀 보스</gray> ")
+                .append(bossHealthText(playerTeam))
+                .append('\n');
+        viewingTeam
+                .filter(team -> team.id() != player.teamId())
+                .ifPresent(team -> {
+                    text.append("<gray>관전 팀</gray> ")
+                            .append(teamNameText(team.id()))
+                            .append('\n');
+                    text.append("<gray>관전 팀 보스</gray> ")
+                            .append(bossHealthText(team))
+                            .append('\n');
+                });
+    }
+
+    private static void appendTeamBossSummary(StringBuilder text, SemionGame game) {
         List<SemionTeam> activeTeams = game.teams().values().stream()
                 .filter(SemionTeam::active)
                 .sorted(Comparator.comparing(SemionTeam::id))
                 .toList();
-        if (player != null || viewingTeam(viewer, game).isEmpty()) {
-            text.append("<dark_gray>────</dark_gray>\n");
-            for (SemionTeam team : activeTeams) {
-                text.append(teamColor(team.id()))
-                        .append(team.id().name())
-                        .append("</")
-                        .append(teamColorName(team.id()))
-                        .append("> ")
-                        .append(bossHealthText(team))
-                        .append('\n');
-            }
+        text.append("<dark_gray>────</dark_gray>\n");
+        text.append("<gray>전체 팀 보스</gray>\n");
+        for (SemionTeam team : activeTeams) {
+            text.append(teamNameText(team.id()))
+                    .append(" ")
+                    .append(bossHealthText(team))
+                    .append('\n');
         }
-        return miniMessage(text.toString());
     }
 
-    private static java.util.Optional<SemionTeam> viewingTeam(ServerPlayer viewer, SemionGame game) {
+    private static Optional<SemionTeam> viewingTeam(ServerPlayer viewer, SemionGame game) {
         if (!(viewer.level() instanceof ServerLevel world)) {
-            return java.util.Optional.empty();
+            return Optional.empty();
         }
         return game.teamForWorld(world);
     }
@@ -255,6 +292,14 @@ public final class SemionDisplayHudService {
 
     private static String teamColor(TeamId teamId) {
         return "<" + teamColorName(teamId) + ">";
+    }
+
+    private static String teamNameText(TeamId teamId) {
+        return teamColor(teamId)
+                + teamId.name()
+                + "</"
+                + teamColorName(teamId)
+                + ">";
     }
 
     private static String teamColorName(TeamId teamId) {

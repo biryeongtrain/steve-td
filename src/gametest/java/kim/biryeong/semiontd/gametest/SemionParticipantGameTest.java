@@ -70,6 +70,7 @@ import kim.biryeong.semiontd.summon.SummonTier;
 import kim.biryeong.semiontd.tower.TowerCategory;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.test.tower.TestTowerTypes;
+import kim.biryeong.semiontd.ui.SemionDisplayHudService;
 import net.minecraft.core.BlockPos;
 import net.fabricmc.fabric.api.gametest.v1.CustomTestMethodInvoker;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
@@ -427,6 +428,73 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertEquals(context, 3, game.spectatorCount(), "Late spectators plus the eliminated BLUE participant should be tracked.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void matchHudTextSplitsActiveSpectatorAndEliminatedRoles(GameTestHelper context) {
+        UUID redId = stableUuid("hud-role-red");
+        UUID blueId = stableUuid("hud-role-blue");
+        UUID greenId = stableUuid("hud-role-green");
+        UUID spectatorId = stableUuid("hud-role-spectator");
+        SemionGame game = startedThreePlayerGame(context, redId, blueId, greenId);
+
+        String activeText = SemionDisplayHudService.matchMarkupFor(
+                redId,
+                Optional.of(game.teams().get(TeamId.RED)),
+                game,
+                MatchMode.NORMAL
+        );
+        if (!assertTrue(context, activeText.contains("팀/라인"), "Active HUD should show team and lane.")) {
+            return;
+        }
+        if (!assertTrue(context, activeText.contains("다이아"), "Active HUD should show diamond economy.")) {
+            return;
+        }
+        if (!assertTrue(context, activeText.contains("전체 팀 보스"), "Active HUD should keep the full team boss summary.")) {
+            return;
+        }
+
+        if (!assertTrue(context, game.addLateSpectator(spectatorId, TeamId.GREEN), "Late spectator should register before HUD rendering.")) {
+            return;
+        }
+        String spectatorText = SemionDisplayHudService.matchMarkupFor(
+                spectatorId,
+                Optional.of(game.teams().get(TeamId.GREEN)),
+                game,
+                MatchMode.NORMAL
+        );
+        if (!assertTrue(context, spectatorText.contains("관전 중"), "Spectator HUD should show spectator status.")) {
+            return;
+        }
+        if (!assertTrue(context, spectatorText.contains("관전 팀 보스"), "Spectator HUD should show the viewed team's boss.")) {
+            return;
+        }
+        if (!assertTrue(context, !spectatorText.contains("전체 팀 보스"), "Spectator HUD should not show the full team boss summary.")) {
+            return;
+        }
+
+        if (!assertTrue(context, game.killBoss(TeamId.BLUE), "BLUE boss kill should eliminate BLUE for HUD role test.")) {
+            return;
+        }
+        String eliminatedText = SemionDisplayHudService.matchMarkupFor(
+                blueId,
+                Optional.of(game.teams().get(TeamId.RED)),
+                game,
+                MatchMode.NORMAL
+        );
+        if (!assertTrue(context, eliminatedText.contains("탈락 후 관전 중"), "Eliminated HUD should distinguish eliminated spectators.")) {
+            return;
+        }
+        if (!assertTrue(context, eliminatedText.contains("소속 팀"), "Eliminated HUD should show the original team.")) {
+            return;
+        }
+        if (!assertTrue(context, eliminatedText.contains("관전 팀"), "Eliminated HUD should show the currently viewed team.")) {
+            return;
+        }
+        if (!assertTrue(context, !eliminatedText.contains("다이아"), "Eliminated HUD should omit active economy lines.")) {
             return;
         }
         context.succeed();
