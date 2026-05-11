@@ -27,6 +27,8 @@ import net.minecraft.world.entity.Relative;
 import net.minecraft.world.level.GameType;
 
 public final class SemionGameManager {
+    private static final int STARTUP_LOBBY_LOAD_DELAY_TICKS = 20;
+
     private EconomyConfig economyConfig = EconomyConfig.defaultConfig();
     private WaveConfig waveConfig = WaveConfig.defaultConfig();
     private MapConfig mapConfig = MapConfig.defaultConfig();
@@ -39,6 +41,8 @@ public final class SemionGameManager {
     private SemionGame activeGame;
     private LobbyWorld lobbyWorld;
     private MatchResult lastMatchResult;
+    private boolean startupLobbyLoadPending;
+    private int startupLobbyLoadDelayTicks;
 
     public void configure(
             EconomyConfig economyConfig,
@@ -90,6 +94,30 @@ public final class SemionGameManager {
     public void sendAllPlayersToLobby(MinecraftServer server) throws ArenaLoadException {
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             sendPlayerToLobby(server, player);
+        }
+    }
+
+    public void scheduleStartupLobbyLoad(MinecraftServer server) {
+        if (lobbyWorld != null) {
+            return;
+        }
+        startupLobbyLoadPending = true;
+        startupLobbyLoadDelayTicks = STARTUP_LOBBY_LOAD_DELAY_TICKS;
+    }
+
+    public void tickStartupLobbyLoad(MinecraftServer server) {
+        if (!startupLobbyLoadPending || lobbyWorld != null) {
+            return;
+        }
+        if (startupLobbyLoadDelayTicks > 0) {
+            startupLobbyLoadDelayTicks--;
+            return;
+        }
+        startupLobbyLoadPending = false;
+        try {
+            ensureLobby(server);
+        } catch (ArenaLoadException | RuntimeException exception) {
+            SemionTd.LOGGER.warn("Failed to load the Semion TD lobby on server start.", exception);
         }
     }
 
@@ -154,16 +182,14 @@ public final class SemionGameManager {
             } catch (ArenaLoadException exception) {
                 SemionTd.LOGGER.warn("Failed to send late-joining player {} to lobby.", player.getGameProfile().getName(), exception);
             }
-            player.sendSystemMessage(Component.literal("A Semion TD match is already in progress. You are waiting in the lobby."));
+            player.sendSystemMessage(Component.literal("Semion TD 게임이 진행 중입니다. 로비에서 대기합니다."));
             return;
         }
 
-        if (lobbyWorld != null) {
-            try {
-                sendPlayerToLobby(server, player);
-            } catch (ArenaLoadException exception) {
-                SemionTd.LOGGER.warn("Failed to send player {} to lobby.", player.getGameProfile().getName(), exception);
-            }
+        try {
+            sendPlayerToLobby(server, player);
+        } catch (ArenaLoadException exception) {
+            SemionTd.LOGGER.warn("Failed to send player {} to lobby.", player.getGameProfile().getName(), exception);
         }
     }
 
@@ -176,6 +202,8 @@ public final class SemionGameManager {
             lobbyWorld.unload();
             lobbyWorld = null;
         }
+        startupLobbyLoadPending = false;
+        startupLobbyLoadDelayTicks = 0;
     }
 
     private void sendPlayerToLobby(MinecraftServer server, ServerPlayer player) throws ArenaLoadException {

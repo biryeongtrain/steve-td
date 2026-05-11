@@ -293,6 +293,47 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
         }
     }
 
+    @GameTest
+    public void gameManagerLoadsLobbyOnServerStart(GameTestHelper context) {
+        SemionGameManager manager = new SemionGameManager();
+        Path storePath;
+        try {
+            storePath = Files.createTempDirectory("semion-manager-startup-lobby").resolve("profiles.json");
+        } catch (java.io.IOException exception) {
+            context.fail(Component.literal("Failed to create temporary progression store path."));
+            return;
+        }
+        manager.configure(
+                EconomyConfig.defaultConfig(),
+                WaveConfig.defaultConfig(),
+                MapConfig.defaultConfig(),
+                ProgressionConfig.defaultConfig(),
+                storePath
+        );
+
+        try {
+            manager.scheduleStartupLobbyLoad(context.getLevel().getServer());
+            for (int i = 0; i < 25; i++) {
+                manager.tickStartupLobbyLoad(context.getLevel().getServer());
+            }
+            if (!assertTrue(context, manager.lobbyWorld().isPresent(), "Server start should load the lobby template.")) {
+                return;
+            }
+            LobbyWorld firstLobby = manager.lobbyWorld().orElseThrow();
+
+            manager.scheduleStartupLobbyLoad(context.getLevel().getServer());
+            for (int i = 0; i < 25; i++) {
+                manager.tickStartupLobbyLoad(context.getLevel().getServer());
+            }
+            if (!assertTrue(context, manager.lobbyWorld().orElse(null) == firstLobby, "Server start lobby load should be idempotent.")) {
+                return;
+            }
+            context.succeed();
+        } finally {
+            manager.shutdown();
+        }
+    }
+
     @GameTest(maxTicks = 700)
     public void actualArenaSupportsMinimumPlayableActionLoop(GameTestHelper context) {
         MinecraftServer server = context.getLevel().getServer();

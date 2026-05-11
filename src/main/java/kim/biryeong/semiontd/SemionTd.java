@@ -37,7 +37,11 @@ public class SemionTd implements ModInitializer {
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
                 SemionCommands.register(dispatcher, gameManager));
-        ServerTickEvents.END_SERVER_TICK.register(gameManager::tick);
+        ServerTickEvents.END_SERVER_TICK.register(server -> {
+            gameManager.tick(server);
+            gameManager.tickStartupLobbyLoad(server);
+        });
+        ServerLifecycleEvents.SERVER_STARTED.register(gameManager::scheduleStartupLobbyLoad);
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> gameManager.shutdown());
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> gameManager.handlePlayerJoin(handler.getPlayer()));
 

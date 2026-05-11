@@ -20,21 +20,22 @@ import xyz.nucleoid.map_templates.TemplateRegion;
 
 public final class LobbyWorldLoader {
     private static final ResourceLocation LOBBY_TEMPLATE_ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "lobby");
-    private static final ResourceLocation LOBBY_WORLD_ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "lobby_world");
-    private static final BlockPos LOBBY_ORIGIN = new BlockPos(0, 64, 0);
+    private static final String LOBBY_WORLD_ID_PREFIX = "lobby_world_";
+    private static final int LOBBY_MIN_Y = 16;
 
     private LobbyWorldLoader() {
     }
 
     public static LobbyWorld load(MinecraftServer server) throws ArenaLoadException {
         MapTemplate template = loadTemplate(server);
-        RuntimeWorldHandle worldHandle = Fantasy.get(server).openTemporaryWorld(LOBBY_WORLD_ID, runtimeWorldConfig(server));
+        BlockPos origin = originFor(template);
+        RuntimeWorldHandle worldHandle = Fantasy.get(server).openTemporaryWorld(runtimeWorldId(), runtimeWorldConfig(server));
         worldHandle.setTickWhenEmpty(true);
 
         try {
             ServerLevel world = worldHandle.asWorld();
-            new MapTemplatePlacer(template).placeAt(world, LOBBY_ORIGIN);
-            Vec3 spawn = requiredSpawn(template);
+            new MapTemplatePlacer(template).placeAt(world, origin);
+            Vec3 spawn = requiredSpawn(template, origin);
             return new LobbyWorld(worldHandle::unload, world, spawn);
         } catch (RuntimeException exception) {
             worldHandle.unload();
@@ -42,12 +43,21 @@ public final class LobbyWorldLoader {
         }
     }
 
-    private static Vec3 requiredSpawn(MapTemplate template) throws ArenaLoadException {
+    private static ResourceLocation runtimeWorldId() {
+        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, LOBBY_WORLD_ID_PREFIX + Long.toUnsignedString(System.nanoTime()));
+    }
+
+    private static BlockPos originFor(MapTemplate template) {
+        BlockPos min = template.getBounds().min();
+        return new BlockPos(-min.getX(), LOBBY_MIN_Y - min.getY(), -min.getZ());
+    }
+
+    private static Vec3 requiredSpawn(MapTemplate template, BlockPos origin) throws ArenaLoadException {
         TemplateRegion region = template.getMetadata().getFirstRegion("spawn");
         if (region == null) {
             throw new ArenaLoadException("Missing map region spawn in lobby template.");
         }
-        return region.getBounds().offset(LOBBY_ORIGIN).centerBottom();
+        return region.getBounds().offset(origin).centerBottom();
     }
 
     private static RuntimeWorldConfig runtimeWorldConfig(MinecraftServer server) {
