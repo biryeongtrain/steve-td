@@ -81,6 +81,7 @@ chore(ui): localize player-facing outputs
 ## 다음 작업 1: 실플레이어 수동 QA
 
 GameTest로 확인하기 어려운 부분은 실제 서버에서 봐야 한다.
+서비스 준비 기준의 필수/권장 작업은 `docs/service-readiness-checklist.ko.md`에 별도로 정리했다.
 
 수동 체크리스트:
 
