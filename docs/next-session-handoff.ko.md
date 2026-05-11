@@ -70,6 +70,8 @@ chore(ui): localize player-facing outputs
 - `semiontd spectate red`는 진행 중 게임 없음 메시지로 실패했다.
 - `semiontd reset` 후 `semiontd status`가 다시 `activeGame=false`를 출력했다.
 - `stop`으로 서버가 정상 종료되었다.
+- 이후 실클라이언트 QA를 위해 서버를 다시 기동했지만 접속자가 없어 2인 ready/start/spectate/HUD/mount 검증은 진행하지 못했다.
+- 재기동 smoke에서는 Polymer resource pack 생성 성공, `arenaLoaded=4/4`, 네 팀 boss 상태, reset 복구, 정상 종료를 다시 확인했다.
 
 주의:
 

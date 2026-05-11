@@ -30,7 +30,7 @@ GameTest와 콘솔 QA로는 실제 클라이언트의 teleport, HUD mount, Dialo
 현재 상태:
 
 - 2026-05-11 콘솔 QA에서 서버 기동과 운영 명령 기본 흐름은 확인했다.
-- 실제 클라이언트 접속자는 없어서 ready/start/HUD/mount/관전 시야 항목은 아직 미완료다.
+- 2026-05-11 실클라이언트 QA를 위해 서버를 다시 기동했지만 접속자가 없어 ready/start/HUD/mount/관전 시야 항목은 아직 미완료다.
 
 ### 2. 맵 템플릿 실사용 QA
 
@@ -60,7 +60,8 @@ GameTest와 콘솔 QA로는 실제 클라이언트의 teleport, HUD mount, Dialo
 - `semiontd create` 후 `arenaLoaded=4/4` 확인.
 - `semiontd status teams`에서 RED/BLUE/GREEN/YELLOW 모두 `arenaLoaded=true`, `boss=1000/1000` 확인.
 - `semiontd reset` 후 `activeGame=false`, `arenaLoaded=false` 복구 확인.
-- 실제 클라이언트 시야, lane path 진행, final lane, boss convergence 체감 QA는 아직 미완료다.
+- 2026-05-11 재기동 smoke에서도 `arenaLoaded=4/4`, 네 팀 arena/boss 상태, reset 복구가 다시 확인됐다.
+- 실제 클라이언트 시야, lane path 진행, final lane, boss convergence 체감 QA는 접속자 부재로 아직 미완료다.
 
 ## 2026-05-11 콘솔 QA 기록
 
@@ -95,6 +96,37 @@ stop
 - 진행 중 게임 없이 `semiontd spectate red`는 정상 실패했다.
 - reset 후 status가 `activeGame=false`, `arenaLoaded=false`로 돌아왔다.
 - `stop`으로 서버가 정상 종료됐다.
+
+## 2026-05-11 실클라이언트 QA 시도 기록
+
+실행 명령:
+
+```text
+./gradlew runServer --console=plain
+list
+list
+list
+semiontd status
+semiontd create
+semiontd status
+semiontd status teams
+semiontd reset
+semiontd status
+stop
+```
+
+확인 결과:
+
+- 서버가 `*:25565`로 정상 기동했다.
+- `Semion TD initialized.` 로그가 출력됐다.
+- Polymer resource pack 생성이 성공했다.
+- 접속 대기 중 `list` 결과가 계속 `0 of a max of 20 players online`이었다.
+- 실제 클라이언트 접속자가 없어 2인 ready/start/spectate/HUD/mount 검증은 진행하지 못했다.
+- 초기 status는 `activeGame=false`, `lobbyLoaded=true`, `arenaLoaded=false`였다.
+- create 후 status는 `activeGame=true`, `phase=WAITING`, `round=1`, `ready=0`, `activeParticipants=0`, `spectators=0`, `arenaLoaded=4/4`였다.
+- team status는 네 팀 모두 `arenaLoaded=true`, `boss=1000/1000`을 출력했다.
+- reset 후 status가 `activeGame=false`, `arenaLoaded=false`로 돌아왔다.
+- `stop`으로 서버가 정상 종료됐고, 25565 리스너가 남지 않았다.
 
 ## P1: 오픈 전 권장 확인
 
