@@ -18,16 +18,12 @@ public final class AcquireLaneDefenseTargetGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (!monster.isAlive() || monster.runtimeMonster() == null) {
+        if (!monster.isAlive() || monster.runtimeMonster() == null || monster.getTarget() != null) {
             return false;
         }
 
         LivingEntity target = findTarget();
-        if (target == null) {
-            return false;
-        }
-
-        return monster.getTarget() == null || !(monster.getTarget() instanceof LaneDefenseEntity);
+        return target != null;
     }
 
     @Override
