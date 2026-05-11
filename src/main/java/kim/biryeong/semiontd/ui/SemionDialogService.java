@@ -31,12 +31,12 @@ public final class SemionDialogService {
 
     public void showGameStatus(ServerPlayer player, SemionGame game) {
         StringBuilder body = new StringBuilder();
-        body.append("Round: ").append(game.currentRound()).append('\n');
-        body.append("Phase: ").append(phaseLabel(game.phase())).append('\n');
-        body.append("Players: ").append(game.players().size()).append('\n');
-        body.append("Spectators: ").append(game.spectatorCount()).append('\n');
+        body.append("라운드: ").append(game.currentRound()).append('\n');
+        body.append("단계: ").append(phaseLabel(game.phase())).append('\n');
+        body.append("플레이어: ").append(game.players().size()).append('\n');
+        body.append("관전자: ").append(game.spectatorCount()).append('\n');
         body.append('\n');
-        body.append("Teams\n");
+        body.append("팀 상태\n");
         for (SemionTeam team : game.teams().values()) {
             if (!team.active()) {
                 continue;
@@ -44,10 +44,10 @@ public final class SemionDialogService {
             body.append(" - ")
                     .append(team.id().name())
                     .append(": ")
-                    .append(team.eliminated() ? "ELIMINATED" : "ALIVE")
-                    .append(", players=")
+                    .append(team.eliminated() ? "탈락" : "생존")
+                    .append(", 인원=")
                     .append(team.memberIds().size())
-                    .append(", bossHp=")
+                    .append(", 보스HP=")
                     .append(Math.round(team.laneGroup().boss().health()))
                     .append('\n');
         }
@@ -56,14 +56,16 @@ public final class SemionDialogService {
         if (semionPlayer != null) {
             PlayerEconomy economy = semionPlayer.economy();
             body.append('\n');
-            body.append("Your Economy\n");
-            body.append("Diamond: ").append(economy.diamond()).append('\n');
-            body.append("Emerald: ").append(economy.emerald()).append('\n');
-            body.append("Income: ").append(economy.income()).append('\n');
-            body.append("Emerald/sec: ").append(economy.emeraldPerSec()).append('\n');
+            body.append("내 정보\n");
+            body.append("팀: ").append(semionPlayer.teamId().name()).append('\n');
+            body.append("라인: ").append(semionPlayer.laneId()).append('\n');
+            body.append("다이아: ").append(economy.diamond()).append('\n');
+            body.append("에메랄드: ").append(economy.emerald()).append('\n');
+            body.append("수입: ").append(economy.income()).append('\n');
+            body.append("에메랄드/초: ").append(economy.emeraldPerSec()).append('\n');
         }
 
-        show(player, "Semion TD Status", body.toString());
+        show(player, "세미온 TD 상태", body.toString());
     }
 
     public void showMatchResult(
@@ -72,17 +74,17 @@ public final class SemionDialogService {
             Map<UUID, MatchProgressionReward> rewards
     ) {
         StringBuilder body = new StringBuilder();
-        body.append("Final round: ").append(matchResult.finalRound()).append('\n');
-        body.append("Winner team: ").append(teamList(matchResult.winningTeams())).append('\n');
+        body.append("최종 라운드: ").append(matchResult.finalRound()).append('\n');
+        body.append("승리 팀: ").append(teamList(matchResult.winningTeams())).append('\n');
         body.append('\n');
 
         List<MatchParticipantResult> losers = matchResult.participants().stream()
                 .filter(participant -> !participant.winner())
                 .sorted(participantComparator())
                 .toList();
-        body.append("Defeated players\n");
+        body.append("탈락 플레이어\n");
         if (losers.isEmpty()) {
-            body.append(" - none\n");
+            body.append(" - 없음\n");
         } else {
             for (MatchParticipantResult participant : losers) {
                 body.append(" - ")
@@ -94,7 +96,7 @@ public final class SemionDialogService {
         }
 
         body.append('\n');
-        body.append("Player stats\n");
+        body.append("참가자 기록\n");
         for (MatchParticipantResult participant : matchResult.participants().stream()
                 .sorted(participantComparator())
                 .toList()) {
@@ -103,25 +105,25 @@ public final class SemionDialogService {
                     .append(participant.playerName())
                     .append(" [")
                     .append(participant.teamId().name())
-                    .append(participant.winner() ? ", WIN" : ", LOSS")
+                    .append(participant.winner() ? ", 승리" : ", 패배")
                     .append("]")
-                    .append(": kills=")
+                    .append(": 처치=")
                     .append(stats.monsterKills())
-                    .append(", income=")
+                    .append(", 수입=")
                     .append(stats.finalIncome())
-                    .append(", summons=")
+                    .append(", 소환=")
                     .append(stats.summonedMonsters())
-                    .append(", killDiamonds=")
+                    .append(", 처치다이아=")
                     .append(stats.killMinerals());
 
             MatchProgressionReward reward = rewards.get(participant.playerId());
             if (reward != null) {
-                body.append(", cosmetic+=").append(reward.currencyAwarded());
+                body.append(", 꾸미기재화+=").append(reward.currencyAwarded());
             }
             body.append('\n');
         }
 
-        show(player, "Semion TD Result", body.toString());
+        show(player, "세미온 TD 결과", body.toString());
     }
 
     public void showLastResult(ServerPlayer player, MatchResult matchResult) {
@@ -146,7 +148,7 @@ public final class SemionDialogService {
 
     private static String teamList(java.util.Set<TeamId> teams) {
         if (teams.isEmpty()) {
-            return "none";
+            return "없음";
         }
         return teams.stream().map(Enum::name).sorted().collect(Collectors.joining(", "));
     }
@@ -158,11 +160,11 @@ public final class SemionDialogService {
 
     private static String phaseLabel(RoundPhase phase) {
         return switch (phase) {
-            case WAITING -> "Waiting";
-            case PREPARE_AND_SUMMON -> "Prepare / Summon";
-            case LANE_WAVE -> "Wave";
-            case ROUND_PAYOUT -> "Payout";
-            case ENDED -> "Ended";
+            case WAITING -> "대기";
+            case PREPARE_AND_SUMMON -> "준비/소환";
+            case LANE_WAVE -> "웨이브";
+            case ROUND_PAYOUT -> "정산";
+            case ENDED -> "종료";
         };
     }
 }

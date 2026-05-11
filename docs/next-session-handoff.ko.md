@@ -2,7 +2,7 @@
 
 ## 현재 상태
 
-관전자 HUD, 팀 선택 관전, HUD 2차 정리, 운영 status 명령 강화 작업은 커밋 완료 상태다.
+관전자 HUD, 팀 선택 관전, HUD 2차 정리, 운영 status 명령 강화, 출력 문구 정리 작업은 커밋 완료 상태다.
 
 완료 커밋:
 
@@ -13,6 +13,7 @@ docs: refresh next session handoff
 feat(ui): split match HUD by player role
 docs: update handoff after HUD role split
 feat(command): expand operational status output
+chore(ui): localize player-facing outputs
 ```
 
 완료된 내용:
@@ -38,6 +39,9 @@ feat(command): expand operational status output
 - `/semiontd status`는 activeGame, phase, round, matchMode, rosterLocked, ready, activeParticipants, spectators, lobbyLoaded, arenaLoaded를 출력한다.
 - `/semiontd status teams`는 팀별 active/eliminated/arenaLoaded/player/lane/boss 상태를 출력한다.
 - `/semiontd status players`는 active participant와 match spectator UUID를 출력한다.
+- `/semiontd economy`, `profile`, `job`, `tower`, `summon`, `summons`, `killboss`, `ui`의 플레이어-facing 성공/실패 메시지는 한국어 문구로 정리되어 있다.
+- DialogUtils 상태/결과 창의 제목과 본문 라벨은 한국어로 정리되어 있고, 상태 창은 팀/라인/경제 정보를 함께 보여준다.
+- 경기 종료 브로드캐스트와 progression 보상 메시지는 한국어로 정리되어 있다.
 
 검증 완료 상태:
 
@@ -89,6 +93,7 @@ GameTest로 확인하기 어려운 부분은 실제 서버에서 봐야 한다.
 - 월드 이동 후 HUD가 사라지지 않고 다시 mount된다.
 - `/semiontd end` 또는 `/semiontd reset` 후 모든 플레이어가 lobby로 이동한다.
 - 실제 클라이언트에서 `/semiontd status`, `/semiontd status teams`, `/semiontd status players`가 읽기 좋은지 확인한다.
+- 실제 클라이언트에서 `/semiontd ui`, `/semiontd economy`, `/semiontd profile`, `/semiontd job list/current/select`, `/semiontd summons` 출력이 읽기 좋은지 확인한다.
 
 ## 후속 큰 작업 후보
 
@@ -96,5 +101,5 @@ GameTest로 확인하기 어려운 부분은 실제 서버에서 봐야 한다.
 - job catalog와 선택 UI
 - summon/tower/job balance pass
 - map template QA: lane path, final lane, boss convergence
-- match result UI와 progression 보상 표시 정리
+- match result UI 레이아웃 고도화
 - ELO 기반 팀 분배 설계

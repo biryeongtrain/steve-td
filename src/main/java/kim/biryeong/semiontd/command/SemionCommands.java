@@ -433,57 +433,57 @@ public final class SemionCommands {
         SemionGame game = gameManager.activeGame().orElse(null);
         if (game != null) {
             gameManager.dialogService().showGameStatus(player, game);
-            source.sendSuccess(() -> Component.literal("Opened Semion TD status dialog."), false);
+            source.sendSuccess(() -> Component.literal("Semion TD 상태 창을 열었습니다."), false);
             return 1;
         }
 
         Optional<MatchResult> lastResult = gameManager.lastMatchResult();
         if (lastResult.isPresent()) {
             gameManager.dialogService().showLastResult(player, lastResult.get());
-            source.sendSuccess(() -> Component.literal("Opened Semion TD last result dialog."), false);
+            source.sendSuccess(() -> Component.literal("Semion TD 최근 결과 창을 열었습니다."), false);
             return 1;
         }
 
-        source.sendFailure(Component.literal("No active Semion TD game or previous result."));
+        source.sendFailure(Component.literal("진행 중인 Semion TD 게임이나 최근 결과가 없습니다."));
         return 0;
     }
 
     private static int economy(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
         SemionGame game = gameManager.activeGame().orElse(null);
         if (game == null) {
-            source.sendFailure(Component.literal("No active Semion TD game."));
+            source.sendFailure(Component.literal("진행 중인 Semion TD 게임이 없습니다."));
             return 0;
         }
 
         SemionPlayer player = game.players().get(source.getPlayerOrException().getUUID());
         if (player == null) {
-            source.sendFailure(Component.literal("You are not in the active Semion TD game."));
+            source.sendFailure(Component.literal("현재 Semion TD 게임 참가자가 아닙니다."));
             return 0;
         }
 
         PlayerEconomy economy = player.economy();
         long nextGasUpgradeCost = nextGasUpgradeCost(game, economy);
-        source.sendSuccess(() -> Component.literal("Economy diamond=" + economy.diamond()
-                + ", emerald=" + economy.emerald()
-                + ", income=" + economy.income()
-                + ", emeraldPerSec=" + economy.emeraldPerSec()
-                + ", emeraldUpgrades=" + economy.emeraldProductionUpgradeCount()
-                + ", nextEmeraldUpCost=" + (nextGasUpgradeCost >= 0 ? nextGasUpgradeCost : "capped")), false);
+        source.sendSuccess(() -> Component.literal("경제 다이아=" + economy.diamond()
+                + ", 에메랄드=" + economy.emerald()
+                + ", 수입=" + economy.income()
+                + ", 에메랄드/초=" + economy.emeraldPerSec()
+                + ", 생산업글=" + economy.emeraldProductionUpgradeCount()
+                + ", 다음업글비용=" + (nextGasUpgradeCost >= 0 ? nextGasUpgradeCost : "최대")), false);
         return 1;
     }
 
     private static int profile(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         var profile = gameManager.profile(source.getServer(), player.getUUID(), player.getGameProfile().getName());
-        source.sendSuccess(() -> Component.literal("Profile cosmetics=" + profile.cosmeticCurrency()
-                + ", games=" + profile.gamesPlayed()
-                + ", wins=" + profile.wins()
-                + ", losses=" + profile.losses()), false);
+        source.sendSuccess(() -> Component.literal("프로필 장식재화=" + profile.cosmeticCurrency()
+                + ", 플레이=" + profile.gamesPlayed()
+                + ", 승=" + profile.wins()
+                + ", 패=" + profile.losses()), false);
         return 1;
     }
 
     private static int listJobs(CommandSourceStack source) {
-        source.sendSuccess(() -> Component.literal("Available Semion TD jobs:"), false);
+        source.sendSuccess(() -> Component.literal("Semion TD 직업 목록:"), false);
         for (SemionJob job : JobRegistry.all()) {
             source.sendSuccess(() -> Component.literal(" - " + job.id()
                     + " => " + job.displayName().getString()), false);
@@ -498,7 +498,7 @@ public final class SemionCommands {
         ServerPlayer player = source.getPlayerOrException();
         SemionGame game = gameManager.activeGame().orElse(null);
         if (game == null) {
-            source.sendFailure(Component.literal("No Semion TD lobby is open. Ask an admin to run /semiontd create first."));
+            source.sendFailure(Component.literal("열린 Semion TD 로비가 없습니다. 관리자에게 /semiontd create 실행을 요청하세요."));
             return 0;
         }
 
@@ -506,7 +506,7 @@ public final class SemionCommands {
         SemionJob job = semionPlayer != null
                 ? semionPlayer.job().orElse(JobRegistry.defaultJob())
                 : game.selectedJobOrDefault(player.getUUID());
-        source.sendSuccess(() -> Component.literal("Current Semion TD job: "
+        source.sendSuccess(() -> Component.literal("현재 Semion TD 직업: "
                 + job.id()
                 + " => "
                 + job.displayName().getString()), false);
@@ -515,12 +515,12 @@ public final class SemionCommands {
 
     private static int selectJob(CommandSourceStack source, SemionGameManager gameManager, String rawJobId)
             throws CommandSyntaxException {
-        SemionGame game = activeWaitingGame(source, gameManager, "select a job");
+        SemionGame game = activeWaitingGame(source, gameManager, "직업 선택");
         if (game == null) {
             return 0;
         }
         if (!game.canConfigureRoster()) {
-            source.sendFailure(Component.literal("Cannot select a job after the match roster has been locked."));
+            source.sendFailure(Component.literal("참가자 확정 후에는 직업을 선택할 수 없습니다."));
             return 0;
         }
 
@@ -532,38 +532,37 @@ public final class SemionCommands {
             return 0;
         }
         if (!game.selectJob(source.getPlayerOrException().getUUID(), jobId)) {
-            source.sendFailure(Component.literal("Unknown Semion TD job: " + jobId + ". Use /semiontd job list."));
+            source.sendFailure(Component.literal("알 수 없는 Semion TD 직업입니다: " + jobId + ". /semiontd job list를 확인하세요."));
             return 0;
         }
 
         SemionJob job = game.selectedJobOrDefault(source.getPlayerOrException().getUUID());
-        source.sendSuccess(() -> Component.literal("Selected Semion TD job "
+        source.sendSuccess(() -> Component.literal("Semion TD 직업을 선택했습니다: "
                 + job.id()
                 + " => "
-                + job.displayName().getString()
-                + "."), false);
+                + job.displayName().getString()), false);
         return 1;
     }
 
     private static int emeraldUp(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
         SemionGame game = gameManager.activeGame().orElse(null);
         if (game == null) {
-            source.sendFailure(Component.literal("No active Semion TD game."));
+            source.sendFailure(Component.literal("진행 중인 Semion TD 게임이 없습니다."));
             return 0;
         }
 
         UUID playerId = source.getPlayerOrException().getUUID();
         boolean upgraded = game.upgradeGasProduction(playerId);
         if (!upgraded) {
-            source.sendFailure(Component.literal("Failed to upgrade emerald production."));
+            source.sendFailure(Component.literal("에메랄드 생산 업그레이드에 실패했습니다."));
             return 0;
         }
 
         PlayerEconomy economy = game.players().get(playerId).economy();
         long nextGasUpgradeCost = nextGasUpgradeCost(game, economy);
-        source.sendSuccess(() -> Component.literal("Emerald production upgraded. emeraldPerSec=" + economy.emeraldPerSec()
-                + ", emeraldUpgrades=" + economy.emeraldProductionUpgradeCount()
-                + ", nextCost=" + (nextGasUpgradeCost >= 0 ? nextGasUpgradeCost : "capped")), false);
+        source.sendSuccess(() -> Component.literal("에메랄드 생산을 업그레이드했습니다. 에메랄드/초=" + economy.emeraldPerSec()
+                + ", 생산업글=" + economy.emeraldProductionUpgradeCount()
+                + ", 다음비용=" + (nextGasUpgradeCost >= 0 ? nextGasUpgradeCost : "최대")), false);
         return 1;
     }
 
@@ -571,18 +570,18 @@ public final class SemionCommands {
             throws CommandSyntaxException {
         SemionGame game = gameManager.activeGame().orElse(null);
         if (game == null) {
-            source.sendFailure(Component.literal("No active Semion TD game."));
+            source.sendFailure(Component.literal("진행 중인 Semion TD 게임이 없습니다."));
             return 0;
         }
 
         ServerPlayer player = source.getPlayerOrException();
         TowerPlacementResult result = TestTowerService.placeTestTower(game, player.getUUID(), player.blockPosition());
         if (result != TowerPlacementResult.SUCCESS) {
-            source.sendFailure(Component.literal("Failed to place test tower: " + placementFailureMessage(result)));
+            source.sendFailure(Component.literal("테스트 타워 설치 실패: " + placementFailureMessage(result)));
             return 0;
         }
 
-        source.sendSuccess(() -> Component.literal("Placed test tower at " + player.blockPosition() + "."), false);
+        source.sendSuccess(() -> Component.literal("테스트 타워를 설치했습니다: " + player.blockPosition()), false);
         return 1;
     }
 
@@ -590,22 +589,22 @@ public final class SemionCommands {
             throws CommandSyntaxException {
         SemionGame game = gameManager.activeGame().orElse(null);
         if (game == null) {
-            source.sendFailure(Component.literal("No active Semion TD game."));
+            source.sendFailure(Component.literal("진행 중인 Semion TD 게임이 없습니다."));
             return 0;
         }
 
         ServerPlayer player = source.getPlayerOrException();
         List<TowerUpgradeOption> upgrades = TestTowerService.availableUpgrades(game, player.getUUID(), player.blockPosition());
         if (upgrades.isEmpty()) {
-            source.sendFailure(Component.literal("No test tower upgrades available at " + player.blockPosition() + "."));
+            source.sendFailure(Component.literal("해당 위치에 사용 가능한 테스트 타워 업그레이드가 없습니다: " + player.blockPosition()));
             return 0;
         }
 
-        source.sendSuccess(() -> Component.literal("Available upgrades at " + player.blockPosition() + ":"), false);
+        source.sendSuccess(() -> Component.literal("사용 가능한 업그레이드: 위치=" + player.blockPosition()), false);
         for (TowerUpgradeOption option : upgrades) {
             source.sendSuccess(() -> Component.literal(" - " + option.id()
                     + " => " + option.displayName()
-                    + " diamondCost=" + option.mineralCost()), false);
+                    + " 다이아비용=" + option.mineralCost()), false);
         }
         return upgrades.size();
     }
@@ -614,18 +613,18 @@ public final class SemionCommands {
             throws CommandSyntaxException {
         SemionGame game = gameManager.activeGame().orElse(null);
         if (game == null) {
-            source.sendFailure(Component.literal("No active Semion TD game."));
+            source.sendFailure(Component.literal("진행 중인 Semion TD 게임이 없습니다."));
             return 0;
         }
 
         ServerPlayer player = source.getPlayerOrException();
         TowerUpgradeResult result = TestTowerService.upgradeTestTower(game, player.getUUID(), player.blockPosition(), upgradeId);
         if (result != TowerUpgradeResult.SUCCESS) {
-            source.sendFailure(Component.literal("Failed to upgrade tower: " + towerUpgradeFailureMessage(result)));
+            source.sendFailure(Component.literal("타워 업그레이드 실패: " + towerUpgradeFailureMessage(result)));
             return 0;
         }
 
-        source.sendSuccess(() -> Component.literal("Upgraded tower at " + player.blockPosition() + " via " + upgradeId + "."), false);
+        source.sendSuccess(() -> Component.literal("타워를 업그레이드했습니다: " + player.blockPosition() + ", 업그레이드=" + upgradeId), false);
         return 1;
     }
 
@@ -633,35 +632,35 @@ public final class SemionCommands {
             throws CommandSyntaxException {
         SemionGame game = gameManager.activeGame().orElse(null);
         if (game == null) {
-            source.sendFailure(Component.literal("No active Semion TD game."));
+            source.sendFailure(Component.literal("진행 중인 Semion TD 게임이 없습니다."));
             return 0;
         }
 
         SummonResult result = game.summonMonster(source.getPlayerOrException().getUUID(), summonId);
         if (result.type() != SummonResultType.SUCCESS) {
-            source.sendFailure(Component.literal("Summon failed: " + summonFailureMessage(result.type())));
+            source.sendFailure(Component.literal("소환 실패: " + summonFailureMessage(result.type())));
             return 0;
         }
 
-        source.sendSuccess(() -> Component.literal("Summoned " + summonId
-                + " to " + result.targetTeam().orElseThrow()
-                + " lane " + result.targetLaneId().orElseThrow()), false);
+        source.sendSuccess(() -> Component.literal("소환했습니다: " + summonId
+                + ", 팀=" + result.targetTeam().orElseThrow()
+                + ", 라인=" + result.targetLaneId().orElseThrow()), false);
         return 1;
     }
 
     private static int summons(CommandSourceStack source, SemionGameManager gameManager) {
         SemionGame game = gameManager.activeGame().orElse(null);
         if (game == null) {
-            source.sendFailure(Component.literal("No active Semion TD game."));
+            source.sendFailure(Component.literal("진행 중인 Semion TD 게임이 없습니다."));
             return 0;
         }
 
-        source.sendSuccess(() -> Component.literal("Available summons:"), false);
+        source.sendSuccess(() -> Component.literal("소환 목록:"), false);
         for (SummonMonsterType type : game.summonShop().all()) {
             source.sendSuccess(() -> Component.literal(" - " + type.id()
-                    + " emeraldCost=" + type.gasCost()
-                    + ", income=" + type.incomeGain()
-                    + ", hp=" + Math.round(type.maxHealth())), false);
+                    + " 에메랄드비용=" + type.gasCost()
+                    + ", 수입=" + type.incomeGain()
+                    + ", 체력=" + Math.round(type.maxHealth())), false);
         }
         return 1;
     }
@@ -669,7 +668,7 @@ public final class SemionCommands {
     private static int killBoss(CommandSourceStack source, SemionGameManager gameManager, String teamName) {
         SemionGame game = gameManager.activeGame().orElse(null);
         if (game == null) {
-            source.sendFailure(Component.literal("No active Semion TD game."));
+            source.sendFailure(Component.literal("진행 중인 Semion TD 게임이 없습니다."));
             return 0;
         }
 
@@ -677,17 +676,17 @@ public final class SemionCommands {
         try {
             teamId = parseTeam(teamName);
         } catch (IllegalArgumentException exception) {
-            source.sendFailure(Component.literal("Unknown team: " + teamName + ". Use RED, BLUE, GREEN, or YELLOW."));
+            source.sendFailure(Component.literal("알 수 없는 팀입니다: " + teamName + ". RED, BLUE, GREEN, YELLOW 중 하나를 사용하세요."));
             return 0;
         }
 
         boolean killed = game.killBoss(source.getServer(), teamId);
         if (!killed) {
-            source.sendFailure(Component.literal("Failed to kill boss for team " + teamId + "."));
+            source.sendFailure(Component.literal("보스 처치 실패: 팀=" + teamId));
             return 0;
         }
 
-        source.sendSuccess(() -> Component.literal("Killed boss for team " + teamId + "."), false);
+        source.sendSuccess(() -> Component.literal("보스를 처치했습니다: 팀=" + teamId), false);
         return 1;
     }
 
@@ -702,7 +701,7 @@ public final class SemionCommands {
         }
         ResourceLocation defaulted = ResourceLocation.tryBuild(SemionTd.MOD_ID, rawJobId);
         if (defaulted == null) {
-            throw new IllegalArgumentException("Invalid job id: " + rawJobId);
+            throw new IllegalArgumentException("잘못된 직업 ID입니다: " + rawJobId);
         }
         return defaulted;
     }
@@ -791,38 +790,46 @@ public final class SemionCommands {
 
     private static String placementFailureMessage(TowerPlacementResult result) {
         return switch (result) {
-            case INVALID_PHASE -> "tower placement is only allowed during prepare phase";
-            case PLAYER_NOT_IN_GAME -> "you are not an active player in this match";
-            case PLAYER_TEAM_ELIMINATED -> "your team is eliminated";
-            case UNKNOWN_LANE -> "your lane is not active";
-            case TOWER_NOT_ALLOWED_BY_JOB -> "your job cannot use that tower";
-            case OUTSIDE_LANE_AREA -> "stand inside your lane_path region";
-            case OCCUPIED -> "that block already has a tower";
-            case NOT_ENOUGH_MINERAL -> "not enough diamond";
-            case SUCCESS -> "success";
+            case INVALID_PHASE -> "준비 단계에서만 설치할 수 있습니다";
+            case PLAYER_NOT_IN_GAME -> "현재 경기 참가자가 아닙니다";
+            case PLAYER_TEAM_ELIMINATED -> "소속 팀이 탈락했습니다";
+            case UNKNOWN_LANE -> "활성화된 라인이 아닙니다";
+            case TOWER_NOT_ALLOWED_BY_JOB -> "현재 직업은 해당 타워를 사용할 수 없습니다";
+            case OUTSIDE_LANE_AREA -> "lane_path 영역 안에서 실행하세요";
+            case OCCUPIED -> "이미 타워가 있는 위치입니다";
+            case NOT_ENOUGH_MINERAL -> "다이아가 부족합니다";
+            case SUCCESS -> "성공";
         };
     }
 
     private static String towerUpgradeFailureMessage(TowerUpgradeResult result) {
         return switch (result) {
-            case INVALID_PHASE -> "tower upgrade is only allowed during prepare phase";
-            case PLAYER_NOT_IN_GAME -> "you are not an active player in this match";
-            case PLAYER_TEAM_ELIMINATED -> "your team is eliminated";
-            case UNKNOWN_LANE -> "your lane is not active";
-            case NO_TOWER_AT_POSITION -> "there is no tower at that block";
-            case TOWER_NOT_UPGRADABLE -> "that tower has no available evolution path";
-            case UNKNOWN_UPGRADE -> "unknown upgrade id for that tower";
-            case UNKNOWN_TARGET_TYPE -> "tower evolution target type is not registered";
-            case TOWER_NOT_ALLOWED_BY_JOB -> "your job cannot use that tower evolution";
-            case NOT_ENOUGH_MINERAL -> "not enough diamond";
-            case SUCCESS -> "success";
+            case INVALID_PHASE -> "준비 단계에서만 업그레이드할 수 있습니다";
+            case PLAYER_NOT_IN_GAME -> "현재 경기 참가자가 아닙니다";
+            case PLAYER_TEAM_ELIMINATED -> "소속 팀이 탈락했습니다";
+            case UNKNOWN_LANE -> "활성화된 라인이 아닙니다";
+            case NO_TOWER_AT_POSITION -> "해당 위치에 타워가 없습니다";
+            case TOWER_NOT_UPGRADABLE -> "사용 가능한 진화 경로가 없습니다";
+            case UNKNOWN_UPGRADE -> "해당 타워에 없는 업그레이드 ID입니다";
+            case UNKNOWN_TARGET_TYPE -> "타워 진화 대상 타입이 등록되지 않았습니다";
+            case TOWER_NOT_ALLOWED_BY_JOB -> "현재 직업은 해당 타워 진화를 사용할 수 없습니다";
+            case NOT_ENOUGH_MINERAL -> "다이아가 부족합니다";
+            case SUCCESS -> "성공";
         };
     }
 
     private static String summonFailureMessage(SummonResultType result) {
         return switch (result) {
-            case NOT_ENOUGH_GAS -> "not enough emerald";
-            default -> result.name();
+            case INVALID_PHASE -> "준비/소환 단계에서만 소환할 수 있습니다";
+            case PLAYER_NOT_IN_GAME -> "현재 경기 참가자가 아닙니다";
+            case PLAYER_TEAM_ELIMINATED -> "소속 팀이 탈락했습니다";
+            case UNKNOWN_SUMMON -> "알 수 없는 소환 ID입니다";
+            case SUMMON_NOT_ALLOWED_BY_JOB -> "현재 직업은 해당 소환을 사용할 수 없습니다";
+            case NOT_ENOUGH_GAS -> "에메랄드가 부족합니다";
+            case NO_TARGET_TEAM -> "공격할 수 있는 상대 팀이 없습니다";
+            case NO_TARGET_LANE -> "대상 팀에 활성화된 라인이 없습니다";
+            case NO_ACTIVE_GAME -> "진행 중인 Semion TD 게임이 없습니다";
+            case SUCCESS -> "성공";
         };
     }
 }

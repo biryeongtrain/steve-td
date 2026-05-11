@@ -265,10 +265,10 @@ public final class SemionGameManager {
             Map<UUID, MatchProgressionReward> rewards
     ) {
         String winners = matchResult.winningTeams().isEmpty()
-                ? "none"
+                ? "없음"
                 : matchResult.winningTeams().stream().map(Enum::name).sorted().collect(Collectors.joining(", "));
         server.getPlayerList().broadcastSystemMessage(
-                Component.literal("Semion TD match ended. Winners=" + winners + ", round=" + matchResult.finalRound() + "."),
+                Component.literal("Semion TD 경기 종료. 승리팀=" + winners + ", 라운드=" + matchResult.finalRound() + "."),
                 false
         );
 
@@ -282,11 +282,11 @@ public final class SemionGameManager {
                 continue;
             }
             player.sendSystemMessage(Component.literal(
-                    "Cosmetic currency +" + reward.currencyAwarded()
-                            + " | games=" + reward.profile().gamesPlayed()
-                            + ", wins=" + reward.profile().wins()
-                            + ", losses=" + reward.profile().losses()
-                            + ", total=" + reward.profile().cosmeticCurrency()
+                    "꾸미기 재화 +" + reward.currencyAwarded()
+                            + " | 경기=" + reward.profile().gamesPlayed()
+                            + ", 승=" + reward.profile().wins()
+                            + ", 패=" + reward.profile().losses()
+                            + ", 보유=" + reward.profile().cosmeticCurrency()
             ));
         }
     }
