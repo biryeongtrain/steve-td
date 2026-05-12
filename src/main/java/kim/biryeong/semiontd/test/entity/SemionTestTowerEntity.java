@@ -15,6 +15,8 @@ import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.test.entity.goal.TestTowerAttackMonsterGoal;
 import kim.biryeong.semiontd.test.tower.TestTower;
+import kim.biryeong.semiontd.tower.ProductionTower;
+import kim.biryeong.semiontd.tower.ProductionTowerBehavior;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -138,12 +140,32 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
     }
 
     public double attackDamageAmount() {
+        if (runtimeTower instanceof ProductionTower productionTower) {
+            return attackDamage * productionTower.damageMultiplier();
+        }
         return attackDamage;
     }
 
     public int attackIntervalTicks() {
+        if (runtimeTower instanceof ProductionTower productionTower) {
+            return productionTower.adjustedAttackInterval(attackIntervalTicks);
+        }
         double attackSpeedMultiplier = 1.0 - timedEffects.magnitude(TimedEffectType.TOWER_ATTACK_SPEED_REDUCTION);
         return Math.max(1, (int) Math.ceil(attackIntervalTicks / Math.max(0.01, attackSpeedMultiplier)));
+    }
+
+    public ProductionTowerBehavior productionBehavior() {
+        return runtimeTower instanceof ProductionTower productionTower ? productionTower.behavior() : null;
+    }
+
+    public int productionMechanicStacks() {
+        return runtimeTower instanceof ProductionTower productionTower ? productionTower.mechanicStacks() : 0;
+    }
+
+    public void recordProductionAttack(boolean killedPrimaryTarget) {
+        if (runtimeTower instanceof ProductionTower productionTower) {
+            productionTower.recordAttack(killedPrimaryTarget);
+        }
     }
 
     public void applyTimedEffect(TimedEffectType type, double magnitude, int durationTicks) {

@@ -16,6 +16,8 @@ import kim.biryeong.semiontd.summon.SummonMonsterType;
 import kim.biryeong.semiontd.summon.SummonResult;
 import kim.biryeong.semiontd.summon.SummonResultType;
 import kim.biryeong.semiontd.test.TestTowerService;
+import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
+import kim.biryeong.semiontd.tower.ProductionTowerService;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
 import java.util.ArrayList;
 import java.util.List;
@@ -85,6 +87,15 @@ public final class SemionCommands {
                                                 StringArgumentType.getString(context, "id")
                                         )))))
                 .then(literal("tower")
+                        .then(literal("list")
+                                .executes(context -> listProductionTowers(context.getSource(), gameManager)))
+                        .then(literal("build")
+                                .then(argument("id", StringArgumentType.word())
+                                        .executes(context -> buildProductionTower(
+                                                context.getSource(),
+                                                gameManager,
+                                                StringArgumentType.getString(context, "id")
+                                        ))))
                         .then(literal("test")
                                 .executes(context -> placeTestTower(context.getSource(), gameManager)))
                         .then(literal("upgrades")
@@ -636,6 +647,52 @@ public final class SemionCommands {
         }
 
         source.sendSuccess(() -> Component.literal("테스트 타워를 설치했습니다: " + player.blockPosition()), false);
+        return 1;
+    }
+
+    private static int listProductionTowers(CommandSourceStack source, SemionGameManager gameManager)
+            throws CommandSyntaxException {
+        SemionGame game = gameManager.activeGame().orElse(null);
+        if (game == null) {
+            source.sendFailure(Component.literal("진행 중인 Semion TD 게임이 없습니다."));
+            return 0;
+        }
+
+        ServerPlayer player = source.getPlayerOrException();
+        List<ProductionTowerCatalog.CatalogEntry> entries = ProductionTowerService.availableTowers(game, player.getUUID());
+        if (entries.isEmpty()) {
+            source.sendFailure(Component.literal("현재 직업으로 사용할 수 있는 타워가 없습니다."));
+            return 0;
+        }
+
+        source.sendSuccess(() -> Component.literal("사용 가능한 타워:"), false);
+        for (ProductionTowerCatalog.CatalogEntry entry : entries) {
+            source.sendSuccess(() -> Component.literal(" - " + entry.type().id()
+                    + " => " + entry.type().displayName()
+                    + " 다이아비용=" + entry.type().mineralCost()
+                    + ", 팩션=" + entry.behavior().faction()
+                    + ", 스플래시=" + entry.behavior().splashRadius()
+                    + ", 특성=" + entry.behavior().mechanicName()), false);
+        }
+        return entries.size();
+    }
+
+    private static int buildProductionTower(CommandSourceStack source, SemionGameManager gameManager, String towerId)
+            throws CommandSyntaxException {
+        SemionGame game = gameManager.activeGame().orElse(null);
+        if (game == null) {
+            source.sendFailure(Component.literal("진행 중인 Semion TD 게임이 없습니다."));
+            return 0;
+        }
+
+        ServerPlayer player = source.getPlayerOrException();
+        TowerPlacementResult result = ProductionTowerService.placeTower(game, player.getUUID(), player.blockPosition(), towerId);
+        if (result != TowerPlacementResult.SUCCESS) {
+            source.sendFailure(Component.literal("타워 설치 실패: " + placementFailureMessage(result)));
+            return 0;
+        }
+
+        source.sendSuccess(() -> Component.literal("타워를 설치했습니다: " + towerId + ", 위치=" + player.blockPosition()), false);
         return 1;
     }
 

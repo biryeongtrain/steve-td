@@ -68,7 +68,11 @@ import kim.biryeong.semiontd.summon.SummonMonsterType;
 import kim.biryeong.semiontd.summon.SummonRegistry;
 import kim.biryeong.semiontd.summon.SummonRole;
 import kim.biryeong.semiontd.summon.SummonTier;
+import kim.biryeong.semiontd.tower.ProductionTower;
+import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
+import kim.biryeong.semiontd.tower.ProductionTowerService;
 import kim.biryeong.semiontd.tower.TowerCategory;
+import kim.biryeong.semiontd.tower.TowerFaction;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.test.tower.TestTowerTypes;
 import kim.biryeong.semiontd.ui.SemionDisplayHudService;
@@ -1061,6 +1065,151 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         context.succeed();
+    }
+
+    @GameTest
+    public void productionTowerCatalogRegistersFactionJobsAndSplashTowers(GameTestHelper context) {
+        if (!assertTrue(context, kim.biryeong.semiontd.job.JobRegistry.find(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("semion-td", "villager_engineer")).isPresent(), "Villager job should be registered.")) {
+            return;
+        }
+        if (!assertTrue(context, kim.biryeong.semiontd.job.JobRegistry.find(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("semion-td", "undead_necromancer")).isPresent(), "Undead job should be registered.")) {
+            return;
+        }
+        if (!assertTrue(context, kim.biryeong.semiontd.job.JobRegistry.find(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("semion-td", "beast_tamer")).isPresent(), "Beast job should be registered.")) {
+            return;
+        }
+        if (!assertEquals(context, 9, ProductionTowerCatalog.all().size(), "Production catalog should expose three towers per faction.")) {
+            return;
+        }
+        for (TowerFaction faction : TowerFaction.values()) {
+            if (!assertEquals(context, 3, ProductionTowerCatalog.forFaction(faction).size(), "Each faction should expose three production towers.")) {
+                return;
+            }
+        }
+        long splashTowerCount = ProductionTowerCatalog.all().stream()
+                .filter(entry -> entry.behavior().splashRadius() > 0.0)
+                .count();
+        if (!assertTrue(context, splashTowerCount >= 8, "Most production towers should have splash coverage for mob packs.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void productionTowerBuildRespectsSelectedFactionJob(GameTestHelper context) {
+        UUID playerId = stableUuid("red-production-villager-owner");
+        SemionGame game = startedSinglePlayerGame(
+                context,
+                playerId,
+                TeamId.RED,
+                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("semion-td", "villager_engineer")
+        );
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
+
+        if (!assertEquals(
+                context,
+                TowerPlacementResult.SUCCESS,
+                ProductionTowerService.placeTower(game, playerId, towerPos, ProductionTowerCatalog.VILLAGER_CROSSBOW_POST.id()),
+                "Villager job should place villager production towers."
+        )) {
+            return;
+        }
+        if (!assertTrue(context, lane.towers().getFirst() instanceof ProductionTower, "Production build should create a ProductionTower runtime object.")) {
+            return;
+        }
+        BlockPos secondPos = towerPos.offset(1, 0, 0);
+        if (!assertEquals(
+                context,
+                TowerPlacementResult.TOWER_NOT_ALLOWED_BY_JOB,
+                ProductionTowerService.placeTower(game, playerId, secondPos, ProductionTowerCatalog.UNDEAD_BONE_SPITTER.id()),
+                "Villager job should reject undead faction towers."
+        )) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest(maxTicks = 120)
+    public void productionSplashTowerDamagesPackedMonsters(GameTestHelper context) {
+        UUID playerId = stableUuid("red-production-splash-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
+        ProductionTowerCatalog.CatalogEntry entry = ProductionTowerCatalog.find(ProductionTowerCatalog.UNDEAD_GRAVE_BOMBARD.id()).orElseThrow();
+        lane.addTower(new ProductionTower(
+                entry.type(),
+                entry.behavior(),
+                playerId,
+                TeamId.RED,
+                1,
+                new kim.biryeong.semiontd.game.GridPosition(towerPos.getX(), towerPos.getY(), towerPos.getZ())
+        ));
+
+        for (int i = 0; i < 3; i++) {
+            lane.enqueueWaveMonster(new WaveMonsterEntry(
+                    "packed-target-" + i,
+                    80.0,
+                    0.0,
+                    0.0,
+                    AttackKind.MELEE,
+                    "minecraft:zombie",
+                    null,
+                    1
+            ));
+        }
+        lane.tick(context.getLevel().getServer());
+        lane.tick(context.getLevel().getServer());
+        lane.tick(context.getLevel().getServer());
+
+        context.runAfterDelay(100, () -> {
+            long damagedCount = lane.activeMonsters().stream()
+                    .filter(monster -> monster.health() < 80.0)
+                    .count();
+            if (!assertTrue(context, damagedCount >= 2, "Splash tower should damage multiple packed monsters.")) {
+                return;
+            }
+            context.succeed();
+        });
+    }
+
+    @GameTest(maxTicks = 120)
+    public void productionTowerMechanicStacksAfterCombat(GameTestHelper context) {
+        UUID playerId = stableUuid("red-production-stack-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
+        ProductionTowerCatalog.CatalogEntry entry = ProductionTowerCatalog.find(ProductionTowerCatalog.VILLAGER_BELL_MORTAR.id()).orElseThrow();
+        ProductionTower tower = new ProductionTower(
+                entry.type(),
+                entry.behavior(),
+                playerId,
+                TeamId.RED,
+                1,
+                new kim.biryeong.semiontd.game.GridPosition(towerPos.getX(), towerPos.getY(), towerPos.getZ())
+        );
+        lane.addTower(tower);
+        lane.enqueueWaveMonster(new WaveMonsterEntry(
+                "stack-target",
+                120.0,
+                0.0,
+                0.0,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                null,
+                1
+        ));
+        lane.tick(context.getLevel().getServer());
+
+        context.runAfterDelay(100, () -> {
+            if (!assertTrue(context, tower.mechanicStacks() > 0, "Villager production tower should gain Emerald stacks after combat.")) {
+                return;
+            }
+            if (!assertTrue(context, tower.damageMultiplier() > 1.0, "Emerald stacks should increase tower damage multiplier.")) {
+                return;
+            }
+            context.succeed();
+        });
     }
 
     @GameTest
@@ -3153,11 +3302,18 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     private static SemionGame startedSinglePlayerGame(GameTestHelper context, UUID playerId, TeamId teamId) {
+        return startedSinglePlayerGame(context, playerId, teamId, null);
+    }
+
+    private static SemionGame startedSinglePlayerGame(GameTestHelper context, UUID playerId, TeamId teamId, net.minecraft.resources.ResourceLocation jobId) {
         SemionGame game = new SemionGame(
                 EconomyConfig.defaultConfig(),
                 WaveConfig.defaultConfig(),
                 testArena(context)
         );
+        if (jobId != null && !game.selectJob(playerId, jobId)) {
+            throw new IllegalStateException("Failed to select test job " + jobId);
+        }
         ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
                 MatchMode.NORMAL,
                 List.of(new AssignedParticipant(playerId, "tester", teamId, 1)),

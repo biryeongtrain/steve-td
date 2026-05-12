@@ -11,7 +11,7 @@ import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 import net.minecraft.core.BlockPos;
 
-public final class TestTower extends Tower {
+public class TestTower extends Tower {
     private int entityId = -1;
 
     public TestTower(UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
@@ -100,5 +100,4 @@ public final class TestTower extends Tower {
         return false;
     }
 }
-
 

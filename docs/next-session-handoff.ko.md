@@ -52,6 +52,8 @@ fix(command): harden lobby reset recovery
 - `/semiontd status lanes`가 active lane별 laneArea 중심 `towerSample=x,y,z`와 `laneArea=min..max`를 출력한다.
 - Carpet tower QA에서는 fake player를 `towerSample` 좌표로 이동시켜 `semiontd tower test` 성공까지 확인했다.
 - 반복 실행 절차는 `docs/carpet-qa-runbook.ko.md`에 정리되어 있다.
+- 프로덕션 타워 1차 카탈로그는 `docs/production-tower-catalog.ko.md`에 정리되어 있다.
+- `/semiontd tower list`와 `/semiontd tower build <id>`가 추가되어 직업별 허용 타워를 설치할 수 있다.
 
 검증 완료 상태:
 

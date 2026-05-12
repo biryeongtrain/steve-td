@@ -11,6 +11,12 @@ public final class JobRegistry {
     private static final Map<ResourceLocation, SemionJob> JOBS = new LinkedHashMap<>();
     private static final SemionJob DEFAULT_JOB = register(new DefaultJob());
 
+    static {
+        register(new VillagerEngineerJob());
+        register(new UndeadNecromancerJob());
+        register(new BeastTamerJob());
+    }
+
     private JobRegistry() {
     }
 
