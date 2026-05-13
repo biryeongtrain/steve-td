@@ -701,6 +701,17 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
 
         manager.tick(server);
 
+        if (!assertTrue(context, manager.activeGame().isPresent(), "Game manager should keep the ended match open while delaying result finalization.")) {
+            return;
+        }
+        if (!assertTrue(context, manager.lastMatchResult().isEmpty(), "Game manager should not publish the match result during the result delay.")) {
+            return;
+        }
+
+        for (int i = 0; i < SemionGameManager.MATCH_RESULT_DELAY_TICKS + 1; i++) {
+            manager.tick(server);
+        }
+
         if (!assertTrue(context, manager.activeGame().isEmpty(), "Game manager should clear the active game after finalization.")) {
             return;
         }

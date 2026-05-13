@@ -30,6 +30,7 @@ import net.minecraft.world.level.GameType;
 
 public final class SemionGameManager {
     private static final int STARTUP_LOBBY_LOAD_DELAY_TICKS = 20;
+    public static final int MATCH_RESULT_DELAY_TICKS = 5 * 20;
 
     private EconomyConfig economyConfig = EconomyConfig.defaultConfig();
     private WaveConfig waveConfig = WaveConfig.defaultConfig();
@@ -43,6 +44,8 @@ public final class SemionGameManager {
     private SemionGame activeGame;
     private LobbyWorld lobbyWorld;
     private MatchResult lastMatchResult;
+    private SemionGame pendingFinishedGame;
+    private int pendingFinishDelayTicks;
     private boolean startupLobbyLoadPending;
     private int startupLobbyLoadDelayTicks;
 
@@ -141,6 +144,8 @@ public final class SemionGameManager {
             sendAllPlayersToLobby(server);
             closeActiveGameSafely(activeGame, "replacing active game during create");
         }
+        pendingFinishedGame = null;
+        pendingFinishDelayTicks = 0;
 
         GameArena arena = GameArenaLoader.load(server, mapConfig);
         activeGame = new SemionGame(economyConfig, waveConfig, arena);
@@ -159,6 +164,8 @@ public final class SemionGameManager {
         if (activeGame != null) {
             closeActiveGameSafely(activeGame, "resetting match to lobby");
         }
+        pendingFinishedGame = null;
+        pendingFinishDelayTicks = 0;
         lastMatchResult = null;
         displayHudService.clear(server);
         return hadActiveGame;
@@ -181,9 +188,18 @@ public final class SemionGameManager {
             return;
         }
 
+        if (pendingFinishedGame != null) {
+            if (pendingFinishDelayTicks > 0) {
+                pendingFinishDelayTicks--;
+                return;
+            }
+            finishActiveGame(server, pendingFinishedGame);
+            return;
+        }
+
         activeGame.tick(server);
         if (activeGame != null && activeGame.phase() == RoundPhase.ENDED) {
-            finishActiveGame(server, activeGame);
+            beginDelayedMatchResult(server, activeGame);
             return;
         }
         if (activeGame != null) {
@@ -225,6 +241,8 @@ public final class SemionGameManager {
             activeGame.close();
             activeGame = null;
         }
+        pendingFinishedGame = null;
+        pendingFinishDelayTicks = 0;
         if (lobbyWorld != null) {
             lobbyWorld.unload();
             lobbyWorld = null;
@@ -258,6 +276,10 @@ public final class SemionGameManager {
         if (activeGame == game) {
             activeGame = null;
         }
+        if (pendingFinishedGame == game) {
+            pendingFinishedGame = null;
+            pendingFinishDelayTicks = 0;
+        }
         try {
             game.close();
         } catch (RuntimeException exception) {
@@ -275,6 +297,16 @@ public final class SemionGameManager {
                     disconnectException
             );
         }
+    }
+
+    private void beginDelayedMatchResult(MinecraftServer server, SemionGame finishedGame) {
+        pendingFinishedGame = finishedGame;
+        pendingFinishDelayTicks = MATCH_RESULT_DELAY_TICKS;
+        displayHudService.clear(server);
+        server.getPlayerList().broadcastSystemMessage(
+                Component.literal("Semion TD 경기 종료. 결과를 집계하는 중입니다..."),
+                false
+        );
     }
 
     private void finishActiveGame(MinecraftServer server, SemionGame finishedGame) {

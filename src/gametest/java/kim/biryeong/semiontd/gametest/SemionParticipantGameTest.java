@@ -40,6 +40,7 @@ import kim.biryeong.semiontd.entity.visual.SemionAnimationState;
 import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.game.AssignedParticipant;
 import kim.biryeong.semiontd.game.EconomyService;
+import kim.biryeong.semiontd.game.MatchParticipantResult;
 import kim.biryeong.semiontd.game.MatchResult;
 import kim.biryeong.semiontd.game.MatchMode;
 import kim.biryeong.semiontd.game.ParticipantSelectionPlan;
@@ -1242,6 +1243,16 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         SemionDialogService dialogService = new SemionDialogService();
         dialogService.showTowerControl(player, game);
         dialogService.showSummonShop(player, game);
+        dialogService.showMatchResult(
+                player,
+                new MatchResult(
+                        List.of(new MatchParticipantResult(player.getUUID(), player.getGameProfile().getName(), TeamId.RED, true)),
+                        Set.of(),
+                        Set.of(TeamId.RED),
+                        3
+                ),
+                Map.of()
+        );
         context.succeed();
     }
 

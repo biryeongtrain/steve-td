@@ -1,5 +1,6 @@
 package kim.biryeong.semiontd.ui;
 
+import de.tomalbrc.avatarrenderer.AvatarRendererMod;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,7 @@ import net.minecraft.server.dialog.ActionButton;
 import net.minecraft.core.Holder;
 import net.minecraft.server.dialog.CommonButtonData;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.common.ClientboundShowDialogPacket;
 import net.minecraft.server.dialog.CommonDialogData;
 import net.minecraft.server.dialog.Dialog;
@@ -89,57 +91,50 @@ public final class SemionDialogService {
             MatchResult matchResult,
             Map<UUID, MatchProgressionReward> rewards
     ) {
-        StringBuilder body = new StringBuilder();
-        body.append("최종 라운드: ").append(matchResult.finalRound()).append('\n');
-        body.append("승리 팀: ").append(teamList(matchResult.winningTeams())).append('\n');
-        body.append('\n');
+        MutableComponent body = mutableMiniMessage("<gradient:#facc15:#22d3ee><bold>경기 결과</bold></gradient>\n")
+                .append(miniMessage("<gray>최종 라운드</gray> <white>" + matchResult.finalRound() + "</white>\n"))
+                .append(miniMessage("<gray>승리 팀</gray> <gold>" + teamList(matchResult.winningTeams()) + "</gold>\n\n"));
+
+        List<MatchParticipantResult> orderedParticipants = matchResult.participants().stream()
+                .sorted(participantComparator())
+                .toList();
+
+        body = body.append(miniMessage("<yellow><bold>참가자 기록</bold></yellow>\n"));
+        int avatarOffset = 0;
+        for (MatchParticipantResult participant : orderedParticipants) {
+            var stats = participant.stats();
+            body = body.append(avatarComponent(participant, avatarOffset++));
+            body = body.append(miniMessage(" <white>" + participant.playerName() + "</white>"
+                    + " <dark_gray>[</dark_gray>"
+                    + (participant.winner() ? "<gold>승리</gold>" : "<gray>패배</gray>")
+                    + " <aqua>" + participant.teamId().name() + "</aqua>"
+                    + "<dark_gray>]</dark_gray>"
+                    + " <gray>처치</gray> <red>" + stats.monsterKills() + "</red>"
+                    + " <gray>수입</gray> <green>" + stats.finalIncome() + "</green>"
+                    + " <gray>소환</gray> <light_purple>" + stats.summonedMonsters() + "</light_purple>"
+                    + " <gray>처치다이아</gray> <aqua>" + stats.killMinerals() + "</aqua>"));
+            MatchProgressionReward reward = rewards.get(participant.playerId());
+            if (reward != null) {
+                body = body.append(miniMessage(" <gray>꾸미기재화</gray> <gold>+" + reward.currencyAwarded() + "</gold>"));
+            }
+            body = body.append(Component.literal("\n"));
+        }
 
         List<MatchParticipantResult> losers = matchResult.participants().stream()
                 .filter(participant -> !participant.winner())
                 .sorted(participantComparator())
                 .toList();
-        body.append("탈락 플레이어\n");
+        body = body.append(miniMessage("\n<red><bold>탈락 플레이어</bold></red>\n"));
         if (losers.isEmpty()) {
-            body.append(" - 없음\n");
+            body = body.append(miniMessage("<gray>- 없음</gray>\n"));
         } else {
             for (MatchParticipantResult participant : losers) {
-                body.append(" - ")
-                        .append(participant.playerName())
-                        .append(" [")
-                        .append(participant.teamId().name())
-                        .append("]\n");
+                body = body.append(miniMessage("<gray>- </gray><white>" + participant.playerName() + "</white>"
+                        + " <dark_gray>[</dark_gray><aqua>" + participant.teamId().name() + "</aqua><dark_gray>]</dark_gray>\n"));
             }
         }
 
-        body.append('\n');
-        body.append("참가자 기록\n");
-        for (MatchParticipantResult participant : matchResult.participants().stream()
-                .sorted(participantComparator())
-                .toList()) {
-            var stats = participant.stats();
-            body.append(" - ")
-                    .append(participant.playerName())
-                    .append(" [")
-                    .append(participant.teamId().name())
-                    .append(participant.winner() ? ", 승리" : ", 패배")
-                    .append("]")
-                    .append(": 처치=")
-                    .append(stats.monsterKills())
-                    .append(", 수입=")
-                    .append(stats.finalIncome())
-                    .append(", 소환=")
-                    .append(stats.summonedMonsters())
-                    .append(", 처치다이아=")
-                    .append(stats.killMinerals());
-
-            MatchProgressionReward reward = rewards.get(participant.playerId());
-            if (reward != null) {
-                body.append(", 꾸미기재화+=").append(reward.currencyAwarded());
-            }
-            body.append('\n');
-        }
-
-        show(player, "세미온 TD 결과", body.toString());
+        show(player, "세미온 TD 결과", body);
     }
 
     public void showLastResult(ServerPlayer player, MatchResult matchResult) {
@@ -249,6 +244,10 @@ public final class SemionDialogService {
     }
 
     private void show(ServerPlayer player, String title, String body) {
+        show(player, title, miniMessage(body));
+    }
+
+    private void show(ServerPlayer player, String title, Component body) {
         Dialog dialog = new NoticeDialog(
                 new CommonDialogData(
                         Component.literal(title),
@@ -256,7 +255,7 @@ public final class SemionDialogService {
                         true,
                         false,
                         DialogAction.CLOSE,
-                        List.<DialogBody>of(new PlainMessage(miniMessage(body), BODY_WIDTH)),
+                        List.<DialogBody>of(new PlainMessage(body, BODY_WIDTH)),
                         List.of()
                 ),
                 NoticeDialog.DEFAULT_ACTION
@@ -294,6 +293,15 @@ public final class SemionDialogService {
 
     private static Component miniMessage(String text) {
         return NonWrappingComponentSerializer.INSTANCE.serialize(MINI_MESSAGE.deserialize(text));
+    }
+
+    private static MutableComponent mutableMiniMessage(String text) {
+        return Component.empty().append(miniMessage(text));
+    }
+
+    private static Component avatarComponent(MatchParticipantResult participant, int offset) {
+        Component avatar = AvatarRendererMod.computeNow(participant.playerName(), offset, false);
+        return avatar == null ? Component.empty() : avatar;
     }
 
     private static long nextGasUpgradeCost(SemionGame game, PlayerEconomy economy) {
