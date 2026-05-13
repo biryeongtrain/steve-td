@@ -14,6 +14,9 @@ public abstract class Tower {
     private GridPosition currentPosition;
     private final double maxHealth;
     private double health;
+    private long paidMineralCost;
+    private int placedRound;
+    private boolean waveStartedAfterPlacement;
     private int cooldownTicks;
     private int level = 1;
     private boolean deployedAtFinalDefense;
@@ -38,6 +41,7 @@ public abstract class Tower {
         this.currentPosition = currentPosition;
         this.maxHealth = type.maxHealth();
         this.health = type.maxHealth();
+        this.paidMineralCost = type.mineralCost();
     }
 
     public TowerType type() {
@@ -82,6 +86,44 @@ public abstract class Tower {
 
     public boolean deployedAtFinalDefense() {
         return deployedAtFinalDefense;
+    }
+
+    public long paidMineralCost() {
+        return paidMineralCost;
+    }
+
+    public int placedRound() {
+        return placedRound;
+    }
+
+    public boolean waveStartedAfterPlacement() {
+        return waveStartedAfterPlacement;
+    }
+
+    public void recordPlacementEconomy(long paidMineralCost, int currentRound) {
+        this.paidMineralCost = Math.max(0, paidMineralCost);
+        this.placedRound = currentRound;
+        this.waveStartedAfterPlacement = false;
+    }
+
+    public void inheritSaleState(Tower previousTower, long extraPaidMineralCost) {
+        if (previousTower == null) {
+            return;
+        }
+        this.paidMineralCost = Math.max(0, previousTower.paidMineralCost() + Math.max(0, extraPaidMineralCost));
+        this.placedRound = previousTower.placedRound();
+        this.waveStartedAfterPlacement = previousTower.waveStartedAfterPlacement();
+    }
+
+    public void markWaveStarted(int currentRound) {
+        if (placedRound > 0 && currentRound >= placedRound) {
+            waveStartedAfterPlacement = true;
+        }
+    }
+
+    public long sellRefundAmount() {
+        double rate = waveStartedAfterPlacement ? 0.5 : 1.0;
+        return Math.round(paidMineralCost * rate);
     }
 
     public void onPlaced(PlayerLane lane) {

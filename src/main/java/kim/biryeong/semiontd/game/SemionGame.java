@@ -444,6 +444,9 @@ public final class SemionGame {
         phaseTicks = 0;
         finalDefenseForcedThisRound = false;
         for (SemionTeam team : livingTeams()) {
+            for (PlayerLane lane : team.laneGroup().lanes()) {
+                lane.markWaveStarted(currentRound);
+            }
             enqueueWave(team);
         }
     }

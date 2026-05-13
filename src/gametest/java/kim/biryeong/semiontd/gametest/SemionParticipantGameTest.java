@@ -55,6 +55,7 @@ import kim.biryeong.semiontd.game.StartPlacement;
 import kim.biryeong.semiontd.game.StartCandidate;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.game.TowerPlacementResult;
+import kim.biryeong.semiontd.game.TowerSellResult;
 import kim.biryeong.semiontd.game.TowerUpgradeResult;
 import kim.biryeong.semiontd.game.VanillaTeamBridge;
 import kim.biryeong.semiontd.map.ArenaLayout;
@@ -1486,6 +1487,84 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 result,
                 "Tower placement outside lane_path should be rejected."
         )) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void sellingTowerBeforeWaveRefundsFullCost(GameTestHelper context) {
+        UUID playerId = stableUuid("red-tower-sell-full");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
+        long startingMineral = game.players().get(playerId).economy().mineral();
+        long towerCost = TestTowerTypes.TEST_DIRECT.mineralCost();
+
+        if (!assertEquals(
+                context,
+                TowerPlacementResult.SUCCESS,
+                TestTowerService.placeTestTower(game, playerId, towerPos),
+                "Test tower placement should succeed before full refund sale."
+        )) {
+            return;
+        }
+
+        ProductionTowerService.SaleResult sale = ProductionTowerService.sellTower(game, playerId, towerPos);
+        if (!assertEquals(context, TowerSellResult.SUCCESS, sale.result(), "Tower sale should succeed before wave starts.")) {
+            return;
+        }
+        if (!assertEquals(context, towerCost, sale.refundAmount(), "Tower sold before its first wave should refund the full paid cost.")) {
+            return;
+        }
+        if (!assertEquals(context, startingMineral, game.players().get(playerId).economy().mineral(), "Full refund should restore the starting mineral balance.")) {
+            return;
+        }
+        if (!assertTrue(context, lane.towers().isEmpty(), "Sold tower should be removed from its lane.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void sellingTowerAfterWaveStartsRefundsHalfCost(GameTestHelper context) {
+        UUID redId = stableUuid("red-tower-sell-half");
+        UUID blueId = stableUuid("blue-tower-sell-half");
+        SemionGame game = startedTwoPlayerGame(context, redId, blueId);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
+        long towerCost = TestTowerTypes.TEST_DIRECT.mineralCost();
+
+        if (!assertEquals(
+                context,
+                TowerPlacementResult.SUCCESS,
+                TestTowerService.placeTestTower(game, redId, towerPos),
+                "Test tower placement should succeed before half refund sale."
+        )) {
+            return;
+        }
+
+        tickGame(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS);
+        if (!assertEquals(context, RoundPhase.LANE_WAVE, game.phase(), "Game should be in wave phase before half refund sale.")) {
+            return;
+        }
+
+        ProductionTowerService.SaleResult sale = ProductionTowerService.sellTower(game, redId, towerPos);
+        if (!assertEquals(context, TowerSellResult.SUCCESS, sale.result(), "Tower sale should succeed after wave starts.")) {
+            return;
+        }
+        if (!assertEquals(context, Math.round(towerCost * 0.5), sale.refundAmount(), "Tower sold after wave starts should refund half of its paid cost.")) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                EconomyConfig.defaultConfig().startingMineral() - towerCost + Math.round(towerCost * 0.5),
+                game.players().get(redId).economy().mineral(),
+                "Half refund should return exactly half the paid mineral cost."
+        )) {
+            return;
+        }
+        if (!assertTrue(context, lane.towers().isEmpty(), "Sold tower should be removed after wave-start sale.")) {
             return;
         }
         context.succeed();

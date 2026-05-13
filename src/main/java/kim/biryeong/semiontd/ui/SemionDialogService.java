@@ -6,11 +6,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.SemionJob;
 import kim.biryeong.semiontd.summon.SummonMonsterType;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerService;
+import kim.biryeong.semiontd.tower.Tower;
 import net.kyori.adventure.platform.modcommon.impl.NonWrappingComponentSerializer;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.network.chat.ClickEvent;
@@ -186,6 +188,17 @@ public final class SemionDialogService {
                 .append(nextGasUpgradeCost >= 0 ? nextGasUpgradeCost : "최대")
                 .append("</gold>\n\n");
 
+        Tower selectedTower = game.playerLane(player.getUUID())
+                .map(lane -> lane.towerAt(GridPosition.from(player.blockPosition())))
+                .orElse(null);
+        if (selectedTower != null) {
+            body.append("<yellow>현재 위치 타워</yellow> <white>").append(selectedTower.type().displayName()).append("</white>\n");
+            body.append("<gray>레벨</gray> <white>").append(selectedTower.level()).append("</white>");
+            body.append(" <gray>체력</gray> <red>").append(Math.round(selectedTower.health())).append("</red>");
+            body.append("<dark_gray>/</dark_gray><red>").append(Math.round(selectedTower.maxHealth())).append("</red>");
+            body.append(" <gray>판매 환불</gray> <gold>").append(selectedTower.sellRefundAmount()).append("</gold>\n\n");
+        }
+
         List<ProductionTowerCatalog.CatalogEntry> entries = ProductionTowerService.availableTowers(game, player.getUUID());
         if (entries.isEmpty()) {
             body.append("<red>현재 직업으로 사용할 수 있는 타워가 없습니다.</red>\n");
@@ -209,6 +222,7 @@ public final class SemionDialogService {
             ));
         }
         actions.add(actionButton("인컴 업그레이드", "/semiontd emeraldup", "에메랄드 생산량을 올립니다."));
+        actions.add(actionButton("현재 타워 판매", "/semiontd tower sell", "현재 위치의 내 타워를 판매합니다."));
         actions.add(actionButton("상태 보기", "/semiontd ui", "현재 경기 상태를 엽니다."));
         showActions(player, "세미온 TD 타워", body.toString(), actions);
     }

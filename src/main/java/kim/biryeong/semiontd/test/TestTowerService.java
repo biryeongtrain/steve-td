@@ -54,12 +54,14 @@ public final class TestTowerService {
             return TowerPlacementResult.NOT_ENOUGH_MINERAL;
         }
 
-        laneContext.lane.addTower(new TestTower(
+        TestTower tower = new TestTower(
                 laneContext.player.uuid(),
                 laneContext.player.teamId(),
                 laneContext.player.laneId(),
                 position
-        ));
+        );
+        tower.recordPlacementEconomy(mineralCost, game.currentRound());
+        laneContext.lane.addTower(tower);
         job.onTowerPlaced(jobContext, laneContext.lane, TestTowerTypes.TEST_DIRECT);
         return TowerPlacementResult.SUCCESS;
     }
@@ -125,6 +127,7 @@ public final class TestTowerService {
                 testTower.originalPosition(),
                 testTower.position()
         );
+        evolvedTower.inheritSaleState(testTower, mineralCost);
         if (!laneContext.lane.replaceTower(testTower, evolvedTower)) {
             laneContext.player.economy().addMineral(mineralCost);
             return TowerUpgradeResult.NO_TOWER_AT_POSITION;
@@ -178,4 +181,3 @@ public final class TestTowerService {
         }
     }
 }
-

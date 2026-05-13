@@ -139,6 +139,20 @@ public final class PlayerLane {
         return true;
     }
 
+    public boolean removeTower(Tower tower) {
+        if (!towers.remove(tower)) {
+            return false;
+        }
+        tower.onRemoved(this);
+        return true;
+    }
+
+    public void markWaveStarted(int currentRound) {
+        for (Tower tower : towers) {
+            tower.markWaveStarted(currentRound);
+        }
+    }
+
     public void addDefenderEntity(DefenderEntity defenderEntity) {
         defenderEntities.add(defenderEntity);
     }

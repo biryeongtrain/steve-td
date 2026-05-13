@@ -100,6 +100,8 @@ public final class SemionCommands {
                                                 gameManager,
                                                 StringArgumentType.getString(context, "id")
                                         ))))
+                        .then(literal("sell")
+                                .executes(context -> sellTower(context.getSource(), gameManager)))
                         .then(literal("test")
                                 .executes(context -> placeTestTower(context.getSource(), gameManager)))
                         .then(literal("upgrades")
@@ -724,6 +726,26 @@ public final class SemionCommands {
         return 1;
     }
 
+    private static int sellTower(CommandSourceStack source, SemionGameManager gameManager)
+            throws CommandSyntaxException {
+        SemionGame game = gameManager.activeGame().orElse(null);
+        if (game == null) {
+            source.sendFailure(Component.literal("진행 중인 Semion TD 게임이 없습니다."));
+            return 0;
+        }
+
+        ServerPlayer player = source.getPlayerOrException();
+        ProductionTowerService.SaleResult result = ProductionTowerService.sellTower(game, player.getUUID(), player.blockPosition());
+        if (result.result() != TowerSellResult.SUCCESS) {
+            source.sendFailure(Component.literal("타워 판매 실패: " + towerSellFailureMessage(result.result())));
+            return 0;
+        }
+
+        source.sendSuccess(() -> Component.literal("타워를 판매했습니다. 환불 다이아=" + result.refundAmount()), false);
+        return 1;
+    }
+
+
     private static int listTowerUpgrades(CommandSourceStack source, SemionGameManager gameManager)
             throws CommandSyntaxException {
         SemionGame game = gameManager.activeGame().orElse(null);
@@ -966,6 +988,18 @@ public final class SemionCommands {
             case TOWER_NOT_ALLOWED_BY_JOB -> "현재 직업은 해당 타워 진화를 사용할 수 없습니다";
             case NOT_ENOUGH_MINERAL -> "다이아가 부족합니다";
             case SUCCESS -> "성공";
+        };
+    }
+
+    private static String towerSellFailureMessage(TowerSellResult result) {
+        return switch (result) {
+            case SUCCESS -> "성공";
+            case INVALID_PHASE -> "현재 단계에서는 판매할 수 없습니다.";
+            case PLAYER_NOT_IN_GAME -> "현재 게임 참가자가 아닙니다.";
+            case PLAYER_TEAM_ELIMINATED -> "탈락한 팀은 판매할 수 없습니다.";
+            case UNKNOWN_LANE -> "담당 라인을 찾을 수 없습니다.";
+            case NO_TOWER_AT_POSITION -> "현재 위치에 판매할 타워가 없습니다.";
+            case TOWER_NOT_OWNED -> "자신이 설치한 타워만 판매할 수 있습니다.";
         };
     }
 
