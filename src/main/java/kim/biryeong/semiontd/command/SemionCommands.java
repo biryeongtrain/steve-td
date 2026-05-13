@@ -143,7 +143,6 @@ public final class SemionCommands {
     private static int createGame(CommandSourceStack source, SemionGameManager gameManager) {
         try {
             gameManager.createGame(source.getServer());
-            gameManager.sendAllPlayersToLobby(source.getServer());
             source.sendSuccess(() -> Component.literal("Semion TD 로비와 아레나를 생성했습니다."), false);
             return 1;
         } catch (ArenaLoadException exception) {

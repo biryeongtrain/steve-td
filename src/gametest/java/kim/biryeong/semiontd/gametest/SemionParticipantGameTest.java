@@ -695,6 +695,87 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void managerResetThenCreateStartsFreshMatch(GameTestHelper context) {
+        MinecraftServer server = context.getLevel().getServer();
+        SemionGameManager manager = new SemionGameManager();
+        Path storePath;
+        try {
+            storePath = Files.createTempDirectory("semion-manager-recreate-flow").resolve("profiles.json");
+        } catch (java.io.IOException exception) {
+            context.fail(Component.literal("Failed to create temporary progression store path."));
+            return;
+        }
+
+        manager.configure(
+                EconomyConfig.defaultConfig(),
+                new WaveConfig(List.of(), 20, null),
+                MapConfig.defaultConfig(),
+                ProgressionConfig.defaultConfig(),
+                storePath
+        );
+
+        try {
+            UUID redId = stableUuid("manager-recreate-red");
+            UUID blueId = stableUuid("manager-recreate-blue");
+
+            SemionGame firstGame = manager.createGame(server);
+            ParticipantSelectionPlan firstPlan = new ParticipantSelectionPlan(
+                    MatchMode.NORMAL,
+                    List.of(
+                            new AssignedParticipant(redId, "recreate-red", TeamId.RED, 1),
+                            new AssignedParticipant(blueId, "recreate-blue", TeamId.BLUE, 1)
+                    ),
+                    Set.of(),
+                    2
+            );
+            if (!assertTrue(context, firstGame.start(server, firstPlan), "First game should start before reset.")) {
+                return;
+            }
+            if (!assertTrue(context, manager.resetToLobby(server), "Reset should close the first active game.")) {
+                return;
+            }
+            if (!assertTrue(context, manager.activeGame().isEmpty(), "Reset should clear active game before recreate.")) {
+                return;
+            }
+
+            SemionGame secondGame = manager.createGame(server);
+            if (!assertTrue(context, manager.activeGame().orElse(null) == secondGame, "Create should install a fresh active waiting game.")) {
+                return;
+            }
+            if (!assertEquals(context, RoundPhase.WAITING, secondGame.phase(), "Fresh game should start from WAITING phase.")) {
+                return;
+            }
+            if (!assertTrue(context, secondGame.markReady(redId), "RED should be able to ready in the fresh game.")) {
+                return;
+            }
+            if (!assertTrue(context, secondGame.markReady(blueId), "BLUE should be able to ready in the fresh game.")) {
+                return;
+            }
+
+            ParticipantSelectionPlan secondPlan = new ParticipantSelectionPlan(
+                    MatchMode.NORMAL,
+                    List.of(
+                            new AssignedParticipant(redId, "recreate-red", TeamId.RED, 1),
+                            new AssignedParticipant(blueId, "recreate-blue", TeamId.BLUE, 1)
+                    ),
+                    Set.of(),
+                    2
+            );
+            if (!assertTrue(context, secondGame.start(server, secondPlan), "Fresh game should start after reset and recreate.")) {
+                return;
+            }
+            if (!assertEquals(context, RoundPhase.PREPARE_AND_SUMMON, secondGame.phase(), "Fresh game should progress into prepare phase.")) {
+                return;
+            }
+            context.succeed();
+        } catch (Exception exception) {
+            context.fail(Component.literal("Reset/create/start sequence should remain usable: " + exception.getMessage()));
+        } finally {
+            manager.shutdown();
+        }
+    }
+
+    @GameTest
     public void scoreboardTeamsAreCreated(GameTestHelper context) {
         MinecraftServer server = context.getLevel().getServer();
         VanillaTeamBridge.ensureTeams(server);

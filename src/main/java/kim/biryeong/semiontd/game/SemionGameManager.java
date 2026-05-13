@@ -137,14 +137,16 @@ public final class SemionGameManager {
 
         if (activeGame != null) {
             displayHudService.clear(server);
-            activeGame.close();
-            activeGame = null;
+            sendAllPlayersToLobby(server);
+            closeActiveGameSafely(activeGame, "replacing active game during create");
         }
 
         GameArena arena = GameArenaLoader.load(server, mapConfig);
         activeGame = new SemionGame(economyConfig, waveConfig, arena);
         lastMatchResult = null;
         VanillaTeamBridge.ensureTeams(server);
+        sendAllPlayersToLobby(server);
+        displayHudService.refreshNow(server, activeGame, matchMode);
         return activeGame;
     }
 
@@ -154,10 +156,10 @@ public final class SemionGameManager {
         displayHudService.clear(server);
         sendAllPlayersToLobby(server);
         if (activeGame != null) {
-            activeGame.close();
-            activeGame = null;
+            closeActiveGameSafely(activeGame, "resetting match to lobby");
         }
         lastMatchResult = null;
+        displayHudService.clear(server);
         return hadActiveGame;
     }
 
@@ -232,6 +234,7 @@ public final class SemionGameManager {
 
     private void sendPlayerToLobby(MinecraftServer server, ServerPlayer player) throws ArenaLoadException {
         LobbyWorld lobby = ensureLobby(server);
+        VanillaTeamBridge.assignSpectator(server, player);
         player.setGameMode(GameType.ADVENTURE);
         player.teleportTo(
                 lobby.world(),
@@ -244,6 +247,20 @@ public final class SemionGameManager {
                 false
         );
         SemionDisplayHudService.refreshPlayerHud(player);
+    }
+
+    private void closeActiveGameSafely(SemionGame game, String reason) {
+        if (game == null) {
+            return;
+        }
+        if (activeGame == game) {
+            activeGame = null;
+        }
+        try {
+            game.close();
+        } catch (RuntimeException exception) {
+            SemionTd.LOGGER.warn("Failed to close Semion TD game while {}. Continuing with manager state cleared.", reason, exception);
+        }
     }
 
     private void disconnectForLobbyReset(ServerPlayer player) {
@@ -276,10 +293,7 @@ public final class SemionGameManager {
             SemionTd.LOGGER.warn("Failed to send players to the Semion TD lobby after match end.", exception);
         }
 
-        finishedGame.close();
-        if (activeGame == finishedGame) {
-            activeGame = null;
-        }
+        closeActiveGameSafely(finishedGame, "finishing match");
     }
 
     private void announceMatchResult(

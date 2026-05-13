@@ -44,6 +44,10 @@ public final class SemionDisplayHudService {
             return;
         }
 
+        refreshNow(server, game, matchMode);
+    }
+
+    public void refreshNow(MinecraftServer server, SemionGame game, MatchMode matchMode) {
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (game.canConfigureRoster()) {
                 update(player, lobbyTextFor(player, game, matchMode, server));
