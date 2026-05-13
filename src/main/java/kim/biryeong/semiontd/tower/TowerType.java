@@ -54,9 +54,37 @@ public record TowerType(
                 damage,
                 attackIntervalTicks,
                 aggroPriority,
-                "minecraft:armor_stand",
+                "minecraft:villager",
                 null,
                 upgradeOptions
+        );
+    }
+
+    public TowerType(
+            String id,
+            String displayName,
+            TowerCategory category,
+            long mineralCost,
+            double maxHealth,
+            double range,
+            double damage,
+            int attackIntervalTicks,
+            int aggroPriority,
+            String entityTypeId
+    ) {
+        this(
+                id,
+                displayName,
+                category,
+                mineralCost,
+                maxHealth,
+                range,
+                damage,
+                attackIntervalTicks,
+                aggroPriority,
+                entityTypeId,
+                null,
+                List.of()
         );
     }
 
@@ -76,7 +104,7 @@ public record TowerType(
         entityTypeId = SemionBilModelCache.normalize(entityTypeId);
         blockbenchModelId = SemionBilModelCache.normalize(blockbenchModelId);
         if (entityTypeId == null && blockbenchModelId == null) {
-            entityTypeId = "minecraft:armor_stand";
+            entityTypeId = "minecraft:villager";
         }
         upgradeOptions = List.copyOf(upgradeOptions);
     }

@@ -21,6 +21,8 @@ import kim.biryeong.semiontd.summon.SummonRegistry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
@@ -86,6 +88,14 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         if (runtimeMonster != null) {
             runtimeMonster.syncHealth(0.0);
         }
+    }
+
+    @Override
+    protected void actuallyHurt(ServerLevel serverLevel, DamageSource damageSource, float amount) {
+        if (damageSource.getEntity() instanceof ServerPlayer) {
+            return;
+        }
+        super.actuallyHurt(serverLevel, damageSource, amount);
     }
 
     public void configureFrom(Monster monster, LaneRegionLayout laneLayout) {

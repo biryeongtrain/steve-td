@@ -20,6 +20,9 @@ import kim.biryeong.semiontd.tower.ProductionTowerBehavior;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -276,14 +279,22 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
         return false;
     }
 
+    @Override
+    protected void actuallyHurt(ServerLevel serverLevel, DamageSource damageSource, float amount) {
+        if (damageSource.getEntity() instanceof ServerPlayer) {
+            return;
+        }
+        super.actuallyHurt(serverLevel, damageSource, amount);
+    }
+
     private void setPolymerEntityType(String entityTypeId) {
         ResourceLocation id = ResourceLocation.tryParse(entityTypeId);
         if (id == null) {
-            polymerEntityType = EntityType.ARMOR_STAND;
+            polymerEntityType = EntityType.VILLAGER;
             return;
         }
 
-        polymerEntityType = BuiltInRegistries.ENTITY_TYPE.getOptional(id).orElse(EntityType.ARMOR_STAND);
+        polymerEntityType = BuiltInRegistries.ENTITY_TYPE.getOptional(id).orElse(EntityType.VILLAGER);
     }
 
     private void installBilModel(String modelId) {

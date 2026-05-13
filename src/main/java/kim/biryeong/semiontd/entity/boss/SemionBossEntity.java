@@ -5,17 +5,20 @@ import kim.biryeong.semiontd.entity.boss.goal.BossAttackLaneMonsterGoal;
 import kim.biryeong.semiontd.game.TeamId;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.packettweaker.PacketContext;
 
 public class SemionBossEntity extends PathfinderMob implements PolymerEntity {
     private TeamId teamId = TeamId.RED;
     private BossMonster runtimeBoss;
     private EntityType<?> polymerEntityType = EntityType.IRON_GOLEM;
+    private Vec3 anchorPosition;
 
     public SemionBossEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
@@ -30,12 +33,21 @@ public class SemionBossEntity extends PathfinderMob implements PolymerEntity {
     }
 
     @Override
+    public void aiStep() {
+        super.aiStep();
+        holdAnchorPosition();
+    }
+
+    @Override
     public EntityType<?> getPolymerEntityType(PacketContext context) {
         return polymerEntityType;
     }
 
     @Override
     protected void actuallyHurt(ServerLevel serverLevel, DamageSource damageSource, float amount) {
+        if (damageSource.getEntity() instanceof ServerPlayer) {
+            return;
+        }
         super.actuallyHurt(serverLevel, damageSource, amount);
         if (runtimeBoss != null && amount > 0.0F) {
             runtimeBoss.damage(amount);
@@ -51,9 +63,35 @@ public class SemionBossEntity extends PathfinderMob implements PolymerEntity {
                 .setBaseValue(bossMonster.maxHealth());
         getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED).setBaseValue(0.0);
         setHealth((float) bossMonster.health());
+        setNoGravity(true);
     }
 
     public TeamId teamId() {
         return teamId;
+    }
+
+    public void setAnchorPosition(Vec3 anchorPosition) {
+        this.anchorPosition = anchorPosition;
+        holdAnchorPosition();
+    }
+
+    @Override
+    public boolean isPushable() {
+        return false;
+    }
+
+    @Override
+    public void knockback(double strength, double x, double z) {
+    }
+
+    private void holdAnchorPosition() {
+        if (anchorPosition == null) {
+            return;
+        }
+        if (position().distanceToSqr(anchorPosition) > 0.0001) {
+            teleportTo(anchorPosition.x, anchorPosition.y, anchorPosition.z);
+        }
+        setDeltaMovement(Vec3.ZERO);
+        getNavigation().stop();
     }
 }

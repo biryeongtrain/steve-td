@@ -131,6 +131,7 @@ public final class TeamLaneGroup {
         SemionBossEntity entity = new SemionBossEntity(SemionEntityTypes.BOSS, world);
         entity.configure(teamId, boss);
         entity.setPos(position.x, position.y, position.z);
+        entity.setAnchorPosition(position);
 
         if (world.addFreshEntity(entity)) {
             bossEntity = entity;

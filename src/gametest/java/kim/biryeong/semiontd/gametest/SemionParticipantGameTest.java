@@ -23,6 +23,7 @@ import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
 import kim.biryeong.semiontd.entity.boss.SemionBossEntity;
 import kim.biryeong.semiontd.entity.boss.BossMonster;
+import kim.biryeong.semiontd.entity.boss.goal.BossAttackLaneMonsterGoal;
 import kim.biryeong.semiontd.entity.defender.DefenderEntity;
 import kim.biryeong.semiontd.entity.defender.DefenderEntityState;
 import kim.biryeong.semiontd.entity.goal.AreaAllyHealGoal;
@@ -718,24 +719,42 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void startPlacementOffsetsPlayersByLane(GameTestHelper context) {
-        Vec3 teamSpawn = testArena(context).teamArena(TeamId.RED)
+        var layout = testArena(context).teamArena(TeamId.RED)
                 .orElseThrow()
-                .layout()
-                .teamSpawn();
+                .layout();
 
         Vec3 laneOne = StartPlacement.activePlayerSpawn(
-                testArena(context).teamArena(TeamId.RED).orElseThrow().layout(),
+                layout,
                 1
         );
         Vec3 laneFive = StartPlacement.activePlayerSpawn(
-                testArena(context).teamArena(TeamId.RED).orElseThrow().layout(),
+                layout,
                 5
         );
 
-        if (!assertEquals(context, teamSpawn.add(-2.5, 0.0, -2.5), laneOne, "Lane 1 start offset is incorrect.")) {
+        if (!assertEquals(context, layout.lane(1).orElseThrow().spawn(), laneOne, "Lane 1 should spawn at its assigned lane spawn.")) {
             return;
         }
-        if (!assertEquals(context, teamSpawn.add(2.5, 0.0, 2.5), laneFive, "Lane 5 start offset is incorrect.")) {
+        if (!assertEquals(context, layout.lane(5).orElseThrow().spawn(), laneFive, "Lane 5 should spawn at its assigned lane spawn.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void defaultWaveConfigCoversPreInfiniteRounds(GameTestHelper context) {
+        WaveConfig config = WaveConfig.defaultConfig();
+
+        for (int round = 1; round <= 20; round++) {
+            if (!assertPresent(context, config.configForRound(round), "Default wave config should define round " + round + ".")) {
+                return;
+            }
+        }
+        if (!assertTrue(
+                context,
+                !config.configForRound(2).orElseThrow().entriesForLane("lane_1").isEmpty(),
+                "Round 2 should enqueue default lane monsters."
+        )) {
             return;
         }
         context.succeed();
@@ -1210,6 +1229,48 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             }
             context.succeed();
         });
+    }
+
+    @GameTest
+    public void productionTowerCatalogUsesVanillaMobVisuals(GameTestHelper context) {
+        if (!assertEquals(
+                context,
+                "minecraft:villager",
+                ProductionTowerCatalog.VILLAGER_CROSSBOW_POST.entityTypeId(),
+                "Villager faction towers should use a visible vanilla mob entity."
+        )) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                "minecraft:pig",
+                ProductionTowerCatalog.BEAST_BOAR_CRASHER.entityTypeId(),
+                "Beast faction boar tower should use a pig visual instead of armor stand."
+        )) {
+            return;
+        }
+        if (!assertTrue(
+                context,
+                ProductionTowerCatalog.all().stream()
+                        .noneMatch(entry -> "minecraft:armor_stand".equals(entry.type().entityTypeId())),
+                "Production tower catalog should not render towers as armor stands."
+        )) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void hudScaleUsesQaMultiplier(GameTestHelper context) {
+        if (!assertEquals(
+                context,
+                2.5F,
+                SemionDisplayHudService.HUD_SCALE_MULTIPLIER,
+                "Display HUD scale multiplier should match QA decision."
+        )) {
+            return;
+        }
+        context.succeed();
     }
 
     @GameTest
@@ -1837,6 +1898,90 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
 
         awaitBossCombatResolution(context, game, TeamId.RED, lane, initialBossHealth, monsterEntityId, 0);
+    }
+
+    @GameTest
+    public void semionEntitiesIgnoreDirectPlayerDamage(GameTestHelper context) {
+        var player = context.makeMockServerPlayerInLevel();
+        Vec3 origin = context.absolutePos(BlockPos.ZERO).getCenter();
+
+        SemionTestTowerEntity tower = spawnTowerEntity(context, TeamId.RED, 1, origin, TestTowerTypes.TEST_DIRECT);
+        float towerHealth = tower.getHealth();
+        context.hurt(tower, tower.damageSources().playerAttack(player), 20.0F);
+        if (!assertEquals(context, towerHealth, tower.getHealth(), "Players should not damage tower entities directly.")) {
+            return;
+        }
+
+        SemionMonsterEntity monster = spawnSummonEntity(context, "player-immune-monster", TeamId.BLUE, TeamId.RED, 1, origin.add(2.0, 0.0, 0.0), 100.0, 0.0);
+        float monsterHealth = monster.getHealth();
+        context.hurt(monster, monster.damageSources().playerAttack(player), 20.0F);
+        if (!assertEquals(context, monsterHealth, monster.getHealth(), "Players should not damage wave or summon entities directly.")) {
+            return;
+        }
+
+        BossMonster runtimeBoss = BossMonster.defaultBoss(TeamId.RED);
+        SemionBossEntity boss = new SemionBossEntity(SemionEntityTypes.BOSS, context.getLevel());
+        boss.configure(TeamId.RED, runtimeBoss);
+        boss.setPos(origin.add(4.0, 0.0, 0.0));
+        context.getLevel().addFreshEntity(boss);
+        float bossHealth = boss.getHealth();
+        double runtimeBossHealth = runtimeBoss.health();
+        context.hurt(boss, boss.damageSources().playerAttack(player), 20.0F);
+        if (!assertEquals(context, bossHealth, boss.getHealth(), "Players should not damage boss entities directly.")) {
+            return;
+        }
+        if (!assertEquals(context, runtimeBossHealth, runtimeBoss.health(), "Player boss hits should not affect runtime boss health.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void bossEntityStaysAnchoredAndPullsRangedMonsters(GameTestHelper context) {
+        Vec3 anchor = context.absolutePos(BlockPos.ZERO).getCenter().add(4.0, 2.0, 4.0);
+        BossMonster runtimeBoss = BossMonster.defaultBoss(TeamId.RED);
+        SemionBossEntity boss = new SemionBossEntity(SemionEntityTypes.BOSS, context.getLevel());
+        boss.configure(TeamId.RED, runtimeBoss);
+        boss.setPos(anchor);
+        boss.setAnchorPosition(anchor);
+        context.getLevel().addFreshEntity(boss);
+
+        boss.teleportTo(anchor.x + 2.0, anchor.y, anchor.z);
+        boss.aiStep();
+        if (!assertTrue(context, boss.position().distanceTo(anchor) < 0.01, "Boss entity should stay fixed at its anchor position.")) {
+            return;
+        }
+
+        Monster rangedMonster = new Monster(
+                "boss-pull-ranged",
+                TeamId.RED,
+                1,
+                Optional.empty(),
+                Optional.of(TeamId.BLUE),
+                100.0,
+                0.0,
+                4.0,
+                AttackKind.RANGED,
+                "minecraft:skeleton",
+                null,
+                DamageType.PHYSICAL,
+                0,
+                SummonTier.T1,
+                List.of(SummonRole.RUSH),
+                0
+        );
+        SemionMonsterEntity rangedEntity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
+        rangedEntity.configureFrom(rangedMonster, null);
+        rangedEntity.setPos(anchor.add(8.0, 0.0, 0.0));
+        context.getLevel().addFreshEntity(rangedEntity);
+
+        double before = rangedEntity.distanceToSqr(boss);
+        new BossAttackLaneMonsterGoal(boss).tick();
+        double after = rangedEntity.distanceToSqr(boss);
+        if (!assertTrue(context, after < before, "Boss should pull ranged monsters toward the fixed boss position.")) {
+            return;
+        }
+        context.succeed();
     }
 
     @GameTest

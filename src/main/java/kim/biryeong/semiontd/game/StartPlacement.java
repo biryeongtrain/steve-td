@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.game;
 
 import kim.biryeong.semiontd.map.ArenaLayout;
+import kim.biryeong.semiontd.map.LaneRegionLayout;
 import net.minecraft.world.phys.Vec3;
 
 public final class StartPlacement {
@@ -26,8 +27,12 @@ public final class StartPlacement {
     }
 
     public static Vec3 activePlayerSpawn(ArenaLayout layout, int laneId) {
-        int index = Math.max(1, Math.min(laneId, ACTIVE_OFFSETS.length)) - 1;
-        return layout.teamSpawn().add(ACTIVE_OFFSETS[index]);
+        return layout.lane(laneId)
+                .map(LaneRegionLayout::spawn)
+                .orElseGet(() -> {
+                    int index = Math.max(1, Math.min(laneId, ACTIVE_OFFSETS.length)) - 1;
+                    return layout.teamSpawn().add(ACTIVE_OFFSETS[index]);
+                });
     }
 
     public static Vec3 spectatorSpawn(ArenaLayout layout, int spectatorIndex) {

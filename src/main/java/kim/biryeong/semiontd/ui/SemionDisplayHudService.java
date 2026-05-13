@@ -31,8 +31,9 @@ public final class SemionDisplayHudService {
     private static final String HUD_ID = "semion-td:status";
     private static final float HUD_X = 1520.0F;
     private static final float HUD_Y = 190.0F;
-    private static final float HUD_SIZE = 34.0F;
-    private static final int LINE_WIDTH = 210;
+    public static final float HUD_SCALE_MULTIPLIER = 2.5F;
+    private static final float HUD_SIZE = 34.0F * HUD_SCALE_MULTIPLIER;
+    private static final int LINE_WIDTH = Math.round(210 * HUD_SCALE_MULTIPLIER);
     private static final int UPDATE_INTERVAL_TICKS = 10;
 
     private int updateTicker;
