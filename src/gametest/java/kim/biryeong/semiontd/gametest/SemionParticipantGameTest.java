@@ -1627,12 +1627,12 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest(maxTicks = 120)
-    public void testTowerMovesTowardOutOfRangeMonster(GameTestHelper context) {
-        UUID playerId = stableUuid("red-tower-move-owner");
+    public void testTowerStaysAnchoredAgainstOutOfRangeMonster(GameTestHelper context) {
+        UUID playerId = stableUuid("red-tower-anchor-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
         PlayerLane lane = redLane(game, 1);
         BlockPos towerPos = towerPlacementPos(lane);
-        TowerType lowRangeType = new TowerType("move_test", "Move Test", TowerCategory.DIRECT, 0, 50.0, 1.0, 12.0, 20, 0);
+        TowerType lowRangeType = new TowerType("anchor_test", "Anchor Test", TowerCategory.DIRECT, 0, 50.0, 1.0, 12.0, 20, 0);
         lane.addTower(new TestTower(lowRangeType, playerId, TeamId.RED, 1, new kim.biryeong.semiontd.game.GridPosition(
                 towerPos.getX(),
                 towerPos.getY(),
@@ -1658,17 +1658,18 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         int monsterEntityId = lane.activeMonsters().getFirst().minecraftEntityId();
         context.runAfterDelay(1, () -> {
             if (!(lane.arenaWorld().getEntity(monsterEntityId) instanceof SemionMonsterEntity monsterEntity)) {
-                context.fail(Component.literal("Movement test monster entity should exist."));
+                context.fail(Component.literal("Anchor test monster entity should exist."));
                 return;
             }
             monsterEntity.setNoAi(true);
         });
 
+        Vec3 anchorPosition = new Vec3(towerPos.getX() + 0.5, towerPos.getY(), towerPos.getZ() + 0.5);
         context.runAfterDelay(40, () -> {
             if (!assertTrue(
                     context,
                     lane.arenaWorld().getEntity(monsterEntityId) instanceof SemionMonsterEntity,
-                    "Movement test monster entity should still exist."
+                    "Anchor test monster entity should still exist."
             )) {
                 return;
             }
@@ -1684,11 +1685,36 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             )) {
                 return;
             }
-            Vec3 currentTowerPos = lane.arenaWorld().getEntity(tower.entityId().getAsInt()).position();
+            SemionTestTowerEntity towerEntity = (SemionTestTowerEntity) lane.arenaWorld().getEntity(tower.entityId().getAsInt());
+            Vec3 currentTowerPos = towerEntity.position();
             if (!assertTrue(
                     context,
-                    currentTowerPos.distanceTo(new Vec3(towerPos.getX() + 0.5, towerPos.getY(), towerPos.getZ() + 0.5)) > 0.2,
-                    "Tower should move away from its original position when the target starts out of range."
+                    currentTowerPos.distanceTo(anchorPosition) < 0.01,
+                    "Tower entity should stay at its placed position when the target starts out of range."
+            )) {
+                return;
+            }
+            towerEntity.teleportTo(anchorPosition.x + 3.0, anchorPosition.y, anchorPosition.z);
+        });
+
+        context.runAfterDelay(42, () -> {
+            TestTower tower = (TestTower) lane.towers().getFirst();
+            if (!assertTrue(context, tower.entityId().isPresent(), "Tower entity should still exist after forced displacement.")) {
+                return;
+            }
+            var displacedTowerEntity = lane.arenaWorld().getEntity(tower.entityId().getAsInt());
+            if (!assertTrue(
+                    context,
+                    displacedTowerEntity instanceof SemionTestTowerEntity,
+                    "Tower entity should still be present after forced displacement."
+            )) {
+                return;
+            }
+            SemionTestTowerEntity towerEntity = (SemionTestTowerEntity) displacedTowerEntity;
+            if (!assertTrue(
+                    context,
+                    towerEntity.position().distanceTo(anchorPosition) < 0.01,
+                    "Tower entity should return to its placed position after being displaced."
             )) {
                 return;
             }

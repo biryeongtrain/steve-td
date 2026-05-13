@@ -29,6 +29,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.packettweaker.PacketContext;
 
 public final class SemionTestTowerEntity extends PathfinderMob implements AnimatedEntity, LaneDefenseEntity, HealingTarget {
@@ -116,6 +117,7 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
     public void aiStep() {
         super.aiStep();
         timedEffects.tick();
+        holdTowerPosition();
     }
 
     @Override
@@ -136,10 +138,6 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
             return getBoundingBox().inflate(targetAcquireRange);
         }
         return laneLayout.defenseSearchBox(position(), TARGET_SEARCH_HORIZONTAL_PADDING, TARGET_SEARCH_VERTICAL_PADDING);
-    }
-
-    public double moveSpeedAmount() {
-        return moveSpeed;
     }
 
     public double attackDamageAmount() {
@@ -280,6 +278,10 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
     }
 
     @Override
+    public void knockback(double strength, double x, double z) {
+    }
+
+    @Override
     protected void actuallyHurt(ServerLevel serverLevel, DamageSource damageSource, float amount) {
         if (damageSource.getEntity() instanceof ServerPlayer) {
             return;
@@ -308,5 +310,19 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
             holder = new LivingEntityHolder<>(this, model);
             holderAttachment = EntityAttachment.ofTicking(holder, this);
         });
+    }
+
+    private void holdTowerPosition() {
+        if (runtimeTower == null) {
+            return;
+        }
+
+        var position = runtimeTower.position();
+        Vec3 anchorPosition = new Vec3(position.x() + 0.5, position.y(), position.z() + 0.5);
+        if (position().distanceToSqr(anchorPosition) > 0.0001) {
+            teleportTo(anchorPosition.x, anchorPosition.y, anchorPosition.z);
+        }
+        setDeltaMovement(Vec3.ZERO);
+        getNavigation().stop();
     }
 }

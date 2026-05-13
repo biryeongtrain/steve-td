@@ -17,7 +17,7 @@ public final class TestTowerAttackMonsterGoal extends Goal {
 
     public TestTowerAttackMonsterGoal(SemionTestTowerEntity tower) {
         this.tower = tower;
-        setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+        setFlags(EnumSet.of(Flag.LOOK));
     }
 
     @Override
@@ -59,8 +59,8 @@ public final class TestTowerAttackMonsterGoal extends Goal {
         double attackRangeSqr = tower.attackRange() * tower.attackRange();
         double distanceSqr = tower.distanceToSqr(target);
         if (distanceSqr > attackRangeSqr) {
-            tower.playAnimation(SemionAnimationState.WALK);
-            moveToward(target);
+            tower.getNavigation().stop();
+            tower.playAnimation(SemionAnimationState.IDLE);
             return;
         }
 
@@ -135,18 +135,4 @@ public final class TestTowerAttackMonsterGoal extends Goal {
                 .forEach(monster -> damageTarget(monster, damageAmount));
     }
 
-    private void moveToward(SemionMonsterEntity target) {
-        var current = tower.position();
-        var targetPos = target.position();
-        var delta = targetPos.subtract(current);
-        double horizontalDistance = Math.hypot(delta.x, delta.z);
-        if (horizontalDistance <= 0.001) {
-            return;
-        }
-
-        double step = Math.min(tower.moveSpeedAmount(), horizontalDistance);
-        double moveX = delta.x / horizontalDistance * step;
-        double moveZ = delta.z / horizontalDistance * step;
-        tower.setPos(current.x + moveX, tower.getY(), current.z + moveZ);
-    }
 }
