@@ -155,6 +155,10 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
         return Math.max(1, (int) Math.ceil(attackIntervalTicks / Math.max(0.01, attackSpeedMultiplier)));
     }
 
+    public boolean playsRangedAttackSound() {
+        return attackDamage > 0.0 && attackRange() > 3.0;
+    }
+
     public ProductionTowerBehavior productionBehavior() {
         return runtimeTower instanceof ProductionTower productionTower ? productionTower.behavior() : null;
     }

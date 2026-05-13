@@ -1727,6 +1727,34 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         context.succeed();
     }
 
+    @GameTest
+    public void rangedDamageTowerUsesArrowAttackSoundCue(GameTestHelper context) {
+        UUID playerId = stableUuid("red-tower-sound-owner");
+        var position = new kim.biryeong.semiontd.game.GridPosition(1, 2, 3);
+        TowerType rangedDamageType = new TowerType("sound_ranged", "Sound Ranged", TowerCategory.DIRECT, 0, 50.0, 8.0, 10.0, 20, 0);
+        TowerType closeDamageType = new TowerType("sound_close", "Sound Close", TowerCategory.DIRECT, 0, 50.0, 2.0, 10.0, 20, 0);
+        TowerType rangedSupportType = new TowerType("sound_support", "Sound Support", TowerCategory.SUPPORT, 0, 50.0, 8.0, 0.0, 20, 0);
+
+        SemionTestTowerEntity ranged = new SemionTestTowerEntity(SemionEntityTypes.TEST_TOWER, context.getLevel());
+        ranged.configure(new TestTower(rangedDamageType, playerId, TeamId.RED, 1, position), null);
+        if (!assertTrue(context, ranged.playsRangedAttackSound(), "Damage-dealing ranged towers should play the arrow attack sound cue.")) {
+            return;
+        }
+
+        SemionTestTowerEntity close = new SemionTestTowerEntity(SemionEntityTypes.TEST_TOWER, context.getLevel());
+        close.configure(new TestTower(closeDamageType, playerId, TeamId.RED, 1, position), null);
+        if (!assertTrue(context, !close.playsRangedAttackSound(), "Close-range towers should not use the ranged arrow sound cue.")) {
+            return;
+        }
+
+        SemionTestTowerEntity support = new SemionTestTowerEntity(SemionEntityTypes.TEST_TOWER, context.getLevel());
+        support.configure(new TestTower(rangedSupportType, playerId, TeamId.RED, 1, position), null);
+        if (!assertTrue(context, !support.playsRangedAttackSound(), "Non-damage support towers should not use the ranged arrow sound cue.")) {
+            return;
+        }
+        context.succeed();
+    }
+
     @GameTest(maxTicks = 80)
     public void testTowerEntityDamagesLaneMonster(GameTestHelper context) {
         UUID playerId = stableUuid("red-tower-combat-owner");

@@ -8,6 +8,8 @@ import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.visual.SemionAnimationState;
 import kim.biryeong.semiontd.test.entity.SemionTestTowerEntity;
 import kim.biryeong.semiontd.tower.ProductionTowerBehavior;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.phys.AABB;
 
@@ -72,10 +74,25 @@ public final class TestTowerAttackMonsterGoal extends Goal {
 
         tower.playAnimation(SemionAnimationState.ATTACK);
         double damageAmount = tower.attackDamageAmount();
+        playRangedAttackSound();
         boolean killedPrimaryTarget = damageTarget(target, damageAmount);
         tower.recordProductionAttack(killedPrimaryTarget);
         applyProductionSplash(target, damageAmount, killedPrimaryTarget);
         cooldownTicks = tower.attackIntervalTicks();
+    }
+
+    private void playRangedAttackSound() {
+        if (!tower.playsRangedAttackSound()) {
+            return;
+        }
+        tower.level().playSound(
+                null,
+                tower.blockPosition(),
+                SoundEvents.ARROW_SHOOT,
+                SoundSource.HOSTILE,
+                0.7F,
+                1.15F
+        );
     }
 
     private boolean damageTarget(SemionMonsterEntity target, double baseDamage) {
