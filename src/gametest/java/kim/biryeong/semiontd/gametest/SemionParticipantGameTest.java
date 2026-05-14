@@ -1297,6 +1297,32 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertEquals(context, 9, starters.size(), "Only the nine first-tier towers should be directly installable.")) {
             return;
         }
+        for (TowerFaction faction : TowerFaction.values()) {
+            List<ProductionTowerCatalog.CatalogEntry> factionStarters = starters.stream()
+                    .filter(entry -> entry.behavior().faction() == faction)
+                    .toList();
+            if (!assertTrue(
+                    context,
+                    factionStarters.stream().anyMatch(SemionParticipantGameTest::isDurableStarter),
+                    faction + " starters should include a durable low-damage front line tower."
+            )) {
+                return;
+            }
+            if (!assertTrue(
+                    context,
+                    factionStarters.stream().anyMatch(SemionParticipantGameTest::isSplashStarter),
+                    faction + " starters should include a pack-clearing splash tower."
+            )) {
+                return;
+            }
+            if (!assertTrue(
+                    context,
+                    factionStarters.stream().anyMatch(SemionParticipantGameTest::isFocusedDamageStarter),
+                    faction + " starters should include a long-range focused damage tower."
+            )) {
+                return;
+            }
+        }
         for (ProductionTowerCatalog.CatalogEntry starter : starters) {
             if (!assertEquals(context, 2, starter.type().upgradeOptions().size(), "Every starter tower should expose two tier-2 branches.")) {
                 return;
@@ -1334,6 +1360,29 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         context.succeed();
+    }
+
+    private static boolean isDurableStarter(ProductionTowerCatalog.CatalogEntry entry) {
+        TowerType type = entry.type();
+        return type.maxHealth() >= 140.0
+                && type.aggroPriority() >= 30
+                && starterDamagePerSecond(type) <= 8.0;
+    }
+
+    private static boolean isSplashStarter(ProductionTowerCatalog.CatalogEntry entry) {
+        return entry.behavior().splashRadius() >= 2.0
+                && entry.behavior().splashDamageMultiplier() >= 0.5;
+    }
+
+    private static boolean isFocusedDamageStarter(ProductionTowerCatalog.CatalogEntry entry) {
+        TowerType type = entry.type();
+        return type.range() >= 13.0
+                && starterDamagePerSecond(type) >= 14.0
+                && entry.behavior().splashRadius() <= 0.6;
+    }
+
+    private static double starterDamagePerSecond(TowerType type) {
+        return type.damage() * 20.0 / type.attackIntervalTicks();
     }
 
     @GameTest
