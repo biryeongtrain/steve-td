@@ -28,6 +28,8 @@ import kim.biryeong.semiontd.util.Scheduler;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Relative;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.portal.TeleportTransition;
@@ -411,6 +413,9 @@ public final class SemionGameManager {
                 SemionText.prefixedMini("<yellow>" + secondsRemaining + "초</yellow> 후 게임을 시작합니다."),
                 false
         );
+        server.getPlayerList().getPlayers().forEach(player -> {
+            player.playNotifySound(SoundEvents.DISPENSER_LAUNCH, SoundSource.MUSIC, 1557f, 1f);
+        });
     }
 
     private void clearStartCountdown() {
