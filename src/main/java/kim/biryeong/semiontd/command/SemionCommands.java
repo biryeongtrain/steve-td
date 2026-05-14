@@ -755,9 +755,9 @@ public final class SemionCommands {
         }
 
         ServerPlayer player = source.getPlayerOrException();
-        List<TowerUpgradeOption> upgrades = TestTowerService.availableUpgrades(game, player.getUUID(), player.blockPosition());
+        List<TowerUpgradeOption> upgrades = ProductionTowerService.availableUpgrades(game, player.getUUID(), player.blockPosition());
         if (upgrades.isEmpty()) {
-            source.sendFailure(Component.literal("해당 위치에 사용 가능한 테스트 타워 업그레이드가 없습니다: " + player.blockPosition()));
+            source.sendFailure(Component.literal("해당 위치에 사용 가능한 타워 업그레이드가 없습니다: " + player.blockPosition()));
             return 0;
         }
 
@@ -779,7 +779,7 @@ public final class SemionCommands {
         }
 
         ServerPlayer player = source.getPlayerOrException();
-        TowerUpgradeResult result = TestTowerService.upgradeTestTower(game, player.getUUID(), player.blockPosition(), upgradeId);
+        TowerUpgradeResult result = ProductionTowerService.upgradeTower(game, player.getUUID(), player.blockPosition(), upgradeId);
         if (result != TowerUpgradeResult.SUCCESS) {
             source.sendFailure(Component.literal("타워 업그레이드 실패: " + towerUpgradeFailureMessage(result)));
             return 0;

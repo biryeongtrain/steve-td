@@ -14,6 +14,7 @@ import kim.biryeong.semiontd.summon.SummonMonsterType;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerService;
 import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.tower.TowerUpgradeOption;
 import net.kyori.adventure.platform.modcommon.impl.NonWrappingComponentSerializer;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.network.chat.ClickEvent;
@@ -195,7 +196,18 @@ public final class SemionDialogService {
         }
 
         List<ProductionTowerCatalog.CatalogEntry> entries = ProductionTowerService.availableTowers(game, player.getUUID());
-        if (entries.isEmpty()) {
+        List<TowerUpgradeOption> upgrades = selectedTower == null
+                ? List.of()
+                : ProductionTowerService.availableUpgrades(game, player.getUUID(), player.blockPosition());
+        if (!upgrades.isEmpty()) {
+            body.append("<gray>선택 가능한 업그레이드</gray>\n");
+            for (TowerUpgradeOption option : upgrades) {
+                body.append("<aqua>").append(option.displayName()).append("</aqua>")
+                        .append(" <gray>비용</gray> <gold>").append(option.mineralCost()).append("</gold>\n");
+            }
+        } else if (selectedTower != null) {
+            body.append("<gray>현재 위치 타워는 더 이상 업그레이드할 수 없습니다.</gray>\n");
+        } else if (entries.isEmpty()) {
             body.append("<red>현재 직업으로 사용할 수 있는 타워가 없습니다.</red>\n");
         } else {
             body.append("<gray>현재 위치에서 설치할 타워를 선택하세요.</gray>\n");
@@ -209,12 +221,22 @@ public final class SemionDialogService {
         }
 
         java.util.ArrayList<ActionButton> actions = new java.util.ArrayList<>();
-        for (ProductionTowerCatalog.CatalogEntry entry : entries) {
-            actions.add(actionButton(
-                    entry.type().displayName(),
-                    "/semiontd tower build " + entry.type().id(),
-                    "현재 위치에 설치합니다."
-            ));
+        if (selectedTower == null) {
+            for (ProductionTowerCatalog.CatalogEntry entry : entries) {
+                actions.add(actionButton(
+                        entry.type().displayName(),
+                        "/semiontd tower build " + entry.type().id(),
+                        "현재 위치에 설치합니다."
+                ));
+            }
+        } else {
+            for (TowerUpgradeOption option : upgrades) {
+                actions.add(actionButton(
+                        option.displayName(),
+                        "/semiontd tower upgrade " + option.id(),
+                        "현재 위치의 타워를 업그레이드합니다."
+                ));
+            }
         }
         actions.add(actionButton("인컴 업그레이드", "/semiontd emeraldup", "에메랄드 생산량을 올립니다."));
         actions.add(actionButton("현재 타워 판매", "/semiontd tower sell", "현재 위치의 내 타워를 판매합니다."));

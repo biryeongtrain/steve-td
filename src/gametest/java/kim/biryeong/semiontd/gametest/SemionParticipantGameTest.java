@@ -1267,18 +1267,54 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertTrue(context, kim.biryeong.semiontd.job.JobRegistry.find(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("semion-td", "beast_tamer")).isPresent(), "Beast job should be registered.")) {
             return;
         }
-        if (!assertEquals(context, 9, ProductionTowerCatalog.all().size(), "Production catalog should expose three towers per faction.")) {
+        if (!assertEquals(context, 45, ProductionTowerCatalog.all().size(), "Production catalog should expose nine starter towers plus two-branch upgrade trees.")) {
             return;
         }
         for (TowerFaction faction : TowerFaction.values()) {
-            if (!assertEquals(context, 3, ProductionTowerCatalog.forFaction(faction).size(), "Each faction should expose three production towers.")) {
+            if (!assertEquals(context, 15, ProductionTowerCatalog.forFaction(faction).size(), "Each faction should expose three starter trees with five towers each.")) {
                 return;
+            }
+        }
+        List<ProductionTowerCatalog.CatalogEntry> starters = ProductionTowerCatalog.all().stream()
+                .filter(ProductionTowerCatalog.CatalogEntry::starter)
+                .toList();
+        if (!assertEquals(context, 9, starters.size(), "Only the nine first-tier towers should be directly installable.")) {
+            return;
+        }
+        for (ProductionTowerCatalog.CatalogEntry starter : starters) {
+            if (!assertEquals(context, 2, starter.type().upgradeOptions().size(), "Every starter tower should expose two tier-2 branches.")) {
+                return;
+            }
+            for (var option : starter.type().upgradeOptions()) {
+                Optional<ProductionTowerCatalog.CatalogEntry> tierTwo = ProductionTowerCatalog.find(option.targetTypeId());
+                if (!assertPresent(context, tierTwo, "Starter upgrade target should exist in production catalog.")) {
+                    return;
+                }
+                if (!assertEquals(context, 2, tierTwo.get().tier(), "Starter upgrade target should be a tier-2 tower.")) {
+                    return;
+                }
+                if (!assertEquals(context, starter.behavior().faction(), tierTwo.get().behavior().faction(), "Upgrade branch should stay in the same faction.")) {
+                    return;
+                }
+                if (!assertEquals(context, 1, tierTwo.get().type().upgradeOptions().size(), "Each tier-2 branch should expose one ultimate upgrade.")) {
+                    return;
+                }
+                Optional<ProductionTowerCatalog.CatalogEntry> ultimate = ProductionTowerCatalog.find(tierTwo.get().type().upgradeOptions().getFirst().targetTypeId());
+                if (!assertPresent(context, ultimate, "Tier-2 ultimate target should exist in production catalog.")) {
+                    return;
+                }
+                if (!assertEquals(context, 3, ultimate.get().tier(), "Final target should be a tier-3 ultimate tower.")) {
+                    return;
+                }
+                if (!assertTrue(context, ultimate.get().type().upgradeOptions().isEmpty(), "Ultimate towers should be leaf upgrades.")) {
+                    return;
+                }
             }
         }
         long splashTowerCount = ProductionTowerCatalog.all().stream()
                 .filter(entry -> entry.behavior().splashRadius() > 0.0)
                 .count();
-        if (!assertTrue(context, splashTowerCount >= 8, "Most production towers should have splash coverage for mob packs.")) {
+        if (!assertTrue(context, splashTowerCount >= 40, "Most production towers should have splash coverage for mob packs.")) {
             return;
         }
         context.succeed();
@@ -1307,12 +1343,142 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertTrue(context, lane.towers().getFirst() instanceof ProductionTower, "Production build should create a ProductionTower runtime object.")) {
             return;
         }
+        if (!assertEquals(
+                context,
+                3,
+                ProductionTowerService.availableTowers(game, playerId).size(),
+                "Production build list should expose only starter towers for the selected faction."
+        )) {
+            return;
+        }
         BlockPos secondPos = towerPos.offset(1, 0, 0);
         if (!assertEquals(
                 context,
                 TowerPlacementResult.TOWER_NOT_ALLOWED_BY_JOB,
                 ProductionTowerService.placeTower(game, playerId, secondPos, ProductionTowerCatalog.UNDEAD_BONE_SPITTER.id()),
                 "Villager job should reject undead faction towers."
+        )) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                TowerPlacementResult.TOWER_NOT_ALLOWED_BY_JOB,
+                ProductionTowerService.placeTower(game, playerId, secondPos, "villager_crossbow_post_militia_net"),
+                "Upgrade-only production towers should not be directly buildable."
+        )) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void productionTowerUpgradeChainsToUltimateAndPreservesRefund(GameTestHelper context) {
+        UUID playerId = stableUuid("red-production-upgrade-owner");
+        SemionGame game = startedSinglePlayerGame(
+                context,
+                playerId,
+                TeamId.RED,
+                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("semion-td", "villager_engineer")
+        );
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
+
+        if (!assertEquals(
+                context,
+                TowerPlacementResult.SUCCESS,
+                ProductionTowerService.placeTower(game, playerId, towerPos, ProductionTowerCatalog.VILLAGER_CROSSBOW_POST.id()),
+                "Starter production tower placement should succeed before upgrade."
+        )) {
+            return;
+        }
+        game.players().get(playerId).economy().addMineral(500);
+        ProductionTower starter = (ProductionTower) lane.towers().getFirst();
+        int starterEntityId = starter.entityId().orElse(-1);
+
+        if (!assertEquals(
+                context,
+                2,
+                ProductionTowerService.availableUpgrades(game, playerId, towerPos).size(),
+                "Starter production tower should expose two upgrade branches."
+        )) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                TowerUpgradeResult.SUCCESS,
+                ProductionTowerService.upgradeTower(game, playerId, towerPos, "militia_net"),
+                "Production tower should upgrade into the selected tier-2 branch."
+        )) {
+            return;
+        }
+
+        ProductionTower tierTwo = (ProductionTower) lane.towers().getFirst();
+        if (!assertEquals(context, "villager_crossbow_post_militia_net", tierTwo.type().id(), "Tier-2 production tower id should match the selected branch.")) {
+            return;
+        }
+        if (!assertTrue(context, tierTwo.entityId().orElse(-1) != starterEntityId, "Production upgrade should replace the live tower entity.")) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                1,
+                ProductionTowerService.availableUpgrades(game, playerId, towerPos).size(),
+                "Tier-2 production tower should expose one ultimate upgrade."
+        )) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                TowerUpgradeResult.SUCCESS,
+                ProductionTowerService.upgradeTower(game, playerId, towerPos, "emerald_sentry"),
+                "Tier-2 production tower should upgrade into its ultimate."
+        )) {
+            return;
+        }
+
+        ProductionTower ultimate = (ProductionTower) lane.towers().getFirst();
+        if (!assertEquals(context, "villager_crossbow_post_emerald_sentry", ultimate.type().id(), "Ultimate production tower id should match the branch leaf.")) {
+            return;
+        }
+        if (!assertTrue(context, ProductionTowerService.availableUpgrades(game, playerId, towerPos).isEmpty(), "Ultimate production towers should be leaf upgrades.")) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                ProductionTowerCatalog.VILLAGER_CROSSBOW_POST.mineralCost() + 90L + 210L,
+                ultimate.sellRefundAmount(),
+                "Production upgrade should preserve full paid cost for pre-wave refund."
+        )) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void productionTowerRejectsUnknownUpgradeId(GameTestHelper context) {
+        UUID playerId = stableUuid("red-production-upgrade-reject");
+        SemionGame game = startedSinglePlayerGame(
+                context,
+                playerId,
+                TeamId.RED,
+                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("semion-td", "villager_engineer")
+        );
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
+
+        if (!assertEquals(
+                context,
+                TowerPlacementResult.SUCCESS,
+                ProductionTowerService.placeTower(game, playerId, towerPos, ProductionTowerCatalog.VILLAGER_CROSSBOW_POST.id()),
+                "Starter production tower placement should succeed before invalid upgrade."
+        )) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                TowerUpgradeResult.UNKNOWN_UPGRADE,
+                ProductionTowerService.upgradeTower(game, playerId, towerPos, "missing_branch"),
+                "Unknown production upgrade ids should be rejected."
         )) {
             return;
         }

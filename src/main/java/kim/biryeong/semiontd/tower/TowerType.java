@@ -88,6 +88,35 @@ public record TowerType(
         );
     }
 
+    public TowerType(
+            String id,
+            String displayName,
+            TowerCategory category,
+            long mineralCost,
+            double maxHealth,
+            double range,
+            double damage,
+            int attackIntervalTicks,
+            int aggroPriority,
+            String entityTypeId,
+            List<TowerUpgradeOption> upgradeOptions
+    ) {
+        this(
+                id,
+                displayName,
+                category,
+                mineralCost,
+                maxHealth,
+                range,
+                damage,
+                attackIntervalTicks,
+                aggroPriority,
+                entityTypeId,
+                null,
+                upgradeOptions
+        );
+    }
+
     public TowerType {
         if (id == null || id.isBlank()) {
             throw new IllegalArgumentException("Tower id cannot be blank.");
