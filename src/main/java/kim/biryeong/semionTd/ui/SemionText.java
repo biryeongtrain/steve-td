@@ -2,6 +2,7 @@ package kim.biryeong.semiontd.ui;
 
 import net.kyori.adventure.platform.modcommon.impl.NonWrappingComponentSerializer;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 
 public final class SemionText {
@@ -27,6 +28,10 @@ public final class SemionText {
 
     public static Component prefixedPlain(String message) {
         return prefixed(Component.literal(message));
+    }
+
+    public static Component prefixedError(String message) {
+        return prefixed(Component.literal(message).withStyle(ChatFormatting.RED));
     }
 
     public static Component prefixedMini(String markup) {

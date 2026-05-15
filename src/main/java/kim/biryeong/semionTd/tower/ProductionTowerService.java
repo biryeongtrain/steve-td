@@ -136,7 +136,10 @@ public final class ProductionTowerService {
         if (!(tower instanceof ProductionTower productionTower)) {
             return tower == null ? TowerUpgradeResult.NO_TOWER_AT_POSITION : TowerUpgradeResult.TOWER_NOT_UPGRADABLE;
         }
-        if (!productionTower.ownerPlayer().equals(playerId) || !productionTower.type().hasUpgradeOptions()) {
+        if (!productionTower.ownerPlayer().equals(playerId)) {
+            return TowerUpgradeResult.TOWER_NOT_OWNED;
+        }
+        if (!productionTower.type().hasUpgradeOptions()) {
             return TowerUpgradeResult.TOWER_NOT_UPGRADABLE;
         }
 
