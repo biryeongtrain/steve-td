@@ -26,6 +26,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -41,6 +42,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
     private static final double DEFAULT_RANGED_RANGE = 8.0;
     private static final double DEFAULT_FOLLOW_RANGE = 5.0;
     public static final double DEFENSE_SEARCH_HORIZONTAL_PADDING = 5.0;
+    public static final double DEFENSE_TARGET_LEASH_RANGE = 8.0;
     private static final double DEFENSE_SEARCH_VERTICAL_PADDING = 3.0;
     private static final int DEFAULT_ATTACK_INTERVAL_TICKS = 20;
 
@@ -156,6 +158,33 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
             return getBoundingBox().inflate(DEFAULT_FOLLOW_RANGE);
         }
         return laneLayout.defenseSearchBox(position(), DEFENSE_SEARCH_HORIZONTAL_PADDING, DEFENSE_SEARCH_VERTICAL_PADDING);
+    }
+
+    public boolean canTargetDefense(LivingEntity target) {
+        if (!(target instanceof LaneDefenseEntity defenseEntity) || runtimeMonster == null) {
+            return true;
+        }
+        double leashRangeSqr = DEFENSE_TARGET_LEASH_RANGE * DEFENSE_TARGET_LEASH_RANGE;
+        return defenseEntity.defendsLane(runtimeMonster.targetLaneId()) && distanceToSqr(target) <= leashRangeSqr;
+    }
+
+    public int nextPathPointIndex() {
+        if (laneLayout == null) {
+            return 0;
+        }
+
+        List<Vec3> points = pathPoints();
+        if (points.isEmpty()) {
+            return 0;
+        }
+
+        double currentProgress = laneLayout.progressAt(position());
+        for (int i = 0; i < points.size(); i++) {
+            if (laneLayout.progressAt(points.get(i)) + 0.0001 >= currentProgress) {
+                return i;
+            }
+        }
+        return points.size();
     }
 
     public Monster runtimeMonster() {

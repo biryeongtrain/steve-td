@@ -44,6 +44,7 @@ import kim.biryeong.semiontd.entity.monster.KillSourceKind;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.MonsterDimensions;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
+import kim.biryeong.semiontd.entity.monster.goal.MonsterAttackTargetGoal;
 import kim.biryeong.semiontd.entity.visual.SemionAnimationState;
 import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.game.AssignedParticipant;
@@ -2824,6 +2825,39 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void laneMonsterDropsDistantDefenseTargetAndResumesPath(GameTestHelper context) {
+        UUID playerId = stableUuid("monster-leash-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        Vec3 monsterPosition = lane.laneLayout().positionAt(0.45);
+        SemionMonsterEntity monster = spawnLaneMonsterEntity(
+                context,
+                lane,
+                "leash-check",
+                TeamId.RED,
+                1,
+                monsterPosition
+        );
+        SemionTestTowerEntity distantTower = spawnTowerEntity(
+                context,
+                TeamId.RED,
+                1,
+                monsterPosition.add(SemionMonsterEntity.DEFENSE_TARGET_LEASH_RANGE + 2.0, 0.0, 0.0),
+                TestTowerTypes.TEST_DIRECT
+        );
+
+        monster.setTarget(distantTower);
+        new MonsterAttackTargetGoal(monster, 1.1).tick();
+        if (!assertTrue(context, monster.getTarget() == null, "Monsters should drop defense targets outside the leash range.")) {
+            return;
+        }
+        if (!assertTrue(context, monster.nextPathPointIndex() > 0, "A monster that drops a target mid-lane should resume from the current path progress.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void bossEntityStaysAnchoredAndPullsRangedMonsters(GameTestHelper context) {
         Vec3 anchor = context.absolutePos(BlockPos.ZERO).getCenter().add(4.0, 2.0, 4.0);
         BossMonster runtimeBoss = BossMonster.defaultBoss(TeamId.RED);
@@ -4538,6 +4572,39 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
         SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
         entity.configureFrom(monster, null);
+        entity.setPos(position);
+        context.getLevel().addFreshEntity(entity);
+        return entity;
+    }
+
+    private static SemionMonsterEntity spawnLaneMonsterEntity(
+            GameTestHelper context,
+            PlayerLane lane,
+            String id,
+            TeamId targetTeam,
+            int targetLaneId,
+            Vec3 position
+    ) {
+        Monster monster = new Monster(
+                id,
+                targetTeam,
+                targetLaneId,
+                Optional.empty(),
+                Optional.empty(),
+                100.0,
+                0,
+                0,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                null,
+                DamageType.PHYSICAL,
+                0,
+                SummonTier.T1,
+                List.of(SummonRole.RUSH),
+                0
+        );
+        SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
+        entity.configureFrom(monster, lane.laneLayout());
         entity.setPos(position);
         context.getLevel().addFreshEntity(entity);
         return entity;

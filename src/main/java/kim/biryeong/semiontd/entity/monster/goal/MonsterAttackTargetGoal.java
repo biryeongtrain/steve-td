@@ -39,6 +39,12 @@ public final class MonsterAttackTargetGoal extends Goal {
             monster.playAnimation(SemionAnimationState.IDLE);
             return;
         }
+        if (!monster.canTargetDefense(target)) {
+            monster.setTarget(null);
+            monster.getNavigation().stop();
+            monster.playAnimation(SemionAnimationState.WALK);
+            return;
+        }
 
         monster.getLookControl().setLookAt(target, 30.0F, 30.0F);
         double attackRange = monster.attackRange();

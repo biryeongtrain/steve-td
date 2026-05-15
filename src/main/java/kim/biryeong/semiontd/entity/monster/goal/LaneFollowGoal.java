@@ -35,7 +35,7 @@ public final class LaneFollowGoal extends Goal {
 
     @Override
     public void start() {
-        waypointIndex = 0;
+        waypointIndex = monster.nextPathPointIndex();
         monster.playAnimation(SemionAnimationState.WALK);
     }
 

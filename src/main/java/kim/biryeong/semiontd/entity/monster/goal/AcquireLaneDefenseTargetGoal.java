@@ -52,6 +52,7 @@ public final class AcquireLaneDefenseTargetGoal extends Goal {
                                 && entity instanceof LaneDefenseEntity laneDefenseEntity
                                 && entity.isAlive()
                                 && laneDefenseEntity.defendsLane(monster.runtimeMonster().targetLaneId())
+                                && monster.canTargetDefense(livingEntity)
                 ).stream()
                 .filter(LivingEntity.class::isInstance)
                 .map(LivingEntity.class::cast)
