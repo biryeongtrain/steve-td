@@ -13,7 +13,7 @@ public final class StaticDisruptorSummon extends SummonMonsterType {
                 4,
                 55,
                 0,
-                4,
+                3,
                 AttackKind.RANGED,
                 "minecraft:witch",
                 "semion-td:summon/t2_static_owl",

@@ -866,7 +866,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertEquals(context, 18.0, firstWave.health(), "Round 1 monster health should be tuned for starter towers.")) {
             return;
         }
-        if (!assertEquals(context, 2.0, firstWave.attackDamage(), "Round 1 monster attack should be tuned for starter towers.")) {
+        if (!assertEquals(context, 1.0, firstWave.attackDamage(), "Round 1 monster attack should be tuned for starter towers.")) {
             return;
         }
         context.succeed();
@@ -2906,6 +2906,33 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void bossAttackDamagesNearbyMonstersWithSplash(GameTestHelper context) {
+        Vec3 anchor = context.absolutePos(BlockPos.ZERO).getCenter().add(4.0, 2.0, 4.0);
+        SemionBossEntity boss = new SemionBossEntity(SemionEntityTypes.BOSS, context.getLevel());
+        boss.configure(TeamId.RED, BossMonster.defaultBoss(TeamId.RED));
+        boss.setPos(anchor);
+        boss.setAnchorPosition(anchor);
+        context.getLevel().addFreshEntity(boss);
+
+        SemionMonsterEntity primary = spawnBossTargetMonster(context, "boss-splash-primary", anchor.add(2.0, 0.0, 0.0));
+        SemionMonsterEntity nearby = spawnBossTargetMonster(context, "boss-splash-nearby", anchor.add(3.0, 0.0, 0.0));
+        SemionMonsterEntity far = spawnBossTargetMonster(context, "boss-splash-far", anchor.add(7.0, 0.0, 0.0));
+
+        new BossAttackLaneMonsterGoal(boss).tick();
+
+        if (!assertTrue(context, primary.getHealth() < 100.0F, "Boss should damage its primary target.")) {
+            return;
+        }
+        if (!assertTrue(context, nearby.getHealth() < 100.0F, "Boss attack should splash onto nearby monsters.")) {
+            return;
+        }
+        if (!assertEquals(context, 100.0F, far.getHealth(), "Boss splash should not hit monsters outside the splash radius.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void waveTimeoutMovesEnemiesAndTowersToFinalDefense(GameTestHelper context) {
         UUID redId = stableUuid("timeout-final-defense-red-owner");
         UUID blueId = stableUuid("timeout-final-defense-blue-owner");
@@ -3928,7 +3955,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             goal.tick();
         }
 
-        if (!assertEquals(context, 31, tower.attackIntervalTicks(), "Apex warden should slow tower attack intervals by attack speed reduction.")) {
+        int expectedInterval = (int) Math.ceil(
+                TestTowerTypes.TEST_DIRECT.attackIntervalTicks() / (1.0 - SummonBalancePolicy.APEX_WARDEN_ATTACK_SPEED_REDUCTION)
+        );
+        if (!assertEquals(context, expectedInterval, tower.attackIntervalTicks(), "Apex warden should slow tower attack intervals by attack speed reduction.")) {
             return;
         }
         if (!assertEquals(context, SummonBalancePolicy.APEX_WARDEN_DAMAGE_REDUCTION, ally.activeTimedEffectMagnitude(TimedEffectType.MONSTER_DAMAGE_REDUCTION), "Apex warden should protect friendly summons.")) {
@@ -4570,6 +4600,32 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             monster.damage(damageTaken, DamageType.TRUE);
         }
 
+        SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
+        entity.configureFrom(monster, null);
+        entity.setPos(position);
+        context.getLevel().addFreshEntity(entity);
+        return entity;
+    }
+
+    private static SemionMonsterEntity spawnBossTargetMonster(GameTestHelper context, String id, Vec3 position) {
+        Monster monster = new Monster(
+                id,
+                TeamId.RED,
+                1,
+                Optional.empty(),
+                Optional.of(TeamId.BLUE),
+                100.0,
+                0,
+                0,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                null,
+                DamageType.PHYSICAL,
+                0,
+                SummonTier.T1,
+                List.of(SummonRole.RUSH),
+                0
+        );
         SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
         entity.configureFrom(monster, null);
         entity.setPos(position);

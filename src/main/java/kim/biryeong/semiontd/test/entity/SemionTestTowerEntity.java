@@ -10,7 +10,9 @@ import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.defender.LaneDefenseEntity;
 import kim.biryeong.semiontd.entity.healing.HealingTarget;
 import kim.biryeong.semiontd.entity.model.SemionBilModelCache;
+import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.visual.SemionAnimationState;
+import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.test.entity.goal.TestTowerAttackMonsterGoal;
@@ -37,6 +39,7 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
     private static final double DEFAULT_TARGET_ACQUIRE_RANGE = 24.0;
     private static final double TARGET_SEARCH_HORIZONTAL_PADDING = 8.0;
     private static final double TARGET_SEARCH_VERTICAL_PADDING = 3.0;
+    private static final double FINAL_DEFENSE_RETURN_SPEED_MULTIPLIER = 1.25;
 
     private TestTower runtimeTower;
     private TeamId teamId;
@@ -50,6 +53,7 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
     private double targetAcquireRange;
     private double moveSpeed;
     private LaneRegionLayout laneLayout;
+    private Vec3 finalDefenseAnchorPosition;
     private String blockbenchModelId;
     private SemionAnimationState animationState = SemionAnimationState.IDLE;
     private EntityType<?> polymerEntityType = EntityType.ARMOR_STAND;
@@ -81,6 +85,7 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
         attackIntervalTicks = tower.type().attackIntervalTicks();
         aggroPriority = tower.aggroPriority();
         finalDefense = tower.deployedAtFinalDefense();
+        finalDefenseAnchorPosition = finalDefense ? towerAnchorPosition(tower.position()) : null;
         blockbenchModelId = tower.type().blockbenchModel().orElse(null);
         setPolymerEntityType(tower.type().entityTypeId());
         targetAcquireRange = Math.max(attackRange + 4.0, DEFAULT_TARGET_ACQUIRE_RANGE);
@@ -91,6 +96,7 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
         getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(attackDamage);
         getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(targetAcquireRange);
         getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(moveSpeed);
+        getAttribute(Attributes.KNOCKBACK_RESISTANCE).setBaseValue(1.0);
         setHealth((float) tower.health());
         installBilModel(blockbenchModelId);
         playAnimation(SemionAnimationState.IDLE);
@@ -121,7 +127,7 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
     public void aiStep() {
         super.aiStep();
         timedEffects.tick();
-        holdTowerPosition();
+        returnToFinalDefenseAreaIfNeeded();
     }
 
     @Override
@@ -130,7 +136,10 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
     }
 
     public double attackRange() {
-        return attackRange * (1.0 - timedEffects.magnitude(TimedEffectType.TOWER_RANGE_REDUCTION));
+        double multiplier = 1.0
+                + timedEffects.magnitude(TimedEffectType.TOWER_RANGE_BONUS)
+                - timedEffects.magnitude(TimedEffectType.TOWER_RANGE_REDUCTION);
+        return attackRange * Math.max(0.01, multiplier);
     }
 
     public double targetAcquireRange() {
@@ -144,23 +153,57 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
         return laneLayout.defenseSearchBox(position(), TARGET_SEARCH_HORIZONTAL_PADDING, TARGET_SEARCH_VERTICAL_PADDING);
     }
 
-    public double attackDamageAmount() {
-        if (runtimeTower instanceof ProductionTower productionTower) {
-            return attackDamage * productionTower.damageMultiplier();
+    public double attackDamageAmount(SemionMonsterEntity target) {
+        double damageAmount = attackDamage * (1.0 + timedEffects.magnitude(TimedEffectType.TOWER_DAMAGE_BONUS));
+        if (runtimeTower != null) {
+            damageAmount = runtimeTower.modifyAttackDamage(this, target, damageAmount);
         }
-        return attackDamage;
+        return Math.max(0.0, damageAmount);
     }
 
     public int attackIntervalTicks() {
+        int adjustedInterval = attackIntervalTicks;
         if (runtimeTower instanceof ProductionTower productionTower) {
-            return productionTower.adjustedAttackInterval(attackIntervalTicks);
+            adjustedInterval = productionTower.adjustedAttackInterval(adjustedInterval);
         }
-        double attackSpeedMultiplier = 1.0 - timedEffects.magnitude(TimedEffectType.TOWER_ATTACK_SPEED_REDUCTION);
-        return Math.max(1, (int) Math.ceil(attackIntervalTicks / Math.max(0.01, attackSpeedMultiplier)));
+        double attackSpeedMultiplier = 1.0
+                + timedEffects.magnitude(TimedEffectType.TOWER_ATTACK_SPEED_BONUS)
+                - timedEffects.magnitude(TimedEffectType.TOWER_ATTACK_SPEED_REDUCTION);
+        return Math.max(1, (int) Math.ceil(adjustedInterval / Math.max(0.01, attackSpeedMultiplier)));
     }
 
     public boolean playsRangedAttackSound() {
         return attackDamage > 0.0 && attackRange() > 3.0;
+    }
+
+    public double chaseSpeedModifier() {
+        return moveSpeed;
+    }
+
+    public boolean needsFinalDefenseReturn() {
+        return finalDefense
+                && laneLayout != null
+                && !laneLayout.isInsideFinalDefenseTowerArea(position());
+    }
+
+    public void returnToFinalDefenseAreaIfNeeded() {
+        if (!needsFinalDefenseReturn()) {
+            return;
+        }
+
+        Vec3 returnPosition = finalDefenseAnchorPosition;
+        if (returnPosition == null) {
+            returnPosition = laneLayout.clampToFinalDefenseTowerArea(position());
+        }
+        moveToward(returnPosition, moveSpeed * FINAL_DEFENSE_RETURN_SPEED_MULTIPLIER);
+    }
+
+    public void moveTowardTarget(Vec3 targetPosition, double speedModifier) {
+        Vec3 moveTarget = targetPosition;
+        if (finalDefense && laneLayout != null) {
+            moveTarget = laneLayout.clampToFinalDefenseTowerArea(targetPosition);
+        }
+        moveToward(moveTarget, speedModifier);
     }
 
     public ProductionTowerBehavior productionBehavior() {
@@ -171,14 +214,29 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
         return runtimeTower instanceof ProductionTower productionTower ? productionTower.mechanicStacks() : 0;
     }
 
-    public void recordProductionAttack(boolean killedPrimaryTarget) {
-        if (runtimeTower instanceof ProductionTower productionTower) {
-            productionTower.recordAttack(killedPrimaryTarget);
+    public void recordAttack(SemionMonsterEntity target, double damageAmount, boolean killedTarget) {
+        if (runtimeTower == null) {
+            return;
+        }
+
+        runtimeTower.onAttack(this, target, damageAmount, killedTarget);
+        if (killedTarget) {
+            runtimeTower.onKill(this, target, damageAmount);
         }
     }
 
     public void applyTimedEffect(TimedEffectType type, double magnitude, int durationTicks) {
+        double previousMagnitude = type == null ? 0.0 : activeTimedEffectMagnitude(type);
+        int previousTicks = type == null ? 0 : activeTimedEffectTicks(type);
         timedEffects.apply(type, magnitude, durationTicks);
+        double currentMagnitude = type == null ? 0.0 : activeTimedEffectMagnitude(type);
+        int currentTicks = type == null ? 0 : activeTimedEffectTicks(type);
+        if (runtimeTower != null
+                && type != null
+                && currentTicks > 0
+                && (Double.compare(previousMagnitude, currentMagnitude) != 0 || previousTicks != currentTicks)) {
+            runtimeTower.onTimedEffectApplied(this, type, currentMagnitude, currentTicks);
+        }
     }
 
     public double activeTimedEffectMagnitude(TimedEffectType type) {
@@ -224,7 +282,13 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
     public void syncTowerState(TestTower tower) {
         runtimeTower = tower;
         aggroPriority = tower.aggroPriority();
+        boolean wasFinalDefense = finalDefense;
         finalDefense = tower.deployedAtFinalDefense();
+        if (finalDefense && (!wasFinalDefense || finalDefenseAnchorPosition == null)) {
+            finalDefenseAnchorPosition = towerAnchorPosition(tower.position());
+        } else if (!finalDefense) {
+            finalDefenseAnchorPosition = null;
+        }
         if (Math.abs(getHealth() - tower.health()) > 0.01F) {
             setHealth((float) tower.health());
         }
@@ -294,7 +358,22 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
         if (damageSource.getEntity() instanceof ServerPlayer) {
             return;
         }
-        super.actuallyHurt(serverLevel, damageSource, amount);
+
+        double damageAmount = amount * (1.0 - timedEffects.magnitude(TimedEffectType.TOWER_DAMAGE_REDUCTION));
+        if (runtimeTower != null) {
+            damageAmount = runtimeTower.modifyIncomingDamage(this, damageSource, damageAmount);
+        }
+        if (damageAmount <= 0.0) {
+            return;
+        }
+
+        double previousHealth = getHealth();
+        super.actuallyHurt(serverLevel, damageSource, (float) damageAmount);
+        double currentHealth = getHealth();
+        if (runtimeTower != null) {
+            runtimeTower.syncHealth(currentHealth);
+            runtimeTower.onDamaged(this, damageSource, damageAmount, previousHealth, currentHealth);
+        }
     }
 
     private void setPolymerEntityType(String entityTypeId) {
@@ -320,17 +399,14 @@ public final class SemionTestTowerEntity extends PathfinderMob implements Animat
         });
     }
 
-    private void holdTowerPosition() {
-        if (runtimeTower == null) {
-            return;
-        }
+    private void moveToward(Vec3 targetPosition, double speedModifier) {
+        playAnimation(SemionAnimationState.WALK);
+        getNavigation().moveTo(targetPosition.x, targetPosition.y, targetPosition.z, speedModifier);
+        getMoveControl().setWantedPosition(targetPosition.x, targetPosition.y, targetPosition.z, speedModifier);
+        getLookControl().setLookAt(targetPosition.x, targetPosition.y, targetPosition.z);
+    }
 
-        var position = runtimeTower.position();
-        Vec3 anchorPosition = new Vec3(position.x() + 0.5, position.y(), position.z() + 0.5);
-        if (position().distanceToSqr(anchorPosition) > 0.0001) {
-            teleportTo(anchorPosition.x, anchorPosition.y, anchorPosition.z);
-        }
-        setDeltaMovement(Vec3.ZERO);
-        getNavigation().stop();
+    private static Vec3 towerAnchorPosition(GridPosition position) {
+        return new Vec3(position.x() + 0.5, position.y(), position.z() + 0.5);
     }
 }

@@ -20,7 +20,7 @@ public final class OraclePhoenixSummon extends SummonMonsterType {
                 21,
                 560,
                 4,
-                24,
+                17,
                 AttackKind.RANGED,
                 "minecraft:blaze",
                 null,

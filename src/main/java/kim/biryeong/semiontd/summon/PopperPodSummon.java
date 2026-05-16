@@ -14,7 +14,7 @@ public final class PopperPodSummon extends SummonMonsterType {
                 3,
                 68,
                 1,
-                8,
+                6,
                 AttackKind.MELEE,
                 "minecraft:armadillo",
                 "semion-td:summon/t1_pincer_crab",

@@ -19,7 +19,7 @@ public final class ApexWardenSummon extends SummonMonsterType {
                 19,
                 900,
                 22,
-                30,
+                21,
                 AttackKind.MELEE,
                 "minecraft:warden",
                 null,

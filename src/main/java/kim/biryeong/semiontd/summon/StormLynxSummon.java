@@ -17,7 +17,7 @@ public final class StormLynxSummon extends SummonMonsterType {
                 10,
                 190,
                 2,
-                22,
+                15,
                 AttackKind.MELEE,
                 "minecraft:ocelot",
                 null,

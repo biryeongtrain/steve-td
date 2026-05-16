@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import kim.biryeong.semiontd.config.AttackKind;
+import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.job.JobContext;
 import kim.biryeong.semiontd.job.JobRegistry;
@@ -16,9 +18,12 @@ import kim.biryeong.semiontd.job.SemionJob;
 import kim.biryeong.semiontd.summon.SummonMonsterType;
 import kim.biryeong.semiontd.summon.SummonRole;
 import kim.biryeong.semiontd.summon.SummonTier;
+import kim.biryeong.semiontd.summon.SummonAbilityActivation;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
+import kim.biryeong.semiontd.tower.ProductionTowerBehavior;
 import kim.biryeong.semiontd.tower.ProductionTowerService;
 import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.tower.TowerCategory;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
 import kim.biryeong.semiontd.ui.dialog.body.HeaderMessage;
 import net.kyori.adventure.platform.modcommon.impl.NonWrappingComponentSerializer;
@@ -260,6 +265,13 @@ public final class SemionDialogService {
         body.append(" <gray>사거리</gray> <aqua>").append(oneDecimal(tower.type().range())).append("</aqua>");
         body.append(" <gray>공속</gray> <white>").append(tower.type().attackIntervalTicks()).append("틱</white>\n");
         body.append("<gray>판매 환불</gray> <gold>").append(tower.sellRefundAmount()).append(" 다이아</gold>\n");
+        ProductionTowerCatalog.behavior(tower.type()).ifPresent(behavior -> {
+            body.append("<gray>특성</gray> <white>").append(behavior.mechanicName()).append("</white>");
+            body.append(" <gray>스플래시</gray> <white>").append(oneDecimal(behavior.splashRadius())).append("</white>\n");
+        });
+        for (String line : tower.type().description()) {
+            body.append("<dark_gray>-</dark_gray> <gray>").append(line).append("</gray>\n");
+        }
         if (!ownedByPlayer) {
             body.append("\n<red>자신이 설치한 타워만 업그레이드하거나 판매할 수 있습니다.</red>\n");
         } else if (!sameLane) {
@@ -431,12 +443,18 @@ public final class SemionDialogService {
                 : type.upgradeOptions().stream()
                 .map(TowerUpgradeOption::displayName)
                 .collect(Collectors.joining(" / "));
-        return Component.literal(type.displayName())
+        MutableComponent tooltip = Component.literal(type.displayName())
                 .append(Component.literal("\n비용 " + mineralCost + " 다이아" + (affordable ? "" : " (부족)")))
-                .append(Component.literal("\n피해 " + Math.round(type.damage()) + " / 사거리 " + Math.round(type.range())))
-                .append(Component.literal("\n공속 " + type.attackIntervalTicks() + "틱 / 스플래시 " + oneDecimal(behavior.splashRadius())))
+                .append(Component.literal("\n분류 " + towerCategoryLabel(type.category()) + " / 티어 " + entry.tier()))
+                .append(Component.literal("\n체력 " + Math.round(type.maxHealth()) + " / 어그로 " + type.aggroPriority()))
+                .append(Component.literal("\n피해 " + oneDecimal(type.damage()) + " / 사거리 " + oneDecimal(type.range())))
+                .append(Component.literal("\n공속 " + type.attackIntervalTicks() + "틱 (" + attacksPerSecond(type.attackIntervalTicks()) + "회/초)"))
+                .append(Component.literal("\n스플래시 " + oneDecimal(behavior.splashRadius()) + "칸 x" + oneDecimal(behavior.splashDamageMultiplier())))
                 .append(Component.literal("\n팩션 " + factionLabel(behavior.faction()) + " / 특성 " + behavior.mechanicName()))
                 .append(Component.literal("\n분기 " + upgradeSummary));
+        appendDescription(tooltip, type.description());
+        appendTowerBehaviorDetails(tooltip, behavior);
+        return tooltip;
     }
 
     private static Component upgradeTooltip(TowerUpgradeOption option) {
@@ -446,11 +464,17 @@ public final class SemionDialogService {
         }
         var entry = target.get();
         var type = entry.type();
-        return Component.literal(option.displayName())
+        MutableComponent tooltip = Component.literal(option.displayName())
                 .append(Component.literal("\n대상 " + type.displayName()))
                 .append(Component.literal("\n비용 " + option.mineralCost() + " 다이아"))
-                .append(Component.literal("\n피해 " + Math.round(type.damage()) + " / 사거리 " + Math.round(type.range())))
-                .append(Component.literal("\n스플래시 " + oneDecimal(entry.behavior().splashRadius()) + " / 특성 " + entry.behavior().mechanicName()));
+                .append(Component.literal("\n체력 " + Math.round(type.maxHealth()) + " / 어그로 " + type.aggroPriority()))
+                .append(Component.literal("\n피해 " + oneDecimal(type.damage()) + " / 사거리 " + oneDecimal(type.range())))
+                .append(Component.literal("\n공속 " + type.attackIntervalTicks() + "틱 (" + attacksPerSecond(type.attackIntervalTicks()) + "회/초)"))
+                .append(Component.literal("\n스플래시 " + oneDecimal(entry.behavior().splashRadius()) + "칸 x" + oneDecimal(entry.behavior().splashDamageMultiplier())))
+                .append(Component.literal("\n특성 " + entry.behavior().mechanicName()));
+        appendDescription(tooltip, type.description());
+        appendTowerBehaviorDetails(tooltip, entry.behavior());
+        return tooltip;
     }
 
     private static String summonTierTable(java.util.Collection<SummonMonsterType> summons) {
@@ -498,11 +522,51 @@ public final class SemionDialogService {
     }
 
     private static Component summonTooltip(SummonMonsterType type) {
-        return Component.literal(type.displayName())
+        MutableComponent tooltip = Component.literal(type.displayName())
                 .append(Component.literal("\n티어 " + type.tier().name() + " / 역할 " + roleList(type)))
                 .append(Component.literal("\n비용 " + type.gasCost() + " 에메랄드 / 수입 +" + type.incomeGain()))
+                .append(Component.literal("\n수입 효율 " + oneDecimal(type.incomeRatio() * 100.0) + "% / 처치 보상 " + type.mineralReward() + " 다이아"))
                 .append(Component.literal("\n체력 " + Math.round(type.maxHealth()) + " / 방어 " + oneDecimal(type.armor()) + " / 저항 " + oneDecimal(type.resistance())))
-                .append(Component.literal("\n공격 " + oneDecimal(type.attackDamage()) + " / 보상 " + type.mineralReward() + " 다이아"));
+                .append(Component.literal("\n공격 " + oneDecimal(type.attackDamage()) + " / 방식 " + attackKindLabel(type.attackKind()) + " / 피해 " + damageTypeLabel(type.damageType())))
+                .append(Component.literal("\n공속 13틱 (" + attacksPerSecond(13) + "회/초)"))
+                .append(Component.literal("\n크기 " + oneDecimal(type.dimensions().width()) + "x" + oneDecimal(type.dimensions().height())))
+                .append(Component.literal("\n타겟 우선도 " + oneDecimal(type.targetRolePriority())))
+                .append(Component.literal("\n능력 발동 " + abilityActivationList(type)));
+        appendDescription(tooltip, type.description());
+        return tooltip;
+    }
+
+    private static void appendDescription(MutableComponent tooltip, List<String> description) {
+        if (description.isEmpty()) {
+            return;
+        }
+        tooltip.append(Component.literal("\n\n설명"));
+        for (String line : description) {
+            if (line != null && !line.isBlank()) {
+                tooltip.append(Component.literal("\n- " + line));
+            }
+        }
+    }
+
+    private static void appendTowerBehaviorDetails(MutableComponent tooltip, ProductionTowerBehavior behavior) {
+        tooltip.append(Component.literal("\n\n특성 상세"));
+        if (behavior.maxStacks() > 0) {
+            tooltip.append(Component.literal("\n- 최대 " + behavior.maxStacks() + "중첩"));
+            if (behavior.damagePerStack() > 0.0) {
+                tooltip.append(Component.literal(" / 중첩당 피해 +" + oneDecimal(behavior.damagePerStack() * 100.0) + "%"));
+            }
+            if (behavior.attackSpeedPerStack() > 0.0) {
+                tooltip.append(Component.literal(" / 중첩당 공속 +" + oneDecimal(behavior.attackSpeedPerStack() * 100.0) + "%"));
+            }
+            tooltip.append(Component.literal("\n- 중첩 조건 "
+                    + (behavior.stackOnHit() ? "명중" : "")
+                    + (behavior.stackOnHit() && behavior.stackOnKill() ? " + " : "")
+                    + (behavior.stackOnKill() ? "처치" : "")));
+        }
+        if (behavior.killSplashRadius() > 0.0 && behavior.killSplashDamageMultiplier() > 0.0) {
+            tooltip.append(Component.literal("\n- 처치 시 추가 폭발 " + oneDecimal(behavior.killSplashRadius())
+                    + "칸 x" + oneDecimal(behavior.killSplashDamageMultiplier())));
+        }
     }
 
     private static SummonRole primaryRole(SummonMonsterType type) {
@@ -515,6 +579,20 @@ public final class SemionDialogService {
         return type.roles().stream().map(SemionDialogService::roleLabel).collect(Collectors.joining(", "));
     }
 
+    private static String abilityActivationList(SummonMonsterType type) {
+        return type.abilityActivations().stream()
+                .map(SemionDialogService::abilityActivationLabel)
+                .collect(Collectors.joining(", "));
+    }
+
+    private static String abilityActivationLabel(SummonAbilityActivation activation) {
+        return switch (activation) {
+            case PASSIVE -> "지속";
+            case CONDITIONAL -> "조건부";
+            case COOLDOWN -> "쿨다운";
+        };
+    }
+
     private static String roleLabel(SummonRole role) {
         return switch (role) {
             case SWARM -> "물량";
@@ -524,6 +602,34 @@ public final class SemionDialogService {
             case TANK -> "탱커";
             case DISRUPTOR -> "교란";
         };
+    }
+
+    private static String towerCategoryLabel(TowerCategory category) {
+        return switch (category) {
+            case DIRECT -> "공격";
+            case SUPPORT -> "지원";
+            case PRODUCER -> "생산";
+            case SUMMONER -> "소환";
+        };
+    }
+
+    private static String attackKindLabel(AttackKind attackKind) {
+        return switch (attackKind) {
+            case MELEE -> "근접";
+            case RANGED -> "원거리";
+        };
+    }
+
+    private static String damageTypeLabel(DamageType damageType) {
+        return switch (damageType) {
+            case PHYSICAL -> "물리";
+            case MAGIC -> "마법";
+            case TRUE -> "고정";
+        };
+    }
+
+    private static String attacksPerSecond(int attackIntervalTicks) {
+        return oneDecimal(20.0 / Math.max(1, attackIntervalTicks));
     }
 
     private static String factionLabel(kim.biryeong.semiontd.tower.TowerFaction faction) {

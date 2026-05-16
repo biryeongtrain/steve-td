@@ -19,7 +19,7 @@ public final class ElderSpriteSummon extends SummonMonsterType {
                 14,
                 185,
                 1,
-                8,
+                6,
                 AttackKind.RANGED,
                 "minecraft:allay",
                 null,

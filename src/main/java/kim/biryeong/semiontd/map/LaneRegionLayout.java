@@ -15,6 +15,8 @@ public record LaneRegionLayout(
         BlockBounds laneArea,
         List<GridPosition> finalDefenseTowerSlots
 ) {
+    private static final double AREA_BOUNDARY_EPSILON = 0.001;
+
     public LaneRegionLayout {
         waypoints = List.copyOf(waypoints);
         finalDefenseTowerSlots = List.copyOf(finalDefenseTowerSlots);
@@ -43,6 +45,44 @@ public record LaneRegionLayout(
         }
         searchBox = includePoint(searchBox, currentPosition);
         return searchBox.inflate(horizontalPadding, verticalPadding, horizontalPadding);
+    }
+
+    public AABB finalDefenseTowerAreaBox() {
+        if (finalDefenseTowerSlots.isEmpty()) {
+            return new AABB(bossPosition, bossPosition).inflate(1.0);
+        }
+
+        GridPosition first = finalDefenseTowerSlots.getFirst();
+        int minX = first.x();
+        int minY = first.y();
+        int minZ = first.z();
+        int maxX = first.x();
+        int maxY = first.y();
+        int maxZ = first.z();
+
+        for (GridPosition slot : finalDefenseTowerSlots) {
+            minX = Math.min(minX, slot.x());
+            minY = Math.min(minY, slot.y());
+            minZ = Math.min(minZ, slot.z());
+            maxX = Math.max(maxX, slot.x());
+            maxY = Math.max(maxY, slot.y());
+            maxZ = Math.max(maxZ, slot.z());
+        }
+
+        return new AABB(minX, minY, minZ, maxX + 1.0, maxY + 1.0, maxZ + 1.0);
+    }
+
+    public boolean isInsideFinalDefenseTowerArea(Vec3 position) {
+        return finalDefenseTowerAreaBox().contains(position);
+    }
+
+    public Vec3 clampToFinalDefenseTowerArea(Vec3 position) {
+        AABB area = finalDefenseTowerAreaBox();
+        return new Vec3(
+                Math.max(area.minX, Math.min(area.maxX - AREA_BOUNDARY_EPSILON, position.x)),
+                Math.max(area.minY, Math.min(area.maxY - AREA_BOUNDARY_EPSILON, position.y)),
+                Math.max(area.minZ, Math.min(area.maxZ - AREA_BOUNDARY_EPSILON, position.z))
+        );
     }
 
     public Vec3 positionAt(double progress) {

@@ -21,7 +21,7 @@ public final class BossMonster {
     }
 
     public static BossMonster defaultBoss(TeamId teamId) {
-        return new BossMonster(teamId, 1000, 25, 20);
+        return new BossMonster(teamId, 1000, 18, 13);
     }
 
     public TeamId teamId() {
@@ -34,6 +34,14 @@ public final class BossMonster {
 
     public double maxHealth() {
         return maxHealth;
+    }
+
+    public double attackDamage() {
+        return attackDamage;
+    }
+
+    public int attackIntervalTicks() {
+        return attackIntervalTicks;
     }
 
     public BossState state() {
@@ -62,7 +70,7 @@ public final class BossMonster {
             cooldownTicks--;
             return;
         }
-        target.damage(attackDamage);
-        cooldownTicks = attackIntervalTicks;
+        target.damage(attackDamage());
+        cooldownTicks = attackIntervalTicks();
     }
 }

@@ -19,7 +19,7 @@ public final class TestTowerAttackMonsterGoal extends Goal {
 
     public TestTowerAttackMonsterGoal(SemionTestTowerEntity tower) {
         this.tower = tower;
-        setFlags(EnumSet.of(Flag.LOOK));
+        setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
 
     @Override
@@ -36,6 +36,11 @@ public final class TestTowerAttackMonsterGoal extends Goal {
     public void tick() {
         if (cooldownTicks > 0) {
             cooldownTicks--;
+        }
+
+        if (tower.needsFinalDefenseReturn()) {
+            tower.returnToFinalDefenseAreaIfNeeded();
+            return;
         }
 
         AABB searchBox = tower.targetSearchBox();
@@ -61,8 +66,7 @@ public final class TestTowerAttackMonsterGoal extends Goal {
         double attackRangeSqr = tower.attackRange() * tower.attackRange();
         double distanceSqr = tower.distanceToSqr(target);
         if (distanceSqr > attackRangeSqr) {
-            tower.getNavigation().stop();
-            tower.playAnimation(SemionAnimationState.IDLE);
+            tower.moveTowardTarget(target.position(), tower.chaseSpeedModifier());
             return;
         }
 
@@ -73,10 +77,10 @@ public final class TestTowerAttackMonsterGoal extends Goal {
         }
 
         tower.playAnimation(SemionAnimationState.ATTACK);
-        double damageAmount = tower.attackDamageAmount();
+        double damageAmount = tower.attackDamageAmount(target);
         playRangedAttackSound();
         boolean killedPrimaryTarget = damageTarget(target, damageAmount);
-        tower.recordProductionAttack(killedPrimaryTarget);
+        tower.recordAttack(target, damageAmount, killedPrimaryTarget);
         applyProductionSplash(target, damageAmount, killedPrimaryTarget);
         cooldownTicks = tower.attackIntervalTicks();
     }

@@ -18,7 +18,7 @@ public final class AegisGolemSummon extends SummonMonsterType {
                 15,
                 540,
                 18,
-                18,
+                13,
                 AttackKind.MELEE,
                 "minecraft:iron_golem",
                 null,

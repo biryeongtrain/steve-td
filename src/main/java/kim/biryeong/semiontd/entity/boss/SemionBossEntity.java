@@ -61,9 +61,17 @@ public class SemionBossEntity extends PathfinderMob implements PolymerEntity {
         setCustomNameVisible(true);
         getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH)
                 .setBaseValue(bossMonster.maxHealth());
+        getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE)
+                .setBaseValue(bossMonster.attackDamage());
         getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED).setBaseValue(0.0);
+        getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE)
+                .setBaseValue(1.0);
         setHealth((float) bossMonster.health());
         setNoGravity(true);
+    }
+
+    public int attackIntervalTicks() {
+        return runtimeBoss == null ? 13 : runtimeBoss.attackIntervalTicks();
     }
 
     public TeamId teamId() {

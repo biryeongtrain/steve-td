@@ -14,6 +14,7 @@ public record TowerType(
         double damage,
         int attackIntervalTicks,
         int aggroPriority,
+        List<String> description,
         String entityTypeId,
         String blockbenchModelId,
         List<TowerUpgradeOption> upgradeOptions
@@ -54,6 +55,7 @@ public record TowerType(
                 damage,
                 attackIntervalTicks,
                 aggroPriority,
+                List.of(),
                 "minecraft:villager",
                 null,
                 upgradeOptions
@@ -82,6 +84,7 @@ public record TowerType(
                 damage,
                 attackIntervalTicks,
                 aggroPriority,
+                List.of(),
                 entityTypeId,
                 null,
                 List.of()
@@ -111,9 +114,71 @@ public record TowerType(
                 damage,
                 attackIntervalTicks,
                 aggroPriority,
+                List.of(),
                 entityTypeId,
                 null,
                 upgradeOptions
+        );
+    }
+
+    public TowerType(
+            String id,
+            String displayName,
+            TowerCategory category,
+            long mineralCost,
+            double maxHealth,
+            double range,
+            double damage,
+            int attackIntervalTicks,
+            int aggroPriority,
+            String entityTypeId,
+            String blockbenchModelId,
+            List<TowerUpgradeOption> upgradeOptions
+    ) {
+        this(
+                id,
+                displayName,
+                category,
+                mineralCost,
+                maxHealth,
+                range,
+                damage,
+                attackIntervalTicks,
+                aggroPriority,
+                List.of(),
+                entityTypeId,
+                blockbenchModelId,
+                upgradeOptions
+        );
+    }
+
+    public TowerType(
+            String id,
+            String displayName,
+            TowerCategory category,
+            long mineralCost,
+            double maxHealth,
+            double range,
+            double damage,
+            int attackIntervalTicks,
+            int aggroPriority,
+            List<String> description,
+            String entityTypeId
+    ) {
+        this(
+                id,
+                displayName,
+                category,
+                mineralCost,
+                maxHealth,
+                range,
+                damage,
+                attackIntervalTicks,
+                aggroPriority,
+                description,
+                entityTypeId,
+                null,
+                List.of()
         );
     }
 
@@ -135,6 +200,7 @@ public record TowerType(
         if (entityTypeId == null && blockbenchModelId == null) {
             entityTypeId = "minecraft:villager";
         }
+        description = description == null ? List.of() : List.copyOf(description);
         upgradeOptions = List.copyOf(upgradeOptions);
     }
 

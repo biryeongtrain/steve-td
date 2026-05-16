@@ -14,7 +14,7 @@ public final class QuiltGuardSummon extends SummonMonsterType {
                 3,
                 88,
                 4,
-                3,
+                2,
                 AttackKind.MELEE,
                 "minecraft:husk",
                 "semion-td:summon/t1_shell_turtle",

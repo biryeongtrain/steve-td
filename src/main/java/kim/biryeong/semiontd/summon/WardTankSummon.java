@@ -13,7 +13,7 @@ public final class WardTankSummon extends SummonMonsterType {
                 5,
                 115,
                 1,
-                6,
+                4,
                 AttackKind.MELEE,
                 "minecraft:zombie_villager",
                 "semion-td:summon/t2_ward_ram",

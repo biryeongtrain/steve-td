@@ -31,6 +31,7 @@ public abstract class SummonMonsterType {
     private final SummonTier tier;
     private final List<SummonRole> roles;
     private final List<SummonAbilityActivation> abilityActivations;
+    private final List<String> description;
 
     protected SummonMonsterType(
             String id,
@@ -61,6 +62,7 @@ public abstract class SummonMonsterType {
                 SummonTier.T1,
                 List.of(SummonRole.RUSH),
                 List.of(SummonAbilityActivation.PASSIVE),
+                List.of(),
                 mineralReward
         );
     }
@@ -95,6 +97,7 @@ public abstract class SummonMonsterType {
                 SummonTier.T1,
                 List.of(SummonRole.RUSH),
                 List.of(SummonAbilityActivation.PASSIVE),
+                List.of(),
                 mineralReward
         );
     }
@@ -134,6 +137,7 @@ public abstract class SummonMonsterType {
                 tier,
                 roles,
                 abilityActivations,
+                List.of(),
                 mineralReward
         );
     }
@@ -155,6 +159,48 @@ public abstract class SummonMonsterType {
             SummonTier tier,
             List<SummonRole> roles,
             List<SummonAbilityActivation> abilityActivations,
+            long mineralReward
+    ) {
+        this(
+                id,
+                displayName,
+                gasCost,
+                incomeGain,
+                maxHealth,
+                armor,
+                attackDamage,
+                attackKind,
+                entityTypeId,
+                blockbenchModelId,
+                dimensions,
+                damageType,
+                resistance,
+                tier,
+                roles,
+                abilityActivations,
+                List.of(),
+                mineralReward
+        );
+    }
+
+    protected SummonMonsterType(
+            String id,
+            String displayName,
+            long gasCost,
+            long incomeGain,
+            double maxHealth,
+            double armor,
+            double attackDamage,
+            AttackKind attackKind,
+            String entityTypeId,
+            String blockbenchModelId,
+            MonsterDimensions dimensions,
+            DamageType damageType,
+            double resistance,
+            SummonTier tier,
+            List<SummonRole> roles,
+            List<SummonAbilityActivation> abilityActivations,
+            List<String> description,
             long mineralReward
     ) {
         if (id == null || id.isBlank()) {
@@ -182,6 +228,9 @@ public abstract class SummonMonsterType {
         this.tier = tier == null ? SummonTier.T1 : tier;
         this.roles = roles == null || roles.isEmpty() ? List.of(SummonRole.RUSH) : List.copyOf(roles);
         this.abilityActivations = abilityActivations == null ? List.of() : List.copyOf(abilityActivations);
+        this.description = description == null || description.isEmpty()
+                ? defaultDescription(this.roles, this.abilityActivations, this.attackKind, this.damageType)
+                : List.copyOf(description);
     }
 
     public final String id() {
@@ -252,6 +301,10 @@ public abstract class SummonMonsterType {
         return abilityActivations;
     }
 
+    public final List<String> description() {
+        return description;
+    }
+
     public final double incomeRatio() {
         return gasCost == 0 ? 0.0 : (double) incomeGain / gasCost;
     }
@@ -290,5 +343,39 @@ public abstract class SummonMonsterType {
 
     public List<Goal> createAbilityGoals(SemionMonsterEntity entity) {
         return List.of();
+    }
+
+    private static List<String> defaultDescription(
+            List<SummonRole> roles,
+            List<SummonAbilityActivation> abilityActivations,
+            AttackKind attackKind,
+            DamageType damageType
+    ) {
+        java.util.ArrayList<String> lines = new java.util.ArrayList<>();
+        if (roles.contains(SummonRole.DISRUPTOR)) {
+            lines.add("상대 타워 성능을 깎거나 전선을 흔드는 교란형 소환수입니다.");
+        } else if (roles.contains(SummonRole.SUPPORT)) {
+            lines.add("아군 소환수를 회복하거나 강화해 라인 유지력을 높입니다.");
+        } else if (roles.contains(SummonRole.SIEGE)) {
+            lines.add("후반 진행도와 보스 압박에 강한 공성형 소환수입니다.");
+        } else if (roles.contains(SummonRole.TANK)) {
+            lines.add("높은 생존력으로 타워 화력을 오래 받아내는 탱커입니다.");
+        } else if (roles.contains(SummonRole.SWARM)) {
+            lines.add("낮은 비용으로 수를 늘려 타워 공격을 분산시키는 물량형 소환수입니다.");
+        } else {
+            lines.add("빠르게 전선을 압박하는 기본 공격형 소환수입니다.");
+        }
+        if (abilityActivations.contains(SummonAbilityActivation.COOLDOWN)) {
+            lines.add("주기적으로 특수 능력을 사용합니다.");
+        } else if (abilityActivations.contains(SummonAbilityActivation.PASSIVE)) {
+            lines.add("소환되어 있는 동안 지속형 특성을 활용합니다.");
+        }
+        if (attackKind == AttackKind.RANGED) {
+            lines.add("원거리 공격으로 타워 접근 전부터 피해를 누적합니다.");
+        }
+        if (damageType == DamageType.MAGIC) {
+            lines.add("마법 피해 기반이라 물리 방어가 높은 대상에게도 압박을 줍니다.");
+        }
+        return List.copyOf(lines);
     }
 }

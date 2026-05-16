@@ -14,7 +14,7 @@ public final class StaticBobbinSummon extends SummonMonsterType {
                 2,
                 34,
                 0,
-                2,
+                1,
                 AttackKind.RANGED,
                 "minecraft:breeze",
                 "semion-td:summon/t1_spark_axolotl",

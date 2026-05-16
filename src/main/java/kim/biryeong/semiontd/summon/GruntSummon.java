@@ -13,7 +13,7 @@ public final class GruntSummon extends SummonMonsterType {
                 2,
                 50,
                 0,
-                5,
+                4,
                 AttackKind.MELEE,
                 "minecraft:zombie",
                 "semion-td:summon/t1_fox_kit",

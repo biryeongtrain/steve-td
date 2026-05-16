@@ -14,8 +14,8 @@ public final class TestTowerTypes {
             420,
             75.0,
             18.0,
-            34.0,
-            34,
+            24,
+            22,
             -20
     );
 
@@ -26,8 +26,8 @@ public final class TestTowerTypes {
             250,
             65.0,
             14.0,
-            24.0,
-            30,
+            17,
+            19,
             -10,
             java.util.List.of(
                     new TowerUpgradeOption("deadeye", "Deadeye Evolution", TEST_DEADEYE.id(), 170)
@@ -41,8 +41,8 @@ public final class TestTowerTypes {
             400,
             170.0,
             7.0,
-            18.0,
-            10,
+            13,
+            7,
             75
     );
 
@@ -53,8 +53,8 @@ public final class TestTowerTypes {
             240,
             110.0,
             6.0,
-            10.0,
-            12,
+            7,
+            8,
             35,
             java.util.List.of(
                     new TowerUpgradeOption("bastion", "Bastion Evolution", TEST_BASTION.id(), 180)
@@ -68,8 +68,8 @@ public final class TestTowerTypes {
             100,
             50.0,
             8.0,
-            12.0,
-            20,
+            8,
+            13,
             0,
             java.util.List.of(
                     new TowerUpgradeOption("sniper", "Sniper Evolution", TEST_SNIPER.id(), 150),

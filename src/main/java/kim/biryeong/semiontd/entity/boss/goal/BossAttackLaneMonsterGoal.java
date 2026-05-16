@@ -5,11 +5,14 @@ import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.entity.boss.SemionBossEntity;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 public final class BossAttackLaneMonsterGoal extends Goal {
     private static final double ATTACK_RANGE = 5;
+    private static final double SPLASH_RADIUS = 3.0;
     private static final double RANGED_PULL_RANGE = 10.0;
     private static final double RANGED_PULL_STEP = 0.45;
 
@@ -43,6 +46,7 @@ public final class BossAttackLaneMonsterGoal extends Goal {
                         entity -> entity instanceof SemionMonsterEntity monster
                                 && monster.isAlive()
                                 && monster.runtimeMonster() != null
+                                && monster.runtimeMonster().targetTeam() == boss.teamId()
                                 && (monster.distanceToSqr(boss) <= ATTACK_RANGE * ATTACK_RANGE
                                 || monster.runtimeMonster().attackKind() == AttackKind.RANGED)
                 ).stream()
@@ -66,14 +70,40 @@ public final class BossAttackLaneMonsterGoal extends Goal {
         }
 
         if (cooldownTicks <= 0 && distanceSqr <= ATTACK_RANGE * ATTACK_RANGE) {
-            if (runtimeMonster != null) {
-                runtimeMonster.recordBossHit();
-            }
-            target.hurt(boss.damageSources().mobAttack(boss), (float) boss.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE));
-            if (runtimeMonster != null) {
-                runtimeMonster.syncHealth(target.getHealth());
-            }
-            cooldownTicks = 20;
+            attackTargetAndSplash(target);
+            cooldownTicks = boss.attackIntervalTicks();
+        }
+    }
+
+    private void attackTargetAndSplash(SemionMonsterEntity primaryTarget) {
+        double damageAmount = boss.getAttributeValue(Attributes.ATTACK_DAMAGE);
+        damage(primaryTarget, damageAmount);
+
+        AABB splashBox = primaryTarget.getBoundingBox().inflate(SPLASH_RADIUS);
+        double splashRadiusSqr = SPLASH_RADIUS * SPLASH_RADIUS;
+        boss.level().getEntities(
+                        boss,
+                        splashBox,
+                        entity -> entity instanceof SemionMonsterEntity monster
+                                && monster != primaryTarget
+                                && monster.isAlive()
+                                && monster.runtimeMonster() != null
+                                && monster.runtimeMonster().targetTeam() == boss.teamId()
+                                && monster.distanceToSqr(primaryTarget) <= splashRadiusSqr
+                ).stream()
+                .filter(SemionMonsterEntity.class::isInstance)
+                .map(SemionMonsterEntity.class::cast)
+                .forEach(monster -> damage(monster, damageAmount));
+    }
+
+    private void damage(SemionMonsterEntity target, double damageAmount) {
+        Monster runtimeMonster = target.runtimeMonster();
+        if (runtimeMonster != null) {
+            runtimeMonster.recordBossHit();
+        }
+        target.hurt(boss.damageSources().mobAttack(boss), (float) damageAmount);
+        if (runtimeMonster != null) {
+            runtimeMonster.syncHealth(target.getHealth());
         }
     }
 

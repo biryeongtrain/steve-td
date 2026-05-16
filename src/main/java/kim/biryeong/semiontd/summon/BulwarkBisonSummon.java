@@ -14,7 +14,7 @@ public final class BulwarkBisonSummon extends SummonMonsterType {
                 10,
                 300,
                 12,
-                13,
+                9,
                 AttackKind.MELEE,
                 "minecraft:hoglin",
                 "semion-td:summon/t3_bulwark_bison",

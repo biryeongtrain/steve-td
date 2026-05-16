@@ -17,7 +17,7 @@ public final class PulseSupportSummon extends SummonMonsterType {
                 5,
                 60,
                 0,
-                3,
+                2,
                 AttackKind.RANGED,
                 "minecraft:evoker",
                 "semion-td:summon/t2_pulse_fawn",

@@ -17,7 +17,7 @@ public final class NullImpSummon extends SummonMonsterType {
                 12,
                 170,
                 1,
-                13,
+                9,
                 AttackKind.RANGED,
                 "minecraft:vex",
                 null,

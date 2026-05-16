@@ -44,7 +44,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
     public static final double DEFENSE_SEARCH_HORIZONTAL_PADDING = 5.0;
     public static final double DEFENSE_TARGET_LEASH_RANGE = 8.0;
     private static final double DEFENSE_SEARCH_VERTICAL_PADDING = 3.0;
-    private static final int DEFAULT_ATTACK_INTERVAL_TICKS = 20;
+    private static final int DEFAULT_ATTACK_INTERVAL_TICKS = 13;
 
     private EntityType<?> polymerEntityType = EntityType.ZOMBIE;
     private Monster runtimeMonster;
@@ -113,6 +113,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(monster.attackDamage());
         getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(followRangeFor(monster));
         getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.28);
+        getAttribute(Attributes.KNOCKBACK_RESISTANCE).setBaseValue(1.0);
         setHealth((float) monster.health());
         installBilModel(blockbenchModelId);
         installSummonAbilityGoals();
@@ -297,6 +298,10 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
     private double followRangeFor(Monster monster) {
         double baseAttackRange = monster.attackKind() == AttackKind.RANGED ? DEFAULT_RANGED_RANGE : DEFAULT_MELEE_RANGE;
         return Math.max(DEFAULT_FOLLOW_RANGE, baseAttackRange + 2.0);
+    }
+
+    @Override
+    public void knockback(double strength, double x, double z) {
     }
 
     private void installSummonAbilityGoals() {

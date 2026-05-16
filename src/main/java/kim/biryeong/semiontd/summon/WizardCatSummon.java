@@ -13,7 +13,7 @@ public final class WizardCatSummon extends SummonMonsterType {
                 8,
                 95,
                 0,
-                9,
+                6,
                 AttackKind.RANGED,
                 "minecraft:cat",
                 "semion-td:summon/t3_wizard_cat",

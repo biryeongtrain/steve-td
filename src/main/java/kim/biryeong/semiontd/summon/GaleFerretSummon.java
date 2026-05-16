@@ -13,7 +13,7 @@ public final class GaleFerretSummon extends SummonMonsterType {
                 7,
                 135,
                 1,
-                15,
+                11,
                 AttackKind.MELEE,
                 "minecraft:fox",
                 "semion-td:summon/t3_gale_ferret",

@@ -17,7 +17,7 @@ public final class GroveAlpacaSummon extends SummonMonsterType {
                 9,
                 125,
                 1,
-                6,
+                4,
                 AttackKind.RANGED,
                 "minecraft:llama",
                 "semion-td:summon/t3_grove_alpaca",

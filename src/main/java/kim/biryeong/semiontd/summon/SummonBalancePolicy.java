@@ -3,6 +3,10 @@ package kim.biryeong.semiontd.summon;
 public final class SummonBalancePolicy {
     public static final double MAX_TOWER_ATTACK_SPEED_REDUCTION = 0.40;
     public static final double MAX_TOWER_RANGE_REDUCTION = 0.30;
+    public static final double MAX_TOWER_DAMAGE_BONUS = 1.00;
+    public static final double MAX_TOWER_ATTACK_SPEED_BONUS = 0.50;
+    public static final double MAX_TOWER_RANGE_BONUS = 0.50;
+    public static final double MAX_TOWER_DAMAGE_REDUCTION = 0.50;
     public static final double MAX_MONSTER_DAMAGE_REDUCTION = 0.35;
     public static final double MAX_MONSTER_MOVE_SPEED_BONUS = 0.30;
     public static final double SIEGE_NEAR_BOSS_PROGRESS = 0.80;

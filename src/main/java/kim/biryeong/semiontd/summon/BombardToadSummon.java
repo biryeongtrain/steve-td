@@ -17,7 +17,7 @@ public final class BombardToadSummon extends SummonMonsterType {
                 16,
                 380,
                 8,
-                30,
+                21,
                 AttackKind.RANGED,
                 "minecraft:frog",
                 null,

@@ -13,7 +13,7 @@ public final class SkitterSwarmSummon extends SummonMonsterType {
                 3,
                 24,
                 0,
-                3,
+                2,
                 AttackKind.MELEE,
                 "minecraft:silverfish",
                 "semion-td:summon/t1_honey_bee",

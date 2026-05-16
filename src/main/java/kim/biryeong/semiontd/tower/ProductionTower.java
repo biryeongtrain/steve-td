@@ -1,8 +1,10 @@
 package kim.biryeong.semiontd.tower;
 
 import java.util.UUID;
+import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.TeamId;
+import kim.biryeong.semiontd.test.entity.SemionTestTowerEntity;
 import kim.biryeong.semiontd.test.tower.TestTower;
 
 public final class ProductionTower extends TestTower {
@@ -56,9 +58,20 @@ public final class ProductionTower extends TestTower {
         return Math.max(1, (int) Math.ceil(baseIntervalTicks * Math.max(0.35, multiplier)));
     }
 
-    public void recordAttack(boolean killedPrimaryTarget) {
+    @Override
+    public double modifyAttackDamage(SemionTestTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
+        return damageAmount * damageMultiplier();
+    }
+
+    @Override
+    public void onAttack(
+            SemionTestTowerEntity towerEntity,
+            SemionMonsterEntity target,
+            double damageAmount,
+            boolean killedTarget
+    ) {
         idleTicks = 0;
-        if (behavior.stackOnHit() || (killedPrimaryTarget && behavior.stackOnKill())) {
+        if (behavior.stackOnHit() || (killedTarget && behavior.stackOnKill())) {
             mechanicStacks = Math.min(behavior.maxStacks(), mechanicStacks + 1);
         }
     }

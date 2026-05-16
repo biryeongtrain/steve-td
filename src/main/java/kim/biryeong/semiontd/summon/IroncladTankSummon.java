@@ -13,7 +13,7 @@ public final class IroncladTankSummon extends SummonMonsterType {
                 5,
                 130,
                 8,
-                7,
+                5,
                 AttackKind.MELEE,
                 "minecraft:husk",
                 "semion-td:summon/t2_ironclad_boar",

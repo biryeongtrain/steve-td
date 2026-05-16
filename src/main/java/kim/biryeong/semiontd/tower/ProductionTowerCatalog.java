@@ -9,41 +9,59 @@ import java.util.Optional;
 public final class ProductionTowerCatalog {
     public static final TowerType VILLAGER_CROSSBOW_POST = new TowerType(
             "villager_armor_tower", "주민 탱커 타워", TowerCategory.DIRECT,
-            95, 150.0, 7.0, 6.0, 24, 35, "minecraft:villager"
+            95, 150.0, 7.0, 4, 15, 35,
+            List.of("높은 체력과 어그로로 라인을 붙잡는 전방형 타워입니다.", "공격할수록 Emerald 중첩으로 피해량이 점진적으로 오릅니다."),
+            "minecraft:villager"
     );
     public static final TowerType VILLAGER_BELL_MORTAR = new TowerType(
             "villager_bell_mortar", "주민 스플래쉬 타워", TowerCategory.DIRECT,
-            105, 82.0, 10.5, 10.0, 26, 5, "minecraft:villager"
+            105, 82.0, 10.5, 7, 17, 5,
+            List.of("넓은 스플래시로 몰려오는 몬스터를 정리하는 라인 클리어 타워입니다.", "중첩이 쌓이면 광역 피해가 안정적으로 누적됩니다."),
+            "minecraft:villager"
     );
     public static final TowerType VILLAGER_EMERALD_LENS = new TowerType(
             "villager_emerald_lens", "주민 저격 타워", TowerCategory.DIRECT,
-            110, 68.0, 15.0, 18.0, 24, -10, "minecraft:villager"
+            110, 68.0, 15.0, 13, 15, -10,
+            List.of("긴 사거리와 높은 단일 피해로 후방에서 핵심 타겟을 압박합니다.", "처치 시 중첩을 얻어 보스와 고체력 몹 대응력이 좋아집니다."),
+            "minecraft:villager"
     );
 
     public static final TowerType UNDEAD_BONE_SPITTER = new TowerType(
             "undead_bone_spitter", "언데드 폭발 타워", TowerCategory.DIRECT,
-            100, 72.0, 9.5, 8.0, 18, 0, "minecraft:skeleton"
+            100, 72.0, 9.5, 6, 12, 0,
+            List.of("빠른 공격과 폭발 스플래시로 물량을 갉아먹는 타워입니다.", "Decay 특성으로 처치 주변에 추가 피해를 남깁니다."),
+            "minecraft:skeleton"
     );
     public static final TowerType UNDEAD_GRAVE_BOMBARD = new TowerType(
             "undead_grave_bombard", "언데드 방어 타워", TowerCategory.DIRECT,
-            100, 165.0, 6.5, 5.5, 26, 38, "minecraft:zombie"
+            100, 165.0, 6.5, 4, 17, 38,
+            List.of("튼튼하고 어그로가 높아 최전방을 버티는 방어형 타워입니다.", "근접 라인에서 몬스터를 붙잡고 처치 폭발로 보조 피해를 냅니다."),
+            "minecraft:zombie"
     );
     public static final TowerType UNDEAD_SOUL_REAPER = new TowerType(
             "undead_soul_reaper", "언데드 저격 타워", TowerCategory.DIRECT,
-            115, 78.0, 13.5, 19.0, 25, -5, "minecraft:wither_skeleton"
+            115, 78.0, 13.5, 13, 16, -5,
+            List.of("높은 단일 피해와 처치 기반 Decay로 강한 몬스터를 마무리합니다.", "사거리 분기와 저격 분기 모두 후반 대응력이 좋습니다."),
+            "minecraft:wither_skeleton"
     );
 
     public static final TowerType BEAST_WOLF_DEN = new TowerType(
             "beast_wolf_den", "댕댕이 타워(원거리)", TowerCategory.DIRECT,
-            95, 74.0, 8.5, 7.0, 15, 5, "minecraft:wolf"
+            95, 74.0, 8.5, 5, 10, 5,
+            List.of("빠른 공격으로 Rage 중첩을 쌓아 공속을 끌어올리는 원거리 타워입니다.", "쉬지 않고 때릴수록 성능이 좋아지지만 오래 쉬면 중첩이 줄어듭니다."),
+            "minecraft:wolf"
     );
     public static final TowerType BEAST_BOAR_CRASHER = new TowerType(
             "beast_boar_crasher", "돼지 타워", TowerCategory.DIRECT,
-            105, 175.0, 6.5, 6.5, 24, 42, "minecraft:pig"
+            105, 175.0, 6.5, 5, 15, 42,
+            List.of("높은 체력과 어그로로 전선을 세우는 동물 진영 방어 타워입니다.", "Rage 중첩으로 피해와 공속이 함께 성장합니다."),
+            "minecraft:pig"
     );
     public static final TowerType BEAST_HAWK_ROOST = new TowerType(
             "beast_hawk_roost", "앵무새 저격 타워", TowerCategory.DIRECT,
-            115, 64.0, 16.0, 17.0, 21, -12, "minecraft:parrot"
+            115, 64.0, 16.0, 12, 14, -12,
+            List.of("매우 긴 사거리로 라인 전체를 견제하는 저격형 타워입니다.", "명중과 처치 모두 Rage 중첩을 올려 후반 화력이 커집니다."),
+            "minecraft:parrot"
     );
 
     private static final Map<String, CatalogEntry> ENTRIES = new LinkedHashMap<>();
@@ -168,6 +186,7 @@ public final class ProductionTowerCatalog {
                 source.damage(),
                 source.attackIntervalTicks(),
                 source.aggroPriority(),
+                source.description(),
                 source.entityTypeId(),
                 source.blockbenchModelId(),
                 upgradeOptions
@@ -185,9 +204,28 @@ public final class ProductionTowerCatalog {
                 starter.damage() * stage.damageMultiplier(),
                 Math.max(4, (int) Math.round(starter.attackIntervalTicks() * stage.attackIntervalMultiplier())),
                 starter.aggroPriority() + stage.aggroPriorityBonus(),
+                stageDescription(stage),
                 stage.entityTypeId(),
+                null,
                 upgradeOptions
         );
+    }
+
+    private static List<String> stageDescription(UpgradeStage stage) {
+        List<String> lines = new java.util.ArrayList<>();
+        lines.add(stage.displayName() + " 분기로 업그레이드한 타워입니다.");
+        if (stage.healthMultiplier() > 1.45) {
+            lines.add("체력과 어그로가 크게 올라 전방 유지력이 좋습니다.");
+        } else if (stage.rangeBonus() >= 3.0) {
+            lines.add("사거리가 크게 늘어나 후방 배치에서도 라인에 개입합니다.");
+        } else if (stage.attackIntervalMultiplier() <= 0.72) {
+            lines.add("공격 주기가 짧아져 중첩과 지속 피해를 빠르게 쌓습니다.");
+        } else if (stage.damageMultiplier() >= 1.5) {
+            lines.add("단일 피해가 크게 올라 고체력 타겟 처리에 강합니다.");
+        } else {
+            lines.add("기본 성능과 특성 수치가 고르게 강화됩니다.");
+        }
+        return lines;
     }
 
     private static ProductionTowerBehavior tune(ProductionTowerBehavior base, BehaviorTuning tuning) {

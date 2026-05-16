@@ -50,23 +50,26 @@ public final class SemionEntityTypes {
                 MONSTER,
                 PathfinderMob.createMobAttributes()
                         .add(Attributes.MAX_HEALTH, 20.0)
-                        .add(Attributes.ATTACK_DAMAGE, 4.0)
+                        .add(Attributes.ATTACK_DAMAGE, 3)
                         .add(Attributes.FOLLOW_RANGE, 3.5)
                         .add(Attributes.MOVEMENT_SPEED, 0.28)
+                        .add(Attributes.KNOCKBACK_RESISTANCE, 1.0)
         );
         FabricDefaultAttributeRegistry.register(
                 BOSS,
                 PathfinderMob.createMobAttributes()
                         .add(Attributes.MAX_HEALTH, 1000.0)
-                        .add(Attributes.ATTACK_DAMAGE, 25.0)
+                        .add(Attributes.ATTACK_DAMAGE, 18)
+                        .add(Attributes.KNOCKBACK_RESISTANCE, 1.0)
         );
         FabricDefaultAttributeRegistry.register(
                 TEST_TOWER,
                 PathfinderMob.createMobAttributes()
                         .add(Attributes.MAX_HEALTH, 50.0)
-                        .add(Attributes.ATTACK_DAMAGE, 12.0)
+                        .add(Attributes.ATTACK_DAMAGE, 8)
                         .add(Attributes.FOLLOW_RANGE, 8.0)
                         .add(Attributes.MOVEMENT_SPEED, 0.0)
+                        .add(Attributes.KNOCKBACK_RESISTANCE, 1.0)
         );
     }
 
