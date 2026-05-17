@@ -52,9 +52,7 @@ public final class ProductionTowerService {
             return TowerPlacementResult.NOT_ENOUGH_MINERAL;
         }
 
-        ProductionTower tower = new ProductionTower(
-                towerType,
-                entry.get().behavior(),
+        ProductionTower tower = entry.get().create(
                 laneContext.player.uuid(),
                 laneContext.player.teamId(),
                 laneContext.player.laneId(),
@@ -167,9 +165,7 @@ public final class ProductionTowerService {
             return TowerUpgradeResult.NOT_ENOUGH_MINERAL;
         }
 
-        ProductionTower upgradedTower = new ProductionTower(
-                targetType,
-                targetEntry.get().behavior(),
+        ProductionTower upgradedTower = targetEntry.get().create(
                 productionTower.ownerPlayer(),
                 productionTower.teamId(),
                 productionTower.laneId(),

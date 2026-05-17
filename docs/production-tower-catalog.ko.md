@@ -45,6 +45,82 @@ ID: `semion-td:beast_tamer`
 2차/3차 타워는 업그레이드 전용이므로 `tower build`로 직접 설치할 수 없다.
 `/semiontd tower upgrades`와 `/semiontd tower upgrade <id>`는 현재 위치의 내 프로덕션 타워를 기준으로 동작한다.
 
+## 타워 생성 및 등록
+
+프로덕션 타워 정의는 `src/main/java/kim/biryeong/semiontd/tower/ProductionTowerCatalog.java`에 모은다.
+새 타워를 추가할 때는 `TowerType`, `ProductionTowerBehavior`, `registerLine` 등록 순서로 작업한다.
+
+### 1. 타워 스탯 정의
+
+`tower(...)`로 가격, 체력, 사거리, 공격력, 공속, 어그로, 외형, 설명, 업그레이드 선택지를 정의한다.
+입력한 공격력은 그대로 최종 공격력으로 쓰인다. 전역 `1.1배` 같은 숨은 보정은 두지 않는다.
+
+```java
+private static final TowerType SPECIAL_TOWER_T2 = tower(
+        "special_tower_t2", "특수 타워", 200, 90, 12.0, 8.5, 14, 10,
+        "minecraft:villager",
+        List.of("특수 능력을 사용하는 2차 타워입니다."),
+        List.of(upgrade("special_tower_t3", "강화 특수 타워", SPECIAL_TOWER_T3, 260))
+);
+```
+
+### 2. 타워 행동 정의
+
+`behavior(...)`로 팩션 능력, 스플래시, 스택 증가 규칙, 처치 폭발을 정의한다.
+스플래시 거리도 최종 칸 수를 직접 적는다. 최대 스플래시를 3칸으로 쓰고 싶으면 `3.0`을 그대로 넣는다.
+
+```java
+private static final ProductionTowerBehavior SPECIAL_TOWER_T2_BEHAVIOR =
+        behavior(TowerFaction.VILLAGER, "Emerald", 1.5, 0.6, 8, 0.04, 0.0, true, false, 0.0, 0.0);
+```
+
+### 3. 기본 타워 등록
+
+일반 타워는 기존처럼 `registerLine(...)`과 `branch(...)`에 타입과 행동만 연결한다.
+
+```java
+registerLine(
+        SPECIAL_STARTER,
+        SPECIAL_STARTER_BEHAVIOR,
+        branch(SPECIAL_LEFT_T2, SPECIAL_LEFT_T2_BEHAVIOR, SPECIAL_LEFT_T3, SPECIAL_LEFT_T3_BEHAVIOR),
+        branch(SPECIAL_RIGHT_T2, SPECIAL_RIGHT_T2_BEHAVIOR, SPECIAL_RIGHT_T3, SPECIAL_RIGHT_T3_BEHAVIOR)
+);
+```
+
+### 4. 특수 능력 타워 등록
+
+타워마다 별도 로직이 필요하면 `ProductionTower`를 상속한 클래스를 만들고, 등록할 때 팩토리를 넘긴다.
+팩토리를 넘긴 타워는 배치와 업그레이드 양쪽에서 해당 클래스 인스턴스로 생성된다.
+
+```java
+public final class SpecialTower extends ProductionTower {
+    public SpecialTower(
+            TowerType type,
+            ProductionTowerBehavior behavior,
+            UUID ownerPlayer,
+            TeamId teamId,
+            int laneId,
+            GridPosition originalPosition,
+            GridPosition currentPosition
+    ) {
+        super(type, behavior, ownerPlayer, teamId, laneId, originalPosition, currentPosition);
+    }
+}
+```
+
+```java
+registerLine(
+        SPECIAL_STARTER,
+        SPECIAL_STARTER_BEHAVIOR,
+        SpecialTower::new,
+        branch(SPECIAL_LEFT_T2, SPECIAL_LEFT_T2_BEHAVIOR, SPECIAL_LEFT_T3, SPECIAL_LEFT_T3_BEHAVIOR),
+        branch(SPECIAL_RIGHT_T2, SPECIAL_RIGHT_T2_BEHAVIOR, SpecialTower::new, SPECIAL_RIGHT_T3, SPECIAL_RIGHT_T3_BEHAVIOR, SpecialTower::new)
+);
+```
+
+특수 로직을 넣을 때는 `ProductionTower` 또는 상위 `TestTower`의 훅을 먼저 확인하고 오버라이드한다.
+예를 들어 공격 성공, 처치, 틱 처리, 받는 피해 같은 기존 흐름에 맞춰 붙이면 배치/판매/업그레이드/직업 제한 로직을 새로 만들 필요가 없다.
+
 ## 타워
 
 | 팩션 | ID | 이름 | 역할 |

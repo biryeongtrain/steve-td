@@ -7,7 +7,7 @@ import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.test.entity.SemionTestTowerEntity;
 import kim.biryeong.semiontd.test.tower.TestTower;
 
-public final class ProductionTower extends TestTower {
+public class ProductionTower extends TestTower {
     private final ProductionTowerBehavior behavior;
     private int mechanicStacks;
     private int idleTicks;
