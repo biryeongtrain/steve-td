@@ -74,6 +74,7 @@ public final class VanillaTeamBridge {
             case BLUE -> ChatFormatting.BLUE;
             case GREEN -> ChatFormatting.GREEN;
             case YELLOW -> ChatFormatting.YELLOW;
+            case PURPLE -> ChatFormatting.LIGHT_PURPLE;
         };
     }
 }

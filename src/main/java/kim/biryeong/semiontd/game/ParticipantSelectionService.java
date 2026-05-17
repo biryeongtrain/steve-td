@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.game;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
@@ -10,19 +11,29 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class ParticipantSelectionService {
-    private static final List<TeamId> TEAM_ORDER = List.of(TeamId.RED, TeamId.BLUE, TeamId.GREEN, TeamId.YELLOW);
+    private static final List<TeamId> TEAM_ORDER = List.of(TeamId.RED, TeamId.BLUE, TeamId.GREEN, TeamId.YELLOW, TeamId.PURPLE);
     private static final int MAX_ACTIVE_PLAYERS = SemionTeam.MAX_PLAYERS * TEAM_ORDER.size();
 
     private ParticipantSelectionService() {
     }
 
     public static Optional<ParticipantSelectionPlan> select(List<StartCandidate> candidates, MatchMode mode) {
-        SelectionShape shape = shapeFor(candidates.size(), mode);
+        return select(candidates, mode, Set.of());
+    }
+
+    public static Optional<ParticipantSelectionPlan> select(
+            List<StartCandidate> candidates,
+            MatchMode mode,
+            Set<UUID> priorityPlayerIds
+    ) {
+        List<StartCandidate> shuffledCandidates = prioritizedRandomCandidates(candidates, priorityPlayerIds);
+
+        SelectionShape shape = shapeFor(shuffledCandidates.size(), mode);
         if (shape == null) {
             return Optional.empty();
         }
 
-        List<StartCandidate> activeCandidates = candidates.subList(0, shape.activePlayerCount());
+        List<StartCandidate> activeCandidates = shuffledCandidates.subList(0, shape.activePlayerCount());
         List<TeamId> activeTeams = TEAM_ORDER.subList(0, shape.activeTeamCount());
         Map<TeamId, Integer> capacities = capacitiesByTeam(activeTeams, shape.teamCapacities());
         Map<TeamId, List<StartCandidate>> assigned = new EnumMap<>(TeamId.class);
@@ -49,8 +60,8 @@ public final class ParticipantSelectionService {
             }
         }
 
-        for (int i = shape.activePlayerCount(); i < candidates.size(); i++) {
-            spectatorIds.add(candidates.get(i).uuid());
+        for (int i = shape.activePlayerCount(); i < shuffledCandidates.size(); i++) {
+            spectatorIds.add(shuffledCandidates.get(i).uuid());
         }
 
         return Optional.of(new ParticipantSelectionPlan(
@@ -66,12 +77,45 @@ public final class ParticipantSelectionService {
             Set<UUID> readyPlayerIds,
             MatchMode mode
     ) {
+        return selectReady(candidates, readyPlayerIds, mode, Set.of());
+    }
+
+    public static Optional<ParticipantSelectionPlan> selectReady(
+            List<StartCandidate> candidates,
+            Set<UUID> readyPlayerIds,
+            MatchMode matchMode,
+            Set<UUID> priorityPlayerIds
+    ) {
         if (readyPlayerIds == null || readyPlayerIds.isEmpty()) {
             return Optional.empty();
         }
         return select(candidates.stream()
                 .filter(candidate -> readyPlayerIds.contains(candidate.uuid()))
-                .toList(), mode);
+                .toList(), matchMode, priorityPlayerIds);
+    }
+
+    private static List<StartCandidate> prioritizedRandomCandidates(
+            List<StartCandidate> candidates,
+            Set<UUID> priorityPlayerIds
+    ) {
+        Set<UUID> priorities = priorityPlayerIds == null ? Set.of() : priorityPlayerIds;
+        List<StartCandidate> priorityCandidates = new ArrayList<>();
+        List<StartCandidate> regularCandidates = new ArrayList<>();
+        for (StartCandidate candidate : candidates) {
+            if (priorities.contains(candidate.uuid())) {
+                priorityCandidates.add(candidate);
+            } else {
+                regularCandidates.add(candidate);
+            }
+        }
+
+        Collections.shuffle(priorityCandidates);
+        Collections.shuffle(regularCandidates);
+
+        List<StartCandidate> shuffledCandidates = new ArrayList<>(candidates.size());
+        shuffledCandidates.addAll(priorityCandidates);
+        shuffledCandidates.addAll(regularCandidates);
+        return shuffledCandidates;
     }
 
     private static Map<TeamId, Integer> capacitiesByTeam(List<TeamId> activeTeams, List<Integer> teamCapacities) {

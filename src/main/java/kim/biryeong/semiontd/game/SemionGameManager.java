@@ -1,15 +1,19 @@
 package kim.biryeong.semiontd.game;
 
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.MapConfig;
 import kim.biryeong.semiontd.config.ProgressionConfig;
+import kim.biryeong.semiontd.config.SemionConfigLoader;
+import kim.biryeong.semiontd.config.SemionConfigLoader.LoadedConfigs;
 import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.map.ArenaLoadException;
 import kim.biryeong.semiontd.map.GameArena;
@@ -43,6 +47,7 @@ public final class SemionGameManager {
     private WaveConfig waveConfig = WaveConfig.defaultConfig();
     private MapConfig mapConfig = MapConfig.defaultConfig();
     private ProgressionConfig progressionConfig = ProgressionConfig.defaultConfig();
+    private Path configDir;
     private Path progressionStorePath;
     private ProgressionService progressionService = new ProgressionService(progressionConfig, null);
     private SemionMusicService musicService = SemionMusicService.disabled();
@@ -52,6 +57,7 @@ public final class SemionGameManager {
     private SemionGame activeGame;
     private LobbyWorld lobbyWorld;
     private MatchResult lastMatchResult;
+    private final Set<UUID> nextMatchPriorityPlayerIds = new HashSet<>();
     private SemionGame pendingFinishedGame;
     private int pendingFinishDelayTicks;
     private ParticipantSelectionPlan pendingStartPlan;
@@ -68,6 +74,9 @@ public final class SemionGameManager {
         PRELOAD_FAILED
     }
 
+    public record ReloadConfigResult(boolean reloaded, boolean activeGameUpdated, Path configDir) {
+    }
+
     public void configure(
             EconomyConfig economyConfig,
             WaveConfig waveConfig,
@@ -80,7 +89,29 @@ public final class SemionGameManager {
         this.mapConfig = mapConfig;
         this.progressionConfig = progressionConfig;
         this.progressionStorePath = progressionStorePath;
+        this.configDir = progressionStorePath == null ? null : progressionStorePath.getParent();
         this.progressionService = new ProgressionService(progressionConfig, progressionStorePath);
+    }
+
+    public ReloadConfigResult reloadConfigs(MinecraftServer server) {
+        if (configDir == null) {
+            return new ReloadConfigResult(false, false, null);
+        }
+
+        LoadedConfigs configs = SemionConfigLoader.load(configDir, SemionTd.LOGGER);
+        configure(
+                configs.economy(),
+                configs.waves(),
+                configs.map(),
+                configs.progression(),
+                configDir.resolve("profiles.json")
+        );
+        boolean activeGameUpdated = activeGame != null && activeGame.phase() != RoundPhase.ENDED;
+        if (activeGameUpdated) {
+            activeGame.applyConfigs(configs.economy(), configs.waves());
+            displayHudService.refreshNow(server, activeGame, matchMode);
+        }
+        return new ReloadConfigResult(true, activeGameUpdated, configDir);
     }
 
     public void configureMusic(SemionMusicService musicService) {
@@ -113,6 +144,10 @@ public final class SemionGameManager {
 
     public Optional<MatchResult> lastMatchResult() {
         return Optional.ofNullable(lastMatchResult);
+    }
+
+    public Set<UUID> nextMatchPriorityPlayerIds() {
+        return Set.copyOf(nextMatchPriorityPlayerIds);
     }
 
     public SemionDialogService dialogService() {
@@ -404,6 +439,7 @@ public final class SemionGameManager {
             );
             return;
         }
+        clearPriorityForActiveParticipants(plan);
         server.getPlayerList().broadcastSystemMessage(SemionText.prefixedMini("<green><bold>게임을 시작합니다.</bold></green>"), false);
         displayHudService.refreshNow(server, activeGame, matchMode);
     }
@@ -414,7 +450,7 @@ public final class SemionGameManager {
                 false
         );
         server.getPlayerList().getPlayers().forEach(player -> {
-            player.playNotifySound(SoundEvents.DISPENSER_LAUNCH, SoundSource.MUSIC, 1557f, 1f);
+            player.playNotifySound(SoundEvents.STONE_BUTTON_CLICK_ON, SoundSource.MUSIC, 1557f, 1f);
         });
     }
 
@@ -470,6 +506,7 @@ public final class SemionGameManager {
         Optional<MatchResult> result = finishedGame.matchResult();
         if (result.isPresent()) {
             lastMatchResult = result.get();
+            nextMatchPriorityPlayerIds.addAll(result.get().spectatorIds());
             Map<UUID, MatchProgressionReward> rewards = progressionService.applyMatchResult(server, result.get());
             announceMatchResult(server, result.get(), rewards);
             showMatchResultDialogs(server, result.get(), rewards);
@@ -484,6 +521,12 @@ public final class SemionGameManager {
         }
 
         closeActiveGameSafely(finishedGame, "finishing match");
+    }
+
+    private void clearPriorityForActiveParticipants(ParticipantSelectionPlan plan) {
+        for (AssignedParticipant participant : plan.activeParticipants()) {
+            nextMatchPriorityPlayerIds.remove(participant.uuid());
+        }
     }
 
     private void announceMatchResult(

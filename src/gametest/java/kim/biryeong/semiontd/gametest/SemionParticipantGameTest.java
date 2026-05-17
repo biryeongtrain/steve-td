@@ -383,6 +383,110 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void normalModeCreatesFifthTeamAboveTwentyPlayers(GameTestHelper context) {
+        List<StartCandidate> candidates = java.util.stream.IntStream.rangeClosed(1, 21)
+                .mapToObj(index -> candidate("overflow-" + index))
+                .toList();
+        Set<UUID> readyPlayerIds = candidates.stream()
+                .map(StartCandidate::uuid)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+
+        Optional<ParticipantSelectionPlan> plan = ParticipantSelectionService.selectReady(candidates, readyPlayerIds, MatchMode.NORMAL);
+
+        if (!assertPresent(context, plan, "Expected normal mode to select from 21 ready players.")) {
+            return;
+        }
+
+        ParticipantSelectionPlan value = plan.get();
+        if (!assertEquals(context, 21, value.activePlayerCount(), "21 players should all enter the match.")) {
+            return;
+        }
+        if (!assertEquals(context, 5, value.activeTeamCount(), "21 players should create a fifth active team.")) {
+            return;
+        }
+        if (!assertEquals(context, 0, value.spectatorCount(), "21 ready players should not become spectators.")) {
+            return;
+        }
+        if (!assertTeamSizes(context, value, Map.of(TeamId.RED, 5, TeamId.BLUE, 4, TeamId.GREEN, 4, TeamId.YELLOW, 4, TeamId.PURPLE, 4))) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void participantSelectionCapsActivePlayersAtTwentyFive(GameTestHelper context) {
+        List<StartCandidate> candidates = java.util.stream.IntStream.rangeClosed(1, 26)
+                .mapToObj(index -> candidate("overflow-cap-" + index))
+                .toList();
+        Set<UUID> readyPlayerIds = candidates.stream()
+                .map(StartCandidate::uuid)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+
+        Optional<ParticipantSelectionPlan> plan = ParticipantSelectionService.selectReady(candidates, readyPlayerIds, MatchMode.NORMAL);
+
+        if (!assertPresent(context, plan, "Expected normal mode to select from 26 ready players.")) {
+            return;
+        }
+
+        ParticipantSelectionPlan value = plan.get();
+        if (!assertEquals(context, 25, value.activePlayerCount(), "Only 25 players should enter the match.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, value.spectatorCount(), "Ready players above 25 should become spectators.")) {
+            return;
+        }
+        if (!assertTeamSizes(context, value, Map.of(TeamId.RED, 5, TeamId.BLUE, 5, TeamId.GREEN, 5, TeamId.YELLOW, 5, TeamId.PURPLE, 5))) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void participantSelectionPrioritizesPreviousSpectators(GameTestHelper context) {
+        List<StartCandidate> candidates = java.util.stream.IntStream.rangeClosed(1, 30)
+                .mapToObj(index -> candidate("priority-overflow-" + index))
+                .toList();
+        Set<UUID> readyPlayerIds = candidates.stream()
+                .map(StartCandidate::uuid)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        Set<UUID> previousSpectatorIds = Set.of(
+                stableUuid("priority-overflow-21"),
+                stableUuid("priority-overflow-22"),
+                stableUuid("priority-overflow-23"),
+                stableUuid("priority-overflow-24"),
+                stableUuid("priority-overflow-25")
+        );
+
+        Optional<ParticipantSelectionPlan> plan = ParticipantSelectionService.selectReady(
+                candidates,
+                readyPlayerIds,
+                MatchMode.NORMAL,
+                previousSpectatorIds
+        );
+
+        if (!assertPresent(context, plan, "Expected normal mode to select with previous spectator priority.")) {
+            return;
+        }
+
+        ParticipantSelectionPlan value = plan.get();
+        if (!assertEquals(context, 25, value.activePlayerCount(), "Only 25 players should enter the match.")) {
+            return;
+        }
+        if (!assertEquals(context, 5, value.spectatorCount(), "Ready players above 25 should become spectators.")) {
+            return;
+        }
+        if (!assertTrue(
+                context,
+                previousSpectatorIds.stream().allMatch(priorityId -> value.activeParticipants().stream()
+                        .anyMatch(participant -> participant.uuid().equals(priorityId))),
+                "Previous spectators should be selected as active participants first."
+        )) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void lateSpectatorsDoNotPolluteResultSpectators(GameTestHelper context) {
         UUID redId = stableUuid("late-spectator-red");
         UUID blueId = stableUuid("late-spectator-blue");
@@ -2928,6 +3032,55 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertEquals(context, 100.0F, far.getHealth(), "Boss splash should not hit monsters outside the splash radius.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void bossDamageScalesByRoundAndTriplesAgainstSummons(GameTestHelper context) {
+        SemionBossEntity boss = new SemionBossEntity(SemionEntityTypes.BOSS, context.getLevel());
+        boss.configure(TeamId.RED, BossMonster.defaultBoss(TeamId.RED));
+        boss.setCurrentRound(3);
+
+        Monster waveMonster = new Monster(
+                "boss-wave-damage-target",
+                TeamId.RED,
+                1,
+                Optional.empty(),
+                Optional.empty(),
+                100.0,
+                0.0,
+                0.0,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                0
+        );
+        Monster summonMonster = new Monster(
+                "boss-summon-damage-target",
+                TeamId.RED,
+                1,
+                Optional.of(stableUuid("boss-summon-owner")),
+                Optional.of(TeamId.BLUE),
+                100.0,
+                0.0,
+                0.0,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                null,
+                DamageType.PHYSICAL,
+                0.0,
+                SummonTier.T1,
+                List.of(SummonRole.RUSH),
+                0
+        );
+
+        double expectedWaveDamage = 18.0 * 1.2;
+        double expectedSummonDamage = expectedWaveDamage * 3.0;
+        if (!assertTrue(context, Math.abs(boss.attackDamageAgainst(waveMonster) - expectedWaveDamage) < 0.001, "Boss damage should gain 10% per round after round 1.")) {
+            return;
+        }
+        if (!assertTrue(context, Math.abs(boss.attackDamageAgainst(summonMonster) - expectedSummonDamage) < 0.001, "Boss damage should be tripled against summon monsters.")) {
             return;
         }
         context.succeed();

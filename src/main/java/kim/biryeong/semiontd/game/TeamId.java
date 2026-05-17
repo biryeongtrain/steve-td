@@ -4,5 +4,6 @@ public enum TeamId {
     RED,
     BLUE,
     GREEN,
-    YELLOW
+    YELLOW,
+    PURPLE
 }

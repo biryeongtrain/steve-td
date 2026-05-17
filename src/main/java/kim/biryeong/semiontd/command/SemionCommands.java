@@ -57,6 +57,9 @@ public final class SemionCommands {
                 .then(literal("reset")
                         .requires(source -> source.hasPermission(2))
                         .executes(context -> resetGame(context.getSource(), gameManager, "리셋")))
+                .then(literal("reload")
+                        .requires(source -> source.hasPermission(2))
+                        .executes(context -> reloadConfigs(context.getSource(), gameManager)))
                 .then(literal("testmode")
                         .requires(source -> source.hasPermission(2))
                         .then(argument("enabled", BoolArgumentType.bool())
@@ -254,6 +257,25 @@ public final class SemionCommands {
                 + ", 카운트다운=" + gameManager.startCountdownSecondsRemaining() + "초"
                 + lobbyLoaded);
         return 1;
+    }
+
+    private static int reloadConfigs(CommandSourceStack source, SemionGameManager gameManager) {
+        try {
+            SemionGameManager.ReloadConfigResult result = gameManager.reloadConfigs(source.getServer());
+            if (!result.reloaded()) {
+                failure(source, "설정 경로를 찾지 못해 리로드하지 못했습니다.");
+                return 0;
+            }
+            String activeGameText = result.activeGameUpdated()
+                    ? "진행 중인 게임의 경제/웨이브 설정도 즉시 반영했습니다."
+                    : "진행 중인 게임은 없습니다.";
+            success(source, "컨픽을 다시 불러왔습니다. " + activeGameText + " 맵 설정은 다음 게임 생성부터 적용됩니다.");
+            return 1;
+        } catch (RuntimeException exception) {
+            SemionTd.LOGGER.error("Unexpected Semion TD config reload failure.", exception);
+            failure(source, "컨픽 리로드 중 예기치 못한 오류가 발생했습니다: " + exception.getMessage());
+            return 0;
+        }
     }
 
     private static int autojoin(CommandSourceStack source, SemionGameManager gameManager) {
@@ -940,7 +962,7 @@ public final class SemionCommands {
         try {
             teamId = parseTeam(teamName);
         } catch (IllegalArgumentException exception) {
-            failure(source, "알 수 없는 팀입니다: " + teamName + ". RED, BLUE, GREEN, YELLOW 중 하나를 사용하세요.");
+            failure(source, "알 수 없는 팀입니다: " + teamName + ". RED, BLUE, GREEN, YELLOW, PURPLE 중 하나를 사용하세요.");
             return 0;
         }
 
@@ -1021,7 +1043,12 @@ public final class SemionCommands {
                     player.getGameProfile().getName()
             ));
         }
-        return ParticipantSelectionService.selectReady(candidates, game.readyPlayerIds(), gameManager.matchMode());
+        return ParticipantSelectionService.selectReady(
+                candidates,
+                game.readyPlayerIds(),
+                gameManager.matchMode(),
+                gameManager.nextMatchPriorityPlayerIds()
+        );
     }
 
     private static void applyPlanToVanillaTeams(CommandSourceStack source, ParticipantSelectionPlan plan) {
