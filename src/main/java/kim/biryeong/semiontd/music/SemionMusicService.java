@@ -187,18 +187,18 @@ public final class SemionMusicService {
         for (UUID playerId : playerStates.keySet()) {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             if (player != null) {
-                player.connection.send(new ClientboundStopSoundPacket(null, SoundSource.MUSIC));
+                player.connection.send(new ClientboundStopSoundPacket(null, SoundSource.RECORDS));
             }
         }
         playerStates.clear();
     }
 
     private void playMusic(ServerPlayer player, SemionMusicTrack track) {
-        player.playNotifySound(SoundEvent.createVariableRangeEvent(track.eventId()), SoundSource.MUSIC, 1.0F, 1.0F);
+        player.playNotifySound(SoundEvent.createVariableRangeEvent(track.eventId()), SoundSource.RECORDS, 1.0F, 1.0F);
     }
 
     private void stopMusic(ServerPlayer player, ResourceLocation eventId) {
-        player.connection.send(new ClientboundStopSoundPacket(eventId, SoundSource.MUSIC));
+        player.connection.send(new ClientboundStopSoundPacket(eventId, SoundSource.RECORDS));
     }
 
     public record PlaybackDecision(PlaybackAction action, SemionMusicTrack track, long trackStartedAtTick) {

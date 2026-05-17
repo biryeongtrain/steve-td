@@ -401,7 +401,7 @@ public final class SemionDialogService {
                         true,
                         false,
                         DialogAction.CLOSE,
-                        List.<DialogBody>of(HeaderMessage.body(miniMessage(body), BODY_WIDTH)),
+                        List.of(new HeaderMessage(miniMessage(body), BODY_WIDTH)),
                         List.of()
                 ),
                 actions,
