@@ -3,10 +3,14 @@ package kim.biryeong.semiontd.tower.villager;
 import static kim.biryeong.semiontd.tower.catalog.ProductionTowerDefinitions.tower;
 
 import java.util.List;
+
+import kim.biryeong.semiontd.entity.visual.CatVisual;
 import kim.biryeong.semiontd.entity.visual.VillagerVisual;
+import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.animal.CatVariants;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.npc.VillagerType;
 
@@ -32,7 +36,7 @@ public final class VillagerTowers {
             60,
             7,
             8,
-            18,
+            15,
             5,
             VillagerVisual.builder().profession(VillagerProfession.LIBRARIAN).build(),
             List.of(
@@ -49,7 +53,7 @@ public final class VillagerTowers {
             80,
             7,
             10,
-            15,
+            12,
             10,
             VillagerVisual.builder().profession(VillagerProfession.CLERIC).build(),
             List.of(
@@ -66,7 +70,7 @@ public final class VillagerTowers {
             "t1_golem_tower",
             "눈 골렘 타워",
             100,
-            80,
+            85,
             2,
             5,
             20,
@@ -79,7 +83,7 @@ public final class VillagerTowers {
             "t2_golem_tower",
             "라마 타워",
             180,
-            120,
+            140,
             2,
             8,
             20,
@@ -87,7 +91,7 @@ public final class VillagerTowers {
             byId(EntityType.TRADER_LLAMA),
             List.of("<gray>구리 골렘이 있는 줄 알고 만들다가 없는거 알고 급하게 바꾼 타워입니다.</gray>",
                     "<green> + 피격 시 3 범위 적에게 8 데미지를 입힙니다. (쿨타임 : 5초)</green>",
-                    "<green> + 생존한 라운드 마다 체력이 5% 증가합니다. (최대 : 25%)"
+                    "<green> + 생존한 라운드 마다 체력이 10% 증가합니다. (최대 : 50%)"
                     )
     );
 
@@ -95,7 +99,7 @@ public final class VillagerTowers {
             "t3_golem_tower",
             "철 골렘 타워",
             350,
-            180,
+            250,
             3,
             10,
             20,
@@ -103,7 +107,7 @@ public final class VillagerTowers {
             byId(EntityType.IRON_GOLEM),
             List.of(
                     "<green> + 피격 시 4 범위 적에게 10 데미지를 입힙니다. ( 쿨타임 : 4초 ) </green>",
-                    "<green> + 생존한 라운드 마다 체력이 10% 증가합니다. ( 최대 : 50 % ) "
+                    "<green> + 생존한 라운드 마다 체력이 20% 증가합니다. ( 최대 : 100 % ) "
             )
     );
 
@@ -184,6 +188,92 @@ public final class VillagerTowers {
             List.of(
                     "<green> + 5초마다 주위 3블록 이내에 있는 타워를 3초동안 공격력과 공격속도를 15% 증가시킵니다.</green>",
                     "<red> 이 효과를 받은 타워는 5초동안 같은 효과를 받을 수 없습니다.</red>"
+            )
+    );
+
+    // 고양이 타워
+    public static final TowerType T1_CAT_TOWER = tower(
+            "t1_cat_tower",
+            "오셸롯 타워",
+            120,
+            50,
+            10,
+            10,
+            20,
+            5,
+            byId(EntityType.OCELOT),
+            List.of(
+                    "<gray> 동물 팀에는 가기싫어서 주민 팩션에 온 고양이 타워입니다. </gray>"
+            )
+    );
+
+    public static final TowerType T2_ANTI_TANKER_CAT_TOWER = tower(
+            "t2_anti_tanker_cat_tower",
+            "저격 캣 타워",
+            250,
+            50,
+            12,
+            20,
+            20,
+            5,
+            CatVisual.builder().variant(CatVariants.ALL_BLACK).tame(true).build(),
+            List.of(
+                    "<green> + 웨이브가 아닌 대상을 공격할 때 피해를 50% 더 입힙니다. </green>",
+                    "<green> + 대상이 </green><red>탱커</red><green>태그를 가질 경우 대신 100% 추가 피해를 입힙니다.</green>",
+                    "<green> + 적 처치 시 마다 공격력이 영구적으로 0.1씩 오르며, 최대 </green><yellow>10</yellow><green>까지 상승합니다. </green>"
+            )
+    );
+
+    public static final TowerType T2_LANE_CLEAR_CAT_TOWER = tower(
+            "t2_lane_clear_cat_tower",
+            "라클 캣 타워",
+            200,
+            50,
+            10,
+            15,
+            20,
+            5,
+            CatVisual.builder().variant(CatVariants.WHITE).tame(true).build(),
+            List.of(
+                    "<green> + 웨이브를 공격 할 때 피해를 50% 더 입힙니다. </green>",
+                    "<green> 적을 처치 시 적이 폭발하며 해당 적 근처 1블록 이내의 적에게 공격력과 같은 피해를 줍니다. </green>",
+                    "<green> 적을 처치 시 영구적으로 공격력이 0.125 증가하며, 최대 5까지 증가합니다. (최대 40스택) </green>",
+                    "<red> 시체 폭발 피해로 처치한 적은 폭발하지 않습니다. </red>"
+            )
+    );
+
+    public static final TowerType T3_ANTI_TANKER_CAT_TOWER = tower(
+            "t3_anti_tanker_cat_tower",
+            "강화 저격 캣 타워",
+            450,
+            50,
+            15,
+            25,
+            18,
+            5,
+            CatVisual.builder().variant(CatVariants.BLACK).tame(true).build(),
+            List.of(
+                    "<green> + 웨이브가 아닌 대상을 공격할 때 피해를 100% 더 입힙니다. </green>",
+                    "<green> + 대상이 </green><red>탱커</red><green>태그를 가질 경우 대신 200% 추가 피해를 입힙니다.</green>",
+                    "<green> + 적 처치 시 마다 공격력이 영구적으로 0.2씩 오르며, 최대 </green><yellow>20</yellow><green>까지 상승합니다. </green>"
+            )
+    );
+
+    public static final TowerType T3_LANE_CLEAR_CAT_TOWER = tower(
+            "t3_lane_clear_cat_tower",
+            "강화 라클 캣 타워",
+            375,
+            50,
+            10,
+            17,
+            18,
+            5,
+            CatVisual.builder().variant(CatVariants.WHITE).tame(true).build(),
+            List.of(
+                    "<green> + 웨이브를 공격 할 때 피해를 75% 더 입힙니다. </green>",
+                    "<green> 적을 처치 시 적이 폭발하며 해당 적 근처 1.5블록 이내의 적에게 공격력과 같은 피해를 줍니다. </green>",
+                    "<green> 적을 처치 시 영구적으로 공격력이 0.25 증가하며, 최대 20까지 증가합니다. (최대 80스택) </green>",
+                    "<red> 시체 폭발 피해로 처치한 적은 폭발하지 않습니다. </red>"
             )
     );
 
