@@ -47,6 +47,7 @@ Tower
 - `SemionTowerEntity`는 테스트/프로덕션 양쪽이 공유하는 엔티티다. 엔티티 타입 ID는 `semion-td:tower`이며, 예전 `SemionTestTowerEntity`/`test_tower` 전용 구조는 쓰지 않는다.
 - `TowerAttackMonsterGoal`은 `SemionTowerEntity`에서 동작한다. 공격 속도, 스플래시, 스택 UI 값은 `Tower` 훅과 `ProductionTowerBehavior`를 통해 얻는다.
 - 업그레이드 서비스는 기존 타워를 `ProductionTower`로 캐스팅하지 않고 일반 `Tower` 상태(`type`, `ownerPlayer`, `position`)로 판정한다. 업그레이드 대상 생성은 catalog entry의 factory가 담당한다.
+- 업그레이드로 새 타워 인스턴스를 만들면 `Tower.copyFrom(previousTower, upgradeCost)`가 호출된다. 기본 판매/라운드 상태는 공통으로 복사되고, 영구 스택 같은 타워별 런타임 상태는 `copyRuntimeStateFrom(...)`을 override해 복사한다.
 
 따라서 새 프로덕션 카탈로그만 추가하면 기본적으로 `semion-td:tower` 엔티티를 가진 타워가 생성된다. 기본 공격 goal을 그대로 쓸 때는 별도 엔티티나 goal을 새로 만들 필요는 없다.
 
@@ -183,6 +184,13 @@ public final class SupporterTower extends EntityBackedTower {
             boolean killedTarget
     ) {
         // 특수 효과를 여기서 적용한다.
+    }
+
+    @Override
+    protected void copyRuntimeStateFrom(Tower previousTower) {
+        if (previousTower instanceof SupporterTower supporterTower) {
+            // 업그레이드 후에도 유지할 영구 보너스 값을 복사한다.
+        }
     }
 }
 ```

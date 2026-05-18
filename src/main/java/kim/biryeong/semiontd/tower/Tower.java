@@ -110,6 +110,14 @@ public abstract class Tower {
         this.waveStartedAfterPlacement = false;
     }
 
+    public final void copyFrom(Tower previousTower, long extraPaidMineralCost) {
+        if (previousTower == null) {
+            return;
+        }
+        inheritSaleState(previousTower, extraPaidMineralCost);
+        copyRuntimeStateFrom(previousTower);
+    }
+
     public void inheritSaleState(Tower previousTower, long extraPaidMineralCost) {
         if (previousTower == null) {
             return;
@@ -117,6 +125,9 @@ public abstract class Tower {
         this.paidMineralCost = Math.max(0, previousTower.paidMineralCost() + Math.max(0, extraPaidMineralCost));
         this.placedRound = previousTower.placedRound();
         this.waveStartedAfterPlacement = previousTower.waveStartedAfterPlacement();
+    }
+
+    protected void copyRuntimeStateFrom(Tower previousTower) {
     }
 
     public void markWaveStarted(int currentRound) {

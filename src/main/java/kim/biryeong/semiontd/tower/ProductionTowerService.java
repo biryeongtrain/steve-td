@@ -172,7 +172,7 @@ public final class ProductionTowerService {
                 tower.originalPosition(),
                 tower.position()
         );
-        upgradedTower.inheritSaleState(tower, mineralCost);
+        upgradedTower.copyFrom(tower, mineralCost);
         if (!laneContext.lane.replaceTower(tower, upgradedTower)) {
             laneContext.player.economy().addMineral(mineralCost);
             return TowerUpgradeResult.NO_TOWER_AT_POSITION;

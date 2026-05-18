@@ -1527,6 +1527,51 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         context.succeed();
     }
 
+    @GameTest
+    public void towerCopyFromTransfersSaleAndRuntimeState(GameTestHelper context) {
+        UUID playerId = stableUuid("red-copy-runtime-state-owner");
+        TowerType sourceType = productionFixtureType("manual_fixture_copy_source", List.of());
+        TowerType targetType = productionFixtureType("manual_fixture_copy_target", List.of());
+        kim.biryeong.semiontd.game.GridPosition position = new kim.biryeong.semiontd.game.GridPosition(0, 64, 0);
+        FixtureSupportTower sourceTower = new FixtureSupportTower(
+                sourceType,
+                productionFixtureBehavior(TowerFaction.VILLAGER),
+                playerId,
+                TeamId.RED,
+                1,
+                position,
+                position
+        );
+        sourceTower.recordPlacementEconomy(75, 2);
+        sourceTower.markWaveStarted(2);
+        sourceTower.setPersistentBonus(4);
+
+        FixtureSupportTower targetTower = new FixtureSupportTower(
+                targetType,
+                productionFixtureBehavior(TowerFaction.VILLAGER),
+                playerId,
+                TeamId.RED,
+                1,
+                position,
+                position
+        );
+        targetTower.copyFrom(sourceTower, 25);
+
+        if (!assertEquals(context, 100L, targetTower.paidMineralCost(), "copyFrom should carry sale cost plus upgrade cost.")) {
+            return;
+        }
+        if (!assertEquals(context, 2, targetTower.placedRound(), "copyFrom should carry original placement round.")) {
+            return;
+        }
+        if (!assertTrue(context, targetTower.waveStartedAfterPlacement(), "copyFrom should carry wave-start sale state.")) {
+            return;
+        }
+        if (!assertEquals(context, 4, targetTower.persistentBonus(), "copyFrom should call the runtime-state copy hook.")) {
+            return;
+        }
+        context.succeed();
+    }
+
     private static TowerType productionFixtureType(String id, List<TowerUpgradeOption> upgradeOptions) {
         return new TowerType(
                 id,
@@ -4972,6 +5017,8 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     private static final class FixtureSupportTower extends EntityBackedTower {
+        private int persistentBonus;
+
         private FixtureSupportTower(
                 TowerType type,
                 kim.biryeong.semiontd.tower.ProductionTowerBehavior behavior,
@@ -4982,6 +5029,21 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 kim.biryeong.semiontd.game.GridPosition currentPosition
         ) {
             super(type, ownerPlayer, teamId, laneId, originalPosition, currentPosition);
+        }
+
+        private void setPersistentBonus(int persistentBonus) {
+            this.persistentBonus = persistentBonus;
+        }
+
+        private int persistentBonus() {
+            return persistentBonus;
+        }
+
+        @Override
+        protected void copyRuntimeStateFrom(kim.biryeong.semiontd.tower.Tower previousTower) {
+            if (previousTower instanceof FixtureSupportTower fixtureSupportTower) {
+                persistentBonus = fixtureSupportTower.persistentBonus;
+            }
         }
     }
 

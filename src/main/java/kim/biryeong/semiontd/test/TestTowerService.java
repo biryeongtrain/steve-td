@@ -123,7 +123,7 @@ public final class TestTowerService {
                 testTower.originalPosition(),
                 testTower.position()
         );
-        evolvedTower.inheritSaleState(testTower, mineralCost);
+        evolvedTower.copyFrom(testTower, mineralCost);
         if (!laneContext.lane.replaceTower(testTower, evolvedTower)) {
             laneContext.player.economy().addMineral(mineralCost);
             return TowerUpgradeResult.NO_TOWER_AT_POSITION;
