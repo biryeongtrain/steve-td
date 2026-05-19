@@ -4,6 +4,7 @@ import net.kyori.adventure.platform.modcommon.impl.NonWrappingComponentSerialize
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
 public final class SemionText {
     public static final String BRAND_MARKUP = "<gradient:#67e8f9:#a78bfa><bold>Semion TD</bold></gradient>";
@@ -16,6 +17,10 @@ public final class SemionText {
 
     public static Component mini(String markup) {
         return NonWrappingComponentSerializer.INSTANCE.serialize(MINI_MESSAGE.deserialize(markup));
+    }
+
+    public static MutableComponent mutableMini(String markup) {
+        return Component.empty().append(mini(markup));
     }
 
     public static Component prefix() {

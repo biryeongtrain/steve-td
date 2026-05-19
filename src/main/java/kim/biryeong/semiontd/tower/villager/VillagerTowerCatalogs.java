@@ -1,5 +1,7 @@
 package kim.biryeong.semiontd.tower.villager;
 
+import kim.biryeong.semiontd.job.JobRegistry;
+import kim.biryeong.semiontd.job.VillagerTowerJob;
 import kim.biryeong.semiontd.tower.ProductionTower;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.TowerType;
@@ -44,6 +46,10 @@ public final class VillagerTowerCatalogs {
         link(VillagerTowers.T1_CAT_TOWER, "t2_lane_clear_cat_tower", "라클 캣 타워", VillagerTowers.T2_LANE_CLEAR_CAT_TOWER, 200);
         link(VillagerTowers.T2_ANTI_TANKER_CAT_TOWER, "t3_anti_tanker_cat_tower", "강화 저격 캣 타워", VillagerTowers.T3_ANTI_TANKER_CAT_TOWER, 450);
         link(VillagerTowers.T2_LANE_CLEAR_CAT_TOWER, "t3_lane_clear_cat_tower", "강화 라클 캣 타워", VillagerTowers.T3_LANE_CLEAR_CAT_TOWER, 375);
+
+        if (JobRegistry.find(VillagerTowerJob.ID).isEmpty()) {
+            JobRegistry.register(new VillagerTowerJob());
+        }
     }
 
     private static void registerTower(TowerType type, ProductionTowerCatalog.TowerFactory factory, int tier) {
