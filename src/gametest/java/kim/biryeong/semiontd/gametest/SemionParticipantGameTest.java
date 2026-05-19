@@ -1392,6 +1392,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void productionTowerCatalogStartsEmptyForManualAuthoring(GameTestHelper context) {
+        ProductionTowerCatalog.clearForTesting();
         if (!assertTrue(context, ProductionTowerCatalog.all().isEmpty(), "Production catalog should start empty so towers can be authored manually.")) {
             return;
         }
@@ -1400,6 +1401,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void emptyProductionTowerCatalogRejectsBuildRequests(GameTestHelper context) {
+        ProductionTowerCatalog.clearForTesting();
         UUID playerId = stableUuid("red-production-villager-owner");
         SemionGame game = startedSinglePlayerGame(
                 context,
@@ -1425,6 +1427,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void emptyProductionTowerCatalogKeepsBuildListsEmpty(GameTestHelper context) {
+        ProductionTowerCatalog.clearForTesting();
         UUID unjobbedId = stableUuid("unjobbed-production-owner");
         SemionGame unjobbedGame = startedSinglePlayerGame(context, unjobbedId, TeamId.RED);
         if (!assertEquals(
@@ -1642,15 +1645,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void productionTowerUpgradeRejectsUnregisteredTargetType(GameTestHelper context) {
-        UUID playerId = stableUuid("red-production-upgrade-owner");
-        SemionGame game = startedSinglePlayerGame(
-                context,
-                playerId,
-                TeamId.RED
-        );
-        PlayerLane lane = redLane(game, 1);
-        BlockPos towerPos = towerPlacementPos(lane);
-
+        ProductionTowerCatalog.clearForTesting();
         TowerType upgradeTarget = new TowerType("manual_fixture_t2", "Manual Fixture T2", TowerCategory.DIRECT, 0, 80.0, 8.0, 8.0, 20, 0);
         TowerType starterType = new TowerType(
                 "manual_fixture_starter",
@@ -1661,30 +1656,21 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 8.0,
                 8.0,
                 20,
-                0,
-                List.of(new TowerUpgradeOption("manual_upgrade", "Manual Upgrade", upgradeTarget, 0))
+                0
         );
-        lane.addTower(new ProductionTower(
-                starterType,
-                playerId,
-                TeamId.RED,
-                1,
-                new kim.biryeong.semiontd.game.GridPosition(towerPos.getX(), towerPos.getY(), towerPos.getZ())
-        ));
-
-        if (!assertEquals(
-                context,
-                TowerUpgradeResult.UNKNOWN_TARGET_TYPE,
-                ProductionTowerService.upgradeTower(game, playerId, towerPos, "manual_upgrade"),
-                "Production upgrades should reject targets that are not registered in the catalog."
-        )) {
+        ProductionTowerCatalog.registerStarter(starterType);
+        try {
+            ProductionTowerCatalog.linkUpgrade(starterType, "manual_upgrade", "Manual Upgrade", upgradeTarget, 0);
+        } catch (IllegalArgumentException expected) {
+            context.succeed();
             return;
         }
-        context.succeed();
+        context.fail(Component.literal("Production catalog should reject upgrade targets that are not registered before linking."));
     }
 
     @GameTest
     public void towerUpgradeServiceAcceptsNonProductionEntityBackedTower(GameTestHelper context) {
+        ProductionTowerCatalog.clearForTesting();
         UUID playerId = stableUuid("red-custom-runtime-upgrade-owner");
         SemionGame game = startedSinglePlayerGame(
                 context,
@@ -1704,9 +1690,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 8.0,
                 8.0,
                 20,
-                0,
-                List.of(new TowerUpgradeOption("manual_upgrade", "Manual Upgrade", upgradeTarget, 0))
+                0
         );
+        ProductionTowerCatalog.registerStarter(starterType, FixtureSupportTower::new);
+        ProductionTowerCatalog.register(upgradeTarget, 2);
+        ProductionTowerCatalog.linkUpgrade(starterType, "manual_upgrade", "Manual Upgrade", upgradeTarget, 0);
         kim.biryeong.semiontd.game.GridPosition gridPosition = new kim.biryeong.semiontd.game.GridPosition(
                 towerPos.getX(),
                 towerPos.getY(),
@@ -1731,9 +1719,9 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
         if (!assertEquals(
                 context,
-                TowerUpgradeResult.UNKNOWN_TARGET_TYPE,
+                TowerUpgradeResult.SUCCESS,
                 ProductionTowerService.upgradeTower(game, playerId, towerPos, "manual_upgrade"),
-                "Generic entity-backed towers should reach target catalog validation during upgrade."
+                "Generic entity-backed towers should upgrade through catalog links."
         )) {
             return;
         }
@@ -1742,6 +1730,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void productionTowerRejectsUnknownUpgradeId(GameTestHelper context) {
+        ProductionTowerCatalog.clearForTesting();
         UUID playerId = stableUuid("red-production-upgrade-reject");
         SemionGame game = startedSinglePlayerGame(
                 context,
@@ -1750,6 +1739,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         );
         PlayerLane lane = redLane(game, 1);
         BlockPos towerPos = towerPlacementPos(lane);
+        TowerType targetType = new TowerType("manual_fixture_known_target", "Manual Fixture Known Target", TowerCategory.DIRECT, 0, 80.0, 8.0, 8.0, 20, 0);
         TowerType starterType = new TowerType(
                 "manual_fixture_unknown_upgrade",
                 "Manual Fixture Unknown Upgrade",
@@ -1759,14 +1749,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 8.0,
                 8.0,
                 20,
-                0,
-                List.of(new TowerUpgradeOption(
-                        "known_upgrade",
-                        "Known Upgrade",
-                        new TowerType("manual_fixture_known_target", "Manual Fixture Known Target", TowerCategory.DIRECT, 0, 80.0, 8.0, 8.0, 20, 0),
-                        0
-                ))
+                0
         );
+        ProductionTowerCatalog.registerStarter(starterType);
+        ProductionTowerCatalog.register(targetType, 2);
+        ProductionTowerCatalog.linkUpgrade(starterType, "known_upgrade", "Known Upgrade", targetType, 0);
 
         lane.addTower(new ProductionTower(
                 starterType,

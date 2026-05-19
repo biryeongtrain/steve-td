@@ -30,6 +30,11 @@ public final class ProductionTowerCatalog {
         return type == null ? Optional.empty() : find(type.id());
     }
 
+    public static void clearForTesting() {
+        ENTRIES.clear();
+        UPGRADES.clear();
+    }
+
     public static CatalogEntry registerStarter(TowerType type) {
         return register(type, ProductionTowerDefinitions.DEFAULT_TOWER_FACTORY, 1);
     }
