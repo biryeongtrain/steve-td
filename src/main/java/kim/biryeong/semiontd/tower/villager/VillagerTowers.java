@@ -125,7 +125,7 @@ public final class VillagerTowers {
             byId(EntityType.ALLAY),
             List.of(
                     "<gray> 팀 지원형 타워입니다.</gray>",
-                    "<green> + 5초마다 주위 2블록에 있는 타워의 체력을 10 회복시킵니다. (회복 받은 대상은 5초간 회복받지 않음)</green>"
+                    "<green> + 5초마다 주위 2블록에 있는 타워의 체력을 20 회복시킵니다. (회복 받은 대상은 5초간 회복받지 않음)</green>"
             )
     );
 
@@ -140,7 +140,7 @@ public final class VillagerTowers {
             -5,
             byId(EntityType.ALLAY),
             List.of(
-                    "<green> + 5초마다 주위 3블록에 있는 타워의 체력을 20 회복시킵니다. (회복 받은 대상은 5초간 회복받지 않음)"
+                    "<green> + 5초마다 주위 3블록에 있는 타워의 체력을 50 회복시킵니다. (회복 받은 대상은 5초간 회복받지 않음)"
             )
     );
 
@@ -170,7 +170,7 @@ public final class VillagerTowers {
             -5,
             VillagerVisual.builder().profession(VillagerProfession.ARMORER).build(),
             List.of(
-                    "<green> + 5초마다 주위 3블록에 있는 타워의 체력을 25 회복시킵니다. 또한 3초간 받는 피해를 10% 감소합니다. </green>",
+                    "<green> + 5초마다 주위 3블록에 있는 타워의 체력을 80 회복시킵니다. 또한 3초간 받는 피해를 10% 감소합니다. </green>",
                     "<red> 효과를 받은 대상은 같은 타워 종류의 효과를 5초간 받을 수 없습니다. </red>"
             )
 
@@ -219,8 +219,8 @@ public final class VillagerTowers {
             5,
             CatVisual.builder().variant(CatVariants.ALL_BLACK).tame(true).build(),
             List.of(
-                    "<green> + 웨이브가 아닌 대상을 공격할 때 피해를 50% 더 입힙니다. </green>",
-                    "<green> + 대상이 </green><red>탱커</red><green>태그를 가질 경우 대신 100% 추가 피해를 입힙니다.</green>",
+                    "<green> + 웨이브가 아닌 대상을 공격할 때 피해를 100% 더 입힙니다. </green>",
+                    "<green> + 대상이 </green><red>탱커</red><green>태그를 가질 경우 대신 200% 추가 피해를 입힙니다.</green>",
                     "<green> + 적 처치 시 마다 공격력이 영구적으로 0.1씩 오르며, 최대 </green><yellow>10</yellow><green>까지 상승합니다. </green>"
             )
     );
@@ -254,9 +254,9 @@ public final class VillagerTowers {
             5,
             CatVisual.builder().variant(CatVariants.BLACK).tame(true).build(),
             List.of(
-                    "<green> + 웨이브가 아닌 대상을 공격할 때 피해를 100% 더 입힙니다. </green>",
-                    "<green> + 대상이 </green><red>탱커</red><green>태그를 가질 경우 대신 200% 추가 피해를 입힙니다.</green>",
-                    "<green> + 적 처치 시 마다 공격력이 영구적으로 0.2씩 오르며, 최대 </green><yellow>20</yellow><green>까지 상승합니다. </green>"
+                    "<green> + 웨이브가 아닌 대상을 공격할 때 피해를 200% 더 입힙니다. </green>",
+                    "<green> + 대상이 </green><red>탱커</red><green>태그를 가질 경우 대신 400% 추가 피해를 입힙니다.</green>",
+                    "<green> + 적 처치 시 마다 공격력이 영구적으로 2씩 오르며, 최대 </green><yellow>20</yellow><green>까지 상승합니다. </green>"
             )
     );
 

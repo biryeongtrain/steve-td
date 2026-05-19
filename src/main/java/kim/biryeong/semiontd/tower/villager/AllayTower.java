@@ -18,9 +18,9 @@ import net.minecraft.resources.ResourceLocation;
 public class AllayTower extends SupportTower {
     private static final int SUPPORT_BLOCK_TICKS = 100;
     private static final int BUFF_DURATION_TICKS = 60;
-    private static final double T1_HEAL_AMOUNT = 10.0;
-    private static final double T2_HEAL_AMOUNT = 20.0;
-    private static final double T3_HEAL_AMOUNT = 25.0;
+    private static final double T1_HEAL_AMOUNT = 20.0;
+    private static final double T2_HEAL_AMOUNT = 50.0;
+    private static final double T3_HEAL_AMOUNT = 80.0;
     private static final double T2_WEAPON_BUFF = 0.10;
     private static final double T3_BUFF = 0.15;
     private static final double T3_DAMAGE_REDUCTION = 0.10;

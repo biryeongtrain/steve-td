@@ -12,12 +12,12 @@ import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 
 public class AntiTankerCatTower extends EntityBackedTower {
-    private static final double T2_NON_WAVE_BONUS = 0.50;
-    private static final double T2_TANK_BONUS = 1.00;
-    private static final double T2_STACK_DAMAGE = 0.10;
+    private static final double T2_NON_WAVE_BONUS = 1;
+    private static final double T2_TANK_BONUS = 1.50;
+    private static final double T2_STACK_DAMAGE = 1;
     private static final double T2_STACK_DAMAGE_CAP = 10.0;
-    private static final double T3_NON_WAVE_BONUS = 1.00;
-    private static final double T3_TANK_BONUS = 2.00;
+    private static final double T3_NON_WAVE_BONUS = 2.00;
+    private static final double T3_TANK_BONUS = 4.00;
     private static final double T3_STACK_DAMAGE = 0.20;
     private static final double T3_STACK_DAMAGE_CAP = 20.0;
 
