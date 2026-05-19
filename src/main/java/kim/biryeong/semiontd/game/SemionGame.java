@@ -648,9 +648,15 @@ public final class SemionGame {
             );
             SemionDisplayHudService.refreshPlayerHud(player);
             SemionHotbarService.grantMatchTools(player);
-            player.getAbilities().flying = true;
+            setFlight(player, true);
             playerLane(activePlayer.uuid()).ifPresent(lane -> SemionLaneIndicatorService.showLane(player, lane));
         });
+    }
+
+    private static void setFlight(ServerPlayer player, boolean enabled) {
+        player.getAbilities().mayfly = enabled;
+        player.getAbilities().flying = enabled;
+        player.onUpdateAbilities();
     }
 
     private void sendTowerControlHint(MinecraftServer server) {

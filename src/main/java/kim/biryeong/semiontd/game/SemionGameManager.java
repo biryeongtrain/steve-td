@@ -384,6 +384,13 @@ public final class SemionGameManager {
         );
         SemionDisplayHudService.refreshPlayerHud(player);
         SemionHotbarService.clearMatchTools(player);
+        setFlight(player, false);
+    }
+
+    private static void setFlight(ServerPlayer player, boolean enabled) {
+        player.getAbilities().mayfly = enabled;
+        player.getAbilities().flying = enabled;
+        player.onUpdateAbilities();
     }
 
     private void applyPersistedJobSelections(MinecraftServer server, SemionGame game) {

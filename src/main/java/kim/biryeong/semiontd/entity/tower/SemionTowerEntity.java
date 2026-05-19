@@ -458,6 +458,6 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     }
 
     private static Vec3 towerAnchorPosition(GridPosition position) {
-        return new Vec3(position.x() + 0.5, position.y(), position.z() + 0.5);
+        return new Vec3(position.x() + 0.5, position.y() + 1.0, position.z() + 0.5);
     }
 }

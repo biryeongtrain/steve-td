@@ -69,7 +69,7 @@ public record LaneRegionLayout(
             maxZ = Math.max(maxZ, slot.z());
         }
 
-        return new AABB(minX, minY, minZ, maxX + 1.0, maxY + 1.0, maxZ + 1.0);
+        return new AABB(minX, minY + 1.0, minZ, maxX + 1.0, maxY + 2.0, maxZ + 1.0);
     }
 
     public boolean isInsideFinalDefenseTowerArea(Vec3 position) {

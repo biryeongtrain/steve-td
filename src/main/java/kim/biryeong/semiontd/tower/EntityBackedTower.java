@@ -38,11 +38,7 @@ public abstract class EntityBackedTower extends Tower {
     public void onPlaced(PlayerLane lane) {
         SemionTowerEntity entity = new SemionTowerEntity(SemionEntityTypes.TOWER, lane.arenaWorld());
         entity.configure(this, lane.laneLayout());
-        entity.setPos(
-                position().x() + 0.5,
-                position().y(),
-                position().z() + 0.5
-        );
+        entity.setPos(anchorX(), anchorY(), anchorZ());
 
         if (lane.arenaWorld().addFreshEntity(entity)) {
             entityId = entity.getId();
@@ -55,7 +51,7 @@ public abstract class EntityBackedTower extends Tower {
             var entity = lane.arenaWorld().getEntity(id);
             if (entity instanceof SemionTowerEntity towerEntity) {
                 towerEntity.syncTowerState(this);
-                towerEntity.setPos(position().x() + 0.5, position().y(), position().z() + 0.5);
+                towerEntity.setPos(anchorX(), anchorY(), anchorZ());
             }
         });
     }
@@ -92,7 +88,11 @@ public abstract class EntityBackedTower extends Tower {
         var entity = lane.arenaWorld().getEntity(entityId);
         if (entity instanceof SemionTowerEntity towerEntity) {
             syncHealth(towerEntity.getHealth());
-            syncPosition(GridPosition.from(BlockPos.containing(towerEntity.position())));
+            syncPosition(GridPosition.from(BlockPos.containing(
+                    towerEntity.getX(),
+                    towerEntity.getY() - 1.0,
+                    towerEntity.getZ()
+            )));
         } else if (entity == null || entity.isRemoved()) {
             syncHealth(0.0);
         }
@@ -116,5 +116,17 @@ public abstract class EntityBackedTower extends Tower {
     @Override
     protected boolean execute(PlayerLane lane) {
         return false;
+    }
+
+    private double anchorX() {
+        return position().x() + 0.5;
+    }
+
+    private double anchorY() {
+        return position().y() + 1.0;
+    }
+
+    private double anchorZ() {
+        return position().z() + 0.5;
     }
 }
