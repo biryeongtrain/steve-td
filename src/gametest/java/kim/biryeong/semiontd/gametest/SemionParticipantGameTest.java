@@ -1454,9 +1454,9 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
         if (!assertEquals(
                 context,
-                ChatFormatting.WHITE.getColor(),
+                ChatFormatting.GREEN.getColor(),
                 affordable.getStyle().getColor().getValue(),
-                "Affordable tower button labels should stay readable."
+                "Affordable tower button labels should be green when the UI opens."
         )) {
             return;
         }
