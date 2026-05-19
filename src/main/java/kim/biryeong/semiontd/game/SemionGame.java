@@ -648,6 +648,7 @@ public final class SemionGame {
             );
             SemionDisplayHudService.refreshPlayerHud(player);
             SemionHotbarService.grantMatchTools(player);
+            player.getAbilities().flying = true;
             playerLane(activePlayer.uuid()).ifPresent(lane -> SemionLaneIndicatorService.showLane(player, lane));
         });
     }

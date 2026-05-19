@@ -9,11 +9,11 @@ import kim.biryeong.semiontd.game.RoundPhase;
 import kim.biryeong.semiontd.game.SemionGame;
 import kim.biryeong.semiontd.game.SemionPlayer;
 import kim.biryeong.semiontd.game.SemionTeam;
-import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.game.TowerPlacementResult;
 import kim.biryeong.semiontd.game.TowerSellResult;
 import kim.biryeong.semiontd.game.TowerUpgradeResult;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 
 public final class ProductionTowerService {
     private ProductionTowerService() {
@@ -29,6 +29,18 @@ public final class ProductionTowerService {
         if (entry.isEmpty() || !entry.get().starter()) {
             return TowerPlacementResult.UNKNOWN_TOWER;
         }
+        ServerLevel arenaLevel = laneContext.lane.arenaWorld();
+
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(blockPos.getX(), blockPos.getY(), blockPos.getZ());
+        while(pos.getY() > 0) {
+            if (arenaLevel.getBlockState(pos).isAir()) {
+                pos.setY(pos.getY() - 1);
+            }
+            break;
+        }
+
+        blockPos = pos.immutable();
+
         if (!laneContext.lane.canPlaceTowerAt(blockPos)) {
             return TowerPlacementResult.OUTSIDE_LANE_AREA;
         }
