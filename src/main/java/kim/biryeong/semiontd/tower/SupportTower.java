@@ -10,6 +10,17 @@ public abstract class SupportTower extends Tower {
         super(type, ownerPlayer, teamId, laneId, position);
     }
 
+    protected SupportTower(
+            TowerType type,
+            UUID ownerPlayer,
+            TeamId teamId,
+            int laneId,
+            GridPosition originalPosition,
+            GridPosition currentPosition
+    ) {
+        super(type, ownerPlayer, teamId, laneId, originalPosition, currentPosition);
+    }
+
     @Override
     protected abstract boolean execute(PlayerLane lane);
 }

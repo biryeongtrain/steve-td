@@ -96,6 +96,8 @@ import kim.biryeong.semiontd.tower.TowerCategory;
 import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
+import kim.biryeong.semiontd.tower.villager.AllayTower;
+import kim.biryeong.semiontd.tower.villager.VillagerTowers;
 import kim.biryeong.semiontd.test.tower.TestTowerTypes;
 import kim.biryeong.semiontd.ui.SemionDialogService;
 import kim.biryeong.semiontd.ui.SemionDisplayHudService;
@@ -4138,6 +4140,97 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertEquals(context, 65.0F, targetEntity.getHealth(), "Generic heal goal should update the tower entity health.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void allayTowerHealsNearbyTowersAndBlocksDuplicateHealing(GameTestHelper context) {
+        UUID playerId = stableUuid("allay-heal-support-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos base = towerPlacementPos(lane);
+        AllayTower allayTower = new AllayTower(
+                VillagerTowers.T1_ALLAY_TOWER,
+                playerId,
+                TeamId.RED,
+                1,
+                new kim.biryeong.semiontd.game.GridPosition(base.getX(), base.getY(), base.getZ())
+        );
+        TestTower nearbyTower = new TestTower(
+                TestTowerTypes.TEST_DIRECT,
+                playerId,
+                TeamId.RED,
+                1,
+                new kim.biryeong.semiontd.game.GridPosition(base.getX() + 1, base.getY(), base.getZ())
+        );
+        TestTower farTower = new TestTower(
+                TestTowerTypes.TEST_DIRECT,
+                playerId,
+                TeamId.RED,
+                1,
+                new kim.biryeong.semiontd.game.GridPosition(base.getX() + 5, base.getY(), base.getZ())
+        );
+        lane.addTower(allayTower);
+        lane.addTower(nearbyTower);
+        lane.addTower(farTower);
+        nearbyTower.syncHealth(30.0);
+        farTower.syncHealth(30.0);
+        ((SemionTowerEntity) lane.arenaWorld().getEntity(nearbyTower.entityId().orElseThrow())).syncTowerState(nearbyTower);
+        ((SemionTowerEntity) lane.arenaWorld().getEntity(farTower.entityId().orElseThrow())).syncTowerState(farTower);
+
+        allayTower.tick(lane);
+        if (!assertEquals(context, 40.0, nearbyTower.health(), "Allay tower should heal nearby damaged towers.")) {
+            return;
+        }
+        if (!assertEquals(context, 30.0, farTower.health(), "Allay tower should ignore towers outside its support radius.")) {
+            return;
+        }
+        for (int i = 0; i < VillagerTowers.T1_ALLAY_TOWER.attackIntervalTicks() + 1; i++) {
+            allayTower.tick(lane);
+        }
+        if (!assertEquals(context, 40.0, nearbyTower.health(), "Allay tower should not re-heal the same target inside the block window.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void weaponSmithTowerAppliesSourcedDamageAndSpeedBuffs(GameTestHelper context) {
+        UUID playerId = stableUuid("weapon-smith-support-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos base = towerPlacementPos(lane);
+        AllayTower weaponSmithTower = new AllayTower(
+                VillagerTowers.T2_WEAPON_SMITH_TOWER,
+                playerId,
+                TeamId.RED,
+                1,
+                new kim.biryeong.semiontd.game.GridPosition(base.getX(), base.getY(), base.getZ())
+        );
+        TestTower targetTower = new TestTower(
+                TestTowerTypes.TEST_DIRECT,
+                playerId,
+                TeamId.RED,
+                1,
+                new kim.biryeong.semiontd.game.GridPosition(base.getX() + 1, base.getY(), base.getZ())
+        );
+        lane.addTower(weaponSmithTower);
+        lane.addTower(targetTower);
+        SemionTowerEntity targetEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(targetTower.entityId().orElseThrow());
+
+        weaponSmithTower.tick(lane);
+        if (!assertEquals(context, 0.10, targetEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_BONUS), "Weapon smith should apply a sourced damage buff.")) {
+            return;
+        }
+        if (!assertEquals(context, 0.10, targetEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_ATTACK_SPEED_BONUS), "Weapon smith should apply a sourced attack-speed buff.")) {
+            return;
+        }
+        for (int i = 0; i < VillagerTowers.T2_WEAPON_SMITH_TOWER.attackIntervalTicks() + 1; i++) {
+            weaponSmithTower.tick(lane);
+        }
+        if (!assertEquals(context, 0.10, targetEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_BONUS), "Weapon smith should not stack the same sourced buff inside the block window.")) {
             return;
         }
         context.succeed();
