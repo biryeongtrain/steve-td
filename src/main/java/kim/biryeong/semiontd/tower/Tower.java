@@ -8,6 +8,9 @@ import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.world.damagesource.DamageSource;
 
@@ -26,6 +29,7 @@ public abstract class Tower {
     private int cooldownTicks;
     private int level = 1;
     private boolean deployedAtFinalDefense;
+    private final Map<TowerDataKey<?>, Object> data = new HashMap<>();
 
     protected Tower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
         this(type, ownerPlayer, teamId, laneId, position, position);
@@ -117,6 +121,7 @@ public abstract class Tower {
             return;
         }
         inheritSaleState(previousTower, extraPaidMineralCost);
+        copyDataFrom(previousTower);
         copyRuntimeStateFrom(previousTower);
     }
 
@@ -130,6 +135,47 @@ public abstract class Tower {
     }
 
     protected void copyRuntimeStateFrom(Tower previousTower) {
+    }
+
+    public <T> void setData(TowerDataKey<T> key, T value) {
+        if (key == null) {
+            return;
+        }
+        if (value == null) {
+            removeData(key);
+            return;
+        }
+        if (!key.type().isInstance(value)) {
+            throw new IllegalArgumentException("Tower data " + key.id() + " requires " + key.type().getName());
+        }
+        data.put(key, value);
+    }
+
+    public boolean hasData(TowerDataKey<?> key) {
+        return key != null && data.containsKey(key);
+    }
+
+    public <T> Optional<T> getData(TowerDataKey<T> key) {
+        if (key == null) {
+            return Optional.empty();
+        }
+        Object value = data.get(key);
+        return value == null ? Optional.empty() : Optional.of(key.cast(value));
+    }
+
+    public <T> T getDataOrDefault(TowerDataKey<T> key, T fallback) {
+        return getData(key).orElse(fallback);
+    }
+
+    public void removeData(TowerDataKey<?> key) {
+        if (key != null) {
+            data.remove(key);
+        }
+    }
+
+    private void copyDataFrom(Tower previousTower) {
+        data.clear();
+        data.putAll(previousTower.data);
     }
 
     public void markWaveStarted(int currentRound) {

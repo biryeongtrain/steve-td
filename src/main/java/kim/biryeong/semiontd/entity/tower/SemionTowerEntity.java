@@ -5,6 +5,7 @@ import de.tomalbrc.bil.api.AnimatedEntityHolder;
 import de.tomalbrc.bil.core.holder.entity.living.LivingEntityHolder;
 import eu.pb4.polymer.virtualentity.api.attachment.EntityAttachment;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.effect.TimedEffectSet;
 import kim.biryeong.semiontd.effect.TimedEffectType;
@@ -20,6 +21,7 @@ import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.entity.tower.goal.TowerAttackMonsterGoal;
 import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.tower.TowerDataKey;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -266,6 +268,24 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     public boolean hasTimedEffectSource(TimedEffectType type, ResourceLocation sourceId) {
         return timedEffects.hasSource(type, sourceId);
+    }
+
+    public <T> void setTowerData(TowerDataKey<T> key, T value) {
+        if (runtimeTower != null) {
+            runtimeTower.setData(key, value);
+        }
+    }
+
+    public boolean hasTowerData(TowerDataKey<?> key) {
+        return runtimeTower != null && runtimeTower.hasData(key);
+    }
+
+    public <T> Optional<T> getTowerData(TowerDataKey<T> key) {
+        return runtimeTower == null ? Optional.empty() : runtimeTower.getData(key);
+    }
+
+    public <T> T getTowerDataOrDefault(TowerDataKey<T> key, T fallback) {
+        return runtimeTower == null ? fallback : runtimeTower.getDataOrDefault(key, fallback);
     }
 
     public String blockbenchModelId() {

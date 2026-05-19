@@ -93,6 +93,7 @@ import kim.biryeong.semiontd.tower.ProductionTower;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerService;
 import kim.biryeong.semiontd.tower.TowerCategory;
+import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
 import kim.biryeong.semiontd.test.tower.TestTowerTypes;
@@ -1504,6 +1505,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         TowerType sourceType = productionFixtureType("manual_fixture_copy_source", List.of());
         TowerType targetType = productionFixtureType("manual_fixture_copy_target", List.of());
         kim.biryeong.semiontd.game.GridPosition position = new kim.biryeong.semiontd.game.GridPosition(0, 64, 0);
+        TowerDataKey<Integer> stacksKey = TowerDataKey.of(
+                ResourceLocation.fromNamespaceAndPath("semion-td", "test/support_stacks"),
+                Integer.class
+        );
         FixtureSupportTower sourceTower = new FixtureSupportTower(
                 sourceType,
                 playerId,
@@ -1515,6 +1520,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         sourceTower.recordPlacementEconomy(75, 2);
         sourceTower.markWaveStarted(2);
         sourceTower.setPersistentBonus(4);
+        sourceTower.setData(stacksKey, 3);
 
         FixtureSupportTower targetTower = new FixtureSupportTower(
                 targetType,
@@ -1536,6 +1542,16 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertEquals(context, 4, targetTower.persistentBonus(), "copyFrom should call the runtime-state copy hook.")) {
+            return;
+        }
+        if (!assertTrue(context, targetTower.hasData(stacksKey), "copyFrom should carry generic tower data keys.")) {
+            return;
+        }
+        if (!assertEquals(context, 3, targetTower.getDataOrDefault(stacksKey, 0), "copyFrom should carry generic tower data values.")) {
+            return;
+        }
+        targetTower.removeData(stacksKey);
+        if (!assertTrue(context, !targetTower.hasData(stacksKey), "removeData should clear generic tower data values.")) {
             return;
         }
         context.succeed();
