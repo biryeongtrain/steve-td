@@ -1,5 +1,6 @@
 package kim.biryeong.semiontd.test.tower;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import kim.biryeong.semiontd.tower.TowerCategory;
@@ -28,10 +29,7 @@ public final class TestTowerTypes {
             14.0,
             17,
             19,
-            -10,
-            java.util.List.of(
-                    new TowerUpgradeOption("deadeye", "Deadeye Evolution", TEST_DEADEYE, 170)
-            )
+            -10
     );
 
     public static final TowerType TEST_BASTION = new TowerType(
@@ -55,10 +53,7 @@ public final class TestTowerTypes {
             6.0,
             7,
             8,
-            35,
-            java.util.List.of(
-                    new TowerUpgradeOption("bastion", "Bastion Evolution", TEST_BASTION, 180)
-            )
+            35
     );
 
     public static final TowerType TEST_DIRECT = new TowerType(
@@ -70,11 +65,7 @@ public final class TestTowerTypes {
             8.0,
             8,
             13,
-            0,
-            java.util.List.of(
-                    new TowerUpgradeOption("sniper", "Sniper Evolution", TEST_SNIPER, 150),
-                    new TowerUpgradeOption("guard", "Guard Evolution", TEST_GUARD, 140)
-            )
+            0
     );
 
     private static final Map<String, TowerType> TYPES = Map.of(
@@ -84,11 +75,35 @@ public final class TestTowerTypes {
             TEST_GUARD.id(), TEST_GUARD,
             TEST_BASTION.id(), TEST_BASTION
     );
+    private static final Map<String, List<TowerUpgradeOption>> UPGRADES = Map.of(
+            TEST_DIRECT.id(), List.of(
+                    new TowerUpgradeOption("sniper", "Sniper Evolution", TEST_SNIPER, 150),
+                    new TowerUpgradeOption("guard", "Guard Evolution", TEST_GUARD, 140)
+            ),
+            TEST_SNIPER.id(), List.of(new TowerUpgradeOption("deadeye", "Deadeye Evolution", TEST_DEADEYE, 170)),
+            TEST_GUARD.id(), List.of(new TowerUpgradeOption("bastion", "Bastion Evolution", TEST_BASTION, 180))
+    );
 
     private TestTowerTypes() {
     }
 
     public static Optional<TowerType> find(String typeId) {
         return Optional.ofNullable(TYPES.get(typeId));
+    }
+
+    public static List<TowerUpgradeOption> upgrades(TowerType type) {
+        if (type == null) {
+            return List.of();
+        }
+        return UPGRADES.getOrDefault(type.id(), List.of());
+    }
+
+    public static Optional<TowerUpgradeOption> upgrade(TowerType type, String upgradeId) {
+        if (upgradeId == null) {
+            return Optional.empty();
+        }
+        return upgrades(type).stream()
+                .filter(option -> option.id().equalsIgnoreCase(upgradeId))
+                .findFirst();
     }
 }

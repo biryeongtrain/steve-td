@@ -62,7 +62,7 @@ public final class TestTowerService {
         if (!(tower instanceof TestTower testTower)) {
             return List.of();
         }
-        return testTower.type().upgradeOptions();
+        return TestTowerTypes.upgrades(testTower.type());
     }
 
     public static TowerUpgradeResult upgradeTestTower(SemionGame game, UUID playerId, BlockPos blockPos, String upgradeId) {
@@ -78,14 +78,11 @@ public final class TestTowerService {
         if (!testTower.ownerPlayer().equals(playerId)) {
             return TowerUpgradeResult.TOWER_NOT_OWNED;
         }
-        if (!testTower.type().hasUpgradeOptions()) {
+        if (TestTowerTypes.upgrades(testTower.type()).isEmpty()) {
             return TowerUpgradeResult.TOWER_NOT_UPGRADABLE;
         }
 
-        TowerUpgradeOption upgrade = testTower.type().upgradeOptions().stream()
-                .filter(option -> option.id().equalsIgnoreCase(upgradeId))
-                .findFirst()
-                .orElse(null);
+        TowerUpgradeOption upgrade = TestTowerTypes.upgrade(testTower.type(), upgradeId).orElse(null);
         if (upgrade == null) {
             return TowerUpgradeResult.UNKNOWN_UPGRADE;
         }
