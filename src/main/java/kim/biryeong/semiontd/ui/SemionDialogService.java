@@ -59,6 +59,7 @@ public final class SemionDialogService {
     private static final int BUTTON_WIDTH = 180;
     private static final int COMPACT_BUTTON_WIDTH = 118;
     private static final int SUMMON_BUTTON_WIDTH = 82;
+    private static final int SUMMON_PAGE_SIZE = 25;
 
     public void showGameStatus(ServerPlayer player, SemionGame game) {
         StringBuilder body = new StringBuilder();
@@ -335,48 +336,87 @@ public final class SemionDialogService {
     }
 
     public void showSummonShop(ServerPlayer player, SemionGame game) {
+        showSummonShop(player, game, 1);
+    }
+
+    public void showSummonShop(ServerPlayer player, SemionGame game, int page) {
         SemionPlayer semionPlayer = game.players().get(player.getUUID());
         long emerald = semionPlayer == null ? 0 : semionPlayer.economy().emerald();
+        List<SummonMonsterType> summons = sortedSummons(game.summonShop().all());
+        int pageCount = pageCount(summons.size());
+        int safePage = clampPage(page, pageCount);
         StringBuilder body = new StringBuilder();
         body.append("<gradient:#f472b6:#a78bfa><bold>견제 몹 소환</bold></gradient>\n");
-        body.append("<gray>티어별 역할 분포입니다. 상세 스탯은 버튼에 마우스를 올려 확인하세요.</gray>\n\n");
+        body.append("<gray>페이지</gray> <yellow>").append(safePage).append("</yellow><gray>/</gray><yellow>").append(pageCount).append("</yellow>");
+        body.append(" <dark_gray>|</dark_gray> <gray>상세 스탯은 버튼에 마우스를 올려 확인하세요.</gray>\n\n");
         body.append(summonTierTable(game.summonShop().all()));
 
-        List<ActionButton> actions = game.summonShop().all().stream()
-                .sorted(Comparator.comparing(SummonMonsterType::tier)
-                        .thenComparing(type -> primaryRole(type).ordinal())
-                        .thenComparingLong(SummonMonsterType::gasCost)
-                        .thenComparing(SummonMonsterType::displayName))
+        ArrayList<ActionButton> actions = summons.stream()
+                .skip((long) (safePage - 1) * SUMMON_PAGE_SIZE)
+                .limit(SUMMON_PAGE_SIZE)
                 .map(type -> actionButton(
                         summonButtonLabel(type, emerald >= type.gasCost()),
                         "/semiontd summon " + type.id(),
                         summonTooltip(type, emerald >= type.gasCost()),
                         SUMMON_BUTTON_WIDTH
                 ))
-                .toList();
+                .collect(Collectors.toCollection(ArrayList::new));
+        addSummonPageActions(actions, "/semiontd summonui ", safePage, pageCount);
         showActions(player, "세미온 TD 소환", body.toString(), actions, 5);
     }
 
     public void showDebugSummonShop(ServerPlayer player) {
+        showDebugSummonShop(player, 1);
+    }
+
+    public void showDebugSummonShop(ServerPlayer player, int page) {
         SummonShop summonShop = new SummonShop();
+        List<SummonMonsterType> summons = sortedSummons(summonShop.all());
+        int pageCount = pageCount(summons.size());
+        int safePage = clampPage(page, pageCount);
         StringBuilder body = new StringBuilder();
         body.append("<gradient:#f472b6:#a78bfa><bold>견제 몹 소환</bold></gradient>\n");
-        body.append("<gray>티어별 역할 분포입니다. 상세 스탯은 버튼에 마우스를 올려 확인하세요.</gray>\n\n");
+        body.append("<gray>페이지</gray> <yellow>").append(safePage).append("</yellow><gray>/</gray><yellow>").append(pageCount).append("</yellow>");
+        body.append(" <dark_gray>|</dark_gray> <gray>상세 스탯은 버튼에 마우스를 올려 확인하세요.</gray>\n\n");
         body.append(summonTierTable(summonShop.all()));
 
-        List<ActionButton> actions = summonShop.all().stream()
-                .sorted(Comparator.comparing(SummonMonsterType::tier)
-                        .thenComparing(type -> primaryRole(type).ordinal())
-                        .thenComparingLong(SummonMonsterType::gasCost)
-                        .thenComparing(SummonMonsterType::displayName))
+        ArrayList<ActionButton> actions = summons.stream()
+                .skip((long) (safePage - 1) * SUMMON_PAGE_SIZE)
+                .limit(SUMMON_PAGE_SIZE)
                 .map(type -> actionButton(
                         summonButtonLabel(type, true),
                         "/semiontd summon " + type.id(),
                         summonTooltip(type, true),
                         SUMMON_BUTTON_WIDTH
                 ))
-                .toList();
+                .collect(Collectors.toCollection(ArrayList::new));
+        addSummonPageActions(actions, "/semiontd-debug summonui ", safePage, pageCount);
         showActions(player, "세미온 TD 소환", body.toString(), actions, 5);
+    }
+
+    private static List<SummonMonsterType> sortedSummons(java.util.Collection<SummonMonsterType> summons) {
+        return summons.stream()
+                .sorted(Comparator.comparing(SummonMonsterType::tier)
+                        .thenComparing(type -> primaryRole(type).ordinal())
+                        .thenComparingLong(SummonMonsterType::gasCost)
+                        .thenComparing(SummonMonsterType::displayName))
+                .toList();
+    }
+
+    private static int pageCount(int size) {
+        return Math.max(1, (int) Math.ceil((double) Math.max(0, size) / SUMMON_PAGE_SIZE));
+    }
+
+    private static int clampPage(int page, int pageCount) {
+        return Math.max(1, Math.min(Math.max(1, pageCount), page));
+    }
+
+    private static void addSummonPageActions(ArrayList<ActionButton> actions, String commandPrefix, int page, int pageCount) {
+        if (pageCount <= 1) {
+            return;
+        }
+        actions.add(actionButton("이전", page > 1 ? commandPrefix + (page - 1) : "", Component.literal("이전 페이지를 엽니다."), SUMMON_BUTTON_WIDTH));
+        actions.add(actionButton("다음", page < pageCount ? commandPrefix + (page + 1) : "", Component.literal("다음 페이지를 엽니다."), SUMMON_BUTTON_WIDTH));
     }
 
     private static Optional<SemionTowerEntity> towerEntity(SemionGame game, Tower tower) {

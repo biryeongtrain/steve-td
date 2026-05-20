@@ -25,6 +25,7 @@ import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.MapConfig;
 import kim.biryeong.semiontd.config.ProgressionConfig;
 import kim.biryeong.semiontd.config.SemionConfigLoader;
+import kim.biryeong.semiontd.config.SummonConfig;
 import kim.biryeong.semiontd.config.WaveMonsterEntry;
 import kim.biryeong.semiontd.effect.TimedEffectSet;
 import kim.biryeong.semiontd.effect.TimedEffectType;
@@ -81,6 +82,7 @@ import kim.biryeong.semiontd.placeholder.SemionPlaceholders;
 import kim.biryeong.semiontd.test.TestTowerService;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.test.tower.TestTower;
+import kim.biryeong.semiontd.summon.IncomeSummons;
 import kim.biryeong.semiontd.summon.SummonAbilityActivation;
 import kim.biryeong.semiontd.summon.SummonBalancePolicy;
 import kim.biryeong.semiontd.summon.SummonContext;
@@ -1394,6 +1396,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void playerFacingDialogsOpenForJobsTowersAndSummons(GameTestHelper context) {
+        reloadDefaultIncomeSummons();
         var player = context.makeMockServerPlayerInLevel();
         SemionGame game = new SemionGame(
                 EconomyConfig.defaultConfig(),
@@ -1413,6 +1416,8 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         SemionDialogService dialogService = new SemionDialogService();
         dialogService.showTowerControl(player, game);
         dialogService.showSummonShop(player, game);
+        dialogService.showSummonShop(player, game, 2);
+        dialogService.showDebugSummonShop(player, 2);
         dialogService.showMatchResult(
                 player,
                 new MatchResult(
@@ -3563,44 +3568,48 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
-    public void missingIncomeSummonReturnsUnknownWithoutEconomyChange(GameTestHelper context) {
+    public void incomeSummonConsumesEmeraldAndAddsIncome(GameTestHelper context) {
         UUID redId = stableUuid("summon-red-owner");
         UUID blueId = stableUuid("summon-blue-owner");
         SemionGame game = startedTwoPlayerGame(context, redId, blueId);
 
-        var result = game.summonMonster(redId, "grunt");
-        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.UNKNOWN_SUMMON, result.type(), "Removed income summons should not be summonable.")) {
+        var result = game.summonMonster(redId, "chicken");
+        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.SUCCESS, result.type(), "Default income summon should be summonable.")) {
             return;
         }
-        if (!assertEquals(context, 50L, game.players().get(redId).economy().gas(), "Unknown summon should not spend gas.")) {
+        if (!assertEquals(context, 30L, game.players().get(redId).economy().gas(), "Successful summon should spend chicken emerald cost.")) {
             return;
         }
-        if (!assertEquals(context, 0L, game.players().get(redId).economy().income(), "Unknown summon should not add income.")) {
+        if (!assertEquals(context, 1L, game.players().get(redId).economy().income(), "Successful summon should add chicken income.")) {
+            return;
+        }
+        PlayerLane targetLane = lane(game, result.targetTeam().orElseThrow(), result.targetLaneId().orElseThrow());
+        if (!assertEquals(context, 1, targetLane.queuedSummonCount(), "Successful summon should queue one monster in the target lane.")) {
             return;
         }
         context.succeed();
     }
 
     @GameTest
-    public void missingIncomeSummonDoesNotReachTargetValidation(GameTestHelper context) {
+    public void incomeSummonRefundsWhenNoTargetTeamExists(GameTestHelper context) {
         UUID redId = stableUuid("refund-red-owner");
         SemionGame game = startedSinglePlayerGame(context, redId, TeamId.RED);
 
-        var result = game.summonMonster(redId, "grunt");
-        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.UNKNOWN_SUMMON, result.type(), "Removed income summons should fail before target lookup.")) {
+        var result = game.summonMonster(redId, "chicken");
+        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.NO_TARGET_TEAM, result.type(), "Summon should fail when there is no target team.")) {
             return;
         }
-        if (!assertEquals(context, 50L, game.players().get(redId).economy().gas(), "Unknown summon should not spend gas.")) {
+        if (!assertEquals(context, 50L, game.players().get(redId).economy().gas(), "Failed summon should refund emerald cost.")) {
             return;
         }
-        if (!assertEquals(context, 0L, game.players().get(redId).economy().income(), "Unknown summon should not add income.")) {
+        if (!assertEquals(context, 0L, game.players().get(redId).economy().income(), "Failed summon should not add income.")) {
             return;
         }
         context.succeed();
     }
 
     @GameTest
-    public void missingIncomeSummonDoesNotTargetEliminatedTeams(GameTestHelper context) {
+    public void incomeSummonDoesNotTargetEliminatedTeams(GameTestHelper context) {
         UUID redId = stableUuid("summon-living-red-owner");
         UUID blueId = stableUuid("summon-eliminated-blue-owner");
         UUID greenId = stableUuid("summon-living-green-owner");
@@ -3610,8 +3619,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
 
-        var result = game.summonMonster(redId, "grunt");
-        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.UNKNOWN_SUMMON, result.type(), "Removed income summons should not enter targeting.")) {
+        var result = game.summonMonster(redId, "chicken");
+        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.SUCCESS, result.type(), "Summon should still succeed with another living enemy team.")) {
+            return;
+        }
+        if (!assertEquals(context, TeamId.GREEN, result.targetTeam().orElse(null), "Summon should skip eliminated BLUE and target living GREEN.")) {
             return;
         }
         context.succeed();
@@ -3738,37 +3750,46 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
-    public void removedIncomeSummonsAreNotRegistered(GameTestHelper context) {
-        List<String> removedSummonIds = List.of(
-                "grunt",
-                "skitter_swarm",
-                "quilt_guard",
-                "static_bobbin",
-                "button_nurse",
-                "popper_pod",
-                "ironclad_tank",
-                "ward_tank",
-                "static_disruptor",
-                "pulse_support",
-                "gale_ferret",
-                "bulwark_bison",
-                "wizard_cat",
-                "grove_alpaca",
-                "storm_lynx",
-                "aegis_golem",
-                "null_imp",
-                "elder_sprite",
-                "bombard_toad",
-                "siege_breaker",
-                "apex_warden",
-                "oracle_phoenix"
+    public void incomeSummonRegistryProvidesDefaultFortyFour(GameTestHelper context) {
+        reloadDefaultIncomeSummons();
+        List<String> expectedSummonIds = List.of(
+                "chicken", "rabbit", "silverfish", "zombie", "husk", "skeleton", "wolf", "spider",
+                "cave_spider", "bee", "turtle", "sheep", "zombie_villager", "stray", "allay", "vex",
+                "fox", "slime", "goat", "bogged", "pillager", "piglin_brute", "ravager", "hoglin",
+                "horse", "llama", "phantom", "enderman", "breeze", "guardian", "polar_bear",
+                "magma_cube", "ocelot", "vindicator", "witch", "iron_golem", "blaze", "shulker",
+                "ghast", "zoglin", "wither_skeleton", "evoker", "elder_guardian", "warden"
         );
-        for (String summonId : removedSummonIds) {
-            if (!assertTrue(context, SummonRegistry.find(summonId).isEmpty(), "Removed income summon should not be registered: " + summonId)) {
+        if (!assertEquals(context, 44, SummonRegistry.all().size(), "Default income registry should contain all 44 planned summons.")) {
+            return;
+        }
+        for (String summonId : expectedSummonIds) {
+            if (!assertPresent(context, SummonRegistry.find(summonId), "Default income summon should be registered: " + summonId)) {
                 return;
             }
         }
-        if (!assertTrue(context, SummonRegistry.all().stream().noneMatch(type -> removedSummonIds.contains(type.id())), "Removed income summons should not appear in registry iteration.")) {
+        SummonMonsterType enderman = SummonRegistry.find("enderman").orElseThrow();
+        if (!assertEquals(context, 300L, enderman.gasCost(), "Enderman should keep the planned high-income emerald cost.")) {
+            return;
+        }
+        if (!assertEquals(context, 30L, enderman.incomeGain(), "Enderman should keep the planned high-income gain.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void summonConfigAppendsMissingDefaultSummons(GameTestHelper context) {
+        SummonConfig.SummonDefinition chicken = SummonConfig.defaultConfig().summons().get("chicken");
+        SummonConfig partial = new SummonConfig(Map.of("chicken", chicken));
+        SummonConfig merged = partial.withMissingDefaults(SummonConfig.defaultConfig());
+        if (!assertEquals(context, 44, merged.summons().size(), "Summon config should append missing default summon ids.")) {
+            return;
+        }
+        if (!assertPresent(context, Optional.ofNullable(merged.summons().get("warden")), "Missing T5 summon should be appended.")) {
+            return;
+        }
+        if (!assertEquals(context, chicken, merged.summons().get("chicken"), "Existing summon config entry should be preserved.")) {
             return;
         }
         context.succeed();
@@ -4813,6 +4834,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     private static SemionGame startedSinglePlayerGame(GameTestHelper context, UUID playerId, TeamId teamId, net.minecraft.resources.ResourceLocation jobId) {
+        reloadDefaultIncomeSummons();
         SemionGame game = new SemionGame(
                 EconomyConfig.defaultConfig(),
                 WaveConfig.defaultConfig(),
@@ -4834,6 +4856,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     private static SemionGame startedTwoPlayerGame(GameTestHelper context, UUID redId, UUID blueId) {
+        reloadDefaultIncomeSummons();
         SemionGame game = new SemionGame(
                 EconomyConfig.defaultConfig(),
                 new WaveConfig(List.of(), 20, null),
@@ -4855,6 +4878,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     private static SemionGame startedThreePlayerGame(GameTestHelper context, UUID redId, UUID blueId, UUID greenId) {
+        reloadDefaultIncomeSummons();
         SemionGame game = new SemionGame(
                 EconomyConfig.defaultConfig(),
                 new WaveConfig(List.of(), 20, null),
@@ -4874,6 +4898,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             throw new IllegalStateException("Failed to start three-player Semion test game.");
         }
         return game;
+    }
+
+    private static void reloadDefaultIncomeSummons() {
+        IncomeSummons.reloadBuiltIns(SummonConfig.defaultConfig());
     }
 
     private static void tickGame(SemionGame game, MinecraftServer server, int ticks) {

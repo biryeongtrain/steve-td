@@ -28,7 +28,8 @@ public final class SemionConfigLoader {
                     WaveConfig.defaultConfig(),
                     MapConfig.defaultConfig(),
                     ProgressionConfig.defaultConfig(),
-                    TowerBalanceConfig.defaultConfig()
+                    TowerBalanceConfig.defaultConfig(),
+                    SummonConfig.defaultConfig()
             );
         }
 
@@ -61,7 +62,12 @@ public final class SemionConfigLoader {
                 TowerBalanceConfig.defaultConfig(),
                 logger
         );
-        return new LoadedConfigs(economy, waves, map, progression, towerBalance);
+        SummonConfig summons = loadOrCreateSummons(
+                configDir.resolve("summons.json"),
+                SummonConfig.defaultConfig(),
+                logger
+        );
+        return new LoadedConfigs(economy, waves, map, progression, towerBalance, summons);
     }
 
     private static <T> T loadOrCreate(Path path, T defaults, Class<T> type, Logger logger) {
@@ -135,6 +141,26 @@ public final class SemionConfigLoader {
         }
     }
 
+    private static SummonConfig loadOrCreateSummons(Path path, SummonConfig defaults, Logger logger) {
+        if (Files.notExists(path)) {
+            write(path, defaults, logger);
+            return defaults;
+        }
+
+        try (Reader reader = Files.newBufferedReader(path)) {
+            SummonConfig value = GSON.fromJson(reader, SummonConfig.class);
+            SummonConfig loaded = value == null ? defaults : value;
+            SummonConfig merged = loaded.withMissingDefaults(defaults);
+            if (!merged.equals(loaded)) {
+                write(path, merged, logger);
+            }
+            return merged;
+        } catch (IOException | JsonParseException | IllegalArgumentException exception) {
+            logger.warn("Failed to load config {}; using defaults.", path, exception);
+            return defaults;
+        }
+    }
+
     private static void write(Path path, Object value, Logger logger) {
         try (Writer writer = Files.newBufferedWriter(path)) {
             GSON.toJson(value, writer);
@@ -159,7 +185,8 @@ public final class SemionConfigLoader {
             WaveConfig waves,
             MapConfig map,
             ProgressionConfig progression,
-            TowerBalanceConfig towerBalance
+            TowerBalanceConfig towerBalance,
+            SummonConfig summons
     ) {
     }
 }

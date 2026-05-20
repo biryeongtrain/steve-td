@@ -21,6 +21,24 @@ public final class SummonRegistry {
         return summonType;
     }
 
+    public static void reload(Collection<SummonMonsterType> summonTypes) {
+        Objects.requireNonNull(summonTypes, "summonTypes");
+        LinkedHashMap<String, SummonMonsterType> reloaded = new LinkedHashMap<>();
+        for (SummonMonsterType summonType : summonTypes) {
+            Objects.requireNonNull(summonType, "summonType");
+            SummonMonsterType previous = reloaded.putIfAbsent(summonType.id(), summonType);
+            if (previous != null) {
+                throw new IllegalArgumentException("Duplicate summon id: " + summonType.id());
+            }
+        }
+        SUMMONS.clear();
+        SUMMONS.putAll(reloaded);
+    }
+
+    public static void clearForTesting() {
+        SUMMONS.clear();
+    }
+
     public static Optional<SummonMonsterType> find(String id) {
         return Optional.ofNullable(SUMMONS.get(id));
     }

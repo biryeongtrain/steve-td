@@ -165,7 +165,13 @@ public final class SemionCommands {
                 .then(literal("summons")
                         .executes(context -> summons(context.getSource(), gameManager)))
                 .then(literal("summonui")
-                        .executes(context -> summonDialog(context.getSource(), gameManager)))
+                        .executes(context -> summonDialog(context.getSource(), gameManager, 1))
+                        .then(argument("page", IntegerArgumentType.integer(1))
+                                .executes(context -> summonDialog(
+                                        context.getSource(),
+                                        gameManager,
+                                        IntegerArgumentType.getInteger(context, "page")
+                                ))))
                 .then(literal("killboss")
                         .requires(source -> source.hasPermission(2))
                         .then(argument("team", StringArgumentType.word())
@@ -198,10 +204,22 @@ public final class SemionCommands {
                         .then(literal("ui")
                                 .executes(context -> debugTowerDialog(context.getSource(), gameManager))))
                 .then(literal("summonui")
-                        .executes(context -> debugSummonDialog(context.getSource(), gameManager)))
+                        .executes(context -> debugSummonDialog(context.getSource(), gameManager, 1))
+                        .then(argument("page", IntegerArgumentType.integer(1))
+                                .executes(context -> debugSummonDialog(
+                                        context.getSource(),
+                                        gameManager,
+                                        IntegerArgumentType.getInteger(context, "page")
+                                ))))
                 .then(literal("summon")
                         .then(literal("ui")
-                                .executes(context -> debugSummonDialog(context.getSource(), gameManager)))));
+                                .executes(context -> debugSummonDialog(context.getSource(), gameManager, 1))
+                                .then(argument("page", IntegerArgumentType.integer(1))
+                                        .executes(context -> debugSummonDialog(
+                                                context.getSource(),
+                                                gameManager,
+                                                IntegerArgumentType.getInteger(context, "page")
+                                        ))))));
     }
 
     private static int createGame(CommandSourceStack source, SemionGameManager gameManager) {
@@ -935,21 +953,21 @@ public final class SemionCommands {
         return 1;
     }
 
-    private static int summonDialog(CommandSourceStack source, SemionGameManager gameManager)
+    private static int summonDialog(CommandSourceStack source, SemionGameManager gameManager, int page)
             throws CommandSyntaxException {
         SemionGame game = gameManager.activeGame().orElse(null);
         if (game == null) {
             failure(source, "진행 중인 게임이 없습니다.");
             return 0;
         }
-        gameManager.dialogService().showSummonShop(source.getPlayerOrException(), game);
+        gameManager.dialogService().showSummonShop(source.getPlayerOrException(), game, page);
         success(source, "견제 소환 창을 열었습니다.");
         return 1;
     }
 
-    private static int debugSummonDialog(CommandSourceStack source, SemionGameManager gameManager)
+    private static int debugSummonDialog(CommandSourceStack source, SemionGameManager gameManager, int page)
             throws CommandSyntaxException {
-        gameManager.dialogService().showDebugSummonShop(source.getPlayerOrException());
+        gameManager.dialogService().showDebugSummonShop(source.getPlayerOrException(), page);
         success(source, "디버그 견제 소환 창을 열었습니다.");
         return 1;
     }

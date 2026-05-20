@@ -73,6 +73,10 @@ public final class PlayerLane {
         return activeMonsters;
     }
 
+    public int queuedSummonCount() {
+        return summonedMonsterSpawnQueue.size();
+    }
+
     public List<Tower> towers() {
         return towers;
     }

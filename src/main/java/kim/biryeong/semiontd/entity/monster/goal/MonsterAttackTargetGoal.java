@@ -5,7 +5,6 @@ import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.visual.SemionAnimationState;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 
 public final class MonsterAttackTargetGoal extends Goal {
     private final SemionMonsterEntity monster;
@@ -65,7 +64,7 @@ public final class MonsterAttackTargetGoal extends Goal {
         }
 
         monster.playAnimation(SemionAnimationState.ATTACK);
-        target.hurt(monster.damageSources().mobAttack(monster), (float) monster.getAttributeValue(Attributes.ATTACK_DAMAGE));
+        target.hurt(monster.damageSources().mobAttack(monster), (float) monster.attackDamageAmount());
         cooldownTicks = monster.attackIntervalTicks();
     }
 }

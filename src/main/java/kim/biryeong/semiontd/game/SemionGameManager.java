@@ -14,6 +14,7 @@ import kim.biryeong.semiontd.config.MapConfig;
 import kim.biryeong.semiontd.config.ProgressionConfig;
 import kim.biryeong.semiontd.config.SemionConfigLoader;
 import kim.biryeong.semiontd.config.SemionConfigLoader.LoadedConfigs;
+import kim.biryeong.semiontd.config.SummonConfig;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.map.ArenaLoadException;
@@ -25,6 +26,7 @@ import kim.biryeong.semiontd.music.SemionMusicService;
 import kim.biryeong.semiontd.progression.MatchProgressionReward;
 import kim.biryeong.semiontd.progression.ProgressionService;
 import kim.biryeong.semiontd.progression.SemionPlayerProfile;
+import kim.biryeong.semiontd.summon.IncomeSummons;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.ui.SemionDialogService;
 import kim.biryeong.semiontd.ui.SemionDisplayHudService;
@@ -50,6 +52,7 @@ public final class SemionGameManager {
     private MapConfig mapConfig = MapConfig.defaultConfig();
     private ProgressionConfig progressionConfig = ProgressionConfig.defaultConfig();
     private TowerBalanceConfig towerBalanceConfig = TowerBalanceConfig.defaultConfig();
+    private SummonConfig summonConfig = SummonConfig.defaultConfig();
     private Path configDir;
     private Path progressionStorePath;
     private ProgressionService progressionService = new ProgressionService(progressionConfig, null);
@@ -93,6 +96,7 @@ public final class SemionGameManager {
                 mapConfig,
                 progressionConfig,
                 TowerBalanceConfig.defaultConfig(),
+                SummonConfig.defaultConfig(),
                 progressionStorePath
         );
     }
@@ -105,15 +109,37 @@ public final class SemionGameManager {
             TowerBalanceConfig towerBalanceConfig,
             Path progressionStorePath
     ) {
+        configure(
+                economyConfig,
+                waveConfig,
+                mapConfig,
+                progressionConfig,
+                towerBalanceConfig,
+                SummonConfig.defaultConfig(),
+                progressionStorePath
+        );
+    }
+
+    public void configure(
+            EconomyConfig economyConfig,
+            WaveConfig waveConfig,
+            MapConfig mapConfig,
+            ProgressionConfig progressionConfig,
+            TowerBalanceConfig towerBalanceConfig,
+            SummonConfig summonConfig,
+            Path progressionStorePath
+    ) {
         this.economyConfig = economyConfig;
         this.waveConfig = waveConfig;
         this.mapConfig = mapConfig;
         this.progressionConfig = progressionConfig;
         this.towerBalanceConfig = towerBalanceConfig == null ? TowerBalanceConfig.defaultConfig() : towerBalanceConfig;
+        this.summonConfig = summonConfig == null ? SummonConfig.defaultConfig() : summonConfig;
         this.progressionStorePath = progressionStorePath;
         this.configDir = progressionStorePath == null ? null : progressionStorePath.getParent();
         this.progressionService = new ProgressionService(progressionConfig, progressionStorePath);
         ProductionTowerCatalogs.reloadBuiltIns(this.towerBalanceConfig);
+        IncomeSummons.reloadBuiltIns(this.summonConfig);
     }
 
     public ReloadConfigResult reloadConfigs(MinecraftServer server) {
@@ -128,12 +154,14 @@ public final class SemionGameManager {
                 configs.map(),
                 configs.progression(),
                 configs.towerBalance(),
+                configs.summons(),
                 configDir.resolve("profiles.json")
         );
         boolean activeGameUpdated = activeGame != null && activeGame.phase() != RoundPhase.ENDED;
         if (activeGameUpdated) {
             activeGame.applyConfigs(configs.economy(), configs.waves());
             activeGame.refreshProductionTowerTypes();
+            activeGame.refreshSummonShop();
             displayHudService.refreshNow(server, activeGame, matchMode);
         }
         return new ReloadConfigResult(true, activeGameUpdated, configDir);

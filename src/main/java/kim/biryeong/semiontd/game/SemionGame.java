@@ -133,6 +133,10 @@ public final class SemionGame {
         }
     }
 
+    public void refreshSummonShop() {
+        summonShop.reloadFromRegistry();
+    }
+
     public int towerLimitForCurrentRound() {
         return economyConfig.towerLimitForRound(currentRound);
     }

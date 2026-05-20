@@ -11,6 +11,7 @@ import kim.biryeong.semiontd.music.SemionMusicLibrary;
 import kim.biryeong.semiontd.music.SemionMusicResourcePack;
 import kim.biryeong.semiontd.music.SemionMusicService;
 import kim.biryeong.semiontd.placeholder.SemionPlaceholders;
+import kim.biryeong.semiontd.summon.IncomeSummons;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.ui.SemionHotbarService;
 import kim.biryeong.semiontd.ui.SemionTowerInteractionService;
@@ -44,6 +45,7 @@ public class SemionTd implements ModInitializer {
         Path configDir = FabricLoader.getInstance().getConfigDir().resolve(MOD_ID);
         LoadedConfigs configs = SemionConfigLoader.load(configDir, LOGGER);
         ProductionTowerCatalogs.reloadBuiltIns(configs.towerBalance());
+        IncomeSummons.reloadBuiltIns(configs.summons());
         SemionPolymerEntityDataWarmup.warm(configs, LOGGER);
         SemionMusicLibrary musicLibrary = SemionMusicLibrary.load(configDir.resolve("music"), LOGGER);
         SemionMusicResourcePack.register(musicLibrary, LOGGER);
@@ -53,6 +55,7 @@ public class SemionTd implements ModInitializer {
                 configs.map(),
                 configs.progression(),
                 configs.towerBalance(),
+                configs.summons(),
                 configDir.resolve("profiles.json")
         );
         gameManager.configureMusic(new SemionMusicService(musicLibrary));

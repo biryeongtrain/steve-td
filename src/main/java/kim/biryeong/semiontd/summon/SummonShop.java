@@ -9,6 +9,11 @@ public final class SummonShop {
     private final Map<String, SummonMonsterType> summons = new LinkedHashMap<>();
 
     public SummonShop() {
+        reloadFromRegistry();
+    }
+
+    public void reloadFromRegistry() {
+        summons.clear();
         for (SummonMonsterType summonType : SummonRegistry.all()) {
             register(summonType);
         }
