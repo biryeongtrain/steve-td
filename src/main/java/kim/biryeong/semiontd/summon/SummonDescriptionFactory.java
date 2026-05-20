@@ -89,8 +89,7 @@ public final class SummonDescriptionFactory {
     }
 
     private static void addSiegeLine(ArrayList<String> lines, SummonConfig.SummonDefinition definition) {
-        addLine(lines, "라인 진행도 " + percent(value(definition, "progressThreshold", 0.70))
-                + " 이상이거나 보스를 공격할 때 방어 대상에게 "
+        addLine(lines, "방어 대상에게 "
                 + number(value(definition, "bonusDamage", 20.0))
                 + " 고정 피해를 줍니다. (" + seconds(definition, "cooldownTicks", 80) + " 쿨타임)");
     }

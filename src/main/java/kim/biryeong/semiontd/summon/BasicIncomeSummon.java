@@ -1,5 +1,6 @@
 package kim.biryeong.semiontd.summon;
 
+import java.util.List;
 import java.util.Map;
 import kim.biryeong.semiontd.config.SummonConfig;
 
@@ -7,6 +8,10 @@ public class BasicIncomeSummon extends SummonMonsterType {
     private final Map<String, Double> abilityValues;
 
     public BasicIncomeSummon(SummonConfig.SummonDefinition definition) {
+        this(definition, definition.abilityActivations());
+    }
+
+    protected BasicIncomeSummon(SummonConfig.SummonDefinition definition, List<SummonAbilityActivation> abilityActivations) {
         super(
                 definition.id(),
                 definition.displayName(),
@@ -23,7 +28,7 @@ public class BasicIncomeSummon extends SummonMonsterType {
                 definition.resistance(),
                 definition.tier(),
                 definition.roles(),
-                definition.abilityActivations(),
+                abilityActivations,
                 SummonDescriptionFactory.describe(definition),
                 definition.diamondReward()
         );

@@ -3814,7 +3814,13 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertTrue(context, chicken.description().isEmpty(), "Summons without abilities should not get filler description lines.")) {
             return;
         }
-        if (!assertTrue(context, warden.description().stream().anyMatch(line -> line.equals("라인 진행도 70% 이상이거나 보스를 공격할 때 방어 대상에게 50 고정 피해를 줍니다. (4.5초 쿨타임)")), "Warden description should be a concise siege ability line.")) {
+        if (!assertTrue(context, SummonRegistry.find("chicken").orElseThrow().description().isEmpty(), "Summon types without abilities should not generate fallback description lines.")) {
+            return;
+        }
+        if (!assertTrue(context, warden.description().stream().anyMatch(line -> line.equals("방어 대상에게 50 고정 피해를 줍니다. (4.5초 쿨타임)")), "Warden description should be a concise siege ability line.")) {
+            return;
+        }
+        if (!assertTrue(context, SummonRegistry.find("warden").orElseThrow().abilityActivations().equals(List.of(SummonAbilityActivation.COOLDOWN)), "Siege summon fixed-damage abilities should display as cooldown abilities.")) {
             return;
         }
         if (!assertTrue(context, config.summons().values().stream()
@@ -4125,7 +4131,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
-    public void siegeSummonsDealConditionalTrueBonusDamage(GameTestHelper context) {
+    public void siegeSummonsDealTrueBonusDamage(GameTestHelper context) {
         Vec3 origin = Vec3.atCenterOf(context.absolutePos(BlockPos.ZERO));
         SemionMonsterEntity bombard = spawnSummonEntity(context, "bombard_toad", TeamId.RED, TeamId.BLUE, 1, origin, 100.0, 0.0);
         SemionTowerEntity tower = spawnTowerEntity(context, TeamId.BLUE, 1, origin.add(1.0, 0.0, 0.0), TestTowerTypes.TEST_DIRECT);
@@ -4133,24 +4139,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
         new SiegeTrueDamageGoal(
                 bombard,
-                SummonBalancePolicy.BOMBARD_TOAD_PROGRESS_THRESHOLD,
                 SummonBalancePolicy.BOMBARD_TOAD_TRUE_DAMAGE,
                 SummonBalancePolicy.BOMBARD_TOAD_TRUE_DAMAGE_COOLDOWN_TICKS,
                 SummonBalancePolicy.SUPPORT_HEAL_RETRY_TICKS
         ).tick();
-        if (!assertEquals(context, 50.0F, tower.getHealth(), "Bombard toad should not bonus-damage towers before its progress condition.")) {
-            return;
-        }
-
-        bombard.runtimeMonster().syncLaneProgress(SummonBalancePolicy.BOMBARD_TOAD_PROGRESS_THRESHOLD);
-        new SiegeTrueDamageGoal(
-                bombard,
-                SummonBalancePolicy.BOMBARD_TOAD_PROGRESS_THRESHOLD,
-                SummonBalancePolicy.BOMBARD_TOAD_TRUE_DAMAGE,
-                SummonBalancePolicy.BOMBARD_TOAD_TRUE_DAMAGE_COOLDOWN_TICKS,
-                SummonBalancePolicy.SUPPORT_HEAL_RETRY_TICKS
-        ).tick();
-        if (!assertEquals(context, 30.0F, tower.getHealth(), "Bombard toad should bonus-damage towers after its progress condition.")) {
+        if (!assertEquals(context, 30.0F, tower.getHealth(), "Bombard toad should bonus-damage towers without a progress condition.")) {
             return;
         }
 
@@ -4163,12 +4156,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
         new SiegeTrueDamageGoal(
                 siege,
-                SummonBalancePolicy.SIEGE_BREAKER_PROGRESS_THRESHOLD,
                 SummonBalancePolicy.SIEGE_BREAKER_TRUE_DAMAGE,
                 SummonBalancePolicy.SIEGE_BREAKER_TRUE_DAMAGE_COOLDOWN_TICKS,
                 SummonBalancePolicy.SUPPORT_HEAL_RETRY_TICKS
         ).tick();
-        if (!assertEquals(context, 955.0F, boss.getHealth(), "Siege breaker should bonus-damage boss targets even before lane progress threshold.")) {
+        if (!assertEquals(context, 955.0F, boss.getHealth(), "Siege breaker should bonus-damage boss targets.")) {
             return;
         }
         context.succeed();
