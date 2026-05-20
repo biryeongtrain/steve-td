@@ -274,7 +274,7 @@ public final class SemionCommands {
             String activeGameText = result.activeGameUpdated()
                     ? "진행 중인 게임의 경제/웨이브 설정도 즉시 반영했습니다."
                     : "진행 중인 게임은 없습니다.";
-            success(source, "컨픽을 다시 불러왔습니다. " + activeGameText + " 맵 설정은 다음 게임 생성부터 적용됩니다.");
+            success(source, "컨픽을 다시 불러왔습니다. " + activeGameText + " 타워 카탈로그는 즉시 갱신되며, 맵 설정은 다음 게임 생성부터 적용됩니다.");
             return 1;
         } catch (RuntimeException exception) {
             SemionTd.LOGGER.error("Unexpected Semion TD config reload failure.", exception);
@@ -1106,6 +1106,7 @@ public final class SemionCommands {
             case TOWER_NOT_ALLOWED -> "현재 직업으로 사용할 수 없는 타워입니다";
             case OUTSIDE_LANE_AREA -> "lane_path 영역 안에서 실행하세요";
             case OCCUPIED -> "이미 타워가 있는 위치입니다";
+            case TOWER_LIMIT_REACHED -> "타워 설치 제한에 도달했습니다";
             case NOT_ENOUGH_MINERAL -> "다이아가 부족합니다";
             case SUCCESS -> "성공";
         };

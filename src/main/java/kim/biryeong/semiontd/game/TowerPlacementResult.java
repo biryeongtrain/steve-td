@@ -10,5 +10,6 @@ public enum TowerPlacementResult {
     TOWER_NOT_ALLOWED,
     OUTSIDE_LANE_AREA,
     OCCUPIED,
+    TOWER_LIMIT_REACHED,
     NOT_ENOUGH_MINERAL
 }

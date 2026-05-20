@@ -55,6 +55,7 @@ public final class SemionDisplayHudService {
                 update(player, lobbyTextFor(player, game, matchMode, server));
             } else if (game.isActiveParticipant(player.getUUID()) || game.isMatchSpectator(player.getUUID())) {
                 update(player, matchTextFor(player, game, matchMode));
+                updateActionbar(player, game);
             } else {
                 remove(player);
             }
@@ -90,6 +91,10 @@ public final class SemionDisplayHudService {
     private void update(ServerPlayer player, Component text) {
         TextDisplayHud hud = hud(player);
         hud.setText(text);
+    }
+
+    private void updateActionbar(ServerPlayer player, SemionGame game) {
+        actionbarTextFor(player.getUUID(), game).ifPresent(component -> player.displayClientMessage(component, true));
     }
 
     private TextDisplayHud hud(ServerPlayer player) {
@@ -142,6 +147,29 @@ public final class SemionDisplayHudService {
         return matchMarkupFor(viewerId, null, viewingTeam, game, matchMode);
     }
 
+    public static Optional<Component> actionbarTextFor(UUID viewerId, SemionGame game) {
+        SemionPlayer player = game.players().get(viewerId);
+        if (player == null) {
+            return Optional.empty();
+        }
+        SemionTeam team = game.teams().get(player.teamId());
+        if (team == null || team.eliminated()) {
+            return Optional.empty();
+        }
+        return Optional.of(miniMessage(actionbarMarkupFor(player, game)));
+    }
+
+    public static String actionbarMarkupFor(SemionPlayer player, SemionGame game) {
+        PlayerEconomy economy = player.economy();
+        int currentTowers = game.towerCount(player.uuid());
+        int maxTowers = game.towerLimitForCurrentRound();
+        return "<aqua>◆ 다이아 " + economy.diamond() + "</aqua>"
+                + " <dark_gray>|</dark_gray> <green>⬢ 에메랄드 " + economy.emerald() + "</green>"
+                + " <dark_gray>|</dark_gray> <dark_green>↗</dark_green> <green>에메랄드/s " + economy.emeraldPerSec() + "</green>"
+                + " <dark_gray>|</dark_gray> <gold>+ 수입 " + economy.income() + "</gold>"
+                + " <dark_gray>|</dark_gray> <gray>▣ 타워</gray> " + towerLimitText(currentTowers, maxTowers);
+    }
+
     private static String matchMarkupFor(ServerPlayer viewer, Optional<SemionTeam> viewingTeam, SemionGame game, MatchMode matchMode) {
         return matchMarkupFor(viewer.getUUID(), viewer, viewingTeam, game, matchMode);
     }
@@ -178,7 +206,6 @@ public final class SemionDisplayHudService {
     }
 
     private static void appendActivePlayerHud(StringBuilder text, ServerPlayer viewer, SemionPlayer player, SemionTeam team) {
-        PlayerEconomy economy = player.economy();
         text.append("<gray>팀/라인</gray> ")
                 .append(teamNameText(player.teamId()))
                 .append(" <dark_gray>/</dark_gray> <white>")
@@ -187,16 +214,6 @@ public final class SemionDisplayHudService {
         text.append("<gray>직업</gray> <yellow>")
                 .append(selectedJobText(viewer, player))
                 .append("</yellow>\n");
-        text.append("<gray>다이아</gray> <aqua>")
-                .append(economy.diamond())
-                .append("</aqua> <gray>에메랄드</gray> <green>")
-                .append(economy.emerald())
-                .append("</green>\n");
-        text.append("<gray>수입</gray> <gold>")
-                .append(economy.income())
-                .append("</gold> <gray>에메랄드/s</gray> <green>")
-                .append(economy.emeraldPerSec())
-                .append("</green>\n");
         if (team != null) {
             text.append("<gray>내 팀 보스</gray> ")
                     .append(bossHealthText(team))
@@ -329,6 +346,25 @@ public final class SemionDisplayHudService {
         long health = Math.round(team.laneGroup().boss().health());
         long maxHealth = Math.round(team.laneGroup().boss().maxHealth());
         return "<red>" + health + "</red><dark_gray>/</dark_gray><white>" + maxHealth + "</white>";
+    }
+
+    private static String towerLimitText(int current, int max) {
+        String color = towerLimitColor(current, max);
+        return "<" + color + ">" + current + "/" + max + "</" + color + ">";
+    }
+
+    private static String towerLimitColor(int current, int max) {
+        if (max <= 0) {
+            return "red";
+        }
+        double ratio = (double) current / max;
+        if (ratio <= 0.50) {
+            return "green";
+        }
+        if (ratio <= 0.75) {
+            return "yellow";
+        }
+        return "red";
     }
 
     private static String teamColor(TeamId teamId) {

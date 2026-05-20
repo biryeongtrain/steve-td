@@ -25,6 +25,8 @@ import kim.biryeong.semiontd.summon.SummonMonsterType;
 import kim.biryeong.semiontd.summon.SummonResult;
 import kim.biryeong.semiontd.summon.SummonResultType;
 import kim.biryeong.semiontd.summon.SummonShop;
+import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
+import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.ui.SemionDisplayHudService;
 import kim.biryeong.semiontd.ui.SemionHotbarService;
 import kim.biryeong.semiontd.ui.SemionLaneIndicatorService;
@@ -118,6 +120,33 @@ public final class SemionGame {
         this.economyConfig = economyConfig;
         this.waveConfig = waveConfig;
         this.economyService.configure(economyConfig);
+    }
+
+    public void refreshProductionTowerTypes() {
+        for (SemionTeam team : teams.values()) {
+            for (PlayerLane lane : team.laneGroup().lanes()) {
+                for (Tower tower : lane.towers()) {
+                    ProductionTowerCatalog.find(tower.type().id())
+                            .ifPresent(entry -> tower.refreshType(entry.type(), lane));
+                }
+            }
+        }
+    }
+
+    public int towerLimitForCurrentRound() {
+        return economyConfig.towerLimitForRound(currentRound);
+    }
+
+    public int towerCount(UUID playerId) {
+        return playerLane(playerId)
+                .map(lane -> (int) lane.towers().stream()
+                        .filter(tower -> tower.ownerPlayer().equals(playerId))
+                        .count())
+                .orElse(0);
+    }
+
+    public boolean canPlaceMoreTowers(UUID playerId) {
+        return towerCount(playerId) < towerLimitForCurrentRound();
     }
 
     public boolean rosterLocked() {

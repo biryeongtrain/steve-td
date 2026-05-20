@@ -11,8 +11,26 @@ public record EconomyConfig(
         @SerializedName(value = "emeraldCap", alternate = "gasCap")
         GasCapConfig emeraldCap,
         @SerializedName(value = "emeraldProduction", alternate = "gasProduction")
-        GasProductionConfig emeraldProduction
+        GasProductionConfig emeraldProduction,
+        TowerLimitConfig towerLimit
 ) {
+    public EconomyConfig(
+            long startingDiamond,
+            long startingEmerald,
+            long startingIncome,
+            GasCapConfig emeraldCap,
+            GasProductionConfig emeraldProduction
+    ) {
+        this(
+                startingDiamond,
+                startingEmerald,
+                startingIncome,
+                emeraldCap,
+                emeraldProduction,
+                TowerLimitConfig.defaultConfig()
+        );
+    }
+
     public EconomyConfig {
         if (startingDiamond < 0 || startingEmerald < 0 || startingIncome < 0) {
             throw new IllegalArgumentException("Starting economy values cannot be negative.");
@@ -23,10 +41,20 @@ public record EconomyConfig(
         if (emeraldProduction == null) {
             emeraldProduction = GasProductionConfig.defaultConfig();
         }
+        if (towerLimit == null) {
+            towerLimit = TowerLimitConfig.defaultConfig();
+        }
     }
 
     public static EconomyConfig defaultConfig() {
-        return new EconomyConfig(200, 50, 0, GasCapConfig.defaultConfig(), GasProductionConfig.defaultConfig());
+        return new EconomyConfig(
+                200,
+                50,
+                0,
+                GasCapConfig.defaultConfig(),
+                GasProductionConfig.defaultConfig(),
+                TowerLimitConfig.defaultConfig()
+        );
     }
 
     public long startingMineral() {
@@ -51,6 +79,10 @@ public record EconomyConfig(
 
     public long gasCapForRound(int round) {
         return emeraldCapForRound(round);
+    }
+
+    public int towerLimitForRound(int round) {
+        return towerLimit.limitForRound(round);
     }
 
     public record GasCapConfig(long base, long roundOffsetMultiplier, long roundOffsetStep, long flatBonus) {
@@ -104,6 +136,38 @@ public record EconomyConfig(
 
         public long gasPerSecIncrease() {
             return emeraldPerSecIncrease;
+        }
+    }
+
+    public record TowerLimitConfig(
+            int initialLimit,
+            int increaseStartRound,
+            int increaseEveryRounds,
+            int increaseAmount,
+            int maxLimit
+    ) {
+        public TowerLimitConfig {
+            if (initialLimit < 0 || increaseStartRound < 1 || increaseEveryRounds < 1
+                    || increaseAmount < 0 || maxLimit < 0) {
+                throw new IllegalArgumentException("Tower limit config values are invalid.");
+            }
+            if (maxLimit < initialLimit) {
+                maxLimit = initialLimit;
+            }
+        }
+
+        public static TowerLimitConfig defaultConfig() {
+            return new TowerLimitConfig(5, 5, 5, 3, 11);
+        }
+
+        public int limitForRound(int round) {
+            int safeRound = Math.max(1, round);
+            if (safeRound < increaseStartRound || increaseAmount == 0) {
+                return Math.min(initialLimit, maxLimit);
+            }
+            int increases = ((safeRound - increaseStartRound) / increaseEveryRounds) + 1;
+            long limit = initialLimit + (long) increases * increaseAmount;
+            return (int) Math.min(maxLimit, Math.max(0, limit));
         }
     }
 }
