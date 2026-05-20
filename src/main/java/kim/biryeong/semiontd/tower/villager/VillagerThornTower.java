@@ -67,11 +67,8 @@ public class VillagerThornTower extends EntityBackedTower {
     }
 
     @Override
-    public void resetForRound(PlayerLane lane) {
-        if (!isDestroyed(lane)) {
-            survivalBonus = Math.min(MAX_HEALTH_BONUS_SCALING, survivalBonus + 1);
-        }
-        super.resetForRound(lane);
+    public void moveToFinalDefense(PlayerLane lane, GridPosition position) {
+        survivalBonus = Math.min(MAX_HEALTH_BONUS_SCALING, survivalBonus + 1);
     }
 
     @Override

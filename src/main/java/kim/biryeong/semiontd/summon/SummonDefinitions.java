@@ -187,7 +187,7 @@ final class SummonDefinitions {
 
     static final SummonDefinition SIEGE_BREAKER = summon("siege_breaker", SummonDisplayNames.SIEGE_BREAKER)
             .economy(380, 18, 34)
-            .combat(364, 14, 46, AttackKind.MELEE, DamageType.PHYSICAL, 4)
+            .combat(364, 14, 80, AttackKind.RANGED, DamageType.PHYSICAL, 4)
             .visual("minecraft:ravager", "semion-td:summon/t5_siege")
             .dimensions(MonsterDimensions.of(2.0, 1.35))
             .tier(SummonTier.T5)
