@@ -2,7 +2,9 @@ package kim.biryeong.semiontd.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import com.google.gson.JsonParser;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
@@ -25,14 +27,14 @@ public final class SemionConfigLoader {
                     EconomyConfig.defaultConfig(),
                     WaveConfig.defaultConfig(),
                     MapConfig.defaultConfig(),
-                    ProgressionConfig.defaultConfig()
+                    ProgressionConfig.defaultConfig(),
+                    TowerBalanceConfig.defaultConfig()
             );
         }
 
-        EconomyConfig economy = loadOrCreate(
+        EconomyConfig economy = loadOrCreateEconomy(
                 configDir.resolve("economy.json"),
                 EconomyConfig.defaultConfig(),
-                EconomyConfig.class,
                 logger
         );
         WaveConfig waves = loadOrCreateWithLegacy(
@@ -54,7 +56,12 @@ public final class SemionConfigLoader {
                 ProgressionConfig.class,
                 logger
         );
-        return new LoadedConfigs(economy, waves, map, progression);
+        TowerBalanceConfig towerBalance = loadOrCreateTowerBalance(
+                configDir.resolve("tower_balance.json"),
+                TowerBalanceConfig.defaultConfig(),
+                logger
+        );
+        return new LoadedConfigs(economy, waves, map, progression, towerBalance);
     }
 
     private static <T> T loadOrCreate(Path path, T defaults, Class<T> type, Logger logger) {
@@ -83,6 +90,51 @@ public final class SemionConfigLoader {
         return defaults;
     }
 
+    private static EconomyConfig loadOrCreateEconomy(Path path, EconomyConfig defaults, Logger logger) {
+        if (Files.notExists(path)) {
+            write(path, defaults, logger);
+            return defaults;
+        }
+
+        try {
+            String json = Files.readString(path);
+            EconomyConfig loaded = GSON.fromJson(json, EconomyConfig.class);
+            EconomyConfig value = loaded == null ? defaults : loaded;
+            boolean towerLimitMissing = !hasObjectProperty(json, "towerLimit");
+            if (towerLimitMissing) {
+                write(path, value, logger);
+            }
+            return value;
+        } catch (IOException | JsonParseException | IllegalArgumentException exception) {
+            logger.warn("Failed to load config {}; using defaults.", path, exception);
+            return defaults;
+        }
+    }
+
+    private static TowerBalanceConfig loadOrCreateTowerBalance(
+            Path path,
+            TowerBalanceConfig defaults,
+            Logger logger
+    ) {
+        if (Files.notExists(path)) {
+            write(path, defaults, logger);
+            return defaults;
+        }
+
+        try (Reader reader = Files.newBufferedReader(path)) {
+            TowerBalanceConfig value = GSON.fromJson(reader, TowerBalanceConfig.class);
+            TowerBalanceConfig loaded = value == null ? defaults : value;
+            TowerBalanceConfig merged = loaded.withMissingDefaults(defaults);
+            if (!merged.equals(loaded)) {
+                write(path, merged, logger);
+            }
+            return merged;
+        } catch (IOException | JsonParseException | IllegalArgumentException exception) {
+            logger.warn("Failed to load config {}; using defaults.", path, exception);
+            return defaults;
+        }
+    }
+
     private static void write(Path path, Object value, Logger logger) {
         try (Writer writer = Files.newBufferedWriter(path)) {
             GSON.toJson(value, writer);
@@ -91,11 +143,23 @@ public final class SemionConfigLoader {
         }
     }
 
+    private static boolean hasObjectProperty(String json, String key) {
+        try {
+            if (!(JsonParser.parseString(json) instanceof JsonObject object)) {
+                return false;
+            }
+            return object.has(key) && !object.get(key).isJsonNull();
+        } catch (JsonParseException exception) {
+            return false;
+        }
+    }
+
     public record LoadedConfigs(
             EconomyConfig economy,
             WaveConfig waves,
             MapConfig map,
-            ProgressionConfig progression
+            ProgressionConfig progression,
+            TowerBalanceConfig towerBalance
     ) {
     }
 }

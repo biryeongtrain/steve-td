@@ -31,6 +31,10 @@ public final class ProductionTowerCatalog {
     }
 
     public static void clearForTesting() {
+        clear();
+    }
+
+    public static void clear() {
         ENTRIES.clear();
         UPGRADES.clear();
     }

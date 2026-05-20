@@ -145,7 +145,7 @@ public final class TestTowerService {
             case PLAYER_NOT_IN_GAME -> TowerUpgradeResult.PLAYER_NOT_IN_GAME;
             case PLAYER_TEAM_ELIMINATED -> TowerUpgradeResult.PLAYER_TEAM_ELIMINATED;
             case UNKNOWN_LANE -> TowerUpgradeResult.UNKNOWN_LANE;
-            case UNKNOWN_TOWER, TOWER_NOT_ALLOWED, OUTSIDE_LANE_AREA, OCCUPIED, NOT_ENOUGH_MINERAL, SUCCESS -> throw new IllegalStateException(
+            case UNKNOWN_TOWER, TOWER_NOT_ALLOWED, OUTSIDE_LANE_AREA, OCCUPIED, TOWER_LIMIT_REACHED, NOT_ENOUGH_MINERAL, SUCCESS -> throw new IllegalStateException(
                     "Unexpected placement-only failure " + result
             );
         };

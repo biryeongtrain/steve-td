@@ -3,6 +3,7 @@ package kim.biryeong.semiontd.tower.villager;
 import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.SemionTd;
+import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.GridPosition;
@@ -16,16 +17,6 @@ import kim.biryeong.semiontd.tower.TowerType;
 import net.minecraft.resources.ResourceLocation;
 
 public class AllayTower extends SupportTower {
-    private static final int SUPPORT_BLOCK_TICKS = 100;
-    private static final int BUFF_DURATION_TICKS = 60;
-    private static final double T1_HEAL_AMOUNT = 20.0;
-    private static final double T2_HEAL_AMOUNT = 50.0;
-    private static final double T3_HEAL_AMOUNT = 80.0;
-    private static final double T2_WEAPON_BUFF = 0.10;
-    private static final double T3_BUFF = 0.15;
-    private static final double T3_DAMAGE_REDUCTION = 0.10;
-    private static final double T1_RADIUS = 2.0;
-    private static final double T2_RADIUS = 3.0;
     private static final ResourceLocation WEAPON_SMITH_SOURCE = supportId("weapon_smith");
     private static final ResourceLocation ARMORER_SOURCE = supportId("armorer");
     private static final TowerDataKey<Long> HEAL_BLOCKED_UNTIL = TowerDataKey.of(supportId("allay_heal_blocked_until"), Long.class);
@@ -42,20 +33,20 @@ public class AllayTower extends SupportTower {
 
     @Override
     protected boolean execute(PlayerLane lane) {
-        if (type() == VillagerTowers.T1_ALLAY_TOWER) {
-            return applyHeal(lane, T1_RADIUS, T1_HEAL_AMOUNT);
+        if (is(VillagerTowers.T1_ALLAY_TOWER)) {
+            return applyHeal(lane, radius(), value("healAmount"));
         }
-        if (type() == VillagerTowers.T2_ALLAY_TOWER) {
-            return applyHeal(lane, T2_RADIUS, T2_HEAL_AMOUNT);
+        if (is(VillagerTowers.T2_ALLAY_TOWER)) {
+            return applyHeal(lane, radius(), value("healAmount"));
         }
-        if (type() == VillagerTowers.T2_WEAPON_SMITH_TOWER) {
-            return applyWeaponSmithBuff(lane, T1_RADIUS, T2_WEAPON_BUFF);
+        if (is(VillagerTowers.T2_WEAPON_SMITH_TOWER)) {
+            return applyWeaponSmithBuff(lane, radius(), value("weaponBuff"));
         }
-        if (type() == VillagerTowers.T3_ARMORER_TOWER) {
+        if (is(VillagerTowers.T3_ARMORER_TOWER)) {
             return applyArmorerSupport(lane);
         }
-        if (type() == VillagerTowers.T3_WEAPON_SMITH_TOWER) {
-            return applyWeaponSmithBuff(lane, T2_RADIUS, T3_BUFF);
+        if (is(VillagerTowers.T3_WEAPON_SMITH_TOWER)) {
+            return applyWeaponSmithBuff(lane, radius(), value("weaponBuff"));
         }
         return Boolean.FALSE;
     }
@@ -88,13 +79,13 @@ public class AllayTower extends SupportTower {
                     TimedEffectType.TOWER_DAMAGE_BONUS,
                     WEAPON_SMITH_SOURCE,
                     magnitude,
-                    BUFF_DURATION_TICKS
+                    ticks("buffDurationTicks")
             );
             boolean speedApplied = targetEntity.get().applyTimedEffect(
                     TimedEffectType.TOWER_ATTACK_SPEED_BONUS,
                     WEAPON_SMITH_SOURCE,
                     magnitude,
-                    BUFF_DURATION_TICKS
+                    ticks("buffDurationTicks")
             );
             if (damageApplied || speedApplied) {
                 block(target, WEAPON_SMITH_BLOCKED_UNTIL, lane.arenaWorld().getGameTime());
@@ -106,18 +97,18 @@ public class AllayTower extends SupportTower {
 
     private boolean applyArmorerSupport(PlayerLane lane) {
         boolean applied = false;
-        for (Tower target : nearbyTowers(lane, T2_RADIUS)) {
+        for (Tower target : nearbyTowers(lane, radius())) {
             if (!canApply(target, ARMORER_BLOCKED_UNTIL, lane.arenaWorld().getGameTime())) {
                 continue;
             }
-            boolean healed = heal(target, lane, T3_HEAL_AMOUNT);
+            boolean healed = heal(target, lane, value("healAmount"));
             Optional<SemionTowerEntity> targetEntity = towerEntity(target, lane);
             boolean reducedDamage = targetEntity
                     .map(entity -> entity.applyTimedEffect(
                             TimedEffectType.TOWER_DAMAGE_REDUCTION,
                             ARMORER_SOURCE,
-                            T3_DAMAGE_REDUCTION,
-                            BUFF_DURATION_TICKS
+                            value("damageReduction"),
+                            ticks("buffDurationTicks")
                     ))
                     .orElse(false);
             if (healed || reducedDamage) {
@@ -167,7 +158,7 @@ public class AllayTower extends SupportTower {
     }
 
     private void block(Tower target, TowerDataKey<Long> key, long gameTime) {
-        target.setData(key, gameTime + SUPPORT_BLOCK_TICKS);
+        target.setData(key, gameTime + ticks("supportBlockTicks"));
     }
 
     private double distanceSqr(GridPosition first, GridPosition second) {
@@ -179,5 +170,21 @@ public class AllayTower extends SupportTower {
 
     private static ResourceLocation supportId(String path) {
         return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "tower_support/" + path);
+    }
+
+    private double radius() {
+        return value("radius");
+    }
+
+    private double value(String key) {
+        return TowerBalanceRuntime.ability(type().id(), key);
+    }
+
+    private int ticks(String key) {
+        return TowerBalanceRuntime.abilityTicks(type().id(), key);
+    }
+
+    private boolean is(TowerType towerType) {
+        return type().id().equals(towerType.id());
     }
 }

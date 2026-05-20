@@ -7,6 +7,7 @@ import java.util.List;
 import kim.biryeong.semiontd.entity.visual.CatVisual;
 import kim.biryeong.semiontd.entity.visual.VillagerVisual;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
 import kim.biryeong.semiontd.util.EntityTypeUtil;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.CatVariants;
@@ -276,6 +277,69 @@ public final class VillagerTowers {
                     "<red> 시체 폭발 피해로 처치한 적은 폭발하지 않습니다. </red>"
             )
     );
+
+    static {
+        TowerDescriptionRegistry.registerTemplate(T2_LIBRARIAN_TOWER, List.of(
+                "<gray>무난한 초반 타워입니다.<gray>",
+                "<green>+ 생존한 라운드마다 피해, 공격 속도가 {ability.bonusPerSurvivedRound:percent} 씩 증가합니다. 최대 {ability.bonusPerSurvivedRound*ability.maxSurvivalStacks:percent} </green>",
+                "<green>+ 스플래시가 존재합니다. {ability.splashRadius:blocks}, {ability.splashDamageRatio:percent} 피해"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T3_CLERIC_TOWER, List.of(
+                "<gray> 초중반용 스플래시 타워입니다. </green>",
+                "<green> + 생존한 라운드마다 피해, 공격 속도가 {ability.bonusPerSurvivedRound:percent} 씩 증가합니다. 최대 {ability.bonusPerSurvivedRound*ability.maxSurvivalStacks:percent}",
+                "<green> + 스플래시가 존재합니다. {ability.splashRadius:blocks}, {ability.splashDamageRatio:percent} 피해 </green>",
+                "<green> + {ability.extraAttackEvery:integer}번 공격 시 1번 추가로 공격을 가합니다.</green>"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T2_GOLEM_TOWER, List.of(
+                "<gray>구리 골렘이 있는 줄 알고 만들다가 없는거 알고 급하게 바꾼 타워입니다.</gray>",
+                "<green> + 피격 시 {ability.thornRadius:blocks} 범위 적에게 {ability.thornDamage:number} 데미지를 입힙니다. (쿨타임 : {ability.thornCooldownTicks:seconds})</green>",
+                "<green> + 생존한 라운드 마다 체력이 {ability.healthBonusPerSurvivedRound:percent} 증가합니다. (최대 : {ability.healthBonusPerSurvivedRound*ability.maxSurvivalStacks:percent})"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T3_GOLEM_TOWER, List.of(
+                "<green> + 피격 시 {ability.thornRadius:blocks} 범위 적에게 {ability.thornDamage:number} 데미지를 입힙니다. ( 쿨타임 : {ability.thornCooldownTicks:seconds} ) </green>",
+                "<green> + 생존한 라운드 마다 체력이 {ability.healthBonusPerSurvivedRound:percent} 증가합니다. ( 최대 : {ability.healthBonusPerSurvivedRound*ability.maxSurvivalStacks:percent} ) "
+        ));
+        TowerDescriptionRegistry.registerTemplate(T1_ALLAY_TOWER, List.of(
+                "<gray> 팀 지원형 타워입니다.</gray>",
+                "<green> + {ability.supportBlockTicks:seconds}마다 주위 {ability.radius:blocks}에 있는 타워의 체력을 {ability.healAmount:number} 회복시킵니다. (회복 받은 대상은 {ability.supportBlockTicks:seconds}간 회복받지 않음)</green>"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T2_ALLAY_TOWER, List.of(
+                "<green> + {ability.supportBlockTicks:seconds}마다 주위 {ability.radius:blocks}에 있는 타워의 체력을 {ability.healAmount:number} 회복시킵니다. (회복 받은 대상은 {ability.supportBlockTicks:seconds}간 회복받지 않음)"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T2_WEAPON_SMITH_TOWER, List.of(
+                "<green> + {ability.supportBlockTicks:seconds}마다 주위 {ability.radius:blocks}에 있는 타워의 공격력을 {ability.buffDurationTicks:seconds}간 {ability.weaponBuff:percent} 증가시킵니다. (버프 받은 대상은 {ability.supportBlockTicks:seconds}간 같은 버프를 적용받지 않음) </green>"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T3_ARMORER_TOWER, List.of(
+                "<green> + {ability.supportBlockTicks:seconds}마다 주위 {ability.radius:blocks}에 있는 타워의 체력을 {ability.healAmount:number} 회복시킵니다. 또한 {ability.buffDurationTicks:seconds}간 받는 피해를 {ability.damageReduction:percent} 감소합니다. </green>",
+                "<red> 효과를 받은 대상은 같은 타워 종류의 효과를 {ability.supportBlockTicks:seconds}간 받을 수 없습니다. </red>"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T3_WEAPON_SMITH_TOWER, List.of(
+                "<green> + {ability.supportBlockTicks:seconds}마다 주위 {ability.radius:blocks} 이내에 있는 타워를 {ability.buffDurationTicks:seconds}동안 공격력과 공격속도를 {ability.weaponBuff:percent} 증가시킵니다.</green>",
+                "<red> 이 효과를 받은 타워는 {ability.supportBlockTicks:seconds}동안 같은 효과를 받을 수 없습니다.</red>"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T2_ANTI_TANKER_CAT_TOWER, List.of(
+                "<green> + 웨이브가 아닌 대상을 공격할 때 피해를 {ability.nonWaveBonus:percent} 더 입힙니다. </green>",
+                "<green> + 대상이 </green><red>탱커</red><green>태그를 가질 경우 대신 {ability.tankBonus:percent} 추가 피해를 입힙니다.</green>",
+                "<green> + 적 처치 시 마다 공격력이 영구적으로 {ability.stackDamage:number}씩 오르며, 최대 </green><yellow>{ability.stackDamageCap:number}</yellow><green>까지 상승합니다. </green>"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T2_LANE_CLEAR_CAT_TOWER, List.of(
+                "<green> + 웨이브를 공격 할 때 피해를 {ability.waveBonus:percent} 더 입힙니다. </green>",
+                "<green> 적을 처치 시 적이 폭발하며 해당 적 근처 {ability.explosionRadius:blocks} 이내의 적에게 공격력과 같은 피해를 줍니다. </green>",
+                "<green> 적을 처치 시 영구적으로 공격력이 {ability.stackDamage:number} 증가하며, 최대 {ability.stackDamageCap:number}까지 증가합니다. (최대 {ability.stackDamageCap/ability.stackDamage:integer}스택) </green>",
+                "<red> 시체 폭발 피해로 처치한 적은 폭발하지 않습니다. </red>"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T3_ANTI_TANKER_CAT_TOWER, List.of(
+                "<green> + 웨이브가 아닌 대상을 공격할 때 피해를 {ability.nonWaveBonus:percent} 더 입힙니다. </green>",
+                "<green> + 대상이 </green><red>탱커</red><green>태그를 가질 경우 대신 {ability.tankBonus:percent} 추가 피해를 입힙니다.</green>",
+                "<green> + 적 처치 시 마다 공격력이 영구적으로 {ability.stackDamage:number}씩 오르며, 최대 </green><yellow>{ability.stackDamageCap:number}</yellow><green>까지 상승합니다. </green>"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T3_LANE_CLEAR_CAT_TOWER, List.of(
+                "<green> + 웨이브를 공격 할 때 피해를 {ability.waveBonus:percent} 더 입힙니다. </green>",
+                "<green> 적을 처치 시 적이 폭발하며 해당 적 근처 {ability.explosionRadius:blocks} 이내의 적에게 공격력과 같은 피해를 줍니다. </green>",
+                "<green> 적을 처치 시 영구적으로 공격력이 {ability.stackDamage:number} 증가하며, 최대 {ability.stackDamageCap:number}까지 증가합니다. (최대 {ability.stackDamageCap/ability.stackDamage:integer}스택) </green>",
+                "<red> 시체 폭발 피해로 처치한 적은 폭발하지 않습니다. </red>"
+        ));
+    }
 
 
     private VillagerTowers() {

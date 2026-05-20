@@ -328,6 +328,12 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     public void syncTowerState(Tower tower) {
         runtimeTower = tower;
+        laneId = tower.laneId();
+        teamId = tower.teamId();
+        ownerPlayer = tower.ownerPlayer();
+        attackRange = tower.type().range();
+        attackDamage = tower.type().damage();
+        attackIntervalTicks = tower.type().attackIntervalTicks();
         aggroPriority = tower.aggroPriority();
         boolean wasFinalDefense = finalDefense;
         finalDefense = tower.deployedAtFinalDefense();
@@ -336,9 +342,23 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         } else if (!finalDefense) {
             finalDefenseAnchorPosition = null;
         }
+        EntityVisual updatedVisual = tower.type().visual();
+        String updatedModelId = updatedVisual.blockbenchModel().orElse(null);
+        boolean modelChanged = !java.util.Objects.equals(updatedModelId, blockbenchModelId);
+        visual = updatedVisual;
+        blockbenchModelId = updatedModelId;
+        setPolymerEntityType(visual.entityTypeId());
+        targetAcquireRange = Math.max(attackRange + 4.0, DEFAULT_TARGET_ACQUIRE_RANGE);
+        setCustomName(Component.literal(tower.type().displayName()));
         getAttribute(Attributes.MAX_HEALTH).setBaseValue(tower.currentMaxHealth());
+        getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(attackDamage);
+        getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(targetAcquireRange);
         if (Math.abs(getHealth() - tower.health()) > 0.01F) {
             setHealth((float) tower.health());
+        }
+        if (modelChanged) {
+            installBilModel(blockbenchModelId);
+            playAnimation(SemionAnimationState.IDLE);
         }
     }
 

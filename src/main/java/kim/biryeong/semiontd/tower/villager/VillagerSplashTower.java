@@ -2,6 +2,7 @@ package kim.biryeong.semiontd.tower.villager;
 
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
+import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
@@ -11,23 +12,15 @@ import kim.biryeong.semiontd.tower.TowerType;
 import java.util.UUID;
 
 public class VillagerSplashTower extends SplashTower {
-    private static final float T2_BONUS_PER_ROUND = 0.05f;
-    private static final float T3_BONUS_PER_ROUND = 0.075f;
-    private static final int MAX_BONUS_SCALING = 6;
-    private static final float T2_SPLASH_RADIUS = 1.25f;
-    private static final float T3_SPLASH_RADIUS = 1.75f;
     private int attackAttempt = 0;
     private int survivalBouns = 0;
-    private final boolean isT3;
 
     public VillagerSplashTower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
         super(type, ownerPlayer, teamId, laneId, position);
-        this.isT3 = type == VillagerTowers.T3_CLERIC_TOWER;
     }
 
     public VillagerSplashTower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition originalPosition, GridPosition currentPosition) {
         super(type, ownerPlayer, teamId, laneId, originalPosition, currentPosition);
-        this.isT3 = type == VillagerTowers.T3_CLERIC_TOWER;
     }
 
     @Override
@@ -39,19 +32,19 @@ public class VillagerSplashTower extends SplashTower {
     }
 
     private void incrementSurvivalBonus() {
-        this.survivalBouns = Math.min(MAX_BONUS_SCALING, survivalBouns + 1);
+        this.survivalBouns = Math.min(TowerBalanceRuntime.abilityInt(type().id(), "maxSurvivalStacks"), survivalBouns + 1);
     }
 
     @Override
     public double modifyAttackDamage(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
-        double scale = isT3 ? T3_BONUS_PER_ROUND : T2_BONUS_PER_ROUND;
+        double scale = value("bonusPerSurvivedRound");
         return damageAmount * (1 + scale * survivalBouns);
     }
 
     @Override
     public int adjustAttackInterval(int baseIntervalTicks) {
-        if (isT3) {
-            return (int) (baseIntervalTicks * (1 - T3_BONUS_PER_ROUND * survivalBouns));
+        if (isT3()) {
+            return (int) (baseIntervalTicks * (1 - value("bonusPerSurvivedRound") * survivalBouns));
         }
 
         return super.adjustAttackInterval(baseIntervalTicks);
@@ -60,10 +53,11 @@ public class VillagerSplashTower extends SplashTower {
     @Override
     public void onAttack(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount, boolean killedTarget) {
         super.onAttack(towerEntity, target, damageAmount, killedTarget); // splash
-        if (isT3) {
+        if (isT3()) {
             attackAttempt++; // attack attempt
-            if (!killedTarget && attackAttempt >= 3) { // skip if target is dead. but stack attack attempt value
-                attackAttempt -= 4; // remove 4 stack. it will stack 1 because calls it self
+            int every = Math.max(1, TowerBalanceRuntime.abilityInt(type().id(), "extraAttackEvery"));
+            if (!killedTarget && attackAttempt >= every) { // skip if target is dead. but stack attack attempt value
+                attackAttempt -= every + 1; // remove stack. it will stack 1 because calls itself
                 boolean killed = damageTarget(towerEntity, target, damageAmount); // damage main target
                 this.onAttack(towerEntity, target, damageAmount, killed); // splash and trigger addition attack if has more stack
                 if (killed) {
@@ -75,11 +69,19 @@ public class VillagerSplashTower extends SplashTower {
 
     @Override
     public float getSplashRange() {
-        return isT3 ? T3_SPLASH_RADIUS : T2_SPLASH_RADIUS;
+        return (float) value("splashRadius");
     }
 
     @Override
     public float getSplashRatio() {
-        return 0.75f;
+        return (float) value("splashDamageRatio");
+    }
+
+    private double value(String key) {
+        return TowerBalanceRuntime.ability(type().id(), key);
+    }
+
+    private boolean isT3() {
+        return type().id().equals(VillagerTowers.T3_CLERIC_TOWER.id());
     }
 }

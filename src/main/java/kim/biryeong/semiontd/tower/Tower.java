@@ -15,13 +15,13 @@ import java.util.UUID;
 import net.minecraft.world.damagesource.DamageSource;
 
 public abstract class Tower {
-    private final TowerType type;
+    private TowerType type;
     private final UUID ownerPlayer;
     private final TeamId teamId;
     private final int laneId;
     private final GridPosition originalPosition;
     private GridPosition currentPosition;
-    private final double maxHealth;
+    private double maxHealth;
     private double health;
     private long paidMineralCost;
     private int placedRound;
@@ -56,6 +56,16 @@ public abstract class Tower {
 
     public TowerType type() {
         return type;
+    }
+
+    public void refreshType(TowerType type, PlayerLane lane) {
+        if (type == null || !this.type.id().equals(type.id())) {
+            return;
+        }
+        this.type = type;
+        this.maxHealth = type.maxHealth();
+        syncHealth(health);
+        onStateChanged(lane);
     }
 
     public UUID ownerPlayer() {

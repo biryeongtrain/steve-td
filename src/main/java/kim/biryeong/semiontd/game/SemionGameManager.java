@@ -14,6 +14,7 @@ import kim.biryeong.semiontd.config.MapConfig;
 import kim.biryeong.semiontd.config.ProgressionConfig;
 import kim.biryeong.semiontd.config.SemionConfigLoader;
 import kim.biryeong.semiontd.config.SemionConfigLoader.LoadedConfigs;
+import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.map.ArenaLoadException;
 import kim.biryeong.semiontd.map.GameArena;
@@ -24,6 +25,7 @@ import kim.biryeong.semiontd.music.SemionMusicService;
 import kim.biryeong.semiontd.progression.MatchProgressionReward;
 import kim.biryeong.semiontd.progression.ProgressionService;
 import kim.biryeong.semiontd.progression.SemionPlayerProfile;
+import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.ui.SemionDialogService;
 import kim.biryeong.semiontd.ui.SemionDisplayHudService;
 import kim.biryeong.semiontd.ui.SemionHotbarService;
@@ -47,6 +49,7 @@ public final class SemionGameManager {
     private WaveConfig waveConfig = WaveConfig.defaultConfig();
     private MapConfig mapConfig = MapConfig.defaultConfig();
     private ProgressionConfig progressionConfig = ProgressionConfig.defaultConfig();
+    private TowerBalanceConfig towerBalanceConfig = TowerBalanceConfig.defaultConfig();
     private Path configDir;
     private Path progressionStorePath;
     private ProgressionService progressionService = new ProgressionService(progressionConfig, null);
@@ -84,13 +87,33 @@ public final class SemionGameManager {
             ProgressionConfig progressionConfig,
             Path progressionStorePath
     ) {
+        configure(
+                economyConfig,
+                waveConfig,
+                mapConfig,
+                progressionConfig,
+                TowerBalanceConfig.defaultConfig(),
+                progressionStorePath
+        );
+    }
+
+    public void configure(
+            EconomyConfig economyConfig,
+            WaveConfig waveConfig,
+            MapConfig mapConfig,
+            ProgressionConfig progressionConfig,
+            TowerBalanceConfig towerBalanceConfig,
+            Path progressionStorePath
+    ) {
         this.economyConfig = economyConfig;
         this.waveConfig = waveConfig;
         this.mapConfig = mapConfig;
         this.progressionConfig = progressionConfig;
+        this.towerBalanceConfig = towerBalanceConfig == null ? TowerBalanceConfig.defaultConfig() : towerBalanceConfig;
         this.progressionStorePath = progressionStorePath;
         this.configDir = progressionStorePath == null ? null : progressionStorePath.getParent();
         this.progressionService = new ProgressionService(progressionConfig, progressionStorePath);
+        ProductionTowerCatalogs.reloadBuiltIns(this.towerBalanceConfig);
     }
 
     public ReloadConfigResult reloadConfigs(MinecraftServer server) {
@@ -104,11 +127,13 @@ public final class SemionGameManager {
                 configs.waves(),
                 configs.map(),
                 configs.progression(),
+                configs.towerBalance(),
                 configDir.resolve("profiles.json")
         );
         boolean activeGameUpdated = activeGame != null && activeGame.phase() != RoundPhase.ENDED;
         if (activeGameUpdated) {
             activeGame.applyConfigs(configs.economy(), configs.waves());
+            activeGame.refreshProductionTowerTypes();
             displayHudService.refreshNow(server, activeGame, matchMode);
         }
         return new ReloadConfigResult(true, activeGameUpdated, configDir);
