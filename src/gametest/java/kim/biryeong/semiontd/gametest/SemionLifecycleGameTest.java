@@ -473,19 +473,13 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
             long emeraldBeforeSummon = redEconomy.emerald();
             long incomeBeforeSummon = redEconomy.income();
             SummonResult summon = game.summonMonster(redId, "grunt");
-            if (!assertEquals(context, SummonResultType.SUCCESS, summon.type(), "Grunt summon should succeed during prepare.")) {
+            if (!assertEquals(context, SummonResultType.UNKNOWN_SUMMON, summon.type(), "Removed income summons should not be available during prepare.")) {
                 return;
             }
-            if (!assertEquals(context, TeamId.BLUE, summon.targetTeam().orElse(null), "RED summon should target BLUE in a two-team game.")) {
+            if (!assertEquals(context, emeraldBeforeSummon, redEconomy.emerald(), "Unknown summon should not spend emerald.")) {
                 return;
             }
-            if (!assertEquals(context, 1, summon.targetLaneId().orElse(-1), "RED summon should target BLUE lane 1.")) {
-                return;
-            }
-            if (!assertEquals(context, emeraldBeforeSummon - 20, redEconomy.emerald(), "Summon should spend emerald.")) {
-                return;
-            }
-            if (!assertEquals(context, incomeBeforeSummon + 2, redEconomy.income(), "Summon should increase income.")) {
+            if (!assertEquals(context, incomeBeforeSummon, redEconomy.income(), "Unknown summon should not increase income.")) {
                 return;
             }
 
@@ -495,19 +489,6 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
             if (!assertEquals(context, RoundPhase.LANE_WAVE, game.phase(), "Prepare should advance into wave phase.")) {
                 return;
             }
-            PlayerLane blueLane = game.teams().get(TeamId.BLUE).laneGroup().lane(1).orElseThrow();
-            if (!assertEquals(context, 1, blueLane.activeMonsters().size(), "Queued summon should spawn on the target lane during wave.")) {
-                return;
-            }
-            if (!assertEquals(context, "grunt", blueLane.activeMonsters().getFirst().id(), "Spawned monster should preserve summon id.")) {
-                return;
-            }
-            if (!(blueLane.arenaWorld().getEntity(blueLane.activeMonsters().getFirst().minecraftEntityId()) instanceof SemionMonsterEntity)) {
-                context.fail(Component.literal("Spawned summon should have a live Minecraft entity in the actual arena world."));
-                return;
-            }
-
-            blueLane.activeMonsters().getFirst().damage(10_000.0);
             manager.tick(server);
             if (!assertEquals(context, RoundPhase.ROUND_PAYOUT, game.phase(), "Cleared wave should advance to payout.")) {
                 return;

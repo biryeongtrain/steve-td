@@ -84,7 +84,6 @@ import kim.biryeong.semiontd.test.tower.TestTower;
 import kim.biryeong.semiontd.summon.SummonAbilityActivation;
 import kim.biryeong.semiontd.summon.SummonBalancePolicy;
 import kim.biryeong.semiontd.summon.SummonContext;
-import kim.biryeong.semiontd.summon.SummonDisplayNames;
 import kim.biryeong.semiontd.summon.SummonMonsterType;
 import kim.biryeong.semiontd.summon.SummonRegistry;
 import kim.biryeong.semiontd.summon.SummonRole;
@@ -98,6 +97,13 @@ import kim.biryeong.semiontd.tower.TowerCategory;
 import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
+import kim.biryeong.semiontd.tower.undead.UndeadDrownedTower;
+import kim.biryeong.semiontd.tower.undead.UndeadHuskTower;
+import kim.biryeong.semiontd.tower.undead.UndeadMeleeSkeletonTower;
+import kim.biryeong.semiontd.tower.undead.UndeadRangedSkeletonTower;
+import kim.biryeong.semiontd.tower.undead.UndeadTowerCatalogs;
+import kim.biryeong.semiontd.tower.undead.UndeadTowers;
+import kim.biryeong.semiontd.tower.undead.UndeadZombieTower;
 import kim.biryeong.semiontd.tower.villager.AllayTower;
 import kim.biryeong.semiontd.tower.villager.AntiTankerCatTower;
 import kim.biryeong.semiontd.tower.villager.LaneClearCatTower;
@@ -595,7 +601,14 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertTrue(context, activeText.contains("팀/라인"), "Active HUD should show team and lane.")) {
             return;
         }
-        if (!assertTrue(context, activeText.contains("다이아"), "Active HUD should show diamond economy.")) {
+        if (!assertTrue(context, !activeText.contains("다이아"), "Active HUD should move economy lines to actionbar.")) {
+            return;
+        }
+        String actionbarText = SemionDisplayHudService.actionbarMarkupFor(game.players().get(redId), game);
+        if (!assertTrue(context, actionbarText.contains("다이아"), "Active actionbar should show diamond economy.")) {
+            return;
+        }
+        if (!assertTrue(context, actionbarText.contains("타워"), "Active actionbar should show tower limit.")) {
             return;
         }
         if (!assertTrue(context, activeText.contains("전체 팀 보스"), "Active HUD should keep the full team boss summary.")) {
@@ -640,6 +653,27 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertTrue(context, !eliminatedText.contains("다이아"), "Eliminated HUD should omit active economy lines.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void towerLimitConfigScalesFromRoundFiveAndCaps(GameTestHelper context) {
+        EconomyConfig.TowerLimitConfig config = EconomyConfig.TowerLimitConfig.defaultConfig();
+        if (!assertEquals(context, 5, config.limitForRound(1), "Tower limit should start at five.")) {
+            return;
+        }
+        if (!assertEquals(context, 5, config.limitForRound(4), "Tower limit should stay at five before round five.")) {
+            return;
+        }
+        if (!assertEquals(context, 8, config.limitForRound(5), "Tower limit should gain three slots at round five.")) {
+            return;
+        }
+        if (!assertEquals(context, 11, config.limitForRound(10), "Tower limit should gain another three slots at round ten.")) {
+            return;
+        }
+        if (!assertEquals(context, 11, config.limitForRound(50), "Tower limit should cap at eleven by default.")) {
             return;
         }
         context.succeed();
@@ -1222,11 +1256,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
         int activeMonsterEntityId = blueLane.activeMonsters().getFirst().minecraftEntityId();
 
-        var summonResult = game.summonMonster(redId, "grunt");
-        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.SUCCESS, summonResult.type(), "Summon should queue a monster on the only living enemy team.")) {
-            return;
-        }
-
         if (!assertTrue(context, game.killBoss(TeamId.BLUE), "Blue boss kill should eliminate the target team.")) {
             return;
         }
@@ -1241,7 +1270,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
 
         blueLane.tick(context.getLevel().getServer());
-        if (!assertEquals(context, 0, blueLane.activeMonsters().size(), "Eliminated team lane should not spawn queued wave or summon monsters.")) {
+        if (!assertEquals(context, 0, blueLane.activeMonsters().size(), "Eliminated team lane should not spawn queued wave monsters.")) {
             return;
         }
         if (!assertTrue(context, context.getLevel().getEntity(activeMonsterEntityId) == null
@@ -3308,35 +3337,17 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         long redGasBeforeSummon = game.players().get(redId).economy().gas();
         long redIncomeBeforeSummon = game.players().get(redId).economy().income();
         var summonResult = game.summonMonster(redId, "grunt");
-        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.SUCCESS, summonResult.type(), "Round 2 prepare should allow RED to summon.")) {
+        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.UNKNOWN_SUMMON, summonResult.type(), "Removed income summons should not be available in round 2 prepare.")) {
             return;
         }
-        if (!assertEquals(context, TeamId.BLUE, summonResult.targetTeam().orElse(null), "RED summon should target BLUE in a two-player game.")) {
+        if (!assertEquals(context, redGasBeforeSummon, game.players().get(redId).economy().gas(), "Unknown lifecycle summon should not spend gas.")) {
             return;
         }
-        if (!assertEquals(context, redGasBeforeSummon - 20, game.players().get(redId).economy().gas(), "Successful lifecycle summon should spend grunt gas cost.")) {
+        if (!assertEquals(context, redIncomeBeforeSummon, game.players().get(redId).economy().income(), "Unknown lifecycle summon should not add income.")) {
             return;
         }
-        if (!assertEquals(context, redIncomeBeforeSummon + 2, game.players().get(redId).economy().income(), "Successful lifecycle summon should add grunt income.")) {
-            return;
-        }
-
-        if (!assertPresent(context, summonResult.targetLaneId(), "Successful lifecycle summon should report a target lane.")) {
-            return;
-        }
-        PlayerLane blueTargetLane = lane(game, TeamId.BLUE, summonResult.targetLaneId().get());
         tickGame(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS + 2);
-        if (!assertEquals(context, RoundPhase.LANE_WAVE, game.phase(), "Queued lifecycle summon should keep round 2 in wave phase after spawning.")) {
-            return;
-        }
-        if (!assertEquals(context, 1, blueTargetLane.activeMonsters().size(), "BLUE target lane should spawn the queued lifecycle summon.")) {
-            return;
-        }
-        Monster lifecycleSummon = blueTargetLane.activeMonsters().getFirst();
-        if (!assertEquals(context, "grunt", lifecycleSummon.id(), "Spawned lifecycle summon should preserve its summon id.")) {
-            return;
-        }
-        if (!assertTrue(context, lifecycleSummon.hasMinecraftEntity(), "Spawned lifecycle summon should have a runtime entity.")) {
+        if (!assertEquals(context, RoundPhase.PREPARE_AND_SUMMON, game.phase(), "Empty round 2 should resolve into the next prepare phase.")) {
             return;
         }
 
@@ -3349,10 +3360,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertTrue(context, game.teams().get(TeamId.BLUE).eliminated(), "BLUE should be eliminated after boss death.")) {
             return;
         }
-        if (!assertEquals(context, 0, blueTargetLane.activeMonsters().size(), "Eliminated BLUE lane should clear active lifecycle summons.")) {
-            return;
-        }
-
         var matchResult = game.matchResult();
         if (!assertPresent(context, matchResult, "Ended lifecycle game should expose a match result.")) {
             return;
@@ -3556,44 +3563,44 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
-    public void summonConsumesGasAndAddsIncome(GameTestHelper context) {
+    public void missingIncomeSummonReturnsUnknownWithoutEconomyChange(GameTestHelper context) {
         UUID redId = stableUuid("summon-red-owner");
         UUID blueId = stableUuid("summon-blue-owner");
         SemionGame game = startedTwoPlayerGame(context, redId, blueId);
 
         var result = game.summonMonster(redId, "grunt");
-        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.SUCCESS, result.type(), "Summon should succeed when a target team exists.")) {
+        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.UNKNOWN_SUMMON, result.type(), "Removed income summons should not be summonable.")) {
             return;
         }
-        if (!assertEquals(context, 30L, game.players().get(redId).economy().gas(), "Successful summon should spend gas.")) {
+        if (!assertEquals(context, 50L, game.players().get(redId).economy().gas(), "Unknown summon should not spend gas.")) {
             return;
         }
-        if (!assertEquals(context, 2L, game.players().get(redId).economy().income(), "Successful summon should add income.")) {
+        if (!assertEquals(context, 0L, game.players().get(redId).economy().income(), "Unknown summon should not add income.")) {
             return;
         }
         context.succeed();
     }
 
     @GameTest
-    public void summonRefundsGasWhenNoTargetTeamExists(GameTestHelper context) {
+    public void missingIncomeSummonDoesNotReachTargetValidation(GameTestHelper context) {
         UUID redId = stableUuid("refund-red-owner");
         SemionGame game = startedSinglePlayerGame(context, redId, TeamId.RED);
 
         var result = game.summonMonster(redId, "grunt");
-        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.NO_TARGET_TEAM, result.type(), "Summon should fail when there is no target team.")) {
+        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.UNKNOWN_SUMMON, result.type(), "Removed income summons should fail before target lookup.")) {
             return;
         }
-        if (!assertEquals(context, 50L, game.players().get(redId).economy().gas(), "Failed summon should refund gas.")) {
+        if (!assertEquals(context, 50L, game.players().get(redId).economy().gas(), "Unknown summon should not spend gas.")) {
             return;
         }
-        if (!assertEquals(context, 0L, game.players().get(redId).economy().income(), "Failed summon should not add income.")) {
+        if (!assertEquals(context, 0L, game.players().get(redId).economy().income(), "Unknown summon should not add income.")) {
             return;
         }
         context.succeed();
     }
 
     @GameTest
-    public void summonDoesNotTargetEliminatedTeams(GameTestHelper context) {
+    public void missingIncomeSummonDoesNotTargetEliminatedTeams(GameTestHelper context) {
         UUID redId = stableUuid("summon-living-red-owner");
         UUID blueId = stableUuid("summon-eliminated-blue-owner");
         UUID greenId = stableUuid("summon-living-green-owner");
@@ -3604,10 +3611,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
 
         var result = game.summonMonster(redId, "grunt");
-        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.SUCCESS, result.type(), "Summon should still succeed with another living enemy team.")) {
-            return;
-        }
-        if (!assertEquals(context, TeamId.GREEN, result.targetTeam().orElse(null), "Summon should skip eliminated BLUE and target living GREEN.")) {
+        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.UNKNOWN_SUMMON, result.type(), "Removed income summons should not enter targeting.")) {
             return;
         }
         context.succeed();
@@ -3734,262 +3738,37 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
-    public void summonRegistryProvidesDefaultGrunt(GameTestHelper context) {
-        var grunt = SummonRegistry.find("grunt");
-        if (!assertPresent(context, grunt, "Summon registry should provide default grunt summon.")) {
-            return;
-        }
-        if (!assertEquals(context, 20L, grunt.get().gasCost(), "Default grunt should keep the expected gas cost.")) {
-            return;
-        }
-        if (!assertEquals(context, 2L, grunt.get().incomeGain(), "Default grunt should keep the expected income gain.")) {
-            return;
-        }
-        context.succeed();
-    }
-
-    @GameTest
-    public void summonRegistryProvidesPlannedRoleTierCatalog(GameTestHelper context) {
-        var swarm = SummonRegistry.find("skitter_swarm");
-        var quiltGuard = SummonRegistry.find("quilt_guard");
-        var staticBobbin = SummonRegistry.find("static_bobbin");
-        var buttonNurse = SummonRegistry.find("button_nurse");
-        var popperPod = SummonRegistry.find("popper_pod");
-        var tank = SummonRegistry.find("ironclad_tank");
-        var wardTank = SummonRegistry.find("ward_tank");
-        var disruptor = SummonRegistry.find("static_disruptor");
-        var support = SummonRegistry.find("pulse_support");
-        var galeFerret = SummonRegistry.find("gale_ferret");
-        var bulwarkBison = SummonRegistry.find("bulwark_bison");
-        var wizardCat = SummonRegistry.find("wizard_cat");
-        var groveAlpaca = SummonRegistry.find("grove_alpaca");
-        var stormLynx = SummonRegistry.find("storm_lynx");
-        var aegisGolem = SummonRegistry.find("aegis_golem");
-        var nullImp = SummonRegistry.find("null_imp");
-        var elderSprite = SummonRegistry.find("elder_sprite");
-        var bombardToad = SummonRegistry.find("bombard_toad");
-        var siege = SummonRegistry.find("siege_breaker");
-        var apexWarden = SummonRegistry.find("apex_warden");
-        var oraclePhoenix = SummonRegistry.find("oracle_phoenix");
-        if (!assertPresent(context, swarm, "Summon registry should provide T1 swarm content.")) {
-            return;
-        }
-        if (!assertPresent(context, quiltGuard, "Summon registry should provide T1 tank content.")) {
-            return;
-        }
-        if (!assertPresent(context, staticBobbin, "Summon registry should provide T1 disruptor content.")) {
-            return;
-        }
-        if (!assertPresent(context, buttonNurse, "Summon registry should provide T1 support content.")) {
-            return;
-        }
-        if (!assertPresent(context, popperPod, "Summon registry should provide T1 siege content.")) {
-            return;
-        }
-        if (!assertPresent(context, tank, "Summon registry should provide armor tank content.")) {
-            return;
-        }
-        if (!assertPresent(context, wardTank, "Summon registry should provide resistance tank content.")) {
-            return;
-        }
-        if (!assertPresent(context, disruptor, "Summon registry should provide low-tier disruptor content.")) {
-            return;
-        }
-        if (!assertPresent(context, support, "Summon registry should provide low-tier support content.")) {
-            return;
-        }
-        if (!assertPresent(context, galeFerret, "Summon registry should provide T3 rush content.")) {
-            return;
-        }
-        if (!assertPresent(context, bulwarkBison, "Summon registry should provide T3 tank content.")) {
-            return;
-        }
-        if (!assertPresent(context, wizardCat, "Summon registry should provide T3 disruptor content.")) {
-            return;
-        }
-        if (!assertPresent(context, groveAlpaca, "Summon registry should provide T3 support content.")) {
-            return;
-        }
-        if (!assertPresent(context, stormLynx, "Summon registry should provide T4 rush content.")) {
-            return;
-        }
-        if (!assertPresent(context, aegisGolem, "Summon registry should provide T4 tank content.")) {
-            return;
-        }
-        if (!assertPresent(context, nullImp, "Summon registry should provide T4 disruptor content.")) {
-            return;
-        }
-        if (!assertPresent(context, elderSprite, "Summon registry should provide T4 support content.")) {
-            return;
-        }
-        if (!assertPresent(context, bombardToad, "Summon registry should provide T4 siege content.")) {
-            return;
-        }
-        if (!assertPresent(context, siege, "Summon registry should provide siege content.")) {
-            return;
-        }
-        if (!assertPresent(context, apexWarden, "Summon registry should provide T5 tank/disruptor content.")) {
-            return;
-        }
-        if (!assertPresent(context, oraclePhoenix, "Summon registry should provide T5 support/disruptor content.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonTier.T1, swarm.get().tier(), "Swarm baseline should be a T1 pressure summon.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonTier.T1, quiltGuard.get().tier(), "Quilt guard should be the T1 tank baseline.")) {
-            return;
-        }
-        if (!assertTrue(context, quiltGuard.get().roles().contains(SummonRole.TANK), "Quilt guard should be a tank role summon.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonTier.T1, staticBobbin.get().tier(), "Static bobbin should be the T1 disruptor baseline.")) {
-            return;
-        }
-        if (!assertTrue(context, staticBobbin.get().roles().contains(SummonRole.DISRUPTOR), "Static bobbin should be a disruptor role summon.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonTier.T1, buttonNurse.get().tier(), "Button nurse should be the T1 support baseline.")) {
-            return;
-        }
-        if (!assertTrue(context, buttonNurse.get().abilityActivations().contains(SummonAbilityActivation.COOLDOWN), "Button nurse should use cooldown support abilities.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonTier.T1, popperPod.get().tier(), "Popper pod should be the T1 siege baseline.")) {
-            return;
-        }
-        if (!assertTrue(context, popperPod.get().roles().contains(SummonRole.SIEGE), "Popper pod should be a siege role summon.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonDisplayNames.PINCER_CRAB, popperPod.get().displayName(), "Summon display names should be editable from the central name catalog.")) {
-            return;
-        }
-        if (!assertTrue(context, tank.get().roles().contains(SummonRole.TANK), "Ironclad should be a tank role summon.")) {
-            return;
-        }
-        if (!assertEquals(context, 8.0, wardTank.get().resistance(), "Ward tank should represent a resistance-specialized tank.")) {
-            return;
-        }
-        if (!assertTrue(context, disruptor.get().abilityActivations().contains(SummonAbilityActivation.COOLDOWN), "Low-tier disruptor should be allowed to use cooldown abilities.")) {
-            return;
-        }
-        if (!assertTrue(context, support.get().abilityActivations().contains(SummonAbilityActivation.COOLDOWN), "Low-tier support should be allowed to use cooldown abilities.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonTier.T3, galeFerret.get().tier(), "Gale ferret should be the T3 rush baseline.")) {
-            return;
-        }
-        if (!assertTrue(context, galeFerret.get().roles().contains(SummonRole.RUSH), "Gale ferret should be a rush role summon.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonTier.T3, bulwarkBison.get().tier(), "Bulwark bison should be the T3 tank baseline.")) {
-            return;
-        }
-        if (!assertEquals(context, MonsterDimensions.of(1.35, 1.15), bulwarkBison.get().dimensions(), "Bulwark bison should define its larger gameplay hitbox.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonTier.T3, wizardCat.get().tier(), "Wizard cat should be the T3 disruptor baseline.")) {
-            return;
-        }
-        if (!assertTrue(context, wizardCat.get().abilityActivations().contains(SummonAbilityActivation.COOLDOWN), "T3 disruptor should use cooldown abilities.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonTier.T3, groveAlpaca.get().tier(), "Grove alpaca should be the T3 support baseline.")) {
-            return;
-        }
-        if (!assertTrue(context, groveAlpaca.get().abilityActivations().contains(SummonAbilityActivation.COOLDOWN), "T3 support should use cooldown abilities.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonTier.T4, stormLynx.get().tier(), "Storm lynx should be the T4 rush baseline.")) {
-            return;
-        }
-        if (!assertTrue(context, stormLynx.get().blockbenchModelId().isEmpty(), "T4 rush should not require an authored Blockbench model yet.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonTier.T4, aegisGolem.get().tier(), "Aegis golem should be the T4 tank baseline.")) {
-            return;
-        }
-        if (!assertEquals(context, MonsterDimensions.of(1.4, 2.2), aegisGolem.get().dimensions(), "Aegis golem should define a larger vanilla fallback hitbox.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonTier.T4, nullImp.get().tier(), "Null imp should be the T4 disruptor baseline.")) {
-            return;
-        }
-        if (!assertTrue(context, nullImp.get().abilityActivations().contains(SummonAbilityActivation.COOLDOWN), "T4 disruptor should use cooldown abilities.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonTier.T4, elderSprite.get().tier(), "Elder sprite should be the T4 support baseline.")) {
-            return;
-        }
-        if (!assertTrue(context, elderSprite.get().blockbenchModelId().isEmpty(), "T4 support should use vanilla visuals until a model is authored.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonTier.T4, bombardToad.get().tier(), "Bombard toad should be the T4 siege baseline.")) {
-            return;
-        }
-        if (!assertTrue(context, bombardToad.get().roles().contains(SummonRole.SIEGE), "Bombard toad should be a siege role summon.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonTier.T5, siege.get().tier(), "Siege breaker should be promoted to the T5 tank model slot.")) {
-            return;
-        }
-        if (!assertEquals(context, MonsterDimensions.of(2.0, 1.35), siege.get().dimensions(), "Siege baseline should define a larger gameplay hitbox.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonTier.T5, apexWarden.get().tier(), "Apex warden should be the T5 tank/disruptor baseline.")) {
-            return;
-        }
-        if (!assertTrue(context, apexWarden.get().roles().contains(SummonRole.TANK), "Apex warden should keep the tank role.")) {
-            return;
-        }
-        if (!assertTrue(context, apexWarden.get().roles().contains(SummonRole.DISRUPTOR), "Apex warden should keep the disruptor role.")) {
-            return;
-        }
-        if (!assertTrue(context, apexWarden.get().blockbenchModelId().isEmpty(), "New T5 tank/disruptor should not require an authored Blockbench model yet.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonTier.T5, oraclePhoenix.get().tier(), "Oracle phoenix should be the T5 support/disruptor baseline.")) {
-            return;
-        }
-        if (!assertTrue(context, oraclePhoenix.get().roles().contains(SummonRole.SUPPORT), "Oracle phoenix should keep the support role.")) {
-            return;
-        }
-        if (!assertTrue(context, oraclePhoenix.get().roles().contains(SummonRole.DISRUPTOR), "Oracle phoenix should keep the disruptor role.")) {
-            return;
-        }
-        if (!assertTrue(context, oraclePhoenix.get().blockbenchModelId().isEmpty(), "New T5 support/disruptor should not require an authored Blockbench model yet.")) {
-            return;
-        }
-        context.succeed();
-    }
-
-    @GameTest
-    public void summonRuntimeCarriesRoleTierAndDamagePolicy(GameTestHelper context) {
-        SummonMonsterType summon = SummonRegistry.find("ironclad_tank").orElseThrow();
-        Monster monster = summon.createMonster(
-                new SummonContext(
-                        new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(), testArena(context)),
-                        new SemionPlayer(
-                                stableUuid("ironclad-runtime-owner"),
-                                "owner",
-                                TeamId.RED,
-                                1,
-                                new PlayerEconomy(EconomyConfig.defaultConfig())
-                        )
-                ),
-                TeamId.BLUE,
-                1
+    public void removedIncomeSummonsAreNotRegistered(GameTestHelper context) {
+        List<String> removedSummonIds = List.of(
+                "grunt",
+                "skitter_swarm",
+                "quilt_guard",
+                "static_bobbin",
+                "button_nurse",
+                "popper_pod",
+                "ironclad_tank",
+                "ward_tank",
+                "static_disruptor",
+                "pulse_support",
+                "gale_ferret",
+                "bulwark_bison",
+                "wizard_cat",
+                "grove_alpaca",
+                "storm_lynx",
+                "aegis_golem",
+                "null_imp",
+                "elder_sprite",
+                "bombard_toad",
+                "siege_breaker",
+                "apex_warden",
+                "oracle_phoenix"
         );
-        if (!assertEquals(context, Optional.of(SummonTier.T2), monster.summonTier(), "Runtime summon monster should keep its tier.")) {
-            return;
+        for (String summonId : removedSummonIds) {
+            if (!assertTrue(context, SummonRegistry.find(summonId).isEmpty(), "Removed income summon should not be registered: " + summonId)) {
+                return;
+            }
         }
-        if (!assertTrue(context, monster.summonRoles().contains(SummonRole.TANK), "Runtime summon monster should keep its role.")) {
-            return;
-        }
-        if (!assertEquals(context, DamageType.PHYSICAL, monster.damageType(), "Ironclad should use physical attack damage.")) {
-            return;
-        }
-        if (!assertEquals(context, 8.0, monster.armor(), "Ironclad should keep armor defense.")) {
+        if (!assertTrue(context, SummonRegistry.all().stream().noneMatch(type -> removedSummonIds.contains(type.id())), "Removed income summons should not appear in registry iteration.")) {
             return;
         }
         context.succeed();
@@ -4033,20 +3812,40 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void summonTargetPriorityUsesRoleProgressAndSiegeBonus(GameTestHelper context) {
-        Monster support = SummonRegistry.find("pulse_support").orElseThrow().createMonster(
-                new SummonContext(
-                        new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(), testArena(context)),
-                        new SemionPlayer(stableUuid("support-priority-owner"), "owner", TeamId.RED, 1, new PlayerEconomy(EconomyConfig.defaultConfig()))
-                ),
+        Monster support = new Monster(
+                "manual_support_priority",
                 TeamId.BLUE,
-                1
+                1,
+                Optional.empty(),
+                Optional.of(TeamId.RED),
+                60.0,
+                0.0,
+                2.0,
+                AttackKind.RANGED,
+                "minecraft:allay",
+                null,
+                DamageType.MAGIC,
+                0.0,
+                SummonTier.T2,
+                List.of(SummonRole.SUPPORT),
+                4
         );
-        Monster tank = SummonRegistry.find("ironclad_tank").orElseThrow().createMonster(
-                new SummonContext(
-                        new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(), testArena(context)),
-                        new SemionPlayer(stableUuid("tank-priority-owner"), "owner", TeamId.RED, 1, new PlayerEconomy(EconomyConfig.defaultConfig()))
-                ),
+        Monster tank = new Monster(
+                "manual_tank_priority",
                 TeamId.BLUE,
+                1,
+                Optional.empty(),
+                Optional.of(TeamId.RED),
+                130.0,
+                8.0,
+                5.0,
+                AttackKind.MELEE,
+                "minecraft:husk",
+                null,
+                DamageType.PHYSICAL,
+                0.0,
+                SummonTier.T2,
+                List.of(SummonRole.TANK),
                 1
         );
         support.syncLaneProgress(0.5);
@@ -4055,13 +3854,23 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
 
-        Monster siege = SummonRegistry.find("siege_breaker").orElseThrow().createMonster(
-                new SummonContext(
-                        new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(), testArena(context)),
-                        new SemionPlayer(stableUuid("siege-priority-owner"), "owner", TeamId.RED, 1, new PlayerEconomy(EconomyConfig.defaultConfig()))
-                ),
+        Monster siege = new Monster(
+                "manual_siege_priority",
                 TeamId.BLUE,
-                1
+                1,
+                Optional.empty(),
+                Optional.of(TeamId.RED),
+                360.0,
+                14.0,
+                80.0,
+                AttackKind.RANGED,
+                "minecraft:ravager",
+                null,
+                DamageType.PHYSICAL,
+                0.0,
+                SummonTier.T5,
+                List.of(SummonRole.SIEGE),
+                4
         );
         siege.syncLaneProgress(SummonBalancePolicy.SIEGE_NEAR_BOSS_PROGRESS);
         double expected = (SummonBalancePolicy.SIEGE_NEAR_BOSS_PROGRESS * 100.0)
@@ -4212,63 +4021,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertEquals(context, 0.0, fartherTarget.activeTimedEffectMagnitude(TimedEffectType.TOWER_RANGE_REDUCTION), "Null imp should affect only one tower.")) {
-            return;
-        }
-        context.succeed();
-    }
-
-    @GameTest
-    public void apexWardenSlowsTowersAndReducesFriendlyTowerDamage(GameTestHelper context) {
-        Vec3 origin = Vec3.atCenterOf(context.absolutePos(BlockPos.ZERO));
-        SemionMonsterEntity caster = spawnSummonEntity(context, "apex_warden", TeamId.RED, TeamId.BLUE, 1, origin, 200.0, 0.0);
-        SemionMonsterEntity ally = spawnSummonEntity(context, "apex_ally", TeamId.RED, TeamId.BLUE, 1, origin.add(1.0, 0.0, 0.0), 100.0, 0.0);
-        SemionMonsterEntity enemy = spawnSummonEntity(context, "apex_enemy", TeamId.GREEN, TeamId.BLUE, 1, origin.add(2.0, 0.0, 0.0), 100.0, 0.0);
-        SemionTowerEntity tower = spawnTowerEntity(context, TeamId.BLUE, 1, origin.add(3.0, 0.0, 0.0), TestTowerTypes.TEST_DIRECT);
-
-        for (var goal : SummonRegistry.find("apex_warden").orElseThrow().createAbilityGoals(caster)) {
-            goal.tick();
-        }
-
-        int expectedInterval = (int) Math.ceil(
-                TestTowerTypes.TEST_DIRECT.attackIntervalTicks() / (1.0 - SummonBalancePolicy.APEX_WARDEN_ATTACK_SPEED_REDUCTION)
-        );
-        if (!assertEquals(context, expectedInterval, tower.attackIntervalTicks(), "Apex warden should slow tower attack intervals by attack speed reduction.")) {
-            return;
-        }
-        if (!assertEquals(context, SummonBalancePolicy.APEX_WARDEN_DAMAGE_REDUCTION, ally.activeTimedEffectMagnitude(TimedEffectType.MONSTER_DAMAGE_REDUCTION), "Apex warden should protect friendly summons.")) {
-            return;
-        }
-        if (!assertEquals(context, 70.0, ally.towerDamageTaken(100.0), "Apex protection should reduce incoming tower damage.")) {
-            return;
-        }
-        if (!assertEquals(context, 0.0, enemy.activeTimedEffectMagnitude(TimedEffectType.MONSTER_DAMAGE_REDUCTION), "Apex warden should not protect another sender team's summons.")) {
-            return;
-        }
-        context.succeed();
-    }
-
-    @GameTest
-    public void oraclePhoenixHealsBlessesAlliesAndReducesTowerRange(GameTestHelper context) {
-        Vec3 origin = Vec3.atCenterOf(context.absolutePos(BlockPos.ZERO));
-        SemionMonsterEntity caster = spawnSummonEntity(context, "oracle_phoenix", TeamId.RED, TeamId.BLUE, 1, origin, 200.0, 0.0);
-        SemionMonsterEntity ally = spawnSummonEntity(context, "oracle_ally", TeamId.RED, TeamId.BLUE, 1, origin.add(1.0, 0.0, 0.0), 100.0, 20.0);
-        SemionMonsterEntity enemy = spawnSummonEntity(context, "oracle_enemy", TeamId.GREEN, TeamId.BLUE, 1, origin.add(2.0, 0.0, 0.0), 100.0, 20.0);
-        SemionTowerEntity tower = spawnTowerEntity(context, TeamId.BLUE, 1, origin.add(3.0, 0.0, 0.0), TestTowerTypes.TEST_DIRECT);
-
-        for (var goal : SummonRegistry.find("oracle_phoenix").orElseThrow().createAbilityGoals(caster)) {
-            goal.tick();
-        }
-
-        if (!assertTrue(context, ally.runtimeMonster().health() > 80.0, "Oracle phoenix should keep its existing support healing behavior.")) {
-            return;
-        }
-        if (!assertEquals(context, 80.0, enemy.runtimeMonster().health(), "Oracle phoenix should not heal another sender team's summon.")) {
-            return;
-        }
-        if (!assertEquals(context, 1.25, ally.movementSpeedMultiplier(), "Oracle phoenix should bless friendly summons with move speed.")) {
-            return;
-        }
-        if (!assertEquals(context, 6.0, tower.attackRange(), "Oracle phoenix should reduce target-team tower range.")) {
             return;
         }
         context.succeed();
@@ -4613,6 +4365,38 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void undeadTowerCatalogRegistersAndLinksAllFamilies(GameTestHelper context) {
+        ProductionTowerCatalog.clearForTesting();
+        UndeadTowerCatalogs.register();
+
+        if (!assertEquals(context, 2L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Undead catalog should expose two starter tower families.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, ProductionTowerCatalog.upgrades(UndeadTowers.T1_ZOMBIE_TOWER).size(), "Zombie starter should link to husk tower.")) {
+            return;
+        }
+        if (!assertEquals(context, 2, ProductionTowerCatalog.upgrades(UndeadTowers.T1_SKELETON_TOWER).size(), "Skeleton starter should branch to ranged and melee towers.")) {
+            return;
+        }
+        if (!assertTrue(context, ProductionTowerCatalog.entry(UndeadTowers.T1_ZOMBIE_TOWER).orElseThrow().create(stableUuid("undead-zombie-catalog-owner"), TeamId.RED, 1, new GridPosition(0, 0, 0)) instanceof UndeadZombieTower, "Zombie catalog entry should create UndeadZombieTower.")) {
+            return;
+        }
+        if (!assertTrue(context, ProductionTowerCatalog.entry(UndeadTowers.T2_ZOMBIE_TOWER).orElseThrow().create(stableUuid("undead-husk-catalog-owner"), TeamId.RED, 1, new GridPosition(0, 0, 0)) instanceof UndeadHuskTower, "Husk catalog entry should create UndeadHuskTower.")) {
+            return;
+        }
+        if (!assertTrue(context, ProductionTowerCatalog.entry(UndeadTowers.T3_ZOMBIE_TOWER).orElseThrow().create(stableUuid("undead-drowned-catalog-owner"), TeamId.RED, 1, new GridPosition(0, 0, 0)) instanceof UndeadDrownedTower, "Drowned catalog entry should create UndeadDrownedTower.")) {
+            return;
+        }
+        if (!assertTrue(context, ProductionTowerCatalog.entry(UndeadTowers.T2_RANGED_SKELETON_TOWER).orElseThrow().create(stableUuid("undead-ranged-catalog-owner"), TeamId.RED, 1, new GridPosition(0, 0, 0)) instanceof UndeadRangedSkeletonTower, "Ranged skeleton catalog entry should create UndeadRangedSkeletonTower.")) {
+            return;
+        }
+        if (!assertTrue(context, ProductionTowerCatalog.entry(UndeadTowers.T2_MELEE_TOWER).orElseThrow().create(stableUuid("undead-melee-catalog-owner"), TeamId.RED, 1, new GridPosition(0, 0, 0)) instanceof UndeadMeleeSkeletonTower, "Melee skeleton catalog entry should create UndeadMeleeSkeletonTower.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void villagerCatUpgradesCopyKillStackDamage(GameTestHelper context) {
         UUID playerId = stableUuid("cat-stack-copy-owner");
         AntiTankerCatTower t2Anti = new AntiTankerCatTower(
@@ -4783,54 +4567,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
         if (!assertClose(context, 1.35, entity.getBbHeight(), "T5 siege hitbox height should match its authored dimensions.")) {
             return;
-        }
-        context.succeed();
-    }
-
-    @GameTest
-    public void earlyTierSummonBlockbenchModelsLoadWithCombatAnimations(GameTestHelper context) {
-        Map<String, String> summonModels = Map.ofEntries(
-                Map.entry("grunt", "semion-td:summon/t1_fox_kit"),
-                Map.entry("skitter_swarm", "semion-td:summon/t1_honey_bee"),
-                Map.entry("quilt_guard", "semion-td:summon/t1_shell_turtle"),
-                Map.entry("static_bobbin", "semion-td:summon/t1_spark_axolotl"),
-                Map.entry("button_nurse", "semion-td:summon/t1_medic_duck"),
-                Map.entry("popper_pod", "semion-td:summon/t1_pincer_crab"),
-                Map.entry("ironclad_tank", "semion-td:summon/t2_ironclad_boar"),
-                Map.entry("ward_tank", "semion-td:summon/t2_ward_ram"),
-                Map.entry("static_disruptor", "semion-td:summon/t2_static_owl"),
-                Map.entry("pulse_support", "semion-td:summon/t2_pulse_fawn"),
-                Map.entry("gale_ferret", "semion-td:summon/t3_gale_ferret"),
-                Map.entry("bulwark_bison", "semion-td:summon/t3_bulwark_bison"),
-                Map.entry("wizard_cat", "semion-td:summon/t3_wizard_cat"),
-                Map.entry("grove_alpaca", "semion-td:summon/t3_grove_alpaca")
-        );
-
-        for (Map.Entry<String, String> entry : summonModels.entrySet()) {
-            SummonMonsterType summon = SummonRegistry.find(entry.getKey()).orElseThrow();
-            if (!assertEquals(context, Optional.of(entry.getValue()), summon.blockbenchModelId(), "Summon should point at its Blockbench model.")) {
-                return;
-            }
-
-            var model = SemionBilModelCache.load(entry.getValue());
-            if (!assertPresent(context, model, entry.getValue() + " should load through BIL.")) {
-                return;
-            }
-            if (!assertTrue(context, model.get().animations().containsKey("idle"), entry.getValue() + " should provide idle animation.")) {
-                return;
-            }
-            if (!assertTrue(context, model.get().animations().containsKey("walk"), entry.getValue() + " should provide walk animation.")) {
-                return;
-            }
-            if (!assertTrue(context, model.get().animations().containsKey("attack"), entry.getValue() + " should provide attack animation.")) {
-                return;
-            }
-            boolean healer = "button_nurse".equals(entry.getKey())
-                    || "pulse_support".equals(entry.getKey())
-                    || "grove_alpaca".equals(entry.getKey());
-            if (healer && !assertTrue(context, model.get().animations().containsKey("heal"), entry.getValue() + " should provide heal animation.")) {
-                return;
-            }
         }
         context.succeed();
     }
