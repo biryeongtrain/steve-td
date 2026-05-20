@@ -26,6 +26,7 @@ import kim.biryeong.semiontd.config.MapConfig;
 import kim.biryeong.semiontd.config.ProgressionConfig;
 import kim.biryeong.semiontd.config.SemionConfigLoader;
 import kim.biryeong.semiontd.config.SummonConfig;
+import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.WaveMonsterEntry;
 import kim.biryeong.semiontd.effect.TimedEffectSet;
 import kim.biryeong.semiontd.effect.TimedEffectType;
@@ -93,6 +94,7 @@ import kim.biryeong.semiontd.summon.SummonTier;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.ProductionTower;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
+import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.tower.ProductionTowerService;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerCategory;
@@ -4485,11 +4487,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
-    public void configLoaderDoesNotCreateSummonsConfigFile(GameTestHelper context) {
+    public void configLoaderCreatesSummonsConfigFile(GameTestHelper context) {
         try {
             Path tempDir = Files.createTempDirectory("semion-td-config-test");
             SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("semion-td-config-test"));
-            if (!assertTrue(context, Files.notExists(tempDir.resolve("summons.json")), "Summon definitions should come from classes, not summons.json.")) {
+            if (!assertTrue(context, Files.exists(tempDir.resolve("summons.json")), "Summon defaults should be written to summons.json.")) {
                 return;
             }
             context.succeed();
@@ -4822,6 +4824,8 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     @Override
     public void invokeTestMethod(GameTestHelper context, Method method) throws ReflectiveOperationException {
         context.setBlock(0, 0, 0, Blocks.AIR);
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        reloadDefaultIncomeSummons();
         method.invoke(this, context);
     }
 

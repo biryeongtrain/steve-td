@@ -95,7 +95,7 @@ public record TowerBalanceConfig(
         ));
         putAbilities(abilities, VillagerTowers.T1_ALLAY_TOWER.id(), Map.of(
                 "supportBlockTicks", 100.0,
-                "healAmount", 20.0,
+                "healAmount", 10.0,
                 "radius", 2.0
         ));
         putAbilities(abilities, VillagerTowers.T2_ALLAY_TOWER.id(), Map.of(
@@ -123,13 +123,13 @@ public record TowerBalanceConfig(
                 "radius", 3.0
         ));
         putAbilities(abilities, VillagerTowers.T2_ANTI_TANKER_CAT_TOWER.id(), Map.of(
-                "nonWaveBonus", 1.0,
-                "tankBonus", 1.5,
-                "stackDamage", 1.0,
+                "nonWaveBonus", 0.5,
+                "tankBonus", 1.0,
+                "stackDamage", 0.1,
                 "stackDamageCap", 10.0
         ));
         putAbilities(abilities, VillagerTowers.T3_ANTI_TANKER_CAT_TOWER.id(), Map.of(
-                "nonWaveBonus", 2.0,
+                "nonWaveBonus", 1.0,
                 "tankBonus", 4.0,
                 "stackDamage", 0.2,
                 "stackDamageCap", 20.0
