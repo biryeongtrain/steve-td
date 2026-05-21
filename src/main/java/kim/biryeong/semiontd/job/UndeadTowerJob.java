@@ -25,10 +25,10 @@ public final class UndeadTowerJob extends SemionJob {
     public UndeadTowerJob() {
         super(
                 ID,
-                Component.literal("언데드 지휘관"),
+                Component.literal("언데드 빌더"),
                 List.of(
-                        SemionText.mini("<gray>흡혈, 피격 반격, 처치 성장으로 장기 교전에 강한 언데드 타워 직업입니다.</gray>"),
-                        SemionText.mini("<gray>좀비 트리는 탱킹과 반격, 스켈레톤 트리는 원거리 분산 화력 또는 근접 성장 화력으로 분기합니다.</gray>")
+                        SemionText.mini("<gray>다른 타워에 비해 성능은 낮지만 피흡이 달려있는 타워입니다.</gray>"),
+                        SemionText.mini("<yellow>테스트중</yellow>")
                 )
         );
     }

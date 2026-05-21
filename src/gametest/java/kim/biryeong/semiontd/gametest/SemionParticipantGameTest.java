@@ -75,6 +75,8 @@ import kim.biryeong.semiontd.game.TowerUpgradeResult;
 import kim.biryeong.semiontd.game.VanillaTeamBridge;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.SemionJob;
+import kim.biryeong.semiontd.job.UndeadTowerJob;
+import kim.biryeong.semiontd.job.VillagerTowerJob;
 import kim.biryeong.semiontd.map.ArenaLayout;
 import kim.biryeong.semiontd.music.SemionMusicLibrary;
 import kim.biryeong.semiontd.music.SemionMusicResourcePack;
@@ -4481,6 +4483,56 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertTrue(context, ProductionTowerCatalog.entry(UndeadTowers.T2_MELEE_TOWER).orElseThrow().create(stableUuid("undead-melee-catalog-owner"), TeamId.RED, 1, new GridPosition(0, 0, 0)) instanceof UndeadMeleeSkeletonTower, "Melee skeleton catalog entry should create UndeadMeleeSkeletonTower.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void builtInCatalogReloadRegistersTowerJobs(GameTestHelper context) {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+
+        if (!assertPresent(context, JobRegistry.find(VillagerTowerJob.ID), "Built-in reload should register the villager tower job.")) {
+            return;
+        }
+        if (!assertPresent(context, JobRegistry.find(UndeadTowerJob.ID), "Built-in reload should register the undead tower job.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void undeadTowerJobUsesUndeadStarterAndUpgradeTree(GameTestHelper context) {
+        UUID playerId = stableUuid("undead-job-tower-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, UndeadTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
+
+        Set<String> starterIds = ProductionTowerService.availableTowers(game, playerId).stream()
+                .map(entry -> entry.type().id())
+                .collect(java.util.stream.Collectors.toSet());
+        if (!assertEquals(
+                context,
+                Set.of(UndeadTowers.T1_ZOMBIE_TOWER.id(), UndeadTowers.T1_SKELETON_TOWER.id()),
+                starterIds,
+                "Undead job should expose only undead starter towers."
+        )) {
+            return;
+        }
+        TowerPlacementResult placement = ProductionTowerService.placeTower(game, playerId, towerPos, UndeadTowers.T1_ZOMBIE_TOWER.id());
+        if (!assertEquals(context, TowerPlacementResult.SUCCESS, placement, "Undead job should be allowed to place zombie tower.")) {
+            return;
+        }
+
+        Set<String> upgradeIds = ProductionTowerService.availableUpgrades(game, playerId, towerPos).stream()
+                .map(option -> option.targetType().id())
+                .collect(java.util.stream.Collectors.toSet());
+        if (!assertEquals(
+                context,
+                Set.of(UndeadTowers.T2_ZOMBIE_TOWER.id()),
+                upgradeIds,
+                "Undead zombie starter should connect to the husk upgrade for undead players."
+        )) {
             return;
         }
         context.succeed();

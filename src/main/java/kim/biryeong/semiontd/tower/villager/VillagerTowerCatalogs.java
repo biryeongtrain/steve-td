@@ -49,7 +49,7 @@ public final class VillagerTowerCatalogs {
         link(VillagerTowers.T2_LANE_CLEAR_CAT_TOWER, "t3_lane_clear_cat_tower", "강화 라클 캣 타워", VillagerTowers.T3_LANE_CLEAR_CAT_TOWER);
 
         if (JobRegistry.find(VillagerTowerJob.ID).isEmpty()) {
-            JobRegistry.register(new VillagerTowerJob());
+            JobRegistry.registerIfAbsent(new VillagerTowerJob());
         }
     }
 

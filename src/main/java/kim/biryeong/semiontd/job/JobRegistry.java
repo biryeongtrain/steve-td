@@ -27,6 +27,12 @@ public final class JobRegistry {
         return job;
     }
 
+    public static SemionJob registerIfAbsent(SemionJob job) {
+        Objects.requireNonNull(job, "job");
+        SemionJob existing = JOBS.putIfAbsent(job.id(), job);
+        return existing == null ? job : existing;
+    }
+
     public static Optional<SemionJob> find(ResourceLocation id) {
         return Optional.ofNullable(JOBS.get(id));
     }

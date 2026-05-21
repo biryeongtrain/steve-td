@@ -31,7 +31,7 @@ public final class UndeadTowerCatalogs {
         link(UndeadTowers.T2_MELEE_TOWER, "t3_melee_tower", "강화 위더 스켈레톤 타워", UndeadTowers.T3_MELEE_TOWER);
 
         if (JobRegistry.find(UndeadTowerJob.ID).isEmpty()) {
-            JobRegistry.register(new UndeadTowerJob());
+            JobRegistry.registerIfAbsent(new UndeadTowerJob());
         }
     }
 
