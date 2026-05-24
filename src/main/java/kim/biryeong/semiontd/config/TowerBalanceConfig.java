@@ -7,6 +7,7 @@ import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
 import kim.biryeong.semiontd.tower.villager.VillagerTowers;
+import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
 
 public record TowerBalanceConfig(
         Map<String, TowerStats> towers,
@@ -56,6 +57,15 @@ public record TowerBalanceConfig(
         addTower(towers, AnimalTowers.T1_RABBIT_TOWER);
         addTower(towers, AnimalTowers.T2_RABBIT_TOWER);
         addTower(towers, AnimalTowers.T3_RABBIT_TOWER);
+        addTower(towers, WarlockTowers.BASE_WARLOCK_TOWER);
+        addTower(towers, WarlockTowers.RANGED_WARLOCK_TOWER);
+        addTower(towers, WarlockTowers.MELEE_WARLOCK_TOWER);
+        addTower(towers, WarlockTowers.T1_SLAVE);
+        addTower(towers, WarlockTowers.T2_SLAVE);
+        addTower(towers, WarlockTowers.T3_SLAVE);
+        addTower(towers, WarlockTowers.T1_RANGED_SLAVE);
+        addTower(towers, WarlockTowers.T2_RANGED_SLAVE);
+        addTower(towers, WarlockTowers.T3_RANGED_SLAVE);
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
         putUpgrade(upgradeCosts, VillagerTowers.T1_SPLASH_TOWER, "villager_splash_t2", 110);
@@ -83,6 +93,12 @@ public record TowerBalanceConfig(
         putUpgrade(upgradeCosts, AnimalTowers.T2_WOLF_DPS_TOWER, "t3_wolf_dps_tower", 110);
         putUpgrade(upgradeCosts, AnimalTowers.T1_RABBIT_TOWER, "t2_rabbit_tower", 180);
         putUpgrade(upgradeCosts, AnimalTowers.T2_RABBIT_TOWER, "t3_rabbit_tower", 300);
+        putUpgrade(upgradeCosts, WarlockTowers.BASE_WARLOCK_TOWER, "ranged_warlock_tower", 0);
+        putUpgrade(upgradeCosts, WarlockTowers.BASE_WARLOCK_TOWER, "melee_warlock_tower", 0);
+        putUpgrade(upgradeCosts, WarlockTowers.T1_SLAVE, "t2_slave", 130);
+        putUpgrade(upgradeCosts, WarlockTowers.T2_SLAVE, "t3_slave", 280);
+        putUpgrade(upgradeCosts, WarlockTowers.T1_RANGED_SLAVE, "t2_ranged_slave", 100);
+        putUpgrade(upgradeCosts, WarlockTowers.T2_RANGED_SLAVE, "t3_ranged_slave", 240);
 
         LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>();
         putAbilities(abilities, VillagerTowers.T2_LIBRARIAN_TOWER.id(), Map.of(
@@ -283,6 +299,71 @@ public record TowerBalanceConfig(
                 "damagePerStack", 8.0,
                 "maxStackExtraIntervalReduction", 7.0,
                 "extraAttackDamageRatio", 1.0
+        ));
+        putAbilities(abilities, WarlockTowers.BASE_WARLOCK_TOWER.id(), Map.ofEntries(
+                Map.entry("baseSacrificeRadius", 6.0),
+                Map.entry("baseFatalHealRatio", 0.35),
+                Map.entry("basePermanentHealthRatio", 0.025),
+                Map.entry("basePermanentDamageRatio", 0.05),
+                Map.entry("sacrificeHealRatio", 0.0)
+        ));
+        putAbilities(abilities, WarlockTowers.RANGED_WARLOCK_TOWER.id(), Map.ofEntries(
+                Map.entry("lowHealthSacrificeThreshold", 0.30),
+                Map.entry("sacrificeRadius", 0.0),
+                Map.entry("roundStatRatio", 0.40),
+                Map.entry("roundIntervalReductionCap", 15.0),
+                Map.entry("permanentHealthRatio", 0.025),
+                Map.entry("permanentDamageRatio", 0.05),
+                Map.entry("lifeStealEvery", 5.0),
+                Map.entry("lifeStealPerStep", 0.005),
+                Map.entry("lifeStealCap", 0.30),
+                Map.entry("splashEvery", 10.0),
+                Map.entry("splashRadiusPerStep", 0.5),
+                Map.entry("splashDamageRatio", 0.75),
+                Map.entry("roundAbsorbDefenseThreshold", 5.0),
+                Map.entry("roundDamageReduction", 0.10),
+                Map.entry("healthBonusPerStack", 0.05),
+                Map.entry("maxHealthBonus", 0.25),
+                Map.entry("damageBonusPerStack", 0.15),
+                Map.entry("maxDamageBonus", 0.75)
+        ));
+        putAbilities(abilities, WarlockTowers.MELEE_WARLOCK_TOWER.id(), Map.ofEntries(
+                Map.entry("lowHealthSacrificeThreshold", 0.30),
+                Map.entry("sacrificeRadius", 0.0),
+                Map.entry("roundStatRatio", 0.60),
+                Map.entry("roundSplashRadiusPerSacrifice", 0.25),
+                Map.entry("splashDamageRatio", 0.75),
+                Map.entry("permanentHealthRatio", 0.05),
+                Map.entry("permanentDamageRatio", 0.025),
+                Map.entry("damageReductionEvery", 5.0),
+                Map.entry("damageReductionPerStep", 0.025),
+                Map.entry("damageReductionCap", 0.25),
+                Map.entry("lifeStealPerSacrifice", 0.01),
+                Map.entry("lifeStealCap", 0.30),
+                Map.entry("healthBonusPerStack", 0.15),
+                Map.entry("maxHealthBonus", 0.75),
+                Map.entry("damageBonusPerStack", 0.05),
+                Map.entry("maxDamageBonus", 0.25)
+        ));
+        putAbilities(abilities, WarlockTowers.T2_SLAVE.id(), Map.of(
+                "deathEffectRadius", 5.0,
+                "deathEffectDurationTicks", 72000.0,
+                "towerDamageTakenBonus", 0.05
+        ));
+        putAbilities(abilities, WarlockTowers.T3_SLAVE.id(), Map.of(
+                "deathEffectRadius", 5.0,
+                "deathEffectDurationTicks", 72000.0,
+                "towerDamageTakenBonus", 0.10
+        ));
+        putAbilities(abilities, WarlockTowers.T2_RANGED_SLAVE.id(), Map.of(
+                "deathEffectRadius", 10.0,
+                "deathEffectDurationTicks", 72000.0,
+                "attackSpeedReduction", 0.05
+        ));
+        putAbilities(abilities, WarlockTowers.T3_RANGED_SLAVE.id(), Map.of(
+                "deathEffectRadius", 10.0,
+                "deathEffectDurationTicks", 72000.0,
+                "attackSpeedReduction", 0.10
         ));
 
         return new TowerBalanceConfig(towers, upgradeCosts, abilities);

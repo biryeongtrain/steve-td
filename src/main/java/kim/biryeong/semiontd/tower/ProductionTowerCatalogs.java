@@ -6,9 +6,11 @@ import kim.biryeong.semiontd.job.AnimalTowerJob;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.UndeadTowerJob;
 import kim.biryeong.semiontd.job.VillagerTowerJob;
+import kim.biryeong.semiontd.job.WarlockTowerJob;
 import kim.biryeong.semiontd.tower.animal.AnimalTowerCatalogs;
 import kim.biryeong.semiontd.tower.undead.UndeadTowerCatalogs;
 import kim.biryeong.semiontd.tower.villager.VillagerTowerCatalogs;
+import kim.biryeong.semiontd.tower.warlock.WarlockTowerCatalogs;
 
 public final class ProductionTowerCatalogs {
     private ProductionTowerCatalogs() {
@@ -20,8 +22,10 @@ public final class ProductionTowerCatalogs {
         JobRegistry.registerIfAbsent(new VillagerTowerJob());
         JobRegistry.registerIfAbsent(new UndeadTowerJob());
         JobRegistry.registerIfAbsent(new AnimalTowerJob());
+        JobRegistry.registerIfAbsent(new WarlockTowerJob());
         VillagerTowerCatalogs.register();
         UndeadTowerCatalogs.register();
         AnimalTowerCatalogs.register();
+        WarlockTowerCatalogs.register();
     }
 }
