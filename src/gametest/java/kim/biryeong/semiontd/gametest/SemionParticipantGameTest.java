@@ -5532,7 +5532,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         SemionTowerEntity coreEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(core.entityId().orElseThrow());
         core.syncHealth(10.0);
         coreEntity.setHealth(10.0F);
-        core.onAttack(coreEntity, null, 0.0, false);
+        core.onDamaged(coreEntity, null, 50.0, 60.0, 10.0);
 
         if (!assertTrue(context, lane.towers().contains(t1Ranged), "Ranged warlock should leave the higher-numbered aggro tower alive after absorbing lowest priority.")) {
             return;
@@ -5550,6 +5550,12 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertEquals(context, 14, core.adjustAttackInterval(20), "Ranged warlock should gain attack interval reduction from absorbed faster tower.")) {
+            return;
+        }
+        core.syncHealth(10.0);
+        coreEntity.setHealth(10.0F);
+        core.onDamaged(coreEntity, null, 50.0, 60.0, 10.0);
+        if (!assertEquals(context, 0.0, t1Ranged.health(), "Ranged warlock should absorb the next living tower instead of reabsorbing a dead target.")) {
             return;
         }
         game.teams().get(TeamId.RED).resetForRound();
@@ -5627,6 +5633,59 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         context.succeed();
+    }
+
+    @GameTest(maxTicks = 120)
+    public void warlockTowerMovesTowardOutOfRangeMonster(GameTestHelper context) {
+        UUID playerId = stableUuid("warlock-move-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, WarlockTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos corePos = towerPlacementPos(lane);
+        WarlockTower core = new WarlockTower(
+                TowerBalanceRuntime.resolve(WarlockTowers.MELEE_WARLOCK_TOWER),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(corePos)
+        );
+        lane.addTower(core);
+        SemionTowerEntity towerEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(core.entityId().orElseThrow());
+        Vec3 initialTowerPosition = towerEntity.position();
+        SemionMonsterEntity target = spawnSummonEntity(
+                context,
+                "warlock-move-target",
+                TeamId.BLUE,
+                TeamId.RED,
+                1,
+                initialTowerPosition.add(8.0, 0.0, 0.0),
+                200.0,
+                0.0
+        );
+        target.setNoAi(true);
+        double initialDistance = initialTowerPosition.distanceTo(target.position());
+
+        context.runAfterDelay(40, () -> {
+            if (!(lane.arenaWorld().getEntity(core.entityId().orElseThrow()) instanceof SemionTowerEntity currentTowerEntity)) {
+                context.fail(Component.literal("Warlock tower entity should still exist while checking movement."));
+                return;
+            }
+            Vec3 currentTowerPosition = currentTowerEntity.position();
+            if (!assertTrue(
+                    context,
+                    currentTowerPosition.distanceTo(initialTowerPosition) > 0.1,
+                    "Warlock tower should move away from its initial position toward an out-of-range target."
+            )) {
+                return;
+            }
+            if (!assertTrue(
+                    context,
+                    currentTowerPosition.distanceTo(target.position()) < initialDistance,
+                    "Warlock tower should get closer to the out-of-range target."
+            )) {
+                return;
+            }
+            context.succeed();
+        });
     }
 
     @GameTest

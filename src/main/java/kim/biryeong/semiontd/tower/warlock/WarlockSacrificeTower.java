@@ -47,6 +47,7 @@ public class WarlockSacrificeTower extends EntityBackedTower {
         } else if (WarlockTowers.isRangedSlave(type())) {
             applyMonsterEffect(lane, TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION, value("attackSpeedReduction"));
         }
+        WarlockTower.refreshWarlockCoreStats(lane);
     }
 
     private void applyMonsterEffect(PlayerLane lane, TimedEffectType effectType, double magnitude) {

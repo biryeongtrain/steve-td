@@ -86,6 +86,10 @@ public class WarlockTower extends EntityBackedTower {
             }
             return;
         }
+        if (is(WarlockTowers.RANGED_WARLOCK_TOWER) && healthRatio(currentHealth) < ability("lowHealthSacrificeThreshold")) {
+            sacrifice(towerEntity, sacrificeRadius("sacrificeRadius"), Comparator.comparingInt(Tower::aggroPriority));
+            return;
+        }
         if (is(WarlockTowers.MELEE_WARLOCK_TOWER) && healthRatio(currentHealth) < ability("lowHealthSacrificeThreshold")) {
             sacrifice(
                     towerEntity,
@@ -115,7 +119,6 @@ public class WarlockTower extends EntityBackedTower {
     @Override
     public void tick(PlayerLane lane) {
         currentLane = lane;
-        refreshWarlockCoreStats(lane);
         super.tick(lane);
     }
 
@@ -157,6 +160,7 @@ public class WarlockTower extends EntityBackedTower {
         }
         Tower target = lane.towers().stream()
                 .filter(tower -> tower != this)
+                .filter(tower -> tower.health() > 0.0)
                 .filter(tower -> !WarlockTowers.isWarlockCore(tower.type()))
                 .filter(tower -> sameOwner(tower) && withinRadius(tower, radius))
                 .sorted(priority)
