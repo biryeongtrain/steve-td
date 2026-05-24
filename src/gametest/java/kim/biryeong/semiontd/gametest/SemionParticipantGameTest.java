@@ -19,6 +19,11 @@ import eu.pb4.placeholders.api.PlaceholderContext;
 import eu.pb4.placeholders.api.PlaceholderResult;
 import eu.pb4.placeholders.api.Placeholders;
 import kim.biryeong.semiontd.command.SemionCommands;
+import kim.biryeong.semiontd.buildguide.BuildAction;
+import kim.biryeong.semiontd.buildguide.BuildActionType;
+import kim.biryeong.semiontd.buildguide.BuildGuide;
+import kim.biryeong.semiontd.buildguide.BuildGuideIndicatorService;
+import kim.biryeong.semiontd.buildguide.BuildGuideService;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.CurrencyType;
 import kim.biryeong.semiontd.config.EconomyConfig;
@@ -27,6 +32,7 @@ import kim.biryeong.semiontd.config.ProgressionConfig;
 import kim.biryeong.semiontd.config.SemionConfigLoader;
 import kim.biryeong.semiontd.config.SummonConfig;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
+import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.config.WaveMonsterEntry;
 import kim.biryeong.semiontd.effect.TimedEffectSet;
 import kim.biryeong.semiontd.effect.TimedEffectType;
@@ -73,6 +79,7 @@ import kim.biryeong.semiontd.game.TowerPlacementResult;
 import kim.biryeong.semiontd.game.TowerSellResult;
 import kim.biryeong.semiontd.game.TowerUpgradeResult;
 import kim.biryeong.semiontd.game.VanillaTeamBridge;
+import kim.biryeong.semiontd.job.AnimalTowerJob;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.SemionJob;
 import kim.biryeong.semiontd.job.UndeadTowerJob;
@@ -104,6 +111,12 @@ import kim.biryeong.semiontd.tower.TowerCategory;
 import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
+import kim.biryeong.semiontd.tower.animal.AnimalTowerCatalogs;
+import kim.biryeong.semiontd.tower.animal.AnimalTowers;
+import kim.biryeong.semiontd.tower.animal.PigTower;
+import kim.biryeong.semiontd.tower.animal.RabbitTower;
+import kim.biryeong.semiontd.tower.animal.WolfTower;
+import kim.biryeong.semiontd.tower.undead.UndeadAnimalTower;
 import kim.biryeong.semiontd.tower.undead.UndeadDrownedTower;
 import kim.biryeong.semiontd.tower.undead.UndeadHuskTower;
 import kim.biryeong.semiontd.tower.undead.UndeadMeleeSkeletonTower;
@@ -1528,6 +1541,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         ProductionTowerCatalog.CatalogEntry entry = productionFixtureEntry();
         Component affordable = SemionDialogService.towerButtonLabel(entry, true);
         Component unaffordable = SemionDialogService.towerButtonLabel(entry, false);
+        Component recommended = SemionDialogService.towerButtonLabel(entry, false, true);
 
         if (!assertEquals(
                 context,
@@ -1542,6 +1556,342 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 ChatFormatting.RED.getColor(),
                 unaffordable.getStyle().getColor().getValue(),
                 "Unaffordable tower button labels should be red when the UI opens."
+        )) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                ChatFormatting.BLUE.getColor(),
+                recommended.getStyle().getColor().getValue(),
+                "Build-recommended tower button labels should be blue regardless of affordability."
+        )) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void buildRecommendedUpgradeButtonLabelsUseBlue(GameTestHelper context) {
+        TowerUpgradeOption option = new TowerUpgradeOption(
+                "manual_upgrade",
+                "Manual Upgrade",
+                productionFixtureType("manual_fixture_blue_upgrade_target", List.of()),
+                100
+        );
+        Component label = SemionDialogService.upgradeButtonLabel(option, false, true);
+        if (!assertEquals(
+                context,
+                ChatFormatting.BLUE.getColor(),
+                label.getStyle().getColor().getValue(),
+                "Build-recommended upgrade button labels should be blue."
+        )) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void buildGuideRecordsSuccessfulActionsAndPersistsPublishedGuide(GameTestHelper context) {
+        Path storePath;
+        try {
+            storePath = Files.createTempDirectory("semion-build-guide-test").resolve("build_guides.json");
+        } catch (java.io.IOException exception) {
+            context.fail(Component.literal("Failed to create temporary build guide store path."));
+            return;
+        }
+
+        BuildGuideService service = new BuildGuideService(storePath);
+        UUID redId = stableUuid("build-guide-red-owner");
+        UUID blueId = stableUuid("build-guide-blue-owner");
+        reloadDefaultIncomeSummons();
+        ProductionTowerCatalog.clearForTesting();
+        TowerType starterType = productionFixtureType("manual_fixture_build_record_starter", List.of());
+        TowerType targetType = productionFixtureType("manual_fixture_build_record_target", List.of());
+        ProductionTowerCatalog.registerStarter(starterType);
+        ProductionTowerCatalog.register(targetType, 2);
+        ProductionTowerCatalog.linkUpgrade(starterType, "manual_upgrade", "Manual Upgrade", targetType, 0);
+
+        SemionGame game = new SemionGame(
+                EconomyConfig.defaultConfig(),
+                new WaveConfig(List.of(), 20, null),
+                testArena(context),
+                service
+        );
+        ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                MatchMode.NORMAL,
+                List.of(
+                        new AssignedParticipant(redId, "red", TeamId.RED, 1),
+                        new AssignedParticipant(blueId, "blue", TeamId.BLUE, 1)
+                ),
+                java.util.Set.of(),
+                2
+        );
+        if (!assertTrue(context, game.start(context.getLevel().getServer(), plan), "Build recording game should start.")) {
+            return;
+        }
+
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
+        ProductionTowerService.placeTower(game, redId, towerPos, "missing_tower");
+        if (!assertEquals(
+                context,
+                TowerPlacementResult.SUCCESS,
+                ProductionTowerService.placeTower(game, redId, towerPos, starterType.id()),
+                "Successful tower placement should be accepted for build recording."
+        )) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                TowerUpgradeResult.SUCCESS,
+                ProductionTowerService.upgradeTower(game, redId, towerPos, "manual_upgrade"),
+                "Successful tower upgrade should be accepted for build recording."
+        )) {
+            return;
+        }
+        var summon = game.summonMonster(redId, "chicken");
+        if (!assertEquals(
+                context,
+                kim.biryeong.semiontd.summon.SummonResultType.SUCCESS,
+                summon.type(),
+                "Successful summon should be accepted for build recording."
+        )) {
+            return;
+        }
+        if (!assertTrue(context, game.upgradeGasProduction(redId), "Successful emerald production upgrade should be accepted for build recording.")) {
+            return;
+        }
+
+        service.finishMatch(game, 3);
+        Optional<BuildGuide> published = service.publishLastRecording(redId, "테스트 빌드");
+        if (!assertPresent(context, published, "Finished recording should publish a build guide.")) {
+            return;
+        }
+        BuildGuide guide = published.get();
+        if (!assertEquals(context, 4, guide.actions().size(), "Only successful placement, upgrade, summon, and emerald upgrade actions should be recorded.")) {
+            return;
+        }
+        if (!assertTrue(context, guide.isPrivate(), "Newly recorded build guides should be private by default.")) {
+            return;
+        }
+        String guideCode = guide.code();
+        if (!assertTrue(context, service.publicGuides().stream().noneMatch(found -> found.code().equals(guideCode)), "Private guides should not appear in the public build list.")) {
+            return;
+        }
+        if (!assertTrue(context, service.myGuides(redId).stream().anyMatch(found -> found.code().equals(guideCode)), "Owner should see private guides in my build list.")) {
+            return;
+        }
+        if (!assertTrue(context, service.findViewable(guide.code(), blueId).isEmpty(), "Other players should not view private guides.")) {
+            return;
+        }
+        if (!assertTrue(context, !service.track(blueId, guide.code()), "Other players should not track private guides.")) {
+            return;
+        }
+        if (!assertTrue(context, service.setVisibility(blueId, guide.code(), BuildGuide.VISIBILITY_PUBLIC).isEmpty(), "Non-owners should not publish another player's guide.")) {
+            return;
+        }
+        guide = service.setVisibility(redId, guide.code(), BuildGuide.VISIBILITY_PUBLIC).orElseThrow();
+        if (!assertTrue(context, guide.isPublic(), "Owner should be able to publish a private guide.")) {
+            return;
+        }
+        if (!assertTrue(context, service.publicGuides().stream().anyMatch(found -> found.code().equals(guideCode)), "Published guides should appear in the public build list.")) {
+            return;
+        }
+        if (!assertTrue(context, guide.actions().stream().anyMatch(action -> action.type() == BuildActionType.TOWER_PLACE), "Published guide should include tower placement.")) {
+            return;
+        }
+        BuildAction placementAction = guide.actions().stream()
+                .filter(action -> action.type() == BuildActionType.TOWER_PLACE)
+                .findFirst()
+                .orElseThrow();
+        if (!assertTrue(context, placementAction.hasLaneRelativePosition(), "Recorded tower placement should store a lane-relative position.")) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                starterType.displayName(),
+                BuildGuideService.subjectDisplayName(placementAction),
+                "Build guide tower placement display should use the tower display name instead of the internal id."
+        )) {
+            return;
+        }
+        GridPosition redAbsolutePosition = GridPosition.from(towerPos);
+        if (!assertEquals(
+                context,
+                redAbsolutePosition,
+                service.resolveActionPosition(game, redId, placementAction).orElse(null),
+                "Lane-relative recorded placement should resolve back to the original player lane position."
+        )) {
+            return;
+        }
+        service.track(blueId, guide.code());
+        GridPosition blueResolvedPosition = service.resolveActionPosition(game, blueId, placementAction).orElse(null);
+        if (!assertTrue(context, blueResolvedPosition != null, "Lane-relative recorded placement should resolve for another player lane.")) {
+            return;
+        }
+        if (!assertTrue(
+                context,
+                service.isRecommendedTower(game, blueId, placementAction.round(), blueResolvedPosition, starterType.id()),
+                "Tracked placement recommendations should compare against the current player's lane-relative absolute position."
+        )) {
+            return;
+        }
+        if (!assertTrue(context, guide.actions().stream().anyMatch(action -> action.type() == BuildActionType.TOWER_UPGRADE), "Published guide should include tower upgrade.")) {
+            return;
+        }
+        BuildAction upgradeAction = guide.actions().stream()
+                .filter(action -> action.type() == BuildActionType.TOWER_UPGRADE)
+                .findFirst()
+                .orElseThrow();
+        if (!assertEquals(
+                context,
+                "Manual Upgrade",
+                BuildGuideService.subjectDisplayName(upgradeAction),
+                "Build guide tower upgrade display should use the upgrade display name instead of the internal id."
+        )) {
+            return;
+        }
+        if (!assertTrue(context, guide.actions().stream().anyMatch(action -> action.type() == BuildActionType.SUMMON), "Published guide should include summon purchase.")) {
+            return;
+        }
+        BuildAction summonAction = guide.actions().stream()
+                .filter(action -> action.type() == BuildActionType.SUMMON)
+                .findFirst()
+                .orElseThrow();
+        if (!assertTrue(
+                context,
+                !BuildGuideService.subjectDisplayName(summonAction).equals(summonAction.subjectId()),
+                "Build guide summon display should use the summon display name instead of the internal id."
+        )) {
+            return;
+        }
+        if (!assertTrue(context, guide.actions().stream().anyMatch(action -> action.type() == BuildActionType.EMERALD_PRODUCTION_UPGRADE), "Published guide should include emerald production upgrade.")) {
+            return;
+        }
+
+        BuildGuideService reloaded = new BuildGuideService(storePath);
+        if (!assertPresent(context, reloaded.find(guide.code()), "Published guide should survive build store reload.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void buildGuideRoundActionsFilterCurrentRound(GameTestHelper context) {
+        BuildGuide guide = new BuildGuide(
+                "ABC123",
+                "라운드 필터",
+                stableUuid("build-round-author"),
+                "author",
+                "semion-td:default",
+                4,
+                1L,
+                BuildGuide.VISIBILITY_PUBLIC,
+                List.of(
+                        BuildAction.towerPlace(1, "tower_a", new GridPosition(1, 64, 1), 0),
+                        BuildAction.towerPlace(2, "tower_b", new GridPosition(2, 64, 2), 0)
+                )
+        );
+        List<BuildAction> roundTwo = BuildGuideService.actionsForRound(guide, 2);
+        if (!assertEquals(context, 1, roundTwo.size(), "Round action filtering should include only the requested round.")) {
+            return;
+        }
+        if (!assertEquals(context, "tower_b", roundTwo.getFirst().subjectId(), "Round action filtering should return the current-round action.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void buildGuidePublicListsHideDebugGuides(GameTestHelper context) {
+        BuildGuideService service = new BuildGuideService(null);
+        UUID authorId = stableUuid("build-debug-filter-author");
+        BuildGuide debugGuide = service.saveDebugGuide(
+                "DEBUG1",
+                "디버그 빌드",
+                authorId,
+                "debug",
+                "semion-td:debug",
+                1,
+                List.of(BuildAction.towerPlace(1, "debug_tower", new GridPosition(0, 0, 0), 0))
+        );
+        BuildGuide publicGuide = service.saveDebugGuide(
+                "LIVE01",
+                "실제 빌드",
+                authorId,
+                "debug",
+                "semion-td:default",
+                1,
+                List.of(BuildAction.towerPlace(1, "live_tower", new GridPosition(0, 0, 0), 0))
+        );
+
+        if (!assertTrue(context, service.find(debugGuide.code()).isPresent(), "Debug guide should remain addressable by code for debug commands.")) {
+            return;
+        }
+        if (!assertTrue(context, service.publicGuides().stream().noneMatch(BuildGuideService::isDebugGuide), "Normal public build list should hide debug guides.")) {
+            return;
+        }
+        if (!assertTrue(context, service.publicGuides().stream().anyMatch(guide -> guide.code().equals(publicGuide.code())), "Normal public build list should still include real guides.")) {
+            return;
+        }
+        if (!assertTrue(
+                context,
+                service.recentGuides(authorId, List.of(debugGuide.code(), publicGuide.code())).stream().noneMatch(BuildGuideService::isDebugGuide),
+                "Normal recent build list should hide debug guides."
+        )) {
+            return;
+        }
+        if (!assertTrue(context, service.debugPublicGuides().stream().anyMatch(BuildGuideService::isDebugGuide), "Debug build list should still include debug guides.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void buildGuideOwnerCanToggleVisibilityAndDelete(GameTestHelper context) {
+        BuildGuideService service = new BuildGuideService(null);
+        UUID ownerId = stableUuid("build-owner-management-owner");
+        UUID otherId = stableUuid("build-owner-management-other");
+        BuildGuide guide = service.saveDebugGuide(
+                "LIVE02",
+                "관리 테스트",
+                ownerId,
+                "owner",
+                "semion-td:default",
+                2,
+                List.of(BuildAction.towerPlace(1, "live_tower", new GridPosition(0, 0, 0), 0))
+        );
+
+        if (!assertTrue(context, service.setVisibility(otherId, guide.code(), BuildGuide.VISIBILITY_PRIVATE).isEmpty(), "Non-owner should not change build visibility.")) {
+            return;
+        }
+        guide = service.setVisibility(ownerId, guide.code(), BuildGuide.VISIBILITY_PRIVATE).orElseThrow();
+        if (!assertTrue(context, guide.isPrivate(), "Owner should be able to make a build private.")) {
+            return;
+        }
+        if (!assertTrue(context, service.findViewable(guide.code(), otherId).isEmpty(), "Private owner builds should not be viewable by other players.")) {
+            return;
+        }
+        if (!assertTrue(context, !service.delete(otherId, guide.code()), "Non-owner should not delete another player's build.")) {
+            return;
+        }
+        if (!assertTrue(context, service.delete(ownerId, guide.code()), "Owner should be able to delete their build.")) {
+            return;
+        }
+        if (!assertTrue(context, service.find(guide.code()).isEmpty(), "Deleted build should be removed from the store.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void buildGuideIndicatorUsesVanillaForPlayersWithoutGcb(GameTestHelper context) {
+        var player = context.makeMockServerPlayerInLevel();
+        if (!assertEquals(
+                context,
+                BuildGuideIndicatorService.DeliveryPath.VANILLA,
+                BuildGuideIndicatorService.deliveryPath(player),
+                "Players without the GCB client mod should use the vanilla particle fallback."
         )) {
             return;
         }
@@ -4518,6 +4868,188 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void pigTowerStacksHealthDamageReductionAndSplash(GameTestHelper context) {
+        UUID playerId = stableUuid("pig-stack-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos base = towerPlacementPos(lane);
+        PigTower tower = new PigTower(
+                AnimalTowers.T3_PIG_TOWER,
+                playerId,
+                TeamId.RED,
+                1,
+                new GridPosition(base.getX(), base.getY(), base.getZ())
+        );
+        lane.addTower(tower);
+        lane.addTower(new PigTower(AnimalTowers.T1_PIG_TOWER, playerId, TeamId.RED, 1, new GridPosition(base.getX() + 1, base.getY(), base.getZ())));
+        lane.addTower(new PigTower(AnimalTowers.T1_PIG_TOWER, playerId, TeamId.RED, 1, new GridPosition(base.getX() + 2, base.getY(), base.getZ())));
+        lane.addTower(new PigTower(AnimalTowers.T1_PIG_TOWER, playerId, TeamId.RED, 1, new GridPosition(base.getX() + 3, base.getY(), base.getZ())));
+
+        if (!assertClose(context, 370.0, tower.currentMaxHealth(), "T3 pig should gain max health from three same-owner pig stacks.")) {
+            return;
+        }
+        if (!assertClose(context, 370.0, tower.health(), "T3 pig should gain current health when stacks increase.")) {
+            return;
+        }
+        if (!assertClose(context, 45.0, tower.modifyAttackDamage(null, null, 15.0), "T3 pig should gain damage from three pig stacks.")) {
+            return;
+        }
+        if (!assertClose(context, 90.0, tower.modifyIncomingDamage(null, null, 100.0), "T3 pig should reduce incoming damage at max stacks.")) {
+            return;
+        }
+
+        SemionTowerEntity towerEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(tower.entityId().orElseThrow());
+        Vec3 origin = towerEntity.position().add(1.0, 0.0, 0.0);
+        SemionMonsterEntity primary = spawnRoleMonsterEntity(context, "pig-primary", Optional.empty(), TeamId.RED, 1, origin, 100.0, List.of(SummonRole.RUSH));
+        SemionMonsterEntity nearby = spawnRoleMonsterEntity(context, "pig-nearby", Optional.empty(), TeamId.RED, 1, origin.add(0.75, 0.0, 0.0), 100.0, List.of(SummonRole.RUSH));
+        SemionMonsterEntity far = spawnRoleMonsterEntity(context, "pig-far", Optional.empty(), TeamId.RED, 1, origin.add(3.0, 0.0, 0.0), 100.0, List.of(SummonRole.RUSH));
+
+        tower.onAttack(towerEntity, primary, 20.0, false);
+        if (!assertClose(context, 90.0, nearby.runtimeMonster().health(), "T3 pig should splash half damage at max stacks.")) {
+            return;
+        }
+        if (!assertClose(context, 100.0, far.runtimeMonster().health(), "T3 pig splash should ignore enemies outside radius.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void wolfTowerStacksDamageIntervalAndSplash(GameTestHelper context) {
+        UUID playerId = stableUuid("wolf-stack-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos base = towerPlacementPos(lane);
+        WolfTower tower = new WolfTower(
+                AnimalTowers.T2_WOLF_DPS_TOWER,
+                playerId,
+                TeamId.RED,
+                1,
+                new GridPosition(base.getX(), base.getY(), base.getZ())
+        );
+        lane.addTower(tower);
+        for (int i = 1; i <= 5; i++) {
+            lane.addTower(new WolfTower(AnimalTowers.T1_WOLF_TOWER, playerId, TeamId.RED, 1, new GridPosition(base.getX() + i, base.getY(), base.getZ() + 1)));
+        }
+
+        if (!assertClose(context, 28.0, tower.modifyAttackDamage(null, null, 8.0), "T2 wolf should gain damage from five same-owner wolf stacks.")) {
+            return;
+        }
+        if (!assertEquals(context, 7, tower.adjustAttackInterval(15), "T2 wolf should reduce attack interval from stacks and max-stack bonus.")) {
+            return;
+        }
+
+        SemionTowerEntity towerEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(tower.entityId().orElseThrow());
+        Vec3 origin = towerEntity.position().add(1.0, 0.0, 0.0);
+        SemionMonsterEntity primary = spawnRoleMonsterEntity(context, "wolf-primary", Optional.empty(), TeamId.RED, 1, origin, 100.0, List.of(SummonRole.RUSH));
+        SemionMonsterEntity nearby = spawnRoleMonsterEntity(context, "wolf-nearby", Optional.empty(), TeamId.RED, 1, origin.add(1.0, 0.0, 0.0), 100.0, List.of(SummonRole.RUSH));
+        SemionMonsterEntity far = spawnRoleMonsterEntity(context, "wolf-far", Optional.empty(), TeamId.RED, 1, origin.add(3.0, 0.0, 0.0), 100.0, List.of(SummonRole.RUSH));
+
+        tower.onAttack(towerEntity, primary, 20.0, false);
+        if (!assertClose(context, 90.0, nearby.runtimeMonster().health(), "T2 wolf should splash half damage.")) {
+            return;
+        }
+        if (!assertClose(context, 100.0, far.runtimeMonster().health(), "T2 wolf splash should ignore enemies outside radius.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void rabbitTowerStacksDamageIntervalAndExtraAttack(GameTestHelper context) {
+        UUID playerId = stableUuid("rabbit-stack-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos base = towerPlacementPos(lane);
+        RabbitTower tower = new RabbitTower(
+                AnimalTowers.T3_RABBIT_TOWER,
+                playerId,
+                TeamId.RED,
+                1,
+                new GridPosition(base.getX(), base.getY(), base.getZ())
+        );
+        lane.addTower(tower);
+        for (int i = 1; i <= 5; i++) {
+            lane.addTower(new RabbitTower(AnimalTowers.T1_RABBIT_TOWER, playerId, TeamId.RED, 1, new GridPosition(base.getX() + i, base.getY(), base.getZ() + 2)));
+        }
+
+        if (!assertClose(context, 50.0, tower.modifyAttackDamage(null, null, 10.0), "T3 rabbit should gain damage from five same-owner rabbit stacks.")) {
+            return;
+        }
+        if (!assertEquals(context, 8, tower.adjustAttackInterval(15), "T3 rabbit should reduce attack interval at max stacks.")) {
+            return;
+        }
+
+        SemionTowerEntity towerEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(tower.entityId().orElseThrow());
+        SemionMonsterEntity target = spawnRoleMonsterEntity(
+                context,
+                "rabbit-extra-target",
+                Optional.empty(),
+                TeamId.RED,
+                1,
+                towerEntity.position().add(1.0, 0.0, 0.0),
+                100.0,
+                List.of(SummonRole.RUSH)
+        );
+        tower.onAttack(towerEntity, target, 20.0, false);
+        if (!assertClose(context, 80.0, target.runtimeMonster().health(), "T3 rabbit should make one extra full-damage attack at max stacks.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void undeadAnimalTowerDebuffsMonsterAttackAndTowerDamageTaken(GameTestHelper context) {
+        UUID playerId = stableUuid("undead-animal-debuff-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos base = towerPlacementPos(lane);
+        UndeadAnimalTower firstTower = new UndeadAnimalTower(
+                UndeadTowers.T2_UNDEAD_ANIMAL_TOWER,
+                playerId,
+                TeamId.RED,
+                1,
+                new GridPosition(base.getX(), base.getY(), base.getZ())
+        );
+        UndeadAnimalTower secondTower = new UndeadAnimalTower(
+                UndeadTowers.T2_UNDEAD_ANIMAL_TOWER,
+                playerId,
+                TeamId.RED,
+                1,
+                new GridPosition(base.getX() + 1, base.getY(), base.getZ())
+        );
+        lane.addTower(firstTower);
+        lane.addTower(secondTower);
+
+        SemionTowerEntity towerEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(firstTower.entityId().orElseThrow());
+        SemionMonsterEntity monster = spawnAttackMonsterEntity(
+                context,
+                "undead-animal-target",
+                TeamId.RED,
+                1,
+                towerEntity.position().add(1.0, 0.0, 0.0),
+                100.0,
+                20.0
+        );
+
+        firstTower.tick(lane);
+        secondTower.tick(lane);
+        if (!assertClose(context, 0.10, monster.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION), "Undead animal tower should apply non-stacking monster attack damage reduction.")) {
+            return;
+        }
+        if (!assertClose(context, 0.10, monster.activeTimedEffectMagnitude(TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS), "T2 undead animal tower should apply non-stacking tower damage taken bonus.")) {
+            return;
+        }
+        if (!assertClose(context, 18.0, monster.attackDamageAmount(), "Monster attack damage reduction should lower runtime attack damage.")) {
+            return;
+        }
+        if (!assertClose(context, 110.0, monster.towerDamageTaken(100.0), "Tower damage taken bonus should increase runtime tower damage.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void villagerAntiTankerCatBonusesNonWaveAndTankTargets(GameTestHelper context) {
         AntiTankerCatTower catTower = new AntiTankerCatTower(
                 VillagerTowers.T2_ANTI_TANKER_CAT_TOWER,
@@ -4640,13 +5172,16 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         ProductionTowerCatalog.clearForTesting();
         UndeadTowerCatalogs.register();
 
-        if (!assertEquals(context, 2L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Undead catalog should expose two starter tower families.")) {
+        if (!assertEquals(context, 3L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Undead catalog should expose three starter tower families.")) {
             return;
         }
         if (!assertEquals(context, 1, ProductionTowerCatalog.upgrades(UndeadTowers.T1_ZOMBIE_TOWER).size(), "Zombie starter should link to husk tower.")) {
             return;
         }
         if (!assertEquals(context, 2, ProductionTowerCatalog.upgrades(UndeadTowers.T1_SKELETON_TOWER).size(), "Skeleton starter should branch to ranged and melee towers.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, ProductionTowerCatalog.upgrades(UndeadTowers.T1_UNDEAD_ANIMAL_TOWER).size(), "Undead animal starter should link to skeleton horse tower.")) {
             return;
         }
         if (!assertTrue(context, ProductionTowerCatalog.entry(UndeadTowers.T1_ZOMBIE_TOWER).orElseThrow().create(stableUuid("undead-zombie-catalog-owner"), TeamId.RED, 1, new GridPosition(0, 0, 0)) instanceof UndeadZombieTower, "Zombie catalog entry should create UndeadZombieTower.")) {
@@ -4664,6 +5199,71 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertTrue(context, ProductionTowerCatalog.entry(UndeadTowers.T2_MELEE_TOWER).orElseThrow().create(stableUuid("undead-melee-catalog-owner"), TeamId.RED, 1, new GridPosition(0, 0, 0)) instanceof UndeadMeleeSkeletonTower, "Melee skeleton catalog entry should create UndeadMeleeSkeletonTower.")) {
             return;
         }
+        if (!assertTrue(context, ProductionTowerCatalog.entry(UndeadTowers.T1_UNDEAD_ANIMAL_TOWER).orElseThrow().create(stableUuid("undead-animal-catalog-owner"), TeamId.RED, 1, new GridPosition(0, 0, 0)) instanceof UndeadAnimalTower, "Undead animal catalog entry should create UndeadAnimalTower.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void animalTowerCatalogRegistersAndLinksAnimalFamilies(GameTestHelper context) {
+        ProductionTowerCatalog.clearForTesting();
+        AnimalTowerCatalogs.register();
+
+        if (!assertEquals(context, 3L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Animal catalog should expose pig, wolf, and rabbit starter families.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, ProductionTowerCatalog.upgrades(AnimalTowers.T1_PIG_TOWER).size(), "Pig starter should link to T2 pig tower.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, ProductionTowerCatalog.upgrades(AnimalTowers.T2_PIG_TOWER).size(), "T2 pig should link to T3 pig tower.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, ProductionTowerCatalog.upgrades(AnimalTowers.T1_WOLF_TOWER).size(), "Wolf starter should link to T2 wolf tower.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, ProductionTowerCatalog.upgrades(AnimalTowers.T2_WOLF_DPS_TOWER).size(), "T2 wolf should link to T3 wolf tower.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, ProductionTowerCatalog.upgrades(AnimalTowers.T1_RABBIT_TOWER).size(), "Rabbit starter should link to T2 rabbit tower.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, ProductionTowerCatalog.upgrades(AnimalTowers.T2_RABBIT_TOWER).size(), "T2 rabbit should link to T3 rabbit tower.")) {
+            return;
+        }
+        if (!assertTrue(context, ProductionTowerCatalog.entry(AnimalTowers.T1_PIG_TOWER).orElseThrow().create(stableUuid("pig-catalog-owner"), TeamId.RED, 1, new GridPosition(0, 0, 0)) instanceof PigTower, "Pig catalog entry should create PigTower.")) {
+            return;
+        }
+        if (!assertTrue(context, ProductionTowerCatalog.entry(AnimalTowers.T1_WOLF_TOWER).orElseThrow().create(stableUuid("wolf-catalog-owner"), TeamId.RED, 1, new GridPosition(0, 0, 0)) instanceof WolfTower, "Wolf catalog entry should create WolfTower.")) {
+            return;
+        }
+        if (!assertTrue(context, ProductionTowerCatalog.entry(AnimalTowers.T1_RABBIT_TOWER).orElseThrow().create(stableUuid("rabbit-catalog-owner"), TeamId.RED, 1, new GridPosition(0, 0, 0)) instanceof RabbitTower, "Rabbit catalog entry should create RabbitTower.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void animalTowerDescriptionsRenderConfiguredAbilityValues(GameTestHelper context) {
+        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        Map<String, Map<String, Double>> abilities = new java.util.LinkedHashMap<>(defaults.abilities());
+        Map<String, Double> rabbitAbilities = new java.util.LinkedHashMap<>(abilities.get(AnimalTowers.T3_RABBIT_TOWER.id()));
+        rabbitAbilities.put("damagePerStack", 12.0);
+        rabbitAbilities.put("maxStackExtraIntervalReduction", 9.0);
+        abilities.put(AnimalTowers.T3_RABBIT_TOWER.id(), rabbitAbilities);
+
+        TowerBalanceRuntime.apply(new TowerBalanceConfig(defaults.towers(), defaults.upgradeCosts(), abilities));
+        try {
+            TowerType resolved = TowerBalanceRuntime.resolve(AnimalTowers.T3_RABBIT_TOWER);
+            if (!assertTrue(context, resolved.description().stream().anyMatch(line -> line.contains("공격력이 12 증가")), "Rabbit description should render configured damage per stack.")) {
+                return;
+            }
+            if (!assertTrue(context, resolved.description().stream().anyMatch(line -> line.contains("공격 주기가 9틱 감소")), "Rabbit description should render configured interval reduction.")) {
+                return;
+            }
+        } finally {
+            TowerBalanceRuntime.apply(defaults);
+        }
         context.succeed();
     }
 
@@ -4675,6 +5275,12 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertPresent(context, JobRegistry.find(UndeadTowerJob.ID), "Built-in reload should register the undead tower job.")) {
+            return;
+        }
+        if (!assertPresent(context, JobRegistry.find(AnimalTowerJob.ID), "Built-in reload should register the animal tower job.")) {
+            return;
+        }
+        if (!assertEquals(context, 10L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose villager, undead, and animal starter families.")) {
             return;
         }
         context.succeed();
@@ -4692,7 +5298,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 .collect(java.util.stream.Collectors.toSet());
         if (!assertEquals(
                 context,
-                Set.of(UndeadTowers.T1_ZOMBIE_TOWER.id(), UndeadTowers.T1_SKELETON_TOWER.id()),
+                Set.of(
+                        UndeadTowers.T1_ZOMBIE_TOWER.id(),
+                        UndeadTowers.T1_SKELETON_TOWER.id(),
+                        UndeadTowers.T1_UNDEAD_ANIMAL_TOWER.id()
+                ),
                 starterIds,
                 "Undead job should expose only undead starter towers."
         )) {
@@ -4711,6 +5321,62 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 Set.of(UndeadTowers.T2_ZOMBIE_TOWER.id()),
                 upgradeIds,
                 "Undead zombie starter should connect to the husk upgrade for undead players."
+        )) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void animalTowerJobUsesAnimalStarterAndUpgradeTree(GameTestHelper context) {
+        UUID playerId = stableUuid("animal-job-tower-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, AnimalTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
+
+        Set<String> starterIds = ProductionTowerService.availableTowers(game, playerId).stream()
+                .map(entry -> entry.type().id())
+                .collect(java.util.stream.Collectors.toSet());
+        if (!assertEquals(
+                context,
+                Set.of(
+                        AnimalTowers.T1_PIG_TOWER.id(),
+                        AnimalTowers.T1_WOLF_TOWER.id(),
+                        AnimalTowers.T1_RABBIT_TOWER.id()
+                ),
+                starterIds,
+                "Animal job should expose only animal starter towers."
+        )) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                TowerPlacementResult.TOWER_NOT_ALLOWED,
+                ProductionTowerService.placeTower(game, playerId, towerPos, UndeadTowers.T1_ZOMBIE_TOWER.id()),
+                "Animal job should reject undead starter placement."
+        )) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                TowerPlacementResult.TOWER_NOT_ALLOWED,
+                ProductionTowerService.placeTower(game, playerId, towerPos, VillagerTowers.T1_SPLASH_TOWER.id()),
+                "Animal job should reject villager starter placement."
+        )) {
+            return;
+        }
+        TowerPlacementResult placement = ProductionTowerService.placeTower(game, playerId, towerPos, AnimalTowers.T1_RABBIT_TOWER.id());
+        if (!assertEquals(context, TowerPlacementResult.SUCCESS, placement, "Animal job should be allowed to place rabbit tower.")) {
+            return;
+        }
+        Set<String> upgradeIds = ProductionTowerService.availableUpgrades(game, playerId, towerPos).stream()
+                .map(option -> option.targetType().id())
+                .collect(java.util.stream.Collectors.toSet());
+        if (!assertEquals(
+                context,
+                Set.of(AnimalTowers.T2_RABBIT_TOWER.id()),
+                upgradeIds,
+                "Animal rabbit starter should connect only to the rabbit upgrade."
         )) {
             return;
         }
@@ -5364,6 +6030,41 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         );
         SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
         entity.configureFrom(monster, lane.laneLayout());
+        entity.setPos(position);
+        context.getLevel().addFreshEntity(entity);
+        return entity;
+    }
+
+    private static SemionMonsterEntity spawnAttackMonsterEntity(
+            GameTestHelper context,
+            String id,
+            TeamId targetTeam,
+            int targetLaneId,
+            Vec3 position,
+            double maxHealth,
+            double attackDamage
+    ) {
+        Monster monster = new Monster(
+                id,
+                targetTeam,
+                targetLaneId,
+                Optional.empty(),
+                Optional.empty(),
+                maxHealth,
+                0,
+                attackDamage,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                null,
+                DamageType.PHYSICAL,
+                0,
+                SummonTier.T1,
+                List.of(SummonRole.RUSH),
+                0
+        );
+        SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
+        entity.configureFrom(monster, null);
+        entity.setNoGravity(true);
         entity.setPos(position);
         context.getLevel().addFreshEntity(entity);
         return entity;

@@ -864,6 +864,17 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
         if (!assertTrue(context, manager.lastMatchResult().isPresent(), "Game manager should retain the last match result after finalization.")) {
             return;
         }
+        if (!assertTrue(context, getField(manager, "pendingMatchResultDialog") != null, "Game manager should queue the result dialog after sending players to lobby.")) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                SemionGameManager.MATCH_RESULT_DIALOG_AFTER_LOBBY_DELAY_TICKS,
+                getField(manager, "pendingMatchResultDialogDelayTicks"),
+                "Result dialog should wait after lobby teleport before opening."
+        )) {
+            return;
+        }
         if (!assertEquals(context, Set.of(TeamId.RED), manager.lastMatchResult().orElseThrow().winningTeams(), "Last match result should preserve the winning team.")) {
             return;
         }
@@ -874,6 +885,12 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
             return;
         }
         if (!assertTrue(context, Files.exists(storePath), "Manager finalization should persist progression in the dedicated file.")) {
+            return;
+        }
+        for (int i = 0; i < SemionGameManager.MATCH_RESULT_DIALOG_AFTER_LOBBY_DELAY_TICKS + 1; i++) {
+            manager.tick(server);
+        }
+        if (!assertTrue(context, getField(manager, "pendingMatchResultDialog") == null, "Game manager should clear the queued result dialog after showing it.")) {
             return;
         }
         context.succeed();
@@ -922,6 +939,16 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
             field.set(target, value);
         } catch (ReflectiveOperationException exception) {
             throw new RuntimeException("Failed to set field " + fieldName + ".", exception);
+        }
+    }
+
+    private static Object getField(Object target, String fieldName) {
+        try {
+            Field field = target.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            return field.get(target);
+        } catch (ReflectiveOperationException exception) {
+            throw new RuntimeException("Failed to get field " + fieldName + ".", exception);
         }
     }
 
