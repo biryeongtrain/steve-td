@@ -323,7 +323,7 @@ public final class SemionGame {
     }
 
     public SummonResult summonMonster(UUID playerId, String summonId) {
-        if (phase != RoundPhase.PREPARE_AND_SUMMON) {
+        if (phase != RoundPhase.PREPARE_AND_SUMMON && phase != RoundPhase.LANE_WAVE) {
             return SummonResult.failure(SummonResultType.INVALID_PHASE, summonId);
         }
 
@@ -369,11 +369,16 @@ public final class SemionGame {
 
         economyService.applySummonIncome(player, incomeGain);
         player.matchStats().recordSummonedMonster();
-        Monster monster = type.get().createMonster(summonContext, targetTeam.get().id(), targetLane.get().laneId());
+        int scheduledRound = phase == RoundPhase.LANE_WAVE ? currentRound + 1 : currentRound;
+        Monster monster = type.get().createMonster(summonContext, targetTeam.get().id(), targetLane.get().laneId(), scheduledRound);
         job.onSummonedMonster(jobContext, type.get(), monster);
         type.get().onSummoned(summonContext, monster);
-        targetLane.get().enqueueSummonedMonster(monster);
-        return SummonResult.success(summonId, targetTeam.get().id(), targetLane.get().laneId());
+        if (phase == RoundPhase.LANE_WAVE) {
+            targetLane.get().enqueueNextRoundSummonedMonster(monster);
+        } else {
+            targetLane.get().enqueueSummonedMonster(monster);
+        }
+        return SummonResult.success(summonId, targetTeam.get().id(), targetLane.get().laneId(), scheduledRound);
     }
 
     public boolean upgradeGasProduction(UUID playerId) {

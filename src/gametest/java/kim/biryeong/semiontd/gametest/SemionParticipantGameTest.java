@@ -3627,6 +3627,150 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertEquals(context, 1, targetLane.queuedSummonCount(), "Successful summon should queue one monster in the target lane.")) {
             return;
         }
+        if (!assertEquals(context, Optional.of(1), result.scheduledRound(), "Prepare phase summon should be scheduled for the current round.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void wavePhaseIncomeSummonQueuesForNextRound(GameTestHelper context) {
+        UUID redId = stableUuid("wave-summon-red-owner");
+        UUID blueId = stableUuid("wave-summon-blue-owner");
+        SemionGame game = startedTwoPlayerGame(context, redId, blueId);
+
+        tickGame(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS);
+        if (!assertEquals(context, RoundPhase.LANE_WAVE, game.phase(), "Game should enter wave phase before reserved summon purchase.")) {
+            return;
+        }
+
+        long gasBeforeSummon = game.players().get(redId).economy().gas();
+        var result = game.summonMonster(redId, "chicken");
+        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.SUCCESS, result.type(), "Wave phase income summon should be purchasable.")) {
+            return;
+        }
+        if (!assertEquals(context, Optional.of(2), result.scheduledRound(), "Wave phase summon should be scheduled for the next round.")) {
+            return;
+        }
+        if (!assertEquals(context, gasBeforeSummon - 20, game.players().get(redId).economy().gas(), "Wave phase summon should spend emerald immediately.")) {
+            return;
+        }
+        if (!assertEquals(context, 1L, game.players().get(redId).economy().income(), "Wave phase summon should add income immediately.")) {
+            return;
+        }
+        if (!assertEquals(context, 1L, game.players().get(redId).matchStats().summonedMonsters(), "Wave phase summon should update match stats immediately.")) {
+            return;
+        }
+
+        PlayerLane targetLane = lane(game, result.targetTeam().orElseThrow(), result.targetLaneId().orElseThrow());
+        if (!assertEquals(context, 0, targetLane.queuedSummonCount(), "Wave phase summon should not enter the current round summon queue.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, targetLane.pendingNextRoundSummonCount(), "Wave phase summon should wait in the next-round queue.")) {
+            return;
+        }
+        if (!assertEquals(context, 0, targetLane.activeMonsters().size(), "Wave phase summon should not spawn in the current wave.")) {
+            return;
+        }
+
+        tickGame(game, context.getLevel().getServer(), 2);
+        if (!assertEquals(context, RoundPhase.PREPARE_AND_SUMMON, game.phase(), "Empty wave should resolve into next prepare after the reserved purchase.")) {
+            return;
+        }
+        if (!assertEquals(context, 2, game.currentRound(), "Reserved summon should carry into round 2 prepare.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, targetLane.queuedSummonCount(), "Reserved summon should move into the target lane summon queue during next prepare.")) {
+            return;
+        }
+        if (!assertEquals(context, 0, targetLane.pendingNextRoundSummonCount(), "Next-round queue should be empty after transfer.")) {
+            return;
+        }
+
+        tickGame(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS + 1);
+        if (!assertEquals(context, RoundPhase.LANE_WAVE, game.phase(), "Round 2 should enter wave phase.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, targetLane.activeMonsters().size(), "Reserved summon should spawn in the next wave.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void wavePhaseIncomeSummonUsesNextRoundScaling(GameTestHelper context) {
+        String summonId = "wave_scale_probe";
+        UUID redId = stableUuid("wave-scale-red-owner");
+        UUID blueId = stableUuid("wave-scale-blue-owner");
+        SemionGame game = startedTwoPlayerGame(context, redId, blueId);
+        SummonRegistry.register(new SummonMonsterType(
+                summonId,
+                "Wave Scale Probe",
+                0,
+                0,
+                100,
+                0,
+                20,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                0
+        ) {
+        });
+        game.refreshSummonShop();
+
+        tickGame(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS);
+        var result = game.summonMonster(redId, summonId);
+        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.SUCCESS, result.type(), "Wave scaling probe should be purchasable during wave phase.")) {
+            return;
+        }
+        PlayerLane targetLane = lane(game, result.targetTeam().orElseThrow(), result.targetLaneId().orElseThrow());
+        tickGame(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS + 3);
+
+        if (!assertEquals(context, 1, targetLane.activeMonsters().size(), "Wave scaling probe should spawn in round 2 wave.")) {
+            return;
+        }
+        Monster spawned = targetLane.activeMonsters().getFirst();
+        double expectedHealth = 100 * SummonBalancePolicy.summonHealthMultiplier(2);
+        double expectedAttackDamage = 20 * SummonBalancePolicy.summonAttackDamageMultiplier(2);
+        if (!assertClose(context, expectedHealth, spawned.maxHealth(), "Wave phase summon should use next round health scaling.")) {
+            return;
+        }
+        if (!assertClose(context, expectedAttackDamage, spawned.attackDamage(), "Wave phase summon should use next round attack scaling.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void incomeSummonInvalidOutsidePrepareAndWave(GameTestHelper context) {
+        UUID redId = stableUuid("summon-phase-red-owner");
+        UUID blueId = stableUuid("summon-phase-blue-owner");
+
+        SemionGame waitingGame = new SemionGame(
+                EconomyConfig.defaultConfig(),
+                new WaveConfig(List.of(), 20, null),
+                testArena(context)
+        );
+        var waitingResult = waitingGame.summonMonster(redId, "chicken");
+        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.INVALID_PHASE, waitingResult.type(), "Waiting game should reject summon purchases by phase.")) {
+            return;
+        }
+
+        SemionGame payoutGame = startedTwoPlayerGame(context, redId, blueId);
+        setField(payoutGame, "phase", RoundPhase.ROUND_PAYOUT);
+        var payoutResult = payoutGame.summonMonster(redId, "chicken");
+        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.INVALID_PHASE, payoutResult.type(), "Round payout should reject summon purchases by phase.")) {
+            return;
+        }
+
+        SemionGame endedGame = startedTwoPlayerGame(context, redId, blueId);
+        if (!assertTrue(context, endedGame.killBoss(TeamId.BLUE), "Ended phase setup should eliminate BLUE.")) {
+            return;
+        }
+        var endedResult = endedGame.summonMonster(redId, "chicken");
+        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.INVALID_PHASE, endedResult.type(), "Ended game should reject summon purchases by phase.")) {
+            return;
+        }
         context.succeed();
     }
 

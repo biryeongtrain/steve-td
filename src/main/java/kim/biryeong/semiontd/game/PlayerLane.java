@@ -30,6 +30,7 @@ public final class PlayerLane {
     private final List<Monster> activeMonsters = new ArrayList<>();
     private final List<Monster> waveMonsterSpawnQueue = new ArrayList<>();
     private final List<Monster> summonedMonsterSpawnQueue = new ArrayList<>();
+    private final List<Monster> nextRoundSummonedMonsterSpawnQueue = new ArrayList<>();
     private final List<Tower> towers = new ArrayList<>();
     private final List<DefenderEntity> defenderEntities = new ArrayList<>();
     private boolean clearedThisRound;
@@ -77,6 +78,10 @@ public final class PlayerLane {
         return summonedMonsterSpawnQueue.size();
     }
 
+    public int pendingNextRoundSummonCount() {
+        return nextRoundSummonedMonsterSpawnQueue.size();
+    }
+
     public List<Tower> towers() {
         return towers;
     }
@@ -99,6 +104,7 @@ public final class PlayerLane {
         for (Tower tower : towers) {
             tower.resetForRound(this);
         }
+        moveNextRoundSummonsToCurrentRound();
     }
 
     public void enqueueWaveMonster(WaveMonsterEntry entry) {
@@ -109,6 +115,10 @@ public final class PlayerLane {
 
     public void enqueueSummonedMonster(Monster monster) {
         summonedMonsterSpawnQueue.add(monster);
+    }
+
+    public void enqueueNextRoundSummonedMonster(Monster monster) {
+        nextRoundSummonedMonsterSpawnQueue.add(monster);
     }
 
     public void addTower(Tower tower) {
@@ -238,6 +248,7 @@ public final class PlayerLane {
         activeMonsters.clear();
         waveMonsterSpawnQueue.clear();
         summonedMonsterSpawnQueue.clear();
+        nextRoundSummonedMonsterSpawnQueue.clear();
         clearedThisRound = true;
     }
 
@@ -276,6 +287,14 @@ public final class PlayerLane {
             return GridPosition.from(below);
         }
         return slot;
+    }
+
+    private void moveNextRoundSummonsToCurrentRound() {
+        if (nextRoundSummonedMonsterSpawnQueue.isEmpty()) {
+            return;
+        }
+        summonedMonsterSpawnQueue.addAll(nextRoundSummonedMonsterSpawnQueue);
+        nextRoundSummonedMonsterSpawnQueue.clear();
     }
 
     private void syncTowerStates() {

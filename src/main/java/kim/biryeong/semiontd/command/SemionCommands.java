@@ -9,6 +9,8 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import kim.biryeong.semiontd.SemionTd;
+import kim.biryeong.semiontd.buildguide.BuildAction;
+import kim.biryeong.semiontd.buildguide.BuildGuide;
 import kim.biryeong.semiontd.game.*;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.SemionJob;
@@ -928,9 +930,17 @@ public final class SemionCommands {
             return 0;
         }
 
-        success(source, "소환했습니다: " + summonId
-                + ", 팀=" + result.targetTeam().orElseThrow()
-                + ", 라인=" + result.targetLaneId().orElseThrow());
+        int scheduledRound = result.scheduledRound().orElse(game.currentRound());
+        if (scheduledRound > game.currentRound()) {
+            success(source, "다음 라운드에 소환 예약했습니다: " + summonId
+                    + ", 팀=" + result.targetTeam().orElseThrow()
+                    + ", 라인=" + result.targetLaneId().orElseThrow()
+                    + ", 라운드=" + scheduledRound);
+        } else {
+            success(source, "소환했습니다: " + summonId
+                    + ", 팀=" + result.targetTeam().orElseThrow()
+                    + ", 라인=" + result.targetLaneId().orElseThrow());
+        }
         gameManager.dialogService().showSummonShop(player, game);
         return 1;
     }

@@ -313,9 +313,15 @@ public abstract class SummonMonsterType {
 
     public Monster createMonster(SummonContext context, TeamId targetTeam, int targetLaneId) {
         Objects.requireNonNull(context, "context");
+        int currentRound = context.game() == null ? 1 : context.game().currentRound();
+        return createMonster(context, targetTeam, targetLaneId, currentRound);
+    }
+
+    public Monster createMonster(SummonContext context, TeamId targetTeam, int targetLaneId, int scalingRound) {
+        Objects.requireNonNull(context, "context");
         UUID ownerPlayer = context.player().uuid();
         TeamId senderTeam = context.player().teamId();
-        int currentRound = context.game() == null ? 1 : context.game().currentRound();
+        int currentRound = Math.max(1, scalingRound);
         return new Monster(
                 id,
                 targetTeam,
