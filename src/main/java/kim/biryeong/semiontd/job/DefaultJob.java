@@ -15,4 +15,6 @@ public final class DefaultJob extends SemionJob {
                 List.of(Component.literal("Baseline job with no modifiers."))
         );
     }
+
+
 }
