@@ -162,10 +162,11 @@ public final class PlayerLane {
     }
 
     public boolean killTower(Tower tower) {
-        if (!towers.remove(tower)) {
+        if (!towers.contains(tower)) {
             return false;
         }
-        tower.onDeath(this);
+        tower.syncHealth(0.0);
+        tower.notifyDeath(this);
         tower.onRemoved(this);
         return true;
     }
@@ -309,13 +310,9 @@ public final class PlayerLane {
     }
 
     private void syncTowerStates() {
-        Iterator<Tower> iterator = towers.iterator();
-        while (iterator.hasNext()) {
-            Tower tower = iterator.next();
+        for (Tower tower : towers) {
             if (tower.isDestroyed(this)) {
-                iterator.remove();
-                tower.onDeath(this);
-                tower.onRemoved(this);
+                tower.notifyDeath(this);
             }
         }
     }

@@ -5527,6 +5527,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 GridPosition.from(t3Pos)
         );
         lane.addTower(t3Ranged);
+        int sacrificedEntityId = t3Ranged.entityId().orElseThrow();
 
         SemionTowerEntity coreEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(core.entityId().orElseThrow());
         core.syncHealth(10.0);
@@ -5536,7 +5537,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertTrue(context, lane.towers().contains(t1Ranged), "Ranged warlock should leave the higher-numbered aggro tower alive after absorbing lowest priority.")) {
             return;
         }
-        if (!assertTrue(context, !lane.towers().contains(t3Ranged), "Ranged warlock should absorb the lowest aggro priority tower first.")) {
+        if (!assertTrue(context, lane.towers().contains(t3Ranged), "Ranged warlock sacrifice target should stay in the lane for next-round respawn.")) {
+            return;
+        }
+        if (!assertEquals(context, 0.0, t3Ranged.health(), "Ranged warlock sacrifice target should be dead for the current round.")) {
             return;
         }
         if (!assertClose(context, 105.5, core.currentMaxHealth(), "Ranged warlock should gain round, permanent, and surviving-pet health bonuses.")) {
@@ -5546,6 +5550,13 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertEquals(context, 14, core.adjustAttackInterval(20), "Ranged warlock should gain attack interval reduction from absorbed faster tower.")) {
+            return;
+        }
+        game.teams().get(TeamId.RED).resetForRound();
+        if (!assertEquals(context, t3Ranged.currentMaxHealth(), t3Ranged.health(), "Ranged warlock sacrifice target should respawn with full health next round.")) {
+            return;
+        }
+        if (!assertTrue(context, t3Ranged.entityId().isPresent() && t3Ranged.entityId().getAsInt() != sacrificedEntityId, "Ranged warlock sacrifice target should get a fresh entity on next-round respawn.")) {
             return;
         }
         context.succeed();
@@ -5583,6 +5594,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 GridPosition.from(t3Pos)
         );
         lane.addTower(t3Melee);
+        int sacrificedEntityId = t3Melee.entityId().orElseThrow();
 
         SemionTowerEntity coreEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(core.entityId().orElseThrow());
         core.syncHealth(20.0);
@@ -5592,7 +5604,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertTrue(context, lane.towers().contains(t1Melee), "Melee warlock should leave the lower-priority sacrifice tower alive.")) {
             return;
         }
-        if (!assertTrue(context, !lane.towers().contains(t3Melee), "Melee warlock should absorb the highest aggro priority tower first.")) {
+        if (!assertTrue(context, lane.towers().contains(t3Melee), "Melee warlock sacrifice target should stay in the lane for next-round respawn.")) {
+            return;
+        }
+        if (!assertEquals(context, 0.0, t3Melee.health(), "Melee warlock sacrifice target should be dead for the current round.")) {
             return;
         }
         if (!assertClose(context, 212.5, core.currentMaxHealth(), "Melee warlock should gain round, permanent, and surviving-sacrifice health bonuses.")) {
@@ -5602,6 +5617,13 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertClose(context, 100.0, core.modifyIncomingDamage(null, null, 100.0), "Melee warlock should not reduce incoming damage before five absorbed towers.")) {
+            return;
+        }
+        game.teams().get(TeamId.RED).resetForRound();
+        if (!assertEquals(context, t3Melee.currentMaxHealth(), t3Melee.health(), "Melee warlock sacrifice target should respawn with full health next round.")) {
+            return;
+        }
+        if (!assertTrue(context, t3Melee.entityId().isPresent() && t3Melee.entityId().getAsInt() != sacrificedEntityId, "Melee warlock sacrifice target should get a fresh entity on next-round respawn.")) {
             return;
         }
         context.succeed();
@@ -5636,7 +5658,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         towerEntity.setHealth(0.0F);
         lane.tick(context.getLevel().getServer());
 
-        if (!assertTrue(context, lane.towers().isEmpty(), "Destroyed sacrifice tower should be removed from the lane.")) {
+        if (!assertTrue(context, lane.towers().contains(tower), "Destroyed sacrifice tower should stay in the lane until round reset.")) {
+            return;
+        }
+        if (!assertEquals(context, 0.0, tower.health(), "Destroyed sacrifice tower runtime health should sync to zero before reset.")) {
             return;
         }
         if (!assertClose(
@@ -5652,6 +5677,17 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 monster.activeTimedEffectTicks(TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS) > 0,
                 "Sacrifice tower death effect should have a positive duration."
         )) {
+            return;
+        }
+        int originalEntityId = tower.entityId().orElseThrow();
+        game.teams().get(TeamId.RED).resetForRound();
+        if (!assertTrue(context, tower.entityId().isPresent(), "Destroyed sacrifice tower should respawn a tower entity on round reset.")) {
+            return;
+        }
+        if (!assertTrue(context, tower.entityId().getAsInt() != originalEntityId, "Respawned sacrifice tower should use a fresh entity id.")) {
+            return;
+        }
+        if (!assertEquals(context, tower.currentMaxHealth(), tower.health(), "Respawned sacrifice tower should reset to full health.")) {
             return;
         }
         context.succeed();

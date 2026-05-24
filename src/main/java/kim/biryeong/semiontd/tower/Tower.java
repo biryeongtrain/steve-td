@@ -29,6 +29,7 @@ public abstract class Tower {
     private int cooldownTicks;
     private int level = 1;
     private boolean deployedAtFinalDefense;
+    private boolean deathNotifiedThisRound;
     private final Map<TowerDataKey<?>, Object> data = new HashMap<>();
 
     protected Tower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
@@ -212,6 +213,14 @@ public abstract class Tower {
     public void onDeath(PlayerLane lane) {
     }
 
+    public final void notifyDeath(PlayerLane lane) {
+        if (deathNotifiedThisRound) {
+            return;
+        }
+        deathNotifiedThisRound = true;
+        onDeath(lane);
+    }
+
     public void onStateChanged(PlayerLane lane) {
     }
 
@@ -286,6 +295,7 @@ public abstract class Tower {
         currentPosition = originalPosition;
         health = currentMaxHealth();
         deployedAtFinalDefense = false;
+        deathNotifiedThisRound = false;
         onStateChanged(lane);
     }
 
