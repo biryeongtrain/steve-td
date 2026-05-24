@@ -19,7 +19,9 @@ public final class UndeadTowerJob extends SemionJob {
             UndeadTowers.T2_RANGED_SKELETON_TOWER.id(),
             UndeadTowers.T2_MELEE_TOWER.id(),
             UndeadTowers.T3_RANGED_SKELETON_TOWER.id(),
-            UndeadTowers.T3_MELEE_TOWER.id()
+            UndeadTowers.T3_MELEE_TOWER.id(),
+            UndeadTowers.T1_UNDEAD_ANIMAL_TOWER.id(),
+            UndeadTowers.T2_UNDEAD_ANIMAL_TOWER.id()
     );
 
     public UndeadTowerJob() {

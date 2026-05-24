@@ -90,7 +90,7 @@ public class UndeadTowers {
             "t2_ranged_skeleton_tower",
             "보그드 타워",
             110,
-            70,
+            65,
             6,
             8,
             12,
@@ -123,9 +123,9 @@ public class UndeadTowers {
     );
     public static final TowerType T3_RANGED_SKELETON_TOWER = tower(
             "t3_ranged_skeleton_tower",
-            "보그드 타워",
+            "스트레이 타워",
             200,
-            100,
+            80,
             6,
             12,
             12,
@@ -154,6 +154,41 @@ public class UndeadTowers {
                     "<green> 스플래시가 존재합니다. 1.75 블록, 90% 피해 </green>",
                     "<green> 입힌 피해의 7%를 체력으로 흡수합니다. </green>",
                     "<green> 처치 시 영구적으로 공격력을 0.15, 체력을 1.5 증가시킵니다. 최대 100스텍 </green>"
+            )
+    );
+
+    // 언데드 동물 타워
+    public static final TowerType T1_UNDEAD_ANIMAL_TOWER = tower(
+            "t1_undead_animal_tower",
+            "좀비 말 타워",
+            150,
+            50,
+            2,
+            5,
+            15,
+            5,
+            byId(EntityType.ZOMBIE_HORSE),
+            List.of(
+                    "<gray> 적에게 디버프를 주는 타워입니다.</gray>",
+                    "<green> 5초마다 2초간 4블록 내의 적의 공격력을 10% 감소시킵니다.</green>",
+                    "<red> 해당 효과는 중첩되지 않습니다.</red>"
+            )
+    );
+
+    public static final TowerType T2_UNDEAD_ANIMAL_TOWER = tower(
+            "t2_undead_animal_tower",
+            "스켈 말 타워",
+            300,
+            50,
+            2,
+            5,
+            15,
+            5,
+            byId(EntityType.SKELETON_HORSE),
+            List.of(
+                    "<gray> 적에게 디버프를 주는 타워 입니다. </gray>",
+                    "<green> 5초마다 2초간 4블록 내의 적의 공격력과 방어력을 10% 감소시킵니다. </green>",
+                    "<red> 해당 효과는 중첩되지 않습니다. </red>"
             )
     );
 
@@ -204,8 +239,18 @@ public class UndeadTowers {
                 "<green> 입힌 피해의 {ability.lifeStealRatio:percent}를 체력으로 흡수합니다. </green>",
                 "<green> 처치 시 영구적으로 공격력을 {ability.damagePerStack:number}, 체력을 {ability.healthPerStack:number} 증가시킵니다. 최대 {ability.stackCap:integer}스택 </green>"
         ));
+        TowerDescriptionRegistry.registerTemplate(T1_UNDEAD_ANIMAL_TOWER, List.of(
+                "<gray> 적에게 디버프를 주는 타워입니다.</gray>",
+                "<green> {ability.scanIntervalTicks:seconds}마다 {ability.debuffDurationTicks:seconds}간 {ability.radius:blocks} 내의 적의 공격력을 {ability.attackDamageReduction:percent} 감소시킵니다.</green>",
+                "<red> 해당 효과는 중첩되지 않습니다.</red>"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T2_UNDEAD_ANIMAL_TOWER, List.of(
+                "<gray> 적에게 디버프를 주는 타워 입니다. </gray>",
+                "<green> {ability.scanIntervalTicks:seconds}마다 {ability.debuffDurationTicks:seconds}간 {ability.radius:blocks} 내의 적의 공격력을 {ability.attackDamageReduction:percent} 감소시키고 받는 타워 피해를 {ability.towerDamageTakenBonus:percent} 증가시킵니다. </green>",
+                "<red> 해당 효과는 중첩되지 않습니다. </red>"
+        ));
     }
 
 
-    // 언데드 동물 타워
+
 }

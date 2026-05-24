@@ -2,9 +2,11 @@ package kim.biryeong.semiontd.tower;
 
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
+import kim.biryeong.semiontd.job.AnimalTowerJob;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.UndeadTowerJob;
 import kim.biryeong.semiontd.job.VillagerTowerJob;
+import kim.biryeong.semiontd.tower.animal.AnimalTowerCatalogs;
 import kim.biryeong.semiontd.tower.undead.UndeadTowerCatalogs;
 import kim.biryeong.semiontd.tower.villager.VillagerTowerCatalogs;
 
@@ -17,7 +19,9 @@ public final class ProductionTowerCatalogs {
         ProductionTowerCatalog.clear();
         JobRegistry.registerIfAbsent(new VillagerTowerJob());
         JobRegistry.registerIfAbsent(new UndeadTowerJob());
+        JobRegistry.registerIfAbsent(new AnimalTowerJob());
         VillagerTowerCatalogs.register();
         UndeadTowerCatalogs.register();
+        AnimalTowerCatalogs.register();
     }
 }

@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.animal.AnimalTowers;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
 import kim.biryeong.semiontd.tower.villager.VillagerTowers;
 
@@ -44,6 +45,17 @@ public record TowerBalanceConfig(
         addTower(towers, UndeadTowers.T2_MELEE_TOWER);
         addTower(towers, UndeadTowers.T3_RANGED_SKELETON_TOWER);
         addTower(towers, UndeadTowers.T3_MELEE_TOWER);
+        addTower(towers, UndeadTowers.T1_UNDEAD_ANIMAL_TOWER);
+        addTower(towers, UndeadTowers.T2_UNDEAD_ANIMAL_TOWER);
+        addTower(towers, AnimalTowers.T1_PIG_TOWER);
+        addTower(towers, AnimalTowers.T2_PIG_TOWER);
+        addTower(towers, AnimalTowers.T3_PIG_TOWER);
+        addTower(towers, AnimalTowers.T1_WOLF_TOWER);
+        addTower(towers, AnimalTowers.T2_WOLF_DPS_TOWER);
+        addTower(towers, AnimalTowers.T3_WOLF_DPS_TOWER);
+        addTower(towers, AnimalTowers.T1_RABBIT_TOWER);
+        addTower(towers, AnimalTowers.T2_RABBIT_TOWER);
+        addTower(towers, AnimalTowers.T3_RABBIT_TOWER);
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
         putUpgrade(upgradeCosts, VillagerTowers.T1_SPLASH_TOWER, "villager_splash_t2", 110);
@@ -64,6 +76,13 @@ public record TowerBalanceConfig(
         putUpgrade(upgradeCosts, UndeadTowers.T1_SKELETON_TOWER, "t2_melee_tower", 150);
         putUpgrade(upgradeCosts, UndeadTowers.T2_RANGED_SKELETON_TOWER, "t3_ranged_skeleton_tower", 200);
         putUpgrade(upgradeCosts, UndeadTowers.T2_MELEE_TOWER, "t3_melee_tower", 250);
+        putUpgrade(upgradeCosts, UndeadTowers.T1_UNDEAD_ANIMAL_TOWER, "t2_undead_animal_tower", 300);
+        putUpgrade(upgradeCosts, AnimalTowers.T1_PIG_TOWER, "t2_pig_tower", 180);
+        putUpgrade(upgradeCosts, AnimalTowers.T2_PIG_TOWER, "t3_pig_tower", 300);
+        putUpgrade(upgradeCosts, AnimalTowers.T1_WOLF_TOWER, "t2_wolf_dps_tower", 110);
+        putUpgrade(upgradeCosts, AnimalTowers.T2_WOLF_DPS_TOWER, "t3_wolf_dps_tower", 110);
+        putUpgrade(upgradeCosts, AnimalTowers.T1_RABBIT_TOWER, "t2_rabbit_tower", 180);
+        putUpgrade(upgradeCosts, AnimalTowers.T2_RABBIT_TOWER, "t3_rabbit_tower", 300);
 
         LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>();
         putAbilities(abilities, VillagerTowers.T2_LIBRARIAN_TOWER.id(), Map.of(
@@ -195,6 +214,75 @@ public record TowerBalanceConfig(
                 "damagePerStack", 0.15,
                 "healthPerStack", 1.5,
                 "stackCap", 100.0
+        ));
+        putAbilities(abilities, UndeadTowers.T1_UNDEAD_ANIMAL_TOWER.id(), Map.of(
+                "scanIntervalTicks", 100.0,
+                "debuffDurationTicks", 40.0,
+                "radius", 4.0,
+                "attackDamageReduction", 0.10
+        ));
+        putAbilities(abilities, UndeadTowers.T2_UNDEAD_ANIMAL_TOWER.id(), Map.of(
+                "scanIntervalTicks", 100.0,
+                "debuffDurationTicks", 40.0,
+                "radius", 4.0,
+                "attackDamageReduction", 0.10,
+                "towerDamageTakenBonus", 0.10
+        ));
+        putAbilities(abilities, AnimalTowers.T1_PIG_TOWER.id(), Map.of(
+                "maxStacks", 2.0,
+                "healthPerStack", 10.0,
+                "damagePerStack", 2.5
+        ));
+        putAbilities(abilities, AnimalTowers.T2_PIG_TOWER.id(), Map.of(
+                "maxStacks", 2.0,
+                "healthPerStack", 25.0,
+                "damagePerStack", 5.0,
+                "damageReduction", 0.10
+        ));
+        putAbilities(abilities, AnimalTowers.T3_PIG_TOWER.id(), Map.of(
+                "maxStacks", 3.0,
+                "healthPerStack", 40.0,
+                "damagePerStack", 10.0,
+                "damageReduction", 0.10,
+                "splashRadius", 1.0,
+                "splashDamageRatio", 0.50
+        ));
+        putAbilities(abilities, AnimalTowers.T1_WOLF_TOWER.id(), Map.of(
+                "maxStacks", 5.0,
+                "damagePerStack", 1.5,
+                "intervalReductionPerStack", 1.0
+        ));
+        putAbilities(abilities, AnimalTowers.T2_WOLF_DPS_TOWER.id(), Map.of(
+                "maxStacks", 5.0,
+                "damagePerStack", 4.0,
+                "intervalReductionPerStack", 1.0,
+                "splashRadius", 1.25,
+                "splashDamageRatio", 0.50,
+                "maxStackExtraIntervalReduction", 3.0
+        ));
+        putAbilities(abilities, AnimalTowers.T3_WOLF_DPS_TOWER.id(), Map.of(
+                "maxStacks", 5.0,
+                "damagePerStack", 6.0,
+                "intervalReductionPerStack", 1.0,
+                "splashRadius", 1.5,
+                "splashDamageRatio", 0.50,
+                "maxStackExtraIntervalReduction", 5.0,
+                "maxStackDamageBonus", 5.0
+        ));
+        putAbilities(abilities, AnimalTowers.T1_RABBIT_TOWER.id(), Map.of(
+                "maxStacks", 5.0,
+                "damagePerStack", 2.0
+        ));
+        putAbilities(abilities, AnimalTowers.T2_RABBIT_TOWER.id(), Map.of(
+                "maxStacks", 5.0,
+                "damagePerStack", 5.0,
+                "maxStackExtraIntervalReduction", 5.0
+        ));
+        putAbilities(abilities, AnimalTowers.T3_RABBIT_TOWER.id(), Map.of(
+                "maxStacks", 5.0,
+                "damagePerStack", 8.0,
+                "maxStackExtraIntervalReduction", 7.0,
+                "extraAttackDamageRatio", 1.0
         ));
 
         return new TowerBalanceConfig(towers, upgradeCosts, abilities);

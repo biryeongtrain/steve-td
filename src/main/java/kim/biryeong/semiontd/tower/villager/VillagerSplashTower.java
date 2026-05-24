@@ -7,6 +7,7 @@ import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.SplashTower;
+import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 
 import java.util.UUID;
@@ -64,6 +65,13 @@ public class VillagerSplashTower extends SplashTower {
                     this.onKill(towerEntity, target, damageAmount); // trigger kill event
                 }
             }
+        }
+    }
+
+    @Override
+    protected void copyRuntimeStateFrom(Tower previousTower) {
+        if (previousTower instanceof VillagerSplashTower splashTower) {
+            survivalBouns = Math.min(TowerBalanceRuntime.abilityInt(type().id(), "maxSurvivalStacks"), splashTower.survivalBouns);
         }
     }
 

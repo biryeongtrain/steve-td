@@ -21,6 +21,8 @@ public final class UndeadTowerCatalogs {
         registerTower(UndeadTowers.T2_MELEE_TOWER, UndeadMeleeSkeletonTower::new, 2);
         registerTower(UndeadTowers.T3_RANGED_SKELETON_TOWER, UndeadRangedSkeletonTower::new, 3);
         registerTower(UndeadTowers.T3_MELEE_TOWER, UndeadMeleeSkeletonTower::new, 3);
+        registerTower(UndeadTowers.T1_UNDEAD_ANIMAL_TOWER, UndeadAnimalTower::new, 1);
+        registerTower(UndeadTowers.T2_UNDEAD_ANIMAL_TOWER, UndeadAnimalTower::new, 2);
 
         link(UndeadTowers.T1_ZOMBIE_TOWER, "t2_zombie_tower", "허스크 타워", UndeadTowers.T2_ZOMBIE_TOWER);
         link(UndeadTowers.T2_ZOMBIE_TOWER, "t3_zombie_tower", "드라운드 타워", UndeadTowers.T3_ZOMBIE_TOWER);
@@ -29,6 +31,7 @@ public final class UndeadTowerCatalogs {
         link(UndeadTowers.T1_SKELETON_TOWER, "t2_melee_tower", "위더 스켈레톤 타워", UndeadTowers.T2_MELEE_TOWER);
         link(UndeadTowers.T2_RANGED_SKELETON_TOWER, "t3_ranged_skeleton_tower", "스트레이 타워", UndeadTowers.T3_RANGED_SKELETON_TOWER);
         link(UndeadTowers.T2_MELEE_TOWER, "t3_melee_tower", "강화 위더 스켈레톤 타워", UndeadTowers.T3_MELEE_TOWER);
+        link(UndeadTowers.T1_UNDEAD_ANIMAL_TOWER, "t2_undead_animal_tower", "스켈 말 타워", UndeadTowers.T2_UNDEAD_ANIMAL_TOWER);
 
         if (JobRegistry.find(UndeadTowerJob.ID).isEmpty()) {
             JobRegistry.registerIfAbsent(new UndeadTowerJob());

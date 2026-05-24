@@ -52,7 +52,7 @@ fix(command): harden lobby reset recovery
 - `/semiontd status lanes`가 active lane별 laneArea 중심 `towerSample=x,y,z`와 `laneArea=min..max`를 출력한다.
 - Carpet tower QA에서는 fake player를 `towerSample` 좌표로 이동시켜 `semiontd tower test` 성공까지 확인했다.
 - 반복 실행 절차는 `docs/carpet-qa-runbook.ko.md`에 정리되어 있다.
-- 프로덕션 타워 등록 방식은 `docs/production-tower-catalog.ko.md`에 정리되어 있다. 현재 기본 등록 타워는 비어 있으므로, 실제 플레이용 타워는 새 카탈로그 클래스로 직접 추가해야 한다.
+- 프로덕션 타워 등록 방식은 `docs/production-tower-catalog.ko.md`에 정리되어 있다. built-in reload는 주민/언데드/동물 카탈로그를 등록하며, 새 실전 타워는 계열별 카탈로그 클래스로 추가한다.
 - 엔티티를 가진 타워 런타임은 `EntityBackedTower`와 `SemionTowerEntity`로 공용화되어 있다. `ProductionTower`는 더 이상 `TestTower`를 상속하지 않고, 두 타워 모두 `EntityBackedTower`를 통해 `semion-td:tower` 엔티티를 사용한다. 프로덕션 카탈로그 factory도 `EntityBackedTower`를 반환하므로 1차/2차/3차를 서로 다른 엔티티 기반 런타임 클래스로 등록할 수 있다.
 - `/semiontd tower list`와 `/semiontd tower build <id>`가 추가되어 직업별 허용 타워를 설치할 수 있다.
 - 타워 외형은 typed visual builder로 바닐라 엔티티 variant/tracked data를 지정할 수 있다. villager/zombie_villager, cow, pig, chicken, wolf, cat, frog, horse, llama/trader_llama, fox, rabbit, parrot, axolotl, mooshroom, salmon, tropical_fish, sheep builder는 `docs/production-tower-catalog.ko.md`에 정리되어 있다.
@@ -134,8 +134,8 @@ GameTest와 Carpet fake player로 확인하기 어려운 화면/체감 부분은
 
 ## 후속 큰 작업 후보
 
-- 실제 tower catalog 확장
-- job catalog와 선택 UI
+- 추가 tower catalog 확장과 밸런스 패스
+- job 선택 UI 고도화
 - summon/tower/job balance pass
 - map template QA: lane path, final lane, boss convergence
 - match result UI 레이아웃 고도화

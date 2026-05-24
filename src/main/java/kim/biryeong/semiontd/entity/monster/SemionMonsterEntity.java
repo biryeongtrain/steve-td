@@ -276,7 +276,10 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
 
     public double attackDamageAmount() {
         double baseDamage = getAttributeValue(Attributes.ATTACK_DAMAGE);
-        return baseDamage * (1.0 + timedEffects.magnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_BONUS));
+        double multiplier = 1.0
+                + timedEffects.magnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_BONUS)
+                - timedEffects.magnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION);
+        return baseDamage * Math.max(0.0, multiplier);
     }
 
     public void applyTimedEffect(TimedEffectType type, double magnitude, int durationTicks) {
@@ -305,7 +308,8 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
 
     public double towerDamageTaken(double baseDamage) {
         double damageReduction = timedEffects.magnitude(TimedEffectType.MONSTER_DAMAGE_REDUCTION);
-        return Math.max(0.0, baseDamage) * (1.0 - damageReduction);
+        double damageTakenBonus = timedEffects.magnitude(TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS);
+        return Math.max(0.0, baseDamage) * Math.max(0.0, 1.0 - damageReduction + damageTakenBonus);
     }
 
     private double followRangeFor(Monster monster) {

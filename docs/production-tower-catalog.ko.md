@@ -2,9 +2,9 @@
 
 ## 현재 상태
 
-기본 등록된 프로덕션 타워는 없다.
+기본 reload 기준으로 주민/언데드/동물 프로덕션 타워가 등록된다.
 
-`ProductionTowerCatalog`는 비어 있는 registry facade로 남겨 두었고, 실제 타워 정의는 직접 추가해야 한다. 이 상태에서 `/semiontd tower list`와 빌드 UI는 등록된 starter tower가 없으므로 빈 목록을 보여준다.
+`ProductionTowerCatalogs.reloadBuiltIns(...)`는 villager, undead, animal built-in 카탈로그를 다시 등록한다. 현재 starter family는 주민 4개, 언데드 3개, 동물 2개이며, `/semiontd tower list`와 빌드 UI는 선택한 직업이 허용하는 starter tower만 보여준다.
 
 ## 패키지 구조
 
@@ -21,10 +21,15 @@ src/main/java/kim/biryeong/semiontd/entity/tower/
 
 src/main/java/kim/biryeong/semiontd/tower/catalog/
   ProductionTowerDefinitions.java  tower/upgrade helper
+
+src/main/java/kim/biryeong/semiontd/tower/villager/
+src/main/java/kim/biryeong/semiontd/tower/undead/
+src/main/java/kim/biryeong/semiontd/tower/animal/
+  *TowerCatalogs.java              built-in 카탈로그 등록
 ```
 
-새 기본 타워를 만들 때는 `tower.catalog` 패키지 아래에 직접 카탈로그 클래스를 만들고, 타워 타입을 먼저 등록한 뒤 등록된 타입끼리 업그레이드 링크를 만든다.
-작성한 `register()` 메서드는 모드 초기화 흐름에서 한 번 호출해야 한다.
+새 기본 타워를 만들 때는 해당 계열 패키지 아래에 카탈로그 클래스를 만들고, 타워 타입을 먼저 등록한 뒤 등록된 타입끼리 업그레이드 링크를 만든다.
+작성한 `register()` 메서드는 `ProductionTowerCatalogs.reloadBuiltIns(...)` 흐름에서 호출해야 한다.
 
 ## 런타임 구조
 
@@ -131,7 +136,7 @@ public final class MyProductionTowers {
 /semiontd tower upgrade <upgrade_id>
 ```
 
-`/semiontd tower build <tower_id>`는 등록된 starter tower만 설치할 수 있다. 현재 기본 등록 타워가 없으므로 직접 등록하기 전에는 모든 production tower build 요청이 거절된다.
+`/semiontd tower build <tower_id>`는 등록된 starter tower만 설치할 수 있다. 직업이 허용하지 않는 starter tower는 카탈로그에 있어도 거절된다.
 
 ## 작성 기준
 
@@ -228,8 +233,8 @@ WolfVisual.builder()
 
 현재 GameTest 기준:
 
-- 기본 `ProductionTowerCatalog`는 비어 있다.
-- 빈 카탈로그에서는 tower list/build UI가 production tower를 노출하지 않는다.
+- `ProductionTowerCatalog.clearForTesting()` 후에는 수동 authoring fixture를 위해 카탈로그를 비울 수 있다.
+- built-in reload는 주민/언데드/동물 카탈로그와 각 tower job을 등록한다.
 - `ProductionTower`의 업그레이드 에러 처리는 테스트 fixture로 검증한다.
 - `TestTower`와 `ProductionTower`는 모두 `SemionTowerEntity`를 사용한다.
 - `./gradlew runGameTest --console=plain --no-daemon`로 검증한다.
