@@ -226,7 +226,7 @@ public final class SemionGameManager {
     }
 
     public Optional<BuildGuide> publishLastBuild(ServerPlayer player, String title) {
-        if (player == null || lastMatchResult == null) {
+        if (player == null) {
             return Optional.empty();
         }
         return buildGuideService.publishLastRecording(player.getUUID(), title);

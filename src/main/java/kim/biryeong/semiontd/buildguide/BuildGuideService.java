@@ -56,6 +56,7 @@ public final class BuildGuideService {
         if (game == null) {
             return;
         }
+        lastRecordings.clear();
         for (SemionPlayer player : game.players().values()) {
             String jobId = player.job().map(job -> job.id().toString()).orElse("");
             activeRecordings.put(player.uuid(), new Recording(player.uuid(), player.name(), jobId, new ArrayList<>(), false, game.currentRound()));

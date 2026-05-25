@@ -101,9 +101,9 @@ public class WarlockTower extends EntityBackedTower {
 
     @Override
     public void onAttack(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount, boolean killedTarget) {
-        if (is(WarlockTowers.RANGED_WARLOCK_TOWER) && healthRatio(health()) < ability("lowHealthSacrificeThreshold")) {
-            sacrifice(towerEntity, sacrificeRadius("sacrificeRadius"), Comparator.comparingInt(Tower::aggroPriority));
-        }
+//        if (is(WarlockTowers.RANGED_WARLOCK_TOWER) && healthRatio(health()) < ability("lowHealthSacrificeThreshold")) {
+//            sacrifice(towerEntity, sacrificeRadius("sacrificeRadius"), Comparator.comparingInt(Tower::aggroPriority));
+//        }
         splash(towerEntity, target, damageAmount);
         heal(towerEntity, damageAmount * lifeStealRatio());
     }

@@ -1781,6 +1781,125 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void buildGuideCanPublishAfterNextWaitingGameIsCreated(GameTestHelper context) {
+        MinecraftServer server = context.getLevel().getServer();
+        var player = context.makeMockServerPlayerInLevel();
+        SemionGameManager manager = new SemionGameManager();
+        Path storePath;
+        try {
+            storePath = Files.createTempDirectory("semion-build-guide-manager-test").resolve("profiles.json");
+        } catch (java.io.IOException exception) {
+            context.fail(Component.literal("Failed to create temporary progression store path."));
+            return;
+        }
+
+        manager.configure(
+                EconomyConfig.defaultConfig(),
+                new WaveConfig(List.of(), 20, null),
+                MapConfig.defaultConfig(),
+                ProgressionConfig.defaultConfig(),
+                storePath
+        );
+
+        try {
+            UUID redId = player.getUUID();
+            UUID blueId = stableUuid("build-guide-waiting-blue-owner");
+            SemionGame finishedGame = manager.createGame(server);
+            ParticipantSelectionPlan firstPlan = new ParticipantSelectionPlan(
+                    MatchMode.NORMAL,
+                    List.of(
+                            new AssignedParticipant(redId, player.getGameProfile().getName(), TeamId.RED, 1),
+                            new AssignedParticipant(blueId, "build-guide-waiting-blue", TeamId.BLUE, 1)
+                    ),
+                    Set.of(),
+                    2
+            );
+            if (!assertTrue(context, finishedGame.start(server, firstPlan), "First game should start build recording.")) {
+                return;
+            }
+            PlayerLane lane = redLane(finishedGame, 1);
+            finishedGame.recordTowerPlacement(redId, "waiting_publish_tower", GridPosition.from(towerPlacementPos(lane)), 0L);
+            manager.buildGuideService().finishMatch(finishedGame, 2);
+
+            SemionGame waitingGame = manager.createGame(server);
+            if (!assertTrue(context, manager.lastMatchResult().isEmpty(), "Creating the next waiting game should clear stale match results.")) {
+                return;
+            }
+            if (!assertEquals(context, RoundPhase.WAITING, waitingGame.phase(), "Next game should still be waiting before build publish.")) {
+                return;
+            }
+
+            Optional<BuildGuide> published = manager.publishLastBuild(player, "대기 중 저장");
+            if (!assertPresent(context, published, "Last finished build recording should publish while the next game is still waiting.")) {
+                return;
+            }
+            if (!assertEquals(context, 1, published.get().actions().size(), "Published waiting-period guide should preserve the previous match action.")) {
+                return;
+            }
+            context.succeed();
+        } catch (Exception exception) {
+            context.fail(Component.literal("Build guide should publish after next waiting game creation: " + exception.getMessage()));
+        } finally {
+            manager.shutdown();
+        }
+    }
+
+    @GameTest
+    public void buildGuideExpiresPreviousRecordingWhenNextMatchStarts(GameTestHelper context) {
+        BuildGuideService service = new BuildGuideService(null);
+        UUID redId = stableUuid("build-guide-expire-red-owner");
+        UUID blueId = stableUuid("build-guide-expire-blue-owner");
+        SemionGame firstGame = new SemionGame(
+                EconomyConfig.defaultConfig(),
+                new WaveConfig(List.of(), 20, null),
+                testArena(context),
+                service
+        );
+        ParticipantSelectionPlan firstPlan = new ParticipantSelectionPlan(
+                MatchMode.NORMAL,
+                List.of(
+                        new AssignedParticipant(redId, "build-guide-expire-red", TeamId.RED, 1),
+                        new AssignedParticipant(blueId, "build-guide-expire-blue", TeamId.BLUE, 1)
+                ),
+                Set.of(),
+                2
+        );
+        if (!assertTrue(context, firstGame.start(context.getLevel().getServer(), firstPlan), "First game should start build recording.")) {
+            return;
+        }
+        PlayerLane firstLane = redLane(firstGame, 1);
+        firstGame.recordTowerPlacement(redId, "expired_publish_tower", GridPosition.from(towerPlacementPos(firstLane)), 0L);
+        service.finishMatch(firstGame, 2);
+
+        SemionGame secondGame = new SemionGame(
+                EconomyConfig.defaultConfig(),
+                new WaveConfig(List.of(), 20, null),
+                testArena(context),
+                service
+        );
+        ParticipantSelectionPlan secondPlan = new ParticipantSelectionPlan(
+                MatchMode.NORMAL,
+                List.of(
+                        new AssignedParticipant(redId, "build-guide-expire-red", TeamId.RED, 1),
+                        new AssignedParticipant(blueId, "build-guide-expire-blue", TeamId.BLUE, 1)
+                ),
+                Set.of(),
+                2
+        );
+        if (!assertTrue(context, secondGame.start(context.getLevel().getServer(), secondPlan), "Second game start should expire previous unpublished recording.")) {
+            return;
+        }
+        if (!assertTrue(
+                context,
+                service.publishLastRecording(redId, "너무 늦은 저장").isEmpty(),
+                "Previous match recording should no longer publish after the next match starts."
+        )) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void buildGuideRoundActionsFilterCurrentRound(GameTestHelper context) {
         BuildGuide guide = new BuildGuide(
                 "ABC123",
@@ -3254,17 +3373,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         int originalEntityId = tower.entityId().getAsInt();
-        ((SemionTowerEntity) lane.arenaWorld().getEntity(originalEntityId)).setHealth(0.0F);
-        lane.tick(context.getLevel().getServer());
-        if (!assertTrue(context, lane.towers().contains(tower), "Destroyed tower should stay in the lane until round reset.")) {
-            return;
-        }
-        if (!assertEquals(context, 0.0, tower.health(), "Destroyed tower runtime health should sync to zero before reset.")) {
+        lane.moveTowersToFinalDefense();
+        if (!assertTrue(context, tower.deployedAtFinalDefense(), "Tower should enter final defense before reset validation.")) {
             return;
         }
 
-        game.teams().get(TeamId.RED).resetForRound();
-        game.teams().get(TeamId.RED).tick(context.getLevel().getServer());
         game.teams().get(TeamId.RED).resetForRound();
 
         if (!assertTrue(context, lane.towers().getFirst() instanceof TestTower, "Placed tower should be a TestTower.")) {
@@ -3278,17 +3391,17 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertEquals(context, tower.maxHealth(), tower.health(), "Tower health should reset to max on round reset.")) {
             return;
         }
-        if (!assertTrue(context, tower.entityId().isPresent(), "Destroyed tower should respawn a tower entity on round reset.")) {
+        if (!assertTrue(context, tower.entityId().isPresent(), "Live tower should retain a tower entity on round reset.")) {
             return;
         }
-        if (!assertTrue(context, tower.entityId().getAsInt() != originalEntityId, "Respawned tower should use a fresh entity id.")) {
+        if (!assertEquals(context, originalEntityId, tower.entityId().getAsInt(), "Live tower reset should keep the existing tower entity id.")) {
             return;
         }
         if (!assertTrue(
                 context,
-                lane.arenaWorld().getEntity(tower.entityId().getAsInt()) instanceof SemionTowerEntity respawnedEntity
-                        && respawnedEntity.isAlive(),
-                "Respawned tower entity should exist and be alive after round reset."
+                lane.arenaWorld().getEntity(tower.entityId().getAsInt()) instanceof SemionTowerEntity resetEntity
+                        && resetEntity.isAlive(),
+                "Reset tower entity should exist and be alive after round reset."
         )) {
             return;
         }
@@ -3624,14 +3737,18 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
 
         PlayerLane lane = redLane(game, 1);
-        if (!assertEquals(
-                context,
-                TowerPlacementResult.SUCCESS,
-                TestTowerService.placeTestTower(game, redId, towerPlacementPos(lane)),
-                "Test tower placement should succeed before wave timeout."
-        )) {
-            return;
-        }
+        TowerType timeoutTowerType = new TowerType(
+                "timeout_final_defense_test_tower",
+                "Timeout Final Defense Test Tower",
+                TowerCategory.DIRECT,
+                0,
+                10000.0,
+                6.0,
+                0.0,
+                20,
+                0
+        );
+        lane.addTower(new TestTower(timeoutTowerType, redId, TeamId.RED, 1, GridPosition.from(towerPlacementPos(lane))));
         lane.enqueueWaveMonster(new WaveMonsterEntry(
                 "timeout-runner",
                 100000.0,
