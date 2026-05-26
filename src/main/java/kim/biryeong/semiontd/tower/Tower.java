@@ -199,6 +199,9 @@ public abstract class Tower {
         }
     }
 
+    public void onWaveStarted(PlayerLane lane, int currentRound) {
+    }
+
     public long sellRefundAmount() {
         double rate = waveStartedAfterPlacement ? 0.5 : 1.0;
         return Math.round(paidMineralCost * rate);

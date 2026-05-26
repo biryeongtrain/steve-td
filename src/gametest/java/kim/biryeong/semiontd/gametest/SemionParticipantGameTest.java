@@ -5,6 +5,7 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -125,6 +126,9 @@ import kim.biryeong.semiontd.tower.undead.UndeadRangedSkeletonTower;
 import kim.biryeong.semiontd.tower.undead.UndeadTowerCatalogs;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
 import kim.biryeong.semiontd.tower.undead.UndeadZombieTower;
+import kim.biryeong.semiontd.tower.illusion.IllusionProfile;
+import kim.biryeong.semiontd.tower.illusion.IllusionRuntimeTower;
+import kim.biryeong.semiontd.tower.illusion.IllusionSummonerTower;
 import kim.biryeong.semiontd.tower.villager.AllayTower;
 import kim.biryeong.semiontd.tower.villager.AntiTankerCatTower;
 import kim.biryeong.semiontd.tower.villager.LaneClearCatTower;
@@ -3282,6 +3286,112 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             }
             context.succeed();
         });
+    }
+
+    @GameTest
+    public void illusionSummonerSpawnsConfiguredTowerEntityClonesOnWaveStarted(GameTestHelper context) {
+        UUID playerId = stableUuid("red-illusion-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        GridPosition position = GridPosition.from(towerPlacementPos(lane));
+        TowerType towerType = new TowerType("illusion_fixture", "Illusion Fixture", TowerCategory.DIRECT, 0, 100.0, 10.0, 20.0, 12, 7);
+        FixtureIllusionTower tower = new FixtureIllusionTower(
+                towerType,
+                playerId,
+                TeamId.RED,
+                1,
+                position,
+                new IllusionProfile(2, 0, 0.25, 0.5, 1.5, 2.0, 1.0, 5)
+        );
+        lane.addTower(tower);
+
+        if (!assertEquals(context, 1, lane.towers().size(), "Illusion summoner body should be the only lane catalog tower.")) {
+            return;
+        }
+        if (!assertTrue(context, tower.entityId().isPresent(), "Illusion summoner body entity should spawn on placement.")) {
+            return;
+        }
+        if (!assertTrue(
+                context,
+                lane.arenaWorld().getEntity(tower.entityId().getAsInt()) instanceof SemionTowerEntity,
+                "Illusion summoner body should be backed by a tower entity."
+        )) {
+            return;
+        }
+
+        lane.markWaveStarted(1);
+
+        if (!assertEquals(context, 2, tower.spawnedCloneEntities().size(), "Wave start should spawn the configured clone count.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, lane.towers().size(), "Illusion clones should not be inserted into the lane tower list.")) {
+            return;
+        }
+
+        for (SemionTowerEntity cloneEntity : tower.spawnedCloneEntities()) {
+            if (!assertTrue(context, cloneEntity.isAlive(), "Spawned clone tower entity should be alive.")) {
+                return;
+            }
+            if (!assertTrue(
+                    context,
+                    cloneEntity.runtimeTower() instanceof IllusionRuntimeTower,
+                    "Spawned clone should be backed by an illusion runtime tower."
+            )) {
+                return;
+            }
+            IllusionRuntimeTower cloneTower = (IllusionRuntimeTower) cloneEntity.runtimeTower();
+            if (!assertEquals(context, "illusion_fixture#illusion", cloneTower.type().id(), "Clone type should use an internal illusion id.")) {
+                return;
+            }
+            if (!assertEquals(context, playerId, cloneTower.ownerPlayer(), "Clone should keep the source owner.")) {
+                return;
+            }
+            if (!assertEquals(context, TeamId.RED, cloneTower.teamId(), "Clone should keep the source team.")) {
+                return;
+            }
+            if (!assertEquals(context, 1, cloneTower.laneId(), "Clone should keep the source lane.")) {
+                return;
+            }
+            if (!assertClose(context, 25.0, cloneTower.currentMaxHealth(), "Clone health should use the configured ratio.")) {
+                return;
+            }
+            if (!assertClose(context, 10.0, cloneTower.type().damage(), "Clone damage should use the configured ratio.")) {
+                return;
+            }
+            if (!assertClose(context, 15.0, cloneTower.type().range(), "Clone range should use the configured ratio.")) {
+                return;
+            }
+            if (!assertEquals(context, 24, cloneTower.type().attackIntervalTicks(), "Clone attack interval should use the configured multiplier.")) {
+                return;
+            }
+            if (!assertEquals(context, 12, cloneTower.aggroPriority(), "Clone aggro should include the configured source bonus.")) {
+                return;
+            }
+        }
+
+        List<SemionTowerEntity> firstRoundClones = List.copyOf(tower.spawnedCloneEntities());
+        lane.resetForRound();
+        for (SemionTowerEntity cloneEntity : firstRoundClones) {
+            if (!assertTrue(context, cloneEntity.isRemoved(), "Round reset should discard existing illusion clones.")) {
+                return;
+            }
+        }
+
+        int previousCloneCount = tower.spawnedCloneEntities().size();
+        lane.markWaveStarted(2);
+        List<SemionTowerEntity> secondRoundClones = tower.spawnedCloneEntities().subList(previousCloneCount, tower.spawnedCloneEntities().size());
+        if (!assertEquals(context, 2, secondRoundClones.size(), "A later wave should spawn a fresh clone set.")) {
+            return;
+        }
+        if (!assertTrue(context, lane.removeTower(tower), "Removing the source tower should succeed.")) {
+            return;
+        }
+        for (SemionTowerEntity cloneEntity : secondRoundClones) {
+            if (!assertTrue(context, cloneEntity.isRemoved(), "Source removal should discard active illusion clones.")) {
+                return;
+            }
+        }
+        context.succeed();
     }
 
     @GameTest
@@ -6786,6 +6896,37 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             if (previousTower instanceof FixtureSupportTower fixtureSupportTower) {
                 persistentBonus = fixtureSupportTower.persistentBonus;
             }
+        }
+    }
+
+    private static final class FixtureIllusionTower extends IllusionSummonerTower {
+        private final IllusionProfile profile;
+        private final List<SemionTowerEntity> spawnedCloneEntities = new ArrayList<>();
+
+        private FixtureIllusionTower(
+                TowerType type,
+                UUID ownerPlayer,
+                TeamId teamId,
+                int laneId,
+                GridPosition position,
+                IllusionProfile profile
+        ) {
+            super(type, ownerPlayer, teamId, laneId, position);
+            this.profile = profile;
+        }
+
+        private List<SemionTowerEntity> spawnedCloneEntities() {
+            return spawnedCloneEntities;
+        }
+
+        @Override
+        protected IllusionProfile illusionProfile(PlayerLane lane) {
+            return profile;
+        }
+
+        @Override
+        protected void onCloneSpawned(PlayerLane lane, SemionTowerEntity cloneEntity, IllusionRuntimeTower cloneTower) {
+            spawnedCloneEntities.add(cloneEntity);
         }
     }
 
