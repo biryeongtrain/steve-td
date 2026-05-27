@@ -1,4 +1,4 @@
-package kim.biryeong.semiontd.tower.illusion;
+package kim.biryeong.semiontd.tower.legion;
 
 public record IllusionProfile(
         int cloneCount,

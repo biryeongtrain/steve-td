@@ -1,4 +1,4 @@
-package kim.biryeong.semiontd.tower.illusion;
+package kim.biryeong.semiontd.tower.legion;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +16,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
 public abstract class IllusionSummonerTower extends SummonerTower {
+    private static final int CLONE_AGGRO_PRIORITY_BONUS = 5;
+
     private final List<CloneInstance> clones = new ArrayList<>();
 
     protected IllusionSummonerTower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
@@ -65,23 +67,34 @@ public abstract class IllusionSummonerTower extends SummonerTower {
     }
 
     @Override
+    public void moveToFinalDefense(PlayerLane lane, GridPosition position) {
+        super.moveToFinalDefense(lane, position);
+        moveClonesToFinalDefense(lane);
+    }
+
+    @Override
     public void onRemoved(PlayerLane lane) {
         cleanupClones(lane);
         super.onRemoved(lane);
     }
 
     protected IllusionProfile illusionProfile(PlayerLane lane) {
+        IllusionProfile defaults = defaultIllusionProfile(lane);
         String towerId = type().id();
         return new IllusionProfile(
-                TowerBalanceRuntime.abilityInt(towerId, "cloneCount", IllusionProfile.DEFAULT_CLONE_COUNT),
-                TowerBalanceRuntime.abilityTicks(towerId, "cloneDurationTicks", IllusionProfile.DEFAULT_DURATION_TICKS),
-                TowerBalanceRuntime.ability(towerId, "cloneHealthRatio", IllusionProfile.DEFAULT_HEALTH_RATIO),
-                TowerBalanceRuntime.ability(towerId, "cloneDamageRatio", IllusionProfile.DEFAULT_DAMAGE_RATIO),
-                TowerBalanceRuntime.ability(towerId, "cloneRangeRatio", IllusionProfile.DEFAULT_RANGE_RATIO),
-                TowerBalanceRuntime.ability(towerId, "cloneAttackIntervalMultiplier", IllusionProfile.DEFAULT_ATTACK_INTERVAL_MULTIPLIER),
-                TowerBalanceRuntime.ability(towerId, "cloneSpawnRadius", IllusionProfile.DEFAULT_SPAWN_RADIUS),
-                TowerBalanceRuntime.abilityInt(towerId, "cloneAggroPriorityBonus", IllusionProfile.DEFAULT_AGGRO_PRIORITY_BONUS)
+                TowerBalanceRuntime.abilityInt(towerId, "cloneCount", defaults.cloneCount()),
+                TowerBalanceRuntime.abilityTicks(towerId, "cloneDurationTicks", defaults.durationTicks()),
+                TowerBalanceRuntime.ability(towerId, "cloneHealthRatio", defaults.healthRatio()),
+                TowerBalanceRuntime.ability(towerId, "cloneDamageRatio", defaults.damageRatio()),
+                TowerBalanceRuntime.ability(towerId, "cloneRangeRatio", defaults.rangeRatio()),
+                TowerBalanceRuntime.ability(towerId, "cloneAttackIntervalMultiplier", defaults.attackIntervalMultiplier()),
+                TowerBalanceRuntime.ability(towerId, "cloneSpawnRadius", defaults.spawnRadius()),
+                TowerBalanceRuntime.abilityInt(towerId, "cloneAggroPriorityBonus", defaults.aggroPriorityBonus())
         );
+    }
+
+    protected IllusionProfile defaultIllusionProfile(PlayerLane lane) {
+        return IllusionProfile.defaults();
     }
 
     protected List<Vec3> spawnOffsets(IllusionProfile profile) {
@@ -132,7 +145,7 @@ public abstract class IllusionSummonerTower extends SummonerTower {
                 Math.max(0.0, source.range() * profile.rangeRatio()),
                 Math.max(0.0, source.damage() * profile.damageRatio()),
                 Math.max(1, (int) Math.ceil(source.attackIntervalTicks() * profile.attackIntervalMultiplier())),
-                aggroPriority() + profile.aggroPriorityBonus(),
+                aggroPriority() + CLONE_AGGRO_PRIORITY_BONUS,
                 source.description(),
                 source.visual(),
                 List.of()
@@ -173,6 +186,51 @@ public abstract class IllusionSummonerTower extends SummonerTower {
                 clones.remove(index);
             }
         }
+    }
+
+    private void moveClonesToFinalDefense(PlayerLane lane) {
+        if (clones.isEmpty()) {
+            return;
+        }
+
+        List<GridPosition> slots = lane.laneLayout().finalDefenseTowerSlots();
+        if (slots.isEmpty()) {
+            return;
+        }
+
+        int slotIndex = lane.towers().size();
+        for (int index = 0; index < clones.size(); index++) {
+            CloneInstance clone = clones.get(index);
+            var entity = lane.arenaWorld().getEntity(clone.entityId());
+            if (!(entity instanceof SemionTowerEntity towerEntity) || towerEntity.isRemoved() || !towerEntity.isAlive()) {
+                continue;
+            }
+            if (!(towerEntity.runtimeTower() instanceof IllusionRuntimeTower cloneTower)) {
+                continue;
+            }
+
+            GridPosition finalDefensePosition = finalDefenseTowerPosition(
+                    lane,
+                    slots.get(Math.min(slotIndex + index, slots.size() - 1))
+            );
+            cloneTower.moveToFinalDefense(lane, finalDefensePosition);
+            towerEntity.syncTowerState(cloneTower);
+            towerEntity.setPos(
+                    finalDefensePosition.x() + 0.5,
+                    finalDefensePosition.y() + 1.0,
+                    finalDefensePosition.z() + 0.5
+            );
+            towerEntity.getNavigation().stop();
+        }
+    }
+
+    private GridPosition finalDefenseTowerPosition(PlayerLane lane, GridPosition slot) {
+        BlockPos slotPos = new BlockPos(slot.x(), slot.y(), slot.z());
+        BlockPos below = slotPos.below();
+        if (lane.arenaWorld().getBlockState(slotPos).isAir() && !lane.arenaWorld().getBlockState(below).isAir()) {
+            return GridPosition.from(below);
+        }
+        return slot;
     }
 
     private void cleanupClones(PlayerLane lane) {

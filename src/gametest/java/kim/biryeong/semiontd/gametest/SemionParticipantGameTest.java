@@ -126,9 +126,9 @@ import kim.biryeong.semiontd.tower.undead.UndeadRangedSkeletonTower;
 import kim.biryeong.semiontd.tower.undead.UndeadTowerCatalogs;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
 import kim.biryeong.semiontd.tower.undead.UndeadZombieTower;
-import kim.biryeong.semiontd.tower.illusion.IllusionProfile;
-import kim.biryeong.semiontd.tower.illusion.IllusionRuntimeTower;
-import kim.biryeong.semiontd.tower.illusion.IllusionSummonerTower;
+import kim.biryeong.semiontd.tower.legion.IllusionProfile;
+import kim.biryeong.semiontd.tower.legion.IllusionRuntimeTower;
+import kim.biryeong.semiontd.tower.legion.IllusionSummonerTower;
 import kim.biryeong.semiontd.tower.villager.AllayTower;
 import kim.biryeong.semiontd.tower.villager.AntiTankerCatTower;
 import kim.biryeong.semiontd.tower.villager.LaneClearCatTower;
@@ -3301,7 +3301,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 TeamId.RED,
                 1,
                 position,
-                new IllusionProfile(2, 0, 0.25, 0.5, 1.5, 2.0, 1.0, 5)
+                new IllusionProfile(2, 0, 0.25, 0.5, 1.5, 2.0, 1.0, 99)
         );
         lane.addTower(tower);
 
@@ -3364,12 +3364,34 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             if (!assertEquals(context, 24, cloneTower.type().attackIntervalTicks(), "Clone attack interval should use the configured multiplier.")) {
                 return;
             }
-            if (!assertEquals(context, 12, cloneTower.aggroPriority(), "Clone aggro should include the configured source bonus.")) {
+            if (!assertEquals(context, 12, cloneTower.aggroPriority(), "Clone aggro should be exactly five higher than the source tower.")) {
                 return;
             }
         }
 
         List<SemionTowerEntity> firstRoundClones = List.copyOf(tower.spawnedCloneEntities());
+        lane.moveTowersToFinalDefense();
+        for (SemionTowerEntity cloneEntity : firstRoundClones) {
+            if (!assertTrue(
+                    context,
+                    cloneEntity.runtimeTower() instanceof IllusionRuntimeTower,
+                    "Final-defense clone should still be backed by an illusion runtime tower."
+            )) {
+                return;
+            }
+            IllusionRuntimeTower cloneTower = (IllusionRuntimeTower) cloneEntity.runtimeTower();
+            if (!assertTrue(context, cloneTower.deployedAtFinalDefense(), "Wave-cleared clone should move to final defense.")) {
+                return;
+            }
+            if (!assertTrue(
+                    context,
+                    lane.laneLayout().isInsideFinalDefenseTowerArea(cloneEntity.position()),
+                    "Wave-cleared clone entity should be positioned inside the final defense tower area."
+            )) {
+                return;
+            }
+        }
+
         lane.resetForRound();
         for (SemionTowerEntity cloneEntity : firstRoundClones) {
             if (!assertTrue(context, cloneEntity.isRemoved(), "Round reset should discard existing illusion clones.")) {

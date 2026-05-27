@@ -1,4 +1,4 @@
-package kim.biryeong.semiontd.tower.illusion;
+package kim.biryeong.semiontd.tower.legion;
 
 import java.util.UUID;
 import kim.biryeong.semiontd.game.GridPosition;
