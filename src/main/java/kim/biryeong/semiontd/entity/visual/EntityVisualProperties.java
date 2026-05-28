@@ -20,6 +20,7 @@ final class EntityVisualProperties {
     static final String AXOLOTL_VARIANT = "axolotl_variant";
     static final String MOOSHROOM_VARIANT = "mooshroom_variant";
     static final String SALMON_SIZE = "salmon_size";
+    static final String SLIME_SIZE = "slime_size";
     static final String TROPICAL_FISH_PATTERN = "tropical_fish_pattern";
     static final String BASE_COLOR = "base_color";
     static final String PATTERN_COLOR = "pattern_color";

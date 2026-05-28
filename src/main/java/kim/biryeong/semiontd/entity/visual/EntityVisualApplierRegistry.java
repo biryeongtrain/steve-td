@@ -18,6 +18,7 @@ import kim.biryeong.semiontd.mixin.accessor.PigAccessor;
 import kim.biryeong.semiontd.mixin.accessor.RabbitAccessor;
 import kim.biryeong.semiontd.mixin.accessor.SalmonAccessor;
 import kim.biryeong.semiontd.mixin.accessor.SheepAccessor;
+import kim.biryeong.semiontd.mixin.accessor.SlimeAccessor;
 import kim.biryeong.semiontd.mixin.accessor.TamableAnimalAccessor;
 import kim.biryeong.semiontd.mixin.accessor.TropicalFishAccessor;
 import kim.biryeong.semiontd.mixin.accessor.VillagerAccessor;
@@ -169,6 +170,8 @@ public final class EntityVisualApplierRegistry {
             applyTropicalFish(visual, data);
         } else if (entityType == EntityType.SHEEP) {
             applySheep(visual, data);
+        } else if (entityType == EntityType.SLIME) {
+            applySlime(visual, data);
         } else if (entityType == EntityType.CAT) {
             applyDyeColor(visual, data, CatAccessor.semiontd$dataCollarColor(), EntityVisualProperties.COLLAR_COLOR);
         } else if (entityType == EntityType.WOLF) {
@@ -228,6 +231,12 @@ public final class EntityVisualApplierRegistry {
             wool = (byte)(wool | 16);
         }
         put(data, SheepAccessor.semiontd$dataWoolId(), wool);
+    }
+
+    private static void applySlime(EntityVisual visual, List<SynchedEntityData.DataValue<?>> data) {
+        intProperty(visual, EntityVisualProperties.SLIME_SIZE, "size")
+                .map(size -> Math.max(1, Math.min(127, size)))
+                .ifPresent(size -> put(data, SlimeAccessor.semiontd$idSize(), size));
     }
 
     private static void applyDyeColor(
@@ -343,17 +352,19 @@ public final class EntityVisualApplierRegistry {
         return Optional.empty();
     }
 
-    private static Optional<Integer> intProperty(EntityVisual visual, String propertyKey) {
-        Optional<Object> value = visual.propertyValue(propertyKey);
-        if (value.isEmpty()) {
-            return Optional.empty();
-        }
-        Object propertyValue = value.get();
-        if (propertyValue instanceof Number number) {
-            return Optional.of(number.intValue());
-        }
-        if (propertyValue instanceof String stringValue) {
-            return parseInt(stringValue);
+    private static Optional<Integer> intProperty(EntityVisual visual, String... propertyKeys) {
+        for (String propertyKey : propertyKeys) {
+            Optional<Object> value = visual.propertyValue(propertyKey);
+            if (value.isEmpty()) {
+                continue;
+            }
+            Object propertyValue = value.get();
+            if (propertyValue instanceof Number number) {
+                return Optional.of(number.intValue());
+            }
+            if (propertyValue instanceof String stringValue) {
+                return parseInt(stringValue);
+            }
         }
         return Optional.empty();
     }
