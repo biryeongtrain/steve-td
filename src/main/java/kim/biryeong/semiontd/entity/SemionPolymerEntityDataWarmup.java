@@ -6,6 +6,7 @@ import java.util.Set;
 import kim.biryeong.semiontd.config.RoundWaveConfig;
 import kim.biryeong.semiontd.config.SemionConfigLoader.LoadedConfigs;
 import kim.biryeong.semiontd.config.WaveMonsterEntry;
+import kim.biryeong.semiontd.entity.model.SemionBilModelCache;
 import kim.biryeong.semiontd.summon.SummonRegistry;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -23,6 +24,7 @@ public final class SemionPolymerEntityDataWarmup {
         addConfiguredWaveEntityTypes(entityTypes, configs);
         addSummonEntityTypes(entityTypes);
         addTowerEntityTypes(entityTypes);
+        warmBilModels(configs, logger);
 
         int warmed = 0;
         for (EntityType<?> entityType : entityTypes) {
@@ -34,6 +36,23 @@ public final class SemionPolymerEntityDataWarmup {
             }
         }
         logger.info("Warmed Polymer tracked data for {} entity types.", warmed);
+    }
+
+    private static void warmBilModels(LoadedConfigs configs, Logger logger) {
+        Set<String> modelIds = new LinkedHashSet<>();
+        addConfiguredWaveBilModels(modelIds, configs);
+        addSummonBilModels(modelIds);
+        addTowerBilModels(modelIds);
+
+        int warmed = 0;
+        for (String modelId : modelIds) {
+            if (SemionBilModelCache.load(modelId).isPresent()) {
+                warmed++;
+            } else {
+                logger.warn("Failed to warm BIL model {}.", modelId);
+            }
+        }
+        logger.info("Warmed {} BIL models for generated resource pack.", warmed);
     }
 
     private static void addBaseEntityTypes(Set<EntityType<?>> entityTypes) {
@@ -95,5 +114,37 @@ public final class SemionPolymerEntityDataWarmup {
             return;
         }
         BuiltInRegistries.ENTITY_TYPE.getOptional(id).ifPresent(entityTypes::add);
+    }
+
+    private static void addConfiguredWaveBilModels(Set<String> modelIds, LoadedConfigs configs) {
+        if (configs == null || configs.waves() == null) {
+            return;
+        }
+        configs.waves().rounds().forEach(round -> addRoundBilModels(modelIds, round));
+        addRoundBilModels(modelIds, configs.waves().infinite());
+    }
+
+    private static void addRoundBilModels(Set<String> modelIds, RoundWaveConfig round) {
+        if (round == null) {
+            return;
+        }
+        round.lanes().values().stream()
+                .filter(entries -> entries != null)
+                .forEach(entries -> entries.forEach(entry -> addBilModel(modelIds, entry.blockbenchModelId())));
+    }
+
+    private static void addSummonBilModels(Set<String> modelIds) {
+        SummonRegistry.all().forEach(summonType -> summonType.blockbenchModelId().ifPresent(modelId -> addBilModel(modelIds, modelId)));
+    }
+
+    private static void addTowerBilModels(Set<String> modelIds) {
+        ProductionTowerCatalog.all().forEach(entry -> entry.type().blockbenchModel().ifPresent(modelId -> addBilModel(modelIds, modelId)));
+    }
+
+    private static void addBilModel(Set<String> modelIds, String modelId) {
+        String normalized = SemionBilModelCache.normalize(modelId);
+        if (normalized != null) {
+            modelIds.add(normalized);
+        }
     }
 }

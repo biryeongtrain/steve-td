@@ -174,6 +174,7 @@ public final class PlayerLane {
     public void markWaveStarted(int currentRound) {
         for (Tower tower : towers) {
             tower.markWaveStarted(currentRound);
+            tower.onWaveStarted(this, currentRound);
         }
     }
 

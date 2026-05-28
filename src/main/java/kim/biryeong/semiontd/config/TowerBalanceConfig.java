@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
+import kim.biryeong.semiontd.tower.legion.LegionTowers;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
 import kim.biryeong.semiontd.tower.villager.VillagerTowers;
 import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
@@ -66,6 +67,16 @@ public record TowerBalanceConfig(
         addTower(towers, WarlockTowers.T1_RANGED_SLAVE);
         addTower(towers, WarlockTowers.T2_RANGED_SLAVE);
         addTower(towers, WarlockTowers.T3_RANGED_SLAVE);
+        addTower(towers, LegionTowers.T1_CHICKEN);
+        addTower(towers, LegionTowers.T2_CHICKEN_TOWER);
+        addTower(towers, LegionTowers.T2_DPS_CHICKEN_TOWER);
+        addTower(towers, LegionTowers.T1_SLIME_TOWER);
+        addTower(towers, LegionTowers.T2_SLIME_TOWER);
+        addTower(towers, LegionTowers.T1_PENGUIN);
+        addTower(towers, LegionTowers.T2_PENGUIN);
+        addTower(towers, LegionTowers.T1_PARROT_TOWER);
+        addTower(towers, LegionTowers.T2_PARROT_TOWER);
+        addTower(towers, LegionTowers.ILLUSION_TOWER);
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
         putUpgrade(upgradeCosts, VillagerTowers.T1_SPLASH_TOWER, "villager_splash_t2", 110);
@@ -99,6 +110,11 @@ public record TowerBalanceConfig(
         putUpgrade(upgradeCosts, WarlockTowers.T2_SLAVE, "t3_slave", 280);
         putUpgrade(upgradeCosts, WarlockTowers.T1_RANGED_SLAVE, "t2_ranged_slave", 100);
         putUpgrade(upgradeCosts, WarlockTowers.T2_RANGED_SLAVE, "t3_ranged_slave", 240);
+        putUpgrade(upgradeCosts, LegionTowers.T1_CHICKEN, LegionTowers.T2_CHICKEN_TOWER.id(), 100);
+        putUpgrade(upgradeCosts, LegionTowers.T1_CHICKEN, LegionTowers.T2_DPS_CHICKEN_TOWER.id(), 100);
+        putUpgrade(upgradeCosts, LegionTowers.T1_SLIME_TOWER, LegionTowers.T2_SLIME_TOWER.id(), 85);
+        putUpgrade(upgradeCosts, LegionTowers.T1_PENGUIN, LegionTowers.T2_PENGUIN.id(), 225);
+        putUpgrade(upgradeCosts, LegionTowers.T1_PARROT_TOWER, LegionTowers.T2_PARROT_TOWER.id(), 225);
 
         LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>();
         putAbilities(abilities, VillagerTowers.T2_LIBRARIAN_TOWER.id(), Map.of(
@@ -364,6 +380,94 @@ public record TowerBalanceConfig(
                 "deathEffectRadius", 10.0,
                 "deathEffectDurationTicks", 72000.0,
                 "attackSpeedReduction", 0.10
+        ));
+        putAbilities(abilities, LegionTowers.T1_CHICKEN.id(), Map.ofEntries(
+                Map.entry("cloneCount", 1.0),
+                Map.entry("cloneHealthRatio", 0.50),
+                Map.entry("cloneDamageRatio", 0.50),
+                Map.entry("cloneRangeRatio", 1.0),
+                Map.entry("cloneAttackIntervalMultiplier", 1.0),
+                Map.entry("cloneSpawnRadius", 1.5),
+                Map.entry("cloneAggroPriorityBonus", 5.0)
+        ));
+        putAbilities(abilities, LegionTowers.T2_CHICKEN_TOWER.id(), Map.ofEntries(
+                Map.entry("cloneCount", 1.0),
+                Map.entry("cloneHealthRatio", 0.50),
+                Map.entry("cloneDamageRatio", 0.50),
+                Map.entry("cloneRangeRatio", 1.0),
+                Map.entry("cloneAttackIntervalMultiplier", 1.0),
+                Map.entry("cloneSpawnRadius", 1.5),
+                Map.entry("cloneAggroPriorityBonus", 5.0),
+                Map.entry("splashRadius", 0.75),
+                Map.entry("splashDamageRatio", 0.25)
+        ));
+        putAbilities(abilities, LegionTowers.T2_DPS_CHICKEN_TOWER.id(), Map.ofEntries(
+                Map.entry("cloneCount", 0.0),
+                Map.entry("cloneHealthRatio", 0.50),
+                Map.entry("cloneDamageRatio", 0.50),
+                Map.entry("cloneRangeRatio", 1.0),
+                Map.entry("cloneAttackIntervalMultiplier", 1.0),
+                Map.entry("cloneSpawnRadius", 1.5),
+                Map.entry("cloneAggroPriorityBonus", 5.0),
+                Map.entry("splashRadius", 0.75),
+                Map.entry("splashDamageRatio", 0.75)
+        ));
+        putAbilities(abilities, LegionTowers.T1_SLIME_TOWER.id(), Map.ofEntries(
+                Map.entry("cloneCount", 1.0),
+                Map.entry("cloneHealthRatio", 0.65),
+                Map.entry("cloneDamageRatio", 0.65),
+                Map.entry("cloneRangeRatio", 1.0),
+                Map.entry("cloneAttackIntervalMultiplier", 1.0),
+                Map.entry("cloneSpawnRadius", 1.5),
+                Map.entry("cloneAggroPriorityBonus", 5.0)
+        ));
+        putAbilities(abilities, LegionTowers.T2_SLIME_TOWER.id(), Map.ofEntries(
+                Map.entry("cloneCount", 2.0),
+                Map.entry("cloneHealthRatio", 0.65),
+                Map.entry("cloneDamageRatio", 0.65),
+                Map.entry("cloneRangeRatio", 1.0),
+                Map.entry("cloneAttackIntervalMultiplier", 1.0),
+                Map.entry("cloneSpawnRadius", 1.5),
+                Map.entry("cloneAggroPriorityBonus", 5.0),
+                Map.entry("regenAmount", 3.0),
+                Map.entry("regenIntervalTicks", 20.0)
+        ));
+        putAbilities(abilities, LegionTowers.T1_PENGUIN.id(), Map.ofEntries(
+                Map.entry("cloneCount", 2.0),
+                Map.entry("cloneHealthRatio", 0.65),
+                Map.entry("cloneDamageRatio", 0.65),
+                Map.entry("cloneRangeRatio", 1.0),
+                Map.entry("cloneAttackIntervalMultiplier", 1.0),
+                Map.entry("cloneSpawnRadius", 1.5),
+                Map.entry("cloneAggroPriorityBonus", 5.0)
+        ));
+        putAbilities(abilities, LegionTowers.T2_PENGUIN.id(), Map.ofEntries(
+                Map.entry("cloneCount", 3.0),
+                Map.entry("cloneHealthRatio", 0.65),
+                Map.entry("cloneDamageRatio", 0.65),
+                Map.entry("cloneRangeRatio", 1.0),
+                Map.entry("cloneAttackIntervalMultiplier", 1.0),
+                Map.entry("cloneSpawnRadius", 1.5),
+                Map.entry("cloneAggroPriorityBonus", 5.0),
+                Map.entry("splashRadius", 0.75),
+                Map.entry("splashDamageRatio", 0.60)
+        ));
+        putAbilities(abilities, LegionTowers.T1_PARROT_TOWER.id(), Map.of(
+                "attackStackBonus", 0.10,
+                "maxAttackStacks", 5.0
+        ));
+        putAbilities(abilities, LegionTowers.T2_PARROT_TOWER.id(), Map.of(
+                "attackStackBonus", 0.20,
+                "maxAttackStacks", 5.0
+        ));
+        putAbilities(abilities, LegionTowers.ILLUSION_TOWER.id(), Map.ofEntries(
+                Map.entry("cloneCount", 1.0),
+                Map.entry("cloneHealthRatio", 0.65),
+                Map.entry("cloneDamageRatio", 0.65),
+                Map.entry("cloneRangeRatio", 1.0),
+                Map.entry("cloneAttackIntervalMultiplier", 1.0),
+                Map.entry("cloneSpawnRadius", 1.5),
+                Map.entry("cloneAggroPriorityBonus", 5.0)
         ));
 
         return new TowerBalanceConfig(towers, upgradeCosts, abilities);

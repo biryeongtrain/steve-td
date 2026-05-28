@@ -226,6 +226,7 @@ WolfVisual.builder()
 | `minecraft:axolotl` | `AxolotlVisual.builder()` |
 | `minecraft:mooshroom` | `MooshroomVisual.builder()` |
 | `minecraft:salmon` | `SalmonVisual.builder()` |
+| `minecraft:slime` | `SlimeVisual.builder()` |
 | `minecraft:tropical_fish` | `TropicalFishVisual.builder()` |
 | `minecraft:sheep` | `SheepVisual.builder()` |
 

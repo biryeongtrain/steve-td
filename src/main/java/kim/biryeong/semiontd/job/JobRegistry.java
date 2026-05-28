@@ -11,6 +11,10 @@ public final class JobRegistry {
     private static final Map<ResourceLocation, SemionJob> JOBS = new LinkedHashMap<>();
     private static final SemionJob DEFAULT_JOB = register(new DefaultJob());
 
+    static {
+        registerBuiltIns();
+    }
+
     private JobRegistry() {
     }
 
@@ -31,6 +35,14 @@ public final class JobRegistry {
         Objects.requireNonNull(job, "job");
         SemionJob existing = JOBS.putIfAbsent(job.id(), job);
         return existing == null ? job : existing;
+    }
+
+    public static void registerBuiltIns() {
+        registerIfAbsent(new VillagerTowerJob());
+        registerIfAbsent(new UndeadTowerJob());
+        registerIfAbsent(new AnimalTowerJob());
+        registerIfAbsent(new WarlockTowerJob());
+        registerIfAbsent(new LegionTowerJob());
     }
 
     public static Optional<SemionJob> find(ResourceLocation id) {

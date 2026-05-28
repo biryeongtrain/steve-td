@@ -76,6 +76,12 @@ public final class PlayerEconomy {
         }
     }
 
+    public void addEmerald(long amount) {
+        if (amount > 0) {
+            emerald += amount;
+        }
+    }
+
     public void addGas(long amount, long cap) {
         addEmerald(amount, cap);
     }

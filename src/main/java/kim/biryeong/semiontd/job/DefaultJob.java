@@ -11,8 +11,8 @@ public final class DefaultJob extends SemionJob {
     public DefaultJob() {
         super(
                 ID,
-                Component.literal("Recruit"),
-                List.of(Component.literal("Baseline job with no modifiers."))
+                Component.literal("무직"),
+                List.of(Component.literal("무직백수. 쓰면 밴"))
         );
     }
 

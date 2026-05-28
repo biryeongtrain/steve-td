@@ -20,6 +20,7 @@
     "accessor.RabbitAccessor",
     "accessor.SalmonAccessor",
     "accessor.SheepAccessor",
+    "accessor.SlimeAccessor",
     "accessor.TamableAnimalAccessor",
     "accessor.TropicalFishAccessor",
     "accessor.VillagerAccessor",

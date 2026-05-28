@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -291,6 +292,41 @@ public final class SemionCommands {
                                                 gameManager,
                                                 IntegerArgumentType.getInteger(context, "page")
                                         )))))
+                .then(literal("give")
+                        .then(literal("diamond")
+                                .then(argument("amount", IntegerArgumentType.integer(1))
+                                        .executes(context -> debugGiveCurrency(
+                                                context.getSource(),
+                                                gameManager,
+                                                CurrencyDebugType.DIAMOND,
+                                                IntegerArgumentType.getInteger(context, "amount"),
+                                                null
+                                        ))
+                                        .then(argument("player", EntityArgument.player())
+                                                .executes(context -> debugGiveCurrency(
+                                                        context.getSource(),
+                                                        gameManager,
+                                                        CurrencyDebugType.DIAMOND,
+                                                        IntegerArgumentType.getInteger(context, "amount"),
+                                                        EntityArgument.getPlayer(context, "player")
+                                                )))))
+                        .then(literal("emerald")
+                                .then(argument("amount", IntegerArgumentType.integer(1))
+                                        .executes(context -> debugGiveCurrency(
+                                                context.getSource(),
+                                                gameManager,
+                                                CurrencyDebugType.EMERALD,
+                                                IntegerArgumentType.getInteger(context, "amount"),
+                                                null
+                                        ))
+                                        .then(argument("player", EntityArgument.player())
+                                                .executes(context -> debugGiveCurrency(
+                                                        context.getSource(),
+                                                        gameManager,
+                                                        CurrencyDebugType.EMERALD,
+                                                        IntegerArgumentType.getInteger(context, "amount"),
+                                                        EntityArgument.getPlayer(context, "player")
+                                                ))))))
                 .then(literal("buildguide")
                         .executes(context -> debugBuildGuideVisual(context.getSource(), gameManager, DebugBuildGuideView.LIST))
                         .then(literal("list")
@@ -715,6 +751,50 @@ public final class SemionCommands {
                 + ", 에메랄드/초=" + economy.emeraldPerSec()
                 + ", 생산업글=" + economy.emeraldProductionUpgradeCount()
                 + ", 다음업글비용=" + (nextGasUpgradeCost >= 0 ? nextGasUpgradeCost : "최대"));
+        return 1;
+    }
+
+    private enum CurrencyDebugType {
+        DIAMOND,
+        EMERALD
+    }
+
+    private static int debugGiveCurrency(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            CurrencyDebugType currency,
+            int amount,
+            ServerPlayer targetPlayer
+    ) throws CommandSyntaxException {
+        SemionGame game = gameManager.activeGame().orElse(null);
+        if (game == null) {
+            failure(source, "진행 중인 게임이 없습니다.");
+            return 0;
+        }
+
+        ServerPlayer target = targetPlayer == null ? source.getPlayerOrException() : targetPlayer;
+        SemionPlayer semionPlayer = game.players().get(target.getUUID());
+        if (semionPlayer == null) {
+            failure(source, "현재 게임 참가자가 아닙니다: " + target.getGameProfile().getName());
+            return 0;
+        }
+
+        PlayerEconomy economy = semionPlayer.economy();
+        if (currency == CurrencyDebugType.DIAMOND) {
+            economy.addDiamond(amount);
+        } else {
+            economy.addEmerald(amount);
+        }
+
+        success(source, target.getGameProfile().getName()
+                + "에게 "
+                + (currency == CurrencyDebugType.DIAMOND ? "다이아" : "에메랄드")
+                + " "
+                + amount
+                + "개를 지급했습니다. 현재 다이아="
+                + economy.diamond()
+                + ", 에메랄드="
+                + economy.emerald());
         return 1;
     }
 
