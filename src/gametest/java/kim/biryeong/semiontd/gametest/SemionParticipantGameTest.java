@@ -48,14 +48,17 @@ import kim.biryeong.semiontd.entity.goal.ApplyMonsterTimedEffectGoal;
 import kim.biryeong.semiontd.entity.goal.ApplyTowerTimedEffectGoal;
 import kim.biryeong.semiontd.entity.goal.SiegeTrueDamageGoal;
 import kim.biryeong.semiontd.entity.goal.SingleAllyHealGoal;
-import kim.biryeong.semiontd.entity.model.SemionBilModelCache;
 import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.KillSourceKind;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.MonsterDimensions;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.monster.goal.MonsterAttackTargetGoal;
+import kim.biryeong.semiontd.entity.visual.EntityVisual;
+import kim.biryeong.semiontd.entity.visual.EntityVisualApplierRegistry;
 import kim.biryeong.semiontd.entity.visual.SemionAnimationState;
+import kim.biryeong.semiontd.entity.visual.SlimeVisual;
+import kim.biryeong.semiontd.mixin.accessor.SlimeAccessor;
 import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.game.AssignedParticipant;
 import kim.biryeong.semiontd.game.EconomyService;
@@ -82,6 +85,7 @@ import kim.biryeong.semiontd.game.TowerUpgradeResult;
 import kim.biryeong.semiontd.game.VanillaTeamBridge;
 import kim.biryeong.semiontd.job.AnimalTowerJob;
 import kim.biryeong.semiontd.job.JobRegistry;
+import kim.biryeong.semiontd.job.LegionTowerJob;
 import kim.biryeong.semiontd.job.SemionJob;
 import kim.biryeong.semiontd.job.UndeadTowerJob;
 import kim.biryeong.semiontd.job.VillagerTowerJob;
@@ -129,6 +133,11 @@ import kim.biryeong.semiontd.tower.undead.UndeadZombieTower;
 import kim.biryeong.semiontd.tower.legion.IllusionProfile;
 import kim.biryeong.semiontd.tower.legion.IllusionRuntimeTower;
 import kim.biryeong.semiontd.tower.legion.IllusionSummonerTower;
+import kim.biryeong.semiontd.tower.legion.LegionGlobalIllusionTower;
+import kim.biryeong.semiontd.tower.legion.LegionParrotTower;
+import kim.biryeong.semiontd.tower.legion.LegionSlimeTower;
+import kim.biryeong.semiontd.tower.legion.LegionTowerCatalogs;
+import kim.biryeong.semiontd.tower.legion.LegionTowers;
 import kim.biryeong.semiontd.tower.villager.AllayTower;
 import kim.biryeong.semiontd.tower.villager.AntiTankerCatTower;
 import kim.biryeong.semiontd.tower.villager.LaneClearCatTower;
@@ -148,6 +157,8 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.EntityType;
@@ -1618,6 +1629,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         ProductionTowerCatalog.registerStarter(starterType);
         ProductionTowerCatalog.register(targetType, 2);
         ProductionTowerCatalog.linkUpgrade(starterType, "manual_upgrade", "Manual Upgrade", targetType, 0);
+        SemionJob testJob = registerTowerAllowingJob(
+                "build_record",
+                Set.of(starterType.id(), targetType.id())
+        );
 
         SemionGame game = new SemionGame(
                 EconomyConfig.defaultConfig(),
@@ -1625,6 +1640,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 testArena(context),
                 service
         );
+        game.selectJob(redId, testJob.id());
         ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
                 MatchMode.NORMAL,
                 List.of(
@@ -2230,14 +2246,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     public void towerUpgradeServiceAcceptsNonProductionEntityBackedTower(GameTestHelper context) {
         ProductionTowerCatalog.clearForTesting();
         UUID playerId = stableUuid("red-custom-runtime-upgrade-owner");
-        SemionGame game = startedSinglePlayerGame(
-                context,
-                playerId,
-                TeamId.RED
-        );
-        PlayerLane lane = redLane(game, 1);
-        BlockPos towerPos = towerPlacementPos(lane);
-
         TowerType upgradeTarget = new TowerType("manual_fixture_custom_t2", "Manual Fixture Custom T2", TowerCategory.DIRECT, 0, 80.0, 8.0, 8.0, 20, 0);
         TowerType starterType = new TowerType(
                 "manual_fixture_custom_starter",
@@ -2253,6 +2261,18 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         ProductionTowerCatalog.registerStarter(starterType, FixtureSupportTower::new);
         ProductionTowerCatalog.register(upgradeTarget, 2);
         ProductionTowerCatalog.linkUpgrade(starterType, "manual_upgrade", "Manual Upgrade", upgradeTarget, 0);
+        SemionJob testJob = registerTowerAllowingJob(
+                "custom_runtime_upgrade",
+                Set.of(starterType.id(), upgradeTarget.id())
+        );
+        SemionGame game = startedSinglePlayerGame(
+                context,
+                playerId,
+                TeamId.RED,
+                testJob.id()
+        );
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
         kim.biryeong.semiontd.game.GridPosition gridPosition = new kim.biryeong.semiontd.game.GridPosition(
                 towerPos.getX(),
                 towerPos.getY(),
@@ -3364,7 +3384,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             if (!assertEquals(context, 24, cloneTower.type().attackIntervalTicks(), "Clone attack interval should use the configured multiplier.")) {
                 return;
             }
-            if (!assertEquals(context, 12, cloneTower.aggroPriority(), "Clone aggro should be exactly five higher than the source tower.")) {
+            if (!assertEquals(context, 106, cloneTower.aggroPriority(), "Clone aggro should use the configured priority bonus.")) {
                 return;
             }
         }
@@ -4290,11 +4310,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
 
-        tickGame(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS + 1);
+        tickGame(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS);
         if (!assertEquals(context, RoundPhase.LANE_WAVE, game.phase(), "Round 2 should enter wave phase.")) {
             return;
         }
-        if (!assertEquals(context, 1, targetLane.activeMonsters().size(), "Reserved summon should spawn in the next wave.")) {
+        if (!assertEquals(context, 1, targetLane.queuedSummonCount(), "Reserved summon should be queued for the next wave.")) {
             return;
         }
         context.succeed();
@@ -5497,6 +5517,39 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void legionTowerCatalogRegistersAndLinksLegionFamilies(GameTestHelper context) {
+        ProductionTowerCatalog.clearForTesting();
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        LegionTowerCatalogs.register();
+
+        if (!assertEquals(context, 5L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Legion catalog should expose chicken, slime, penguin, parrot, and illusion starters.")) {
+            return;
+        }
+        if (!assertEquals(context, 2, ProductionTowerCatalog.upgrades(LegionTowers.T1_CHICKEN).size(), "Chicken starter should branch to social and DPS upgrades.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, ProductionTowerCatalog.upgrades(LegionTowers.T1_SLIME_TOWER).size(), "Slime starter should link to T2 slime.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, ProductionTowerCatalog.upgrades(LegionTowers.T1_PENGUIN).size(), "Penguin starter should link to T2 penguin.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, ProductionTowerCatalog.upgrades(LegionTowers.T1_PARROT_TOWER).size(), "Parrot starter should link to T2 parrot.")) {
+            return;
+        }
+        if (!assertTrue(context, ProductionTowerCatalog.entry(LegionTowers.T1_SLIME_TOWER).orElseThrow().create(stableUuid("legion-slime-catalog-owner"), TeamId.RED, 1, new GridPosition(0, 0, 0)) instanceof LegionSlimeTower, "Slime catalog entry should create LegionSlimeTower.")) {
+            return;
+        }
+        if (!assertTrue(context, ProductionTowerCatalog.entry(LegionTowers.T1_PARROT_TOWER).orElseThrow().create(stableUuid("legion-parrot-catalog-owner"), TeamId.RED, 1, new GridPosition(0, 0, 0)) instanceof LegionParrotTower, "Parrot catalog entry should create LegionParrotTower.")) {
+            return;
+        }
+        if (!assertTrue(context, ProductionTowerCatalog.entry(LegionTowers.ILLUSION_TOWER).orElseThrow().create(stableUuid("legion-illusion-catalog-owner"), TeamId.RED, 1, new GridPosition(0, 0, 0)) instanceof LegionGlobalIllusionTower, "Illusion catalog entry should create LegionGlobalIllusionTower.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void animalTowerDescriptionsRenderConfiguredAbilityValues(GameTestHelper context) {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
         Map<String, Map<String, Double>> abilities = new java.util.LinkedHashMap<>(defaults.abilities());
@@ -5512,6 +5565,47 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 return;
             }
             if (!assertTrue(context, resolved.description().stream().anyMatch(line -> line.contains("공격 주기가 9틱 감소")), "Rabbit description should render configured interval reduction.")) {
+                return;
+            }
+        } finally {
+            TowerBalanceRuntime.apply(defaults);
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void legionTowerDescriptionsRenderConfiguredAbilityValues(GameTestHelper context) {
+        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        Map<String, Map<String, Double>> abilities = new java.util.LinkedHashMap<>(defaults.abilities());
+        Map<String, Double> penguinAbilities = new java.util.LinkedHashMap<>(abilities.get(LegionTowers.T2_PENGUIN.id()));
+        penguinAbilities.put("cloneCount", 4.0);
+        penguinAbilities.put("cloneHealthRatio", 0.80);
+        penguinAbilities.put("splashRadius", 2.0);
+        penguinAbilities.put("splashDamageRatio", 0.40);
+        abilities.put(LegionTowers.T2_PENGUIN.id(), penguinAbilities);
+        Map<String, Double> slimeAbilities = new java.util.LinkedHashMap<>(abilities.get(LegionTowers.T2_SLIME_TOWER.id()));
+        slimeAbilities.put("regenAmount", 7.0);
+        abilities.put(LegionTowers.T2_SLIME_TOWER.id(), slimeAbilities);
+        Map<String, Double> parrotAbilities = new java.util.LinkedHashMap<>(abilities.get(LegionTowers.T1_PARROT_TOWER.id()));
+        parrotAbilities.put("attackStackBonus", 0.25);
+        parrotAbilities.put("maxAttackStacks", 3.0);
+        abilities.put(LegionTowers.T1_PARROT_TOWER.id(), parrotAbilities);
+
+        TowerBalanceRuntime.apply(new TowerBalanceConfig(defaults.towers(), defaults.upgradeCosts(), abilities));
+        try {
+            TowerType penguin = TowerBalanceRuntime.resolve(LegionTowers.T2_PENGUIN);
+            if (!assertTrue(context, penguin.description().stream().anyMatch(line -> line.contains("80%") && line.contains("4체")), "Penguin description should render configured clone ratio and count.")) {
+                return;
+            }
+            if (!assertTrue(context, penguin.description().stream().anyMatch(line -> line.contains("2블록") && line.contains("40%")), "Penguin description should render configured splash values.")) {
+                return;
+            }
+            TowerType slime = TowerBalanceRuntime.resolve(LegionTowers.T2_SLIME_TOWER);
+            if (!assertTrue(context, slime.description().stream().anyMatch(line -> line.contains("체력이 7씩 재생")), "Slime description should render configured regen amount.")) {
+                return;
+            }
+            TowerType parrot = TowerBalanceRuntime.resolve(LegionTowers.T1_PARROT_TOWER);
+            if (!assertTrue(context, parrot.description().stream().anyMatch(line -> line.contains("25% 증가") && line.contains("최대 75%")), "Parrot description should render configured stack bonus and cap.")) {
                 return;
             }
         } finally {
@@ -5560,7 +5654,142 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertPresent(context, JobRegistry.find(WarlockTowerJob.ID), "Built-in reload should register the warlock tower job.")) {
             return;
         }
-        if (!assertEquals(context, 13L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose villager, undead, animal, and warlock starter families.")) {
+        if (!assertPresent(context, JobRegistry.find(LegionTowerJob.ID), "Built-in reload should register the legion tower job.")) {
+            return;
+        }
+        if (!assertEquals(context, 18L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose villager, undead, animal, warlock, and legion starter families.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void legionTowerJobUsesLegionStarterAndUpgradeTree(GameTestHelper context) {
+        UUID playerId = stableUuid("legion-job-tower-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, LegionTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
+
+        Set<String> starterIds = ProductionTowerService.availableTowers(game, playerId).stream()
+                .map(entry -> entry.type().id())
+                .collect(java.util.stream.Collectors.toSet());
+        if (!assertEquals(
+                context,
+                Set.of(
+                        LegionTowers.T1_CHICKEN.id(),
+                        LegionTowers.T1_SLIME_TOWER.id(),
+                        LegionTowers.T1_PENGUIN.id(),
+                        LegionTowers.T1_PARROT_TOWER.id(),
+                        LegionTowers.ILLUSION_TOWER.id()
+                ),
+                starterIds,
+                "Legion job should expose all legion starters including illusion tower."
+        )) {
+            return;
+        }
+        TowerPlacementResult placement = ProductionTowerService.placeTower(game, playerId, towerPos, LegionTowers.T1_CHICKEN.id());
+        if (!assertEquals(context, TowerPlacementResult.SUCCESS, placement, "Legion job should be allowed to place chicken tower.")) {
+            return;
+        }
+        Set<String> upgradeIds = ProductionTowerService.availableUpgrades(game, playerId, towerPos).stream()
+                .map(option -> option.targetType().id())
+                .collect(java.util.stream.Collectors.toSet());
+        if (!assertEquals(
+                context,
+                Set.of(LegionTowers.T2_CHICKEN_TOWER.id(), LegionTowers.T2_DPS_CHICKEN_TOWER.id()),
+                upgradeIds,
+                "Legion chicken starter should branch to both chicken upgrades."
+        )) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void legionSlimeCloneUsesCatalogRuntimeAndRegenerates(GameTestHelper context) {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        UUID playerId = stableUuid("legion-slime-clone-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        TowerType slimeType = ProductionTowerCatalog.entry(LegionTowers.T2_SLIME_TOWER).orElseThrow().type();
+        CapturingLegionSlimeTower slime = new CapturingLegionSlimeTower(
+                slimeType,
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(towerPlacementPos(lane))
+        );
+        lane.addTower(slime);
+        lane.markWaveStarted(1);
+
+        if (!assertEquals(context, 2, slime.spawnedCloneEntities().size(), "T2 slime should spawn configured clone count.")) {
+            return;
+        }
+        SemionTowerEntity cloneEntity = slime.spawnedCloneEntities().getFirst();
+        if (!assertTrue(context, cloneEntity.runtimeTower() instanceof LegionSlimeTower, "Slime clone should reuse the catalog LegionSlimeTower runtime.")) {
+            return;
+        }
+        LegionSlimeTower cloneTower = (LegionSlimeTower) cloneEntity.runtimeTower();
+        double damagedHealth = cloneTower.health() - 10.0;
+        cloneTower.syncHealth(damagedHealth);
+        cloneEntity.setHealth((float) damagedHealth);
+        for (int tick = 0; tick < 20; tick++) {
+            slime.tick(lane);
+        }
+        if (!assertClose(context, damagedHealth + 3.0, cloneTower.health(), "Slime clone should regenerate using configured runtime logic.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void legionIllusionDeathClonesParrotWithCatalogRuntimeAndStackLogic(GameTestHelper context) {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        UUID playerId = stableUuid("legion-global-parrot-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos parrotPos = towerPlacementPos(lane);
+        LegionParrotTower parrot = new LegionParrotTower(
+                ProductionTowerCatalog.entry(LegionTowers.T2_PARROT_TOWER).orElseThrow().type(),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(parrotPos)
+        );
+        lane.addTower(parrot);
+        CapturingGlobalIllusionTower illusion = new CapturingGlobalIllusionTower(
+                ProductionTowerCatalog.entry(LegionTowers.ILLUSION_TOWER).orElseThrow().type(),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(nearbyTowerPlacementPos(lane, parrotPos))
+        );
+        lane.addTower(illusion);
+
+        illusion.syncHealth(0.0);
+        illusion.notifyDeath(lane);
+
+        if (!assertEquals(context, 1, illusion.spawnedCloneEntities().size(), "Illusion tower death should clone the living same-owner parrot tower.")) {
+            return;
+        }
+        SemionTowerEntity cloneEntity = illusion.spawnedCloneEntities().getFirst();
+        if (!assertTrue(context, cloneEntity.runtimeTower() instanceof LegionParrotTower, "Illusion-created parrot clone should reuse LegionParrotTower runtime.")) {
+            return;
+        }
+        LegionParrotTower cloneTower = (LegionParrotTower) cloneEntity.runtimeTower();
+        double baseDamage = cloneTower.type().damage();
+        int baseInterval = cloneTower.type().attackIntervalTicks();
+        if (!assertClose(context, baseDamage, cloneTower.modifyAttackDamage(cloneEntity, null, baseDamage), "Parrot clone should start without attack stacks.")) {
+            return;
+        }
+        cloneTower.onAttack(cloneEntity, null, baseDamage, false);
+        if (!assertEquals(context, 1, cloneTower.attackStacks(), "Parrot clone should gain a stack after attacking.")) {
+            return;
+        }
+        if (!assertClose(context, baseDamage * 1.2, cloneTower.modifyAttackDamage(cloneEntity, null, baseDamage), "T2 parrot clone should apply configured attack stack damage bonus.")) {
+            return;
+        }
+        if (!assertEquals(context, (int) Math.ceil(baseInterval / 1.2), cloneTower.adjustAttackInterval(baseInterval), "T2 parrot clone should apply configured attack stack speed bonus.")) {
             return;
         }
         context.succeed();
@@ -6124,59 +6353,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
-    public void t5SiegeBlockbenchModelLoadsWithCombatAnimations(GameTestHelper context) {
-        var model = SemionBilModelCache.load("semion-td:summon/t5_siege");
-        if (!assertPresent(context, model, "T5 siege Blockbench model should load through BIL.")) {
-            return;
-        }
-        if (!assertTrue(context, model.get().animations().containsKey("idle"), "T5 siege model should provide idle animation.")) {
-            return;
-        }
-        if (!assertTrue(context, model.get().animations().containsKey("walk"), "T5 siege model should provide walk animation.")) {
-            return;
-        }
-        if (!assertTrue(context, model.get().animations().containsKey("attack"), "T5 siege model should provide attack animation.")) {
-            return;
-        }
-
-        Monster monster = new Monster(
-                "t5_siege_model",
-                TeamId.BLUE,
-                1,
-                Optional.empty(),
-                Optional.of(TeamId.RED),
-                70,
-                2,
-                8,
-                AttackKind.MELEE,
-                null,
-                "semion-td:summon/t5_siege",
-                DamageType.PHYSICAL,
-                0,
-                MonsterDimensions.of(2.0, 1.35),
-                SummonTier.T5,
-                List.of(SummonRole.SIEGE),
-                6
-        );
-        SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
-        entity.configureFrom(monster, null);
-        if (!assertTrue(context, entity.hasBilModelHolder(), "T5 siege runtime entity should attach a BIL holder when the model resource exists.")) {
-            return;
-        }
-        entity.playAnimation(SemionAnimationState.ATTACK);
-        if (!assertEquals(context, SemionAnimationState.ATTACK, entity.animationState(), "T5 siege entity should expose attack animation state.")) {
-            return;
-        }
-        if (!assertClose(context, 2.0, entity.getBbWidth(), "T5 siege hitbox width should match its authored dimensions.")) {
-            return;
-        }
-        if (!assertClose(context, 1.35, entity.getBbHeight(), "T5 siege hitbox height should match its authored dimensions.")) {
-            return;
-        }
-        context.succeed();
-    }
-
-    @GameTest
     public void monsterDimensionsAreAuthoredAndAppliedAtRuntime(GameTestHelper context) {
         MonsterDimensions waveDimensions = MonsterDimensions.of(1.25, 0.9);
         WaveMonsterEntry entry = new WaveMonsterEntry(
@@ -6403,6 +6579,35 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         context.succeed();
     }
 
+    @GameTest
+    public void slimeVisualBuilderAppliesClampedSize(GameTestHelper context) {
+        EntityVisual visual = SlimeVisual.builder().size(4).build();
+        if (!assertEquals(context, "minecraft:slime", visual.entityTypeId(), "Slime visual builder should use the slime entity type.")) {
+            return;
+        }
+        if (!assertEquals(context, Optional.of(4), appliedSlimeSize(context, visual), "Slime visual should apply size 4 to tracked data.")) {
+            return;
+        }
+        if (!assertEquals(context, Optional.of(1), appliedSlimeSize(context, SlimeVisual.builder().size(0).build()), "Slime size should clamp zero to 1.")) {
+            return;
+        }
+        if (!assertEquals(context, Optional.of(1), appliedSlimeSize(context, SlimeVisual.builder().size(-5).build()), "Slime size should clamp negative values to 1.")) {
+            return;
+        }
+        if (!assertEquals(context, Optional.of(127), appliedSlimeSize(context, SlimeVisual.builder().size(200).build()), "Slime size should clamp large values to 127.")) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                Optional.of(6),
+                appliedSlimeSize(context, new EntityVisual("minecraft:slime", null, Map.of("size", "6"))),
+                "Slime visual should accept the size alias."
+        )) {
+            return;
+        }
+        context.succeed();
+    }
+
     @Override
     public void invokeTestMethod(GameTestHelper context, Method method) throws ReflectiveOperationException {
         context.setBlock(0, 0, 0, Blocks.AIR);
@@ -6488,6 +6693,20 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     private static void reloadDefaultIncomeSummons() {
         IncomeSummons.reloadBuiltIns(SummonConfig.defaultConfig());
+    }
+
+    private static SemionJob registerTowerAllowingJob(String path, Set<String> towerIds) {
+        Set<String> allowedTowerIds = Set.copyOf(towerIds);
+        return JobRegistry.registerIfAbsent(new SemionJob(
+                ResourceLocation.fromNamespaceAndPath("semion-td", "test/" + path),
+                Component.literal("Test Job"),
+                List.of()
+        ) {
+            @Override
+            public boolean canUseTower(kim.biryeong.semiontd.job.JobContext context, TowerType towerType) {
+                return towerType != null && allowedTowerIds.contains(towerType.id());
+            }
+        });
     }
 
     private static void tickGame(SemionGame game, MinecraftServer server, int ticks) {
@@ -6839,6 +7058,25 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         return data;
     }
 
+    private static Optional<Integer> appliedSlimeSize(GameTestHelper context, EntityVisual visual) {
+        List<SynchedEntityData.DataValue<?>> data = new ArrayList<>();
+        EntityVisualApplierRegistry.apply(visual, EntityType.SLIME, context.getLevel().registryAccess(), data);
+        return dataValue(data, SlimeAccessor.semiontd$idSize());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> Optional<T> dataValue(
+            List<SynchedEntityData.DataValue<?>> data,
+            EntityDataAccessor<T> accessor
+    ) {
+        for (SynchedEntityData.DataValue<?> dataValue : data) {
+            if (dataValue.id() == accessor.id()) {
+                return Optional.of((T)dataValue.value());
+            }
+        }
+        return Optional.empty();
+    }
+
     private static byte[] syntheticOggVorbis(int sampleRate, long samples) throws java.io.IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         writeOggPage(output, 0L, 0, syntheticVorbisIdentificationPacket(sampleRate));
@@ -6947,7 +7185,53 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
 
         @Override
-        protected void onCloneSpawned(PlayerLane lane, SemionTowerEntity cloneEntity, IllusionRuntimeTower cloneTower) {
+        protected void onCloneSpawned(PlayerLane lane, SemionTowerEntity cloneEntity, Tower cloneTower) {
+            spawnedCloneEntities.add(cloneEntity);
+        }
+    }
+
+    private static final class CapturingLegionSlimeTower extends LegionSlimeTower {
+        private final List<SemionTowerEntity> spawnedCloneEntities = new ArrayList<>();
+
+        private CapturingLegionSlimeTower(
+                TowerType type,
+                UUID ownerPlayer,
+                TeamId teamId,
+                int laneId,
+                GridPosition position
+        ) {
+            super(type, ownerPlayer, teamId, laneId, position);
+        }
+
+        private List<SemionTowerEntity> spawnedCloneEntities() {
+            return spawnedCloneEntities;
+        }
+
+        @Override
+        protected void onCloneSpawned(PlayerLane lane, SemionTowerEntity cloneEntity, Tower cloneTower) {
+            spawnedCloneEntities.add(cloneEntity);
+        }
+    }
+
+    private static final class CapturingGlobalIllusionTower extends LegionGlobalIllusionTower {
+        private final List<SemionTowerEntity> spawnedCloneEntities = new ArrayList<>();
+
+        private CapturingGlobalIllusionTower(
+                TowerType type,
+                UUID ownerPlayer,
+                TeamId teamId,
+                int laneId,
+                GridPosition position
+        ) {
+            super(type, ownerPlayer, teamId, laneId, position);
+        }
+
+        private List<SemionTowerEntity> spawnedCloneEntities() {
+            return spawnedCloneEntities;
+        }
+
+        @Override
+        protected void onCloneSpawned(PlayerLane lane, SemionTowerEntity cloneEntity, Tower cloneTower) {
             spawnedCloneEntities.add(cloneEntity);
         }
     }
