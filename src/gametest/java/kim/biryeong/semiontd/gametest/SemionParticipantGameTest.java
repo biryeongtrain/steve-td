@@ -3341,7 +3341,20 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
         lane.markWaveStarted(1);
 
-        if (!assertEquals(context, 2, tower.spawnedCloneEntities().size(), "Wave start should spawn the configured clone count.")) {
+        if (!assertTrue(context, tower.spawnedCloneEntities().size() < 2, "Wave start should queue clones instead of spawning all clones immediately.")) {
+            return;
+        }
+        lane.tick(context.getLevel().getServer());
+        if (!assertTrue(context, tower.spawnedCloneEntities().size() > 0, "The first queued clone should spawn on the next lane tick.")) {
+            return;
+        }
+        if (!assertTrue(context, tower.spawnedCloneEntities().size() < 2, "Clone spawning should stay distributed after one tick.")) {
+            return;
+        }
+        for (int tick = 1; tick < 10; tick++) {
+            lane.tick(context.getLevel().getServer());
+        }
+        if (!assertEquals(context, 2, tower.spawnedCloneEntities().size(), "Wave start should spawn the configured clone count within 10 ticks.")) {
             return;
         }
         if (!assertEquals(context, 1, lane.towers().size(), "Illusion clones should not be inserted into the lane tower list.")) {
@@ -3421,8 +3434,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
         int previousCloneCount = tower.spawnedCloneEntities().size();
         lane.markWaveStarted(2);
+        for (int tick = 0; tick < 10; tick++) {
+            lane.tick(context.getLevel().getServer());
+        }
         List<SemionTowerEntity> secondRoundClones = tower.spawnedCloneEntities().subList(previousCloneCount, tower.spawnedCloneEntities().size());
-        if (!assertEquals(context, 2, secondRoundClones.size(), "A later wave should spawn a fresh clone set.")) {
+        if (!assertEquals(context, 2, secondRoundClones.size(), "A later wave should spawn a fresh clone set within 10 ticks.")) {
             return;
         }
         if (!assertTrue(context, lane.removeTower(tower), "Removing the source tower should succeed.")) {
@@ -3432,6 +3448,99 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             if (!assertTrue(context, cloneEntity.isRemoved(), "Source removal should discard active illusion clones.")) {
                 return;
             }
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void illusionPendingCloneSpawnsCancelOnResetAndRemoval(GameTestHelper context) {
+        UUID playerId = stableUuid("red-illusion-cancel-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        GridPosition position = GridPosition.from(towerPlacementPos(lane));
+        TowerType towerType = new TowerType("illusion_cancel_fixture", "Illusion Cancel Fixture", TowerCategory.DIRECT, 0, 100.0, 10.0, 20.0, 12, 7);
+        FixtureIllusionTower tower = new FixtureIllusionTower(
+                towerType,
+                playerId,
+                TeamId.RED,
+                1,
+                position,
+                new IllusionProfile(10, 0, 0.25, 0.5, 1.0, 1.0, 1.0, 0)
+        );
+        lane.addTower(tower);
+
+        lane.markWaveStarted(1);
+        lane.tick(context.getLevel().getServer());
+        if (!assertEquals(context, 1, tower.spawnedCloneEntities().size(), "One clone should spawn before reset cancellation.")) {
+            return;
+        }
+        SemionTowerEntity resetRoundClone = tower.spawnedCloneEntities().getFirst();
+        lane.resetForRound();
+        if (!assertTrue(context, resetRoundClone.isRemoved(), "Round reset should discard the already spawned clone.")) {
+            return;
+        }
+        for (int tick = 0; tick < 10; tick++) {
+            lane.tick(context.getLevel().getServer());
+        }
+        if (!assertEquals(context, 1, tower.spawnedCloneEntities().size(), "Round reset should cancel pending illusion clones.")) {
+            return;
+        }
+
+        int cloneCountAfterReset = tower.spawnedCloneEntities().size();
+        lane.markWaveStarted(2);
+        lane.tick(context.getLevel().getServer());
+        if (!assertEquals(context, cloneCountAfterReset + 1, tower.spawnedCloneEntities().size(), "One clone should spawn before removal cancellation.")) {
+            return;
+        }
+        SemionTowerEntity removalRoundClone = tower.spawnedCloneEntities().get(cloneCountAfterReset);
+        if (!assertTrue(context, lane.removeTower(tower), "Removing the illusion source should succeed.")) {
+            return;
+        }
+        if (!assertTrue(context, removalRoundClone.isRemoved(), "Source removal should discard already spawned illusion clones.")) {
+            return;
+        }
+        for (int tick = 0; tick < 10; tick++) {
+            lane.tick(context.getLevel().getServer());
+        }
+        if (!assertEquals(context, cloneCountAfterReset + 1, tower.spawnedCloneEntities().size(), "Source removal should cancel pending illusion clones.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void illusionCloneSpawnsAboveTenCompleteWithinTenTicks(GameTestHelper context) {
+        UUID playerId = stableUuid("red-illusion-spread-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        GridPosition position = GridPosition.from(towerPlacementPos(lane));
+        TowerType towerType = new TowerType("illusion_spread_fixture", "Illusion Spread Fixture", TowerCategory.DIRECT, 0, 100.0, 10.0, 20.0, 12, 7);
+        FixtureIllusionTower tower = new FixtureIllusionTower(
+                towerType,
+                playerId,
+                TeamId.RED,
+                1,
+                position,
+                new IllusionProfile(12, 0, 0.25, 0.5, 1.0, 1.0, 1.0, 0)
+        );
+        lane.addTower(tower);
+
+        lane.markWaveStarted(1);
+        if (!assertEquals(context, 0, tower.spawnedCloneEntities().size(), "Clone spawning should be queued after wave start.")) {
+            return;
+        }
+        lane.tick(context.getLevel().getServer());
+        if (!assertTrue(context, tower.spawnedCloneEntities().size() > 0, "At least one queued clone should spawn on the first tick.")) {
+            return;
+        }
+        if (!assertTrue(context, tower.spawnedCloneEntities().size() < 12, "Clone counts above 10 should not all spawn in one tick.")) {
+            return;
+        }
+        for (int tick = 1; tick < 10; tick++) {
+            lane.tick(context.getLevel().getServer());
+        }
+        if (!assertEquals(context, 12, tower.spawnedCloneEntities().size(), "All queued clones should spawn within 10 ticks.")) {
+            return;
         }
         context.succeed();
     }
@@ -5721,8 +5830,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         );
         lane.addTower(slime);
         lane.markWaveStarted(1);
+        for (int tick = 0; tick < 10; tick++) {
+            lane.tick(context.getLevel().getServer());
+        }
 
-        if (!assertEquals(context, 2, slime.spawnedCloneEntities().size(), "T2 slime should spawn configured clone count.")) {
+        if (!assertEquals(context, 2, slime.spawnedCloneEntities().size(), "T2 slime should spawn configured clone count within 10 ticks.")) {
             return;
         }
         SemionTowerEntity cloneEntity = slime.spawnedCloneEntities().getFirst();
@@ -5769,7 +5881,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         illusion.syncHealth(0.0);
         illusion.notifyDeath(lane);
 
-        if (!assertEquals(context, 1, illusion.spawnedCloneEntities().size(), "Illusion tower death should clone the living same-owner parrot tower.")) {
+        if (!assertEquals(context, 0, illusion.spawnedCloneEntities().size(), "Illusion tower death should queue clone spawning.")) {
+            return;
+        }
+        lane.tick(context.getLevel().getServer());
+        if (!assertEquals(context, 1, illusion.spawnedCloneEntities().size(), "Illusion tower death should clone the living same-owner parrot tower on tick.")) {
             return;
         }
         SemionTowerEntity cloneEntity = illusion.spawnedCloneEntities().getFirst();

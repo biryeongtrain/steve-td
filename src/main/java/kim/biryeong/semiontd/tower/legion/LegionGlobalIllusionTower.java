@@ -41,9 +41,11 @@ public class LegionGlobalIllusionTower extends IllusionSummonerTower {
 
     @Override
     public void tick(PlayerLane lane) {
-        tickClones(lane);
         if (health() > 0.0) {
             super.tick(lane);
+            return;
         }
+        tickPendingCloneSpawns(lane);
+        tickClones(lane);
     }
 }
