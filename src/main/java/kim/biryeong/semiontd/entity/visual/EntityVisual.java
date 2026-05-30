@@ -9,9 +9,11 @@ import kim.biryeong.semiontd.entity.model.SemionBilModelCache;
 public record EntityVisual(
         String entityTypeId,
         String blockbenchModelId,
+        double scale,
         Map<String, Object> properties
 ) {
     public static final String DEFAULT_TOWER_ENTITY_TYPE = "minecraft:villager";
+    public static final double DEFAULT_SCALE = 1.0;
 
     public EntityVisual {
         entityTypeId = SemionBilModelCache.normalize(entityTypeId);
@@ -19,15 +21,25 @@ public record EntityVisual(
         if (entityTypeId == null && blockbenchModelId == null) {
             entityTypeId = DEFAULT_TOWER_ENTITY_TYPE;
         }
-        properties = normalizeProperties(properties);
+        scale = normalizeScale(scale);
+        properties = withoutScaleProperty(properties);
+    }
+
+    public EntityVisual(String entityTypeId, String blockbenchModelId, Map<String, Object> properties) {
+        this(
+                entityTypeId,
+                blockbenchModelId,
+                scaleProperty(properties).orElse(DEFAULT_SCALE),
+                withoutScaleProperty(properties)
+        );
     }
 
     public static EntityVisual vanilla(String entityTypeId) {
-        return new EntityVisual(entityTypeId, null, Map.of());
+        return new EntityVisual(entityTypeId, null, DEFAULT_SCALE, Map.of());
     }
 
     public static EntityVisual modeled(String entityTypeId, String blockbenchModelId) {
-        return new EntityVisual(entityTypeId, blockbenchModelId, Map.of());
+        return new EntityVisual(entityTypeId, blockbenchModelId, DEFAULT_SCALE, Map.of());
     }
 
     public static Builder builder(String entityTypeId) {
@@ -56,19 +68,30 @@ public record EntityVisual(
     }
 
     EntityVisual withPropertyValue(String key, Object value) {
+        if (EntityVisualProperties.SCALE.equals(normalizeKey(key))) {
+            return scaleValue(value).map(this::withScale).orElse(this);
+        }
         LinkedHashMap<String, Object> nextProperties = new LinkedHashMap<>(properties);
         putNormalized(nextProperties, key, value);
-        return new EntityVisual(entityTypeId, blockbenchModelId, nextProperties);
+        return new EntityVisual(entityTypeId, blockbenchModelId, scale, nextProperties);
     }
 
-    private static Map<String, Object> normalizeProperties(Map<String, Object> properties) {
+    public EntityVisual withScale(double scale) {
+        return new EntityVisual(entityTypeId, blockbenchModelId, scale, properties);
+    }
+
+    private static Map<String, Object> withoutScaleProperty(Map<String, Object> properties) {
         if (properties == null || properties.isEmpty()) {
             return Map.of();
         }
 
-        LinkedHashMap<String, Object> normalized = new LinkedHashMap<>();
-        properties.forEach((key, value) -> putNormalized(normalized, key, value));
-        return Map.copyOf(normalized);
+        LinkedHashMap<String, Object> withoutScale = new LinkedHashMap<>();
+        properties.forEach((key, value) -> {
+            if (!EntityVisualProperties.SCALE.equals(normalizeKey(key))) {
+                putNormalized(withoutScale, key, value);
+            }
+        });
+        return withoutScale;
     }
 
     private static void putNormalized(Map<String, Object> properties, String key, Object value) {
@@ -89,9 +112,45 @@ public record EntityVisual(
         return key == null ? "" : key.trim().toLowerCase(Locale.ROOT);
     }
 
+    private static double normalizeScale(double scale) {
+        return Double.isFinite(scale) && scale > 0.0 ? scale : DEFAULT_SCALE;
+    }
+
+    private static Optional<Double> scaleProperty(Map<String, Object> properties) {
+        if (properties == null || properties.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Object value = properties.get(EntityVisualProperties.SCALE);
+        if (value == null) {
+            for (Map.Entry<String, Object> entry : properties.entrySet()) {
+                if (EntityVisualProperties.SCALE.equals(normalizeKey(entry.getKey()))) {
+                    value = entry.getValue();
+                    break;
+                }
+            }
+        }
+        return scaleValue(value);
+    }
+
+    private static Optional<Double> scaleValue(Object value) {
+        if (value instanceof Number number) {
+            return Optional.of(normalizeScale(number.doubleValue()));
+        }
+        if (value instanceof String stringValue) {
+            try {
+                return Optional.of(normalizeScale(Double.parseDouble(stringValue.trim())));
+            } catch (NumberFormatException exception) {
+                return Optional.empty();
+            }
+        }
+        return Optional.empty();
+    }
+
     public static final class Builder {
         private final String entityTypeId;
         private String blockbenchModelId;
+        private double scale = DEFAULT_SCALE;
         private final LinkedHashMap<String, Object> properties = new LinkedHashMap<>();
 
         private Builder(String entityTypeId) {
@@ -103,18 +162,31 @@ public record EntityVisual(
             return this;
         }
 
+        public Builder scale(double scale) {
+            this.scale = scale;
+            return this;
+        }
+
         Builder property(String key, String value) {
+            if (EntityVisualProperties.SCALE.equals(normalizeKey(key))) {
+                scaleValue(value).ifPresent(parsedScale -> scale = parsedScale);
+                return this;
+            }
             putNormalized(properties, key, value);
             return this;
         }
 
         Builder propertyValue(String key, Object value) {
+            if (EntityVisualProperties.SCALE.equals(normalizeKey(key))) {
+                scaleValue(value).ifPresent(parsedScale -> scale = parsedScale);
+                return this;
+            }
             putNormalized(properties, key, value);
             return this;
         }
 
         public EntityVisual build() {
-            return new EntityVisual(entityTypeId, blockbenchModelId, properties);
+            return new EntityVisual(entityTypeId, blockbenchModelId, scale, properties);
         }
     }
 }

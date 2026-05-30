@@ -96,6 +96,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         visual = tower.type().visual();
         blockbenchModelId = visual.blockbenchModel().orElse(null);
         setPolymerEntityType(visual.entityTypeId());
+        applyVisualScale(visual);
         targetAcquireRange = Math.max(attackRange + 4.0, DEFAULT_TARGET_ACQUIRE_RANGE);
         moveSpeed = DEFAULT_MOVE_SPEED;
         setCustomName(Component.literal(tower.type().displayName()));
@@ -348,6 +349,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         visual = updatedVisual;
         blockbenchModelId = updatedModelId;
         setPolymerEntityType(visual.entityTypeId());
+        applyVisualScale(visual);
         targetAcquireRange = Math.max(attackRange + 4.0, DEFAULT_TARGET_ACQUIRE_RANGE);
         setCustomName(Component.literal(tower.type().displayName()));
         getAttribute(Attributes.MAX_HEALTH).setBaseValue(tower.currentMaxHealth());
@@ -475,6 +477,14 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
             holder = new LivingEntityHolder<>(this, model);
             holderAttachment = EntityAttachment.ofTicking(holder, this);
         });
+    }
+
+    private void applyVisualScale(EntityVisual visual) {
+        getAttribute(Attributes.SCALE).setBaseValue(visual == null ? EntityVisual.DEFAULT_SCALE : visual.scale());
+        refreshDimensions();
+        if (holder != null) {
+            holder.setScale(1.0F);
+        }
     }
 
     private void moveToward(Vec3 targetPosition, double speedModifier) {

@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.entity.visual;
 
 final class EntityVisualProperties {
+    static final String SCALE = "scale";
     static final String VILLAGER_TYPE = "villager_type";
     static final String VILLAGER_PROFESSION = "villager_profession";
     static final String VILLAGER_LEVEL = "villager_level";
