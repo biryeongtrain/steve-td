@@ -45,7 +45,6 @@ public class LegionGlobalIllusionTower extends IllusionSummonerTower {
             super.tick(lane);
             return;
         }
-        tickPendingCloneSpawns(lane);
         tickClones(lane);
     }
 }

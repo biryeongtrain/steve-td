@@ -1,7 +1,6 @@
 package kim.biryeong.semiontd.tower.legion;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
@@ -19,10 +18,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
 public abstract class IllusionSummonerTower extends SummonerTower {
-    private static final int CLONE_SPAWN_SPREAD_TICKS = 10;
-
     private final List<CloneInstance> clones = new ArrayList<>();
-    private final List<PendingCloneSpawn> pendingCloneSpawns = new ArrayList<>();
 
     protected IllusionSummonerTower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
         super(type, ownerPlayer, teamId, laneId, position);
@@ -57,7 +53,6 @@ public abstract class IllusionSummonerTower extends SummonerTower {
 
     @Override
     public void tick(PlayerLane lane) {
-        tickPendingCloneSpawns(lane);
         super.tick(lane);
         tickClones(lane);
     }
@@ -70,7 +65,7 @@ public abstract class IllusionSummonerTower extends SummonerTower {
 
     @Override
     public void moveToFinalDefense(PlayerLane lane, GridPosition position) {
-        pendingCloneSpawns.clear();
+        IllusionCloneSpawnQueue.cancel(this);
         super.moveToFinalDefense(lane, position);
         moveClonesToFinalDefense(lane);
     }
@@ -124,31 +119,10 @@ public abstract class IllusionSummonerTower extends SummonerTower {
         if (sourceTower == null || profile.cloneCount() <= 0 || sourceTower.health() <= 0.0) {
             return;
         }
-        for (int index = 0; index < profile.cloneCount(); index++) {
-            Vec3 offset = offsets.get(index % offsets.size());
-            int delayTicks = (int) Math.floor(index * (double) CLONE_SPAWN_SPREAD_TICKS / profile.cloneCount());
-            pendingCloneSpawns.add(new PendingCloneSpawn(sourceTower, profile, offset, delayTicks));
-        }
+        IllusionCloneSpawnQueue.enqueue(this, lane, sourceTower, profile, offsets);
     }
 
-    protected final void tickPendingCloneSpawns(PlayerLane lane) {
-        if (pendingCloneSpawns.isEmpty()) {
-            return;
-        }
-
-        Iterator<PendingCloneSpawn> iterator = pendingCloneSpawns.iterator();
-        while (iterator.hasNext()) {
-            PendingCloneSpawn pending = iterator.next();
-            if (pending.delayTicks() <= 0) {
-                spawnClone(lane, pending.sourceTower(), pending.profile(), pending.offset());
-                iterator.remove();
-                continue;
-            }
-            pending.decrementDelay();
-        }
-    }
-
-    private void spawnClone(PlayerLane lane, Tower sourceTower, IllusionProfile profile, Vec3 offset) {
+    final void spawnQueuedClone(PlayerLane lane, Tower sourceTower, IllusionProfile profile, Vec3 offset) {
         Vec3 spawnPosition = new Vec3(
                 sourceTower.position().x() + 0.5 + offset.x,
                 sourceTower.position().y() + 1.0 + offset.y,
@@ -320,7 +294,7 @@ public abstract class IllusionSummonerTower extends SummonerTower {
     }
 
     protected final void cleanupClones(PlayerLane lane) {
-        pendingCloneSpawns.clear();
+        IllusionCloneSpawnQueue.cancel(this);
         for (CloneInstance clone : clones) {
             var entity = lane.arenaWorld().getEntity(clone.entityId());
             if (entity != null) {
@@ -328,40 +302,6 @@ public abstract class IllusionSummonerTower extends SummonerTower {
             }
         }
         clones.clear();
-    }
-
-    private static final class PendingCloneSpawn {
-        private final Tower sourceTower;
-        private final IllusionProfile profile;
-        private final Vec3 offset;
-        private int delayTicks;
-
-        private PendingCloneSpawn(Tower sourceTower, IllusionProfile profile, Vec3 offset, int delayTicks) {
-            this.sourceTower = sourceTower;
-            this.profile = profile;
-            this.offset = offset;
-            this.delayTicks = delayTicks;
-        }
-
-        private Tower sourceTower() {
-            return sourceTower;
-        }
-
-        private IllusionProfile profile() {
-            return profile;
-        }
-
-        private Vec3 offset() {
-            return offset;
-        }
-
-        private int delayTicks() {
-            return delayTicks;
-        }
-
-        private void decrementDelay() {
-            delayTicks--;
-        }
     }
 
     private static final class CloneInstance {

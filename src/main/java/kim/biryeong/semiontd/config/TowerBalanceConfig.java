@@ -13,12 +13,18 @@ import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
 public record TowerBalanceConfig(
         Map<String, TowerStats> towers,
         Map<String, Long> upgradeCosts,
-        Map<String, Map<String, Double>> abilities
+        Map<String, Map<String, Double>> abilities,
+        IllusionCloneQueueConfig illusionCloneQueue
 ) {
+    public TowerBalanceConfig(Map<String, TowerStats> towers, Map<String, Long> upgradeCosts, Map<String, Map<String, Double>> abilities) {
+        this(towers, upgradeCosts, abilities, IllusionCloneQueueConfig.defaultConfig());
+    }
+
     public TowerBalanceConfig {
         towers = towers == null ? Map.of() : copyTowerStats(towers);
         upgradeCosts = upgradeCosts == null ? Map.of() : copyUpgradeCosts(upgradeCosts);
         abilities = abilities == null ? Map.of() : copyAbilities(abilities);
+        illusionCloneQueue = illusionCloneQueue == null ? IllusionCloneQueueConfig.defaultConfig() : illusionCloneQueue;
     }
 
     public static TowerBalanceConfig defaultConfig() {
@@ -470,7 +476,7 @@ public record TowerBalanceConfig(
                 Map.entry("cloneAggroPriorityBonus", 5.0)
         ));
 
-        return new TowerBalanceConfig(towers, upgradeCosts, abilities);
+        return new TowerBalanceConfig(towers, upgradeCosts, abilities, IllusionCloneQueueConfig.defaultConfig());
     }
 
     public TowerStats statsFor(TowerType defaults) {
@@ -530,7 +536,9 @@ public record TowerBalanceConfig(
         });
         defaults.abilities.forEach((towerId, values) -> mergedAbilities.putIfAbsent(towerId, values));
 
-        return new TowerBalanceConfig(mergedTowers, mergedUpgradeCosts, mergedAbilities);
+        IllusionCloneQueueConfig mergedIllusionCloneQueue = illusionCloneQueue.withMissingDefaults(defaults.illusionCloneQueue);
+
+        return new TowerBalanceConfig(mergedTowers, mergedUpgradeCosts, mergedAbilities, mergedIllusionCloneQueue);
     }
 
     public static String upgradeKey(String fromTowerId, String upgradeId) {
@@ -584,6 +592,35 @@ public record TowerBalanceConfig(
             copy.put(towerId, Collections.unmodifiableMap(inner));
         });
         return Collections.unmodifiableMap(copy);
+    }
+
+    public record IllusionCloneQueueConfig(Integer spreadTicks, Integer maxSpawnsPerTick) {
+        public static IllusionCloneQueueConfig defaultConfig() {
+            return new IllusionCloneQueueConfig(40, 8);
+        }
+
+        public IllusionCloneQueueConfig {
+            spreadTicks = spreadTicks == null ? null : Math.max(1, spreadTicks);
+            maxSpawnsPerTick = maxSpawnsPerTick == null ? null : Math.max(1, maxSpawnsPerTick);
+        }
+
+        public int resolvedSpreadTicks() {
+            return spreadTicks == null ? defaultConfig().spreadTicks() : spreadTicks;
+        }
+
+        public int resolvedMaxSpawnsPerTick() {
+            return maxSpawnsPerTick == null ? defaultConfig().maxSpawnsPerTick() : maxSpawnsPerTick;
+        }
+
+        public IllusionCloneQueueConfig withMissingDefaults(IllusionCloneQueueConfig defaults) {
+            if (defaults == null) {
+                return this;
+            }
+            return new IllusionCloneQueueConfig(
+                    spreadTicks == null ? defaults.spreadTicks() : spreadTicks,
+                    maxSpawnsPerTick == null ? defaults.maxSpawnsPerTick() : maxSpawnsPerTick
+            );
+        }
     }
 
     public record TowerStats(

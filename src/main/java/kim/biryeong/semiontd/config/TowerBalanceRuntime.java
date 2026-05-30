@@ -81,4 +81,12 @@ public final class TowerBalanceRuntime {
     public static int abilityInt(String towerId, String key) {
         return current.abilityInt(towerId, key, DEFAULT_CONFIG.abilityInt(towerId, key, 0));
     }
+
+    public static int illusionCloneSpawnSpreadTicks() {
+        return current.illusionCloneQueue().resolvedSpreadTicks();
+    }
+
+    public static int illusionCloneMaxSpawnsPerTick() {
+        return current.illusionCloneQueue().resolvedMaxSpawnsPerTick();
+    }
 }
