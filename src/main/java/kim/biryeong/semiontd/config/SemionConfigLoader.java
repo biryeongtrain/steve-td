@@ -135,11 +135,13 @@ public final class SemionConfigLoader {
             return defaults;
         }
 
-        try (Reader reader = Files.newBufferedReader(path)) {
-            TowerBalanceConfig value = GSON.fromJson(reader, TowerBalanceConfig.class);
+        try {
+            String json = Files.readString(path);
+            TowerBalanceConfig value = GSON.fromJson(json, TowerBalanceConfig.class);
             TowerBalanceConfig loaded = value == null ? defaults : value;
             TowerBalanceConfig merged = loaded.withMissingDefaults(defaults);
-            if (!merged.equals(loaded)) {
+            boolean illusionCloneQueueMissing = !hasObjectProperty(json, "illusionCloneQueue");
+            if (illusionCloneQueueMissing || !merged.equals(loaded)) {
                 write(path, merged, logger);
             }
             return merged;
