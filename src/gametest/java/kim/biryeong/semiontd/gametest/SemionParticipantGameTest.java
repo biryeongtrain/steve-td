@@ -6696,6 +6696,52 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void entityVisualScaleAppliesToTowerEntity(GameTestHelper context) {
+        EntityVisual visual = EntityVisual.builder("minecraft:villager").scale(1.5).build();
+        if (!assertClose(context, 1.5, visual.scale(), "EntityVisual builder should keep configured scale.")) {
+            return;
+        }
+
+        EntityVisual stringScaleVisual = new EntityVisual("minecraft:villager", null, Map.of("scale", "2.25"));
+        if (!assertClose(context, 2.25, stringScaleVisual.scale(), "EntityVisual should accept scale from property maps.")) {
+            return;
+        }
+        if (!assertTrue(context, !stringScaleVisual.properties().containsKey("scale"), "Scale should be normalized out of generic visual properties.")) {
+            return;
+        }
+
+        TowerType towerType = new TowerType(
+                "scaled_visual_tower",
+                "Scaled Visual Tower",
+                TowerCategory.DIRECT,
+                100,
+                50,
+                8,
+                12,
+                20,
+                0,
+                visual,
+                List.of()
+        );
+        TestTower tower = new TestTower(
+                towerType,
+                stableUuid("scaled-visual-tower-owner"),
+                TeamId.RED,
+                1,
+                new kim.biryeong.semiontd.game.GridPosition(0, 0, 0)
+        );
+        SemionTowerEntity entity = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+        entity.configure(tower, null);
+        if (!assertClose(context, 1.5, entity.getScale(), "Tower entity should apply EntityVisual scale to the runtime entity.")) {
+            return;
+        }
+        if (!assertClose(context, 1.5, entity.getAttributeValue(Attributes.SCALE), "Tower entity scale attribute should match EntityVisual scale.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void slimeVisualBuilderAppliesClampedSize(GameTestHelper context) {
         EntityVisual visual = SlimeVisual.builder().size(4).build();
         if (!assertEquals(context, "minecraft:slime", visual.entityTypeId(), "Slime visual builder should use the slime entity type.")) {
