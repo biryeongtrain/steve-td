@@ -1,11 +1,10 @@
 package kim.biryeong.semiontd.progression;
 
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.ProgressionConfig;
-import kim.biryeong.semiontd.game.MatchParticipantResult;
 import kim.biryeong.semiontd.game.MatchResult;
 import kim.biryeong.semiontd.persistence.AppliedMatchRepository;
 import kim.biryeong.semiontd.persistence.FileAppliedMatchRepository;
@@ -60,20 +59,17 @@ public final class ProgressionService {
     }
 
     public synchronized Map<UUID, MatchProgressionReward> applyMatchResult(MinecraftServer server, MatchResult matchResult) {
-        if (!appliedMatchRepository.markApplied(matchResult.matchId(), PROGRESSION_SUBSYSTEM, System.currentTimeMillis())) {
+        if (appliedMatchRepository.hasApplied(matchResult.matchId(), PROGRESSION_SUBSYSTEM)) {
             return Map.of();
         }
 
-        Map<UUID, MatchProgressionReward> rewards = new LinkedHashMap<>();
-        for (MatchParticipantResult participant : matchResult.participants()) {
-            long reward = participant.winner()
-                    ? progressionConfig.rewardForWin()
-                    : progressionConfig.rewardForLoss();
-            SemionPlayerProfile updated = store.getOrCreateProfile(participant.playerId(), participant.playerName())
-                    .recordMatch(participant.playerName(), participant.winner(), reward);
-            store.putProfile(participant.playerId(), updated);
-            rewards.put(participant.playerId(), new MatchProgressionReward(participant.winner(), reward, updated));
+        Optional<Map<UUID, MatchProgressionReward>> rewards = store.recordMatch(matchResult, progressionConfig);
+        if (rewards.isEmpty()) {
+            return Map.of();
         }
-        return Map.copyOf(rewards);
+        if (!appliedMatchRepository.markApplied(matchResult.matchId(), PROGRESSION_SUBSYSTEM, System.currentTimeMillis())) {
+            return Map.of();
+        }
+        return rewards.get();
     }
 }

@@ -9,10 +9,15 @@ import java.io.Writer;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.SemionTd;
+import kim.biryeong.semiontd.config.ProgressionConfig;
+import kim.biryeong.semiontd.game.MatchParticipantResult;
+import kim.biryeong.semiontd.game.MatchResult;
 
 public final class SemionProgressionStore {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
@@ -52,6 +57,27 @@ public final class SemionProgressionStore {
         return profile;
     }
 
+    public synchronized Optional<Map<UUID, MatchProgressionReward>> recordMatch(
+            MatchResult matchResult,
+            ProgressionConfig progressionConfig
+    ) {
+        ensureLoaded();
+        Map<UUID, MatchProgressionReward> rewards = new LinkedHashMap<>();
+        for (MatchParticipantResult participant : matchResult.participants()) {
+            long reward = participant.winner()
+                    ? progressionConfig.rewardForWin()
+                    : progressionConfig.rewardForLoss();
+            SemionPlayerProfile existing = profiles.get(participant.playerId());
+            SemionPlayerProfile base = existing == null
+                    ? SemionPlayerProfile.fresh(participant.playerName())
+                    : existing;
+            SemionPlayerProfile updated = base.recordMatch(participant.playerName(), participant.winner(), reward);
+            profiles.put(participant.playerId(), updated);
+            rewards.put(participant.playerId(), new MatchProgressionReward(participant.winner(), reward, updated));
+        }
+        return save() ? Optional.of(Map.copyOf(rewards)) : Optional.empty();
+    }
+
     private void ensureLoaded() {
         if (loaded) {
             return;
@@ -78,9 +104,9 @@ public final class SemionProgressionStore {
         }
     }
 
-    private void save() {
+    private boolean save() {
         if (path == null) {
-            return;
+            return true;
         }
 
         try {
@@ -95,8 +121,10 @@ public final class SemionProgressionStore {
             try (Writer writer = Files.newBufferedWriter(path)) {
                 GSON.toJson(raw, RAW_TYPE, writer);
             }
+            return true;
         } catch (IOException exception) {
             SemionTd.LOGGER.warn("Failed to save progression store {}.", path, exception);
+            return false;
         }
     }
 }
