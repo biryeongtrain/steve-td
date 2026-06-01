@@ -291,13 +291,31 @@ public final class SemionGameManager {
             return file;
         }
         try {
-            return new SQLiteRatingRepository(sqlitePath);
+            RatingRepository sqlite = new SQLiteRatingRepository(sqlitePath);
+            migrateFallbackRatingProfiles(file, sqlite);
+            return sqlite;
         } catch (RuntimeException exception) {
             if (persistenceConfig.externalDbRequired()) {
                 throw new PersistenceException("SQLite rating repository is required but initialization failed.", exception);
             }
             SemionTd.LOGGER.warn("SQLite rating repository initialization failed; using file fallback.", exception);
             return file;
+        }
+    }
+
+    static void migrateFallbackRatingProfiles(RatingRepository fallback, RatingRepository primary) {
+        int migrated = 0;
+        for (PlayerRatingProfile fallbackProfile : fallback.findAllProfiles().values()) {
+            Optional<PlayerRatingProfile> existing = primary.findProfile(fallbackProfile.playerId());
+            if (existing.isPresent()
+                    && existing.get().updatedAtEpochMillis() >= fallbackProfile.updatedAtEpochMillis()) {
+                continue;
+            }
+            primary.saveProfile(fallbackProfile.playerId(), fallbackProfile);
+            migrated++;
+        }
+        if (migrated > 0) {
+            SemionTd.LOGGER.info("Migrated {} fallback rating profiles into primary rating repository.", migrated);
         }
     }
 
