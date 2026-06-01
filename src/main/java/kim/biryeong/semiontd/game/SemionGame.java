@@ -1,5 +1,6 @@
 package kim.biryeong.semiontd.game;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashSet;
@@ -60,6 +61,10 @@ public final class SemionGame {
     private final Set<UUID> matchSpectatorIds = new HashSet<>();
     private final Set<TeamId> announcedEliminations = new HashSet<>();
     private final Set<TeamId> currentWaveTeamIds = new HashSet<>();
+    private final List<TeamEliminationRecord> eliminationOrder = new ArrayList<>();
+    private UUID matchId = UUID.randomUUID();
+    private long startedAtEpochMillis;
+    private long endedAtEpochMillis;
     private RoundPhase phase = RoundPhase.WAITING;
     private boolean rosterLocked;
     private int currentRound = 1;
@@ -266,7 +271,16 @@ public final class SemionGame {
                         player.matchStats().snapshot(player.economy().income())
                 ))
                 .toList();
-        return Optional.of(new MatchResult(participants, initialSpectatorIds, winningTeams, currentRound));
+        return Optional.of(new MatchResult(
+                matchId,
+                startedAtEpochMillis,
+                endedAtEpochMillis,
+                participants,
+                initialSpectatorIds,
+                winningTeams,
+                teamResults(winningTeams),
+                currentRound
+        ));
     }
 
     public boolean start(MinecraftServer server, ParticipantSelectionPlan plan) {
@@ -277,6 +291,7 @@ public final class SemionGame {
         initialSpectatorIds.clear();
         matchSpectatorIds.clear();
         announcedEliminations.clear();
+        eliminationOrder.clear();
         initialSpectatorIds.addAll(plan.spectatorIds());
         matchSpectatorIds.addAll(plan.spectatorIds());
 
@@ -303,6 +318,9 @@ public final class SemionGame {
         placeActivePlayers(server, plan.activeParticipants());
         sendTowerControlHint(server);
         placeSpectators(server, plan.spectatorIds());
+        matchId = UUID.randomUUID();
+        startedAtEpochMillis = System.currentTimeMillis();
+        endedAtEpochMillis = 0L;
         rosterLocked = true;
         notifyMatchStarted();
         if (buildGuideService != null) {
@@ -455,8 +473,10 @@ public final class SemionGame {
         if (!team.eliminate()) {
             return false;
         }
-        announcedEliminations.add(teamId);
-        handleTeamEliminated(server, team);
+        if (announcedEliminations.add(teamId)) {
+            recordTeamEliminated(team);
+            handleTeamEliminated(server, team);
+        }
         checkVictory();
         return true;
     }
@@ -582,6 +602,7 @@ public final class SemionGame {
         for (SemionTeam team : teams.values()) {
             team.tick(server, economyService, players);
             if (team.active() && team.eliminated() && announcedEliminations.add(team.id())) {
+                recordTeamEliminated(team);
                 handleTeamEliminated(server, team);
             }
         }
@@ -643,6 +664,9 @@ public final class SemionGame {
     private boolean checkVictory() {
         List<SemionTeam> living = livingTeams();
         if (living.size() <= 1 && phase != RoundPhase.WAITING) {
+            if (endedAtEpochMillis == 0L) {
+                endedAtEpochMillis = System.currentTimeMillis();
+            }
             phase = RoundPhase.ENDED;
             return true;
         }
@@ -654,6 +678,56 @@ public final class SemionGame {
                 .filter(SemionTeam::active)
                 .filter(team -> !team.eliminated())
                 .toList();
+    }
+
+    private List<TeamMatchResult> teamResults(Set<TeamId> winningTeams) {
+        List<TeamMatchResult> results = new ArrayList<>();
+        List<SemionTeam> living = livingTeams().stream()
+                .sorted(Comparator.comparing(SemionTeam::id))
+                .toList();
+        for (SemionTeam team : living) {
+            results.add(new TeamMatchResult(
+                    team.id(),
+                    1,
+                    winningTeams.contains(team.id()) ? MatchResultGroup.WIN_GROUP : MatchResultGroup.DRAW_OR_UNRATED,
+                    1.0,
+                    -1,
+                    -1,
+                    bossDamageTaken(team)
+            ));
+        }
+
+        int placement = living.isEmpty() ? 1 : living.size() + 1;
+        for (int index = eliminationOrder.size() - 1; index >= 0; index--) {
+            TeamEliminationRecord record = eliminationOrder.get(index);
+            results.add(new TeamMatchResult(
+                    record.teamId(),
+                    placement++,
+                    MatchResultGroup.LOSS_GROUP,
+                    placementWeight(placement - 1),
+                    record.round(),
+                    record.tick(),
+                    record.bossDamageTaken()
+            ));
+        }
+        return List.copyOf(results);
+    }
+
+    private static double placementWeight(int placement) {
+        return placement <= 1 ? 1.0 : 1.0 / placement;
+    }
+
+    private void recordTeamEliminated(SemionTeam team) {
+        eliminationOrder.add(new TeamEliminationRecord(
+                team.id(),
+                currentRound,
+                tickCounter,
+                bossDamageTaken(team)
+        ));
+    }
+
+    private static double bossDamageTaken(SemionTeam team) {
+        return Math.max(0.0, team.laneGroup().boss().maxHealth() - team.laneGroup().boss().health());
     }
 
     private Optional<SemionTeam> randomTargetTeam(TeamId senderTeam) {
@@ -955,5 +1029,13 @@ public final class SemionGame {
                 player.job().ifPresent(job -> job.onRoundEnded(new JobContext(this, player), round));
             }
         }
+    }
+
+    private record TeamEliminationRecord(
+            TeamId teamId,
+            int round,
+            long tick,
+            double bossDamageTaken
+    ) {
     }
 }
