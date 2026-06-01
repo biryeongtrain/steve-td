@@ -2,6 +2,7 @@ package kim.biryeong.semiontd.progression;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import java.io.IOException;
 import java.io.Reader;
@@ -102,6 +103,8 @@ public final class SemionProgressionStore {
             }
         } catch (IOException exception) {
             SemionTd.LOGGER.warn("Failed to load progression store {}.", path, exception);
+        } catch (JsonSyntaxException exception) {
+            SemionTd.LOGGER.warn("Failed to parse progression store {}.", path, exception);
         }
     }
 
@@ -126,7 +129,7 @@ public final class SemionProgressionStore {
         } catch (IOException exception) {
             SemionTd.LOGGER.warn("Failed to save progression store {}; writing progression snapshot to fallback log.", path, exception);
             appendFallbackLog(raw);
-            return true;
+            return false;
         }
     }
 

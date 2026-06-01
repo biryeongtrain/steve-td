@@ -33,6 +33,7 @@ import kim.biryeong.semiontd.persistence.FileMatchResultRepository;
 import kim.biryeong.semiontd.persistence.LoggingAppliedMatchRepository;
 import kim.biryeong.semiontd.persistence.LoggingMatchResultRepository;
 import kim.biryeong.semiontd.persistence.MatchResultRepository;
+import kim.biryeong.semiontd.persistence.PersistenceException;
 import kim.biryeong.semiontd.persistence.SemionPersistenceBackendType;
 import kim.biryeong.semiontd.persistence.SemionPersistenceConfig;
 import kim.biryeong.semiontd.persistence.SQLiteAppliedMatchRepository;
@@ -192,9 +193,9 @@ public final class SemionGameManager {
         this.progressionService = new ProgressionService(
                 progressionConfig,
                 progressionStorePath,
-                createAppliedMatchRepository(sqlitePath, appliedMatchesPath, this.configDir)
+                createAppliedMatchRepository(this.persistenceConfig, sqlitePath, appliedMatchesPath, this.configDir)
         );
-        this.matchResultRepository = createMatchResultRepository(sqlitePath, matchResultPath, this.configDir);
+        this.matchResultRepository = createMatchResultRepository(this.persistenceConfig, sqlitePath, matchResultPath, this.configDir);
         this.buildGuideService.configure(this.configDir == null ? null : this.configDir.resolve("build_guides.json"));
         ProductionTowerCatalogs.reloadBuiltIns(this.towerBalanceConfig);
         IncomeSummons.reloadBuiltIns(this.summonConfig);
@@ -208,32 +209,58 @@ public final class SemionGameManager {
         return configured.isAbsolute() ? configured : configDir.resolve(configured).normalize();
     }
 
-    private static MatchResultRepository createMatchResultRepository(Path sqlitePath, Path filePath, Path configDir) {
+    static MatchResultRepository createMatchResultRepository(
+            SemionPersistenceConfig persistenceConfig,
+            Path sqlitePath,
+            Path filePath,
+            Path configDir
+    ) {
         MatchResultRepository file = new FileMatchResultRepository(filePath);
         MatchResultRepository log = new LoggingMatchResultRepository(fallbackLogPath(configDir, "match-results-fallback.log"));
         if (sqlitePath == null) {
+            if (requiresSQLite(persistenceConfig)) {
+                throw new PersistenceException("SQLite match-result repository is required but no SQLite path is available.");
+            }
             return new CascadingMatchResultRepository(file, log, log);
         }
         try {
             return new CascadingMatchResultRepository(new SQLiteMatchResultRepository(sqlitePath), file, log);
         } catch (RuntimeException exception) {
+            if (persistenceConfig.externalDbRequired()) {
+                throw new PersistenceException("SQLite match-result repository is required but initialization failed.", exception);
+            }
             SemionTd.LOGGER.warn("SQLite match-result repository initialization failed; using file/log fallback.", exception);
             return new CascadingMatchResultRepository(file, log, log);
         }
     }
 
-    private static AppliedMatchRepository createAppliedMatchRepository(Path sqlitePath, Path filePath, Path configDir) {
+    static AppliedMatchRepository createAppliedMatchRepository(
+            SemionPersistenceConfig persistenceConfig,
+            Path sqlitePath,
+            Path filePath,
+            Path configDir
+    ) {
         AppliedMatchRepository file = new FileAppliedMatchRepository(filePath);
         AppliedMatchRepository log = new LoggingAppliedMatchRepository(fallbackLogPath(configDir, "applied-matches-fallback.log"));
         if (sqlitePath == null) {
+            if (requiresSQLite(persistenceConfig)) {
+                throw new PersistenceException("SQLite applied-match repository is required but no SQLite path is available.");
+            }
             return new CascadingAppliedMatchRepository(file, log, log);
         }
         try {
             return new CascadingAppliedMatchRepository(new SQLiteAppliedMatchRepository(sqlitePath), file, log);
         } catch (RuntimeException exception) {
+            if (persistenceConfig.externalDbRequired()) {
+                throw new PersistenceException("SQLite applied-match repository is required but initialization failed.", exception);
+            }
             SemionTd.LOGGER.warn("SQLite applied-match repository initialization failed; using file/log fallback.", exception);
             return new CascadingAppliedMatchRepository(file, log, log);
         }
+    }
+
+    private static boolean requiresSQLite(SemionPersistenceConfig persistenceConfig) {
+        return persistenceConfig.backend() == SemionPersistenceBackendType.SQLITE && persistenceConfig.externalDbRequired();
     }
 
     private static Path fallbackLogPath(Path configDir, String fileName) {
