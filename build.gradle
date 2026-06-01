@@ -91,6 +91,16 @@ dependencies {
     modImplementation include("kim.biryeong:GCB-server:1.0.1+1.21.8")
     modImplementation include("eu.pb4:player-data-api:0.8.0+1.21.6")
     modLocalRuntime("maven.modrinth:carpet:1.4.177")
+
+    implementation include("io.hypersistence:hypersistence-tsid:2.1.4")
+    implementation include("org.xerial:sqlite-jdbc:3.46.1.0")
+
+    testImplementation "org.junit.jupiter:junit-jupiter:5.10.3"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:1.10.3"
+}
+
+test {
+    useJUnitPlatform()
 }
 
 fabricApi {

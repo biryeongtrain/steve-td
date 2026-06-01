@@ -897,6 +897,9 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
         if (!assertTrue(context, Files.exists(storePath), "Manager finalization should persist progression in the dedicated file.")) {
             return;
         }
+        if (!assertTrue(context, Files.exists(storePath.resolveSibling("semiontd.db")), "Manager finalization should persist match/apply state in SQLite by default.")) {
+            return;
+        }
         for (int i = 0; i < SemionGameManager.MATCH_RESULT_DIALOG_AFTER_LOBBY_DELAY_TICKS + 1; i++) {
             manager.tick(server);
         }

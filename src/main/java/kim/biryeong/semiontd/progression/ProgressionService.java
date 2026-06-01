@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.config.ProgressionConfig;
 import kim.biryeong.semiontd.game.MatchResult;
 import kim.biryeong.semiontd.persistence.AppliedMatchRepository;
@@ -68,6 +69,7 @@ public final class ProgressionService {
             return Map.of();
         }
         if (!appliedMatchRepository.markApplied(matchResult.matchId(), PROGRESSION_SUBSYSTEM, System.currentTimeMillis())) {
+            SemionTd.LOGGER.warn("Progression was persisted but applied marker already existed for match {}.", matchResult.matchId());
             return Map.of();
         }
         return rewards.get();

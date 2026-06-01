@@ -12,8 +12,8 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 import kim.biryeong.semiontd.SemionTd;
+import kim.biryeong.semiontd.game.MatchId;
 
 public final class FileAppliedMatchRepository implements AppliedMatchRepository {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
@@ -29,13 +29,13 @@ public final class FileAppliedMatchRepository implements AppliedMatchRepository 
     }
 
     @Override
-    public synchronized boolean hasApplied(UUID matchId, String subsystem) {
+    public synchronized boolean hasApplied(MatchId matchId, String subsystem) {
         ensureLoaded();
         return appliedMatches.containsKey(key(matchId, subsystem));
     }
 
     @Override
-    public synchronized boolean markApplied(UUID matchId, String subsystem, long appliedAtEpochMillis) {
+    public synchronized boolean markApplied(MatchId matchId, String subsystem, long appliedAtEpochMillis) {
         ensureLoaded();
         String key = key(matchId, subsystem);
         if (appliedMatches.containsKey(key)) {
@@ -44,7 +44,7 @@ public final class FileAppliedMatchRepository implements AppliedMatchRepository 
         appliedMatches.put(key, Math.max(0L, appliedAtEpochMillis));
         if (!save()) {
             appliedMatches.remove(key);
-            return false;
+            throw new PersistenceException("Failed to save applied match store " + path);
         }
         return true;
     }
@@ -88,7 +88,7 @@ public final class FileAppliedMatchRepository implements AppliedMatchRepository 
         }
     }
 
-    private static String key(UUID matchId, String subsystem) {
+    private static String key(MatchId matchId, String subsystem) {
         Objects.requireNonNull(matchId, "matchId");
         String normalizedSubsystem = Objects.requireNonNull(subsystem, "subsystem").trim();
         if (normalizedSubsystem.isEmpty()) {

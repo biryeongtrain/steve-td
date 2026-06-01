@@ -7,7 +7,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public record MatchResult(
-        UUID matchId,
+        MatchId matchId,
         long startedAtEpochMillis,
         long endedAtEpochMillis,
         List<MatchParticipantResult> participants,
@@ -23,7 +23,7 @@ public record MatchResult(
             int finalRound
     ) {
         this(
-                UUID.randomUUID(),
+                MatchId.newId(),
                 System.currentTimeMillis(),
                 System.currentTimeMillis(),
                 participants,

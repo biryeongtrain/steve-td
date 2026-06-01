@@ -1,9 +1,9 @@
 package kim.biryeong.semiontd.persistence;
 
-import java.util.UUID;
+import kim.biryeong.semiontd.game.MatchId;
 
 public interface AppliedMatchRepository {
-    boolean hasApplied(UUID matchId, String subsystem);
+    boolean hasApplied(MatchId matchId, String subsystem);
 
-    boolean markApplied(UUID matchId, String subsystem, long appliedAtEpochMillis);
+    boolean markApplied(MatchId matchId, String subsystem, long appliedAtEpochMillis);
 }
