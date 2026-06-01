@@ -12,6 +12,7 @@ import kim.biryeong.semiontd.persistence.AppliedMatchRepository;
 import kim.biryeong.semiontd.persistence.FileAppliedMatchRepository;
 import kim.biryeong.semiontd.persistence.FileRatingEventRepository;
 import kim.biryeong.semiontd.persistence.FileRatingRepository;
+import kim.biryeong.semiontd.persistence.PersistenceException;
 import kim.biryeong.semiontd.persistence.RatingEventRepository;
 import kim.biryeong.semiontd.persistence.RatingRepository;
 import net.minecraft.server.MinecraftServer;
@@ -108,11 +109,13 @@ public final class RatingService {
         }
         if (hasProfileAlreadyUpdatedForMatch(matchResult)) {
             SemionTd.LOGGER.error(
-                    "Rating profile for match {} already exists but no rating event was found. Marking rating applied to prevent unsafe replay.",
+                    "Rating profile for match {} already exists but no rating event was found. Manual repair is required before retrying rating application.",
                     matchResult.matchId()
             );
-            appliedMatchRepository.markApplied(matchResult.matchId(), RATING_SUBSYSTEM, System.currentTimeMillis());
-            return RatingMatchResult.empty(matchResult.matchId());
+            throw new PersistenceException(
+                    "Rating profile for match " + matchResult.matchId()
+                            + " already exists without a rating event; refusing to mark the match applied."
+            );
         }
 
         RatingMatchInput input = new RatingMatchInput(

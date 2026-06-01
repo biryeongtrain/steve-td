@@ -1,12 +1,18 @@
 package kim.biryeong.semiontd.game;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.UUID;
+import kim.biryeong.semiontd.persistence.FileRatingRepository;
 import kim.biryeong.semiontd.persistence.PersistenceException;
+import kim.biryeong.semiontd.persistence.RatingRepository;
 import kim.biryeong.semiontd.persistence.SemionPersistenceBackendType;
 import kim.biryeong.semiontd.persistence.SemionPersistenceConfig;
+import kim.biryeong.semiontd.rating.PlayerRatingProfile;
+import kim.biryeong.semiontd.rating.RatingSystemId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -62,6 +68,50 @@ final class SemionGameManagerPersistenceTest {
                 sqlitePathAsDirectory,
                 tempDir.resolve("rating-events.json")
         ));
+    }
+
+    @Test
+    void recoveredSqliteRatingRepositoryImportsNewerFileFallbackProfiles() {
+        Path sqlitePath = tempDir.resolve("ratings.db");
+        Path filePath = tempDir.resolve("ratings.json");
+        UUID fallbackOnlyId = UUID.nameUUIDFromBytes("fallback-only".getBytes());
+        UUID conflictId = UUID.nameUUIDFromBytes("fallback-conflict".getBytes());
+        FileRatingRepository fallback = new FileRatingRepository(filePath);
+        fallback.saveProfile(fallbackOnlyId, profile(fallbackOnlyId, "fallbackOnly", 1510, 10L));
+        fallback.saveProfile(conflictId, profile(conflictId, "fallbackNewer", 1600, 20L));
+
+        RatingRepository initialSqlite = SemionGameManager.createRatingRepository(
+                new SemionPersistenceConfig(SemionPersistenceBackendType.SQLITE, sqlitePath.toString(), "", "semiontd", false),
+                sqlitePath,
+                tempDir.resolve("empty-ratings.json")
+        );
+        initialSqlite.saveProfile(conflictId, profile(conflictId, "sqliteOlder", 1400, 5L));
+
+        RatingRepository recovered = SemionGameManager.createRatingRepository(
+                new SemionPersistenceConfig(SemionPersistenceBackendType.SQLITE, sqlitePath.toString(), "", "semiontd", false),
+                sqlitePath,
+                filePath
+        );
+
+        assertEquals(1510, recovered.findProfile(fallbackOnlyId).orElseThrow().displayElo());
+        assertEquals(1600, recovered.findProfile(conflictId).orElseThrow().displayElo());
+    }
+
+    private static PlayerRatingProfile profile(UUID playerId, String name, int elo, long updatedAtEpochMillis) {
+        return new PlayerRatingProfile(
+                playerId,
+                name,
+                RatingSystemId.ELO,
+                1,
+                1,
+                1,
+                0,
+                elo,
+                350.0,
+                elo,
+                new MatchId(updatedAtEpochMillis),
+                updatedAtEpochMillis
+        );
     }
 
     private static SemionPersistenceConfig requiredSqlite(Path sqlitePath) {
