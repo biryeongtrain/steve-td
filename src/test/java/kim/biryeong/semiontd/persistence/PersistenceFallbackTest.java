@@ -10,14 +10,18 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import kim.biryeong.semiontd.config.ProgressionConfig;
 import kim.biryeong.semiontd.game.MatchId;
 import kim.biryeong.semiontd.game.MatchParticipantResult;
 import kim.biryeong.semiontd.game.MatchResult;
 import kim.biryeong.semiontd.game.PlayerMatchStatsSnapshot;
 import kim.biryeong.semiontd.game.TeamId;
+import kim.biryeong.semiontd.progression.MatchProgressionReward;
+import kim.biryeong.semiontd.progression.ProgressionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -124,6 +128,24 @@ final class PersistenceFallbackTest {
         assertEquals(List.of(matchId), log.saved);
         assertTrue(repository.hasApplied(matchId, "progression"));
     }
+
+    @Test
+    void progressionDoesNotMarkAppliedWhenProfileSaveOnlyReachesFallbackLog() throws Exception {
+        Path profilePathAsDirectory = Files.createDirectory(tempDir.resolve("profiles.json"));
+        RecordingAppliedMatchRepository appliedMatches = new RecordingAppliedMatchRepository(false);
+        ProgressionService service = new ProgressionService(
+                ProgressionConfig.defaultConfig(),
+                profilePathAsDirectory,
+                appliedMatches
+        );
+
+        Map<UUID, MatchProgressionReward> rewards = service.applyMatchResult(null, sampleResult());
+
+        assertTrue(rewards.isEmpty());
+        assertTrue(appliedMatches.saved.isEmpty());
+        assertTrue(Files.exists(tempDir.resolve("progression-fallback.log")));
+    }
+
 
     @Test
     void sqliteSchemaUsesOnlyNonUniqueIndexesAndNoDomainConstraints() throws Exception {

@@ -6699,11 +6699,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
-    public void defaultPersistenceBackendIsFile(GameTestHelper context) {
+    public void defaultPersistenceBackendIsSqlite(GameTestHelper context) {
         try {
             Path tempDir = Files.createTempDirectory("semion-persistence-config-test");
             SemionConfigLoader.LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("semion-td-persistence-config-test"));
-            if (!assertEquals(context, SemionPersistenceBackendType.FILE, configs.persistence().backend(), "Default persistence backend should remain FILE.")) {
+            if (!assertEquals(context, SemionPersistenceBackendType.SQLITE, configs.persistence().backend(), "Default persistence backend should be SQLITE.")) {
                 return;
             }
             if (!assertTrue(context, Files.exists(tempDir.resolve("persistence.json")), "Persistence config should be created next to other config files.")) {
