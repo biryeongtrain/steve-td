@@ -9,6 +9,7 @@ import java.io.Writer;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.LinkedHashMap;
 import java.util.HashMap;
 import java.util.Map;
@@ -109,22 +110,44 @@ public final class SemionProgressionStore {
             return true;
         }
 
+        Map<String, SemionPlayerProfile> raw = new HashMap<>();
+        for (Map.Entry<UUID, SemionPlayerProfile> entry : profiles.entrySet()) {
+            raw.put(entry.getKey().toString(), entry.getValue());
+        }
         try {
             Path parent = path.getParent();
             if (parent != null) {
                 Files.createDirectories(parent);
-            }
-            Map<String, SemionPlayerProfile> raw = new HashMap<>();
-            for (Map.Entry<UUID, SemionPlayerProfile> entry : profiles.entrySet()) {
-                raw.put(entry.getKey().toString(), entry.getValue());
             }
             try (Writer writer = Files.newBufferedWriter(path)) {
                 GSON.toJson(raw, RAW_TYPE, writer);
             }
             return true;
         } catch (IOException exception) {
-            SemionTd.LOGGER.warn("Failed to save progression store {}.", path, exception);
-            return false;
+            SemionTd.LOGGER.warn("Failed to save progression store {}; writing progression snapshot to fallback log.", path, exception);
+            appendFallbackLog(raw);
+            return true;
+        }
+    }
+
+    private void appendFallbackLog(Map<String, SemionPlayerProfile> raw) {
+        String payload = GSON.toJson(Map.of("type", "progression_profiles", "payload", raw));
+        Path fallbackPath = path == null ? null : path.resolveSibling("progression-fallback.log");
+        if (fallbackPath == null) {
+            SemionTd.LOGGER.error("Persistence log fallback: {}", payload);
+            return;
+        }
+        try {
+            Files.writeString(
+                    fallbackPath,
+                    payload + System.lineSeparator(),
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.WRITE,
+                    StandardOpenOption.APPEND
+            );
+        } catch (IOException exception) {
+            SemionTd.LOGGER.error("Failed to append progression fallback log {}; writing to application log.", fallbackPath, exception);
+            SemionTd.LOGGER.error("Persistence log fallback: {}", payload);
         }
     }
 }

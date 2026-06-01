@@ -25,8 +25,18 @@ import kim.biryeong.semiontd.map.GameArenaLoader;
 import kim.biryeong.semiontd.map.LobbyWorld;
 import kim.biryeong.semiontd.map.LobbyWorldLoader;
 import kim.biryeong.semiontd.music.SemionMusicService;
+import kim.biryeong.semiontd.persistence.AppliedMatchRepository;
+import kim.biryeong.semiontd.persistence.CascadingAppliedMatchRepository;
+import kim.biryeong.semiontd.persistence.CascadingMatchResultRepository;
+import kim.biryeong.semiontd.persistence.FileAppliedMatchRepository;
 import kim.biryeong.semiontd.persistence.FileMatchResultRepository;
+import kim.biryeong.semiontd.persistence.LoggingAppliedMatchRepository;
+import kim.biryeong.semiontd.persistence.LoggingMatchResultRepository;
 import kim.biryeong.semiontd.persistence.MatchResultRepository;
+import kim.biryeong.semiontd.persistence.SemionPersistenceBackendType;
+import kim.biryeong.semiontd.persistence.SemionPersistenceConfig;
+import kim.biryeong.semiontd.persistence.SQLiteAppliedMatchRepository;
+import kim.biryeong.semiontd.persistence.SQLiteMatchResultRepository;
 import kim.biryeong.semiontd.progression.MatchProgressionReward;
 import kim.biryeong.semiontd.progression.ProgressionService;
 import kim.biryeong.semiontd.progression.SemionPlayerProfile;
@@ -58,6 +68,7 @@ public final class SemionGameManager {
     private WaveConfig waveConfig = WaveConfig.defaultConfig();
     private MapConfig mapConfig = MapConfig.defaultConfig();
     private ProgressionConfig progressionConfig = ProgressionConfig.defaultConfig();
+    private SemionPersistenceConfig persistenceConfig = SemionPersistenceConfig.defaultConfig();
     private TowerBalanceConfig towerBalanceConfig = TowerBalanceConfig.defaultConfig();
     private SummonConfig summonConfig = SummonConfig.defaultConfig();
     private Path configDir;
@@ -128,6 +139,7 @@ public final class SemionGameManager {
                 progressionConfig,
                 towerBalanceConfig,
                 SummonConfig.defaultConfig(),
+                SemionPersistenceConfig.defaultConfig(),
                 progressionStorePath
         );
     }
@@ -141,21 +153,91 @@ public final class SemionGameManager {
             SummonConfig summonConfig,
             Path progressionStorePath
     ) {
+        configure(
+                economyConfig,
+                waveConfig,
+                mapConfig,
+                progressionConfig,
+                towerBalanceConfig,
+                summonConfig,
+                SemionPersistenceConfig.defaultConfig(),
+                progressionStorePath
+        );
+    }
+
+    public void configure(
+            EconomyConfig economyConfig,
+            WaveConfig waveConfig,
+            MapConfig mapConfig,
+            ProgressionConfig progressionConfig,
+            TowerBalanceConfig towerBalanceConfig,
+            SummonConfig summonConfig,
+            SemionPersistenceConfig persistenceConfig,
+            Path progressionStorePath
+    ) {
         this.economyConfig = economyConfig;
         this.waveConfig = waveConfig;
         this.mapConfig = mapConfig;
         this.progressionConfig = progressionConfig;
+        this.persistenceConfig = persistenceConfig == null ? SemionPersistenceConfig.defaultConfig() : persistenceConfig;
         this.towerBalanceConfig = towerBalanceConfig == null ? TowerBalanceConfig.defaultConfig() : towerBalanceConfig;
         this.summonConfig = summonConfig == null ? SummonConfig.defaultConfig() : summonConfig;
         this.progressionStorePath = progressionStorePath;
         this.configDir = progressionStorePath == null ? null : progressionStorePath.getParent();
-        this.progressionService = new ProgressionService(progressionConfig, progressionStorePath);
-        this.matchResultRepository = new FileMatchResultRepository(this.configDir == null
+        Path matchResultPath = this.configDir == null ? null : this.configDir.resolve("match-results.json");
+        Path sqlitePath = resolveSqlitePath(this.configDir, this.persistenceConfig);
+        Path appliedMatchesPath = progressionStorePath == null
                 ? null
-                : this.configDir.resolve("match-results.json"));
+                : progressionStorePath.resolveSibling("progression-applied-matches.json");
+        this.progressionService = new ProgressionService(
+                progressionConfig,
+                progressionStorePath,
+                createAppliedMatchRepository(sqlitePath, appliedMatchesPath, this.configDir)
+        );
+        this.matchResultRepository = createMatchResultRepository(sqlitePath, matchResultPath, this.configDir);
         this.buildGuideService.configure(this.configDir == null ? null : this.configDir.resolve("build_guides.json"));
         ProductionTowerCatalogs.reloadBuiltIns(this.towerBalanceConfig);
         IncomeSummons.reloadBuiltIns(this.summonConfig);
+    }
+
+    private static Path resolveSqlitePath(Path configDir, SemionPersistenceConfig persistenceConfig) {
+        if (configDir == null || persistenceConfig.backend() != SemionPersistenceBackendType.SQLITE) {
+            return null;
+        }
+        Path configured = Path.of(persistenceConfig.sqlitePath());
+        return configured.isAbsolute() ? configured : configDir.resolve(configured).normalize();
+    }
+
+    private static MatchResultRepository createMatchResultRepository(Path sqlitePath, Path filePath, Path configDir) {
+        MatchResultRepository file = new FileMatchResultRepository(filePath);
+        MatchResultRepository log = new LoggingMatchResultRepository(fallbackLogPath(configDir, "match-results-fallback.log"));
+        if (sqlitePath == null) {
+            return new CascadingMatchResultRepository(file, log, log);
+        }
+        try {
+            return new CascadingMatchResultRepository(new SQLiteMatchResultRepository(sqlitePath), file, log);
+        } catch (RuntimeException exception) {
+            SemionTd.LOGGER.warn("SQLite match-result repository initialization failed; using file/log fallback.", exception);
+            return new CascadingMatchResultRepository(file, log, log);
+        }
+    }
+
+    private static AppliedMatchRepository createAppliedMatchRepository(Path sqlitePath, Path filePath, Path configDir) {
+        AppliedMatchRepository file = new FileAppliedMatchRepository(filePath);
+        AppliedMatchRepository log = new LoggingAppliedMatchRepository(fallbackLogPath(configDir, "applied-matches-fallback.log"));
+        if (sqlitePath == null) {
+            return new CascadingAppliedMatchRepository(file, log, log);
+        }
+        try {
+            return new CascadingAppliedMatchRepository(new SQLiteAppliedMatchRepository(sqlitePath), file, log);
+        } catch (RuntimeException exception) {
+            SemionTd.LOGGER.warn("SQLite applied-match repository initialization failed; using file/log fallback.", exception);
+            return new CascadingAppliedMatchRepository(file, log, log);
+        }
+    }
+
+    private static Path fallbackLogPath(Path configDir, String fileName) {
+        return configDir == null ? null : configDir.resolve(fileName);
     }
 
     public ReloadConfigResult reloadConfigs(MinecraftServer server) {
@@ -171,6 +253,7 @@ public final class SemionGameManager {
                 configs.progression(),
                 configs.towerBalance(),
                 configs.summons(),
+                configs.persistence(),
                 configDir.resolve("profiles.json")
         );
         boolean activeGameUpdated = activeGame != null && activeGame.phase() != RoundPhase.ENDED;
