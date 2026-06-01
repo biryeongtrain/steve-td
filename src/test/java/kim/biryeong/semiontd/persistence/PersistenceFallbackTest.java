@@ -148,7 +148,7 @@ final class PersistenceFallbackTest {
 
 
     @Test
-    void sqliteSchemaUsesOnlyNonUniqueIndexesAndNoDomainConstraints() throws Exception {
+    void sqliteAppliedMatchSchemaUsesUniqueIdempotencyIndex() throws Exception {
         Path database = tempDir.resolve("schema.db");
         new SQLiteMatchResultRepository(database).saveMatchResult(sampleResult());
         new SQLiteAppliedMatchRepository(database).markApplied(MatchId.newId(), "progression", 1L);
@@ -158,21 +158,57 @@ final class PersistenceFallbackTest {
              ResultSet tables = statement.executeQuery("SELECT sql FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")) {
             while (tables.next()) {
                 String sql = tables.getString(1).toUpperCase(java.util.Locale.ROOT);
-                assertFalse(sql.contains("NOT NULL"), sql);
-                assertFalse(sql.contains("PRIMARY KEY"), sql);
                 assertFalse(sql.contains("FOREIGN KEY"), sql);
-                assertFalse(sql.contains("UNIQUE"), sql);
                 assertFalse(sql.contains("CHECK"), sql);
             }
         }
 
+        boolean foundAppliedUniqueIndex = false;
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database.toAbsolutePath());
              var statement = connection.createStatement();
-             ResultSet indexes = statement.executeQuery("SELECT sql FROM sqlite_master WHERE type = 'index'")) {
+             ResultSet indexes = statement.executeQuery("PRAGMA index_list('applied_matches')")) {
             while (indexes.next()) {
-                String sql = indexes.getString(1).toUpperCase(java.util.Locale.ROOT);
-                assertFalse(sql.contains("UNIQUE"), sql);
+                if ("idx_applied_matches_match_subsystem".equals(indexes.getString("name"))) {
+                    assertEquals(1, indexes.getInt("unique"));
+                    foundAppliedUniqueIndex = true;
+                }
             }
+        }
+        assertTrue(foundAppliedUniqueIndex);
+    }
+
+    @Test
+    void sqliteAppliedMatchSchemaReplacesLegacyNonUniqueIndex() throws Exception {
+        Path database = tempDir.resolve("legacy-schema.db");
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database.toAbsolutePath());
+             var statement = connection.createStatement()) {
+            statement.executeUpdate("CREATE TABLE applied_matches (match_id INTEGER, subsystem TEXT, applied_at_epoch_millis INTEGER)");
+            statement.executeUpdate("CREATE INDEX idx_applied_matches_match_subsystem ON applied_matches (match_id, subsystem)");
+            statement.executeUpdate("INSERT INTO applied_matches VALUES (1, 'rating', 10)");
+            statement.executeUpdate("INSERT INTO applied_matches VALUES (1, 'rating', 20)");
+        }
+
+        SQLiteAppliedMatchRepository repository = new SQLiteAppliedMatchRepository(database);
+
+        assertTrue(repository.hasApplied(new MatchId(1L), "rating"));
+        assertFalse(repository.markApplied(new MatchId(1L), "rating", 30L));
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database.toAbsolutePath());
+             var statement = connection.createStatement();
+             ResultSet count = statement.executeQuery("SELECT COUNT(*) FROM applied_matches WHERE match_id = 1 AND subsystem = 'rating'")) {
+            assertTrue(count.next());
+            assertEquals(1, count.getInt(1));
+        }
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database.toAbsolutePath());
+             var statement = connection.createStatement();
+             ResultSet indexes = statement.executeQuery("PRAGMA index_list('applied_matches')")) {
+            boolean foundUnique = false;
+            while (indexes.next()) {
+                if ("idx_applied_matches_match_subsystem".equals(indexes.getString("name"))) {
+                    assertEquals(1, indexes.getInt("unique"));
+                    foundUnique = true;
+                }
+            }
+            assertTrue(foundUnique);
         }
     }
 

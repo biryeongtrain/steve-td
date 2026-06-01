@@ -30,17 +30,24 @@ import kim.biryeong.semiontd.persistence.CascadingAppliedMatchRepository;
 import kim.biryeong.semiontd.persistence.CascadingMatchResultRepository;
 import kim.biryeong.semiontd.persistence.FileAppliedMatchRepository;
 import kim.biryeong.semiontd.persistence.FileMatchResultRepository;
+import kim.biryeong.semiontd.persistence.FileRatingEventRepository;
+import kim.biryeong.semiontd.persistence.FileRatingRepository;
 import kim.biryeong.semiontd.persistence.LoggingAppliedMatchRepository;
 import kim.biryeong.semiontd.persistence.LoggingMatchResultRepository;
 import kim.biryeong.semiontd.persistence.MatchResultRepository;
 import kim.biryeong.semiontd.persistence.PersistenceException;
+import kim.biryeong.semiontd.persistence.RatingEventRepository;
+import kim.biryeong.semiontd.persistence.RatingRepository;
 import kim.biryeong.semiontd.persistence.SemionPersistenceBackendType;
 import kim.biryeong.semiontd.persistence.SemionPersistenceConfig;
 import kim.biryeong.semiontd.persistence.SQLiteAppliedMatchRepository;
 import kim.biryeong.semiontd.persistence.SQLiteMatchResultRepository;
+import kim.biryeong.semiontd.persistence.SQLiteRatingEventRepository;
+import kim.biryeong.semiontd.persistence.SQLiteRatingRepository;
 import kim.biryeong.semiontd.progression.MatchProgressionReward;
 import kim.biryeong.semiontd.progression.ProgressionService;
 import kim.biryeong.semiontd.progression.SemionPlayerProfile;
+import kim.biryeong.semiontd.rating.PlayerRatingProfile;
 import kim.biryeong.semiontd.rating.RatingService;
 import kim.biryeong.semiontd.summon.IncomeSummons;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
@@ -189,16 +196,25 @@ public final class SemionGameManager {
         this.progressionStorePath = progressionStorePath;
         this.configDir = progressionStorePath == null ? null : progressionStorePath.getParent();
         Path matchResultPath = this.configDir == null ? null : this.configDir.resolve("match-results.json");
+        Path ratingProfilePath = this.configDir == null ? null : this.configDir.resolve("ratings.json");
+        Path ratingEventPath = this.configDir == null ? null : this.configDir.resolve("rating-events.json");
         Path sqlitePath = resolveSqlitePath(this.configDir, this.persistenceConfig);
         Path appliedMatchesPath = progressionStorePath == null
                 ? null
                 : progressionStorePath.resolveSibling("progression-applied-matches.json");
+        Path ratingAppliedMatchesPath = progressionStorePath == null
+                ? null
+                : progressionStorePath.resolveSibling("rating-applied-matches.json");
         this.progressionService = new ProgressionService(
                 progressionConfig,
                 progressionStorePath,
                 createAppliedMatchRepository(this.persistenceConfig, sqlitePath, appliedMatchesPath, this.configDir)
         );
-        this.ratingService = new RatingService(this.configDir);
+        this.ratingService = new RatingService(
+                createRatingRepository(this.persistenceConfig, sqlitePath, ratingProfilePath),
+                createRatingEventRepository(this.persistenceConfig, sqlitePath, ratingEventPath),
+                createAppliedMatchRepository(this.persistenceConfig, sqlitePath, ratingAppliedMatchesPath, this.configDir)
+        );
         this.matchResultRepository = createMatchResultRepository(this.persistenceConfig, sqlitePath, matchResultPath, this.configDir);
         this.buildGuideService.configure(this.configDir == null ? null : this.configDir.resolve("build_guides.json"));
         ProductionTowerCatalogs.reloadBuiltIns(this.towerBalanceConfig);
@@ -263,6 +279,52 @@ public final class SemionGameManager {
         }
     }
 
+    static RatingRepository createRatingRepository(
+            SemionPersistenceConfig persistenceConfig,
+            Path sqlitePath,
+            Path filePath
+    ) {
+        RatingRepository file = new FileRatingRepository(filePath);
+        if (sqlitePath == null) {
+            if (requiresSQLite(persistenceConfig)) {
+                throw new PersistenceException("SQLite rating repository is required but no SQLite path is available.");
+            }
+            return file;
+        }
+        try {
+            return new SQLiteRatingRepository(sqlitePath);
+        } catch (RuntimeException exception) {
+            if (persistenceConfig.externalDbRequired()) {
+                throw new PersistenceException("SQLite rating repository is required but initialization failed.", exception);
+            }
+            SemionTd.LOGGER.warn("SQLite rating repository initialization failed; using file fallback.", exception);
+            return file;
+        }
+    }
+
+    static RatingEventRepository createRatingEventRepository(
+            SemionPersistenceConfig persistenceConfig,
+            Path sqlitePath,
+            Path filePath
+    ) {
+        RatingEventRepository file = new FileRatingEventRepository(filePath);
+        if (sqlitePath == null) {
+            if (requiresSQLite(persistenceConfig)) {
+                throw new PersistenceException("SQLite rating-event repository is required but no SQLite path is available.");
+            }
+            return file;
+        }
+        try {
+            return new SQLiteRatingEventRepository(sqlitePath);
+        } catch (RuntimeException exception) {
+            if (persistenceConfig.externalDbRequired()) {
+                throw new PersistenceException("SQLite rating-event repository is required but initialization failed.", exception);
+            }
+            SemionTd.LOGGER.warn("SQLite rating-event repository initialization failed; using file fallback.", exception);
+            return file;
+        }
+    }
+
     private static boolean requiresSQLite(SemionPersistenceConfig persistenceConfig) {
         return persistenceConfig.backend() == SemionPersistenceBackendType.SQLITE && persistenceConfig.externalDbRequired();
     }
@@ -319,6 +381,14 @@ public final class SemionGameManager {
 
     public SemionPlayerProfile profile(MinecraftServer server, UUID playerId, String playerName) {
         return progressionService.profile(server, playerId, playerName);
+    }
+
+    public Optional<PlayerRatingProfile> ratingProfile(UUID playerId) {
+        return ratingService.profile(playerId);
+    }
+
+    public List<PlayerRatingProfile> topRatingProfiles(int limit) {
+        return ratingService.topProfiles(limit);
     }
 
     public SemionPlayerProfile saveSelectedJob(MinecraftServer server, UUID playerId, String playerName, ResourceLocation jobId) {
@@ -804,7 +874,11 @@ public final class SemionGameManager {
         if (result.isPresent()) {
             lastMatchResult = result.get();
             matchResultRepository.saveMatchResult(result.get());
-            ratingService.applyMatchResult(server, result.get());
+            try {
+                ratingService.applyMatchResult(server, result.get());
+            } catch (RuntimeException exception) {
+                SemionTd.LOGGER.warn("Failed to apply Semion TD rating for match {}. Continuing match finish flow.", result.get().matchId(), exception);
+            }
             buildGuideService.finishMatch(finishedGame, result.get().finalRound());
             nextMatchPriorityPlayerIds.addAll(result.get().spectatorIds());
             Map<UUID, MatchProgressionReward> rewards = progressionService.applyMatchResult(server, result.get());
