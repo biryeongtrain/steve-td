@@ -12,8 +12,8 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import kim.biryeong.semiontd.SemionTd;
+import kim.biryeong.semiontd.game.MatchId;
 import kim.biryeong.semiontd.game.MatchResult;
 
 public final class FileMatchResultRepository implements MatchResultRepository {
@@ -22,7 +22,7 @@ public final class FileMatchResultRepository implements MatchResultRepository {
     }.getType();
 
     private final Path path;
-    private final Map<UUID, MatchResult> matchResults = new LinkedHashMap<>();
+    private final Map<MatchId, MatchResult> matchResults = new LinkedHashMap<>();
     private boolean loaded;
 
     public FileMatchResultRepository(Path path) {
@@ -37,7 +37,7 @@ public final class FileMatchResultRepository implements MatchResultRepository {
     }
 
     @Override
-    public synchronized Optional<MatchResult> findMatchResult(UUID matchId) {
+    public synchronized Optional<MatchResult> findMatchResult(MatchId matchId) {
         ensureLoaded();
         return Optional.ofNullable(matchResults.get(matchId));
     }
@@ -58,7 +58,7 @@ public final class FileMatchResultRepository implements MatchResultRepository {
             }
             for (Map.Entry<String, MatchResult> entry : raw.entrySet()) {
                 try {
-                    matchResults.put(UUID.fromString(entry.getKey()), entry.getValue());
+                    matchResults.put(MatchId.fromString(entry.getKey()), entry.getValue());
                 } catch (IllegalArgumentException exception) {
                     SemionTd.LOGGER.warn("Skipping invalid match result key {}.", entry.getKey());
                 }
@@ -79,7 +79,7 @@ public final class FileMatchResultRepository implements MatchResultRepository {
                 Files.createDirectories(parent);
             }
             Map<String, MatchResult> raw = new LinkedHashMap<>();
-            for (Map.Entry<UUID, MatchResult> entry : matchResults.entrySet()) {
+            for (Map.Entry<MatchId, MatchResult> entry : matchResults.entrySet()) {
                 raw.put(entry.getKey().toString(), entry.getValue());
             }
             try (Writer writer = Files.newBufferedWriter(path)) {
@@ -87,6 +87,7 @@ public final class FileMatchResultRepository implements MatchResultRepository {
             }
         } catch (IOException exception) {
             SemionTd.LOGGER.warn("Failed to save match result store {}.", path, exception);
+            throw new PersistenceException("Failed to save match result store " + path, exception);
         }
     }
 }

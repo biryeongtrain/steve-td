@@ -66,6 +66,7 @@ import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.MatchParticipantResult;
 import kim.biryeong.semiontd.game.MatchResultGroup;
 import kim.biryeong.semiontd.game.MatchResult;
+import kim.biryeong.semiontd.game.MatchId;
 import kim.biryeong.semiontd.game.MatchMode;
 import kim.biryeong.semiontd.game.ParticipantSelectionPlan;
 import kim.biryeong.semiontd.game.ParticipantSelectionService;
@@ -807,7 +808,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
 
         MatchResult matchResult = new MatchResult(
-                stableUuid("persisted-match"),
+                MatchId.newId(),
                 1000L,
                 2000L,
                 List.of(new MatchParticipantResult(stableUuid("persisted-player"), "persisted-player", TeamId.RED, true)),
@@ -6725,7 +6726,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
 
         FileAppliedMatchRepository repository = new FileAppliedMatchRepository(storePath);
-        UUID matchId = stableUuid("applied-match");
+        MatchId matchId = MatchId.newId();
         if (!assertTrue(context, repository.markApplied(matchId, "progression", 1000L), "First progression mark should be recorded.")) {
             return;
         }

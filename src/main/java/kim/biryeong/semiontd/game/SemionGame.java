@@ -62,7 +62,7 @@ public final class SemionGame {
     private final Set<TeamId> announcedEliminations = new HashSet<>();
     private final Set<TeamId> currentWaveTeamIds = new HashSet<>();
     private final List<TeamEliminationRecord> eliminationOrder = new ArrayList<>();
-    private UUID matchId = UUID.randomUUID();
+    private MatchId matchId = MatchId.newId();
     private long startedAtEpochMillis;
     private long endedAtEpochMillis;
     private RoundPhase phase = RoundPhase.WAITING;
@@ -318,7 +318,7 @@ public final class SemionGame {
         placeActivePlayers(server, plan.activeParticipants());
         sendTowerControlHint(server);
         placeSpectators(server, plan.spectatorIds());
-        matchId = UUID.randomUUID();
+        matchId = MatchId.newId();
         startedAtEpochMillis = System.currentTimeMillis();
         endedAtEpochMillis = 0L;
         rosterLocked = true;

@@ -10,7 +10,7 @@ public record SemionPersistenceConfig(
         boolean externalDbRequired
 ) {
     public SemionPersistenceConfig {
-        backend = backend == null ? SemionPersistenceBackendType.FILE : backend;
+        backend = backend == null ? SemionPersistenceBackendType.SQLITE : backend;
         sqlitePath = Objects.requireNonNullElse(sqlitePath, "semiontd.db");
         mongodbUri = Objects.requireNonNullElse(mongodbUri, "");
         mongodbDatabase = Objects.requireNonNullElse(mongodbDatabase, "semiontd");
@@ -18,7 +18,7 @@ public record SemionPersistenceConfig(
 
     public static SemionPersistenceConfig defaultConfig() {
         return new SemionPersistenceConfig(
-                SemionPersistenceBackendType.FILE,
+                SemionPersistenceBackendType.SQLITE,
                 "semiontd.db",
                 "",
                 "semiontd",
