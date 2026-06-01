@@ -1,11 +1,14 @@
 package kim.biryeong.semiontd.persistence;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import kim.biryeong.semiontd.rating.SemionRatingProfile;
+import kim.biryeong.semiontd.rating.PlayerRatingProfile;
 
 public interface RatingRepository {
-    Optional<SemionRatingProfile> findProfile(UUID playerId);
+    Optional<PlayerRatingProfile> findProfile(UUID playerId);
 
-    SemionRatingProfile saveProfile(UUID playerId, SemionRatingProfile profile);
+    PlayerRatingProfile saveProfile(UUID playerId, PlayerRatingProfile profile);
+
+    Map<UUID, PlayerRatingProfile> findAllProfiles();
 }

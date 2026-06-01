@@ -41,6 +41,7 @@ import kim.biryeong.semiontd.persistence.SQLiteMatchResultRepository;
 import kim.biryeong.semiontd.progression.MatchProgressionReward;
 import kim.biryeong.semiontd.progression.ProgressionService;
 import kim.biryeong.semiontd.progression.SemionPlayerProfile;
+import kim.biryeong.semiontd.rating.RatingService;
 import kim.biryeong.semiontd.summon.IncomeSummons;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.ui.SemionDialogService;
@@ -75,6 +76,7 @@ public final class SemionGameManager {
     private Path configDir;
     private Path progressionStorePath;
     private ProgressionService progressionService = new ProgressionService(progressionConfig, null);
+    private RatingService ratingService = new RatingService(null);
     private MatchResultRepository matchResultRepository = new FileMatchResultRepository(null);
     private SemionMusicService musicService = SemionMusicService.disabled();
     private final SemionDialogService dialogService = new SemionDialogService();
@@ -195,6 +197,7 @@ public final class SemionGameManager {
                 progressionStorePath,
                 createAppliedMatchRepository(this.persistenceConfig, sqlitePath, appliedMatchesPath, this.configDir)
         );
+        this.ratingService = new RatingService(this.configDir);
         this.matchResultRepository = createMatchResultRepository(this.persistenceConfig, sqlitePath, matchResultPath, this.configDir);
         this.buildGuideService.configure(this.configDir == null ? null : this.configDir.resolve("build_guides.json"));
         ProductionTowerCatalogs.reloadBuiltIns(this.towerBalanceConfig);
@@ -797,6 +800,7 @@ public final class SemionGameManager {
         if (result.isPresent()) {
             lastMatchResult = result.get();
             matchResultRepository.saveMatchResult(result.get());
+            ratingService.applyMatchResult(server, result.get());
             buildGuideService.finishMatch(finishedGame, result.get().finalRound());
             nextMatchPriorityPlayerIds.addAll(result.get().spectatorIds());
             Map<UUID, MatchProgressionReward> rewards = progressionService.applyMatchResult(server, result.get());
