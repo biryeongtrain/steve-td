@@ -57,6 +57,7 @@ final class RatingServiceTest {
                 new EloRatingCalculator()
         );
         UUID winnerId = UUID.nameUUIDFromBytes("spectator-winner".getBytes());
+        UUID loserId = UUID.nameUUIDFromBytes("spectator-loser".getBytes());
         UUID spectatorId = UUID.nameUUIDFromBytes("spectator".getBytes());
         MatchResult matchResult = new MatchResult(
                 new MatchId(12L),
@@ -64,6 +65,7 @@ final class RatingServiceTest {
                 2L,
                 List.of(
                         new MatchParticipantResult(winnerId, "winner", TeamId.RED, true),
+                        new MatchParticipantResult(loserId, "loser", TeamId.BLUE, false),
                         new MatchParticipantResult(spectatorId, "spectator", TeamId.BLUE, false)
                 ),
                 Set.of(spectatorId),
@@ -77,8 +79,88 @@ final class RatingServiceTest {
 
         RatingMatchResult result = service.applyMatchResult(null, matchResult);
 
-        assertEquals(1, result.adjustments().size());
+        assertEquals(2, result.adjustments().size());
         assertTrue(ratingRepository.findProfile(spectatorId).isEmpty());
+    }
+
+    @Test
+    void topProfilesAreSortedByEloThenGamesPlayed() {
+        FileRatingRepository ratingRepository = new FileRatingRepository(tempDir.resolve("ratings.json"));
+        RatingService service = new RatingService(
+                ratingRepository,
+                new FileRatingEventRepository(tempDir.resolve("rating-events.json")),
+                new FileAppliedMatchRepository(tempDir.resolve("rating-applied-matches.json")),
+                new EloRatingCalculator()
+        );
+        UUID strongerId = UUID.nameUUIDFromBytes("stronger".getBytes());
+        UUID moreGamesId = UUID.nameUUIDFromBytes("more-games".getBytes());
+        UUID fewerGamesId = UUID.nameUUIDFromBytes("fewer-games".getBytes());
+        ratingRepository.saveProfile(strongerId, profile(strongerId, "stronger", 1600, 1));
+        ratingRepository.saveProfile(moreGamesId, profile(moreGamesId, "moreGames", 1500, 3));
+        ratingRepository.saveProfile(fewerGamesId, profile(fewerGamesId, "fewerGames", 1500, 1));
+
+        List<PlayerRatingProfile> top = service.topProfiles(3);
+
+        assertEquals(List.of(strongerId, moreGamesId, fewerGamesId), top.stream().map(PlayerRatingProfile::playerId).toList());
+    }
+
+    @Test
+    void profileAlreadyUpdatedForMatchStopsUnsafeReplayWithoutNewEvent() {
+        FileRatingRepository ratingRepository = new FileRatingRepository(tempDir.resolve("ratings.json"));
+        FileRatingEventRepository eventRepository = new FileRatingEventRepository(tempDir.resolve("rating-events.json"));
+        FileAppliedMatchRepository appliedMatchRepository = new FileAppliedMatchRepository(tempDir.resolve("rating-applied-matches.json"));
+        RatingService service = new RatingService(
+                ratingRepository,
+                eventRepository,
+                appliedMatchRepository,
+                new EloRatingCalculator()
+        );
+        UUID winnerId = UUID.nameUUIDFromBytes("partial-winner".getBytes());
+        UUID loserId = UUID.nameUUIDFromBytes("partial-loser".getBytes());
+        MatchId matchId = new MatchId(13L);
+        ratingRepository.saveProfile(winnerId, profileForMatch(winnerId, "winner", 1516, matchId));
+
+        RatingMatchResult result = service.applyMatchResult(null, matchResult(matchId, winnerId, loserId));
+
+        assertTrue(result.adjustments().isEmpty());
+        assertEquals(1516, ratingRepository.findProfile(winnerId).orElseThrow().displayElo());
+        assertTrue(ratingRepository.findProfile(loserId).isEmpty());
+        assertTrue(eventRepository.findMatchResult(matchId).isEmpty());
+        assertTrue(appliedMatchRepository.hasApplied(matchId, "rating"));
+    }
+
+    private static PlayerRatingProfile profile(UUID playerId, String name, int elo, int gamesPlayed) {
+        return new PlayerRatingProfile(
+                playerId,
+                name,
+                RatingSystemId.ELO,
+                gamesPlayed,
+                gamesPlayed,
+                gamesPlayed,
+                0,
+                elo,
+                350.0,
+                elo,
+                new MatchId(99L),
+                1000L + gamesPlayed
+        );
+    }
+
+    private static PlayerRatingProfile profileForMatch(UUID playerId, String name, int elo, MatchId matchId) {
+        return new PlayerRatingProfile(
+                playerId,
+                name,
+                RatingSystemId.ELO,
+                1,
+                1,
+                1,
+                0,
+                elo,
+                350.0,
+                elo,
+                matchId,
+                1000L
+        );
     }
 
     private static MatchResult matchResult(MatchId matchId, UUID winnerId, UUID loserId) {

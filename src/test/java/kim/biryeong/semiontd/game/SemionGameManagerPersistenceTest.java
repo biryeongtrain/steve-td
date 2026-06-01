@@ -40,6 +40,30 @@ final class SemionGameManagerPersistenceTest {
         ));
     }
 
+    @Test
+    void requiredSqliteRatingRepositoryInitializationFailureFailsFastInsteadOfFallingBack() throws Exception {
+        Path sqlitePathAsDirectory = Files.createDirectory(tempDir.resolve("required-rating.db"));
+        SemionPersistenceConfig requiredSqlite = requiredSqlite(sqlitePathAsDirectory);
+
+        assertThrows(PersistenceException.class, () -> SemionGameManager.createRatingRepository(
+                requiredSqlite,
+                sqlitePathAsDirectory,
+                tempDir.resolve("ratings.json")
+        ));
+    }
+
+    @Test
+    void requiredSqliteRatingEventRepositoryInitializationFailureFailsFastInsteadOfFallingBack() throws Exception {
+        Path sqlitePathAsDirectory = Files.createDirectory(tempDir.resolve("required-rating-events.db"));
+        SemionPersistenceConfig requiredSqlite = requiredSqlite(sqlitePathAsDirectory);
+
+        assertThrows(PersistenceException.class, () -> SemionGameManager.createRatingEventRepository(
+                requiredSqlite,
+                sqlitePathAsDirectory,
+                tempDir.resolve("rating-events.json")
+        ));
+    }
+
     private static SemionPersistenceConfig requiredSqlite(Path sqlitePath) {
         return new SemionPersistenceConfig(
                 SemionPersistenceBackendType.SQLITE,

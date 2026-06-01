@@ -12,7 +12,11 @@ public final class EloRatingCalculator implements RatingCalculator {
     private final double kFactor;
 
     public EloRatingCalculator() {
-        this(DEFAULT_K_FACTOR);
+        this(RatingConfig.defaultConfig());
+    }
+
+    public EloRatingCalculator(RatingConfig config) {
+        this((config == null ? RatingConfig.defaultConfig() : config).eloKFactor());
     }
 
     public EloRatingCalculator(double kFactor) {

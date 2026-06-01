@@ -1,5 +1,7 @@
 package kim.biryeong.semiontd.gametest;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -9,6 +11,7 @@ import kim.biryeong.semiontd.game.MatchResult;
 import kim.biryeong.semiontd.game.MatchResultGroup;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.game.TeamMatchResult;
+import kim.biryeong.semiontd.persistence.SQLiteRatingRepository;
 import kim.biryeong.semiontd.rating.EloRatingCalculator;
 import kim.biryeong.semiontd.rating.PlayerRatingProfile;
 import kim.biryeong.semiontd.rating.RatingMatchInput;
@@ -95,5 +98,52 @@ public final class SemionRatingGameTest {
             throw new AssertionError("Spectator must not receive a rating adjustment");
         }
         context.succeed();
+    }
+
+    @GameTest
+    public void sqliteRatingRepositoryPersistsProfileInGameTestRuntime(GameTestHelper context) {
+        try {
+            Path database = Files.createTempFile("semion-rating-gametest", ".db");
+            UUID playerId = UUID.nameUUIDFromBytes("gametest-sqlite-rating-player".getBytes());
+            PlayerRatingProfile profile = new PlayerRatingProfile(
+                    playerId,
+                    "sqlitePlayer",
+                    kim.biryeong.semiontd.rating.RatingSystemId.ELO,
+                    1,
+                    1,
+                    1,
+                    0,
+                    1516.0,
+                    350.0,
+                    1516,
+                    new MatchId(103L),
+                    1000L
+            );
+            new SQLiteRatingRepository(database).saveProfile(playerId, profile);
+            PlayerRatingProfile loaded = new SQLiteRatingRepository(database).findProfile(playerId).orElseThrow();
+            Files.deleteIfExists(database);
+            if (loaded.displayElo() != 1516 || loaded.gamesPlayed() != 1) {
+                throw new AssertionError("SQLite rating repository did not preserve profile fields");
+            }
+            context.succeed();
+        } catch (Exception exception) {
+            throw new AssertionError("SQLite rating repository failed in GameTest runtime", exception);
+        }
+    }
+
+    @GameTest
+    public void ratingTopCommandRunsWithEmptyLeaderboard(GameTestHelper context) {
+        try {
+            int result = context.getLevel().getServer().getCommands().getDispatcher().execute(
+                    "semiontd rating top",
+                    context.getLevel().getServer().createCommandSourceStack()
+            );
+            if (result < 1) {
+                throw new AssertionError("/semiontd rating top should succeed with an empty leaderboard");
+            }
+            context.succeed();
+        } catch (Exception exception) {
+            throw new AssertionError("/semiontd rating top failed", exception);
+        }
     }
 }
