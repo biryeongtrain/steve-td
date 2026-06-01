@@ -100,6 +100,7 @@ import kim.biryeong.semiontd.music.SemionMusicService;
 import kim.biryeong.semiontd.music.SemionMusicTrack;
 import kim.biryeong.semiontd.placeholder.SemionPlaceholders;
 import kim.biryeong.semiontd.persistence.FileAppliedMatchRepository;
+import kim.biryeong.semiontd.persistence.FileMatchResultRepository;
 import kim.biryeong.semiontd.persistence.SemionPersistenceBackendType;
 import kim.biryeong.semiontd.test.TestTowerService;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
@@ -743,6 +744,91 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertEquals(context, 5, byTeam.get(TeamId.YELLOW).placement(), "First eliminated YELLOW team should be fifth.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void allEliminatedMatchResultIsUnratedDraw(GameTestHelper context) {
+        SemionGame game = new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(), testArena(context));
+        ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                MatchMode.NORMAL,
+                List.of(
+                        new AssignedParticipant(stableUuid("draw-red"), "draw-red", TeamId.RED, 1),
+                        new AssignedParticipant(stableUuid("draw-blue"), "draw-blue", TeamId.BLUE, 1)
+                ),
+                Set.of(),
+                2
+        );
+        if (!assertTrue(context, game.start(context.getLevel().getServer(), plan), "Two-team game should start.")) {
+            return;
+        }
+
+        if (!assertTrue(context, game.killBoss(TeamId.BLUE), "BLUE should be eliminated first.")) {
+            return;
+        }
+        if (!assertTrue(context, game.killBoss(TeamId.RED), "RED should also be eliminable after match end.")) {
+            return;
+        }
+
+        Optional<MatchResult> result = game.matchResult();
+        if (!assertPresent(context, result, "All-eliminated game should expose a match result.")) {
+            return;
+        }
+        if (!assertEquals(context, Set.of(), result.get().winningTeams(), "All-eliminated games should have no winner.")) {
+            return;
+        }
+        Map<TeamId, TeamMatchResult> byTeam = teamResultsByTeam(result.get());
+        if (!assertEquals(context, MatchResultGroup.DRAW_OR_UNRATED, byTeam.get(TeamId.RED).resultGroup(), "No-winner RED result should be unrated.")) {
+            return;
+        }
+        if (!assertEquals(context, MatchResultGroup.DRAW_OR_UNRATED, byTeam.get(TeamId.BLUE).resultGroup(), "No-winner BLUE result should be unrated.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, byTeam.get(TeamId.RED).placement(), "No-winner RED placement should be tied first.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, byTeam.get(TeamId.BLUE).placement(), "No-winner BLUE placement should be tied first.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void matchResultRepositoryPersistsDetailedResults(GameTestHelper context) {
+        Path storePath;
+        try {
+            storePath = Files.createTempDirectory("semion-match-result-test").resolve("match-results.json");
+        } catch (java.io.IOException exception) {
+            context.fail(Component.literal("Failed to create temporary match result store path."));
+            return;
+        }
+
+        MatchResult matchResult = new MatchResult(
+                stableUuid("persisted-match"),
+                1000L,
+                2000L,
+                List.of(new MatchParticipantResult(stableUuid("persisted-player"), "persisted-player", TeamId.RED, true)),
+                Set.of(stableUuid("persisted-spectator")),
+                Set.of(TeamId.RED),
+                List.of(new TeamMatchResult(TeamId.RED, 1, MatchResultGroup.WIN_GROUP, 1.0, -1, -1, 12.5)),
+                7
+        );
+        FileMatchResultRepository repository = new FileMatchResultRepository(storePath);
+        repository.saveMatchResult(matchResult);
+        FileMatchResultRepository reloaded = new FileMatchResultRepository(storePath);
+        Optional<MatchResult> loaded = reloaded.findMatchResult(matchResult.matchId());
+        if (!assertPresent(context, loaded, "Saved match result should reload by stable matchId.")) {
+            return;
+        }
+        if (!assertEquals(context, 7, loaded.get().finalRound(), "Persisted match result should keep final round.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, loaded.get().participantCount(), "Persisted match result should keep participant details.")) {
+            return;
+        }
+        if (!assertEquals(context, 12.5, loaded.get().teamResults().getFirst().bossDamageTaken(), "Persisted match result should keep team debug statistics.")) {
             return;
         }
         context.succeed();

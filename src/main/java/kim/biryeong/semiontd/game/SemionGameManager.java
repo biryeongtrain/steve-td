@@ -25,6 +25,8 @@ import kim.biryeong.semiontd.map.GameArenaLoader;
 import kim.biryeong.semiontd.map.LobbyWorld;
 import kim.biryeong.semiontd.map.LobbyWorldLoader;
 import kim.biryeong.semiontd.music.SemionMusicService;
+import kim.biryeong.semiontd.persistence.FileMatchResultRepository;
+import kim.biryeong.semiontd.persistence.MatchResultRepository;
 import kim.biryeong.semiontd.progression.MatchProgressionReward;
 import kim.biryeong.semiontd.progression.ProgressionService;
 import kim.biryeong.semiontd.progression.SemionPlayerProfile;
@@ -61,6 +63,7 @@ public final class SemionGameManager {
     private Path configDir;
     private Path progressionStorePath;
     private ProgressionService progressionService = new ProgressionService(progressionConfig, null);
+    private MatchResultRepository matchResultRepository = new FileMatchResultRepository(null);
     private SemionMusicService musicService = SemionMusicService.disabled();
     private final SemionDialogService dialogService = new SemionDialogService();
     private final SemionDisplayHudService displayHudService = new SemionDisplayHudService();
@@ -147,6 +150,9 @@ public final class SemionGameManager {
         this.progressionStorePath = progressionStorePath;
         this.configDir = progressionStorePath == null ? null : progressionStorePath.getParent();
         this.progressionService = new ProgressionService(progressionConfig, progressionStorePath);
+        this.matchResultRepository = new FileMatchResultRepository(this.configDir == null
+                ? null
+                : this.configDir.resolve("match-results.json"));
         this.buildGuideService.configure(this.configDir == null ? null : this.configDir.resolve("build_guides.json"));
         ProductionTowerCatalogs.reloadBuiltIns(this.towerBalanceConfig);
         IncomeSummons.reloadBuiltIns(this.summonConfig);
@@ -680,6 +686,7 @@ public final class SemionGameManager {
         Optional<MatchResult> result = finishedGame.matchResult();
         if (result.isPresent()) {
             lastMatchResult = result.get();
+            matchResultRepository.saveMatchResult(result.get());
             buildGuideService.finishMatch(finishedGame, result.get().finalRound());
             nextMatchPriorityPlayerIds.addAll(result.get().spectatorIds());
             Map<UUID, MatchProgressionReward> rewards = progressionService.applyMatchResult(server, result.get());
