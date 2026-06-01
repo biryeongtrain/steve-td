@@ -38,6 +38,11 @@ public record PlayerRatingProfile(
     }
 
     public static PlayerRatingProfile initial(UUID playerId, String playerName) {
+        return initial(playerId, playerName, RatingConfig.defaultConfig());
+    }
+
+    public static PlayerRatingProfile initial(UUID playerId, String playerName, RatingConfig config) {
+        RatingConfig safeConfig = config == null ? RatingConfig.defaultConfig() : config;
         return new PlayerRatingProfile(
                 playerId,
                 playerName,
@@ -46,9 +51,9 @@ public record PlayerRatingProfile(
                 0,
                 0,
                 0,
-                INITIAL_MU,
-                INITIAL_SIGMA,
-                INITIAL_DISPLAY_ELO,
+                safeConfig.initialMu(),
+                safeConfig.initialSigma(),
+                safeConfig.initialDisplayElo(),
                 null,
                 0L
         );

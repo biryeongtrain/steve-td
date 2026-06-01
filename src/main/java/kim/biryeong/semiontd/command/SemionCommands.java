@@ -15,6 +15,7 @@ import kim.biryeong.semiontd.game.*;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.SemionJob;
 import kim.biryeong.semiontd.map.ArenaLoadException;
+import kim.biryeong.semiontd.rating.PlayerRatingProfile;
 import kim.biryeong.semiontd.summon.SummonMonsterType;
 import kim.biryeong.semiontd.summon.SummonResult;
 import kim.biryeong.semiontd.summon.SummonResultType;
@@ -98,6 +99,10 @@ public final class SemionCommands {
                         .executes(context -> economy(context.getSource(), gameManager)))
                 .then(literal("profile")
                         .executes(context -> profile(context.getSource(), gameManager)))
+                .then(literal("rating")
+                        .executes(context -> rating(context.getSource(), gameManager))
+                        .then(literal("top")
+                                .executes(context -> ratingTop(context.getSource(), gameManager))))
                 .then(literal("job")
                         .then(literal("list")
                                 .executes(context -> listJobs(context.getSource())))
@@ -204,6 +209,20 @@ public final class SemionCommands {
 
         dispatcher.register(literal("직업")
                 .executes(context -> jobDialog(context.getSource(), gameManager)));
+        dispatcher.register(literal("레이팅")
+                .executes(context -> rating(context.getSource(), gameManager))
+                .then(literal("순위")
+                        .executes(context -> ratingTop(context.getSource(), gameManager)))
+                .then(literal("top")
+                        .executes(context -> ratingTop(context.getSource(), gameManager))));
+        dispatcher.register(literal("랭크")
+                .executes(context -> rating(context.getSource(), gameManager))
+                .then(literal("순위")
+                        .executes(context -> ratingTop(context.getSource(), gameManager)))
+                .then(literal("top")
+                        .executes(context -> ratingTop(context.getSource(), gameManager))));
+        dispatcher.register(literal("순위")
+                .executes(context -> ratingTop(context.getSource(), gameManager)));
         dispatcher.register(literal("준비")
                 .executes(context -> ready(context.getSource(), gameManager)));
         dispatcher.register(literal("빌드")
@@ -810,6 +829,43 @@ public final class SemionCommands {
                         .map(job -> job.displayName().getString())
                         .orElse(JobRegistry.defaultJob().displayName().getString()));
         return 1;
+    }
+
+    private static int rating(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        Optional<PlayerRatingProfile> profile = gameManager.ratingProfile(player.getUUID());
+        if (profile.isEmpty()) {
+            success(source, "아직 Rating 기록이 없습니다. 첫 경기를 완료하면 1500 ELO에서 시작합니다.");
+            return 1;
+        }
+        success(source, formatRatingProfile(profile.get()));
+        return 1;
+    }
+
+    private static int ratingTop(CommandSourceStack source, SemionGameManager gameManager) {
+        List<PlayerRatingProfile> profiles = gameManager.topRatingProfiles(10);
+        if (profiles.isEmpty()) {
+            success(source, "Rating Top 10: 아직 기록된 플레이어가 없습니다.");
+            return 1;
+        }
+        success(source, "Rating Top " + profiles.size());
+        int rank = 1;
+        for (PlayerRatingProfile profile : profiles) {
+            success(source, rank + ". " + profile.lastKnownName()
+                    + " — " + profile.displayElo()
+                    + " ELO (" + profile.wins() + "W " + profile.losses() + "L)");
+            rank++;
+        }
+        return profiles.size();
+    }
+
+    private static String formatRatingProfile(PlayerRatingProfile profile) {
+        return "Rating: " + profile.displayElo()
+                + " ELO, 전적=" + profile.gamesPlayed()
+                + "전 " + profile.wins()
+                + "승 " + profile.losses()
+                + "패, 시스템=" + profile.ratingSystemId()
+                + " v" + profile.ratingVersion();
     }
 
     private static int listJobs(CommandSourceStack source) {
