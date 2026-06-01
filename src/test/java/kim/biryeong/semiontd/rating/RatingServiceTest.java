@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.rating;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
@@ -16,6 +17,7 @@ import kim.biryeong.semiontd.game.TeamMatchResult;
 import kim.biryeong.semiontd.persistence.FileAppliedMatchRepository;
 import kim.biryeong.semiontd.persistence.FileRatingEventRepository;
 import kim.biryeong.semiontd.persistence.FileRatingRepository;
+import kim.biryeong.semiontd.persistence.PersistenceException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -120,13 +122,12 @@ final class RatingServiceTest {
         MatchId matchId = new MatchId(13L);
         ratingRepository.saveProfile(winnerId, profileForMatch(winnerId, "winner", 1516, matchId));
 
-        RatingMatchResult result = service.applyMatchResult(null, matchResult(matchId, winnerId, loserId));
+        assertThrows(PersistenceException.class, () -> service.applyMatchResult(null, matchResult(matchId, winnerId, loserId)));
 
-        assertTrue(result.adjustments().isEmpty());
         assertEquals(1516, ratingRepository.findProfile(winnerId).orElseThrow().displayElo());
         assertTrue(ratingRepository.findProfile(loserId).isEmpty());
         assertTrue(eventRepository.findMatchResult(matchId).isEmpty());
-        assertTrue(appliedMatchRepository.hasApplied(matchId, "rating"));
+        assertTrue(!appliedMatchRepository.hasApplied(matchId, "rating"));
     }
 
     private static PlayerRatingProfile profile(UUID playerId, String name, int elo, int gamesPlayed) {
