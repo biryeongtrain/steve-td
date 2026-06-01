@@ -167,7 +167,7 @@ public class LegionTowers {
             20,
             20,
             15,
-            ParrotVisual.builder().variant(Parrot.Variant.RED_BLUE).build(),
+            ParrotVisual.builder().variant(Parrot.Variant.GREEN).build(),
             List.of(
                     "<gray>동물 빌더가 리워크될 때 실직당한 앵무 타워가 원한을 풀기위해 돌아왔습니다.</gray>",
                     "<green> 공격 시 마다 이 타워의 공격력과 공격속도가 20% 증가합니다. 최대 100% </green>"
