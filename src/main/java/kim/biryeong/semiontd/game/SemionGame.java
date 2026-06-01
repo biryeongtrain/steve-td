@@ -698,13 +698,17 @@ public final class SemionGame {
         }
 
         int placement = living.isEmpty() ? 1 : living.size() + 1;
+        MatchResultGroup eliminatedResultGroup = winningTeams.isEmpty()
+                ? MatchResultGroup.DRAW_OR_UNRATED
+                : MatchResultGroup.LOSS_GROUP;
         for (int index = eliminationOrder.size() - 1; index >= 0; index--) {
             TeamEliminationRecord record = eliminationOrder.get(index);
+            int resultPlacement = winningTeams.isEmpty() ? 1 : placement++;
             results.add(new TeamMatchResult(
                     record.teamId(),
-                    placement++,
-                    MatchResultGroup.LOSS_GROUP,
-                    placementWeight(placement - 1),
+                    resultPlacement,
+                    eliminatedResultGroup,
+                    winningTeams.isEmpty() ? 0.0 : placementWeight(resultPlacement),
                     record.round(),
                     record.tick(),
                     record.bossDamageTaken()
