@@ -64,6 +64,7 @@ import kim.biryeong.semiontd.game.AssignedParticipant;
 import kim.biryeong.semiontd.game.EconomyService;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.MatchParticipantResult;
+import kim.biryeong.semiontd.game.MatchResultGroup;
 import kim.biryeong.semiontd.game.MatchResult;
 import kim.biryeong.semiontd.game.MatchMode;
 import kim.biryeong.semiontd.game.ParticipantSelectionPlan;
@@ -79,6 +80,8 @@ import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.StartPlacement;
 import kim.biryeong.semiontd.game.StartCandidate;
 import kim.biryeong.semiontd.game.TeamId;
+import kim.biryeong.semiontd.game.TeamMatchResult;
+import kim.biryeong.semiontd.game.TeamSizeBalancePolicy;
 import kim.biryeong.semiontd.game.TowerPlacementResult;
 import kim.biryeong.semiontd.game.TowerSellResult;
 import kim.biryeong.semiontd.game.TowerUpgradeResult;
@@ -96,6 +99,8 @@ import kim.biryeong.semiontd.music.SemionMusicResourcePack;
 import kim.biryeong.semiontd.music.SemionMusicService;
 import kim.biryeong.semiontd.music.SemionMusicTrack;
 import kim.biryeong.semiontd.placeholder.SemionPlaceholders;
+import kim.biryeong.semiontd.persistence.FileAppliedMatchRepository;
+import kim.biryeong.semiontd.persistence.SemionPersistenceBackendType;
 import kim.biryeong.semiontd.test.TestTowerService;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.test.tower.TestTower;
@@ -613,6 +618,144 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertTrue(context, !result.get().spectatorIds().contains(lateSpectatorId), "Late spectators should not be stored as initial match spectators.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void matchResultKeepsStableMatchId(GameTestHelper context) {
+        UUID redId = stableUuid("match-id-red");
+        UUID blueId = stableUuid("match-id-blue");
+        SemionGame game = startedTwoPlayerGame(context, redId, blueId);
+
+        if (!assertTrue(context, game.killBoss(TeamId.BLUE), "BLUE boss kill should end the match.")) {
+            return;
+        }
+
+        Optional<MatchResult> first = game.matchResult();
+        Optional<MatchResult> second = game.matchResult();
+        if (!assertPresent(context, first, "Ended game should expose the first match result.")) {
+            return;
+        }
+        if (!assertPresent(context, second, "Ended game should expose the second match result.")) {
+            return;
+        }
+        if (!assertEquals(context, first.get().matchId(), second.get().matchId(), "Repeated matchResult calls should keep the same matchId.")) {
+            return;
+        }
+        if (!assertTrue(context, first.get().startedAtEpochMillis() > 0, "Match result should expose a start timestamp.")) {
+            return;
+        }
+        if (!assertTrue(context, first.get().endedAtEpochMillis() >= first.get().startedAtEpochMillis(), "End timestamp should not precede start timestamp.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void winningTeamsRemainBackwardCompatibleAndTeamResultsExposeGroups(GameTestHelper context) {
+        UUID redId = stableUuid("team-result-red");
+        UUID blueId = stableUuid("team-result-blue");
+        SemionGame game = startedTwoPlayerGame(context, redId, blueId);
+
+        if (!assertTrue(context, game.killBoss(TeamId.BLUE), "BLUE boss kill should end the match.")) {
+            return;
+        }
+
+        Optional<MatchResult> result = game.matchResult();
+        if (!assertPresent(context, result, "Ended game should expose a match result.")) {
+            return;
+        }
+        MatchResult matchResult = result.get();
+        if (!assertEquals(context, Set.of(TeamId.RED), matchResult.winningTeams(), "Winning teams should remain backward compatible.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, matchResult.winnerCount(), "Participant winner count should remain compatible.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, matchResult.loserCount(), "Participant loser count should remain compatible.")) {
+            return;
+        }
+        Map<TeamId, TeamMatchResult> byTeam = teamResultsByTeam(matchResult);
+        if (!assertEquals(context, MatchResultGroup.WIN_GROUP, byTeam.get(TeamId.RED).resultGroup(), "Winner team should be in the win group.")) {
+            return;
+        }
+        if (!assertEquals(context, MatchResultGroup.LOSS_GROUP, byTeam.get(TeamId.BLUE).resultGroup(), "Eliminated team should be in the loss group.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, byTeam.get(TeamId.RED).placement(), "Winner should keep placement 1.")) {
+            return;
+        }
+        if (!assertEquals(context, 2, byTeam.get(TeamId.BLUE).placement(), "Loser should get placement 2 in a two-team match.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void fiveTeamMatchResultOrdersEliminatedTeams(GameTestHelper context) {
+        SemionGame game = new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(), testArena(context));
+        ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                MatchMode.NORMAL,
+                List.of(
+                        new AssignedParticipant(stableUuid("placement-red"), "placement-red", TeamId.RED, 1),
+                        new AssignedParticipant(stableUuid("placement-blue"), "placement-blue", TeamId.BLUE, 1),
+                        new AssignedParticipant(stableUuid("placement-green"), "placement-green", TeamId.GREEN, 1),
+                        new AssignedParticipant(stableUuid("placement-yellow"), "placement-yellow", TeamId.YELLOW, 1),
+                        new AssignedParticipant(stableUuid("placement-purple"), "placement-purple", TeamId.PURPLE, 1)
+                ),
+                Set.of(),
+                5
+        );
+        if (!assertTrue(context, game.start(context.getLevel().getServer(), plan), "Five-team game should start.")) {
+            return;
+        }
+
+        if (!assertTrue(context, game.killBoss(TeamId.YELLOW), "YELLOW should be eliminated first.")) {
+            return;
+        }
+        if (!assertTrue(context, game.killBoss(TeamId.BLUE), "BLUE should be eliminated second.")) {
+            return;
+        }
+        if (!assertTrue(context, game.killBoss(TeamId.GREEN), "GREEN should be eliminated third.")) {
+            return;
+        }
+        if (!assertTrue(context, game.killBoss(TeamId.PURPLE), "PURPLE should be eliminated fourth and finish the match.")) {
+            return;
+        }
+
+        Optional<MatchResult> result = game.matchResult();
+        if (!assertPresent(context, result, "Finished five-team game should expose a match result.")) {
+            return;
+        }
+        Map<TeamId, TeamMatchResult> byTeam = teamResultsByTeam(result.get());
+        if (!assertEquals(context, 1, byTeam.get(TeamId.RED).placement(), "Living RED team should be first.")) {
+            return;
+        }
+        if (!assertEquals(context, 2, byTeam.get(TeamId.PURPLE).placement(), "Last eliminated PURPLE team should be second.")) {
+            return;
+        }
+        if (!assertEquals(context, 3, byTeam.get(TeamId.GREEN).placement(), "Third eliminated GREEN team should be third.")) {
+            return;
+        }
+        if (!assertEquals(context, 4, byTeam.get(TeamId.BLUE).placement(), "Second eliminated BLUE team should be fourth.")) {
+            return;
+        }
+        if (!assertEquals(context, 5, byTeam.get(TeamId.YELLOW).placement(), "First eliminated YELLOW team should be fifth.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void teamSizeBalancePolicyDefaultsToNormalization(GameTestHelper context) {
+        if (!assertEquals(
+                context,
+                TeamSizeBalancePolicy.ALLOW_UNEVEN_WITH_SIZE_NORMALIZATION,
+                TeamSizeBalancePolicy.defaultPolicy(),
+                "Rating prework should keep uneven team rosters allowed with future normalized scoring."
+        )) {
             return;
         }
         context.succeed();
@@ -6312,6 +6455,58 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void defaultPersistenceBackendIsFile(GameTestHelper context) {
+        try {
+            Path tempDir = Files.createTempDirectory("semion-persistence-config-test");
+            SemionConfigLoader.LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("semion-td-persistence-config-test"));
+            if (!assertEquals(context, SemionPersistenceBackendType.FILE, configs.persistence().backend(), "Default persistence backend should remain FILE.")) {
+                return;
+            }
+            if (!assertTrue(context, Files.exists(tempDir.resolve("persistence.json")), "Persistence config should be created next to other config files.")) {
+                return;
+            }
+            context.succeed();
+        } catch (Exception exception) {
+            context.fail(Component.literal("Failed to load persistence config: " + exception.getMessage()));
+        }
+    }
+
+    @GameTest
+    public void appliedMatchRepositorySeparatesSubsystems(GameTestHelper context) {
+        Path storePath;
+        try {
+            storePath = Files.createTempDirectory("semion-applied-match-test").resolve("progression-applied-matches.json");
+        } catch (java.io.IOException exception) {
+            context.fail(Component.literal("Failed to create temporary applied-match store path."));
+            return;
+        }
+
+        FileAppliedMatchRepository repository = new FileAppliedMatchRepository(storePath);
+        UUID matchId = stableUuid("applied-match");
+        if (!assertTrue(context, repository.markApplied(matchId, "progression", 1000L), "First progression mark should be recorded.")) {
+            return;
+        }
+        if (!assertTrue(context, repository.hasApplied(matchId, "progression"), "Progression mark should be readable.")) {
+            return;
+        }
+        if (!assertTrue(context, !repository.markApplied(matchId, "progression", 2000L), "Duplicate progression mark should be rejected.")) {
+            return;
+        }
+        if (!assertTrue(context, repository.markApplied(matchId, "rating", 3000L), "Same matchId should be markable for another subsystem.")) {
+            return;
+        }
+
+        FileAppliedMatchRepository reloaded = new FileAppliedMatchRepository(storePath);
+        if (!assertTrue(context, reloaded.hasApplied(matchId, "progression"), "Progression mark should survive reload.")) {
+            return;
+        }
+        if (!assertTrue(context, reloaded.hasApplied(matchId, "rating"), "Rating mark should survive reload separately.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void waveMonsterBlockbenchVisualReachesRuntimeEntity(GameTestHelper context) {
         WaveMonsterEntry entry = new WaveMonsterEntry(
                 "model_wave",
@@ -7030,6 +7225,14 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             actualSizes.merge(participant.teamId(), 1, Integer::sum);
         }
         return assertEquals(context, expectedSizes, actualSizes, "Unexpected team size distribution.");
+    }
+
+    private static Map<TeamId, TeamMatchResult> teamResultsByTeam(MatchResult matchResult) {
+        Map<TeamId, TeamMatchResult> byTeam = new EnumMap<>(TeamId.class);
+        for (TeamMatchResult result : matchResult.teamResults()) {
+            byTeam.put(result.teamId(), result);
+        }
+        return byTeam;
     }
 
     private static boolean assertPresent(

@@ -753,12 +753,22 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
         if (!assertTrue(context, Files.exists(storePath), "Progression store should be written to a dedicated file.")) {
             return;
         }
+        Map<UUID, MatchProgressionReward> duplicateRewards = progressionService.applyMatchResult(context.getLevel().getServer(), result);
+        if (!assertTrue(context, duplicateRewards.isEmpty(), "Duplicate match application should return no progression rewards.")) {
+            return;
+        }
 
         ProgressionService reloaded = new ProgressionService(new ProgressionConfig(10, 15, 5), storePath);
         if (!assertEquals(context, 25L, reloaded.profile(context.getLevel().getServer(), winnerId, "profile-winner").cosmeticCurrency(), "Winner cosmetic currency should survive service reload.")) {
             return;
         }
         if (!assertEquals(context, 15L, reloaded.profile(context.getLevel().getServer(), loserId, "profile-loser").cosmeticCurrency(), "Loser cosmetic currency should survive service reload.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, reloaded.profile(context.getLevel().getServer(), winnerId, "profile-winner").gamesPlayed(), "Duplicate apply should not increment winner games played.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, reloaded.profile(context.getLevel().getServer(), loserId, "profile-loser").gamesPlayed(), "Duplicate apply should not increment loser games played.")) {
             return;
         }
         context.succeed();
