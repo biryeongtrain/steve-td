@@ -3,14 +3,26 @@ package kim.biryeong.semiontd.gametest;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import kim.biryeong.semiontd.config.AttackKind;
+import kim.biryeong.semiontd.config.EconomyConfig;
+import kim.biryeong.semiontd.config.MapConfig;
+import kim.biryeong.semiontd.entity.monster.Monster;
+import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.game.MatchId;
 import kim.biryeong.semiontd.game.MatchParticipantResult;
 import kim.biryeong.semiontd.game.MatchResult;
 import kim.biryeong.semiontd.game.MatchResultGroup;
+import kim.biryeong.semiontd.game.PlayerEconomy;
+import kim.biryeong.semiontd.game.PlayerLane;
+import kim.biryeong.semiontd.game.PlayerMatchStatsSnapshot;
+import kim.biryeong.semiontd.game.SemionPlayer;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.game.TeamMatchResult;
+import kim.biryeong.semiontd.map.GameArenaLoader;
 import kim.biryeong.semiontd.persistence.SQLiteRatingRepository;
 import kim.biryeong.semiontd.rating.EloRatingCalculator;
 import kim.biryeong.semiontd.rating.PlayerRatingProfile;
@@ -98,6 +110,120 @@ public final class SemionRatingGameTest {
             throw new AssertionError("Spectator must not receive a rating adjustment");
         }
         context.succeed();
+    }
+
+    @GameTest
+    public void contributionStatsAffectRatingDeltaInGameTestRuntime(GameTestHelper context) {
+        UUID strongWinnerId = UUID.nameUUIDFromBytes("gametest-strong-winner".getBytes());
+        UUID weakWinnerId = UUID.nameUUIDFromBytes("gametest-weak-winner".getBytes());
+        UUID strongLoserId = UUID.nameUUIDFromBytes("gametest-strong-loser".getBytes());
+        UUID weakLoserId = UUID.nameUUIDFromBytes("gametest-weak-loser".getBytes());
+        RatingMatchResult result = new EloRatingCalculator().calculate(new RatingMatchInput(
+                new MatchId(104L),
+                1000L,
+                List.of(
+                        new RatingParticipant(strongWinnerId, "strongWinner", TeamId.RED, true,
+                                PlayerRatingProfile.initial(strongWinnerId, "strongWinner"),
+                                new PlayerMatchStatsSnapshot(20, 200, 4, 80)),
+                        new RatingParticipant(weakWinnerId, "weakWinner", TeamId.RED, true,
+                                PlayerRatingProfile.initial(weakWinnerId, "weakWinner"),
+                                new PlayerMatchStatsSnapshot(5, 50, 1, 20)),
+                        new RatingParticipant(strongLoserId, "strongLoser", TeamId.BLUE, false,
+                                PlayerRatingProfile.initial(strongLoserId, "strongLoser"),
+                                new PlayerMatchStatsSnapshot(20, 200, 4, 80)),
+                        new RatingParticipant(weakLoserId, "weakLoser", TeamId.BLUE, false,
+                                PlayerRatingProfile.initial(weakLoserId, "weakLoser"),
+                                new PlayerMatchStatsSnapshot(5, 50, 1, 20))
+                )
+        ));
+
+        if (result.adjustments().get(0).displayEloDelta() <= result.adjustments().get(1).displayEloDelta()) {
+            throw new AssertionError("Stronger winner contribution should earn a larger delta");
+        }
+        if (Math.abs(result.adjustments().get(2).displayEloDelta()) >= Math.abs(result.adjustments().get(3).displayEloDelta())) {
+            throw new AssertionError("Stronger loser contribution should reduce the penalty");
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void laneAttributionStatsAreRecordedThroughPlayerLaneRuntime(GameTestHelper context) {
+        kim.biryeong.semiontd.map.GameArena arena = null;
+        try {
+            arena = GameArenaLoader.load(context.getLevel().getServer(), MapConfig.defaultConfig());
+            UUID laneOwnerId = UUID.nameUUIDFromBytes("gametest-rating-lane-owner".getBytes());
+            UUID senderId = UUID.nameUUIDFromBytes("gametest-rating-income-sender".getBytes());
+            PlayerLane lane = new PlayerLane(
+                    TeamId.RED,
+                    1,
+                    laneOwnerId,
+                    arena.teamArena(TeamId.RED).orElseThrow().world(),
+                    arena.teamArena(TeamId.RED).orElseThrow().layout().lane(1).orElseThrow()
+            );
+            SemionPlayer laneOwner = new SemionPlayer(
+                    laneOwnerId,
+                    "laneOwner",
+                    TeamId.RED,
+                    1,
+                    new PlayerEconomy(EconomyConfig.defaultConfig())
+            );
+            SemionPlayer sender = new SemionPlayer(
+                    senderId,
+                    "incomeSender",
+                    TeamId.BLUE,
+                    1,
+                    new PlayerEconomy(EconomyConfig.defaultConfig())
+            );
+            Map<UUID, SemionPlayer> players = Map.of(laneOwnerId, laneOwner, senderId, sender);
+            Monster incomeMonster = new Monster(
+                    "gametest-income-unit",
+                    TeamId.RED,
+                    1,
+                    Optional.of(senderId),
+                    Optional.of(TeamId.BLUE),
+                    20.0,
+                    0.0,
+                    5.0,
+                    AttackKind.MELEE,
+                    "minecraft:zombie",
+                    3L
+            );
+
+            lane.enqueueSummonedMonster(incomeMonster);
+            lane.tick(context.getLevel().getServer(), null, players);
+
+            PlayerMatchStatsSnapshot afterSpawn = laneOwner.matchStats().snapshot(laneOwner.economy().income());
+            double threat = incomeMonster.attributionThreat();
+            if (Math.abs(afterSpawn.ownLaneIncomingThreat() - threat) > 0.0001) {
+                throw new AssertionError("Lane owner should record incoming income-unit threat through PlayerLane runtime");
+            }
+            if (Math.abs(afterSpawn.incomingIncomeThreat() - threat) > 0.0001) {
+                throw new AssertionError("Lane owner should record incoming income-specific threat through PlayerLane runtime");
+            }
+
+            if (!(lane.arenaWorld().getEntity(incomeMonster.minecraftEntityId()) instanceof SemionMonsterEntity monsterEntity)) {
+                throw new AssertionError("Spawned income unit should have a runtime monster entity");
+            }
+            var leakPosition = lane.laneLayout().positionAt(0.95);
+            monsterEntity.teleportTo(leakPosition.x, leakPosition.y, leakPosition.z);
+            lane.tick(context.getLevel().getServer(), null, players);
+
+            PlayerMatchStatsSnapshot afterLeak = laneOwner.matchStats().snapshot(laneOwner.economy().income());
+            PlayerMatchStatsSnapshot senderStats = sender.matchStats().snapshot(sender.economy().income());
+            if (Math.abs(afterLeak.ownLaneLeakedThreat() - threat) > 0.0001) {
+                throw new AssertionError("Lane owner should record leaked threat through PlayerLane runtime");
+            }
+            if (Math.abs(senderStats.incomeAttackSuccessThreat() - threat) > 0.0001) {
+                throw new AssertionError("Income unit sender should record successful pressure through PlayerLane runtime");
+            }
+            context.succeed();
+        } catch (Exception exception) {
+            throw new AssertionError("Lane attribution GameTest failed", exception);
+        } finally {
+            if (arena != null) {
+                arena.unload();
+            }
+        }
     }
 
     @GameTest

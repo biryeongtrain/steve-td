@@ -41,6 +41,7 @@ public final class Monster {
     private Optional<UUID> lastHitPlayerId = Optional.empty();
     private KillSourceKind lastHitSourceKind = KillSourceKind.UNKNOWN;
     private boolean rewardGranted;
+    private boolean laneLeakRecorded;
 
     public Monster(
             String id,
@@ -256,6 +257,10 @@ public final class Monster {
         return targetLaneId;
     }
 
+    public Optional<UUID> ownerPlayer() {
+        return ownerPlayer;
+    }
+
     public Optional<TeamId> senderTeam() {
         return senderTeam;
     }
@@ -364,6 +369,14 @@ public final class Monster {
         return rewardGranted;
     }
 
+    public boolean laneLeakRecorded() {
+        return laneLeakRecorded;
+    }
+
+    public double attributionThreat() {
+        return Math.max(1.0, maxHealth + Math.max(0.0, attackDamage));
+    }
+
     public boolean isAlive() {
         return state == MonsterState.ALIVE || state == MonsterState.SPAWNING;
     }
@@ -445,6 +458,10 @@ public final class Monster {
 
     public void markRewardGranted() {
         rewardGranted = true;
+    }
+
+    public void markLaneLeakRecorded() {
+        laneLeakRecorded = true;
     }
 
     public void markRemoved() {

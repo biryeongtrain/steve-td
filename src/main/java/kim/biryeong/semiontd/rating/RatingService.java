@@ -195,7 +195,8 @@ public final class RatingService {
                 participant.playerName(),
                 participant.teamId(),
                 participant.winner(),
-                profile
+                profile,
+                participant.stats()
         );
     }
 }

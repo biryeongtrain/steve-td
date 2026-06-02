@@ -12,6 +12,7 @@ import kim.biryeong.semiontd.game.MatchId;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.rating.PlayerRatingProfile;
 import kim.biryeong.semiontd.rating.RatingAdjustment;
+import kim.biryeong.semiontd.rating.RatingContributionBreakdown;
 import kim.biryeong.semiontd.rating.RatingMatchResult;
 import kim.biryeong.semiontd.rating.RatingSystemId;
 import org.junit.jupiter.api.Test;
@@ -89,7 +90,17 @@ final class RatingPersistenceTest {
                 RatingSystemId.ELO,
                 1,
                 1000L,
-                List.of(new RatingAdjustment(playerId, "player", TeamId.RED, true, before, after, 16.0, 16))
+                List.of(new RatingAdjustment(
+                        playerId,
+                        "player",
+                        TeamId.RED,
+                        true,
+                        before,
+                        after,
+                        16.0,
+                        16,
+                        new RatingContributionBreakdown(1.10, 1.05, 1.00, 1.00, 1.06, 1.06)
+                ))
         );
         RatingMatchResult duplicate = new RatingMatchResult(
                 new MatchId(201L),
@@ -106,6 +117,7 @@ final class RatingPersistenceTest {
         assertTrue(loaded.isPresent());
         assertEquals(1, loaded.get().adjustments().size());
         assertEquals(1000L, loaded.get().appliedAtEpochMillis());
+        assertEquals(1.06, loaded.get().adjustments().get(0).contribution().appliedMultiplier(), 0.0001);
     }
 
     private static PlayerRatingProfile profile(UUID playerId, String name, int elo) {

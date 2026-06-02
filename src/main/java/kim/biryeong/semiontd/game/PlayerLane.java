@@ -187,8 +187,8 @@ public final class PlayerLane {
     }
 
     public void tick(MinecraftServer server, EconomyService economyService, Map<UUID, SemionPlayer> players) {
-        spawnQueuedMonster(waveMonsterSpawnQueue);
-        spawnQueuedMonster(summonedMonsterSpawnQueue);
+        spawnQueuedMonster(waveMonsterSpawnQueue, players);
+        spawnQueuedMonster(summonedMonsterSpawnQueue, players);
 
         for (Tower tower : List.copyOf(towers)) {
             if (towers.contains(tower)) {
@@ -200,7 +200,7 @@ public final class PlayerLane {
         Iterator<Monster> iterator = activeMonsters.iterator();
         while (iterator.hasNext()) {
             Monster monster = iterator.next();
-            syncMonsterEntityState(monster);
+            syncMonsterEntityState(monster, players);
             if (monster.state() == MonsterState.DEAD) {
                 if (economyService != null) {
                     economyService.awardMonsterKillReward(monster, players);
@@ -318,10 +318,11 @@ public final class PlayerLane {
         }
     }
 
-    private void spawnQueuedMonster(List<Monster> queue) {
+    private void spawnQueuedMonster(List<Monster> queue, Map<UUID, SemionPlayer> players) {
         if (!queue.isEmpty()) {
             Monster monster = queue.removeFirst();
             spawnMinecraftEntity(monster);
+            recordIncomingThreat(monster, players);
             activeMonsters.add(monster);
         }
     }
@@ -350,7 +351,7 @@ public final class PlayerLane {
         }
     }
 
-    private void syncMonsterEntityState(Monster monster) {
+    private void syncMonsterEntityState(Monster monster, Map<UUID, SemionPlayer> players) {
         if (!monster.hasMinecraftEntity()) {
             return;
         }
@@ -378,6 +379,34 @@ public final class PlayerLane {
         } else {
             monster.syncHealth(monsterEntity.getHealth());
         }
+        if (monster.state() == MonsterState.REACHED_BOSS) {
+            recordLaneLeak(monster, players);
+        }
+    }
+
+    private void recordIncomingThreat(Monster monster, Map<UUID, SemionPlayer> players) {
+        if (monster == null || players == null) {
+            return;
+        }
+        SemionPlayer laneOwner = players.get(ownerPlayer);
+        if (laneOwner != null) {
+            laneOwner.matchStats().recordOwnLaneIncomingThreat(monster.attributionThreat(), monster.ownerPlayer().isPresent());
+        }
+    }
+
+    private void recordLaneLeak(Monster monster, Map<UUID, SemionPlayer> players) {
+        if (monster == null || monster.laneLeakRecorded() || players == null) {
+            return;
+        }
+        double threat = monster.attributionThreat();
+        SemionPlayer laneOwner = players.get(ownerPlayer);
+        if (laneOwner != null) {
+            laneOwner.matchStats().recordOwnLaneLeakedThreat(threat);
+        }
+        monster.ownerPlayer()
+                .map(players::get)
+                .ifPresent(owner -> owner.matchStats().recordIncomeAttackSuccessThreat(threat));
+        monster.markLaneLeakRecorded();
     }
 
     private void discardMinecraftEntity(Monster monster) {
