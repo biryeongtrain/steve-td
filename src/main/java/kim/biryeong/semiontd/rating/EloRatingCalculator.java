@@ -6,9 +6,9 @@ import java.util.List;
 public final class EloRatingCalculator implements RatingCalculator {
     public static final double DEFAULT_K_FACTOR = 32.0;
     private static final double ELO_SCALE = 400.0;
-    private static final double WIN_SCORE = 1.0;
-    private static final double LOSS_SCORE = 0.0;
-    private static final double DRAW_SCORE = 0.5;
+    private static final double TOP_HALF_TARGET_SCORE = 0.90;
+    private static final double BOTTOM_HALF_TARGET_SCORE = 0.10;
+    private static final double DRAW_SCORE = 0.50;
 
     private final double kFactor;
     private final RatingContributionCalculator contributionCalculator;
@@ -108,25 +108,39 @@ public final class EloRatingCalculator implements RatingCalculator {
         if (opponents.isEmpty()) {
             return 0.0;
         }
-        double scoreDelta = 0.0;
-        for (RatingParticipant opponent : opponents) {
-            double actualScore = actualScore(participant.placement(), opponent.placement());
-            double expectedScore = expectedScore(participant.currentProfile().mu(), opponent.currentProfile().mu());
-            scoreDelta += actualScore - expectedScore;
-        }
-        double averageScoreDelta = scoreDelta / opponents.size();
+        int teamCount = distinctTeamCount(participants);
+        double targetScore = placementTargetScore(teamCount, participant.placement());
+        double averageExpectedScore = opponents.stream()
+                .mapToDouble(opponent -> expectedScore(participant.currentProfile().mu(), opponent.currentProfile().mu()))
+                .average()
+                .orElse(DRAW_SCORE);
         double teamSizeMultiplier = teamSizeMultiplier(participants, participant, opponents.size());
-        return kFactor * averageScoreDelta * teamSizeMultiplier;
+        return kFactor * (targetScore - averageExpectedScore) * teamSizeMultiplier;
     }
 
-    private static double actualScore(int placement, int opponentPlacement) {
-        if (placement < opponentPlacement) {
-            return WIN_SCORE;
+    private static int distinctTeamCount(List<RatingParticipant> participants) {
+        return (int) participants.stream()
+                .map(RatingParticipant::teamId)
+                .distinct()
+                .count();
+    }
+
+    private static double placementTargetScore(int teamCount, int placement) {
+        if (teamCount <= 1) {
+            return DRAW_SCORE;
         }
-        if (placement > opponentPlacement) {
-            return LOSS_SCORE;
+        if (placement <= 1) {
+            return 1.0;
         }
-        return DRAW_SCORE;
+        if (placement >= teamCount) {
+            return 0.0;
+        }
+        if (teamCount % 2 == 1 && placement == (teamCount + 1) / 2) {
+            return DRAW_SCORE;
+        }
+        return placement <= teamCount / 2
+                ? TOP_HALF_TARGET_SCORE
+                : BOTTOM_HALF_TARGET_SCORE;
     }
 
     private static double teamSizeMultiplier(
