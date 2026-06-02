@@ -75,7 +75,7 @@ final class RatingEligibilityPolicyTest {
     void participantWinnerFlagMustMatchWinningTeams() {
         RatingEligibilityPolicy policy = new RatingEligibilityPolicy(RatingConfig.defaultConfig());
 
-        assertEquals("participant winner flag does not match winning teams", policy.skippedReason(matchResult(
+        assertEquals("participant winner flag does not match team placement result", policy.skippedReason(matchResult(
                 List.of(participant("winner", TeamId.RED, false), participant("loser", TeamId.BLUE, false)),
                 Set.of(),
                 Set.of(TeamId.RED)
@@ -83,7 +83,7 @@ final class RatingEligibilityPolicyTest {
     }
 
     @Test
-    void multipleWinningTeamsAreNotEligibleUntilPlacementRatingExists() {
+    void multipleWinningTeamsAreNotEligibleUntilTiePolicyExists() {
         RatingEligibilityPolicy policy = new RatingEligibilityPolicy(RatingConfig.defaultConfig());
 
         assertEquals("rating requires exactly one winning team", policy.skippedReason(matchResult(
@@ -116,26 +116,113 @@ final class RatingEligibilityPolicyTest {
     }
 
     @Test
-    void sameTeamOnlyMatchIsNotEligible() {
+    void threeTeamPlacementMatchIsEligible() {
         RatingEligibilityPolicy policy = new RatingEligibilityPolicy(RatingConfig.defaultConfig());
 
-        assertEquals("rating requires exactly two participant teams", policy.skippedReason(matchResult(
-                List.of(participant("winner", TeamId.RED, true), participant("teammate", TeamId.RED, true)),
+        assertTrue(policy.isEligible(matchResult(
+                List.of(
+                        participant("winner", TeamId.RED, true),
+                        participant("second", TeamId.BLUE, false),
+                        participant("third", TeamId.GREEN, false)
+                ),
                 Set.of(),
-                Set.of(TeamId.RED)
+                Set.of(TeamId.RED),
+                List.of(
+                        new TeamMatchResult(TeamId.RED, 1, MatchResultGroup.WIN_GROUP, 1.0, 1, 1, 0.0),
+                        new TeamMatchResult(TeamId.BLUE, 2, MatchResultGroup.LOSS_GROUP, 0.0, 1, 1, 0.0),
+                        new TeamMatchResult(TeamId.GREEN, 3, MatchResultGroup.LOSS_GROUP, 0.0, 1, 1, 0.0)
+                )
         )));
     }
 
     @Test
-    void moreThanTwoParticipantTeamsAreNotEligibleForBinaryElo() {
+    void fiveTeamPlacementMatchIsEligible() {
         RatingEligibilityPolicy policy = new RatingEligibilityPolicy(RatingConfig.defaultConfig());
 
-        assertEquals("rating requires exactly two participant teams", policy.skippedReason(matchResult(
+        assertTrue(policy.isEligible(matchResult(
                 List.of(
                         participant("winner", TeamId.RED, true),
-                        participant("loser", TeamId.BLUE, false),
+                        participant("second", TeamId.BLUE, false),
+                        participant("third", TeamId.GREEN, false),
+                        participant("fourth", TeamId.YELLOW, false),
+                        participant("fifth", TeamId.PURPLE, false)
+                ),
+                Set.of(),
+                Set.of(TeamId.RED),
+                List.of(
+                        new TeamMatchResult(TeamId.RED, 1, MatchResultGroup.WIN_GROUP, 1.0, 1, 1, 0.0),
+                        new TeamMatchResult(TeamId.BLUE, 2, MatchResultGroup.LOSS_GROUP, 0.0, 1, 1, 0.0),
+                        new TeamMatchResult(TeamId.GREEN, 3, MatchResultGroup.LOSS_GROUP, 0.0, 1, 1, 0.0),
+                        new TeamMatchResult(TeamId.YELLOW, 4, MatchResultGroup.LOSS_GROUP, 0.0, 1, 1, 0.0),
+                        new TeamMatchResult(TeamId.PURPLE, 5, MatchResultGroup.LOSS_GROUP, 0.0, 1, 1, 0.0)
+                )
+        )));
+    }
+
+    @Test
+    void duplicatePlacementIsNotEligible() {
+        RatingEligibilityPolicy policy = new RatingEligibilityPolicy(RatingConfig.defaultConfig());
+
+        assertEquals("rating requires unique contiguous team placements", policy.skippedReason(matchResult(
+                List.of(
+                        participant("winner", TeamId.RED, true),
+                        participant("second", TeamId.BLUE, false),
                         participant("third", TeamId.GREEN, false)
                 ),
+                Set.of(),
+                Set.of(TeamId.RED),
+                List.of(
+                        new TeamMatchResult(TeamId.RED, 1, MatchResultGroup.WIN_GROUP, 1.0, 1, 1, 0.0),
+                        new TeamMatchResult(TeamId.BLUE, 2, MatchResultGroup.LOSS_GROUP, 0.0, 1, 1, 0.0),
+                        new TeamMatchResult(TeamId.GREEN, 2, MatchResultGroup.LOSS_GROUP, 0.0, 1, 1, 0.0)
+                )
+        )));
+    }
+
+    @Test
+    void duplicateTeamResultIsNotEligible() {
+        RatingEligibilityPolicy policy = new RatingEligibilityPolicy(RatingConfig.defaultConfig());
+
+        assertEquals("rating requires one team result per participant team", policy.skippedReason(matchResult(
+                List.of(
+                        participant("winner", TeamId.RED, true),
+                        participant("second", TeamId.BLUE, false)
+                ),
+                Set.of(),
+                Set.of(TeamId.RED),
+                List.of(
+                        new TeamMatchResult(TeamId.RED, 1, MatchResultGroup.WIN_GROUP, 1.0, 1, 1, 0.0),
+                        new TeamMatchResult(TeamId.RED, 1, MatchResultGroup.WIN_GROUP, 1.0, 1, 1, 0.0),
+                        new TeamMatchResult(TeamId.BLUE, 2, MatchResultGroup.LOSS_GROUP, 0.0, 1, 1, 0.0)
+                )
+        )));
+    }
+
+    @Test
+    void missingTeamResultIsNotEligible() {
+        RatingEligibilityPolicy policy = new RatingEligibilityPolicy(RatingConfig.defaultConfig());
+
+        assertEquals("rating requires team results for every participant team", policy.skippedReason(matchResult(
+                List.of(
+                        participant("winner", TeamId.RED, true),
+                        participant("second", TeamId.BLUE, false),
+                        participant("third", TeamId.GREEN, false)
+                ),
+                Set.of(),
+                Set.of(TeamId.RED),
+                List.of(
+                        new TeamMatchResult(TeamId.RED, 1, MatchResultGroup.WIN_GROUP, 1.0, 1, 1, 0.0),
+                        new TeamMatchResult(TeamId.BLUE, 2, MatchResultGroup.LOSS_GROUP, 0.0, 1, 1, 0.0)
+                )
+        )));
+    }
+
+    @Test
+    void sameTeamOnlyMatchIsNotEligible() {
+        RatingEligibilityPolicy policy = new RatingEligibilityPolicy(RatingConfig.defaultConfig());
+
+        assertEquals("rating requires between two and five participant teams", policy.skippedReason(matchResult(
+                List.of(participant("winner", TeamId.RED, true), participant("teammate", TeamId.RED, true)),
                 Set.of(),
                 Set.of(TeamId.RED)
         )));
@@ -150,6 +237,23 @@ final class RatingEligibilityPolicyTest {
             Set<UUID> spectatorIds,
             Set<TeamId> winningTeams
     ) {
+        return matchResult(
+                participants,
+                spectatorIds,
+                winningTeams,
+                List.of(
+                        new TeamMatchResult(TeamId.RED, 1, MatchResultGroup.WIN_GROUP, 1.0, 1, 1, 0.0),
+                        new TeamMatchResult(TeamId.BLUE, 2, MatchResultGroup.LOSS_GROUP, 0.0, 1, 1, 0.0)
+                )
+        );
+    }
+
+    private static MatchResult matchResult(
+            List<MatchParticipantResult> participants,
+            Set<UUID> spectatorIds,
+            Set<TeamId> winningTeams,
+            List<TeamMatchResult> teamResults
+    ) {
         return new MatchResult(
                 new MatchId(301L),
                 1L,
@@ -157,10 +261,7 @@ final class RatingEligibilityPolicyTest {
                 participants,
                 spectatorIds,
                 winningTeams,
-                List.of(
-                        new TeamMatchResult(TeamId.RED, 1, MatchResultGroup.WIN_GROUP, 1.0, 1, 1, 0.0),
-                        new TeamMatchResult(TeamId.BLUE, 2, MatchResultGroup.LOSS_GROUP, 0.0, 1, 1, 0.0)
-                ),
+                teamResults,
                 10
         );
     }

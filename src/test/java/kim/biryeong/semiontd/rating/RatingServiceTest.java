@@ -90,6 +90,48 @@ final class RatingServiceTest {
     }
 
     @Test
+    void passesTeamPlacementsToRatingCalculator() {
+        FileRatingRepository ratingRepository = new FileRatingRepository(tempDir.resolve("ratings.json"));
+        CapturingRatingCalculator calculator = new CapturingRatingCalculator();
+        RatingService service = new RatingService(
+                ratingRepository,
+                new FileRatingEventRepository(tempDir.resolve("rating-events.json")),
+                new FileAppliedMatchRepository(tempDir.resolve("rating-applied-matches.json")),
+                calculator
+        );
+        UUID firstId = UUID.nameUUIDFromBytes("service-first".getBytes());
+        UUID secondId = UUID.nameUUIDFromBytes("service-second".getBytes());
+        UUID thirdId = UUID.nameUUIDFromBytes("service-third".getBytes());
+        MatchResult matchResult = new MatchResult(
+                new MatchId(20L),
+                1L,
+                2L,
+                List.of(
+                        new MatchParticipantResult(firstId, "first", TeamId.RED, true),
+                        new MatchParticipantResult(secondId, "second", TeamId.BLUE, false),
+                        new MatchParticipantResult(thirdId, "third", TeamId.GREEN, false)
+                ),
+                Set.of(),
+                Set.of(TeamId.RED),
+                List.of(
+                        new TeamMatchResult(TeamId.RED, 1, MatchResultGroup.WIN_GROUP, 1.0, 1, 1, 0.0),
+                        new TeamMatchResult(TeamId.BLUE, 2, MatchResultGroup.LOSS_GROUP, 0.5, 1, 1, 0.0),
+                        new TeamMatchResult(TeamId.GREEN, 3, MatchResultGroup.LOSS_GROUP, 0.0, 1, 1, 0.0)
+                ),
+                10
+        );
+
+        service.applyMatchResult(null, matchResult);
+
+        assertEquals(List.of(1, 2, 3), calculator.lastInput.participants().stream()
+                .map(RatingParticipant::placement)
+                .toList());
+        assertEquals(List.of(1.0, 0.5, 0.0), calculator.lastInput.participants().stream()
+                .map(RatingParticipant::placementWeight)
+                .toList());
+    }
+
+    @Test
     void topProfilesAreSortedByEloThenGamesPlayed() {
         FileRatingRepository ratingRepository = new FileRatingRepository(tempDir.resolve("ratings.json"));
         RatingService service = new RatingService(
@@ -311,6 +353,16 @@ final class RatingServiceTest {
                 ),
                 10
         );
+    }
+
+    private static final class CapturingRatingCalculator implements RatingCalculator {
+        private RatingMatchInput lastInput;
+
+        @Override
+        public RatingMatchResult calculate(RatingMatchInput input) {
+            lastInput = input;
+            return new EloRatingCalculator().calculate(input);
+        }
     }
 
     private static final class FailingFirstSaveRatingEventRepository implements RatingEventRepository {

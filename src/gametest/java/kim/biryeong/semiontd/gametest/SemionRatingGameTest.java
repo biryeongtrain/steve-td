@@ -23,12 +23,16 @@ import kim.biryeong.semiontd.game.SemionPlayer;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.game.TeamMatchResult;
 import kim.biryeong.semiontd.map.GameArenaLoader;
+import kim.biryeong.semiontd.persistence.FileAppliedMatchRepository;
+import kim.biryeong.semiontd.persistence.FileRatingEventRepository;
+import kim.biryeong.semiontd.persistence.FileRatingRepository;
 import kim.biryeong.semiontd.persistence.SQLiteRatingRepository;
 import kim.biryeong.semiontd.rating.EloRatingCalculator;
 import kim.biryeong.semiontd.rating.PlayerRatingProfile;
 import kim.biryeong.semiontd.rating.RatingMatchInput;
 import kim.biryeong.semiontd.rating.RatingMatchResult;
 import kim.biryeong.semiontd.rating.RatingParticipant;
+import kim.biryeong.semiontd.rating.RatingService;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 
@@ -144,6 +148,73 @@ public final class SemionRatingGameTest {
             throw new AssertionError("Stronger loser contribution should reduce the penalty");
         }
         context.succeed();
+    }
+
+    @GameTest
+    public void threeTeamPlacementMatchPersistsRatingThroughServiceRuntime(GameTestHelper context) {
+        try {
+            Path configDir = Files.createTempDirectory("semion-rating-service-gametest");
+            FileRatingRepository ratingRepository = new FileRatingRepository(configDir.resolve("ratings.json"));
+            FileRatingEventRepository eventRepository = new FileRatingEventRepository(configDir.resolve("rating-events.json"));
+            FileAppliedMatchRepository appliedRepository = new FileAppliedMatchRepository(configDir.resolve("rating-applied-matches.json"));
+            RatingService service = new RatingService(
+                    ratingRepository,
+                    eventRepository,
+                    appliedRepository,
+                    new EloRatingCalculator()
+            );
+            UUID firstId = UUID.nameUUIDFromBytes("gametest-three-team-first".getBytes());
+            UUID secondId = UUID.nameUUIDFromBytes("gametest-three-team-second".getBytes());
+            UUID thirdId = UUID.nameUUIDFromBytes("gametest-three-team-third".getBytes());
+            MatchResult matchResult = new MatchResult(
+                    new MatchId(105L),
+                    1L,
+                    2L,
+                    List.of(
+                            new MatchParticipantResult(firstId, "first", TeamId.RED, true),
+                            new MatchParticipantResult(secondId, "second", TeamId.BLUE, false),
+                            new MatchParticipantResult(thirdId, "third", TeamId.GREEN, false)
+                    ),
+                    Set.of(),
+                    Set.of(TeamId.RED),
+                    List.of(
+                            new TeamMatchResult(TeamId.RED, 1, MatchResultGroup.WIN_GROUP, 1.0, 1, 1L, 0.0),
+                            new TeamMatchResult(TeamId.BLUE, 2, MatchResultGroup.LOSS_GROUP, 0.5, 1, 1L, 0.0),
+                            new TeamMatchResult(TeamId.GREEN, 3, MatchResultGroup.LOSS_GROUP, 0.0, 1, 1L, 0.0)
+                    ),
+                    10
+            );
+
+            RatingMatchResult result = service.applyMatchResult(context.getLevel().getServer(), matchResult);
+
+            if (result.adjustments().size() != 3) {
+                throw new AssertionError("Expected three rating adjustments for a three-team match");
+            }
+            PlayerRatingProfile first = ratingRepository.findProfile(firstId).orElseThrow();
+            PlayerRatingProfile second = ratingRepository.findProfile(secondId).orElseThrow();
+            PlayerRatingProfile third = ratingRepository.findProfile(thirdId).orElseThrow();
+            if (first.displayElo() <= PlayerRatingProfile.INITIAL_DISPLAY_ELO) {
+                throw new AssertionError("First place should gain rating");
+            }
+            if (second.displayElo() != PlayerRatingProfile.INITIAL_DISPLAY_ELO) {
+                throw new AssertionError("Second place in an equal three-team match should stay near neutral");
+            }
+            if (third.displayElo() >= PlayerRatingProfile.INITIAL_DISPLAY_ELO) {
+                throw new AssertionError("Third place should lose rating");
+            }
+            if (first.wins() != 1 || second.losses() != 1 || third.losses() != 1) {
+                throw new AssertionError("Win/loss counters should reflect first-place vs non-first placements");
+            }
+            if (eventRepository.findMatchResult(matchResult.matchId()).isEmpty()) {
+                throw new AssertionError("Rating event should be persisted");
+            }
+            if (!appliedRepository.hasApplied(matchResult.matchId(), "rating")) {
+                throw new AssertionError("Rating applied marker should be persisted");
+            }
+            context.succeed();
+        } catch (Exception exception) {
+            throw new AssertionError("Three-team rating service GameTest failed", exception);
+        }
     }
 
     @GameTest

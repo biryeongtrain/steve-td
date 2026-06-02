@@ -24,26 +24,34 @@ A match is rating-eligible only when all of the following are true:
 
 1. Rating is enabled.
 2. The match has at least two rating-eligible participants after spectator filtering.
-3. The match has exactly two rating-eligible participant teams.
+3. The match has 2-5 rating-eligible participant teams.
 4. The match result contains exactly one winning team.
 5. No eligible participant belongs to a `DRAW_OR_UNRATED` team.
-6. Every eligible participant's winner flag matches the match `winningTeams` set.
-7. At least one eligible participant is a winner.
-8. At least one eligible participant is a loser.
+6. Every eligible participant team has a `TeamMatchResult`.
+7. Eligible team placements are unique and contiguous from `1..teamCount`.
+8. The first-place team is the only winning team.
+9. Every eligible participant's winner flag matches their team placement (`placement == 1`).
+10. At least one eligible participant is a winner.
+11. At least one eligible participant is a loser.
 
 Skipped matches are not persisted as rating events and are not marked as applied. This keeps the current data model simple while avoiding false audit records. If skipped-match auditing becomes necessary, add explicit `applied/skippedReason` metadata to `RatingMatchResult` in a follow-up change.
 
 ## ELO calculation
 
-For each eligible participant:
+For each eligible participant in a 2-5 team placement match:
 
-- Winners receive actual score `1.0`.
-- Losers receive actual score `0.0`.
-- Opponent rating is the average `mu` of the opposite result group.
-- Base delta is `K * (actual - expected) * min(1.0, opposingTeamSize / ownTeamSize)`, so larger teams do not multiply aggregate ladder inflation by participant count.
+- The participant is compared pairwise against every eligible participant on other teams.
+- Better placement receives actual score `1.0` for that comparison.
+- Worse placement receives actual score `0.0` for that comparison.
+- Pairwise score deltas are averaged across opponents before multiplying by K, so 3-5 team matches do not multiply volatility just because there are more teams.
+- A team-size multiplier `min(1.0, opposingParticipantCount / ownTeamSize)` keeps uneven team-size matches close to the current aggregate volatility.
 - `displayElo` is `round(mu)` after applying the final delta.
 
 For equal 1500-vs-1500 ratings with K=32 and neutral contribution stats, this yields `+16` for winners and `-16` for losers.
+
+In a 3-team equal-rating match this yields first place positive, second place near neutral, and third place negative. In a 5-team equal-rating match the deltas are monotonic by placement.
+
+For command/backward-compatibility counters, `wins` means first-place finishes and `losses` means non-first finishes.
 
 ## Contribution weighting
 
@@ -124,6 +132,5 @@ The following policies are intentionally deferred:
 - Inactivity decay.
 - Provisional placement matches.
 - Draw handling.
-- Partial placement scoring for three or more teams.
 - TrueSkill2 migration.
 - Admin re-rating or event replay commands.

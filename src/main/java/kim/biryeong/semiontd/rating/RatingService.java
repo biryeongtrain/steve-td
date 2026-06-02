@@ -185,7 +185,7 @@ public final class RatingService {
 
     private List<RatingParticipant> participants(MatchResult matchResult) {
         return eligibilityPolicy.ratingParticipants(matchResult).stream()
-                .map(this::participant)
+                .map(participant -> participant(matchResult, participant))
                 .toList();
     }
 
@@ -199,16 +199,30 @@ public final class RatingService {
         return false;
     }
 
-    private RatingParticipant participant(MatchParticipantResult participant) {
+    private RatingParticipant participant(MatchResult matchResult, MatchParticipantResult participant) {
         PlayerRatingProfile profile = ratingRepository.findProfile(participant.playerId())
                 .orElseGet(() -> PlayerRatingProfile.initial(participant.playerId(), participant.playerName(), ratingConfig));
+        TeamPlacement placement = teamPlacement(matchResult, participant);
         return new RatingParticipant(
                 participant.playerId(),
                 participant.playerName(),
                 participant.teamId(),
                 participant.winner(),
+                placement.placement(),
+                placement.placementWeight(),
                 profile,
                 participant.stats()
         );
+    }
+
+    private static TeamPlacement teamPlacement(MatchResult matchResult, MatchParticipantResult participant) {
+        return matchResult.teamResults().stream()
+                .filter(teamResult -> teamResult.teamId().equals(participant.teamId()))
+                .findFirst()
+                .map(teamResult -> new TeamPlacement(teamResult.placement(), teamResult.placementWeight()))
+                .orElseGet(() -> new TeamPlacement(participant.winner() ? 1 : 2, participant.winner() ? 1.0 : 0.0));
+    }
+
+    private record TeamPlacement(int placement, double placementWeight) {
     }
 }

@@ -8,6 +8,7 @@ public final class EloRatingCalculator implements RatingCalculator {
     private static final double ELO_SCALE = 400.0;
     private static final double WIN_SCORE = 1.0;
     private static final double LOSS_SCORE = 0.0;
+    private static final double DRAW_SCORE = 0.5;
 
     private final double kFactor;
     private final RatingContributionCalculator contributionCalculator;
@@ -54,19 +55,12 @@ public final class EloRatingCalculator implements RatingCalculator {
             return RatingMatchResult.empty(input.matchId());
         }
 
-        double winnerAverage = averageMu(input, true);
-        double loserAverage = averageMu(input, false);
-        int winnerCount = participantCount(input, true);
-        int loserCount = participantCount(input, false);
         List<RatingAdjustment> adjustments = new ArrayList<>();
         for (RatingParticipant participant : input.participants()) {
             PlayerRatingProfile before = participant.currentProfile();
-            double opponentAverage = participant.winner() ? loserAverage : winnerAverage;
-            double actualScore = participant.winner() ? WIN_SCORE : LOSS_SCORE;
-            double expectedScore = expectedScore(before.mu(), opponentAverage);
-            double baseDelta = teamBalancedBaseDelta(kFactor, actualScore, expectedScore, participant.winner(), winnerCount, loserCount);
+            double baseDelta = placementBaseDelta(input.participants(), participant);
             RatingContributionBreakdown contribution = contributionCalculator.breakdown(input, participant);
-            double multiplier = participant.winner()
+            double multiplier = baseDelta >= 0.0
                     ? contribution.appliedMultiplier()
                     : 2.0 - contribution.appliedMultiplier();
             double muDelta = baseDelta * multiplier;
@@ -78,8 +72,8 @@ public final class EloRatingCalculator implements RatingCalculator {
                     RatingSystemId.ELO,
                     before.ratingVersion() + 1,
                     before.gamesPlayed() + 1,
-                    before.wins() + (participant.winner() ? 1 : 0),
-                    before.losses() + (participant.winner() ? 0 : 1),
+                    before.wins() + (participant.placement() == 1 ? 1 : 0),
+                    before.losses() + (participant.placement() == 1 ? 0 : 1),
                     afterMu,
                     before.sigma(),
                     afterDisplayElo,
@@ -107,47 +101,53 @@ public final class EloRatingCalculator implements RatingCalculator {
         );
     }
 
+    private double placementBaseDelta(List<RatingParticipant> participants, RatingParticipant participant) {
+        List<RatingParticipant> opponents = participants.stream()
+                .filter(opponent -> !opponent.teamId().equals(participant.teamId()))
+                .toList();
+        if (opponents.isEmpty()) {
+            return 0.0;
+        }
+        double scoreDelta = 0.0;
+        for (RatingParticipant opponent : opponents) {
+            double actualScore = actualScore(participant.placement(), opponent.placement());
+            double expectedScore = expectedScore(participant.currentProfile().mu(), opponent.currentProfile().mu());
+            scoreDelta += actualScore - expectedScore;
+        }
+        double averageScoreDelta = scoreDelta / opponents.size();
+        double teamSizeMultiplier = teamSizeMultiplier(participants, participant, opponents.size());
+        return kFactor * averageScoreDelta * teamSizeMultiplier;
+    }
+
+    private static double actualScore(int placement, int opponentPlacement) {
+        if (placement < opponentPlacement) {
+            return WIN_SCORE;
+        }
+        if (placement > opponentPlacement) {
+            return LOSS_SCORE;
+        }
+        return DRAW_SCORE;
+    }
+
+    private static double teamSizeMultiplier(
+            List<RatingParticipant> participants,
+            RatingParticipant participant,
+            int opponentCount
+    ) {
+        long ownTeamSize = participants.stream()
+                .filter(other -> other.teamId().equals(participant.teamId()))
+                .count();
+        if (ownTeamSize <= 0 || opponentCount <= 0) {
+            return 1.0;
+        }
+        return Math.min(1.0, (double) opponentCount / ownTeamSize);
+    }
+
     private static double validateKFactor(double kFactor) {
         if (!Double.isFinite(kFactor) || kFactor <= 0.0) {
             throw new IllegalArgumentException("kFactor must be positive and finite");
         }
         return kFactor;
-    }
-
-    private static double averageMu(RatingMatchInput input, boolean winner) {
-        List<RatingParticipant> participants = input.participants().stream()
-                .filter(participant -> participant.winner() == winner)
-                .toList();
-        if (participants.isEmpty()) {
-            return PlayerRatingProfile.INITIAL_MU;
-        }
-        return participants.stream()
-                .mapToDouble(participant -> participant.currentProfile().mu())
-                .average()
-                .orElse(PlayerRatingProfile.INITIAL_MU);
-    }
-
-    private static int participantCount(RatingMatchInput input, boolean winner) {
-        return (int) input.participants().stream()
-                .filter(participant -> participant.winner() == winner)
-                .count();
-    }
-
-    private static double teamBalancedBaseDelta(
-            double kFactor,
-            double actualScore,
-            double expectedScore,
-            boolean winner,
-            int winnerCount,
-            int loserCount
-    ) {
-        int ownTeamSize = winner ? winnerCount : loserCount;
-        int opposingTeamSize = winner ? loserCount : winnerCount;
-        if (ownTeamSize <= 0 || opposingTeamSize <= 0) {
-            return kFactor * (actualScore - expectedScore);
-        }
-        double teamSizeMultiplier = Math.min(1.0, (double) opposingTeamSize / ownTeamSize);
-        return kFactor * (actualScore - expectedScore) * teamSizeMultiplier;
     }
 
     private static double expectedScore(double ownRating, double opponentRating) {
