@@ -57,6 +57,7 @@ public class SemionTd implements ModInitializer {
                 configs.waves(),
                 configs.map(),
                 configs.progression(),
+                configs.rating(),
                 configs.towerBalance(),
                 configs.summons(),
                 configs.persistence(),

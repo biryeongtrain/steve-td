@@ -17,8 +17,10 @@ import net.minecraft.world.level.Level;
 public final class SemionHotbarService {
     private static final int TOWER_TOOL_SLOT = 0;
     private static final int SUMMON_TOOL_SLOT = 1;
+    private static final int LEADER_TOOL_SLOT = 2;
     private static final Component TOWER_TOOL_NAME = Component.literal("타워 관리").withStyle(ChatFormatting.AQUA);
     private static final Component SUMMON_TOOL_NAME = Component.literal("견제 소환").withStyle(ChatFormatting.LIGHT_PURPLE);
+    private static final Component LEADER_TOOL_NAME = Component.literal("팀장 타깃").withStyle(ChatFormatting.GOLD);
 
     private SemionHotbarService() {
     }
@@ -33,9 +35,14 @@ public final class SemionHotbarService {
         setTool(player, SUMMON_TOOL_SLOT, summonTool());
     }
 
+    public static void grantLeaderTool(ServerPlayer player) {
+        setTool(player, LEADER_TOOL_SLOT, leaderTool());
+    }
+
     public static void clearMatchTools(ServerPlayer player) {
         clearTool(player, TOWER_TOOL_SLOT, Items.COMPASS);
         clearTool(player, SUMMON_TOOL_SLOT, Items.ECHO_SHARD);
+        clearTool(player, LEADER_TOOL_SLOT, Items.BLAZE_ROD);
     }
 
     private static InteractionResult handleUse(
@@ -62,6 +69,14 @@ public final class SemionHotbarService {
             gameManager.dialogService().showSummonShop(serverPlayer, game);
             return InteractionResult.SUCCESS;
         }
+        if (isLeaderTool(stack)) {
+            if (game.players().get(serverPlayer.getUUID()) != null
+                    && game.teams().get(game.players().get(serverPlayer.getUUID()).teamId()).hasLeader(serverPlayer.getUUID())) {
+                gameManager.dialogService().showLeaderTargetControl(serverPlayer, game);
+                return InteractionResult.SUCCESS;
+            }
+            return InteractionResult.PASS;
+        }
         return InteractionResult.PASS;
     }
 
@@ -74,6 +89,12 @@ public final class SemionHotbarService {
     private static ItemStack summonTool() {
         ItemStack stack = new ItemStack(Items.ECHO_SHARD);
         stack.set(DataComponents.CUSTOM_NAME, SUMMON_TOOL_NAME);
+        return stack;
+    }
+
+    private static ItemStack leaderTool() {
+        ItemStack stack = new ItemStack(Items.BLAZE_ROD);
+        stack.set(DataComponents.CUSTOM_NAME, LEADER_TOOL_NAME);
         return stack;
     }
 
@@ -99,8 +120,12 @@ public final class SemionHotbarService {
         return stack.is(Items.ECHO_SHARD) && isNamed(stack, SUMMON_TOOL_NAME);
     }
 
+    private static boolean isLeaderTool(ItemStack stack) {
+        return stack.is(Items.BLAZE_ROD) && isNamed(stack, LEADER_TOOL_NAME);
+    }
+
     private static boolean isSemionTool(ItemStack stack) {
-        return isTowerTool(stack) || isSummonTool(stack);
+        return isTowerTool(stack) || isSummonTool(stack) || isLeaderTool(stack);
     }
 
     private static boolean isNamed(ItemStack stack, Component expectedName) {

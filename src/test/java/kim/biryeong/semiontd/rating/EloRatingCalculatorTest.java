@@ -92,9 +92,51 @@ final class EloRatingCalculatorTest {
         assertEquals(-32.0, loserTotal, 0.000001);
     }
 
+    @Test
+    void fourTeamPlacementScoresProduceTopHalfGainsAndBottomHalfLosses() {
+        RatingMatchResult result = new EloRatingCalculator().calculate(new RatingMatchInput(
+                new MatchId(4L),
+                1000L,
+                List.of(
+                        participant("first", TeamId.RED, true, 1.0),
+                        participant("second", TeamId.BLUE, false, 0.9),
+                        participant("third", TeamId.GREEN, false, 0.1),
+                        participant("fourth", TeamId.YELLOW, false, 0.0)
+                )
+        ));
+
+        assertEquals(List.of(16, 13, -13, -16), result.adjustments().stream()
+                .map(RatingAdjustment::displayEloDelta)
+                .toList());
+    }
+
+    @Test
+    void fiveTeamPlacementScoresKeepMiddlePlacementNeutral() {
+        RatingMatchResult result = new EloRatingCalculator().calculate(new RatingMatchInput(
+                new MatchId(5L),
+                1000L,
+                List.of(
+                        participant("first", TeamId.RED, true, 1.0),
+                        participant("second", TeamId.BLUE, false, 0.9),
+                        participant("third", TeamId.GREEN, false, 0.5),
+                        participant("fourth", TeamId.YELLOW, false, 0.1),
+                        participant("fifth", TeamId.PURPLE, false, 0.0)
+                )
+        ));
+
+        assertEquals(List.of(16, 13, 0, -13, -16), result.adjustments().stream()
+                .map(RatingAdjustment::displayEloDelta)
+                .toList());
+    }
+
     private static RatingParticipant participant(String name, TeamId teamId, boolean winner) {
         UUID playerId = UUID.nameUUIDFromBytes(name.getBytes());
         return new RatingParticipant(playerId, name, teamId, winner, PlayerRatingProfile.initial(playerId, name));
+    }
+
+    private static RatingParticipant participant(String name, TeamId teamId, boolean winner, double placementScore) {
+        UUID playerId = UUID.nameUUIDFromBytes(name.getBytes());
+        return new RatingParticipant(playerId, name, teamId, winner, PlayerRatingProfile.initial(playerId, name), placementScore);
     }
 
     private static PlayerRatingProfile profile(UUID playerId, String name, double mu) {

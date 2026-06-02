@@ -33,18 +33,18 @@ import kim.biryeong.semiontd.ui.SemionDisplayHudService;
 import kim.biryeong.semiontd.ui.SemionHotbarService;
 import kim.biryeong.semiontd.ui.SemionLaneIndicatorService;
 import kim.biryeong.semiontd.ui.SemionText;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Relative;
 import net.minecraft.world.level.GameType;
-import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 
 public final class SemionGame {
     public static final int DEFAULT_PREPARE_TICKS = 25 * 20;
     public static final int DEFAULT_WAVE_FINAL_DEFENSE_TICKS = 90 * 20;
+    static final int LEADER_TARGET_COOLDOWN_ROUNDS = 3;
 
     private EconomyConfig economyConfig;
     private WaveConfig waveConfig;
@@ -313,6 +313,7 @@ public final class SemionGame {
                 return false;
             }
         }
+        assignTeamLeadersFromParticipants(plan.activeParticipants());
 
         spawnBossesForActiveTeams(activeTeams);
         placeActivePlayers(server, plan.activeParticipants());
@@ -387,7 +388,7 @@ public final class SemionGame {
             return SummonResult.failure(SummonResultType.NOT_ENOUGH_GAS, summonId);
         }
 
-        Optional<SemionTeam> targetTeam = randomTargetTeam(player.teamId());
+        Optional<SemionTeam> targetTeam = targetTeamForSummon(player.teamId());
         if (targetTeam.isEmpty()) {
             economyService.refundSummon(player, gasCost, currentRound);
             return SummonResult.failure(SummonResultType.NO_TARGET_TEAM, summonId);
@@ -633,6 +634,7 @@ public final class SemionGame {
         economyService.payRoundIncome(players.values(), teams);
         currentWaveTeamIds.clear();
         currentRound++;
+        tickLeaderCooldowns();
         startPreparePhase(server);
     }
 
@@ -736,6 +738,93 @@ public final class SemionGame {
         return Math.max(0.0, team.laneGroup().boss().maxHealth() - team.laneGroup().boss().health());
     }
 
+    void assignTeamLeadersFromParticipants(List<AssignedParticipant> activeParticipants) {
+        for (SemionTeam team : teams.values()) {
+            if (!team.active() || team.eliminated()) {
+                continue;
+            }
+            activeParticipants.stream()
+                    .filter(participant -> participant.teamId() == team.id())
+                    .filter(participant -> players.containsKey(participant.uuid()))
+                    .min(Comparator.comparingInt(AssignedParticipant::laneId))
+                    .ifPresent(participant -> team.setLeader(participant.uuid()));
+        }
+    }
+
+    public void announceTeamLeaders(MinecraftServer server) {
+        for (SemionTeam team : teams.values()) {
+            team.leaderPlayerId()
+                    .map(players::get)
+                    .map(player -> teamLeaderAnnouncementMarkup(team.id(), player.name()))
+                    .map(SemionText::prefixedMini)
+                    .ifPresent(message -> server.getPlayerList().broadcastSystemMessage(message, false));
+        }
+    }
+
+    static String teamLeaderAnnouncementMarkup(TeamId teamId, String playerName) {
+        return "<white>" + teamId.name() + " 팀장: </white>" + teamColoredNameMarkup(teamId, playerName);
+    }
+
+    private static String teamColoredNameMarkup(TeamId teamId, String playerName) {
+        String color = switch (teamId) {
+            case RED -> "red";
+            case BLUE -> "blue";
+            case GREEN -> "green";
+            case YELLOW -> "yellow";
+            case PURPLE -> "light_purple";
+        };
+        return "<" + color + ">" + MiniMessage.miniMessage().escapeTags(playerName) + "</" + color + ">";
+    }
+
+    public LeaderTargetResult setLeaderTarget(UUID playerId, TeamId targetTeamId) {
+        SemionPlayer player = players.get(playerId);
+        if (player == null) {
+            return LeaderTargetResult.PLAYER_NOT_IN_GAME;
+        }
+        SemionTeam senderTeam = teams.get(player.teamId());
+        if (senderTeam == null || senderTeam.leaderTargeting().isEmpty() || !senderTeam.hasLeader(playerId)) {
+            return LeaderTargetResult.NOT_TEAM_LEADER;
+        }
+        if (targetTeamId == null) {
+            return LeaderTargetResult.INVALID_TARGET_TEAM;
+        }
+        if (targetTeamId == player.teamId()) {
+            return LeaderTargetResult.TARGET_SELF_TEAM;
+        }
+        SemionTeam targetTeam = teams.get(targetTeamId);
+        if (targetTeam == null || !targetTeam.active() || targetTeam.eliminated()) {
+            return LeaderTargetResult.TARGET_TEAM_NOT_ALIVE;
+        }
+        LeaderTargetingState leaderTargeting = senderTeam.leaderTargeting().orElseThrow();
+        if (!leaderTargeting.canUse()) {
+            return LeaderTargetResult.COOLDOWN_ACTIVE;
+        }
+        leaderTargeting.use(targetTeamId, currentRound, LEADER_TARGET_COOLDOWN_ROUNDS);
+        return LeaderTargetResult.SUCCESS;
+    }
+
+    void tickLeaderCooldowns() {
+        for (SemionTeam team : livingTeams()) {
+            team.leaderTargeting().ifPresent(LeaderTargetingState::tickRoundCooldown);
+        }
+    }
+
+    Optional<SemionTeam> targetTeamForSummon(TeamId senderTeam) {
+        SemionTeam team = teams.get(senderTeam);
+        if (team != null) {
+            Optional<LeaderTargetingState> leaderTargeting = team.leaderTargeting();
+            if (leaderTargeting.isPresent() && leaderTargeting.get().targetTeamId().isPresent()) {
+                TeamId targetTeamId = leaderTargeting.get().targetTeamId().orElseThrow();
+                SemionTeam targetTeam = teams.get(targetTeamId);
+                if (targetTeam != null && targetTeam.active() && !targetTeam.eliminated() && targetTeam.id() != senderTeam) {
+                    return Optional.of(targetTeam);
+                }
+                leaderTargeting.get().clearTarget();
+            }
+        }
+        return randomTargetTeam(senderTeam);
+    }
+
     private Optional<SemionTeam> randomTargetTeam(TeamId senderTeam) {
         List<SemionTeam> candidates = livingTeams().stream()
                 .filter(team -> team.id() != senderTeam)
@@ -809,18 +898,12 @@ public final class SemionGame {
         arena.teamArena(activePlayer.teamId()).ifPresent(teamArena -> {
             Vec3 position = StartPlacement.activePlayerSpawn(teamArena.layout(), activePlayer.laneId());
             player.setGameMode(GameType.ADVENTURE);
-            player.teleport(
-                    new TeleportTransition(
-                            teamArena.world(),
-                            position,
-                            Vec3.ZERO,
-                            player.getXRot(),
-                            player.getYRot(),
-                            TeleportTransition.DO_NOTHING
-                    )
-            );
+            player.teleport(PlayerTeleportTransitions.preservingFacing(teamArena.world(), position, Vec3.ZERO, player));
             SemionDisplayHudService.refreshPlayerHud(player);
             SemionHotbarService.grantMatchTools(player);
+            if (teams.get(activePlayer.teamId()).hasLeader(activePlayer.uuid())) {
+                SemionHotbarService.grantLeaderTool(player);
+            }
             setFlight(player, true);
             playerLane(activePlayer.uuid()).ifPresent(lane -> SemionLaneIndicatorService.showLane(player, lane));
         });
@@ -858,16 +941,7 @@ public final class SemionGame {
         spectatorArena(fallbackTeam).ifPresent(teamArena -> {
             Vec3 position = StartPlacement.spectatorSpawn(teamArena.layout(), spectatorIndex);
             player.setGameMode(GameType.SPECTATOR);
-            player.teleport(
-                    new TeleportTransition(
-                            teamArena.world(),
-                            position,
-                            Vec3.ZERO,
-                            player.getXRot(),
-                            player.getYRot(),
-                            TeleportTransition.DO_NOTHING
-                    )
-            );
+            player.teleport(PlayerTeleportTransitions.preservingFacing(teamArena.world(), position, Vec3.ZERO, player));
             SemionDisplayHudService.refreshPlayerHud(player);
             SemionHotbarService.clearMatchTools(player);
         });
@@ -877,16 +951,7 @@ public final class SemionGame {
         spectatorArenaForActiveTeam(targetTeam).ifPresent(teamArena -> {
             Vec3 position = StartPlacement.spectatorSpawn(teamArena.layout(), spectatorIndex);
             player.setGameMode(GameType.SPECTATOR);
-            player.teleport(
-                    new TeleportTransition(
-                            teamArena.world(),
-                            position,
-                            Vec3.ZERO,
-                            player.getXRot(),
-                            player.getYRot(),
-                            TeleportTransition.DO_NOTHING
-                    )
-            );
+            player.teleport(PlayerTeleportTransitions.preservingFacing(teamArena.world(), position, Vec3.ZERO, player));
             SemionDisplayHudService.refreshPlayerHud(player);
             SemionHotbarService.clearMatchTools(player);
         });

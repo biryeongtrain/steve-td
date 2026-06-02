@@ -70,6 +70,7 @@ import kim.biryeong.semiontd.game.MatchId;
 import kim.biryeong.semiontd.game.MatchMode;
 import kim.biryeong.semiontd.game.ParticipantSelectionPlan;
 import kim.biryeong.semiontd.game.ParticipantSelectionService;
+import kim.biryeong.semiontd.game.PlayerTeleportTransitions;
 import kim.biryeong.semiontd.game.PlayerEconomy;
 import kim.biryeong.semiontd.game.RoundPhase;
 import kim.biryeong.semiontd.game.SemionPlayer;
@@ -173,6 +174,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
 import org.slf4j.LoggerFactory;
@@ -181,6 +183,25 @@ import xyz.nucleoid.map_templates.BlockBounds;
 import xyz.nucleoid.map_templates.MapTemplate;
 
 public final class SemionParticipantGameTest implements CustomTestMethodInvoker {
+    @GameTest
+    public void teleportTransitionPreservesYawAndPitch(GameTestHelper context) {
+        TeleportTransition transition = PlayerTeleportTransitions.preservingRotation(
+                context.getLevel(),
+                new Vec3(1.0, 2.0, 3.0),
+                Vec3.ZERO,
+                135.0F,
+                -30.0F
+        );
+
+        if (!assertEquals(context, 135.0F, transition.yRot(), "Teleport should preserve head yaw as yRot.")) {
+            return;
+        }
+        if (!assertEquals(context, -30.0F, transition.xRot(), "Teleport should preserve pitch as xRot.")) {
+            return;
+        }
+        context.succeed();
+    }
+
     private static kim.biryeong.semiontd.map.GameArena testArena(GameTestHelper context) {
         return SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(net.minecraft.core.BlockPos.ZERO));
     }
@@ -551,6 +572,42 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void participantSelectionBalancesTeamsByDisplayElo(GameTestHelper context) {
+        StartCandidate strongest = candidate("elo-balance-strongest", 2000);
+        StartCandidate strong = candidate("elo-balance-strong", 1900);
+        StartCandidate weak = candidate("elo-balance-weak", 1000);
+        StartCandidate weakest = candidate("elo-balance-weakest", 900);
+
+        Optional<ParticipantSelectionPlan> plan = ParticipantSelectionService.selectReady(
+                List.of(strongest, strong, weak, weakest),
+                Set.of(strongest.uuid(), strong.uuid(), weak.uuid(), weakest.uuid()),
+                MatchMode.NORMAL
+        );
+        if (!assertPresent(context, plan, "Expected ELO-balanced participant selection plan.")) {
+            return;
+        }
+
+        Map<TeamId, Integer> teamElo = plan.get().activeParticipants().stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        AssignedParticipant::teamId,
+                        java.util.stream.Collectors.summingInt(participant -> eloFor(
+                                participant.uuid(),
+                                strongest,
+                                strong,
+                                weak,
+                                weakest
+                        ))
+                ));
+        if (!assertEquals(context, 2900, teamElo.get(TeamId.RED), "Red team should combine high and low ELO players.")) {
+            return;
+        }
+        if (!assertEquals(context, 2900, teamElo.get(TeamId.BLUE), "Blue team should combine high and low ELO players.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void gameReadyRosterAllowsPlayersAboveActiveCap(GameTestHelper context) {
         SemionGame game = new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(), testArena(context));
         List<StartCandidate> candidates = java.util.stream.IntStream.rangeClosed(1, 30)
@@ -621,6 +678,33 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertTrue(context, !result.get().spectatorIds().contains(lateSpectatorId), "Late spectators should not be stored as initial match spectators.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void eliminatedParticipantsRemainRatedParticipantsNotResultSpectators(GameTestHelper context) {
+        UUID redId = stableUuid("eliminated-leave-red");
+        UUID blueId = stableUuid("eliminated-leave-blue");
+        SemionGame game = startedTwoPlayerGame(context, redId, blueId);
+
+        if (!assertTrue(context, game.killBoss(TeamId.BLUE), "BLUE boss kill should eliminate BLUE and end the match.")) {
+            return;
+        }
+        if (!assertTrue(context, game.matchSpectatorIds().contains(blueId), "Eliminated players should be runtime spectators so they can leave/rejoin as observers.")) {
+            return;
+        }
+
+        Optional<MatchResult> result = game.matchResult();
+        if (!assertPresent(context, result, "Ended game should expose a match result.")) {
+            return;
+        }
+        MatchResult matchResult = result.get();
+        if (!assertTrue(context, !matchResult.spectatorIds().contains(blueId), "Eliminated players must not be stored as initial/result spectators.")) {
+            return;
+        }
+        if (!assertTrue(context, matchResult.participants().stream().anyMatch(participant -> participant.playerId().equals(blueId)), "Eliminated players should remain match participants for loss/rating/progression handling.")) {
             return;
         }
         context.succeed();
@@ -5481,6 +5565,74 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void golemTowerFinalDefenseSurvivalBonusHealsCurrentHealthDelta(GameTestHelper context) {
+        UUID playerId = stableUuid("golem-final-defense-health-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos base = towerPlacementPos(lane);
+        VillagerThornTower tower = new VillagerThornTower(
+                VillagerTowers.T3_GOLEM_TOWER,
+                playerId,
+                TeamId.RED,
+                1,
+                new GridPosition(base.getX(), base.getY(), base.getZ())
+        );
+        lane.addTower(tower);
+        double initialHealth = tower.health();
+
+        tower.moveToFinalDefense(lane, new GridPosition(base.getX() + 1, base.getY(), base.getZ()));
+
+        double expectedMaxHealth = VillagerTowers.T3_GOLEM_TOWER.maxHealth() * 1.20;
+        if (!assertEquals(context, expectedMaxHealth, tower.currentMaxHealth(), "Iron golem final-defense bonus should increase max health immediately.")) {
+            return;
+        }
+        if (!assertEquals(context, expectedMaxHealth, tower.health(), "Iron golem final-defense bonus should heal the newly gained max health.")) {
+            return;
+        }
+        if (!assertEquals(context, expectedMaxHealth - initialHealth, tower.health() - initialHealth, "Iron golem should gain current health equal to the max-health delta.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void ironGolemUpgradeCopiesSurvivalBonusAndHealsAboveBaseHealth(GameTestHelper context) {
+        UUID playerId = stableUuid("iron-golem-upgrade-health-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos base = towerPlacementPos(lane);
+        VillagerThornTower previousTower = new VillagerThornTower(
+                VillagerTowers.T2_GOLEM_TOWER,
+                playerId,
+                TeamId.RED,
+                1,
+                new GridPosition(base.getX(), base.getY(), base.getZ())
+        );
+        for (int round = 0; round < 5; round++) {
+            previousTower.moveToFinalDefense(lane, previousTower.position());
+        }
+        VillagerThornTower upgradedTower = new VillagerThornTower(
+                VillagerTowers.T3_GOLEM_TOWER,
+                playerId,
+                TeamId.RED,
+                1,
+                previousTower.originalPosition(),
+                previousTower.position()
+        );
+
+        upgradedTower.copyFrom(previousTower, VillagerTowers.T3_GOLEM_TOWER.mineralCost());
+
+        double expectedMaxHealth = VillagerTowers.T3_GOLEM_TOWER.maxHealth() * 2.0;
+        if (!assertEquals(context, expectedMaxHealth, upgradedTower.currentMaxHealth(), "Iron golem upgrade should inherit capped survival stacks.")) {
+            return;
+        }
+        if (!assertEquals(context, expectedMaxHealth, upgradedTower.health(), "Iron golem upgrade should heal to its inherited current max health.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void weaponSmithTowerAppliesSourcedDamageAndSpeedBuffs(GameTestHelper context) {
         UUID playerId = stableUuid("weapon-smith-support-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
@@ -7103,6 +7255,19 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     private static StartCandidate candidate(String name) {
         return new StartCandidate(stableUuid(name), name);
+    }
+
+    private static StartCandidate candidate(String name, int displayElo) {
+        return new StartCandidate(stableUuid(name), name, displayElo);
+    }
+
+    private static int eloFor(UUID playerId, StartCandidate... candidates) {
+        for (StartCandidate candidate : candidates) {
+            if (candidate.uuid().equals(playerId)) {
+                return candidate.displayElo();
+            }
+        }
+        throw new IllegalArgumentException("Unknown playerId " + playerId);
     }
 
     private static SemionGame startedSinglePlayerGame(GameTestHelper context, UUID playerId, TeamId teamId) {

@@ -69,6 +69,8 @@ public final class SemionDialogService {
     private static final int BUTTON_WIDTH = 180;
     private static final int COMPACT_BUTTON_WIDTH = 118;
     private static final int SUMMON_BUTTON_WIDTH = 82;
+    private static final int TEAM_TARGET_BUTTON_WIDTH = 82;
+    private static final int TEAM_TARGET_COLUMNS = 4;
     private static final int SUMMON_COLUMNS = 5;
     private static final int SUMMON_PAGE_SIZE = 25;
     private static final int BUILD_GUIDE_PAGE_SIZE = 4;
@@ -482,6 +484,49 @@ public final class SemionDialogService {
 
     public void showSummonShop(ServerPlayer player, SemionGame game) {
         showSummonShop(player, game, 1);
+    }
+
+    public void showLeaderTargetControl(ServerPlayer player, SemionGame game) {
+        SemionPlayer semionPlayer = game.players().get(player.getUUID());
+        if (semionPlayer == null) {
+            show(player, "세미온 TD 팀장", "<red>현재 게임 참가자가 아닙니다.</red>");
+            return;
+        }
+        SemionTeam team = game.teams().get(semionPlayer.teamId());
+        if (team == null || !team.hasLeader(player.getUUID()) || team.leaderTargeting().isEmpty()) {
+            show(player, "세미온 TD 팀장", "<red>팀장만 타깃을 지정할 수 있습니다.</red>");
+            return;
+        }
+
+        var leaderTargeting = team.leaderTargeting().orElseThrow();
+        StringBuilder body = new StringBuilder();
+        body.append("<gradient:#facc15:#fb923c><bold>팀장 타깃 지정</bold></gradient>\n");
+        body.append("<gray>내 팀</gray> ").append(teamMarkup(semionPlayer.teamId())).append("\n");
+        body.append("<gray>현재 타깃</gray> ")
+                .append(leaderTargeting.targetTeamId().map(SemionDialogService::teamMarkup).orElse("<dark_gray>없음</dark_gray>"))
+                .append("\n");
+        if (!leaderTargeting.canUse()) {
+            body.append("\n<red>쿨타임: </red><yellow>")
+                    .append(leaderTargeting.cooldownRemainingRounds())
+                    .append("라운드</yellow>");
+            showActions(player, "세미온 TD 팀장", body.toString(), List.of(), TEAM_TARGET_COLUMNS);
+            return;
+        }
+        body.append("\n<gray>견제 유닛을 보낼 팀을 선택하세요.</gray>");
+
+        ArrayList<ActionButton> actions = game.teams().values().stream()
+                .filter(candidate -> candidate.active() && !candidate.eliminated())
+                .filter(candidate -> candidate.id() != semionPlayer.teamId())
+                .sorted(Comparator.comparing(SemionTeam::id))
+                .limit(TEAM_TARGET_COLUMNS)
+                .map(candidate -> actionButton(
+                        teamButtonLabel(candidate.id()),
+                        "/semiontd leader target " + candidate.id().name().toLowerCase(java.util.Locale.ROOT),
+                        Component.literal(candidate.id().name() + " 팀으로 이후 견제 유닛을 보냅니다."),
+                        TEAM_TARGET_BUTTON_WIDTH
+                ))
+                .collect(Collectors.toCollection(ArrayList::new));
+        showActions(player, "세미온 TD 팀장", body.toString(), actions, TEAM_TARGET_COLUMNS);
     }
 
     public void showSummonShop(ServerPlayer player, SemionGame game, int page) {
@@ -983,6 +1028,10 @@ public final class SemionDialogService {
         );
         appendSummonDescription(tooltip, type.description());
         return tooltip;
+    }
+
+    public static Component teamButtonLabel(TeamId teamId) {
+        return miniMessage(teamMarkup(teamId));
     }
 
     private static void appendTowerDescription(StringBuilder body, List<String> description) {

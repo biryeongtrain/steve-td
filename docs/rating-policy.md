@@ -24,12 +24,10 @@ A match is rating-eligible only when all of the following are true:
 
 1. Rating is enabled.
 2. The match has at least two rating-eligible participants after spectator filtering.
-3. The match has exactly two rating-eligible participant teams.
-4. The match result contains exactly one winning team.
+3. The match result contains exactly one winning team.
+4. Rating-eligible participants include at least one winner and at least one loser.
 5. No eligible participant belongs to a `DRAW_OR_UNRATED` team.
 6. Every eligible participant's winner flag matches the match `winningTeams` set.
-7. At least one eligible participant is a winner.
-8. At least one eligible participant is a loser.
 
 Skipped matches are not persisted as rating events and are not marked as applied. This keeps the current data model simple while avoiding false audit records. If skipped-match auditing becomes necessary, add explicit `applied/skippedReason` metadata to `RatingMatchResult` in a follow-up change.
 
@@ -37,13 +35,20 @@ Skipped matches are not persisted as rating events and are not marked as applied
 
 For each eligible participant:
 
-- Winners receive actual score `1.0`.
-- Losers receive actual score `0.0`.
-- Opponent rating is the average `mu` of the opposite result group.
+- Placement determines the actual score:
+  - 2 teams: `[1.00, 0.00]`
+  - 3 teams: `[1.00, 0.50, 0.00]`
+  - 4 teams: `[1.00, 0.90, 0.10, 0.00]`
+  - 5 teams: `[1.00, 0.90, 0.50, 0.10, 0.00]`
+- Opponent rating is the average `mu` of participants outside the player's team.
 - Base delta is `K * (actual - expected) * min(1.0, opposingTeamSize / ownTeamSize)`, so larger teams do not multiply aggregate ladder inflation by participant count.
 - `displayElo` is `round(mu)` after applying the final delta.
 
-For equal 1500-vs-1500 ratings with K=32 and neutral contribution stats, this yields `+16` for winners and `-16` for losers.
+- For equal 1500 ratings with K=32 and neutral contribution stats, this yields:
+  - 2 teams: `+16, -16`
+  - 3 teams: `+16, 0, -16`
+  - 4 teams: `+16, +13, -13, -16`
+  - 5 teams: `+16, +13, 0, -13, -16`
 
 ## Contribution weighting
 
@@ -89,14 +94,14 @@ Fallback behavior:
 - Economy falls back to `finalIncome` relative to the participant's team average.
 - Assist stays neutral when no assist attribution exists.
 
-Winner delta uses the applied multiplier directly. Loser delta uses the inverse around `1.0`, so stronger contribution reduces the rating loss while weaker contribution increases it.
+Positive placement delta uses the applied multiplier directly. Negative placement delta uses the inverse around `1.0`, so stronger contribution reduces the rating loss while weaker contribution increases it.
 
 ```text
-winnerFinalDelta = baseDelta * contributionMultiplier
-loserFinalDelta = baseDelta * (2.0 - contributionMultiplier)
+positiveFinalDelta = baseDelta * contributionMultiplier
+negativeFinalDelta = baseDelta * (2.0 - contributionMultiplier)
 ```
 
-The first version intentionally avoids sign reversal. A losing player with strong stats loses less rating, but does not gain rating from a lost match. A winning player with weak stats gains less rating, but does not lose rating from a won match.
+The first version intentionally avoids sign reversal. A player with strong stats loses less rating on a negative placement, but does not gain rating from that negative placement. A player with weak stats gains less rating on a positive placement, but does not lose rating from that positive placement.
 
 ## Persistence
 
@@ -124,6 +129,6 @@ The following policies are intentionally deferred:
 - Inactivity decay.
 - Provisional placement matches.
 - Draw handling.
-- Partial placement scoring for three or more teams.
+- TrueSkill2-style placement/team uncertainty modeling beyond the current placement-band ELO scores.
 - TrueSkill2 migration.
 - Admin re-rating or event replay commands.
