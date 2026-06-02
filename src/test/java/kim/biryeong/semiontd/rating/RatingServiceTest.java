@@ -5,7 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import kim.biryeong.semiontd.game.MatchId;
@@ -18,6 +21,7 @@ import kim.biryeong.semiontd.persistence.FileAppliedMatchRepository;
 import kim.biryeong.semiontd.persistence.FileRatingEventRepository;
 import kim.biryeong.semiontd.persistence.FileRatingRepository;
 import kim.biryeong.semiontd.persistence.PersistenceException;
+import kim.biryeong.semiontd.persistence.RatingEventRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -130,6 +134,132 @@ final class RatingServiceTest {
         assertTrue(!appliedMatchRepository.hasApplied(matchId, "rating"));
     }
 
+    @Test
+    void ratingEventFailureHappensBeforeProfileWritesForRecoverableRetry() {
+        FileRatingRepository ratingRepository = new FileRatingRepository(tempDir.resolve("ratings.json"));
+        FailingFirstSaveRatingEventRepository eventRepository = new FailingFirstSaveRatingEventRepository();
+        FileAppliedMatchRepository appliedMatchRepository = new FileAppliedMatchRepository(tempDir.resolve("rating-applied-matches.json"));
+        RatingService service = new RatingService(
+                ratingRepository,
+                eventRepository,
+                appliedMatchRepository,
+                new EloRatingCalculator()
+        );
+        UUID winnerId = UUID.nameUUIDFromBytes("recoverable-winner".getBytes());
+        UUID loserId = UUID.nameUUIDFromBytes("recoverable-loser".getBytes());
+        MatchResult matchResult = matchResult(new MatchId(14L), winnerId, loserId);
+
+        assertThrows(PersistenceException.class, () -> service.applyMatchResult(null, matchResult));
+        assertTrue(ratingRepository.findProfile(winnerId).isEmpty());
+        assertTrue(ratingRepository.findProfile(loserId).isEmpty());
+        assertTrue(!appliedMatchRepository.hasApplied(matchResult.matchId(), "rating"));
+
+        RatingMatchResult retried = service.applyMatchResult(null, matchResult);
+
+        assertEquals(2, retried.adjustments().size());
+        assertTrue(ratingRepository.findProfile(winnerId).isPresent());
+        assertTrue(ratingRepository.findProfile(loserId).isPresent());
+        assertTrue(appliedMatchRepository.hasApplied(matchResult.matchId(), "rating"));
+    }
+
+    @Test
+    void existingRatingEventRetryPersistsMissingProfilesBeforeAppliedMarker() {
+        FileRatingRepository ratingRepository = new FileRatingRepository(tempDir.resolve("ratings.json"));
+        FileRatingEventRepository eventRepository = new FileRatingEventRepository(tempDir.resolve("rating-events.json"));
+        FileAppliedMatchRepository appliedMatchRepository = new FileAppliedMatchRepository(tempDir.resolve("rating-applied-matches.json"));
+        UUID winnerId = UUID.nameUUIDFromBytes("event-retry-winner".getBytes());
+        UUID loserId = UUID.nameUUIDFromBytes("event-retry-loser".getBytes());
+        MatchResult matchResult = matchResult(new MatchId(15L), winnerId, loserId);
+        RatingMatchResult precomputed = new EloRatingCalculator().calculate(new RatingMatchInput(
+                matchResult.matchId(),
+                matchResult.endedAtEpochMillis(),
+                List.of(
+                        new RatingParticipant(winnerId, "winner", TeamId.RED, true, PlayerRatingProfile.initial(winnerId, "winner")),
+                        new RatingParticipant(loserId, "loser", TeamId.BLUE, false, PlayerRatingProfile.initial(loserId, "loser"))
+                )
+        ));
+        eventRepository.saveMatchResult(precomputed);
+        RatingService service = new RatingService(
+                ratingRepository,
+                eventRepository,
+                appliedMatchRepository,
+                new EloRatingCalculator()
+        );
+
+        RatingMatchResult result = service.applyMatchResult(null, matchResult);
+
+        assertEquals(precomputed, result);
+        assertTrue(ratingRepository.findProfile(winnerId).isPresent());
+        assertTrue(ratingRepository.findProfile(loserId).isPresent());
+        assertTrue(appliedMatchRepository.hasApplied(matchResult.matchId(), "rating"));
+    }
+
+    @Test
+    void existingRatingEventRetryDoesNotOverwriteProfileFromDifferentMatch() {
+        FileRatingRepository ratingRepository = new FileRatingRepository(tempDir.resolve("ratings.json"));
+        FileRatingEventRepository eventRepository = new FileRatingEventRepository(tempDir.resolve("rating-events.json"));
+        FileAppliedMatchRepository appliedMatchRepository = new FileAppliedMatchRepository(tempDir.resolve("rating-applied-matches.json"));
+        UUID winnerId = UUID.nameUUIDFromBytes("event-retry-newer-winner".getBytes());
+        UUID loserId = UUID.nameUUIDFromBytes("event-retry-newer-loser".getBytes());
+        MatchResult matchResult = matchResult(new MatchId(16L), winnerId, loserId);
+        RatingMatchResult oldEvent = new EloRatingCalculator().calculate(new RatingMatchInput(
+                matchResult.matchId(),
+                matchResult.endedAtEpochMillis(),
+                List.of(
+                        new RatingParticipant(winnerId, "winner", TeamId.RED, true, PlayerRatingProfile.initial(winnerId, "winner")),
+                        new RatingParticipant(loserId, "loser", TeamId.BLUE, false, PlayerRatingProfile.initial(loserId, "loser"))
+                )
+        ));
+        eventRepository.saveMatchResult(oldEvent);
+        MatchId newerMatchId = new MatchId(17L);
+        ratingRepository.saveProfile(winnerId, profileForMatch(winnerId, "winner", 1700, newerMatchId));
+        RatingService service = new RatingService(
+                ratingRepository,
+                eventRepository,
+                appliedMatchRepository,
+                new EloRatingCalculator()
+        );
+
+        RatingMatchResult result = service.applyMatchResult(null, matchResult);
+
+        assertEquals(oldEvent, result);
+        assertEquals(1700, ratingRepository.findProfile(winnerId).orElseThrow().displayElo());
+        assertEquals(newerMatchId, ratingRepository.findProfile(winnerId).orElseThrow().lastUpdatedMatchId());
+        assertTrue(ratingRepository.findProfile(loserId).isPresent());
+        assertTrue(appliedMatchRepository.hasApplied(matchResult.matchId(), "rating"));
+    }
+
+    @Test
+    void sequentialMatchesUpdateProfilesAfterPreviousMatchId() {
+        FileRatingRepository ratingRepository = new FileRatingRepository(tempDir.resolve("ratings.json"));
+        FileRatingEventRepository eventRepository = new FileRatingEventRepository(tempDir.resolve("rating-events.json"));
+        FileAppliedMatchRepository appliedMatchRepository = new FileAppliedMatchRepository(tempDir.resolve("rating-applied-matches.json"));
+        RatingService service = new RatingService(
+                ratingRepository,
+                eventRepository,
+                appliedMatchRepository,
+                new EloRatingCalculator()
+        );
+        UUID winnerId = UUID.nameUUIDFromBytes("sequential-winner".getBytes());
+        UUID loserId = UUID.nameUUIDFromBytes("sequential-loser".getBytes());
+        MatchId firstMatchId = new MatchId(18L);
+        MatchId secondMatchId = new MatchId(19L);
+
+        service.applyMatchResult(null, matchResult(firstMatchId, winnerId, loserId));
+        service.applyMatchResult(null, matchResult(secondMatchId, winnerId, loserId));
+
+        PlayerRatingProfile winnerProfile = ratingRepository.findProfile(winnerId).orElseThrow();
+        PlayerRatingProfile loserProfile = ratingRepository.findProfile(loserId).orElseThrow();
+        assertEquals(2, winnerProfile.gamesPlayed());
+        assertEquals(secondMatchId, winnerProfile.lastUpdatedMatchId());
+        assertEquals(2, loserProfile.gamesPlayed());
+        assertEquals(secondMatchId, loserProfile.lastUpdatedMatchId());
+        assertTrue(eventRepository.findMatchResult(firstMatchId).isPresent());
+        assertTrue(eventRepository.findMatchResult(secondMatchId).isPresent());
+        assertTrue(appliedMatchRepository.hasApplied(firstMatchId, "rating"));
+        assertTrue(appliedMatchRepository.hasApplied(secondMatchId, "rating"));
+    }
+
     private static PlayerRatingProfile profile(UUID playerId, String name, int elo, int gamesPlayed) {
         return new PlayerRatingProfile(
                 playerId,
@@ -181,5 +311,24 @@ final class RatingServiceTest {
                 ),
                 10
         );
+    }
+
+    private static final class FailingFirstSaveRatingEventRepository implements RatingEventRepository {
+        private final Map<MatchId, RatingMatchResult> saved = new LinkedHashMap<>();
+        private boolean failNextSave = true;
+
+        @Override
+        public void saveMatchResult(RatingMatchResult ratingMatchResult) {
+            if (failNextSave) {
+                failNextSave = false;
+                throw new PersistenceException("intentional event failure");
+            }
+            saved.put(ratingMatchResult.matchId(), ratingMatchResult);
+        }
+
+        @Override
+        public Optional<RatingMatchResult> findMatchResult(MatchId matchId) {
+            return Optional.ofNullable(saved.get(matchId));
+        }
     }
 }

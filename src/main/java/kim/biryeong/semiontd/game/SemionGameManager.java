@@ -2,6 +2,7 @@ package kim.biryeong.semiontd.game;
 
 import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -48,6 +49,7 @@ import kim.biryeong.semiontd.progression.MatchProgressionReward;
 import kim.biryeong.semiontd.progression.ProgressionService;
 import kim.biryeong.semiontd.progression.SemionPlayerProfile;
 import kim.biryeong.semiontd.rating.PlayerRatingProfile;
+import kim.biryeong.semiontd.rating.RatingMatchResult;
 import kim.biryeong.semiontd.rating.RatingService;
 import kim.biryeong.semiontd.summon.IncomeSummons;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
@@ -72,6 +74,7 @@ public final class SemionGameManager {
     public static final int START_COUNTDOWN_TICKS = 5 * 20;
     public static final int MATCH_RESULT_DELAY_TICKS = 5 * 20;
     public static final int MATCH_RESULT_DIALOG_AFTER_LOBBY_DELAY_TICKS = 2 * 20;
+    static final int RATING_RETRY_DELAY_TICKS = 20;
 
     private EconomyConfig economyConfig = EconomyConfig.defaultConfig();
     private WaveConfig waveConfig = WaveConfig.defaultConfig();
@@ -97,6 +100,8 @@ public final class SemionGameManager {
     private SemionGame pendingFinishedGame;
     private int pendingFinishDelayTicks;
     private MatchResult pendingMatchResultDialog;
+    private final Map<MatchId, MatchResult> pendingRatingRetryMatchResults = new LinkedHashMap<>();
+    private int pendingRatingRetryDelayTicks;
     private Map<UUID, MatchProgressionReward> pendingMatchResultRewards = Map.of();
     private int pendingMatchResultDialogDelayTicks;
     private ParticipantSelectionPlan pendingStartPlan;
@@ -319,6 +324,20 @@ public final class SemionGameManager {
         }
     }
 
+    static void migrateFallbackRatingEvents(RatingEventRepository fallback, RatingEventRepository primary) {
+        int migrated = 0;
+        for (RatingMatchResult fallbackResult : fallback.findAllMatchResults().values()) {
+            if (primary.findMatchResult(fallbackResult.matchId()).isPresent()) {
+                continue;
+            }
+            primary.saveMatchResult(fallbackResult);
+            migrated++;
+        }
+        if (migrated > 0) {
+            SemionTd.LOGGER.info("Migrated {} fallback rating events into primary rating-event repository.", migrated);
+        }
+    }
+
     static RatingEventRepository createRatingEventRepository(
             SemionPersistenceConfig persistenceConfig,
             Path sqlitePath,
@@ -332,7 +351,9 @@ public final class SemionGameManager {
             return file;
         }
         try {
-            return new SQLiteRatingEventRepository(sqlitePath);
+            RatingEventRepository sqlite = new SQLiteRatingEventRepository(sqlitePath);
+            migrateFallbackRatingEvents(file, sqlite);
+            return sqlite;
         } catch (RuntimeException exception) {
             if (persistenceConfig.externalDbRequired()) {
                 throw new PersistenceException("SQLite rating-event repository is required but initialization failed.", exception);
@@ -652,6 +673,7 @@ public final class SemionGameManager {
 
     public void tick(MinecraftServer server) {
         musicService.tick(server, activeGame);
+        tickPendingRatingRetry(server);
         tickPendingMatchResultDialog(server);
         if (activeGame == null) {
             clearStartCountdown();
@@ -888,11 +910,7 @@ public final class SemionGameManager {
         if (result.isPresent()) {
             lastMatchResult = result.get();
             matchResultRepository.saveMatchResult(result.get());
-            try {
-                ratingService.applyMatchResult(server, result.get());
-            } catch (RuntimeException exception) {
-                SemionTd.LOGGER.warn("Failed to apply Semion TD rating for match {}. Continuing match finish flow.", result.get().matchId(), exception);
-            }
+            applyRatingOrQueueRetry(server, result.get());
             buildGuideService.finishMatch(finishedGame, result.get().finalRound());
             nextMatchPriorityPlayerIds.addAll(result.get().spectatorIds());
             Map<UUID, MatchProgressionReward> rewards = progressionService.applyMatchResult(server, result.get());
@@ -909,6 +927,54 @@ public final class SemionGameManager {
         }
 
         closeActiveGameSafely(finishedGame, "finishing match");
+    }
+
+    private void applyRatingOrQueueRetry(MinecraftServer server, MatchResult matchResult) {
+        if (!pendingRatingRetryMatchResults.isEmpty()
+                && !pendingRatingRetryMatchResults.containsKey(matchResult.matchId())) {
+            pendingRatingRetryMatchResults.put(matchResult.matchId(), matchResult);
+            SemionTd.LOGGER.warn(
+                    "Queued Semion TD rating for match {} behind {} pending retry match(es) to preserve chronological profile updates.",
+                    matchResult.matchId(),
+                    pendingRatingRetryMatchResults.size() - 1
+            );
+            return;
+        }
+        try {
+            ratingService.applyMatchResult(server, matchResult);
+            pendingRatingRetryMatchResults.remove(matchResult.matchId());
+            if (pendingRatingRetryMatchResults.isEmpty()) {
+                pendingRatingRetryDelayTicks = 0;
+            }
+        } catch (RuntimeException exception) {
+            pendingRatingRetryMatchResults.put(matchResult.matchId(), matchResult);
+            pendingRatingRetryDelayTicks = RATING_RETRY_DELAY_TICKS;
+            SemionTd.LOGGER.warn(
+                    "Failed to apply Semion TD rating for match {}. Queued retry while continuing match finish flow.",
+                    matchResult.matchId(),
+                    exception
+            );
+        }
+    }
+
+    private void tickPendingRatingRetry(MinecraftServer server) {
+        if (pendingRatingRetryMatchResults.isEmpty()) {
+            return;
+        }
+        if (pendingRatingRetryDelayTicks > 0) {
+            pendingRatingRetryDelayTicks--;
+            return;
+        }
+        MatchResult matchResult = pendingRatingRetryMatchResults.values().iterator().next();
+        try {
+            ratingService.applyMatchResult(server, matchResult);
+            pendingRatingRetryMatchResults.remove(matchResult.matchId());
+            pendingRatingRetryDelayTicks = pendingRatingRetryMatchResults.isEmpty() ? 0 : RATING_RETRY_DELAY_TICKS;
+            SemionTd.LOGGER.info("Applied queued Semion TD rating retry for match {}.", matchResult.matchId());
+        } catch (RuntimeException exception) {
+            pendingRatingRetryDelayTicks = RATING_RETRY_DELAY_TICKS;
+            SemionTd.LOGGER.warn("Queued Semion TD rating retry failed for match {}; will retry again.", matchResult.matchId(), exception);
+        }
     }
 
     private void queueMatchResultDialog(MatchResult matchResult, Map<UUID, MatchProgressionReward> rewards) {

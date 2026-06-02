@@ -65,6 +65,38 @@ final class EloRatingCalculatorTest {
         assertTrue(result.adjustments().get(1).displayEloDelta() < -30);
     }
 
+    @Test
+    void unevenTeamSizesDoNotInflateTotalDelta() {
+        RatingMatchResult result = new EloRatingCalculator().calculate(new RatingMatchInput(
+                new MatchId(3L),
+                1000L,
+                List.of(
+                        participant("winner-a", TeamId.RED, true),
+                        participant("winner-b", TeamId.RED, true),
+                        participant("winner-c", TeamId.RED, true),
+                        participant("loser-a", TeamId.BLUE, false),
+                        participant("loser-b", TeamId.BLUE, false)
+                )
+        ));
+
+        double winnerTotal = result.adjustments().stream()
+                .filter(RatingAdjustment::winner)
+                .mapToDouble(RatingAdjustment::muDelta)
+                .sum();
+        double loserTotal = result.adjustments().stream()
+                .filter(adjustment -> !adjustment.winner())
+                .mapToDouble(RatingAdjustment::muDelta)
+                .sum();
+
+        assertEquals(32.0, winnerTotal, 0.000001);
+        assertEquals(-32.0, loserTotal, 0.000001);
+    }
+
+    private static RatingParticipant participant(String name, TeamId teamId, boolean winner) {
+        UUID playerId = UUID.nameUUIDFromBytes(name.getBytes());
+        return new RatingParticipant(playerId, name, teamId, winner, PlayerRatingProfile.initial(playerId, name));
+    }
+
     private static PlayerRatingProfile profile(UUID playerId, String name, double mu) {
         return new PlayerRatingProfile(
                 playerId,

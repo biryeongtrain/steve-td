@@ -12,7 +12,7 @@ The rating subsystem currently implements a local-server ELO ladder. It is desig
 - Rating version: `1`
 - Initial display ELO: `1500`
 - Initial mu: `1500.0`
-- Initial sigma: `350.0`
+- Initial sigma: `350.0` (stored for future migration compatibility; this phase does not perform TrueSkill/TrueSkill2 uncertainty updates)
 - ELO K-factor: `32.0`
 - Leaderboard limit: `10`
 - Minimum rating-eligible participants: `2`
@@ -24,11 +24,12 @@ A match is rating-eligible only when all of the following are true:
 
 1. Rating is enabled.
 2. The match has at least two rating-eligible participants after spectator filtering.
-3. The match result contains exactly one winning team.
-4. No eligible participant belongs to a `DRAW_OR_UNRATED` team.
-5. Every eligible participant's winner flag matches the match `winningTeams` set.
-6. At least one eligible participant is a winner.
-7. At least one eligible participant is a loser.
+3. The match has exactly two rating-eligible participant teams.
+4. The match result contains exactly one winning team.
+5. No eligible participant belongs to a `DRAW_OR_UNRATED` team.
+6. Every eligible participant's winner flag matches the match `winningTeams` set.
+7. At least one eligible participant is a winner.
+8. At least one eligible participant is a loser.
 
 Skipped matches are not persisted as rating events and are not marked as applied. This keeps the current data model simple while avoiding false audit records. If skipped-match auditing becomes necessary, add explicit `applied/skippedReason` metadata to `RatingMatchResult` in a follow-up change.
 
@@ -39,7 +40,7 @@ For each eligible participant:
 - Winners receive actual score `1.0`.
 - Losers receive actual score `0.0`.
 - Opponent rating is the average `mu` of the opposite result group.
-- Base delta is `K * (actual - expected)`.
+- Base delta is `K * (actual - expected) * min(1.0, opposingTeamSize / ownTeamSize)`, so larger teams do not multiply aggregate ladder inflation by participant count.
 - `displayElo` is `round(mu)` after applying the final delta.
 
 For equal 1500-vs-1500 ratings with K=32 and neutral contribution stats, this yields `+16` for winners and `-16` for losers.
@@ -69,9 +70,9 @@ Tracked attribution fields:
 Collection points:
 
 - A spawned wave/income monster adds incoming threat to the target lane owner.
-- A summoned monster adds sent income threat and income generated to the summoner.
+- A summoned monster adds sent income threat and income generated to the income unit sender.
 - A monster reaching boss/final-defense progress adds leaked threat to the target lane owner.
-- If that leaked monster was summoned, the summoner receives income attack success threat.
+- If that leaked monster was summoned, the income unit sender receives income attack success threat.
 - A monster kill records own-lane diamond when the killer owns the target lane; otherwise it records assist-clear diamond/threat.
 
 Scoring:

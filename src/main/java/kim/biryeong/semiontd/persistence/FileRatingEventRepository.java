@@ -42,6 +42,12 @@ public final class FileRatingEventRepository implements RatingEventRepository {
         return Optional.ofNullable(matchResults.get(matchId));
     }
 
+    @Override
+    public synchronized Map<MatchId, RatingMatchResult> findAllMatchResults() {
+        ensureLoaded();
+        return Map.copyOf(matchResults);
+    }
+
     private void ensureLoaded() {
         if (loaded) {
             return;

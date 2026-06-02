@@ -56,13 +56,15 @@ public final class EloRatingCalculator implements RatingCalculator {
 
         double winnerAverage = averageMu(input, true);
         double loserAverage = averageMu(input, false);
+        int winnerCount = participantCount(input, true);
+        int loserCount = participantCount(input, false);
         List<RatingAdjustment> adjustments = new ArrayList<>();
         for (RatingParticipant participant : input.participants()) {
             PlayerRatingProfile before = participant.currentProfile();
             double opponentAverage = participant.winner() ? loserAverage : winnerAverage;
             double actualScore = participant.winner() ? WIN_SCORE : LOSS_SCORE;
             double expectedScore = expectedScore(before.mu(), opponentAverage);
-            double baseDelta = kFactor * (actualScore - expectedScore);
+            double baseDelta = teamBalancedBaseDelta(kFactor, actualScore, expectedScore, participant.winner(), winnerCount, loserCount);
             RatingContributionBreakdown contribution = contributionCalculator.breakdown(input, participant);
             double multiplier = participant.winner()
                     ? contribution.appliedMultiplier()
@@ -123,6 +125,29 @@ public final class EloRatingCalculator implements RatingCalculator {
                 .mapToDouble(participant -> participant.currentProfile().mu())
                 .average()
                 .orElse(PlayerRatingProfile.INITIAL_MU);
+    }
+
+    private static int participantCount(RatingMatchInput input, boolean winner) {
+        return (int) input.participants().stream()
+                .filter(participant -> participant.winner() == winner)
+                .count();
+    }
+
+    private static double teamBalancedBaseDelta(
+            double kFactor,
+            double actualScore,
+            double expectedScore,
+            boolean winner,
+            int winnerCount,
+            int loserCount
+    ) {
+        int ownTeamSize = winner ? winnerCount : loserCount;
+        int opposingTeamSize = winner ? loserCount : winnerCount;
+        if (ownTeamSize <= 0 || opposingTeamSize <= 0) {
+            return kFactor * (actualScore - expectedScore);
+        }
+        double teamSizeMultiplier = Math.min(1.0, (double) opposingTeamSize / ownTeamSize);
+        return kFactor * (actualScore - expectedScore) * teamSizeMultiplier;
     }
 
     private static double expectedScore(double ownRating, double opponentRating) {

@@ -8,6 +8,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import kim.biryeong.semiontd.game.MatchId;
 import kim.biryeong.semiontd.rating.RatingMatchResult;
@@ -52,6 +54,22 @@ public final class SQLiteRatingEventRepository implements RatingEventRepository 
             }
         } catch (SQLException exception) {
             throw new PersistenceException("Failed to load rating event from SQLite " + path, exception);
+        }
+    }
+
+    @Override
+    public synchronized Map<MatchId, RatingMatchResult> findAllMatchResults() {
+        try (Connection connection = SQLiteSupport.connect(path);
+             PreparedStatement statement = connection.prepareStatement("SELECT match_id, payload FROM rating_events ORDER BY match_id")) {
+            Map<MatchId, RatingMatchResult> results = new LinkedHashMap<>();
+            try (ResultSet rows = statement.executeQuery()) {
+                while (rows.next()) {
+                    results.put(new MatchId(rows.getLong(1)), GSON.fromJson(rows.getString(2), RatingMatchResult.class));
+                }
+            }
+            return Map.copyOf(results);
+        } catch (SQLException exception) {
+            throw new PersistenceException("Failed to load rating events from SQLite " + path, exception);
         }
     }
 
