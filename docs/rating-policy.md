@@ -40,22 +40,30 @@ Skipped matches are not persisted as rating events and are not marked as applied
 
 For each eligible participant in a 2-5 team placement match:
 
-- The participant is compared pairwise against every eligible participant on other teams.
-- Better placement receives actual score `1.0` for that comparison.
-- Worse placement receives actual score `0.0` for that comparison.
-- Pairwise score deltas are averaged across opponents before multiplying by K, so 3-5 team matches do not multiply volatility just because there are more teams.
+- Placement maps to a target score, then the target score is compared against the participant's average ELO expected score against other teams.
+- First place target score is `1.0`; last place target score is `0.0`.
+- In 4-5 team matches, second place uses a high `0.90` target score so top-half finishes normally gain rating and only lose rating when heavily favored.
+- In 4-5 team matches, the first bottom-half placement uses a low `0.10` target score so bottom-half finishes normally lose rating.
+- Odd team counts have a neutral middle placement with target score `0.50`.
 - A team-size multiplier `min(1.0, opposingParticipantCount / ownTeamSize)` keeps uneven team-size matches close to the current aggregate volatility.
 - `displayElo` is `round(mu)` after applying the final delta.
 
-For equal 1500-vs-1500 ratings with K=32 and neutral contribution stats, this yields `+16` for winners and `-16` for losers.
+For equal 1500-vs-1500 ratings with K=32 and neutral contribution stats, the expected display deltas are:
 
-In a 3-team equal-rating match this yields first place positive, second place near neutral, and third place negative. In a 5-team equal-rating match the deltas are monotonic by placement.
+```text
+2 teams: +16, -16
+3 teams: +16, 0, -16
+4 teams: +16, +13, -13, -16
+5 teams: +16, +13, 0, -13, -16
+```
+
+This makes the top half gain and the bottom half lose for equal-rating matches, while still preserving ELO expectation: a heavily favored second-place finish can lose rating, but that should be uncommon.
 
 For command/backward-compatibility counters, `wins` means first-place finishes and `losses` means non-first finishes.
 
 ## Contribution weighting
 
-The rating system keeps win/loss as the primary signal and applies player contribution as a bounded multiplier on the base ELO delta. Contribution weighting does not replace match outcome: winners still gain rating and losers still lose rating in this phase.
+The rating system keeps placement outcome as the primary signal and applies player contribution as a bounded multiplier on the base ELO delta. Contribution weighting does not replace placement outcome: positive base deltas stay positive, negative base deltas stay negative, and neutral base deltas stay neutral.
 
 Default contribution config:
 
@@ -97,14 +105,15 @@ Fallback behavior:
 - Economy falls back to `finalIncome` relative to the participant's team average.
 - Assist stays neutral when no assist attribution exists.
 
-Winner delta uses the applied multiplier directly. Loser delta uses the inverse around `1.0`, so stronger contribution reduces the rating loss while weaker contribution increases it.
+Positive base delta uses the applied multiplier directly. Negative base delta uses the inverse around `1.0`, so stronger contribution reduces the rating loss while weaker contribution increases it.
 
 ```text
-winnerFinalDelta = baseDelta * contributionMultiplier
-loserFinalDelta = baseDelta * (2.0 - contributionMultiplier)
+positiveFinalDelta = baseDelta * contributionMultiplier
+negativeFinalDelta = baseDelta * (2.0 - contributionMultiplier)
+neutralFinalDelta = 0
 ```
 
-The first version intentionally avoids sign reversal. A losing player with strong stats loses less rating, but does not gain rating from a lost match. A winning player with weak stats gains less rating, but does not lose rating from a won match.
+The first version intentionally avoids sign reversal. A player with strong stats can reduce a negative placement delta, but does not turn it into a gain. A player with weak stats can reduce a positive placement delta, but does not turn it into a loss.
 
 ## Persistence
 

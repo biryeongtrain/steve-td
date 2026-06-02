@@ -116,9 +116,28 @@ final class EloRatingCalculatorTest {
     }
 
     @Test
-    void fiveTeamPlacementEloDeltasAreMonotonicByPlacement() {
+    void fourTeamPlacementEloRewardsTopHalfAndPenalizesBottomHalf() {
         RatingMatchResult result = new EloRatingCalculator().calculate(new RatingMatchInput(
                 new MatchId(5L),
+                1000L,
+                List.of(
+                        participant("first-4", TeamId.RED, true, 1),
+                        participant("second-4", TeamId.BLUE, false, 2),
+                        participant("third-4", TeamId.GREEN, false, 3),
+                        participant("fourth-4", TeamId.YELLOW, false, 4)
+                )
+        ));
+
+        List<Integer> deltas = result.adjustments().stream()
+                .map(RatingAdjustment::displayEloDelta)
+                .toList();
+        assertEquals(List.of(16, 13, -13, -16), deltas);
+    }
+
+    @Test
+    void fiveTeamPlacementEloDeltasAreMonotonicByPlacement() {
+        RatingMatchResult result = new EloRatingCalculator().calculate(new RatingMatchInput(
+                new MatchId(6L),
                 1000L,
                 List.of(
                         participant("first", TeamId.RED, true, 1),
@@ -132,10 +151,32 @@ final class EloRatingCalculatorTest {
         List<Integer> deltas = result.adjustments().stream()
                 .map(RatingAdjustment::displayEloDelta)
                 .toList();
-        assertTrue(deltas.get(0) > deltas.get(1));
-        assertTrue(deltas.get(1) > deltas.get(2));
-        assertTrue(deltas.get(2) > deltas.get(3));
-        assertTrue(deltas.get(3) > deltas.get(4));
+        assertEquals(List.of(16, 13, 0, -13, -16), deltas);
+    }
+
+    @Test
+    void secondPlaceOnlyLosesWhenHeavilyFavored() {
+        UUID favoriteId = UUID.nameUUIDFromBytes("favored-second".getBytes());
+        RatingMatchResult result = new EloRatingCalculator().calculate(new RatingMatchInput(
+                new MatchId(7L),
+                1000L,
+                List.of(
+                        participant("first-vs-favored", TeamId.RED, true, 1),
+                        new RatingParticipant(
+                                favoriteId,
+                                "favored-second",
+                                TeamId.BLUE,
+                                false,
+                                2,
+                                1.0,
+                                profile(favoriteId, "favored-second", 1800.0)
+                        ),
+                        participant("third-vs-favored", TeamId.GREEN, false, 3),
+                        participant("fourth-vs-favored", TeamId.YELLOW, false, 4)
+                )
+        ));
+
+        assertTrue(result.adjustments().get(1).displayEloDelta() > 0);
     }
 
     @Test
