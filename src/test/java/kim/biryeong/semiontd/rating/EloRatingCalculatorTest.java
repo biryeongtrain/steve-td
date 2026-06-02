@@ -92,9 +92,87 @@ final class EloRatingCalculatorTest {
         assertEquals(-32.0, loserTotal, 0.000001);
     }
 
+    @Test
+    void threeTeamPlacementEloKeepsMiddlePlacementNearNeutral() {
+        RatingMatchResult result = new EloRatingCalculator().calculate(new RatingMatchInput(
+                new MatchId(4L),
+                1000L,
+                List.of(
+                        participant("first", TeamId.RED, true, 1),
+                        participant("second", TeamId.BLUE, false, 2),
+                        participant("third", TeamId.GREEN, false, 3)
+                )
+        ));
+
+        RatingAdjustment first = result.adjustments().get(0);
+        RatingAdjustment second = result.adjustments().get(1);
+        RatingAdjustment third = result.adjustments().get(2);
+        assertTrue(first.displayEloDelta() > 0);
+        assertEquals(0, second.displayEloDelta());
+        assertTrue(third.displayEloDelta() < 0);
+        assertEquals(1, first.after().wins());
+        assertEquals(1, second.after().losses());
+        assertEquals(1, third.after().losses());
+    }
+
+    @Test
+    void fiveTeamPlacementEloDeltasAreMonotonicByPlacement() {
+        RatingMatchResult result = new EloRatingCalculator().calculate(new RatingMatchInput(
+                new MatchId(5L),
+                1000L,
+                List.of(
+                        participant("first", TeamId.RED, true, 1),
+                        participant("second", TeamId.BLUE, false, 2),
+                        participant("third", TeamId.GREEN, false, 3),
+                        participant("fourth", TeamId.YELLOW, false, 4),
+                        participant("fifth", TeamId.PURPLE, false, 5)
+                )
+        ));
+
+        List<Integer> deltas = result.adjustments().stream()
+                .map(RatingAdjustment::displayEloDelta)
+                .toList();
+        assertTrue(deltas.get(0) > deltas.get(1));
+        assertTrue(deltas.get(1) > deltas.get(2));
+        assertTrue(deltas.get(2) > deltas.get(3));
+        assertTrue(deltas.get(3) > deltas.get(4));
+    }
+
+    @Test
+    void underdogFirstPlaceAgainstMultipleFavoritesGainsMoreThanFavoriteFirstPlace() {
+        UUID underdogId = UUID.nameUUIDFromBytes("multi-underdog".getBytes());
+        UUID favoriteAId = UUID.nameUUIDFromBytes("multi-favorite-a".getBytes());
+        UUID favoriteBId = UUID.nameUUIDFromBytes("multi-favorite-b".getBytes());
+        RatingMatchResult upset = new EloRatingCalculator().calculate(new RatingMatchInput(
+                new MatchId(6L),
+                1000L,
+                List.of(
+                        new RatingParticipant(underdogId, "underdog", TeamId.RED, true, 1, 1.0, profile(underdogId, "underdog", 1200.0)),
+                        new RatingParticipant(favoriteAId, "favoriteA", TeamId.BLUE, false, 2, 1.0, profile(favoriteAId, "favoriteA", 1800.0)),
+                        new RatingParticipant(favoriteBId, "favoriteB", TeamId.GREEN, false, 3, 1.0, profile(favoriteBId, "favoriteB", 1800.0))
+                )
+        ));
+        RatingMatchResult expectedFavoriteWin = new EloRatingCalculator().calculate(new RatingMatchInput(
+                new MatchId(7L),
+                1000L,
+                List.of(
+                        new RatingParticipant(favoriteAId, "favoriteA", TeamId.BLUE, true, 1, 1.0, profile(favoriteAId, "favoriteA", 1800.0)),
+                        new RatingParticipant(underdogId, "underdog", TeamId.RED, false, 2, 1.0, profile(underdogId, "underdog", 1200.0)),
+                        new RatingParticipant(favoriteBId, "favoriteB", TeamId.GREEN, false, 3, 1.0, profile(favoriteBId, "favoriteB", 1800.0))
+                )
+        ));
+
+        assertTrue(upset.adjustments().get(0).displayEloDelta() > expectedFavoriteWin.adjustments().get(0).displayEloDelta());
+    }
+
     private static RatingParticipant participant(String name, TeamId teamId, boolean winner) {
         UUID playerId = UUID.nameUUIDFromBytes(name.getBytes());
         return new RatingParticipant(playerId, name, teamId, winner, PlayerRatingProfile.initial(playerId, name));
+    }
+
+    private static RatingParticipant participant(String name, TeamId teamId, boolean winner, int placement) {
+        UUID playerId = UUID.nameUUIDFromBytes(name.getBytes());
+        return new RatingParticipant(playerId, name, teamId, winner, placement, 1.0, PlayerRatingProfile.initial(playerId, name));
     }
 
     private static PlayerRatingProfile profile(UUID playerId, String name, double mu) {
