@@ -33,7 +33,9 @@ public final class ParticipantSelectionService {
             return Optional.empty();
         }
 
-        List<StartCandidate> activeCandidates = shuffledCandidates.subList(0, shape.activePlayerCount());
+        List<StartCandidate> activeCandidates = shuffledCandidates.subList(0, shape.activePlayerCount()).stream()
+                .sorted((left, right) -> Integer.compare(right.displayElo(), left.displayElo()))
+                .toList();
         List<TeamId> activeTeams = TEAM_ORDER.subList(0, shape.activeTeamCount());
         Map<TeamId, Integer> capacities = capacitiesByTeam(activeTeams, shape.teamCapacities());
         Map<TeamId, List<StartCandidate>> assigned = new EnumMap<>(TeamId.class);
@@ -42,7 +44,7 @@ public final class ParticipantSelectionService {
         }
 
         for (StartCandidate candidate : activeCandidates) {
-            Optional<TeamId> targetTeam = leastFilledAvailableTeam(assigned, capacities, activeTeams);
+            Optional<TeamId> targetTeam = lowestEloAvailableTeam(assigned, capacities, activeTeams);
             if (targetTeam.isEmpty()) {
                 break;
             }
@@ -126,13 +128,13 @@ public final class ParticipantSelectionService {
         return capacities;
     }
 
-    private static Optional<TeamId> leastFilledAvailableTeam(
+    private static Optional<TeamId> lowestEloAvailableTeam(
             Map<TeamId, List<StartCandidate>> assigned,
             Map<TeamId, Integer> capacities,
             List<TeamId> activeTeams
     ) {
         TeamId bestTeam = null;
-        double bestRatio = Double.MAX_VALUE;
+        int bestElo = Integer.MAX_VALUE;
         int bestSize = Integer.MAX_VALUE;
         for (TeamId teamId : activeTeams) {
             int currentSize = assigned.get(teamId).size();
@@ -140,10 +142,10 @@ public final class ParticipantSelectionService {
             if (currentSize >= capacity) {
                 continue;
             }
-            double ratio = (double) currentSize / capacity;
-            if (ratio < bestRatio || (ratio == bestRatio && currentSize < bestSize)) {
+            int teamElo = assigned.get(teamId).stream().mapToInt(StartCandidate::displayElo).sum();
+            if (teamElo < bestElo || (teamElo == bestElo && currentSize < bestSize)) {
                 bestTeam = teamId;
-                bestRatio = ratio;
+                bestElo = teamElo;
                 bestSize = currentSize;
             }
         }

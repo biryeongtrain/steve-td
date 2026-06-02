@@ -25,13 +25,6 @@ public final class RatingEligibilityPolicy {
         if (participants.size() < config.minimumParticipants()) {
             return "not enough rating-eligible participants";
         }
-        long ratedTeamCount = participants.stream()
-                .map(MatchParticipantResult::teamId)
-                .distinct()
-                .count();
-        if (ratedTeamCount != 2) {
-            return "rating requires exactly two participant teams";
-        }
         if (matchResult.winningTeams().size() != 1) {
             return "rating requires exactly one winning team";
         }
@@ -46,7 +39,7 @@ public final class RatingEligibilityPolicy {
         boolean hasWinner = participants.stream().anyMatch(MatchParticipantResult::winner);
         boolean hasLoser = participants.stream().anyMatch(participant -> !participant.winner());
         if (!hasWinner || !hasLoser) {
-            return "rating requires at least one winner and one loser";
+            return "rating requires winner and loser participant groups";
         }
         return "";
     }

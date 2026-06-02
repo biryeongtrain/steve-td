@@ -9,6 +9,8 @@ import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.game.MatchId;
 import kim.biryeong.semiontd.game.MatchParticipantResult;
 import kim.biryeong.semiontd.game.MatchResult;
+import kim.biryeong.semiontd.game.TeamId;
+import kim.biryeong.semiontd.game.TeamMatchResult;
 import kim.biryeong.semiontd.persistence.AppliedMatchRepository;
 import kim.biryeong.semiontd.persistence.FileAppliedMatchRepository;
 import kim.biryeong.semiontd.persistence.FileRatingEventRepository;
@@ -185,7 +187,7 @@ public final class RatingService {
 
     private List<RatingParticipant> participants(MatchResult matchResult) {
         return eligibilityPolicy.ratingParticipants(matchResult).stream()
-                .map(this::participant)
+                .map(participant -> participant(matchResult, participant))
                 .toList();
     }
 
@@ -199,7 +201,7 @@ public final class RatingService {
         return false;
     }
 
-    private RatingParticipant participant(MatchParticipantResult participant) {
+    private RatingParticipant participant(MatchResult matchResult, MatchParticipantResult participant) {
         PlayerRatingProfile profile = ratingRepository.findProfile(participant.playerId())
                 .orElseGet(() -> PlayerRatingProfile.initial(participant.playerId(), participant.playerName(), ratingConfig));
         return new RatingParticipant(
@@ -208,7 +210,48 @@ public final class RatingService {
                 participant.teamId(),
                 participant.winner(),
                 profile,
+                placementScore(matchResult, participant.teamId()),
                 participant.stats()
         );
+    }
+
+    private static double placementScore(MatchResult matchResult, TeamId teamId) {
+        int teamCount = (int) matchResult.teamResults().stream()
+                .map(TeamMatchResult::teamId)
+                .distinct()
+                .count();
+        return matchResult.teamResults().stream()
+                .filter(teamResult -> teamResult.teamId() == teamId)
+                .findFirst()
+                .map(teamResult -> placementScore(teamResult.placement(), teamCount))
+                .orElse(matchResult.winningTeams().contains(teamId) ? 1.0 : 0.0);
+    }
+
+    private static double placementScore(int placement, int teamCount) {
+        if (teamCount <= 2) {
+            return placement <= 1 ? 1.0 : 0.0;
+        }
+        if (teamCount == 3) {
+            return switch (placement) {
+                case 1 -> 1.0;
+                case 2 -> 0.5;
+                default -> 0.0;
+            };
+        }
+        if (teamCount == 4) {
+            return switch (placement) {
+                case 1 -> 1.0;
+                case 2 -> 0.9;
+                case 3 -> 0.1;
+                default -> 0.0;
+            };
+        }
+        return switch (placement) {
+            case 1 -> 1.0;
+            case 2 -> 0.9;
+            case 3 -> 0.5;
+            case 4 -> 0.1;
+            default -> 0.0;
+        };
     }
 }

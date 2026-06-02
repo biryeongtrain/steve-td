@@ -11,6 +11,7 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import kim.biryeong.semiontd.persistence.SemionPersistenceConfig;
+import kim.biryeong.semiontd.rating.RatingConfig;
 import org.slf4j.Logger;
 
 public final class SemionConfigLoader {
@@ -29,6 +30,7 @@ public final class SemionConfigLoader {
                     WaveConfig.defaultConfig(),
                     MapConfig.defaultConfig(),
                     ProgressionConfig.defaultConfig(),
+                    RatingConfig.defaultConfig(),
                     SemionPersistenceConfig.defaultConfig(),
                     TowerBalanceConfig.defaultConfig(),
                     SummonConfig.defaultConfig()
@@ -59,6 +61,12 @@ public final class SemionConfigLoader {
                 ProgressionConfig.class,
                 logger
         );
+        RatingConfig rating = loadOrCreate(
+                configDir.resolve("rating.json"),
+                RatingConfig.defaultConfig(),
+                RatingConfig.class,
+                logger
+        );
         SemionPersistenceConfig persistence = loadOrCreate(
                 configDir.resolve("persistence.json"),
                 SemionPersistenceConfig.defaultConfig(),
@@ -75,7 +83,7 @@ public final class SemionConfigLoader {
                 SummonConfig.defaultConfig(),
                 logger
         );
-        return new LoadedConfigs(economy, waves, map, progression, persistence, towerBalance, summons);
+        return new LoadedConfigs(economy, waves, map, progression, rating, persistence, towerBalance, summons);
     }
 
     private static <T> T loadOrCreate(Path path, T defaults, Class<T> type, Logger logger) {
@@ -195,6 +203,7 @@ public final class SemionConfigLoader {
             WaveConfig waves,
             MapConfig map,
             ProgressionConfig progression,
+            RatingConfig rating,
             SemionPersistenceConfig persistence,
             TowerBalanceConfig towerBalance,
             SummonConfig summons

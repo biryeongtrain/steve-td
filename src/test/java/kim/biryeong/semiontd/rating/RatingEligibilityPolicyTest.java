@@ -119,7 +119,7 @@ final class RatingEligibilityPolicyTest {
     void sameTeamOnlyMatchIsNotEligible() {
         RatingEligibilityPolicy policy = new RatingEligibilityPolicy(RatingConfig.defaultConfig());
 
-        assertEquals("rating requires exactly two participant teams", policy.skippedReason(matchResult(
+        assertEquals("rating requires winner and loser participant groups", policy.skippedReason(matchResult(
                 List.of(participant("winner", TeamId.RED, true), participant("teammate", TeamId.RED, true)),
                 Set.of(),
                 Set.of(TeamId.RED)
@@ -127,10 +127,10 @@ final class RatingEligibilityPolicyTest {
     }
 
     @Test
-    void moreThanTwoParticipantTeamsAreNotEligibleForBinaryElo() {
+    void moreThanTwoParticipantTeamsAreEligibleWhenOneTeamWins() {
         RatingEligibilityPolicy policy = new RatingEligibilityPolicy(RatingConfig.defaultConfig());
 
-        assertEquals("rating requires exactly two participant teams", policy.skippedReason(matchResult(
+        assertTrue(policy.isEligible(matchResult(
                 List.of(
                         participant("winner", TeamId.RED, true),
                         participant("loser", TeamId.BLUE, false),
@@ -150,6 +150,19 @@ final class RatingEligibilityPolicyTest {
             Set<UUID> spectatorIds,
             Set<TeamId> winningTeams
     ) {
+        List<TeamMatchResult> teamResults = participants.stream()
+                .map(MatchParticipantResult::teamId)
+                .distinct()
+                .map(teamId -> new TeamMatchResult(
+                        teamId,
+                        winningTeams.contains(teamId) ? 1 : 2,
+                        winningTeams.contains(teamId) ? MatchResultGroup.WIN_GROUP : MatchResultGroup.LOSS_GROUP,
+                        winningTeams.contains(teamId) ? 1.0 : 0.0,
+                        1,
+                        1,
+                        0.0
+                ))
+                .toList();
         return new MatchResult(
                 new MatchId(301L),
                 1L,
@@ -157,10 +170,7 @@ final class RatingEligibilityPolicyTest {
                 participants,
                 spectatorIds,
                 winningTeams,
-                List.of(
-                        new TeamMatchResult(TeamId.RED, 1, MatchResultGroup.WIN_GROUP, 1.0, 1, 1, 0.0),
-                        new TeamMatchResult(TeamId.BLUE, 2, MatchResultGroup.LOSS_GROUP, 0.0, 1, 1, 0.0)
-                ),
+                teamResults,
                 10
         );
     }

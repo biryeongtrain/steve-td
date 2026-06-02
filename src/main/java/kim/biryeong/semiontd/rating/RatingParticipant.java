@@ -11,6 +11,7 @@ public record RatingParticipant(
         TeamId teamId,
         boolean winner,
         PlayerRatingProfile currentProfile,
+        double placementScore,
         PlayerMatchStatsSnapshot stats
 ) {
     public RatingParticipant(
@@ -20,7 +21,29 @@ public record RatingParticipant(
             boolean winner,
             PlayerRatingProfile currentProfile
     ) {
-        this(playerId, playerName, teamId, winner, currentProfile, PlayerMatchStatsSnapshot.empty());
+        this(playerId, playerName, teamId, winner, currentProfile, winner ? 1.0 : 0.0, PlayerMatchStatsSnapshot.empty());
+    }
+
+    public RatingParticipant(
+            UUID playerId,
+            String playerName,
+            TeamId teamId,
+            boolean winner,
+            PlayerRatingProfile currentProfile,
+            double placementScore
+    ) {
+        this(playerId, playerName, teamId, winner, currentProfile, placementScore, PlayerMatchStatsSnapshot.empty());
+    }
+
+    public RatingParticipant(
+            UUID playerId,
+            String playerName,
+            TeamId teamId,
+            boolean winner,
+            PlayerRatingProfile currentProfile,
+            PlayerMatchStatsSnapshot stats
+    ) {
+        this(playerId, playerName, teamId, winner, currentProfile, winner ? 1.0 : 0.0, stats);
     }
 
     public RatingParticipant {
@@ -28,6 +51,9 @@ public record RatingParticipant(
         Objects.requireNonNull(playerName, "playerName");
         Objects.requireNonNull(teamId, "teamId");
         Objects.requireNonNull(currentProfile, "currentProfile");
+        if (!Double.isFinite(placementScore) || placementScore < 0.0 || placementScore > 1.0) {
+            throw new IllegalArgumentException("placementScore must be between 0.0 and 1.0");
+        }
         stats = stats == null ? PlayerMatchStatsSnapshot.empty() : stats;
     }
 }

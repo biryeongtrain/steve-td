@@ -80,6 +80,7 @@ public class VillagerThornTower extends EntityBackedTower {
     protected void copyRuntimeStateFrom(Tower previousTower) {
         if (previousTower instanceof VillagerThornTower thornTower) {
             survivalBonus = Math.min(TowerBalanceRuntime.abilityInt(type().id(), "maxSurvivalStacks"), thornTower.survivalBonus);
+            syncHealth(currentMaxHealth());
         }
     }
 
@@ -92,6 +93,11 @@ public class VillagerThornTower extends EntityBackedTower {
     }
 
     private void increaseSurvivalBonus() {
+        double previousMaxHealth = currentMaxHealth();
+        int previousBonus = survivalBonus;
         survivalBonus = Math.min(TowerBalanceRuntime.abilityInt(type().id(), "maxSurvivalStacks"), survivalBonus + 1);
+        if (survivalBonus > previousBonus) {
+            syncHealth(health() + Math.max(0.0, currentMaxHealth() - previousMaxHealth));
+        }
     }
 }

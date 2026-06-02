@@ -188,6 +188,14 @@ public final class SemionCommands {
                                         gameManager,
                                         IntegerArgumentType.getInteger(context, "page")
                                 ))))
+                .then(literal("leader")
+                        .then(literal("target")
+                                .then(argument("team", StringArgumentType.word())
+                                        .executes(context -> leaderTarget(
+                                                context.getSource(),
+                                                gameManager,
+                                                StringArgumentType.getString(context, "team")
+                                        )))))
                 .then(literal("killboss")
                         .requires(source -> source.hasPermission(2))
                         .then(argument("team", StringArgumentType.word())
@@ -843,9 +851,9 @@ public final class SemionCommands {
     }
 
     private static int ratingTop(CommandSourceStack source, SemionGameManager gameManager) {
-        List<PlayerRatingProfile> profiles = gameManager.topRatingProfiles(10);
+        List<PlayerRatingProfile> profiles = gameManager.topRatingProfiles();
         if (profiles.isEmpty()) {
-            success(source, "Rating Top 10: 아직 기록된 플레이어가 없습니다.");
+            success(source, "Rating Top: 아직 기록된 플레이어가 없습니다.");
             return 1;
         }
         success(source, "Rating Top " + profiles.size());
@@ -1155,6 +1163,34 @@ public final class SemionCommands {
                     + ", 라인=" + result.targetLaneId().orElseThrow());
         }
         gameManager.dialogService().showSummonShop(player, game);
+        return 1;
+    }
+
+    private static int leaderTarget(CommandSourceStack source, SemionGameManager gameManager, String teamName)
+            throws CommandSyntaxException {
+        SemionGame game = gameManager.activeGame().orElse(null);
+        if (game == null) {
+            failure(source, "진행 중인 게임이 없습니다.");
+            return 0;
+        }
+
+        TeamId targetTeam;
+        try {
+            targetTeam = parseTeam(teamName);
+        } catch (IllegalArgumentException exception) {
+            failure(source, LeaderTargetResult.INVALID_TARGET_TEAM.message());
+            return 0;
+        }
+
+        ServerPlayer player = source.getPlayerOrException();
+        LeaderTargetResult result = game.setLeaderTarget(player.getUUID(), targetTeam);
+        if (result != LeaderTargetResult.SUCCESS) {
+            failure(source, result.message());
+            return 0;
+        }
+
+        success(source, targetTeam.name() + " 팀을 견제 타깃으로 지정했습니다.");
+        gameManager.dialogService().showLeaderTargetControl(player, game);
         return 1;
     }
 
@@ -1516,7 +1552,10 @@ public final class SemionCommands {
         for (ServerPlayer player : source.getServer().getPlayerList().getPlayers()) {
             candidates.add(new StartCandidate(
                     player.getUUID(),
-                    player.getGameProfile().getName()
+                    player.getGameProfile().getName(),
+                    gameManager.ratingProfile(player.getUUID())
+                            .map(PlayerRatingProfile::displayElo)
+                            .orElse(PlayerRatingProfile.INITIAL_DISPLAY_ELO)
             ));
         }
         return ParticipantSelectionService.selectReady(

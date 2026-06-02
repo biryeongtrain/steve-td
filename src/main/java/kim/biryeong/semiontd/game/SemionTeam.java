@@ -3,6 +3,7 @@ package kim.biryeong.semiontd.game;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.entity.boss.BossMonster;
 import kim.biryeong.semiontd.map.LaneRegionLayout;
@@ -17,6 +18,7 @@ public final class SemionTeam {
     private final TeamLaneGroup laneGroup;
     private boolean active;
     private boolean eliminated;
+    private LeaderTargetingState leaderTargeting;
 
     public SemionTeam(TeamId id) {
         this.id = id;
@@ -43,6 +45,25 @@ public final class SemionTeam {
         return active;
     }
 
+    public Optional<UUID> leaderPlayerId() {
+        return leaderTargeting == null ? Optional.empty() : Optional.of(leaderTargeting.leaderPlayerId());
+    }
+
+    public Optional<LeaderTargetingState> leaderTargeting() {
+        if (!active || eliminated) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(leaderTargeting);
+    }
+
+    public boolean hasLeader(UUID playerId) {
+        return playerId != null && leaderPlayerId().map(playerId::equals).orElse(false);
+    }
+
+    public void setLeader(UUID playerId) {
+        this.leaderTargeting = new LeaderTargetingState(playerId);
+    }
+
     public void activate() {
         this.active = true;
         this.eliminated = false;
@@ -51,6 +72,7 @@ public final class SemionTeam {
     public void deactivate() {
         this.active = false;
         this.eliminated = false;
+        this.leaderTargeting = null;
         this.memberIds.clear();
         this.laneGroup.clearTowers();
         this.laneGroup.discardBossEntity();
@@ -94,6 +116,7 @@ public final class SemionTeam {
             return false;
         }
         eliminated = true;
+        leaderTargeting = null;
         laneGroup.disableMonsters();
         laneGroup.clearTowers();
         laneGroup.discardBossEntity();

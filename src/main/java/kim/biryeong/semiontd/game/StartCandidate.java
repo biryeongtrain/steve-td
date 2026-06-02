@@ -4,6 +4,10 @@ import java.util.UUID;
 
 public record StartCandidate(
         UUID uuid,
-        String name
+        String name,
+        int displayElo
 ) {
+    public StartCandidate(UUID uuid, String name) {
+        this(uuid, name, 1500);
+    }
 }

@@ -6,9 +6,6 @@ import java.util.List;
 public final class EloRatingCalculator implements RatingCalculator {
     public static final double DEFAULT_K_FACTOR = 32.0;
     private static final double ELO_SCALE = 400.0;
-    private static final double WIN_SCORE = 1.0;
-    private static final double LOSS_SCORE = 0.0;
-
     private final double kFactor;
     private final RatingContributionCalculator contributionCalculator;
 
@@ -54,19 +51,15 @@ public final class EloRatingCalculator implements RatingCalculator {
             return RatingMatchResult.empty(input.matchId());
         }
 
-        double winnerAverage = averageMu(input, true);
-        double loserAverage = averageMu(input, false);
-        int winnerCount = participantCount(input, true);
-        int loserCount = participantCount(input, false);
         List<RatingAdjustment> adjustments = new ArrayList<>();
         for (RatingParticipant participant : input.participants()) {
             PlayerRatingProfile before = participant.currentProfile();
-            double opponentAverage = participant.winner() ? loserAverage : winnerAverage;
-            double actualScore = participant.winner() ? WIN_SCORE : LOSS_SCORE;
+            double opponentAverage = opponentAverageMu(input, participant);
+            double actualScore = participant.placementScore();
             double expectedScore = expectedScore(before.mu(), opponentAverage);
-            double baseDelta = teamBalancedBaseDelta(kFactor, actualScore, expectedScore, participant.winner(), winnerCount, loserCount);
+            double baseDelta = teamBalancedBaseDelta(kFactor, actualScore, expectedScore, input, participant);
             RatingContributionBreakdown contribution = contributionCalculator.breakdown(input, participant);
-            double multiplier = participant.winner()
+            double multiplier = baseDelta >= 0.0
                     ? contribution.appliedMultiplier()
                     : 2.0 - contribution.appliedMultiplier();
             double muDelta = baseDelta * multiplier;
@@ -114,40 +107,39 @@ public final class EloRatingCalculator implements RatingCalculator {
         return kFactor;
     }
 
-    private static double averageMu(RatingMatchInput input, boolean winner) {
+    private static double opponentAverageMu(RatingMatchInput input, RatingParticipant participant) {
         List<RatingParticipant> participants = input.participants().stream()
-                .filter(participant -> participant.winner() == winner)
+                .filter(candidate -> candidate.teamId() != participant.teamId())
                 .toList();
         if (participants.isEmpty()) {
             return PlayerRatingProfile.INITIAL_MU;
         }
         return participants.stream()
-                .mapToDouble(participant -> participant.currentProfile().mu())
+                .mapToDouble(candidate -> candidate.currentProfile().mu())
                 .average()
                 .orElse(PlayerRatingProfile.INITIAL_MU);
-    }
-
-    private static int participantCount(RatingMatchInput input, boolean winner) {
-        return (int) input.participants().stream()
-                .filter(participant -> participant.winner() == winner)
-                .count();
     }
 
     private static double teamBalancedBaseDelta(
             double kFactor,
             double actualScore,
             double expectedScore,
-            boolean winner,
-            int winnerCount,
-            int loserCount
+            RatingMatchInput input,
+            RatingParticipant participant
     ) {
-        int ownTeamSize = winner ? winnerCount : loserCount;
-        int opposingTeamSize = winner ? loserCount : winnerCount;
+        int ownTeamSize = teamParticipantCount(input, participant.teamId());
+        int opposingTeamSize = input.participants().size() - ownTeamSize;
         if (ownTeamSize <= 0 || opposingTeamSize <= 0) {
             return kFactor * (actualScore - expectedScore);
         }
         double teamSizeMultiplier = Math.min(1.0, (double) opposingTeamSize / ownTeamSize);
         return kFactor * (actualScore - expectedScore) * teamSizeMultiplier;
+    }
+
+    private static int teamParticipantCount(RatingMatchInput input, kim.biryeong.semiontd.game.TeamId teamId) {
+        return (int) input.participants().stream()
+                .filter(participant -> participant.teamId() == teamId)
+                .count();
     }
 
     private static double expectedScore(double ownRating, double opponentRating) {

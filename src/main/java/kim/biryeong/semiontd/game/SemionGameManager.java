@@ -49,6 +49,7 @@ import kim.biryeong.semiontd.progression.MatchProgressionReward;
 import kim.biryeong.semiontd.progression.ProgressionService;
 import kim.biryeong.semiontd.progression.SemionPlayerProfile;
 import kim.biryeong.semiontd.rating.PlayerRatingProfile;
+import kim.biryeong.semiontd.rating.RatingConfig;
 import kim.biryeong.semiontd.rating.RatingMatchResult;
 import kim.biryeong.semiontd.rating.RatingService;
 import kim.biryeong.semiontd.summon.IncomeSummons;
@@ -68,7 +69,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Relative;
 import net.minecraft.world.level.GameType;
-import net.minecraft.world.level.portal.TeleportTransition;
 
 public final class SemionGameManager {
     private static final int STARTUP_LOBBY_LOAD_DELAY_TICKS = 20;
@@ -81,6 +81,7 @@ public final class SemionGameManager {
     private WaveConfig waveConfig = WaveConfig.defaultConfig();
     private MapConfig mapConfig = MapConfig.defaultConfig();
     private ProgressionConfig progressionConfig = ProgressionConfig.defaultConfig();
+    private RatingConfig ratingConfig = RatingConfig.defaultConfig();
     private SemionPersistenceConfig persistenceConfig = SemionPersistenceConfig.defaultConfig();
     private TowerBalanceConfig towerBalanceConfig = TowerBalanceConfig.defaultConfig();
     private SummonConfig summonConfig = SummonConfig.defaultConfig();
@@ -134,8 +135,10 @@ public final class SemionGameManager {
                 waveConfig,
                 mapConfig,
                 progressionConfig,
+                RatingConfig.defaultConfig(),
                 TowerBalanceConfig.defaultConfig(),
                 SummonConfig.defaultConfig(),
+                SemionPersistenceConfig.defaultConfig(),
                 progressionStorePath
         );
     }
@@ -153,6 +156,7 @@ public final class SemionGameManager {
                 waveConfig,
                 mapConfig,
                 progressionConfig,
+                RatingConfig.defaultConfig(),
                 towerBalanceConfig,
                 SummonConfig.defaultConfig(),
                 SemionPersistenceConfig.defaultConfig(),
@@ -174,6 +178,7 @@ public final class SemionGameManager {
                 waveConfig,
                 mapConfig,
                 progressionConfig,
+                RatingConfig.defaultConfig(),
                 towerBalanceConfig,
                 summonConfig,
                 SemionPersistenceConfig.defaultConfig(),
@@ -191,10 +196,35 @@ public final class SemionGameManager {
             SemionPersistenceConfig persistenceConfig,
             Path progressionStorePath
     ) {
+        configure(
+                economyConfig,
+                waveConfig,
+                mapConfig,
+                progressionConfig,
+                RatingConfig.defaultConfig(),
+                towerBalanceConfig,
+                summonConfig,
+                persistenceConfig,
+                progressionStorePath
+        );
+    }
+
+    public void configure(
+            EconomyConfig economyConfig,
+            WaveConfig waveConfig,
+            MapConfig mapConfig,
+            ProgressionConfig progressionConfig,
+            RatingConfig ratingConfig,
+            TowerBalanceConfig towerBalanceConfig,
+            SummonConfig summonConfig,
+            SemionPersistenceConfig persistenceConfig,
+            Path progressionStorePath
+    ) {
         this.economyConfig = economyConfig;
         this.waveConfig = waveConfig;
         this.mapConfig = mapConfig;
         this.progressionConfig = progressionConfig;
+        this.ratingConfig = ratingConfig == null ? RatingConfig.defaultConfig() : ratingConfig;
         this.persistenceConfig = persistenceConfig == null ? SemionPersistenceConfig.defaultConfig() : persistenceConfig;
         this.towerBalanceConfig = towerBalanceConfig == null ? TowerBalanceConfig.defaultConfig() : towerBalanceConfig;
         this.summonConfig = summonConfig == null ? SummonConfig.defaultConfig() : summonConfig;
@@ -218,7 +248,8 @@ public final class SemionGameManager {
         this.ratingService = new RatingService(
                 createRatingRepository(this.persistenceConfig, sqlitePath, ratingProfilePath),
                 createRatingEventRepository(this.persistenceConfig, sqlitePath, ratingEventPath),
-                createAppliedMatchRepository(this.persistenceConfig, sqlitePath, ratingAppliedMatchesPath, this.configDir)
+                createAppliedMatchRepository(this.persistenceConfig, sqlitePath, ratingAppliedMatchesPath, this.configDir),
+                this.ratingConfig
         );
         this.matchResultRepository = createMatchResultRepository(this.persistenceConfig, sqlitePath, matchResultPath, this.configDir);
         this.buildGuideService.configure(this.configDir == null ? null : this.configDir.resolve("build_guides.json"));
@@ -383,6 +414,7 @@ public final class SemionGameManager {
                 configs.waves(),
                 configs.map(),
                 configs.progression(),
+                configs.rating(),
                 configs.towerBalance(),
                 configs.summons(),
                 configs.persistence(),
@@ -428,6 +460,10 @@ public final class SemionGameManager {
 
     public List<PlayerRatingProfile> topRatingProfiles(int limit) {
         return ratingService.topProfiles(limit);
+    }
+
+    public List<PlayerRatingProfile> topRatingProfiles() {
+        return ratingService.topProfiles();
     }
 
     public SemionPlayerProfile saveSelectedJob(MinecraftServer server, UUID playerId, String playerName, ResourceLocation jobId) {
@@ -771,16 +807,12 @@ public final class SemionGameManager {
         LobbyWorld lobby = ensureLobby(server);
         VanillaTeamBridge.assignSpectator(server, player);
         player.setGameMode(GameType.ADVENTURE);
-        player.teleport(
-                new TeleportTransition(
-                        lobby.world(),
-                        lobby.spawn(),
-                        player.getDeltaMovement(),
-                        player.getXRot(),
-                        player.getYRot(),
-                        TeleportTransition.DO_NOTHING
-                )
-        );
+        player.teleport(PlayerTeleportTransitions.preservingFacing(
+                lobby.world(),
+                lobby.spawn(),
+                player.getDeltaMovement(),
+                player
+        ));
         SemionDisplayHudService.refreshPlayerHud(player);
         SemionHotbarService.clearMatchTools(player);
         setFlight(player, false);
@@ -847,6 +879,7 @@ public final class SemionGameManager {
         }
         clearPriorityForActiveParticipants(plan);
         server.getPlayerList().broadcastSystemMessage(SemionText.prefixedMini("<green><bold>게임을 시작합니다.</bold></green>"), false);
+        activeGame.announceTeamLeaders(server);
         displayHudService.refreshNow(server, activeGame, matchMode);
     }
 

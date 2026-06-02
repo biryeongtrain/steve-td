@@ -90,6 +90,55 @@ final class RatingServiceTest {
     }
 
     @Test
+    void appliesSingleWinnerAgainstMultipleLosingTeamsWithPlacementOffsets() {
+        FileRatingRepository ratingRepository = new FileRatingRepository(tempDir.resolve("ratings.json"));
+        RatingService service = new RatingService(
+                ratingRepository,
+                new FileRatingEventRepository(tempDir.resolve("rating-events.json")),
+                new FileAppliedMatchRepository(tempDir.resolve("rating-applied-matches.json")),
+                new EloRatingCalculator()
+        );
+        UUID firstId = UUID.nameUUIDFromBytes("multi-first".getBytes());
+        UUID secondId = UUID.nameUUIDFromBytes("multi-second".getBytes());
+        UUID thirdId = UUID.nameUUIDFromBytes("multi-third".getBytes());
+        UUID fourthId = UUID.nameUUIDFromBytes("multi-fourth".getBytes());
+        UUID fifthId = UUID.nameUUIDFromBytes("multi-fifth".getBytes());
+        MatchResult matchResult = new MatchResult(
+                new MatchId(20L),
+                1L,
+                2L,
+                List.of(
+                        new MatchParticipantResult(firstId, "first", TeamId.RED, true),
+                        new MatchParticipantResult(secondId, "second", TeamId.BLUE, false),
+                        new MatchParticipantResult(thirdId, "third", TeamId.GREEN, false),
+                        new MatchParticipantResult(fourthId, "fourth", TeamId.YELLOW, false),
+                        new MatchParticipantResult(fifthId, "fifth", TeamId.PURPLE, false)
+                ),
+                Set.of(),
+                Set.of(TeamId.RED),
+                List.of(
+                        new TeamMatchResult(TeamId.RED, 1, MatchResultGroup.WIN_GROUP, 1.0, 1, 1, 0.0),
+                        new TeamMatchResult(TeamId.BLUE, 2, MatchResultGroup.LOSS_GROUP, 0.9, 1, 1, 0.0),
+                        new TeamMatchResult(TeamId.GREEN, 3, MatchResultGroup.LOSS_GROUP, 0.5, 1, 1, 0.0),
+                        new TeamMatchResult(TeamId.YELLOW, 4, MatchResultGroup.LOSS_GROUP, 0.1, 1, 1, 0.0),
+                        new TeamMatchResult(TeamId.PURPLE, 5, MatchResultGroup.LOSS_GROUP, 0.0, 1, 1, 0.0)
+                ),
+                10
+        );
+
+        RatingMatchResult result = service.applyMatchResult(null, matchResult);
+
+        assertEquals(List.of(16, 13, 0, -13, -16), result.adjustments().stream()
+                .map(RatingAdjustment::displayEloDelta)
+                .toList());
+        assertEquals(1516, ratingRepository.findProfile(firstId).orElseThrow().displayElo());
+        assertEquals(1513, ratingRepository.findProfile(secondId).orElseThrow().displayElo());
+        assertEquals(1500, ratingRepository.findProfile(thirdId).orElseThrow().displayElo());
+        assertEquals(1487, ratingRepository.findProfile(fourthId).orElseThrow().displayElo());
+        assertEquals(1484, ratingRepository.findProfile(fifthId).orElseThrow().displayElo());
+    }
+
+    @Test
     void topProfilesAreSortedByEloThenGamesPlayed() {
         FileRatingRepository ratingRepository = new FileRatingRepository(tempDir.resolve("ratings.json"));
         RatingService service = new RatingService(
