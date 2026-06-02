@@ -115,6 +115,32 @@ final class RatingEligibilityPolicyTest {
         assertEquals("rating does not support draw or unrated participant teams yet", policy.skippedReason(result));
     }
 
+    @Test
+    void sameTeamOnlyMatchIsNotEligible() {
+        RatingEligibilityPolicy policy = new RatingEligibilityPolicy(RatingConfig.defaultConfig());
+
+        assertEquals("rating requires exactly two participant teams", policy.skippedReason(matchResult(
+                List.of(participant("winner", TeamId.RED, true), participant("teammate", TeamId.RED, true)),
+                Set.of(),
+                Set.of(TeamId.RED)
+        )));
+    }
+
+    @Test
+    void moreThanTwoParticipantTeamsAreNotEligibleForBinaryElo() {
+        RatingEligibilityPolicy policy = new RatingEligibilityPolicy(RatingConfig.defaultConfig());
+
+        assertEquals("rating requires exactly two participant teams", policy.skippedReason(matchResult(
+                List.of(
+                        participant("winner", TeamId.RED, true),
+                        participant("loser", TeamId.BLUE, false),
+                        participant("third", TeamId.GREEN, false)
+                ),
+                Set.of(),
+                Set.of(TeamId.RED)
+        )));
+    }
+
     private static MatchParticipantResult participant(String name, TeamId teamId, boolean winner) {
         return new MatchParticipantResult(UUID.nameUUIDFromBytes(name.getBytes()), name, teamId, winner);
     }

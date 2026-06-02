@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.SemionTd;
+import kim.biryeong.semiontd.game.MatchId;
 import kim.biryeong.semiontd.game.MatchParticipantResult;
 import kim.biryeong.semiontd.game.MatchResult;
 import kim.biryeong.semiontd.persistence.AppliedMatchRepository;
@@ -99,6 +100,7 @@ public final class RatingService {
         }
         Optional<RatingMatchResult> existingEvent = ratingEventRepository.findMatchResult(matchResult.matchId());
         if (existingEvent.isPresent()) {
+            persistProfiles(existingEvent.get(), matchResult.matchId(), true);
             appliedMatchRepository.markApplied(matchResult.matchId(), RATING_SUBSYSTEM, System.currentTimeMillis());
             return existingEvent.get();
         }
@@ -124,23 +126,33 @@ public final class RatingService {
                 participants(matchResult)
         );
         RatingMatchResult ratingResult = ratingCalculator.calculate(input);
-        for (RatingAdjustment adjustment : ratingResult.adjustments()) {
-            Optional<PlayerRatingProfile> current = ratingRepository.findProfile(adjustment.playerId());
-            if (current.map(profile -> matchResult.matchId().equals(profile.lastUpdatedMatchId())).orElse(false)) {
-                SemionTd.LOGGER.warn(
-                        "Skipping duplicate rating profile write for player {} and match {} because the profile already references that match.",
-                        adjustment.playerId(),
-                        matchResult.matchId()
-                );
-                continue;
-            }
-            ratingRepository.saveProfile(adjustment.playerId(), adjustment.after());
-        }
         ratingEventRepository.saveMatchResult(ratingResult);
+        persistProfiles(ratingResult, matchResult.matchId(), false);
         if (!appliedMatchRepository.markApplied(matchResult.matchId(), RATING_SUBSYSTEM, System.currentTimeMillis())) {
             SemionTd.LOGGER.warn("Rating was persisted but applied marker already existed for match {}.", matchResult.matchId());
         }
         return ratingResult;
+    }
+
+    private void persistProfiles(RatingMatchResult ratingResult, MatchId matchId, boolean replayExistingEvent) {
+        for (RatingAdjustment adjustment : ratingResult.adjustments()) {
+            Optional<PlayerRatingProfile> current = ratingRepository.findProfile(adjustment.playerId());
+            if (current.isPresent() && current.get().lastUpdatedMatchId() != null) {
+                if (matchId.equals(current.get().lastUpdatedMatchId())) {
+                    continue;
+                }
+                if (replayExistingEvent) {
+                    SemionTd.LOGGER.warn(
+                            "Skipping rating event replay for player {} and match {} because the current profile already references newer/different match {}.",
+                            adjustment.playerId(),
+                            matchId,
+                            current.get().lastUpdatedMatchId()
+                    );
+                    continue;
+                }
+            }
+            ratingRepository.saveProfile(adjustment.playerId(), adjustment.after());
+        }
     }
 
     public Optional<PlayerRatingProfile> profile(UUID playerId) {
