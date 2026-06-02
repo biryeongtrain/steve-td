@@ -120,7 +120,11 @@ public final class EconomyService {
                         .map(job -> Math.max(0, job.modifyKillMineralReward(jobContext, monster, monster.mineralReward())))
                         .orElse(monster.mineralReward());
         player.economy().addDiamond(reward);
-        player.matchStats().recordMonsterKill(reward);
+        if (player.teamId() == monster.targetTeam() && player.laneId() == monster.targetLaneId()) {
+            player.matchStats().recordOwnLaneMonsterKill(reward, monster.attributionThreat());
+        } else {
+            player.matchStats().recordAssistMonsterKill(reward, monster.attributionThreat());
+        }
         if (jobContext != null) {
             player.job().ifPresent(job -> job.onMonsterKilled(jobContext, monster, reward));
         }

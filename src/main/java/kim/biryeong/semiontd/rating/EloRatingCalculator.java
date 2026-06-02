@@ -10,20 +10,42 @@ public final class EloRatingCalculator implements RatingCalculator {
     private static final double LOSS_SCORE = 0.0;
 
     private final double kFactor;
+    private final RatingContributionCalculator contributionCalculator;
 
     public EloRatingCalculator() {
         this(RatingConfig.defaultConfig());
     }
 
     public EloRatingCalculator(RatingConfig config) {
-        this((config == null ? RatingConfig.defaultConfig() : config).eloKFactor());
+        this(config == null ? RatingConfig.defaultConfig() : config, null);
     }
 
     public EloRatingCalculator(double kFactor) {
-        if (!Double.isFinite(kFactor) || kFactor <= 0.0) {
-            throw new IllegalArgumentException("kFactor must be positive and finite");
-        }
-        this.kFactor = kFactor;
+        this.kFactor = validateKFactor(kFactor);
+        this.contributionCalculator = new RatingContributionCalculator(new RatingConfig(
+                true,
+                kFactor,
+                PlayerRatingProfile.INITIAL_DISPLAY_ELO,
+                PlayerRatingProfile.INITIAL_MU,
+                PlayerRatingProfile.INITIAL_SIGMA,
+                10,
+                2,
+                true,
+                false,
+                1.0,
+                1.0,
+                0.40,
+                0.25,
+                0.20,
+                0.15
+        ));
+    }
+
+    private EloRatingCalculator(RatingConfig config, RatingContributionCalculator contributionCalculator) {
+        this.kFactor = validateKFactor(config.eloKFactor());
+        this.contributionCalculator = contributionCalculator == null
+                ? new RatingContributionCalculator(config)
+                : contributionCalculator;
     }
 
     @Override
@@ -40,7 +62,12 @@ public final class EloRatingCalculator implements RatingCalculator {
             double opponentAverage = participant.winner() ? loserAverage : winnerAverage;
             double actualScore = participant.winner() ? WIN_SCORE : LOSS_SCORE;
             double expectedScore = expectedScore(before.mu(), opponentAverage);
-            double muDelta = kFactor * (actualScore - expectedScore);
+            double baseDelta = kFactor * (actualScore - expectedScore);
+            RatingContributionBreakdown contribution = contributionCalculator.breakdown(input, participant);
+            double multiplier = participant.winner()
+                    ? contribution.appliedMultiplier()
+                    : 2.0 - contribution.appliedMultiplier();
+            double muDelta = baseDelta * multiplier;
             double afterMu = before.mu() + muDelta;
             int afterDisplayElo = (int) Math.round(afterMu);
             PlayerRatingProfile after = new PlayerRatingProfile(
@@ -65,7 +92,8 @@ public final class EloRatingCalculator implements RatingCalculator {
                     before,
                     after,
                     after.mu() - before.mu(),
-                    after.displayElo() - before.displayElo()
+                    after.displayElo() - before.displayElo(),
+                    contribution
             ));
         }
         return new RatingMatchResult(
@@ -75,6 +103,13 @@ public final class EloRatingCalculator implements RatingCalculator {
                 input.endedAtEpochMillis(),
                 adjustments
         );
+    }
+
+    private static double validateKFactor(double kFactor) {
+        if (!Double.isFinite(kFactor) || kFactor <= 0.0) {
+            throw new IllegalArgumentException("kFactor must be positive and finite");
+        }
+        return kFactor;
     }
 
     private static double averageMu(RatingMatchInput input, boolean winner) {

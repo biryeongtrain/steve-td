@@ -25,6 +25,7 @@
     "polymer-core": "*",
     "polymer-networking": "*",
     "polymer-resource-pack": "*",
-    "polymer-virtual-entity": "*"
+    "polymer-virtual-entity": "*",
+    "placeholder-api": ">=2.7.2+1.21.8"
   }
 }

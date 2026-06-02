@@ -401,8 +401,10 @@ public final class SemionGame {
 
         economyService.applySummonIncome(player, incomeGain);
         player.matchStats().recordSummonedMonster();
+        player.matchStats().recordIncomeGenerated(incomeGain);
         int scheduledRound = phase == RoundPhase.LANE_WAVE ? currentRound + 1 : currentRound;
         Monster monster = type.get().createMonster(summonContext, targetTeam.get().id(), targetLane.get().laneId(), scheduledRound);
+        player.matchStats().recordSentIncomeThreat(monster.attributionThreat());
         job.onSummonedMonster(jobContext, type.get(), monster);
         type.get().onSummoned(summonContext, monster);
         if (phase == RoundPhase.LANE_WAVE) {

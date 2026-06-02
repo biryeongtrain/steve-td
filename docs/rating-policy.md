@@ -39,10 +39,63 @@ For each eligible participant:
 - Winners receive actual score `1.0`.
 - Losers receive actual score `0.0`.
 - Opponent rating is the average `mu` of the opposite result group.
-- Delta is `K * (actual - expected)`.
-- `displayElo` is `round(mu)` after applying the delta.
+- Base delta is `K * (actual - expected)`.
+- `displayElo` is `round(mu)` after applying the final delta.
 
-For equal 1500-vs-1500 ratings with K=32, this yields `+16` for winners and `-16` for losers.
+For equal 1500-vs-1500 ratings with K=32 and neutral contribution stats, this yields `+16` for winners and `-16` for losers.
+
+## Contribution weighting
+
+The rating system keeps win/loss as the primary signal and applies player contribution as a bounded multiplier on the base ELO delta. Contribution weighting does not replace match outcome: winners still gain rating and losers still lose rating in this phase.
+
+Default contribution config:
+
+- Enabled: `true`
+- Multiplier clamp: `0.85..1.15`
+- Defense weight: `0.40`
+- Pressure weight: `0.25`
+- Economy weight: `0.20`
+- Assist weight: `0.15`
+
+Current implementation prefers explicit lane/round attribution when available, then falls back to broad counters for historical or partial records.
+
+Tracked attribution fields:
+
+- Lane defense: `ownLaneIncomingThreat`, `incomingIncomeThreat`, `ownLaneLeakedThreat`.
+- Income pressure: `sentIncomeThreat`, `incomeAttackSuccessThreat`.
+- Economy source: `ownLaneDiamondGain`, `assistClearDiamondGain`, `incomeGenerated`.
+- Assist cleanup: `assistClearThreat`.
+
+Collection points:
+
+- A spawned wave/income monster adds incoming threat to the target lane owner.
+- A summoned monster adds sent income threat and income generated to the summoner.
+- A monster reaching boss/final-defense progress adds leaked threat to the target lane owner.
+- If that leaked monster was summoned, the summoner receives income attack success threat.
+- A monster kill records own-lane diamond when the killer owns the target lane; otherwise it records assist-clear diamond/threat.
+
+Scoring:
+
+- Defense compares lane hold rate, with a small income-pressure difficulty bonus.
+- Pressure compares sent income threat plus successful leaked threat bonus.
+- Economy compares attributed diamond sources and generated income.
+- Assist compares cleanup threat cleared outside the player's own lane.
+
+Fallback behavior:
+
+- Defense falls back to `killMinerals` and `monsterKills` relative to the participant's team average.
+- Pressure falls back to `summonedMonsters` relative to the match average.
+- Economy falls back to `finalIncome` relative to the participant's team average.
+- Assist stays neutral when no assist attribution exists.
+
+Winner delta uses the applied multiplier directly. Loser delta uses the inverse around `1.0`, so stronger contribution reduces the rating loss while weaker contribution increases it.
+
+```text
+winnerFinalDelta = baseDelta * contributionMultiplier
+loserFinalDelta = baseDelta * (2.0 - contributionMultiplier)
+```
+
+The first version intentionally avoids sign reversal. A losing player with strong stats loses less rating, but does not gain rating from a lost match. A winning player with weak stats gains less rating, but does not lose rating from a won match.
 
 ## Persistence
 
