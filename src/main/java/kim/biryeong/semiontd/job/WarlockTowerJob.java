@@ -2,6 +2,7 @@ package kim.biryeong.semiontd.job;
 
 import java.util.List;
 import kim.biryeong.semiontd.SemionTd;
+import kim.biryeong.semiontd.summon.SummonMonsterType;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
@@ -18,9 +19,15 @@ public final class WarlockTowerJob extends SemionJob {
                 Component.literal("흑마법사"),
                 List.of(
                         SemionText.mini("<gray>아군 타워를 희생해 흑마법사 타워를 키우는 빌더입니다.</gray>"),
-                        SemionText.mini("<red>흑마법사 타워는 한 라인에 하나만 운용할 수 있습니다.</red>")
+                        SemionText.mini("<red>흑마법사 타워는 한 라인에 하나만 운용할 수 있습니다.</red>"),
+                        SemionText.mini("<red><bold>이 빌더는 인컴 수급량이 15% 낮습니다. </red>")
                 )
         );
+    }
+
+    @Override
+    public long modifySummonIncomeGain(JobContext context, SummonMonsterType summonType, long baseIncomeGain) {
+        return (long) (baseIncomeGain * 0.85);
     }
 
     @Override
