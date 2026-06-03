@@ -27,7 +27,7 @@ public final class WarlockTowerJob extends SemionJob {
 
     @Override
     public long modifySummonIncomeGain(JobContext context, SummonMonsterType summonType, long baseIncomeGain) {
-        return (long) (baseIncomeGain * 0.85);
+        return (long) Math.ceil(baseIncomeGain * 0.85);
     }
 
     @Override
