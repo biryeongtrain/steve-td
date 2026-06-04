@@ -41,26 +41,8 @@ final class PlayerMatchStatsAttributionTest {
     @Test
     void killAttributionRequiresMatchingTeamAndLaneForOwnLaneCredit() {
         UUID playerId = UUID.nameUUIDFromBytes("cross-team-lane-killer".getBytes());
-        SemionPlayer player = new SemionPlayer(
-                playerId,
-                "killer",
-                TeamId.BLUE,
-                1,
-                new PlayerEconomy(EconomyConfig.defaultConfig())
-        );
-        Monster monster = new Monster(
-                "red-lane-income-unit",
-                TeamId.RED,
-                1,
-                Optional.empty(),
-                Optional.empty(),
-                20.0,
-                0.0,
-                5.0,
-                AttackKind.MELEE,
-                "minecraft:zombie",
-                3L
-        );
+        SemionPlayer player = player(playerId, TeamId.BLUE, 1);
+        Monster monster = naturalWaveMonster("red-lane-income-unit", TeamId.RED, 1, 3L);
         monster.recordLastHit(playerId, KillSourceKind.TOWER);
         monster.syncHealth(0.0);
 
@@ -70,5 +52,125 @@ final class PlayerMatchStatsAttributionTest {
         assertEquals(0, snapshot.ownLaneDiamondGain());
         assertEquals(3, snapshot.assistClearDiamondGain());
         assertEquals(monster.attributionThreat(), snapshot.assistClearThreat(), 0.0001);
+    }
+
+    @Test
+    void sameTeamCrossLaneFinalDefenseWaveKillReceivesReducedRewardButKeepsAssistThreat() {
+        UUID playerId = UUID.nameUUIDFromBytes("cross-lane-final-defense-killer".getBytes());
+        SemionPlayer player = player(playerId, TeamId.BLUE, 1);
+        Monster monster = naturalWaveMonster("blue-lane-two-final-defense-wave", TeamId.BLUE, 2, 10L);
+        monster.syncLaneProgress(0.90);
+        monster.recordLastHit(playerId, KillSourceKind.TOWER);
+        monster.syncHealth(0.0);
+
+        new EconomyService(EconomyConfig.defaultConfig()).awardMonsterKillReward(monster, Map.of(playerId, player));
+
+        PlayerMatchStatsSnapshot snapshot = player.matchStats().snapshot(player.economy().income());
+        assertEquals(0, snapshot.ownLaneDiamondGain());
+        assertEquals(4, snapshot.assistClearDiamondGain());
+        assertEquals(monster.attributionThreat(), snapshot.assistClearThreat(), 0.0001);
+        assertEquals(EconomyConfig.defaultConfig().startingDiamond() + 4, player.economy().diamond());
+    }
+
+    @Test
+    void ownLaneFinalDefenseWaveKillKeepsFullReward() {
+        UUID playerId = UUID.nameUUIDFromBytes("own-lane-final-defense-killer".getBytes());
+        SemionPlayer player = player(playerId, TeamId.BLUE, 1);
+        Monster monster = naturalWaveMonster("blue-lane-one-final-defense-wave", TeamId.BLUE, 1, 10L);
+        monster.syncLaneProgress(0.90);
+        monster.recordLastHit(playerId, KillSourceKind.TOWER);
+        monster.syncHealth(0.0);
+
+        new EconomyService(EconomyConfig.defaultConfig()).awardMonsterKillReward(monster, Map.of(playerId, player));
+
+        PlayerMatchStatsSnapshot snapshot = player.matchStats().snapshot(player.economy().income());
+        assertEquals(10, snapshot.ownLaneDiamondGain());
+        assertEquals(0, snapshot.assistClearDiamondGain());
+        assertEquals(EconomyConfig.defaultConfig().startingDiamond() + 10, player.economy().diamond());
+    }
+
+    @Test
+    void sameTeamCrossLaneWaveKillBeforeFinalDefenseKeepsFullReward() {
+        UUID playerId = UUID.nameUUIDFromBytes("cross-lane-early-killer".getBytes());
+        SemionPlayer player = player(playerId, TeamId.BLUE, 1);
+        Monster monster = naturalWaveMonster("blue-lane-two-early-wave", TeamId.BLUE, 2, 10L);
+        monster.syncLaneProgress(0.89);
+        monster.recordLastHit(playerId, KillSourceKind.TOWER);
+        monster.syncHealth(0.0);
+
+        new EconomyService(EconomyConfig.defaultConfig()).awardMonsterKillReward(monster, Map.of(playerId, player));
+
+        PlayerMatchStatsSnapshot snapshot = player.matchStats().snapshot(player.economy().income());
+        assertEquals(0, snapshot.ownLaneDiamondGain());
+        assertEquals(10, snapshot.assistClearDiamondGain());
+        assertEquals(EconomyConfig.defaultConfig().startingDiamond() + 10, player.economy().diamond());
+    }
+
+    @Test
+    void sameTeamCrossLaneIncomeUnitKillKeepsFullRewardByDefault() {
+        UUID playerId = UUID.nameUUIDFromBytes("cross-lane-income-killer".getBytes());
+        UUID senderId = UUID.nameUUIDFromBytes("income-unit-sender".getBytes());
+        SemionPlayer player = player(playerId, TeamId.BLUE, 1);
+        Monster monster = incomeMonster("blue-lane-two-income-unit", TeamId.BLUE, 2, senderId, TeamId.RED, 10L);
+        monster.syncLaneProgress(0.90);
+        monster.recordLastHit(playerId, KillSourceKind.TOWER);
+        monster.syncHealth(0.0);
+
+        new EconomyService(EconomyConfig.defaultConfig()).awardMonsterKillReward(monster, Map.of(playerId, player));
+
+        PlayerMatchStatsSnapshot snapshot = player.matchStats().snapshot(player.economy().income());
+        assertEquals(0, snapshot.ownLaneDiamondGain());
+        assertEquals(10, snapshot.assistClearDiamondGain());
+        assertEquals(monster.attributionThreat(), snapshot.assistClearThreat(), 0.0001);
+        assertEquals(EconomyConfig.defaultConfig().startingDiamond() + 10, player.economy().diamond());
+    }
+
+    private static SemionPlayer player(UUID playerId, TeamId teamId, int laneId) {
+        return new SemionPlayer(
+                playerId,
+                "killer",
+                teamId,
+                laneId,
+                new PlayerEconomy(EconomyConfig.defaultConfig())
+        );
+    }
+
+    private static Monster naturalWaveMonster(String id, TeamId targetTeam, int targetLaneId, long reward) {
+        return new Monster(
+                id,
+                targetTeam,
+                targetLaneId,
+                Optional.empty(),
+                Optional.empty(),
+                20.0,
+                0.0,
+                5.0,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                reward
+        );
+    }
+
+    private static Monster incomeMonster(
+            String id,
+            TeamId targetTeam,
+            int targetLaneId,
+            UUID ownerPlayer,
+            TeamId senderTeam,
+            long reward
+    ) {
+        return new Monster(
+                id,
+                targetTeam,
+                targetLaneId,
+                Optional.of(ownerPlayer),
+                Optional.of(senderTeam),
+                20.0,
+                0.0,
+                5.0,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                reward
+        );
     }
 }

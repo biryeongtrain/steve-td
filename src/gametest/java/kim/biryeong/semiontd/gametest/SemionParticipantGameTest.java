@@ -159,6 +159,7 @@ import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
 import kim.biryeong.semiontd.test.tower.TestTowerTypes;
 import kim.biryeong.semiontd.ui.SemionDialogService;
 import kim.biryeong.semiontd.ui.SemionDisplayHudService;
+import kim.biryeong.semiontd.ui.SemionHudTextService;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.fabricmc.fabric.api.gametest.v1.CustomTestMethodInvoker;
@@ -204,6 +205,48 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     private static kim.biryeong.semiontd.map.GameArena testArena(GameTestHelper context) {
         return SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(net.minecraft.core.BlockPos.ZERO));
+    }
+
+    @GameTest
+    public void crossLaneFinalDefenseWaveRewardReductionAppliesInRuntimeEconomyService(GameTestHelper context) {
+        UUID playerId = UUID.nameUUIDFromBytes("gametest-cross-lane-final-defense-killer".getBytes(StandardCharsets.UTF_8));
+        SemionPlayer player = new SemionPlayer(
+                playerId,
+                "killer",
+                TeamId.BLUE,
+                1,
+                new PlayerEconomy(EconomyConfig.defaultConfig())
+        );
+        Monster monster = new Monster(
+                "gametest-blue-lane-two-final-defense-wave",
+                TeamId.BLUE,
+                2,
+                Optional.empty(),
+                Optional.empty(),
+                20.0,
+                0.0,
+                5.0,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                10L
+        );
+        monster.syncLaneProgress(0.90);
+        monster.recordLastHit(playerId, KillSourceKind.TOWER);
+        monster.syncHealth(0.0);
+
+        new EconomyService(EconomyConfig.defaultConfig()).awardMonsterKillReward(monster, Map.of(playerId, player));
+
+        var snapshot = player.matchStats().snapshot(player.economy().income());
+        if (!assertEquals(context, 204L, player.economy().diamond(), "Cross-lane final-defense wave kill should pay 40% of 10 diamond reward.")) {
+            return;
+        }
+        if (!assertEquals(context, 4L, snapshot.assistClearDiamondGain(), "Assist clear diamond gain should record paid reduced reward.")) {
+            return;
+        }
+        if (!assertEquals(context, 25.0, snapshot.assistClearThreat(), "Assist clear threat should preserve full monster threat.")) {
+            return;
+        }
+        context.succeed();
     }
 
     @GameTest
@@ -981,7 +1024,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         UUID spectatorId = stableUuid("hud-role-spectator");
         SemionGame game = startedThreePlayerGame(context, redId, blueId, greenId);
 
-        String activeText = SemionDisplayHudService.matchMarkupFor(
+        String activeText = SemionHudTextService.matchSidebarMarkupFor(
                 redId,
                 Optional.of(game.teams().get(TeamId.RED)),
                 game,
@@ -993,11 +1036,37 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertTrue(context, !activeText.contains("다이아"), "Active HUD should move economy lines to actionbar.")) {
             return;
         }
-        String actionbarText = SemionDisplayHudService.actionbarMarkupFor(game.players().get(redId), game);
+        String actionbarText = SemionHudTextService.actionbarMarkupFor(game.players().get(redId), game);
         if (!assertTrue(context, actionbarText.contains("다이아"), "Active actionbar should show diamond economy.")) {
             return;
         }
         if (!assertTrue(context, actionbarText.contains("타워"), "Active actionbar should show tower limit.")) {
+            return;
+        }
+        if (!assertTrue(context, game.purchaseTowerLimit(redId), "Tower limit purchase should succeed before actionbar rendering.")) {
+            return;
+        }
+        String upgradedActionbarText = SemionHudTextService.actionbarMarkupFor(game.players().get(redId), game);
+        String upgradedTowerLimitText = game.towerCount(redId) + "/" + game.towerLimitForPlayer(redId);
+        if (!assertTrue(context, upgradedActionbarText.contains(upgradedTowerLimitText), "Active actionbar should reflect purchased tower slots.")) {
+            return;
+        }
+        String scoreboardText = SemionHudTextService.matchSidebarMarkupFor(
+                redId,
+                Optional.of(game.teams().get(TeamId.RED)),
+                game,
+                MatchMode.NORMAL
+        );
+        if (!assertTrue(context, !scoreboardText.contains("다이아"), "Scoreboard HUD should keep diamond economy in actionbar.")) {
+            return;
+        }
+        if (!assertTrue(context, !scoreboardText.contains("타워"), "Scoreboard HUD should keep tower limit in actionbar.")) {
+            return;
+        }
+        if (!assertTrue(context, !scoreboardText.contains(upgradedTowerLimitText), "Scoreboard HUD should not duplicate purchased tower slots from actionbar.")) {
+            return;
+        }
+        if (!assertTrue(context, scoreboardText.contains("전체 팀 보스"), "Scoreboard HUD should keep the full team boss summary.")) {
             return;
         }
         if (!assertTrue(context, activeText.contains("전체 팀 보스"), "Active HUD should keep the full team boss summary.")) {
@@ -2777,6 +2846,33 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void buyingTowerLimitAddsPlayerSpecificTowerSlots(GameTestHelper context) {
+        UUID playerId = stableUuid("red-tower-limit-buyer");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerEconomy economy = game.players().get(playerId).economy();
+        int roundLimit = game.towerLimitForCurrentRound();
+        long diamondCost = game.economyConfig().towerLimit().initialPurchaseDiamondCost();
+        long emeraldCost = game.economyConfig().towerLimit().initialPurchaseEmeraldCost();
+
+        if (!assertEquals(context, roundLimit, game.towerLimitForPlayer(playerId), "Player limit should start at the round limit.")) {
+            return;
+        }
+        if (!assertTrue(context, game.purchaseTowerLimit(playerId), "Player should be able to buy an extra tower slot.")) {
+            return;
+        }
+        if (!assertEquals(context, roundLimit + game.economyConfig().towerLimit().purchaseIncreaseAmount(), game.towerLimitForPlayer(playerId), "Purchased slots should increase the player's tower limit.")) {
+            return;
+        }
+        if (!assertEquals(context, EconomyConfig.defaultConfig().startingMineral() - diamondCost, economy.mineral(), "Tower slot purchase should spend the configured diamond cost.")) {
+            return;
+        }
+        if (!assertEquals(context, EconomyConfig.defaultConfig().startingGas() - emeraldCost, economy.gas(), "Tower slot purchase should spend the configured emerald cost.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void placingTestTowerOutsideLanePathIsRejected(GameTestHelper context) {
         UUID playerId = stableUuid("red-outside-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
@@ -3332,6 +3428,62 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                     nearTarget.getHealth() < farProgressTarget.getHealth(),
                     "In-range target should take priority over a farther high-progress target."
             )) {
+                return;
+            }
+            context.succeed();
+        });
+    }
+
+    @GameTest(maxTicks = 80)
+    public void illusionCloneAttacksSharedSourceTargetInsteadOfScanningOwnTarget(GameTestHelper context) {
+        UUID playerId = stableUuid("red-clone-shared-target-owner");
+        Vec3 origin = Vec3.atCenterOf(context.absolutePos(BlockPos.ZERO));
+        TowerType sourceType = new TowerType("shared_target_source", "Shared Target Source", TowerCategory.DIRECT, 0, 50.0, 6.0, 0.0, 100, 0);
+        TowerType cloneType = new TowerType("shared_target_clone", "Shared Target Clone", TowerCategory.DIRECT, 0, 50.0, 6.0, 10.0, 10, 0);
+        SemionTowerEntity sourceEntity = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+        sourceEntity.configure(new TestTower(sourceType, playerId, TeamId.RED, 1, GridPosition.from(context.absolutePos(BlockPos.ZERO))), null);
+        sourceEntity.setNoAi(true);
+        sourceEntity.setPos(origin);
+        context.getLevel().addFreshEntity(sourceEntity);
+
+        SemionTowerEntity cloneEntity = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+        cloneEntity.configure(new TestTower(cloneType, playerId, TeamId.RED, 1, GridPosition.from(context.absolutePos(BlockPos.ZERO.east(4)))), null);
+        cloneEntity.useAttackTargetFrom(sourceEntity);
+        cloneEntity.setPos(origin.add(4.0, 0.0, 0.0));
+        context.getLevel().addFreshEntity(cloneEntity);
+
+        SemionMonsterEntity sharedTarget = spawnRoleMonsterEntity(
+                context,
+                "shared-source-target",
+                Optional.empty(),
+                TeamId.RED,
+                1,
+                origin.add(6.0, 0.0, 0.0),
+                100.0,
+                List.of(SummonRole.RUSH)
+        );
+        SemionMonsterEntity closerOwnTarget = spawnRoleMonsterEntity(
+                context,
+                "closer-clone-target",
+                Optional.empty(),
+                TeamId.RED,
+                1,
+                origin.add(5.0, 0.0, 0.0),
+                100.0,
+                List.of(SummonRole.RUSH)
+        );
+        sharedTarget.setNoAi(true);
+        closerOwnTarget.setNoAi(true);
+        sourceEntity.recordCurrentAttackTarget(sharedTarget);
+
+        context.runAfterDelay(30, () -> {
+            if (!assertTrue(context, sharedTarget.getHealth() < 100.0F, "Clone should damage the source tower's shared target.")) {
+                return;
+            }
+            if (!assertEquals(context, 100.0F, closerOwnTarget.getHealth(), "Clone should not run its own target scan while a source target is shared.")) {
+                return;
+            }
+            if (!assertTrue(context, cloneEntity.currentAttackTarget() == sharedTarget, "Clone should expose the source-selected monster as its current target.")) {
                 return;
             }
             context.succeed();

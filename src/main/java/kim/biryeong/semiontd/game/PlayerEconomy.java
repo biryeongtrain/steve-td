@@ -1,6 +1,5 @@
 package kim.biryeong.semiontd.game;
 
-import kim.biryeong.semiontd.config.CurrencyType;
 import kim.biryeong.semiontd.config.EconomyConfig;
 
 public final class PlayerEconomy {
@@ -9,6 +8,7 @@ public final class PlayerEconomy {
     private long income;
     private long emeraldPerSec;
     private int emeraldProductionUpgradeCount;
+    private int towerLimitPurchaseCount;
 
     public PlayerEconomy(EconomyConfig config) {
         this.diamond = config.startingDiamond();
@@ -58,6 +58,10 @@ public final class PlayerEconomy {
 
     public int gasProductionUpgradeCount() {
         return emeraldProductionUpgradeCount;
+    }
+
+    public int towerLimitPurchaseCount() {
+        return towerLimitPurchaseCount;
     }
 
     public void addDiamond(long amount) {
@@ -133,6 +137,19 @@ public final class PlayerEconomy {
 
         emeraldPerSec += config.emeraldPerSecIncrease();
         emeraldProductionUpgradeCount++;
+        return true;
+    }
+
+    public boolean purchaseTowerLimit(EconomyConfig.TowerLimitConfig config) {
+        long diamondCost = config.purchaseDiamondCost(towerLimitPurchaseCount);
+        long emeraldCost = config.purchaseEmeraldCost(towerLimitPurchaseCount);
+        if (diamondCost < 0 || emeraldCost < 0 || diamond < diamondCost || emerald < emeraldCost) {
+            return false;
+        }
+
+        spendDiamond(diamondCost);
+        spendEmerald(emeraldCost);
+        towerLimitPurchaseCount++;
         return true;
     }
 }

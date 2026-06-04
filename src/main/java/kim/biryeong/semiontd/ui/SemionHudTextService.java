@@ -3,15 +3,11 @@ package kim.biryeong.semiontd.ui;
 import eu.pb4.placeholders.api.PlaceholderContext;
 import eu.pb4.placeholders.api.PlaceholderResult;
 import eu.pb4.placeholders.api.Placeholders;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import kim.biryeong.dantashader.displayhud.DisplayHud;
-import kim.biryeong.dantashader.displayhud.DisplayHud.HudAlignment;
-import kim.biryeong.dantashader.displayhud.DisplayHudManager;
-import kim.biryeong.dantashader.displayhud.TextDisplayHud;
 import kim.biryeong.semiontd.game.MatchMode;
 import kim.biryeong.semiontd.game.ParticipantSelectionPlan;
 import kim.biryeong.semiontd.game.ParticipantSelectionService;
@@ -29,122 +25,32 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
-public final class SemionDisplayHudService {
-    private static final String HUD_ID = "semion-td:status";
-    private static final float HUD_X = 1520.0F;
-    private static final float HUD_Y = 190.0F;
-    public static final float HUD_SCALE_MULTIPLIER = 3.0F;
-    private static final float HUD_SIZE = 34.0F * HUD_SCALE_MULTIPLIER;
-    private static final int LINE_WIDTH = Math.round(210 * HUD_SCALE_MULTIPLIER);
-    private static final int UPDATE_INTERVAL_TICKS = 10;
+public final class SemionHudTextService {
+    public static final int MAX_SIDEBAR_LINES = 14;
 
-    private int updateTicker;
+    private SemionHudTextService() {
+    }
 
-    public void tick(MinecraftServer server, SemionGame game, MatchMode matchMode) {
-        updateTicker++;
-        if (updateTicker % UPDATE_INTERVAL_TICKS != 0) {
-            return;
+    public static Component title() {
+        return miniMessage(SemionText.BRAND_MARKUP);
+    }
+
+    public static List<Component> sidebarLinesFor(ServerPlayer viewer, SemionGame game, MatchMode matchMode, MinecraftServer server) {
+        if (game.canConfigureRoster()) {
+            return components(lobbyMarkupFor(viewer, game, matchMode, server));
         }
-
-        refreshNow(server, game, matchMode);
-    }
-
-    public void refreshNow(MinecraftServer server, SemionGame game, MatchMode matchMode) {
-        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            if (game.canConfigureRoster()) {
-                update(player, lobbyTextFor(player, game, matchMode, server));
-            } else if (game.isActiveParticipant(player.getUUID()) || game.isMatchSpectator(player.getUUID())) {
-                update(player, matchTextFor(player, game, matchMode));
-                updateActionbar(player, game);
-            } else {
-                remove(player);
-            }
+        if (game.isActiveParticipant(viewer.getUUID()) || game.isMatchSpectator(viewer.getUUID())) {
+            return components(matchSidebarMarkupFor(viewer, game, matchMode));
         }
+        return List.of();
     }
 
-    public void clear(MinecraftServer server) {
-        updateTicker = 0;
-        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            remove(player);
-        }
+    public static String matchSidebarMarkupFor(ServerPlayer viewer, SemionGame game, MatchMode matchMode) {
+        return matchSidebarMarkupFor(viewer.getUUID(), viewer, viewingTeam(viewer, game), game, matchMode);
     }
 
-    public void remove(ServerPlayer player) {
-        DisplayHud.removeHud(player, HUD_ID);
-    }
-
-    public static void refreshPlayerHud(ServerPlayer player) {
-        if (player == null) {
-            return;
-        }
-        Map<String, DisplayHud> huds = DisplayHud.getHuds(player);
-        for (DisplayHud hud : huds.values()) {
-            hud.teleport();
-            hud.mount();
-        }
-    }
-
-    private void update(ServerPlayer player, String text) {
-        update(player, Component.literal(text));
-    }
-
-    private void update(ServerPlayer player, Component text) {
-        TextDisplayHud hud = hud(player);
-        hud.setText(text);
-    }
-
-    private void updateActionbar(ServerPlayer player, SemionGame game) {
-        actionbarTextFor(player.getUUID(), game).ifPresent(component -> player.displayClientMessage(component, true));
-    }
-
-    private TextDisplayHud hud(ServerPlayer player) {
-        DisplayHud existing = DisplayHud.getHud(player, HUD_ID);
-        if (existing instanceof TextDisplayHud textHud) {
-            return textHud;
-        }
-        if (existing != null) {
-            existing.remove();
-        }
-
-        DisplayHudManager.configure(1.0F, 1.0F, 1920.0F, 1080.0F, 10_000);
-        TextDisplayHud hud = new TextDisplayHud();
-        hud.setLineWidth(LINE_WIDTH);
-        hud.setShadowToggle(true);
-        hud.setScale(HUD_SIZE, HUD_SIZE, 1.0F);
-        hud.setViewRange(1000.0F);
-        hud.setAlignment(HudAlignment.UNALIGNED);
-        hud.setLocation(HUD_X, HUD_Y, 0.0F);
-        hud.spawn(player, HUD_ID);
-        return hud;
-    }
-
-    private static Component lobbyTextFor(ServerPlayer viewer, SemionGame game, MatchMode matchMode, MinecraftServer server) {
-        boolean ready = game.isReady(viewer.getUUID());
-        String readyLabel = ready ? "<green><bold>준비 완료</bold></green>" : "<red><bold>미준비</bold></red>";
-        int onlinePlayers = server.getPlayerList().getPlayerCount();
-        String startableLabel = startableText(server, game, matchMode);
-        String selectedJob = selectedJobText(viewer, null);
-        return miniMessage("""
-                %s
-                <gray>상태</gray> <yellow>대기 중</yellow>
-                <gray>게임 모드</gray> <aqua>%s</aqua>
-                <gray>선택 직업</gray> <yellow>%s</yellow>
-                <gray>준비 인원</gray> <green>%d</green><dark_gray>/</dark_gray><white>%d</white>
-                <gray>준비 상태</gray> %s
-                <gray>시작 가능</gray> %s
-                """.formatted(SemionText.BRAND_MARKUP, matchModeLabel(matchMode), selectedJob, game.readyPlayerCount(), onlinePlayers, readyLabel, startableLabel));
-    }
-
-    private static Component miniMessage(String text) {
-        return SemionText.mini(text);
-    }
-
-    private static Component matchTextFor(ServerPlayer viewer, SemionGame game, MatchMode matchMode) {
-        return miniMessage(matchMarkupFor(viewer, viewingTeam(viewer, game), game, matchMode));
-    }
-
-    public static String matchMarkupFor(UUID viewerId, Optional<SemionTeam> viewingTeam, SemionGame game, MatchMode matchMode) {
-        return matchMarkupFor(viewerId, null, viewingTeam, game, matchMode);
+    public static String matchSidebarMarkupFor(UUID viewerId, Optional<SemionTeam> viewingTeam, SemionGame game, MatchMode matchMode) {
+        return matchSidebarMarkupFor(viewerId, null, viewingTeam, game, matchMode);
     }
 
     public static Optional<Component> actionbarTextFor(UUID viewerId, SemionGame game) {
@@ -170,11 +76,21 @@ public final class SemionDisplayHudService {
                 + " <dark_gray>|</dark_gray> <gray>▣ 타워</gray> " + towerLimitText(currentTowers, maxTowers);
     }
 
-    private static String matchMarkupFor(ServerPlayer viewer, Optional<SemionTeam> viewingTeam, SemionGame game, MatchMode matchMode) {
-        return matchMarkupFor(viewer.getUUID(), viewer, viewingTeam, game, matchMode);
+    private static String lobbyMarkupFor(ServerPlayer viewer, SemionGame game, MatchMode matchMode, MinecraftServer server) {
+        boolean ready = game.isReady(viewer.getUUID());
+        String readyLabel = ready ? "<green><bold>준비 완료</bold></green>" : "<red><bold>미준비</bold></red>";
+        int onlinePlayers = server.getPlayerList().getPlayerCount();
+        String startableLabel = startableText(server, game, matchMode);
+        String selectedJob = selectedJobText(viewer, null);
+        return "<gray>상태</gray> <yellow>대기 중</yellow>\n"
+                + "<gray>게임 모드</gray> <aqua>" + matchModeLabel(matchMode) + "</aqua>\n"
+                + "<gray>선택 직업</gray> <yellow>" + selectedJob + "</yellow>\n"
+                + "<gray>준비 인원</gray> <green>" + game.readyPlayerCount() + "</green><dark_gray>/</dark_gray><white>" + onlinePlayers + "</white>\n"
+                + "<gray>준비 상태</gray> " + readyLabel + "\n"
+                + "<gray>시작 가능</gray> " + startableLabel;
     }
 
-    private static String matchMarkupFor(UUID viewerId, ServerPlayer viewer, Optional<SemionTeam> viewingTeam, SemionGame game, MatchMode matchMode) {
+    private static String matchSidebarMarkupFor(UUID viewerId, ServerPlayer viewer, Optional<SemionTeam> viewingTeam, SemionGame game, MatchMode matchMode) {
         StringBuilder text = new StringBuilder();
         appendMatchHeader(text, game, matchMode);
 
@@ -191,8 +107,25 @@ public final class SemionDisplayHudService {
         return text.toString();
     }
 
+    private static List<Component> components(String markup) {
+        String[] lines = markup.split("\\R");
+        List<Component> components = new ArrayList<>(Math.min(MAX_SIDEBAR_LINES, lines.length));
+        for (String line : lines) {
+            if (components.size() >= MAX_SIDEBAR_LINES) {
+                break;
+            }
+            if (!line.isBlank()) {
+                components.add(miniMessage(line));
+            }
+        }
+        return components;
+    }
+
+    private static Component miniMessage(String text) {
+        return SemionText.mini(text);
+    }
+
     private static void appendMatchHeader(StringBuilder text, SemionGame game, MatchMode matchMode) {
-        text.append(SemionText.BRAND_MARKUP).append('\n');
         text.append("<gray>상태</gray> <yellow>").append(phaseLabel(game.phase())).append("</yellow>\n");
         text.append("<gray>게임 모드</gray> <aqua>").append(matchModeLabel(matchMode)).append("</aqua>\n");
         text.append("<gray>라운드</gray> <gold>").append(game.currentRound()).append("</gold>");
@@ -220,6 +153,7 @@ public final class SemionDisplayHudService {
                     .append('\n');
         }
     }
+
 
     private static void appendSpectatorHud(StringBuilder text, Optional<SemionTeam> viewingTeam) {
         text.append("<gray>준비 상태</gray> <yellow>관전 중</yellow>\n");
@@ -311,7 +245,7 @@ public final class SemionDisplayHudService {
                 .orElse("<red><bold>대기</bold></red>");
     }
 
-    private static java.util.Optional<ParticipantSelectionPlan> readyPlan(
+    private static Optional<ParticipantSelectionPlan> readyPlan(
             MinecraftServer server,
             SemionGame game,
             MatchMode matchMode

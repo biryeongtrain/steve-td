@@ -30,7 +30,22 @@ final class LeaderTargetingStateTest {
         assertEquals(Optional.of(TeamId.BLUE), state.targetTeamId());
         assertEquals(5, state.lastUsedRound());
         assertEquals(3, state.cooldownRemainingRounds());
+        assertEquals(2, state.activeTargetRemainingRounds());
         assertFalse(state.canUse());
+    }
+
+    @Test
+    void targetExpiresAfterTwoRoundTicks() {
+        LeaderTargetingState state = new LeaderTargetingState(UUID.nameUUIDFromBytes("leader-state-duration".getBytes()));
+        state.use(TeamId.BLUE, 1, 3);
+
+        state.tickRoundCooldown();
+        assertEquals(Optional.of(TeamId.BLUE), state.targetTeamId());
+        assertEquals(1, state.activeTargetRemainingRounds());
+
+        state.tickRoundCooldown();
+        assertEquals(Optional.empty(), state.targetTeamId());
+        assertEquals(0, state.activeTargetRemainingRounds());
     }
 
     @Test
@@ -44,7 +59,7 @@ final class LeaderTargetingStateTest {
 
         assertEquals(0, state.cooldownRemainingRounds());
         assertTrue(state.canUse());
-        assertEquals(Optional.of(TeamId.GREEN), state.targetTeamId());
+        assertEquals(Optional.empty(), state.targetTeamId());
     }
 
     @Test
@@ -66,5 +81,6 @@ final class LeaderTargetingStateTest {
 
         assertEquals(Optional.empty(), state.targetTeamId());
         assertEquals(3, state.cooldownRemainingRounds());
+        assertEquals(0, state.activeTargetRemainingRounds());
     }
 }

@@ -119,16 +119,37 @@ public final class EconomyService {
                 : player.job()
                         .map(job -> Math.max(0, job.modifyKillMineralReward(jobContext, monster, monster.mineralReward())))
                         .orElse(monster.mineralReward());
-        player.economy().addDiamond(reward);
+        long finalReward = adjustedKillReward(player, monster, reward);
+        player.economy().addDiamond(finalReward);
         if (player.teamId() == monster.targetTeam() && player.laneId() == monster.targetLaneId()) {
-            player.matchStats().recordOwnLaneMonsterKill(reward, monster.attributionThreat());
+            player.matchStats().recordOwnLaneMonsterKill(finalReward, monster.attributionThreat());
         } else {
-            player.matchStats().recordAssistMonsterKill(reward, monster.attributionThreat());
+            player.matchStats().recordAssistMonsterKill(finalReward, monster.attributionThreat());
         }
         if (jobContext != null) {
-            player.job().ifPresent(job -> job.onMonsterKilled(jobContext, monster, reward));
+            player.job().ifPresent(job -> job.onMonsterKilled(jobContext, monster, finalReward));
         }
         monster.markRewardGranted();
+    }
+
+    private long adjustedKillReward(SemionPlayer player, Monster monster, long reward) {
+        long boundedReward = Math.max(0, reward);
+        if (boundedReward <= 0) {
+            return boundedReward;
+        }
+        EconomyConfig.KillRewardConfig killReward = economyConfig.killReward();
+        if (!killReward.crossLaneWaveReductionEnabled()) {
+            return boundedReward;
+        }
+
+        boolean sameTeamCrossLaneKill = player.teamId() == monster.targetTeam()
+                && player.laneId() != monster.targetLaneId();
+        boolean eligibleMonster = monster.ownerPlayer().isEmpty() || killReward.applyToIncomeUnits();
+        boolean nearFinalDefense = monster.laneProgress() >= killReward.finalDefenseProgressThreshold();
+        if (sameTeamCrossLaneKill && eligibleMonster && nearFinalDefense) {
+            return Math.max(1, Math.round(boundedReward * killReward.crossLaneFinalDefenseWaveMultiplier()));
+        }
+        return boundedReward;
     }
 
     private boolean isEconomyEligible(SemionPlayer player, Map<TeamId, SemionTeam> teams) {

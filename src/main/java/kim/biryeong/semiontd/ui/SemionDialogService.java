@@ -190,6 +190,10 @@ public final class SemionDialogService {
 
         PlayerEconomy economy = semionPlayer.economy();
         long nextGasUpgradeCost = nextGasUpgradeCost(game, economy);
+        long nextTowerLimitDiamondCost = game.nextTowerLimitPurchaseDiamondCost(player.getUUID());
+        long nextTowerLimitEmeraldCost = game.nextTowerLimitPurchaseEmeraldCost(player.getUUID());
+        int towerCount = game.towerCount(player.getUUID());
+        int towerLimit = game.towerLimitForPlayer(player.getUUID());
         StringBuilder body = new StringBuilder();
         body.append("<gradient:#facc15:#22d3ee><bold>타워 관리</bold></gradient>\n");
         body.append("<gray>라인</gray> <white>").append(semionPlayer.teamId()).append(" #").append(semionPlayer.laneId()).append("</white>\n");
@@ -198,9 +202,15 @@ public final class SemionDialogService {
         body.append("<gray>에메랄드/초</gray> <green>").append(economy.emeraldPerSec()).append("</green>");
         body.append(" <dark_gray>|</dark_gray> <gray>다음 인컴 업글</gray> <gold>")
                 .append(nextGasUpgradeCost >= 0 ? nextGasUpgradeCost : "최대")
+                .append("</gold>\n");
+        body.append("<gray>타워 수</gray> <yellow>").append(towerCount).append("/").append(towerLimit).append("</yellow>");
+        body.append(" <dark_gray>|</dark_gray> <gray>다음 타워 수 구매</gray> <gold>")
+                .append(formatTowerLimitPurchaseCost(nextTowerLimitDiamondCost, nextTowerLimitEmeraldCost))
                 .append("</gold>\n\n");
         body.append("<gray>보조 기능</gray>\n");
         body.append(commandLink("인컴 업그레이드", "/semiontd emeraldup", "green"));
+        body.append("  ");
+        body.append(commandLink("타워 수 +" + game.economyConfig().towerLimit().purchaseIncreaseAmount(), "/semiontd tower limitup", "yellow"));
         body.append("  ");
         body.append(commandLink("상태 보기", "/semiontd ui", "aqua"));
         body.append("\n\n<dark_gray>────────────────────────</dark_gray>\n\n");
@@ -1326,6 +1336,13 @@ public final class SemionDialogService {
             return -1;
         }
         return config.upgradeCost(economy.emeraldProductionUpgradeCount());
+    }
+
+    private static String formatTowerLimitPurchaseCost(long diamondCost, long emeraldCost) {
+        if (diamondCost < 0 || emeraldCost < 0) {
+            return "최대";
+        }
+        return diamondCost + " 다이아 + " + emeraldCost + " 에메랄드";
     }
 
     private static String teamList(java.util.Set<TeamId> teams) {

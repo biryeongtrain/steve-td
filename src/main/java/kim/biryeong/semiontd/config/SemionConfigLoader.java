@@ -33,7 +33,8 @@ public final class SemionConfigLoader {
                     RatingConfig.defaultConfig(),
                     SemionPersistenceConfig.defaultConfig(),
                     TowerBalanceConfig.defaultConfig(),
-                    SummonConfig.defaultConfig()
+                    SummonConfig.defaultConfig(),
+                    LeaderTargetingConfig.defaultConfig()
             );
         }
 
@@ -83,7 +84,13 @@ public final class SemionConfigLoader {
                 SummonConfig.defaultConfig(),
                 logger
         );
-        return new LoadedConfigs(economy, waves, map, progression, rating, persistence, towerBalance, summons);
+        LeaderTargetingConfig leaderTargeting = loadOrCreate(
+                configDir.resolve("leader_targeting.json"),
+                LeaderTargetingConfig.defaultConfig(),
+                LeaderTargetingConfig.class,
+                logger
+        );
+        return new LoadedConfigs(economy, waves, map, progression, rating, persistence, towerBalance, summons, leaderTargeting);
     }
 
     private static <T> T loadOrCreate(Path path, T defaults, Class<T> type, Logger logger) {
@@ -123,7 +130,28 @@ public final class SemionConfigLoader {
             EconomyConfig loaded = GSON.fromJson(json, EconomyConfig.class);
             EconomyConfig value = loaded == null ? defaults : loaded;
             boolean towerLimitMissing = !hasObjectProperty(json, "towerLimit");
-            if (towerLimitMissing) {
+            boolean towerLimitPurchaseMissing = !towerLimitMissing
+                    && !hasAllNestedObjectProperties(
+                    json,
+                    "towerLimit",
+                    "initialPurchaseDiamondCost",
+                    "purchaseDiamondCostIncrease",
+                    "initialPurchaseEmeraldCost",
+                    "purchaseEmeraldCostIncrease"
+            );
+            boolean killRewardMissing = !hasObjectProperty(json, "killReward");
+            if (towerLimitPurchaseMissing) {
+                value = new EconomyConfig(
+                        value.startingDiamond(),
+                        value.startingEmerald(),
+                        value.startingIncome(),
+                        value.emeraldCap(),
+                        value.emeraldProduction(),
+                        value.towerLimit().withDefaultPurchaseSettings(),
+                        value.killReward()
+                );
+            }
+            if (towerLimitMissing || towerLimitPurchaseMissing || killRewardMissing) {
                 write(path, value, logger);
             }
             return value;
@@ -198,6 +226,41 @@ public final class SemionConfigLoader {
         }
     }
 
+    private static boolean hasNestedObjectProperty(String json, String parentKey, String childKey) {
+        try {
+            if (!(JsonParser.parseString(json) instanceof JsonObject object)) {
+                return false;
+            }
+            if (!object.has(parentKey) || !object.get(parentKey).isJsonObject()) {
+                return false;
+            }
+            JsonObject parent = object.getAsJsonObject(parentKey);
+            return parent.has(childKey) && !parent.get(childKey).isJsonNull();
+        } catch (JsonParseException exception) {
+            return false;
+        }
+    }
+
+    private static boolean hasAllNestedObjectProperties(String json, String parentKey, String... childKeys) {
+        try {
+            if (!(JsonParser.parseString(json) instanceof JsonObject object)) {
+                return false;
+            }
+            if (!object.has(parentKey) || !object.get(parentKey).isJsonObject()) {
+                return false;
+            }
+            JsonObject parent = object.getAsJsonObject(parentKey);
+            for (String childKey : childKeys) {
+                if (!parent.has(childKey) || parent.get(childKey).isJsonNull()) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (JsonParseException exception) {
+            return false;
+        }
+    }
+
     public record LoadedConfigs(
             EconomyConfig economy,
             WaveConfig waves,
@@ -206,7 +269,8 @@ public final class SemionConfigLoader {
             RatingConfig rating,
             SemionPersistenceConfig persistence,
             TowerBalanceConfig towerBalance,
-            SummonConfig summons
+            SummonConfig summons,
+            LeaderTargetingConfig leaderTargeting
     ) {
     }
 }

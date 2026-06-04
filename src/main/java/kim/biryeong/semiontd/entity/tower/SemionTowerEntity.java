@@ -66,6 +66,8 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     private final TimedEffectSet timedEffects = new TimedEffectSet();
     private LivingEntityHolder<SemionTowerEntity> holder;
     private EntityAttachment holderAttachment;
+    private SemionTowerEntity attackTargetSource;
+    private SemionMonsterEntity currentAttackTarget;
 
     public SemionTowerEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
@@ -111,12 +113,36 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         playAnimation(SemionAnimationState.IDLE);
     }
 
+
     public int laneId() {
         return laneId;
     }
 
     public Tower runtimeTower() {
         return runtimeTower;
+    }
+
+    public void useAttackTargetFrom(SemionTowerEntity source) {
+        attackTargetSource = source == this ? null : source;
+    }
+
+    public boolean usesSharedAttackTarget() {
+        return attackTargetSource != null;
+    }
+
+    public SemionMonsterEntity sharedAttackTarget() {
+        if (attackTargetSource == null || attackTargetSource.isRemoved() || !attackTargetSource.isAlive()) {
+            return null;
+        }
+        return attackTargetSource.currentAttackTarget();
+    }
+
+    public SemionMonsterEntity currentAttackTarget() {
+        return isValidAttackTarget(currentAttackTarget) ? currentAttackTarget : null;
+    }
+
+    public void recordCurrentAttackTarget(SemionMonsterEntity target) {
+        currentAttackTarget = isValidAttackTarget(target) ? target : null;
     }
 
     public UUID ownerPlayer() {
@@ -130,6 +156,14 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     @Override
     public boolean defendsLane(int targetLaneId) {
         return finalDefense || laneId == targetLaneId;
+    }
+
+    public boolean isValidAttackTarget(SemionMonsterEntity target) {
+        return target != null
+                && target.isAlive()
+                && !target.isRemoved()
+                && target.runtimeMonster() != null
+                && defendsLane(target.runtimeMonster().targetLaneId());
     }
 
     @Override

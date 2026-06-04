@@ -62,4 +62,124 @@ final class SemionConfigLoaderTest {
         assertEquals(25, configs.rating().leaderboardLimit());
         assertEquals(false, configs.rating().contributionWeightingEnabled());
     }
+
+    @Test
+    void loadBackfillsTowerLimitPurchaseDefaults() throws Exception {
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("economy.json"), """
+                {
+                  "startingDiamond": 200,
+                  "startingEmerald": 50,
+                  "startingIncome": 0,
+                  "emeraldCap": {
+                    "base": 1500,
+                    "roundOffsetMultiplier": 6,
+                    "roundOffsetStep": 20,
+                    "flatBonus": 30
+                  },
+                  "emeraldProduction": {
+                    "initialEmeraldPerSec": 1,
+                    "maxUpgradeCount": 20,
+                    "initialUpgradeCost": 50,
+                    "upgradeCostIncrease": 25,
+                    "emeraldPerSecIncrease": 1,
+                    "upgradeCurrency": "DIAMOND"
+                  },
+                  "towerLimit": {
+                    "initialLimit": 5,
+                    "increaseStartRound": 5,
+                    "increaseEveryRounds": 5,
+                    "increaseAmount": 3,
+                    "maxLimit": 11
+                  }
+                }
+                """);
+
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+
+        assertEquals(EconomyConfig.TowerLimitConfig.defaultConfig().initialPurchaseDiamondCost(), configs.economy().towerLimit().initialPurchaseDiamondCost());
+        assertEquals(EconomyConfig.TowerLimitConfig.defaultConfig().initialPurchaseEmeraldCost(), configs.economy().towerLimit().initialPurchaseEmeraldCost());
+        assertEquals(EconomyConfig.KillRewardConfig.defaultConfig(), configs.economy().killReward());
+        String written = Files.readString(tempDir.resolve("economy.json"));
+        assertTrue(written.contains("initialPurchaseDiamondCost"));
+        assertTrue(written.contains("initialPurchaseEmeraldCost"));
+        assertTrue(written.contains("killReward"));
+    }
+
+    @Test
+    void loadReadsKillRewardConfigOverrides() throws Exception {
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("economy.json"), """
+                {
+                  "startingDiamond": 200,
+                  "startingEmerald": 50,
+                  "startingIncome": 0,
+                  "emeraldCap": {
+                    "base": 1500,
+                    "roundOffsetMultiplier": 6,
+                    "roundOffsetStep": 20,
+                    "flatBonus": 30
+                  },
+                  "emeraldProduction": {
+                    "initialEmeraldPerSec": 1,
+                    "maxUpgradeCount": 20,
+                    "initialUpgradeCost": 50,
+                    "upgradeCostIncrease": 25,
+                    "emeraldPerSecIncrease": 1,
+                    "upgradeCurrency": "DIAMOND"
+                  },
+                  "towerLimit": {
+                    "initialLimit": 5,
+                    "increaseStartRound": 5,
+                    "increaseEveryRounds": 5,
+                    "increaseAmount": 3,
+                    "maxLimit": 11,
+                    "purchaseIncreaseAmount": 1,
+                    "maxPurchaseCount": 20,
+                    "initialPurchaseDiamondCost": 100,
+                    "purchaseDiamondCostIncrease": 50,
+                    "initialPurchaseEmeraldCost": 25,
+                    "purchaseEmeraldCostIncrease": 10
+                  },
+                  "killReward": {
+                    "crossLaneWaveReductionEnabled": false,
+                    "crossLaneFinalDefenseWaveMultiplier": 0.5,
+                    "finalDefenseProgressThreshold": 0.95,
+                    "applyToIncomeUnits": true
+                  }
+                }
+                """);
+
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+
+        assertEquals(false, configs.economy().killReward().crossLaneWaveReductionEnabled());
+        assertEquals(0.5, configs.economy().killReward().crossLaneFinalDefenseWaveMultiplier(), 0.0001);
+        assertEquals(0.95, configs.economy().killReward().finalDefenseProgressThreshold(), 0.0001);
+        assertEquals(true, configs.economy().killReward().applyToIncomeUnits());
+    }
+
+    @Test
+    void loadCreatesLeaderTargetingConfigFileWithDefaults() {
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+
+        assertTrue(Files.exists(tempDir.resolve("leader_targeting.json")));
+        assertEquals(2, configs.leaderTargeting().maxTargetingTeamsPerTarget());
+        assertEquals(2, configs.leaderTargeting().activeTargetRounds());
+    }
+
+    @Test
+    void loadReadsLeaderTargetingConfigOverrides() throws Exception {
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("leader_targeting.json"), """
+                {
+                  "maxTargetingTeamsPerTarget": 1,
+                  "activeTargetRounds": 4
+                }
+                """);
+
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+
+        assertEquals(1, configs.leaderTargeting().maxTargetingTeamsPerTarget());
+        assertEquals(4, configs.leaderTargeting().activeTargetRounds());
+    }
 }

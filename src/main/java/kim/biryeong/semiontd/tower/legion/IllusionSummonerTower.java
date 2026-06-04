@@ -9,6 +9,7 @@ import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
+import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.SummonerTower;
 import kim.biryeong.semiontd.tower.Tower;
@@ -133,12 +134,25 @@ public abstract class IllusionSummonerTower extends SummonerTower {
 
         SemionTowerEntity entity = new SemionTowerEntity(SemionEntityTypes.TOWER, lane.arenaWorld());
         entity.configure(cloneTower, lane.laneLayout());
+        sourceTowerEntity(lane, sourceTower).ifPresent(entity::useAttackTargetFrom);
         entity.setPos(spawnPosition.x, spawnPosition.y, spawnPosition.z);
 
         if (lane.arenaWorld().addFreshEntity(entity)) {
             clones.add(new CloneInstance(entity.getId(), profile.durationTicks()));
             onCloneSpawned(lane, entity, cloneTower);
         }
+    }
+
+    private java.util.Optional<SemionTowerEntity> sourceTowerEntity(PlayerLane lane, Tower sourceTower) {
+        if (!(sourceTower instanceof EntityBackedTower entityBackedTower)) {
+            return java.util.Optional.empty();
+        }
+        return entityBackedTower.entityId()
+                .stream()
+                .mapToObj(lane.arenaWorld()::getEntity)
+                .filter(SemionTowerEntity.class::isInstance)
+                .map(SemionTowerEntity.class::cast)
+                .findFirst();
     }
 
     private Tower createCloneTower(Tower sourceTower, IllusionProfile profile, GridPosition clonePosition) {

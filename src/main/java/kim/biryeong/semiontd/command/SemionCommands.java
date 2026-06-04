@@ -122,6 +122,8 @@ public final class SemionCommands {
                                 .executes(context -> listProductionTowers(context.getSource(), gameManager)))
                         .then(literal("ui")
                                 .executes(context -> towerDialog(context.getSource(), gameManager)))
+                        .then(literal("limitup")
+                                .executes(context -> towerLimitUp(context.getSource(), gameManager)))
                         .then(literal("build")
                                 .then(argument("id", StringArgumentType.word())
                                         .executes(context -> buildProductionTower(
@@ -973,6 +975,29 @@ public final class SemionCommands {
         return 1;
     }
 
+    private static int towerLimitUp(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
+        SemionGame game = gameManager.activeGame().orElse(null);
+        if (game == null) {
+            failure(source, "진행 중인 게임이 없습니다.");
+            return 0;
+        }
+
+        UUID playerId = source.getPlayerOrException().getUUID();
+        boolean upgraded = game.purchaseTowerLimit(playerId);
+        if (!upgraded) {
+            failure(source, "타워 설치 수 증가 구매에 실패했습니다.");
+            return 0;
+        }
+
+        PlayerEconomy economy = game.players().get(playerId).economy();
+        long nextDiamondCost = game.nextTowerLimitPurchaseDiamondCost(playerId);
+        long nextEmeraldCost = game.nextTowerLimitPurchaseEmeraldCost(playerId);
+        success(source, "타워 설치 수를 증가시켰습니다. 현재제한=" + game.towerLimitForPlayer(playerId)
+                + ", 구매횟수=" + economy.towerLimitPurchaseCount()
+                + ", 다음비용=" + formatTowerLimitPurchaseCost(nextDiamondCost, nextEmeraldCost));
+        return 1;
+    }
+
     private static int placeTestTower(CommandSourceStack source, SemionGameManager gameManager)
             throws CommandSyntaxException {
         SemionGame game = gameManager.activeGame().orElse(null);
@@ -1606,6 +1631,13 @@ public final class SemionCommands {
             return -1;
         }
         return gasProduction.upgradeCost(economy.gasProductionUpgradeCount());
+    }
+
+    private static String formatTowerLimitPurchaseCost(long diamondCost, long emeraldCost) {
+        if (diamondCost < 0 || emeraldCost < 0) {
+            return "최대";
+        }
+        return diamondCost + " 다이아 + " + emeraldCost + " 에메랄드";
     }
 
     private static String placementFailureMessage(TowerPlacementResult result) {

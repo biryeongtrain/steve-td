@@ -42,6 +42,7 @@ public final class TowerAttackMonsterGoal extends Goal {
         }
 
         SemionMonsterEntity target = findTarget();
+        tower.recordCurrentAttackTarget(target);
         if (target == null) {
             tower.getNavigation().stop();
             tower.playAnimation(SemionAnimationState.IDLE);
@@ -76,6 +77,14 @@ public final class TowerAttackMonsterGoal extends Goal {
     }
 
     private SemionMonsterEntity findTarget() {
+        SemionMonsterEntity sharedTarget = tower.sharedAttackTarget();
+        if (sharedTarget != null) {
+            return sharedTarget;
+        }
+        if (tower.usesSharedAttackTarget()) {
+            return null;
+        }
+
         List<SemionMonsterEntity> targets = targetCandidates();
         if (targets.isEmpty()) {
             return null;
@@ -98,9 +107,7 @@ public final class TowerAttackMonsterGoal extends Goal {
                         tower,
                         searchBox,
                         entity -> entity instanceof SemionMonsterEntity monster
-                                && monster.isAlive()
-                                && monster.runtimeMonster() != null
-                                && tower.defendsLane(monster.runtimeMonster().targetLaneId())
+                                && tower.isValidAttackTarget(monster)
                 ).stream()
                 .filter(SemionMonsterEntity.class::isInstance)
                 .map(SemionMonsterEntity.class::cast)

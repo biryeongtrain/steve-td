@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import kim.biryeong.semiontd.buildguide.BuildGuideService;
 import kim.biryeong.semiontd.config.EconomyConfig;
+import kim.biryeong.semiontd.config.LeaderTargetingConfig;
 import kim.biryeong.semiontd.config.RoundWaveConfig;
 import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.entity.monster.Monster;
@@ -29,9 +30,9 @@ import kim.biryeong.semiontd.summon.SummonResultType;
 import kim.biryeong.semiontd.summon.SummonShop;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.Tower;
-import kim.biryeong.semiontd.ui.SemionDisplayHudService;
 import kim.biryeong.semiontd.ui.SemionHotbarService;
 import kim.biryeong.semiontd.ui.SemionLaneIndicatorService;
+import kim.biryeong.semiontd.ui.SemionSidebarHudService;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.resources.ResourceLocation;
@@ -48,6 +49,7 @@ public final class SemionGame {
 
     private EconomyConfig economyConfig;
     private WaveConfig waveConfig;
+    private LeaderTargetingConfig leaderTargetingConfig;
     private final GameArena arena;
     private final EconomyService economyService;
     private final SummonShop summonShop;
@@ -77,8 +79,28 @@ public final class SemionGame {
     }
 
     public SemionGame(EconomyConfig economyConfig, WaveConfig waveConfig, GameArena arena, BuildGuideService buildGuideService) {
+        this(economyConfig, waveConfig, LeaderTargetingConfig.defaultConfig(), arena, buildGuideService);
+    }
+
+    public SemionGame(
+            EconomyConfig economyConfig,
+            WaveConfig waveConfig,
+            LeaderTargetingConfig leaderTargetingConfig,
+            GameArena arena
+    ) {
+        this(economyConfig, waveConfig, leaderTargetingConfig, arena, null);
+    }
+
+    public SemionGame(
+            EconomyConfig economyConfig,
+            WaveConfig waveConfig,
+            LeaderTargetingConfig leaderTargetingConfig,
+            GameArena arena,
+            BuildGuideService buildGuideService
+    ) {
         this.economyConfig = economyConfig;
         this.waveConfig = waveConfig;
+        this.leaderTargetingConfig = leaderTargetingConfig == null ? LeaderTargetingConfig.defaultConfig() : leaderTargetingConfig;
         this.arena = arena;
         this.economyService = new EconomyService(economyConfig, this);
         this.summonShop = new SummonShop();
@@ -133,8 +155,13 @@ public final class SemionGame {
     }
 
     public void applyConfigs(EconomyConfig economyConfig, WaveConfig waveConfig) {
+        applyConfigs(economyConfig, waveConfig, leaderTargetingConfig);
+    }
+
+    public void applyConfigs(EconomyConfig economyConfig, WaveConfig waveConfig, LeaderTargetingConfig leaderTargetingConfig) {
         this.economyConfig = economyConfig;
         this.waveConfig = waveConfig;
+        this.leaderTargetingConfig = leaderTargetingConfig == null ? LeaderTargetingConfig.defaultConfig() : leaderTargetingConfig;
         this.economyService.configure(economyConfig);
     }
 
@@ -157,6 +184,35 @@ public final class SemionGame {
         return economyConfig.towerLimitForRound(currentRound);
     }
 
+    public int towerLimitForPlayer(UUID playerId) {
+        SemionPlayer player = players.get(playerId);
+        int purchasedBonus = player == null
+                ? 0
+                : economyConfig.towerLimit().purchasedBonus(player.economy().towerLimitPurchaseCount());
+        return towerLimitForCurrentRound() + purchasedBonus;
+    }
+
+    public long nextTowerLimitPurchaseDiamondCost(UUID playerId) {
+        SemionPlayer player = players.get(playerId);
+        if (player == null) {
+            return -1;
+        }
+        return economyConfig.towerLimit().purchaseDiamondCost(player.economy().towerLimitPurchaseCount());
+    }
+
+    public long nextTowerLimitPurchaseEmeraldCost(UUID playerId) {
+        SemionPlayer player = players.get(playerId);
+        if (player == null) {
+            return -1;
+        }
+        return economyConfig.towerLimit().purchaseEmeraldCost(player.economy().towerLimitPurchaseCount());
+    }
+
+    public boolean purchaseTowerLimit(UUID playerId) {
+        SemionPlayer player = players.get(playerId);
+        return player != null && player.economy().purchaseTowerLimit(economyConfig.towerLimit());
+    }
+
     public int towerCount(UUID playerId) {
         return playerLane(playerId)
                 .map(lane -> (int) lane.towers().stream()
@@ -166,7 +222,7 @@ public final class SemionGame {
     }
 
     public boolean canPlaceMoreTowers(UUID playerId) {
-        return towerCount(playerId) < towerLimitForCurrentRound();
+        return towerCount(playerId) < towerLimitForPlayer(playerId);
     }
 
     public boolean rosterLocked() {
@@ -799,8 +855,26 @@ public final class SemionGame {
         if (!leaderTargeting.canUse()) {
             return LeaderTargetResult.COOLDOWN_ACTIVE;
         }
-        leaderTargeting.use(targetTeamId, currentRound, LEADER_TARGET_COOLDOWN_ROUNDS);
+        if (activeLeaderTargetCount(targetTeamId, senderTeam.id()) >= leaderTargetingConfig.maxTargetingTeamsPerTarget()) {
+            return LeaderTargetResult.TARGET_TEAM_ALREADY_DESIGNATED;
+        }
+        leaderTargeting.use(
+                targetTeamId,
+                currentRound,
+                LEADER_TARGET_COOLDOWN_ROUNDS,
+                leaderTargetingConfig.activeTargetRounds()
+        );
         return LeaderTargetResult.SUCCESS;
+    }
+
+    private long activeLeaderTargetCount(TeamId targetTeamId, TeamId excludingSenderTeamId) {
+        return livingTeams().stream()
+                .filter(team -> team.id() != excludingSenderTeamId)
+                .map(SemionTeam::leaderTargeting)
+                .flatMap(Optional::stream)
+                .flatMap(state -> state.targetTeamId().stream())
+                .filter(targetTeamId::equals)
+                .count();
     }
 
     void tickLeaderCooldowns() {
@@ -899,7 +973,7 @@ public final class SemionGame {
             Vec3 position = StartPlacement.activePlayerSpawn(teamArena.layout(), activePlayer.laneId());
             player.setGameMode(GameType.ADVENTURE);
             player.teleport(PlayerTeleportTransitions.preservingFacing(teamArena.world(), position, Vec3.ZERO, player));
-            SemionDisplayHudService.refreshPlayerHud(player);
+            SemionSidebarHudService.refreshPlayerHud(player);
             SemionHotbarService.grantMatchTools(player);
             if (teams.get(activePlayer.teamId()).hasLeader(activePlayer.uuid())) {
                 SemionHotbarService.grantLeaderTool(player);
@@ -942,7 +1016,7 @@ public final class SemionGame {
             Vec3 position = StartPlacement.spectatorSpawn(teamArena.layout(), spectatorIndex);
             player.setGameMode(GameType.SPECTATOR);
             player.teleport(PlayerTeleportTransitions.preservingFacing(teamArena.world(), position, Vec3.ZERO, player));
-            SemionDisplayHudService.refreshPlayerHud(player);
+            SemionSidebarHudService.refreshPlayerHud(player);
             SemionHotbarService.clearMatchTools(player);
         });
     }
@@ -952,7 +1026,7 @@ public final class SemionGame {
             Vec3 position = StartPlacement.spectatorSpawn(teamArena.layout(), spectatorIndex);
             player.setGameMode(GameType.SPECTATOR);
             player.teleport(PlayerTeleportTransitions.preservingFacing(teamArena.world(), position, Vec3.ZERO, player));
-            SemionDisplayHudService.refreshPlayerHud(player);
+            SemionSidebarHudService.refreshPlayerHud(player);
             SemionHotbarService.clearMatchTools(player);
         });
     }

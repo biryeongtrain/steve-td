@@ -12,7 +12,8 @@ public record EconomyConfig(
         GasCapConfig emeraldCap,
         @SerializedName(value = "emeraldProduction", alternate = "gasProduction")
         GasProductionConfig emeraldProduction,
-        TowerLimitConfig towerLimit
+        TowerLimitConfig towerLimit,
+        KillRewardConfig killReward
 ) {
     public EconomyConfig(
             long startingDiamond,
@@ -27,7 +28,27 @@ public record EconomyConfig(
                 startingIncome,
                 emeraldCap,
                 emeraldProduction,
-                TowerLimitConfig.defaultConfig()
+                TowerLimitConfig.defaultConfig(),
+                KillRewardConfig.defaultConfig()
+        );
+    }
+
+    public EconomyConfig(
+            long startingDiamond,
+            long startingEmerald,
+            long startingIncome,
+            GasCapConfig emeraldCap,
+            GasProductionConfig emeraldProduction,
+            TowerLimitConfig towerLimit
+    ) {
+        this(
+                startingDiamond,
+                startingEmerald,
+                startingIncome,
+                emeraldCap,
+                emeraldProduction,
+                towerLimit,
+                KillRewardConfig.defaultConfig()
         );
     }
 
@@ -44,6 +65,9 @@ public record EconomyConfig(
         if (towerLimit == null) {
             towerLimit = TowerLimitConfig.defaultConfig();
         }
+        if (killReward == null) {
+            killReward = KillRewardConfig.defaultConfig();
+        }
     }
 
     public static EconomyConfig defaultConfig() {
@@ -53,7 +77,8 @@ public record EconomyConfig(
                 0,
                 GasCapConfig.defaultConfig(),
                 GasProductionConfig.defaultConfig(),
-                TowerLimitConfig.defaultConfig()
+                TowerLimitConfig.defaultConfig(),
+                KillRewardConfig.defaultConfig()
         );
     }
 
@@ -139,16 +164,64 @@ public record EconomyConfig(
         }
     }
 
+    public record KillRewardConfig(
+            boolean crossLaneWaveReductionEnabled,
+            double crossLaneFinalDefenseWaveMultiplier,
+            double finalDefenseProgressThreshold,
+            boolean applyToIncomeUnits
+    ) {
+        public KillRewardConfig {
+            if (crossLaneFinalDefenseWaveMultiplier < 0.0 || crossLaneFinalDefenseWaveMultiplier > 1.0
+                    || finalDefenseProgressThreshold < 0.0 || finalDefenseProgressThreshold > 1.0) {
+                throw new IllegalArgumentException("Kill reward config values are invalid.");
+            }
+        }
+
+        public static KillRewardConfig defaultConfig() {
+            return new KillRewardConfig(true, 0.40, 0.90, false);
+        }
+    }
+
     public record TowerLimitConfig(
             int initialLimit,
             int increaseStartRound,
             int increaseEveryRounds,
             int increaseAmount,
-            int maxLimit
+            int maxLimit,
+            int purchaseIncreaseAmount,
+            int maxPurchaseCount,
+            long initialPurchaseDiamondCost,
+            long purchaseDiamondCostIncrease,
+            long initialPurchaseEmeraldCost,
+            long purchaseEmeraldCostIncrease
     ) {
+        public TowerLimitConfig(
+                int initialLimit,
+                int increaseStartRound,
+                int increaseEveryRounds,
+                int increaseAmount,
+                int maxLimit
+        ) {
+            this(
+                    initialLimit,
+                    increaseStartRound,
+                    increaseEveryRounds,
+                    increaseAmount,
+                    maxLimit,
+                    defaultConfig().purchaseIncreaseAmount,
+                    defaultConfig().maxPurchaseCount,
+                    defaultConfig().initialPurchaseDiamondCost,
+                    defaultConfig().purchaseDiamondCostIncrease,
+                    defaultConfig().initialPurchaseEmeraldCost,
+                    defaultConfig().purchaseEmeraldCostIncrease
+            );
+        }
+
         public TowerLimitConfig {
             if (initialLimit < 0 || increaseStartRound < 1 || increaseEveryRounds < 1
-                    || increaseAmount < 0 || maxLimit < 0) {
+                    || increaseAmount < 0 || maxLimit < 0 || purchaseIncreaseAmount < 0
+                    || maxPurchaseCount < 0 || initialPurchaseDiamondCost < 0 || purchaseDiamondCostIncrease < 0
+                    || initialPurchaseEmeraldCost < 0 || purchaseEmeraldCostIncrease < 0) {
                 throw new IllegalArgumentException("Tower limit config values are invalid.");
             }
             if (maxLimit < initialLimit) {
@@ -157,7 +230,24 @@ public record EconomyConfig(
         }
 
         public static TowerLimitConfig defaultConfig() {
-            return new TowerLimitConfig(5, 5, 5, 3, 11);
+            return new TowerLimitConfig(5, 5, 5, 3, 11, 1, 20, 100, 50, 25, 10);
+        }
+
+        public TowerLimitConfig withDefaultPurchaseSettings() {
+            TowerLimitConfig defaults = defaultConfig();
+            return new TowerLimitConfig(
+                    initialLimit,
+                    increaseStartRound,
+                    increaseEveryRounds,
+                    increaseAmount,
+                    maxLimit,
+                    defaults.purchaseIncreaseAmount,
+                    defaults.maxPurchaseCount,
+                    defaults.initialPurchaseDiamondCost,
+                    defaults.purchaseDiamondCostIncrease,
+                    defaults.initialPurchaseEmeraldCost,
+                    defaults.purchaseEmeraldCostIncrease
+            );
         }
 
         public int limitForRound(int round) {
@@ -168,6 +258,26 @@ public record EconomyConfig(
             int increases = ((safeRound - increaseStartRound) / increaseEveryRounds) + 1;
             long limit = initialLimit + (long) increases * increaseAmount;
             return (int) Math.min(maxLimit, Math.max(0, limit));
+        }
+
+        public int purchasedBonus(int purchaseCount) {
+            return Math.max(0, purchaseCount) * purchaseIncreaseAmount;
+        }
+
+        public long purchaseDiamondCost(int currentPurchaseCount) {
+            int safePurchaseCount = Math.max(0, currentPurchaseCount);
+            if (safePurchaseCount >= maxPurchaseCount || purchaseIncreaseAmount == 0) {
+                return -1;
+            }
+            return initialPurchaseDiamondCost + purchaseDiamondCostIncrease * (long) safePurchaseCount;
+        }
+
+        public long purchaseEmeraldCost(int currentPurchaseCount) {
+            int safePurchaseCount = Math.max(0, currentPurchaseCount);
+            if (safePurchaseCount >= maxPurchaseCount || purchaseIncreaseAmount == 0) {
+                return -1;
+            }
+            return initialPurchaseEmeraldCost + purchaseEmeraldCostIncrease * (long) safePurchaseCount;
         }
     }
 }

@@ -13,6 +13,7 @@ import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.buildguide.BuildGuide;
 import kim.biryeong.semiontd.buildguide.BuildGuideService;
 import kim.biryeong.semiontd.config.EconomyConfig;
+import kim.biryeong.semiontd.config.LeaderTargetingConfig;
 import kim.biryeong.semiontd.config.MapConfig;
 import kim.biryeong.semiontd.config.ProgressionConfig;
 import kim.biryeong.semiontd.config.SemionConfigLoader;
@@ -49,6 +50,7 @@ import kim.biryeong.semiontd.progression.MatchProgressionReward;
 import kim.biryeong.semiontd.progression.ProgressionService;
 import kim.biryeong.semiontd.progression.SemionPlayerProfile;
 import kim.biryeong.semiontd.rating.PlayerRatingProfile;
+import kim.biryeong.semiontd.rating.RatingAdjustment;
 import kim.biryeong.semiontd.rating.RatingConfig;
 import kim.biryeong.semiontd.rating.RatingMatchResult;
 import kim.biryeong.semiontd.rating.RatingService;
@@ -56,8 +58,9 @@ import kim.biryeong.semiontd.summon.IncomeSummons;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.tower.legion.IllusionCloneSpawnQueue;
 import kim.biryeong.semiontd.ui.SemionDialogService;
-import kim.biryeong.semiontd.ui.SemionDisplayHudService;
 import kim.biryeong.semiontd.ui.SemionHotbarService;
+import kim.biryeong.semiontd.ui.SemionRatingTitleService;
+import kim.biryeong.semiontd.ui.SemionSidebarHudService;
 import kim.biryeong.semiontd.ui.SemionText;
 import kim.biryeong.semiontd.util.Scheduler;
 import net.minecraft.resources.ResourceLocation;
@@ -85,6 +88,7 @@ public final class SemionGameManager {
     private SemionPersistenceConfig persistenceConfig = SemionPersistenceConfig.defaultConfig();
     private TowerBalanceConfig towerBalanceConfig = TowerBalanceConfig.defaultConfig();
     private SummonConfig summonConfig = SummonConfig.defaultConfig();
+    private LeaderTargetingConfig leaderTargetingConfig = LeaderTargetingConfig.defaultConfig();
     private Path configDir;
     private Path progressionStorePath;
     private ProgressionService progressionService = new ProgressionService(progressionConfig, null);
@@ -92,7 +96,7 @@ public final class SemionGameManager {
     private MatchResultRepository matchResultRepository = new FileMatchResultRepository(null);
     private SemionMusicService musicService = SemionMusicService.disabled();
     private final SemionDialogService dialogService = new SemionDialogService();
-    private final SemionDisplayHudService displayHudService = new SemionDisplayHudService();
+    private final SemionSidebarHudService sidebarHudService = new SemionSidebarHudService();
     private final BuildGuideService buildGuideService = new BuildGuideService(null);
     private MatchMode matchMode = MatchMode.NORMAL;
     private SemionGame activeGame;
@@ -220,6 +224,32 @@ public final class SemionGameManager {
             SemionPersistenceConfig persistenceConfig,
             Path progressionStorePath
     ) {
+        configure(
+                economyConfig,
+                waveConfig,
+                mapConfig,
+                progressionConfig,
+                ratingConfig,
+                towerBalanceConfig,
+                summonConfig,
+                persistenceConfig,
+                LeaderTargetingConfig.defaultConfig(),
+                progressionStorePath
+        );
+    }
+
+    public void configure(
+            EconomyConfig economyConfig,
+            WaveConfig waveConfig,
+            MapConfig mapConfig,
+            ProgressionConfig progressionConfig,
+            RatingConfig ratingConfig,
+            TowerBalanceConfig towerBalanceConfig,
+            SummonConfig summonConfig,
+            SemionPersistenceConfig persistenceConfig,
+            LeaderTargetingConfig leaderTargetingConfig,
+            Path progressionStorePath
+    ) {
         this.economyConfig = economyConfig;
         this.waveConfig = waveConfig;
         this.mapConfig = mapConfig;
@@ -228,6 +258,7 @@ public final class SemionGameManager {
         this.persistenceConfig = persistenceConfig == null ? SemionPersistenceConfig.defaultConfig() : persistenceConfig;
         this.towerBalanceConfig = towerBalanceConfig == null ? TowerBalanceConfig.defaultConfig() : towerBalanceConfig;
         this.summonConfig = summonConfig == null ? SummonConfig.defaultConfig() : summonConfig;
+        this.leaderTargetingConfig = leaderTargetingConfig == null ? LeaderTargetingConfig.defaultConfig() : leaderTargetingConfig;
         this.progressionStorePath = progressionStorePath;
         this.configDir = progressionStorePath == null ? null : progressionStorePath.getParent();
         Path matchResultPath = this.configDir == null ? null : this.configDir.resolve("match-results.json");
@@ -418,14 +449,15 @@ public final class SemionGameManager {
                 configs.towerBalance(),
                 configs.summons(),
                 configs.persistence(),
+                configs.leaderTargeting(),
                 configDir.resolve("profiles.json")
         );
         boolean activeGameUpdated = activeGame != null && activeGame.phase() != RoundPhase.ENDED;
         if (activeGameUpdated) {
-            activeGame.applyConfigs(configs.economy(), configs.waves());
+            activeGame.applyConfigs(configs.economy(), configs.waves(), configs.leaderTargeting());
             activeGame.refreshProductionTowerTypes();
             activeGame.refreshSummonShop();
-            displayHudService.refreshNow(server, activeGame, matchMode);
+            sidebarHudService.refreshNow(server, activeGame, matchMode);
         }
         return new ReloadConfigResult(true, activeGameUpdated, configDir);
     }
@@ -482,8 +514,8 @@ public final class SemionGameManager {
         return dialogService;
     }
 
-    public SemionDisplayHudService displayHudService() {
-        return displayHudService;
+    public SemionSidebarHudService sidebarHudService() {
+        return sidebarHudService;
     }
 
     public BuildGuideService buildGuideService() {
@@ -607,7 +639,7 @@ public final class SemionGameManager {
         ensureLobby(server);
 
         if (activeGame != null) {
-            displayHudService.clear(server);
+            sidebarHudService.clear(server);
             sendAllPlayersToLobby(server);
             closeActiveGameSafely(activeGame, "replacing active game during create");
         }
@@ -616,19 +648,19 @@ public final class SemionGameManager {
         clearPendingMatchResultDialog();
 
         GameArena arena = GameArenaLoader.load(server, mapConfig);
-        activeGame = new SemionGame(economyConfig, waveConfig, arena, buildGuideService);
+        activeGame = new SemionGame(economyConfig, waveConfig, leaderTargetingConfig, arena, buildGuideService);
         applyPersistedJobSelections(server, activeGame);
         lastMatchResult = null;
         VanillaTeamBridge.ensureTeams(server);
         sendAllPlayersToLobby(server);
-        displayHudService.refreshNow(server, activeGame, matchMode);
+        sidebarHudService.refreshNow(server, activeGame, matchMode);
         return activeGame;
     }
 
     public boolean resetToLobby(MinecraftServer server) throws ArenaLoadException {
         ensureLobby(server);
         boolean hadActiveGame = activeGame != null;
-        displayHudService.clear(server);
+        sidebarHudService.clear(server);
         sendAllPlayersToLobby(server);
         if (activeGame != null) {
             closeActiveGameSafely(activeGame, "resetting match to lobby");
@@ -637,7 +669,7 @@ public final class SemionGameManager {
         pendingFinishDelayTicks = 0;
         clearPendingMatchResultDialog();
         lastMatchResult = null;
-        displayHudService.clear(server);
+        sidebarHudService.clear(server);
         return hadActiveGame;
     }
 
@@ -729,7 +761,7 @@ public final class SemionGameManager {
 
         if (pendingStartPlan != null) {
             tickStartCountdown(server);
-            displayHudService.tick(server, activeGame, matchMode);
+            sidebarHudService.tick(server, activeGame, matchMode);
             return;
         }
 
@@ -739,7 +771,7 @@ public final class SemionGameManager {
             return;
         }
         if (activeGame != null) {
-            displayHudService.tick(server, activeGame, matchMode);
+            sidebarHudService.tick(server, activeGame, matchMode);
         }
     }
 
@@ -773,7 +805,7 @@ public final class SemionGameManager {
             try {
                 sendPlayerToLobby(server, player);
                 if (activeGame != null && activeGame.canConfigureRoster()) {
-                    displayHudService.refreshNow(server, activeGame, matchMode);
+                    sidebarHudService.refreshNow(server, activeGame, matchMode);
                 }
             } catch (ArenaLoadException exception) {
                 SemionTd.LOGGER.warn("Failed to send player {} to lobby.", player.getGameProfile().getName(), exception);
@@ -813,7 +845,7 @@ public final class SemionGameManager {
                 player.getDeltaMovement(),
                 player
         ));
-        SemionDisplayHudService.refreshPlayerHud(player);
+        SemionSidebarHudService.refreshPlayerHud(player);
         SemionHotbarService.clearMatchTools(player);
         setFlight(player, false);
     }
@@ -880,7 +912,7 @@ public final class SemionGameManager {
         clearPriorityForActiveParticipants(plan);
         server.getPlayerList().broadcastSystemMessage(SemionText.prefixedMini("<green><bold>게임을 시작합니다.</bold></green>"), false);
         activeGame.announceTeamLeaders(server);
-        displayHudService.refreshNow(server, activeGame, matchMode);
+        sidebarHudService.refreshNow(server, activeGame, matchMode);
     }
 
     private void announceStartCountdown(MinecraftServer server, int secondsRemaining) {
@@ -934,7 +966,8 @@ public final class SemionGameManager {
     private void beginDelayedMatchResult(MinecraftServer server, SemionGame finishedGame) {
         pendingFinishedGame = finishedGame;
         pendingFinishDelayTicks = MATCH_RESULT_DELAY_TICKS;
-        displayHudService.clear(server);
+        finishedGame.matchResult().ifPresent(result -> buildGuideService.finishMatch(finishedGame, result.finalRound()));
+        sidebarHudService.clear(server);
         server.getPlayerList().broadcastSystemMessage(
                 SemionText.prefixedMini("<gold>경기 종료.</gold> 결과를 집계하는 중입니다..."),
                 false
@@ -942,12 +975,13 @@ public final class SemionGameManager {
     }
 
     private void finishActiveGame(MinecraftServer server, SemionGame finishedGame) {
-        displayHudService.clear(server);
+        sidebarHudService.clear(server);
         Optional<MatchResult> result = finishedGame.matchResult();
+        Optional<RatingMatchResult> ratingResult = Optional.empty();
         if (result.isPresent()) {
             lastMatchResult = result.get();
             matchResultRepository.saveMatchResult(result.get());
-            applyRatingOrQueueRetry(server, result.get());
+            ratingResult = applyRatingOrQueueRetry(server, result.get());
             buildGuideService.finishMatch(finishedGame, result.get().finalRound());
             nextMatchPriorityPlayerIds.addAll(result.get().spectatorIds());
             Map<UUID, MatchProgressionReward> rewards = progressionService.applyMatchResult(server, result.get());
@@ -959,6 +993,7 @@ public final class SemionGameManager {
 
         try {
             sendAllPlayersToLobby(server);
+            ratingResult.ifPresent(appliedRating -> showRatingTitle(server, appliedRating));
         } catch (ArenaLoadException exception) {
             SemionTd.LOGGER.warn("Failed to send players to the Semion TD lobby after match end.", exception);
         }
@@ -966,7 +1001,7 @@ public final class SemionGameManager {
         closeActiveGameSafely(finishedGame, "finishing match");
     }
 
-    private void applyRatingOrQueueRetry(MinecraftServer server, MatchResult matchResult) {
+    private Optional<RatingMatchResult> applyRatingOrQueueRetry(MinecraftServer server, MatchResult matchResult) {
         if (!pendingRatingRetryMatchResults.isEmpty()
                 && !pendingRatingRetryMatchResults.containsKey(matchResult.matchId())) {
             pendingRatingRetryMatchResults.put(matchResult.matchId(), matchResult);
@@ -975,14 +1010,15 @@ public final class SemionGameManager {
                     matchResult.matchId(),
                     pendingRatingRetryMatchResults.size() - 1
             );
-            return;
+            return Optional.empty();
         }
         try {
-            ratingService.applyMatchResult(server, matchResult);
+            RatingMatchResult ratingResult = ratingService.applyMatchResult(server, matchResult);
             pendingRatingRetryMatchResults.remove(matchResult.matchId());
             if (pendingRatingRetryMatchResults.isEmpty()) {
                 pendingRatingRetryDelayTicks = 0;
             }
+            return Optional.of(ratingResult);
         } catch (RuntimeException exception) {
             pendingRatingRetryMatchResults.put(matchResult.matchId(), matchResult);
             pendingRatingRetryDelayTicks = RATING_RETRY_DELAY_TICKS;
@@ -991,6 +1027,16 @@ public final class SemionGameManager {
                     matchResult.matchId(),
                     exception
             );
+            return Optional.empty();
+        }
+    }
+
+    private void showRatingTitle(MinecraftServer server, RatingMatchResult ratingResult) {
+        for (RatingAdjustment adjustment : ratingResult.adjustments()) {
+            ServerPlayer player = server.getPlayerList().getPlayer(adjustment.playerId());
+            if (player != null) {
+                SemionRatingTitleService.showRatingChange(player, adjustment);
+            }
         }
     }
 

@@ -64,6 +64,9 @@ public final class BuildGuideService {
     }
 
     public void finishMatch(SemionGame game, int finalRound) {
+        if (activeRecordings.isEmpty()) {
+            return;
+        }
         lastRecordings.clear();
         for (Recording recording : activeRecordings.values()) {
             lastRecordings.put(recording.playerId(), recording.withEnded(Math.max(1, finalRound)));

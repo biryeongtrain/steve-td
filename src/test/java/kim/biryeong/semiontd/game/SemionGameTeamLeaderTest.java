@@ -3,11 +3,14 @@ package kim.biryeong.semiontd.game;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Optional;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.EconomyConfig;
+import kim.biryeong.semiontd.config.LeaderTargetingConfig;
 import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.map.GameArena;
 import org.junit.jupiter.api.Test;
@@ -78,8 +81,70 @@ final class SemionGameTeamLeaderTest {
         );
     }
 
+    @Test
+    void onlyTwoLeaderTargetsMayPointAtTheSameTeam() {
+        SemionGame game = newGame();
+        UUID red = addLeader(game, TeamId.RED);
+        UUID blue = addLeader(game, TeamId.BLUE);
+        UUID green = addLeader(game, TeamId.GREEN);
+        addLeader(game, TeamId.YELLOW);
+
+        assertEquals(LeaderTargetResult.SUCCESS, game.setLeaderTarget(red, TeamId.YELLOW));
+        assertEquals(LeaderTargetResult.SUCCESS, game.setLeaderTarget(blue, TeamId.YELLOW));
+        assertEquals(LeaderTargetResult.TARGET_TEAM_ALREADY_DESIGNATED, game.setLeaderTarget(green, TeamId.YELLOW));
+        assertEquals("해당 라인을 지정할 수 없습니다.", LeaderTargetResult.TARGET_TEAM_ALREADY_DESIGNATED.message());
+    }
+
+    @Test
+    void forcedIncomeTargetExpiresAfterTwoRounds() {
+        SemionGame game = newGame();
+        UUID red = addLeader(game, TeamId.RED);
+        addLeader(game, TeamId.BLUE);
+        addLeader(game, TeamId.GREEN);
+
+        assertEquals(LeaderTargetResult.SUCCESS, game.setLeaderTarget(red, TeamId.BLUE));
+        assertEquals(Optional.of(TeamId.BLUE), game.targetTeamForSummon(TeamId.RED).map(SemionTeam::id));
+
+        game.tickLeaderCooldowns();
+        assertEquals(Optional.of(TeamId.BLUE), game.targetTeamForSummon(TeamId.RED).map(SemionTeam::id));
+
+        game.tickLeaderCooldowns();
+        assertTrue(game.teams().get(TeamId.RED).leaderTargeting().orElseThrow().targetTeamId().isEmpty());
+    }
+
+    @Test
+    void leaderTargetCapsAndDurationUseConfig() {
+        SemionGame game = new SemionGame(
+                EconomyConfig.defaultConfig(),
+                WaveConfig.defaultConfig(),
+                LeaderTargetingConfig.defaultConfig().withMaxTargetingTeams(1).withActiveTargetRounds(3),
+                new GameArena(Map.of())
+        );
+        UUID red = addLeader(game, TeamId.RED);
+        UUID blue = addLeader(game, TeamId.BLUE);
+        addLeader(game, TeamId.YELLOW);
+
+        assertEquals(LeaderTargetResult.SUCCESS, game.setLeaderTarget(red, TeamId.YELLOW));
+        assertEquals(LeaderTargetResult.TARGET_TEAM_ALREADY_DESIGNATED, game.setLeaderTarget(blue, TeamId.YELLOW));
+
+        game.tickLeaderCooldowns();
+        game.tickLeaderCooldowns();
+        assertEquals(Optional.of(TeamId.YELLOW), game.targetTeamForSummon(TeamId.RED).map(SemionTeam::id));
+
+        game.tickLeaderCooldowns();
+        assertTrue(game.teams().get(TeamId.RED).leaderTargeting().orElseThrow().targetTeamId().isEmpty());
+    }
+
     private static SemionGame newGame() {
         return new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(), new GameArena(Map.of()));
+    }
+
+    private static UUID addLeader(SemionGame game, TeamId teamId) {
+        UUID uuid = UUID.nameUUIDFromBytes((teamId.name().toLowerCase() + "-target-leader").getBytes());
+        game.teams().get(teamId).activate();
+        game.players().put(uuid, player(uuid, teamId, 1));
+        game.teams().get(teamId).setLeader(uuid);
+        return uuid;
     }
 
     private static SemionPlayer player(UUID uuid, TeamId teamId, int laneId) {

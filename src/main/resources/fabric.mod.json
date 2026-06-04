@@ -26,6 +26,7 @@
     "polymer-networking": "*",
     "polymer-resource-pack": "*",
     "polymer-virtual-entity": "*",
-    "placeholder-api": ">=2.7.2+1.21.8"
+    "placeholder-api": ">=2.7.2+1.21.8",
+    "sidebar-api": ">=0.5.1+1.21.1"
   }
 }
