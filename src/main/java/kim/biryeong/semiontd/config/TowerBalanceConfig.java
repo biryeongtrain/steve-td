@@ -67,6 +67,9 @@ public record TowerBalanceConfig(
         addTower(towers, AnimalTowers.T1_FOX_TOWER);
         addTower(towers, AnimalTowers.T2_FOX_TOWER);
         addTower(towers, AnimalTowers.T3_FOX_TOWER);
+        addTower(towers, LegionTowers.T1_BEE_TOWER);
+        addTower(towers, LegionTowers.T2_BEE_TOWER);
+        addTower(towers, LegionTowers.T3_BEE_TOWER);
         addTower(towers, WarlockTowers.BASE_WARLOCK_TOWER);
         addTower(towers, WarlockTowers.RANGED_WARLOCK_TOWER);
         addTower(towers, WarlockTowers.MELEE_WARLOCK_TOWER);
@@ -115,6 +118,8 @@ public record TowerBalanceConfig(
         putUpgrade(upgradeCosts, AnimalTowers.T2_RABBIT_TOWER, "t3_rabbit_tower", 300);
         putUpgrade(upgradeCosts, AnimalTowers.T1_FOX_TOWER, "t2_fox_tower", 170);
         putUpgrade(upgradeCosts, AnimalTowers.T2_FOX_TOWER, "t3_fox_tower", 320);
+        putUpgrade(upgradeCosts, LegionTowers.T1_BEE_TOWER, "t2_bee_tower", 160);
+        putUpgrade(upgradeCosts, LegionTowers.T2_BEE_TOWER, "t3_bee_tower", 310);
         putUpgrade(upgradeCosts, WarlockTowers.BASE_WARLOCK_TOWER, "ranged_warlock_tower", 0);
         putUpgrade(upgradeCosts, WarlockTowers.BASE_WARLOCK_TOWER, "melee_warlock_tower", 0);
         putUpgrade(upgradeCosts, WarlockTowers.T1_SLAVE, "t2_slave", 130);
@@ -350,6 +355,33 @@ public record TowerBalanceConfig(
                 "maxExecuteHealthThreshold", 0.60,
                 "executeDamageBonusRatio", 0.75,
                 "executeDamageBonusPerStack", 0.10
+        ));
+        putAbilities(abilities, LegionTowers.T1_BEE_TOWER.id(), Map.of(
+                "maxSwarmStacks", 4.0,
+                "poisonDamagePerStack", 3.0,
+                "poisonDamagePerSwarmStack", 0.5,
+                "maxPoisonStacks", 4.0,
+                "poisonStacksPerSwarmStack", 1.0,
+                "poisonDurationTicks", 80.0,
+                "poisonTickIntervalTicks", 20.0
+        ));
+        putAbilities(abilities, LegionTowers.T2_BEE_TOWER.id(), Map.of(
+                "maxSwarmStacks", 4.0,
+                "poisonDamagePerStack", 4.5,
+                "poisonDamagePerSwarmStack", 0.75,
+                "maxPoisonStacks", 5.0,
+                "poisonStacksPerSwarmStack", 1.0,
+                "poisonDurationTicks", 100.0,
+                "poisonTickIntervalTicks", 20.0
+        ));
+        putAbilities(abilities, LegionTowers.T3_BEE_TOWER.id(), Map.of(
+                "maxSwarmStacks", 4.0,
+                "poisonDamagePerStack", 6.0,
+                "poisonDamagePerSwarmStack", 1.0,
+                "maxPoisonStacks", 6.0,
+                "poisonStacksPerSwarmStack", 1.0,
+                "poisonDurationTicks", 140.0,
+                "poisonTickIntervalTicks", 20.0
         ));
         putAbilities(abilities, WarlockTowers.BASE_WARLOCK_TOWER.id(), Map.ofEntries(
                 Map.entry("baseSacrificeRadius", 6.0),

@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -139,6 +140,7 @@ import kim.biryeong.semiontd.tower.undead.UndeadRangedSkeletonTower;
 import kim.biryeong.semiontd.tower.undead.UndeadTowerCatalogs;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
 import kim.biryeong.semiontd.tower.undead.UndeadZombieTower;
+import kim.biryeong.semiontd.tower.legion.BeeTower;
 import kim.biryeong.semiontd.tower.legion.IllusionCloneSpawnQueue;
 import kim.biryeong.semiontd.tower.legion.IllusionProfile;
 import kim.biryeong.semiontd.tower.legion.IllusionRuntimeTower;
@@ -3492,6 +3494,72 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 return;
             }
             if (!assertEquals(context, 100.0F, healthyClose.getHealth(), "Healthy target should not be attacked first.")) {
+                return;
+            }
+            context.succeed();
+        });
+    }
+
+    @GameTest(maxTicks = 100)
+    public void beeTowerPoisonDealsConfigDrivenRuntimeDamage(GameTestHelper context) {
+        UUID playerId = stableUuid("red-bee-tower-owner");
+        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        Map<String, TowerBalanceConfig.TowerStats> towers = new LinkedHashMap<>(defaults.towers());
+        TowerType baseBee = LegionTowers.T1_BEE_TOWER;
+        towers.put(baseBee.id(), new TowerBalanceConfig.TowerStats(
+                baseBee.mineralCost(),
+                baseBee.maxHealth(),
+                baseBee.range(),
+                0.0,
+                10,
+                baseBee.aggroPriority()
+        ));
+        Map<String, Map<String, Double>> abilities = new LinkedHashMap<>(defaults.abilities());
+        abilities.put(baseBee.id(), Map.of(
+                "maxSwarmStacks", 1.0,
+                "poisonDamagePerStack", 5.0,
+                "poisonDamagePerSwarmStack", 0.0,
+                "maxPoisonStacks", 2.0,
+                "poisonStacksPerSwarmStack", 0.0,
+                "poisonDurationTicks", 40.0,
+                "poisonTickIntervalTicks", 5.0
+        ));
+        TowerBalanceRuntime.apply(new TowerBalanceConfig(towers, defaults.upgradeCosts(), abilities));
+
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
+        TowerType beeType = TowerBalanceRuntime.resolve(baseBee);
+        lane.addTower(new BeeTower(beeType, playerId, TeamId.RED, 1, GridPosition.from(towerPos)));
+        BeeTower beeTower = (BeeTower) lane.towers().getFirst();
+        if (!assertTrue(context, beeTower.entityId().isPresent(), "Bee tower entity should exist.")) {
+            TowerBalanceRuntime.apply(defaults);
+            return;
+        }
+        SemionTowerEntity towerEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(beeTower.entityId().getAsInt());
+        Vec3 towerPosition = towerEntity.position();
+        SemionMonsterEntity target = spawnRoleMonsterEntity(
+                context,
+                "bee-poison-target",
+                Optional.empty(),
+                TeamId.RED,
+                1,
+                towerPosition.add(3.0, 0.0, 0.0),
+                100.0,
+                List.of(SummonRole.SIEGE)
+        );
+        target.setNoAi(true);
+
+        context.runAfterDelay(45, () -> {
+            TowerBalanceRuntime.apply(defaults);
+            if (!assertTrue(context, towerEntity.currentAttackTarget() == target, "Bee tower should acquire the poison target.")) {
+                return;
+            }
+            if (!assertTrue(
+                    context,
+                    target.getHealth() <= 80.0F,
+                    "Bee tower has zero direct damage in this test, so health loss should come from config-driven poison."
+            )) {
                 return;
             }
             context.succeed();

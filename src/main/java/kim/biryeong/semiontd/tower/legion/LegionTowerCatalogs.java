@@ -24,6 +24,10 @@ public final class LegionTowerCatalogs {
         registerTower(LegionTowers.T1_PARROT_TOWER, LegionParrotTower::new, 1);
         registerTower(LegionTowers.T2_PARROT_TOWER, LegionParrotTower::new, 2);
 
+//        registerTower(LegionTowers.T1_BEE_TOWER, BeeTower::new, 1);
+//        registerTower(LegionTowers.T2_BEE_TOWER, BeeTower::new, 2);
+//        registerTower(LegionTowers.T3_BEE_TOWER, BeeTower::new, 3);
+
         registerTower(LegionTowers.ILLUSION_TOWER, LegionGlobalIllusionTower::new, 1);
 
         link(LegionTowers.T1_CHICKEN, LegionTowers.T2_CHICKEN_TOWER.id(), "인싸 닭 타워", LegionTowers.T2_CHICKEN_TOWER);
@@ -31,6 +35,8 @@ public final class LegionTowerCatalogs {
         link(LegionTowers.T1_SLIME_TOWER, LegionTowers.T2_SLIME_TOWER.id(), "슬라임 타워", LegionTowers.T2_SLIME_TOWER);
         link(LegionTowers.T1_PENGUIN, LegionTowers.T2_PENGUIN.id(), "강화 땡컨타워", LegionTowers.T2_PENGUIN);
         link(LegionTowers.T1_PARROT_TOWER, LegionTowers.T2_PARROT_TOWER.id(), "앵무 타워", LegionTowers.T2_PARROT_TOWER);
+//        link(LegionTowers.T1_BEE_TOWER, LegionTowers.T2_BEE_TOWER.id(), "벌떼 타워", LegionTowers.T2_BEE_TOWER);
+//        link(LegionTowers.T2_BEE_TOWER, LegionTowers.T3_BEE_TOWER.id(), "여왕벌 타워", LegionTowers.T3_BEE_TOWER);
 
         JobRegistry.registerIfAbsent(new LegionTowerJob());
     }
