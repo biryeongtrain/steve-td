@@ -127,6 +127,7 @@ import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
 import kim.biryeong.semiontd.tower.animal.AnimalTowerCatalogs;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
+import kim.biryeong.semiontd.tower.animal.FoxTower;
 import kim.biryeong.semiontd.tower.animal.PigTower;
 import kim.biryeong.semiontd.tower.animal.RabbitTower;
 import kim.biryeong.semiontd.tower.animal.WolfTower;
@@ -3428,6 +3429,69 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                     nearTarget.getHealth() < farProgressTarget.getHealth(),
                     "In-range target should take priority over a farther high-progress target."
             )) {
+                return;
+            }
+            context.succeed();
+        });
+    }
+
+    @GameTest(maxTicks = 80)
+    public void foxTowerPrioritizesLowHealthTargetInRuntimeCombat(GameTestHelper context) {
+        UUID playerId = stableUuid("red-fox-tower-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
+        TowerType foxType = TowerBalanceRuntime.resolve(AnimalTowers.T1_FOX_TOWER);
+        lane.addTower(new FoxTower(foxType, playerId, TeamId.RED, 1, GridPosition.from(towerPos)));
+        FoxTower foxTower = (FoxTower) lane.towers().getFirst();
+        if (!assertTrue(context, foxTower.entityId().isPresent(), "Fox tower entity should exist.")) {
+            return;
+        }
+        SemionTowerEntity towerEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(foxTower.entityId().getAsInt());
+        Vec3 towerPosition = towerEntity.position();
+
+        SemionMonsterEntity healthyClose = spawnRoleMonsterEntity(
+                context,
+                "fox-healthy-close",
+                Optional.empty(),
+                TeamId.RED,
+                1,
+                towerPosition.add(1.0, 0.0, 0.0),
+                100.0,
+                List.of(SummonRole.SIEGE)
+        );
+        SemionMonsterEntity lowHealthFar = spawnRoleMonsterEntity(
+                context,
+                "fox-low-health-far",
+                Optional.empty(),
+                TeamId.RED,
+                1,
+                towerPosition.add(5.0, 0.0, 0.0),
+                100.0,
+                List.of(SummonRole.RUSH)
+        );
+        healthyClose.runtimeMonster().syncLaneProgress(0.95);
+        lowHealthFar.runtimeMonster().syncLaneProgress(0.10);
+        healthyClose.setNoAi(true);
+        lowHealthFar.setNoAi(true);
+        lowHealthFar.setHealth(25.0F);
+
+        context.runAfterDelay(30, () -> {
+            if (!assertTrue(
+                    context,
+                    towerEntity.currentAttackTarget() == lowHealthFar,
+                    "Fox tower should select the low-health in-range target before the healthier progress target."
+            )) {
+                return;
+            }
+            if (!assertTrue(
+                    context,
+                    lowHealthFar.getHealth() < 25.0F,
+                    "Fox tower should damage the low-health execute target."
+            )) {
+                return;
+            }
+            if (!assertEquals(context, 100.0F, healthyClose.getHealth(), "Healthy target should not be attacked first.")) {
                 return;
             }
             context.succeed();

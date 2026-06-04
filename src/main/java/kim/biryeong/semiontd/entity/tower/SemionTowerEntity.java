@@ -145,6 +145,13 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         currentAttackTarget = isValidAttackTarget(target) ? target : null;
     }
 
+    public SemionMonsterEntity selectAttackTarget(List<SemionMonsterEntity> candidates) {
+        if (runtimeTower == null) {
+            return null;
+        }
+        return runtimeTower.selectAttackTarget(this, candidates).orElse(null);
+    }
+
     public UUID ownerPlayer() {
         return ownerPlayer;
     }

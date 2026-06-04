@@ -2,11 +2,13 @@ package kim.biryeong.semiontd.tower.animal;
 
 import static kim.biryeong.semiontd.tower.catalog.ProductionTowerDefinitions.*;
 
+import kim.biryeong.semiontd.entity.visual.FoxVisual;
 import kim.biryeong.semiontd.entity.visual.PigVisual;
 import kim.biryeong.semiontd.entity.visual.RabbitVisual;
 import kim.biryeong.semiontd.entity.visual.WolfVisual;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
+import net.minecraft.world.entity.animal.Fox;
 import net.minecraft.world.entity.animal.PigVariants;
 import net.minecraft.world.entity.animal.Rabbit;
 import net.minecraft.world.entity.animal.wolf.WolfVariants;
@@ -177,6 +179,57 @@ public class AnimalTowers {
             )
     );
 
+    public static final TowerType T1_FOX_TOWER = tower(
+            "t1_fox_tower",
+            "사냥 여우 타워",
+            75,
+            35,
+            7,
+            6,
+            16,
+            10,
+            FoxVisual.builder().variant(Fox.Variant.DEFAULT).build(),
+            List.of(
+                    "<gray> 낮은 체력의 적을 노리는 동물 빌더의 마무리 타워입니다. </gray>",
+                    "<green> 체력이 낮은 사거리 내 몬스터를 우선 공격하고 추가 피해를 줍니다. </green>",
+                    "<green> 같은 여우 타워가 많을수록 처형 기준과 추가 피해가 증가합니다. </green>"
+            )
+    );
+
+    public static final TowerType T2_FOX_TOWER = tower(
+            "t2_fox_tower",
+            "붉은 여우 타워",
+            170,
+            45,
+            7,
+            10,
+            15,
+            10,
+            FoxVisual.builder().variant(Fox.Variant.DEFAULT).build(),
+            List.of(
+                    "<gray> 더 이른 체력 구간부터 적을 마무리하는 여우 타워입니다. </gray>",
+                    "<green> 처형 대상에게 더 큰 추가 피해를 줍니다. </green>",
+                    "<green> 같은 여우 타워가 많을수록 처형 기준과 추가 피해가 증가합니다. </green>"
+            )
+    );
+
+    public static final TowerType T3_FOX_TOWER = tower(
+            "t3_fox_tower",
+            "설원 여우 타워",
+            320,
+            60,
+            8,
+            15,
+            14,
+            10,
+            FoxVisual.builder().variant(Fox.Variant.SNOW).build(),
+            List.of(
+                    "<gray> 후반 누수를 정리하는 설원의 사냥꾼입니다. </gray>",
+                    "<green> 체력이 낮은 사거리 내 몬스터를 우선 공격하고 큰 추가 피해를 줍니다. </green>",
+                    "<green> 같은 여우 타워가 많을수록 더 높은 체력의 적도 처형 대상으로 봅니다. </green>"
+            )
+    );
+
     // 양 타워
 
     static {
@@ -233,6 +286,27 @@ public class AnimalTowers {
                 "<green> 최대 중첩 : {ability.maxStacks:integer}회 </green>",
                 "<green> 최대 중첩 시 공격 주기가 {ability.maxStackExtraIntervalReduction:integer}틱 감소합니다. </green>",
                 "<green> 최대 중첩 시 사거리 내 대상을 추가로 1회 공격합니다. </green>"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T1_FOX_TOWER, List.of(
+                "<gray> 낮은 체력의 적을 노리는 동물 빌더의 마무리 타워입니다. </gray>",
+                "<green> 체력이 {ability.executeHealthThreshold:percent} 이하인 사거리 내 몬스터를 우선 공격합니다. </green>",
+                "<green> 처형 대상에게 {ability.executeDamageBonusRatio:percent} 추가 피해를 줍니다. </green>",
+                "<green> 같은 여우 타워마다 처형 기준이 {ability.executeThresholdPerStack:percent}, 추가 피해가 {ability.executeDamageBonusPerStack:percent} 증가합니다. </green>",
+                "<green> 최대 중첩 : {ability.maxStacks:integer}회, 처형 기준 최대 : {ability.maxExecuteHealthThreshold:percent} </green>"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T2_FOX_TOWER, List.of(
+                "<gray> 더 이른 체력 구간부터 적을 마무리하는 여우 타워입니다. </gray>",
+                "<green> 체력이 {ability.executeHealthThreshold:percent} 이하인 사거리 내 몬스터를 우선 공격합니다. </green>",
+                "<green> 처형 대상에게 {ability.executeDamageBonusRatio:percent} 추가 피해를 줍니다. </green>",
+                "<green> 같은 여우 타워마다 처형 기준이 {ability.executeThresholdPerStack:percent}, 추가 피해가 {ability.executeDamageBonusPerStack:percent} 증가합니다. </green>",
+                "<green> 최대 중첩 : {ability.maxStacks:integer}회, 처형 기준 최대 : {ability.maxExecuteHealthThreshold:percent} </green>"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T3_FOX_TOWER, List.of(
+                "<gray> 후반 누수를 정리하는 설원의 사냥꾼입니다. </gray>",
+                "<green> 체력이 {ability.executeHealthThreshold:percent} 이하인 사거리 내 몬스터를 우선 공격합니다. </green>",
+                "<green> 처형 대상에게 {ability.executeDamageBonusRatio:percent} 추가 피해를 줍니다. </green>",
+                "<green> 같은 여우 타워마다 처형 기준이 {ability.executeThresholdPerStack:percent}, 추가 피해가 {ability.executeDamageBonusPerStack:percent} 증가합니다. </green>",
+                "<green> 최대 중첩 : {ability.maxStacks:integer}회, 처형 기준 최대 : {ability.maxExecuteHealthThreshold:percent} </green>"
         ));
     }
 }

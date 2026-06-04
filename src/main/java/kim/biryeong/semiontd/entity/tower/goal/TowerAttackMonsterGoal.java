@@ -90,6 +90,11 @@ public final class TowerAttackMonsterGoal extends Goal {
             return null;
         }
 
+        SemionMonsterEntity towerSelectedTarget = tower.selectAttackTarget(targets);
+        if (towerSelectedTarget != null) {
+            return towerSelectedTarget;
+        }
+
         Comparator<SemionMonsterEntity> targetPriority = Comparator
                 .comparingDouble((SemionMonsterEntity monster) -> monster.runtimeMonster().targetPriorityScore())
                 .thenComparingDouble(monster -> -tower.distanceToSqr(monster));

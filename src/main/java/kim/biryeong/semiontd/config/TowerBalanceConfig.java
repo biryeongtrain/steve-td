@@ -64,6 +64,9 @@ public record TowerBalanceConfig(
         addTower(towers, AnimalTowers.T1_RABBIT_TOWER);
         addTower(towers, AnimalTowers.T2_RABBIT_TOWER);
         addTower(towers, AnimalTowers.T3_RABBIT_TOWER);
+        addTower(towers, AnimalTowers.T1_FOX_TOWER);
+        addTower(towers, AnimalTowers.T2_FOX_TOWER);
+        addTower(towers, AnimalTowers.T3_FOX_TOWER);
         addTower(towers, WarlockTowers.BASE_WARLOCK_TOWER);
         addTower(towers, WarlockTowers.RANGED_WARLOCK_TOWER);
         addTower(towers, WarlockTowers.MELEE_WARLOCK_TOWER);
@@ -110,6 +113,8 @@ public record TowerBalanceConfig(
         putUpgrade(upgradeCosts, AnimalTowers.T2_WOLF_DPS_TOWER, "t3_wolf_dps_tower", 110);
         putUpgrade(upgradeCosts, AnimalTowers.T1_RABBIT_TOWER, "t2_rabbit_tower", 180);
         putUpgrade(upgradeCosts, AnimalTowers.T2_RABBIT_TOWER, "t3_rabbit_tower", 300);
+        putUpgrade(upgradeCosts, AnimalTowers.T1_FOX_TOWER, "t2_fox_tower", 170);
+        putUpgrade(upgradeCosts, AnimalTowers.T2_FOX_TOWER, "t3_fox_tower", 320);
         putUpgrade(upgradeCosts, WarlockTowers.BASE_WARLOCK_TOWER, "ranged_warlock_tower", 0);
         putUpgrade(upgradeCosts, WarlockTowers.BASE_WARLOCK_TOWER, "melee_warlock_tower", 0);
         putUpgrade(upgradeCosts, WarlockTowers.T1_SLAVE, "t2_slave", 130);
@@ -321,6 +326,30 @@ public record TowerBalanceConfig(
                 "damagePerStack", 8.0,
                 "maxStackExtraIntervalReduction", 7.0,
                 "extraAttackDamageRatio", 1.0
+        ));
+        putAbilities(abilities, AnimalTowers.T1_FOX_TOWER.id(), Map.of(
+                "maxStacks", 4.0,
+                "executeHealthThreshold", 0.30,
+                "executeThresholdPerStack", 0.02,
+                "maxExecuteHealthThreshold", 0.40,
+                "executeDamageBonusRatio", 0.25,
+                "executeDamageBonusPerStack", 0.05
+        ));
+        putAbilities(abilities, AnimalTowers.T2_FOX_TOWER.id(), Map.of(
+                "maxStacks", 4.0,
+                "executeHealthThreshold", 0.35,
+                "executeThresholdPerStack", 0.025,
+                "maxExecuteHealthThreshold", 0.50,
+                "executeDamageBonusRatio", 0.50,
+                "executeDamageBonusPerStack", 0.075
+        ));
+        putAbilities(abilities, AnimalTowers.T3_FOX_TOWER.id(), Map.of(
+                "maxStacks", 4.0,
+                "executeHealthThreshold", 0.40,
+                "executeThresholdPerStack", 0.03,
+                "maxExecuteHealthThreshold", 0.60,
+                "executeDamageBonusRatio", 0.75,
+                "executeDamageBonusPerStack", 0.10
         ));
         putAbilities(abilities, WarlockTowers.BASE_WARLOCK_TOWER.id(), Map.ofEntries(
                 Map.entry("baseSacrificeRadius", 6.0),
