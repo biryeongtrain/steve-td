@@ -249,9 +249,9 @@ public class LegionTowers {
             T2_PENGUIN.id(),
             T1_PARROT_TOWER.id(),
             T2_PARROT_TOWER.id(),
-            T1_BEE_TOWER.id(),
-            T2_BEE_TOWER.id(),
-            T3_BEE_TOWER.id(),
+//            T1_BEE_TOWER.id(),
+//            T2_BEE_TOWER.id(),
+//            T3_BEE_TOWER.id(),
             ILLUSION_TOWER.id()
     );
 
@@ -306,21 +306,19 @@ public class LegionTowers {
                 "<green> 공격 시 마다 이 타워의 공격력과 공격속도가 {ability.attackStackBonus:percent} 증가합니다. 최대 {ability.attackStackBonus*ability.maxAttackStacks:percent} </green>"
         ));
         TowerDescriptionRegistry.registerTemplate(T1_BEE_TOWER, List.of(
-                "<gray> 무리 빌더의 정찰 벌떼가 독침으로 오래 버티는 적을 갉아먹습니다. </gray>",
+                "<gray> 야꿀벌. </gray>",
                 "<green> 공격 시 {ability.poisonDurationTicks:seconds} 동안 유지되는 독침을 부여합니다. </green>",
                 "<green> 독침은 {ability.poisonTickIntervalTicks:seconds}마다 스택당 {ability.poisonDamagePerStack:number} 피해를 줍니다. </green>",
                 "<green> 독침은 최대 {ability.maxPoisonStacks:integer}스택까지 중첩됩니다. </green>",
                 "<green> 같은 벌 타워마다 스택당 피해가 {ability.poisonDamagePerSwarmStack:number}, 최대 독침이 {ability.poisonStacksPerSwarmStack:integer} 증가합니다. </green>"
         ));
         TowerDescriptionRegistry.registerTemplate(T2_BEE_TOWER, List.of(
-                "<gray> 더 큰 무리로 독침 스택을 오래 유지하는 벌떼 타워입니다. </gray>",
                 "<green> 공격 시 {ability.poisonDurationTicks:seconds} 동안 유지되는 독침을 부여합니다. </green>",
                 "<green> 독침은 {ability.poisonTickIntervalTicks:seconds}마다 스택당 {ability.poisonDamagePerStack:number} 피해를 줍니다. </green>",
                 "<green> 독침은 최대 {ability.maxPoisonStacks:integer}스택까지 중첩됩니다. </green>",
                 "<green> 같은 벌 타워마다 스택당 피해가 {ability.poisonDamagePerSwarmStack:number}, 최대 독침이 {ability.poisonStacksPerSwarmStack:integer} 증가합니다. </green>"
         ));
         TowerDescriptionRegistry.registerTemplate(T3_BEE_TOWER, List.of(
-                "<gray> 여왕벌이 무리를 이끌어 장기전에 독 피해를 누적시킵니다. </gray>",
                 "<green> 공격 시 {ability.poisonDurationTicks:seconds} 동안 유지되는 독침을 부여합니다. </green>",
                 "<green> 독침은 {ability.poisonTickIntervalTicks:seconds}마다 스택당 {ability.poisonDamagePerStack:number} 피해를 줍니다. </green>",
                 "<green> 독침은 최대 {ability.maxPoisonStacks:integer}스택까지 중첩됩니다. </green>",
