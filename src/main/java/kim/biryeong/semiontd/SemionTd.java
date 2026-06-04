@@ -62,6 +62,7 @@ public class SemionTd implements ModInitializer {
                 configs.summons(),
                 configs.persistence(),
                 configs.leaderTargeting(),
+                configs.incomeLaneRouting(),
                 configDir.resolve("profiles.json")
         );
         gameManager.configureMusic(new SemionMusicService(musicLibrary));

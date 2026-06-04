@@ -3,6 +3,7 @@ package kim.biryeong.semiontd.map;
 import java.util.ArrayList;
 import java.util.List;
 import kim.biryeong.semiontd.game.GridPosition;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
@@ -10,6 +11,7 @@ import xyz.nucleoid.map_templates.BlockBounds;
 public record LaneRegionLayout(
         int laneId,
         Vec3 spawn,
+        BlockBounds spawnArea,
         List<Vec3> waypoints,
         Vec3 bossPosition,
         BlockBounds laneArea,
@@ -17,7 +19,21 @@ public record LaneRegionLayout(
 ) {
     private static final double AREA_BOUNDARY_EPSILON = 0.001;
 
+    public LaneRegionLayout(
+            int laneId,
+            Vec3 spawn,
+            List<Vec3> waypoints,
+            Vec3 bossPosition,
+            BlockBounds laneArea,
+            List<GridPosition> finalDefenseTowerSlots
+    ) {
+        this(laneId, spawn, singleCellBounds(spawn), waypoints, bossPosition, laneArea, finalDefenseTowerSlots);
+    }
+
     public LaneRegionLayout {
+        if (spawnArea == null) {
+            spawnArea = singleCellBounds(spawn);
+        }
         waypoints = List.copyOf(waypoints);
         finalDefenseTowerSlots = List.copyOf(finalDefenseTowerSlots);
     }
@@ -143,6 +159,11 @@ public record LaneRegionLayout(
             walked += segmentLength;
         }
         return Math.max(0.0, Math.min(1.0, bestWalked / totalDistance));
+    }
+
+    private static BlockBounds singleCellBounds(Vec3 position) {
+        BlockPos blockPos = BlockPos.containing(position);
+        return BlockBounds.of(blockPos, blockPos);
     }
 
     private static double totalDistance(List<Vec3> points) {

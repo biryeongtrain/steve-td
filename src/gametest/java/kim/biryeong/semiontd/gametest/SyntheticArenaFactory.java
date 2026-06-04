@@ -49,8 +49,12 @@ final class SyntheticArenaFactory {
                     new BlockPos(baseX + laneOffset, baseY + 1, baseZ + 3),
                     new BlockPos(baseX + 4 + laneOffset, baseY + 4, baseZ + 8)
             );
+            BlockBounds spawnArea = BlockBounds.of(
+                    new BlockPos(baseX + 1 + laneOffset, baseY + 2, baseZ + 3),
+                    new BlockPos(baseX + 3 + laneOffset, baseY + 2, baseZ + 3)
+            );
             List<GridPosition> finalDefenseSlots = finalDefenseSlots(baseX, baseY, baseZ, laneId, bossSpawn);
-            lanes.put(laneId, new LaneRegionLayout(laneId, spawn, waypoints, bossSpawn, laneArea, finalDefenseSlots));
+            lanes.put(laneId, new LaneRegionLayout(laneId, spawn, spawnArea, waypoints, bossSpawn, laneArea, finalDefenseSlots));
         }
 
         return new ArenaLayout(teamSpawn, bossSpawn, lanes);

@@ -27,6 +27,7 @@ public final class PlayerLane {
     private final UUID ownerPlayer;
     private final ServerLevel arenaWorld;
     private final LaneRegionLayout laneLayout;
+    private final WaveSpawnPositionPolicy waveSpawnPositionPolicy;
     private final List<Monster> activeMonsters = new ArrayList<>();
     private final List<Monster> waveMonsterSpawnQueue = new ArrayList<>();
     private final List<Monster> summonedMonsterSpawnQueue = new ArrayList<>();
@@ -48,6 +49,7 @@ public final class PlayerLane {
         this.ownerPlayer = ownerPlayer;
         this.arenaWorld = arenaWorld;
         this.laneLayout = laneLayout;
+        this.waveSpawnPositionPolicy = new WaveSpawnPositionPolicy(laneLayout);
     }
 
     public TeamId teamId() {
@@ -78,8 +80,20 @@ public final class PlayerLane {
         return summonedMonsterSpawnQueue.size();
     }
 
+    public double queuedSummonThreat() {
+        return summonedMonsterSpawnQueue.stream()
+                .mapToDouble(Monster::attributionThreat)
+                .sum();
+    }
+
     public int pendingNextRoundSummonCount() {
         return nextRoundSummonedMonsterSpawnQueue.size();
+    }
+
+    public double pendingNextRoundSummonThreat() {
+        return nextRoundSummonedMonsterSpawnQueue.stream()
+                .mapToDouble(Monster::attributionThreat)
+                .sum();
     }
 
     public List<Tower> towers() {
@@ -187,8 +201,8 @@ public final class PlayerLane {
     }
 
     public void tick(MinecraftServer server, EconomyService economyService, Map<UUID, SemionPlayer> players) {
-        spawnQueuedMonster(waveMonsterSpawnQueue, players);
-        spawnQueuedMonster(summonedMonsterSpawnQueue, players);
+        spawnQueuedMonster(waveMonsterSpawnQueue, players, true);
+        spawnQueuedMonster(summonedMonsterSpawnQueue, players, false);
 
         for (Tower tower : List.copyOf(towers)) {
             if (towers.contains(tower)) {
@@ -318,10 +332,10 @@ public final class PlayerLane {
         }
     }
 
-    private void spawnQueuedMonster(List<Monster> queue, Map<UUID, SemionPlayer> players) {
+    private void spawnQueuedMonster(List<Monster> queue, Map<UUID, SemionPlayer> players, boolean distributeWaveSpawn) {
         if (!queue.isEmpty()) {
             Monster monster = queue.removeFirst();
-            spawnMinecraftEntity(monster);
+            spawnMinecraftEntity(monster, distributeWaveSpawn);
             recordIncomingThreat(monster, players);
             activeMonsters.add(monster);
         }
@@ -330,12 +344,12 @@ public final class PlayerLane {
     private void spawnAllQueuedMonsters(List<Monster> queue) {
         while (!queue.isEmpty()) {
             Monster monster = queue.removeFirst();
-            spawnMinecraftEntity(monster);
+            spawnMinecraftEntity(monster, false);
             activeMonsters.add(monster);
         }
     }
 
-    private void spawnMinecraftEntity(Monster monster) {
+    private void spawnMinecraftEntity(Monster monster, boolean distributeWaveSpawn) {
         if (monster.hasMinecraftEntity()) {
             return;
         }
@@ -343,7 +357,7 @@ public final class PlayerLane {
         SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, arenaWorld);
         entity.configureFrom(monster, laneLayout);
 
-        var spawn = laneLayout.spawn();
+        var spawn = distributeWaveSpawn ? waveSpawnPositionPolicy.next() : laneLayout.spawn();
         entity.setPos(spawn.x, spawn.y, spawn.z);
 
         if (arenaWorld.addFreshEntity(entity)) {

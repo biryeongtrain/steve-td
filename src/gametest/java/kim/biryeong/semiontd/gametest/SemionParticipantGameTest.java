@@ -28,6 +28,8 @@ import kim.biryeong.semiontd.buildguide.BuildGuideService;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.CurrencyType;
 import kim.biryeong.semiontd.config.EconomyConfig;
+import kim.biryeong.semiontd.config.IncomeLaneRoutingConfig;
+import kim.biryeong.semiontd.config.LeaderTargetingConfig;
 import kim.biryeong.semiontd.config.MapConfig;
 import kim.biryeong.semiontd.config.ProgressionConfig;
 import kim.biryeong.semiontd.config.SemionConfigLoader;
@@ -1733,6 +1735,156 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
         if (!assertTrue(context, context.getLevel().getEntity(activeMonsterEntityId) == null
                 || context.getLevel().getEntity(activeMonsterEntityId).isRemoved(), "Active monster entity should be discarded.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void waveMonstersSpawnAcrossLaneSpawnArea(GameTestHelper context) {
+        UUID redId = stableUuid("wave-spawn-area-red");
+        UUID blueId = stableUuid("wave-spawn-area-blue");
+        SemionGame game = startedTwoPlayerGame(context, redId, blueId);
+        PlayerLane redLane = lane(game, TeamId.RED, 1);
+
+        redLane.enqueueWaveMonster(new WaveMonsterEntry(
+                "distributed-wave",
+                20.0,
+                0.0,
+                0.0,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                null,
+                1,
+                3
+        ));
+        redLane.tick(context.getLevel().getServer());
+        redLane.tick(context.getLevel().getServer());
+        redLane.tick(context.getLevel().getServer());
+
+        if (!assertEquals(context, 3, redLane.activeMonsters().size(), "Three wave monsters should spawn after three lane ticks.")) {
+            return;
+        }
+
+        Set<String> spawnCells = redLane.activeMonsters().stream()
+                .map(monster -> BlockPos.containing(monster.spawnX(), monster.spawnY(), monster.spawnZ()))
+                .map(pos -> pos.getX() + "," + pos.getY() + "," + pos.getZ())
+                .collect(java.util.stream.Collectors.toSet());
+        if (!assertTrue(context, spawnCells.size() >= 2, "Wave monsters should not all spawn on the same block.")) {
+            return;
+        }
+
+        BlockBounds spawnArea = redLane.laneLayout().spawnArea();
+        for (Monster monster : redLane.activeMonsters()) {
+            BlockPos spawnPos = BlockPos.containing(monster.spawnX(), monster.spawnY(), monster.spawnZ());
+            if (!assertTrue(context, spawnArea.contains(spawnPos), "Wave monster should spawn inside lane spawn area: " + spawnPos)) {
+                return;
+            }
+            if (!(context.getLevel().getEntity(monster.minecraftEntityId()) instanceof SemionMonsterEntity entity)) {
+                context.fail(Component.literal("Wave monster entity should exist in the world."));
+                return;
+            }
+            if (!assertEquals(context, spawnPos, BlockPos.containing(entity.position()), "Runtime entity should be at the recorded spawn cell.")) {
+                return;
+            }
+        }
+
+        context.succeed();
+    }
+
+    @GameTest
+    public void incomeSummonsKeepSingleSpawnPointWhenWaveSpawnAreaIsDistributed(GameTestHelper context) {
+        UUID redId = stableUuid("income-single-spawn-red");
+        UUID blueId = stableUuid("income-single-spawn-blue");
+        SemionGame game = startedTwoPlayerGame(context, redId, blueId);
+        PlayerLane redLane = lane(game, TeamId.RED, 2);
+        Monster incomeMonster = new Monster(
+                "income-single-spawn",
+                TeamId.RED,
+                2,
+                Optional.empty(),
+                Optional.of(TeamId.BLUE),
+                20.0,
+                0.0,
+                0.0,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                1
+        );
+
+        redLane.enqueueSummonedMonster(incomeMonster);
+        redLane.tick(context.getLevel().getServer());
+
+        if (!assertEquals(context, 1, redLane.activeMonsters().size(), "Income monster should spawn from the summon queue.")) {
+            return;
+        }
+        Monster spawned = redLane.activeMonsters().getFirst();
+        BlockPos recordedSpawn = BlockPos.containing(spawned.spawnX(), spawned.spawnY(), spawned.spawnZ());
+        BlockPos legacySpawn = BlockPos.containing(redLane.laneLayout().spawn());
+        if (!assertEquals(context, legacySpawn, recordedSpawn, "Income summons should keep the existing single lane spawn point in the MVP.")) {
+            return;
+        }
+
+        context.succeed();
+    }
+
+    @GameTest
+    public void incomeSummonRoutingUsesThreatPressureInRuntimeGame(GameTestHelper context) {
+        UUID redId = stableUuid("income-threat-routing-red");
+        UUID blueLaneOneId = stableUuid("income-threat-routing-blue-1");
+        UUID blueLaneTwoId = stableUuid("income-threat-routing-blue-2");
+        reloadDefaultIncomeSummons();
+        EconomyConfig economy = new EconomyConfig(
+                200,
+                1000,
+                0,
+                EconomyConfig.GasCapConfig.defaultConfig(),
+                EconomyConfig.GasProductionConfig.defaultConfig(),
+                EconomyConfig.TowerLimitConfig.defaultConfig(),
+                EconomyConfig.KillRewardConfig.defaultConfig()
+        );
+        SemionGame game = new SemionGame(
+                economy,
+                new WaveConfig(List.of(), 20, null),
+                LeaderTargetingConfig.defaultConfig(),
+                IncomeLaneRoutingConfig.defaultConfig(),
+                testArena(context)
+        );
+        ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                MatchMode.NORMAL,
+                List.of(
+                        new AssignedParticipant(redId, "red", TeamId.RED, 1),
+                        new AssignedParticipant(blueLaneOneId, "blue-one", TeamId.BLUE, 1),
+                        new AssignedParticipant(blueLaneTwoId, "blue-two", TeamId.BLUE, 2)
+                ),
+                java.util.Set.of(),
+                3
+        );
+        if (!assertTrue(context, game.start(context.getLevel().getServer(), plan), "Threat routing game should start.")) {
+            return;
+        }
+
+        var heavySummon = game.summonMonster(redId, "ravager");
+        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.SUCCESS, heavySummon.type(), "Heavy summon should succeed.")) {
+            return;
+        }
+        PlayerLane blueLaneOne = lane(game, TeamId.BLUE, 1);
+        PlayerLane blueLaneTwo = lane(game, TeamId.BLUE, 2);
+        if (!assertEquals(context, 1, blueLaneOne.queuedSummonCount(), "First equal-pressure summon should use round-robin lane 1.")) {
+            return;
+        }
+        if (!assertEquals(context, 0, blueLaneTwo.queuedSummonCount(), "Lane 2 should still be empty after first summon.")) {
+            return;
+        }
+
+        var lightSummon = game.summonMonster(redId, "chicken");
+        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.SUCCESS, lightSummon.type(), "Light summon should succeed.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, blueLaneTwo.queuedSummonCount(), "Next summon should route to the lane with lower accumulated threat.")) {
+            return;
+        }
+        if (!assertTrue(context, blueLaneOne.queuedSummonThreat() > blueLaneTwo.queuedSummonThreat(), "Ravager lane should remain much higher threat than chicken lane.")) {
             return;
         }
         context.succeed();

@@ -13,6 +13,7 @@ import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.buildguide.BuildGuide;
 import kim.biryeong.semiontd.buildguide.BuildGuideService;
 import kim.biryeong.semiontd.config.EconomyConfig;
+import kim.biryeong.semiontd.config.IncomeLaneRoutingConfig;
 import kim.biryeong.semiontd.config.LeaderTargetingConfig;
 import kim.biryeong.semiontd.config.MapConfig;
 import kim.biryeong.semiontd.config.ProgressionConfig;
@@ -89,6 +90,7 @@ public final class SemionGameManager {
     private TowerBalanceConfig towerBalanceConfig = TowerBalanceConfig.defaultConfig();
     private SummonConfig summonConfig = SummonConfig.defaultConfig();
     private LeaderTargetingConfig leaderTargetingConfig = LeaderTargetingConfig.defaultConfig();
+    private IncomeLaneRoutingConfig incomeLaneRoutingConfig = IncomeLaneRoutingConfig.defaultConfig();
     private Path configDir;
     private Path progressionStorePath;
     private ProgressionService progressionService = new ProgressionService(progressionConfig, null);
@@ -143,6 +145,8 @@ public final class SemionGameManager {
                 TowerBalanceConfig.defaultConfig(),
                 SummonConfig.defaultConfig(),
                 SemionPersistenceConfig.defaultConfig(),
+                LeaderTargetingConfig.defaultConfig(),
+                IncomeLaneRoutingConfig.defaultConfig(),
                 progressionStorePath
         );
     }
@@ -164,6 +168,8 @@ public final class SemionGameManager {
                 towerBalanceConfig,
                 SummonConfig.defaultConfig(),
                 SemionPersistenceConfig.defaultConfig(),
+                LeaderTargetingConfig.defaultConfig(),
+                IncomeLaneRoutingConfig.defaultConfig(),
                 progressionStorePath
         );
     }
@@ -186,6 +192,8 @@ public final class SemionGameManager {
                 towerBalanceConfig,
                 summonConfig,
                 SemionPersistenceConfig.defaultConfig(),
+                LeaderTargetingConfig.defaultConfig(),
+                IncomeLaneRoutingConfig.defaultConfig(),
                 progressionStorePath
         );
     }
@@ -209,6 +217,8 @@ public final class SemionGameManager {
                 towerBalanceConfig,
                 summonConfig,
                 persistenceConfig,
+                LeaderTargetingConfig.defaultConfig(),
+                IncomeLaneRoutingConfig.defaultConfig(),
                 progressionStorePath
         );
     }
@@ -234,6 +244,7 @@ public final class SemionGameManager {
                 summonConfig,
                 persistenceConfig,
                 LeaderTargetingConfig.defaultConfig(),
+                IncomeLaneRoutingConfig.defaultConfig(),
                 progressionStorePath
         );
     }
@@ -248,6 +259,7 @@ public final class SemionGameManager {
             SummonConfig summonConfig,
             SemionPersistenceConfig persistenceConfig,
             LeaderTargetingConfig leaderTargetingConfig,
+            IncomeLaneRoutingConfig incomeLaneRoutingConfig,
             Path progressionStorePath
     ) {
         this.economyConfig = economyConfig;
@@ -259,6 +271,7 @@ public final class SemionGameManager {
         this.towerBalanceConfig = towerBalanceConfig == null ? TowerBalanceConfig.defaultConfig() : towerBalanceConfig;
         this.summonConfig = summonConfig == null ? SummonConfig.defaultConfig() : summonConfig;
         this.leaderTargetingConfig = leaderTargetingConfig == null ? LeaderTargetingConfig.defaultConfig() : leaderTargetingConfig;
+        this.incomeLaneRoutingConfig = incomeLaneRoutingConfig == null ? IncomeLaneRoutingConfig.defaultConfig() : incomeLaneRoutingConfig;
         this.progressionStorePath = progressionStorePath;
         this.configDir = progressionStorePath == null ? null : progressionStorePath.getParent();
         Path matchResultPath = this.configDir == null ? null : this.configDir.resolve("match-results.json");
@@ -450,11 +463,12 @@ public final class SemionGameManager {
                 configs.summons(),
                 configs.persistence(),
                 configs.leaderTargeting(),
+                configs.incomeLaneRouting(),
                 configDir.resolve("profiles.json")
         );
         boolean activeGameUpdated = activeGame != null && activeGame.phase() != RoundPhase.ENDED;
         if (activeGameUpdated) {
-            activeGame.applyConfigs(configs.economy(), configs.waves(), configs.leaderTargeting());
+            activeGame.applyConfigs(configs.economy(), configs.waves(), configs.leaderTargeting(), configs.incomeLaneRouting());
             activeGame.refreshProductionTowerTypes();
             activeGame.refreshSummonShop();
             sidebarHudService.refreshNow(server, activeGame, matchMode);
@@ -648,7 +662,7 @@ public final class SemionGameManager {
         clearPendingMatchResultDialog();
 
         GameArena arena = GameArenaLoader.load(server, mapConfig);
-        activeGame = new SemionGame(economyConfig, waveConfig, leaderTargetingConfig, arena, buildGuideService);
+        activeGame = new SemionGame(economyConfig, waveConfig, leaderTargetingConfig, incomeLaneRoutingConfig, arena, buildGuideService);
         applyPersistedJobSelections(server, activeGame);
         lastMatchResult = null;
         VanillaTeamBridge.ensureTeams(server);

@@ -34,7 +34,8 @@ public final class SemionConfigLoader {
                     SemionPersistenceConfig.defaultConfig(),
                     TowerBalanceConfig.defaultConfig(),
                     SummonConfig.defaultConfig(),
-                    LeaderTargetingConfig.defaultConfig()
+                    LeaderTargetingConfig.defaultConfig(),
+                    IncomeLaneRoutingConfig.defaultConfig()
             );
         }
 
@@ -90,7 +91,13 @@ public final class SemionConfigLoader {
                 LeaderTargetingConfig.class,
                 logger
         );
-        return new LoadedConfigs(economy, waves, map, progression, rating, persistence, towerBalance, summons, leaderTargeting);
+        IncomeLaneRoutingConfig incomeLaneRouting = loadOrCreate(
+                configDir.resolve("income_lane_routing.json"),
+                IncomeLaneRoutingConfig.defaultConfig(),
+                IncomeLaneRoutingConfig.class,
+                logger
+        );
+        return new LoadedConfigs(economy, waves, map, progression, rating, persistence, towerBalance, summons, leaderTargeting, incomeLaneRouting);
     }
 
     private static <T> T loadOrCreate(Path path, T defaults, Class<T> type, Logger logger) {
@@ -270,7 +277,8 @@ public final class SemionConfigLoader {
             SemionPersistenceConfig persistence,
             TowerBalanceConfig towerBalance,
             SummonConfig summons,
-            LeaderTargetingConfig leaderTargeting
+            LeaderTargetingConfig leaderTargeting,
+            IncomeLaneRoutingConfig incomeLaneRouting
     ) {
     }
 }

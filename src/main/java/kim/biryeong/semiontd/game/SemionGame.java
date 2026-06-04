@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import kim.biryeong.semiontd.buildguide.BuildGuideService;
 import kim.biryeong.semiontd.config.EconomyConfig;
+import kim.biryeong.semiontd.config.IncomeLaneRoutingConfig;
 import kim.biryeong.semiontd.config.LeaderTargetingConfig;
 import kim.biryeong.semiontd.config.RoundWaveConfig;
 import kim.biryeong.semiontd.config.WaveConfig;
@@ -50,8 +51,10 @@ public final class SemionGame {
     private EconomyConfig economyConfig;
     private WaveConfig waveConfig;
     private LeaderTargetingConfig leaderTargetingConfig;
+    private IncomeLaneRoutingConfig incomeLaneRoutingConfig;
     private final GameArena arena;
     private final EconomyService economyService;
+    private IncomeLaneRoutingPolicy incomeLaneRoutingPolicy;
     private final SummonShop summonShop;
     private final BuildGuideService buildGuideService;
     private final Random random = new Random();
@@ -79,7 +82,7 @@ public final class SemionGame {
     }
 
     public SemionGame(EconomyConfig economyConfig, WaveConfig waveConfig, GameArena arena, BuildGuideService buildGuideService) {
-        this(economyConfig, waveConfig, LeaderTargetingConfig.defaultConfig(), arena, buildGuideService);
+        this(economyConfig, waveConfig, LeaderTargetingConfig.defaultConfig(), IncomeLaneRoutingConfig.defaultConfig(), arena, buildGuideService);
     }
 
     public SemionGame(
@@ -88,7 +91,17 @@ public final class SemionGame {
             LeaderTargetingConfig leaderTargetingConfig,
             GameArena arena
     ) {
-        this(economyConfig, waveConfig, leaderTargetingConfig, arena, null);
+        this(economyConfig, waveConfig, leaderTargetingConfig, IncomeLaneRoutingConfig.defaultConfig(), arena, null);
+    }
+
+    public SemionGame(
+            EconomyConfig economyConfig,
+            WaveConfig waveConfig,
+            LeaderTargetingConfig leaderTargetingConfig,
+            IncomeLaneRoutingConfig incomeLaneRoutingConfig,
+            GameArena arena
+    ) {
+        this(economyConfig, waveConfig, leaderTargetingConfig, incomeLaneRoutingConfig, arena, null);
     }
 
     public SemionGame(
@@ -98,11 +111,24 @@ public final class SemionGame {
             GameArena arena,
             BuildGuideService buildGuideService
     ) {
+        this(economyConfig, waveConfig, leaderTargetingConfig, IncomeLaneRoutingConfig.defaultConfig(), arena, buildGuideService);
+    }
+
+    public SemionGame(
+            EconomyConfig economyConfig,
+            WaveConfig waveConfig,
+            LeaderTargetingConfig leaderTargetingConfig,
+            IncomeLaneRoutingConfig incomeLaneRoutingConfig,
+            GameArena arena,
+            BuildGuideService buildGuideService
+    ) {
         this.economyConfig = economyConfig;
         this.waveConfig = waveConfig;
         this.leaderTargetingConfig = leaderTargetingConfig == null ? LeaderTargetingConfig.defaultConfig() : leaderTargetingConfig;
+        this.incomeLaneRoutingConfig = incomeLaneRoutingConfig == null ? IncomeLaneRoutingConfig.defaultConfig() : incomeLaneRoutingConfig;
         this.arena = arena;
         this.economyService = new EconomyService(economyConfig, this);
+        this.incomeLaneRoutingPolicy = new IncomeLaneRoutingPolicy(this.incomeLaneRoutingConfig, random);
         this.summonShop = new SummonShop();
         this.buildGuideService = buildGuideService;
         for (TeamId teamId : TeamId.values()) {
@@ -155,13 +181,24 @@ public final class SemionGame {
     }
 
     public void applyConfigs(EconomyConfig economyConfig, WaveConfig waveConfig) {
-        applyConfigs(economyConfig, waveConfig, leaderTargetingConfig);
+        applyConfigs(economyConfig, waveConfig, leaderTargetingConfig, incomeLaneRoutingConfig);
     }
 
     public void applyConfigs(EconomyConfig economyConfig, WaveConfig waveConfig, LeaderTargetingConfig leaderTargetingConfig) {
+        applyConfigs(economyConfig, waveConfig, leaderTargetingConfig, incomeLaneRoutingConfig);
+    }
+
+    public void applyConfigs(
+            EconomyConfig economyConfig,
+            WaveConfig waveConfig,
+            LeaderTargetingConfig leaderTargetingConfig,
+            IncomeLaneRoutingConfig incomeLaneRoutingConfig
+    ) {
         this.economyConfig = economyConfig;
         this.waveConfig = waveConfig;
         this.leaderTargetingConfig = leaderTargetingConfig == null ? LeaderTargetingConfig.defaultConfig() : leaderTargetingConfig;
+        this.incomeLaneRoutingConfig = incomeLaneRoutingConfig == null ? IncomeLaneRoutingConfig.defaultConfig() : incomeLaneRoutingConfig;
+        this.incomeLaneRoutingPolicy = new IncomeLaneRoutingPolicy(this.incomeLaneRoutingConfig, random);
         this.economyService.configure(economyConfig);
     }
 
@@ -450,7 +487,7 @@ public final class SemionGame {
             return SummonResult.failure(SummonResultType.NO_TARGET_TEAM, summonId);
         }
 
-        Optional<PlayerLane> targetLane = randomTargetLane(targetTeam.get());
+        Optional<PlayerLane> targetLane = targetLaneForSummon(targetTeam.get());
         if (targetLane.isEmpty()) {
             economyService.refundSummon(player, gasCost, currentRound);
             return SummonResult.failure(SummonResultType.NO_TARGET_LANE, summonId);
@@ -909,12 +946,12 @@ public final class SemionGame {
         return Optional.of(candidates.get(random.nextInt(candidates.size())));
     }
 
-    private Optional<PlayerLane> randomTargetLane(SemionTeam team) {
+    Optional<PlayerLane> targetLaneForSummon(SemionTeam team) {
         List<PlayerLane> lanes = team.laneGroup().lanes();
         if (lanes.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.of(lanes.get(random.nextInt(lanes.size())));
+        return incomeLaneRoutingPolicy.select(lanes);
     }
 
     private boolean activateParticipant(AssignedParticipant participant) {

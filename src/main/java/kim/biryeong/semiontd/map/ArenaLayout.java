@@ -33,6 +33,7 @@ public record ArenaLayout(
         Vec3 teamSpawn = requiredPoint(template, markers.teamSpawn());
         Vec3 bossSpawn = requiredPoint(template, markers.bossSpawn());
         Map<Integer, Vec3> laneSpawns = readLanePoints(template, markers.laneSpawn());
+        Map<Integer, BlockBounds> laneSpawnAreas = readLaneBounds(template, markers.laneSpawn());
         Map<Integer, BlockBounds> laneAreas = readLaneBounds(template, markers.lanePath());
         Map<Integer, List<OrderedPoint>> laneWaypoints = readLaneWaypoints(template, markers.laneWaypoint());
         List<Vec3> finalWaypoints = readOrderedPoints(template, markers.finalWaypoint());
@@ -45,6 +46,7 @@ public record ArenaLayout(
         Map<Integer, LaneRegionLayout> lanes = new HashMap<>();
         for (int laneId = 1; laneId <= SemionTeam.MAX_PLAYERS; laneId++) {
             Vec3 laneSpawn = requiredLanePoint(laneSpawns, laneId, markers.laneSpawn());
+            BlockBounds laneSpawnArea = requiredLaneBounds(laneSpawnAreas, laneId, markers.laneSpawn());
             BlockBounds laneArea = requiredLaneBounds(laneAreas, laneId, markers.lanePath());
             List<Vec3> waypoints = laneWaypoints.getOrDefault(laneId, List.of()).stream()
                     .sorted(Comparator.comparingInt(OrderedPoint::order))
@@ -52,7 +54,7 @@ public record ArenaLayout(
                     .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
             waypoints.addAll(finalWaypoints);
             List<GridPosition> slots = requiredFinalDefenseSlots(finalDefenseTowerSlots, laneId, markers.finalDefenseTower());
-            lanes.put(laneId, new LaneRegionLayout(laneId, laneSpawn, waypoints, bossSpawn, laneArea, slots));
+            lanes.put(laneId, new LaneRegionLayout(laneId, laneSpawn, laneSpawnArea, waypoints, bossSpawn, laneArea, slots));
         }
 
         return new ArenaLayout(teamSpawn, bossSpawn, lanes);

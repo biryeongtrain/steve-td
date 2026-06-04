@@ -182,4 +182,36 @@ final class SemionConfigLoaderTest {
         assertEquals(1, configs.leaderTargeting().maxTargetingTeamsPerTarget());
         assertEquals(4, configs.leaderTargeting().activeTargetRounds());
     }
+
+    @Test
+    void loadCreatesIncomeLaneRoutingConfigFileWithDefaults() {
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+
+        assertTrue(Files.exists(tempDir.resolve("income_lane_routing.json")));
+        assertEquals(IncomeLaneRoutingConfig.defaultConfig(), configs.incomeLaneRouting());
+        assertEquals(true, configs.incomeLaneRouting().enabled());
+        assertEquals(IncomeLaneRoutingConfig.Mode.LEAST_THREAT_PRESSURE, configs.incomeLaneRouting().mode());
+    }
+
+    @Test
+    void loadReadsIncomeLaneRoutingConfigOverrides() throws Exception {
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("income_lane_routing.json"), """
+                {
+                  "enabled": false,
+                  "mode": "RANDOM",
+                  "queuedThreatWeight": 2.0,
+                  "nextRoundQueuedThreatWeight": 0.25,
+                  "tieBreakMode": "RANDOM"
+                }
+                """);
+
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+
+        assertEquals(false, configs.incomeLaneRouting().enabled());
+        assertEquals(IncomeLaneRoutingConfig.Mode.RANDOM, configs.incomeLaneRouting().mode());
+        assertEquals(2.0, configs.incomeLaneRouting().queuedThreatWeight(), 0.0001);
+        assertEquals(0.25, configs.incomeLaneRouting().nextRoundQueuedThreatWeight(), 0.0001);
+        assertEquals(IncomeLaneRoutingConfig.TieBreakMode.RANDOM, configs.incomeLaneRouting().tieBreakMode());
+    }
 }
