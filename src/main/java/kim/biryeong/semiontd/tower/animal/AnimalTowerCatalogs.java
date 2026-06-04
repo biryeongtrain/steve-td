@@ -27,9 +27,6 @@ public final class AnimalTowerCatalogs {
         registerTower(AnimalTowers.T2_FOX_TOWER, FoxTower::new, 2);
         registerTower(AnimalTowers.T3_FOX_TOWER, FoxTower::new, 3);
 
-        registerTower(AnimalTowers.T1_BEE_TOWER, BeeTower::new, 1);
-        registerTower(AnimalTowers.T2_BEE_TOWER, BeeTower::new, 2);
-        registerTower(AnimalTowers.T3_BEE_TOWER, BeeTower::new, 3);
 
         link(AnimalTowers.T1_PIG_TOWER, "t2_pig_tower", "돼지 타워", AnimalTowers.T2_PIG_TOWER);
         link(AnimalTowers.T2_PIG_TOWER, "t3_pig_tower", "돼지 타워", AnimalTowers.T3_PIG_TOWER);
@@ -39,8 +36,7 @@ public final class AnimalTowerCatalogs {
         link(AnimalTowers.T2_RABBIT_TOWER, "t3_rabbit_tower", "토끼 타워", AnimalTowers.T3_RABBIT_TOWER);
         link(AnimalTowers.T1_FOX_TOWER, "t2_fox_tower", "붉은 여우 타워", AnimalTowers.T2_FOX_TOWER);
         link(AnimalTowers.T2_FOX_TOWER, "t3_fox_tower", "설원 여우 타워", AnimalTowers.T3_FOX_TOWER);
-        link(AnimalTowers.T1_BEE_TOWER, "t2_bee_tower", "벌집 타워", AnimalTowers.T2_BEE_TOWER);
-        link(AnimalTowers.T2_BEE_TOWER, "t3_bee_tower", "여왕벌 타워", AnimalTowers.T3_BEE_TOWER);
+
 
         JobRegistry.registerIfAbsent(new AnimalTowerJob());
     }

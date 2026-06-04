@@ -128,6 +128,7 @@ import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
 import kim.biryeong.semiontd.tower.animal.AnimalTowerCatalogs;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
+import kim.biryeong.semiontd.tower.animal.FoxTower;
 import kim.biryeong.semiontd.tower.animal.PigTower;
 import kim.biryeong.semiontd.tower.animal.RabbitTower;
 import kim.biryeong.semiontd.tower.animal.WolfTower;
@@ -139,6 +140,7 @@ import kim.biryeong.semiontd.tower.undead.UndeadRangedSkeletonTower;
 import kim.biryeong.semiontd.tower.undead.UndeadTowerCatalogs;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
 import kim.biryeong.semiontd.tower.undead.UndeadZombieTower;
+import kim.biryeong.semiontd.tower.legion.BeeTower;
 import kim.biryeong.semiontd.tower.legion.IllusionCloneSpawnQueue;
 import kim.biryeong.semiontd.tower.legion.IllusionProfile;
 import kim.biryeong.semiontd.tower.legion.IllusionRuntimeTower;
@@ -3503,7 +3505,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         UUID playerId = stableUuid("red-bee-tower-owner");
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
         Map<String, TowerBalanceConfig.TowerStats> towers = new LinkedHashMap<>(defaults.towers());
-        TowerType baseBee = AnimalTowers.T1_BEE_TOWER;
+        TowerType baseBee = LegionTowers.T1_BEE_TOWER;
         towers.put(baseBee.id(), new TowerBalanceConfig.TowerStats(
                 baseBee.mineralCost(),
                 baseBee.maxHealth(),
@@ -3514,11 +3516,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         ));
         Map<String, Map<String, Double>> abilities = new LinkedHashMap<>(defaults.abilities());
         abilities.put(baseBee.id(), Map.of(
-                "maxAnimalStacks", 1.0,
+                "maxSwarmStacks", 1.0,
                 "poisonDamagePerStack", 5.0,
-                "poisonDamagePerAnimalStack", 0.0,
+                "poisonDamagePerSwarmStack", 0.0,
                 "maxPoisonStacks", 2.0,
-                "poisonStacksPerAnimalStack", 0.0,
+                "poisonStacksPerSwarmStack", 0.0,
                 "poisonDurationTicks", 40.0,
                 "poisonTickIntervalTicks", 5.0
         ));

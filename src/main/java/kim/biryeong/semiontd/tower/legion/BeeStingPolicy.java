@@ -1,4 +1,4 @@
-package kim.biryeong.semiontd.tower.animal;
+package kim.biryeong.semiontd.tower.legion;
 
 import java.util.Optional;
 

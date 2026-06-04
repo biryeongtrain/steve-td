@@ -2,7 +2,6 @@ package kim.biryeong.semiontd.tower.animal;
 
 import static kim.biryeong.semiontd.tower.catalog.ProductionTowerDefinitions.*;
 
-import kim.biryeong.semiontd.entity.visual.EntityVisual;
 import kim.biryeong.semiontd.entity.visual.FoxVisual;
 import kim.biryeong.semiontd.entity.visual.PigVisual;
 import kim.biryeong.semiontd.entity.visual.RabbitVisual;
@@ -231,54 +230,6 @@ public class AnimalTowers {
             )
     );
 
-    public static final TowerType T1_BEE_TOWER = tower(
-            "t1_bee_tower",
-            "벌 타워",
-            80,
-            28,
-            7,
-            4,
-            18,
-            0,
-            EntityVisual.vanilla("minecraft:bee"),
-            List.of(
-                    "<gray> 독침으로 오래 버티는 적을 갉아먹는 동물 타워입니다. </gray>",
-                    "<green> 공격 시 대상에게 독침 스택을 부여합니다. </green>"
-            )
-    );
-
-    public static final TowerType T2_BEE_TOWER = tower(
-            "t2_bee_tower",
-            "벌집 타워",
-            160,
-            36,
-            7,
-            6,
-            17,
-            0,
-            EntityVisual.vanilla("minecraft:bee"),
-            List.of(
-                    "<gray> 독침 스택을 더 오래 유지하는 벌집 타워입니다. </gray>",
-                    "<green> 높은 독 스택으로 탱커를 압박합니다. </green>"
-            )
-    );
-
-    public static final TowerType T3_BEE_TOWER = tower(
-            "t3_bee_tower",
-            "여왕벌 타워",
-            310,
-            48,
-            8,
-            8,
-            16,
-            0,
-            EntityVisual.vanilla("minecraft:bee"),
-            List.of(
-                    "<gray> 오래 싸울수록 독 피해를 누적시키는 여왕벌입니다. </gray>",
-                    "<green> 더 많은 독침 스택으로 보스와 고체력 몬스터를 압박합니다. </green>"
-            )
-    );
-
     // 양 타워
 
     static {
@@ -356,27 +307,6 @@ public class AnimalTowers {
                 "<green> 처형 대상에게 {ability.executeDamageBonusRatio:percent} 추가 피해를 줍니다. </green>",
                 "<green> 같은 여우 타워마다 처형 기준이 {ability.executeThresholdPerStack:percent}, 추가 피해가 {ability.executeDamageBonusPerStack:percent} 증가합니다. </green>",
                 "<green> 최대 중첩 : {ability.maxStacks:integer}회, 처형 기준 최대 : {ability.maxExecuteHealthThreshold:percent} </green>"
-        ));
-        TowerDescriptionRegistry.registerTemplate(T1_BEE_TOWER, List.of(
-                "<gray> 독침으로 오래 버티는 적을 갉아먹는 동물 타워입니다. </gray>",
-                "<green> 공격 시 {ability.poisonDurationTicks:seconds} 동안 유지되는 독침을 부여합니다. </green>",
-                "<green> 독침은 {ability.poisonTickIntervalTicks:seconds}마다 스택당 {ability.poisonDamagePerStack:number} 피해를 줍니다. </green>",
-                "<green> 독침은 최대 {ability.maxPoisonStacks:integer}스택까지 중첩됩니다. </green>",
-                "<green> 같은 벌 타워마다 스택당 피해가 {ability.poisonDamagePerAnimalStack:number}, 최대 독침이 {ability.poisonStacksPerAnimalStack:integer} 증가합니다. </green>"
-        ));
-        TowerDescriptionRegistry.registerTemplate(T2_BEE_TOWER, List.of(
-                "<gray> 독침 스택을 더 오래 유지하는 벌집 타워입니다. </gray>",
-                "<green> 공격 시 {ability.poisonDurationTicks:seconds} 동안 유지되는 독침을 부여합니다. </green>",
-                "<green> 독침은 {ability.poisonTickIntervalTicks:seconds}마다 스택당 {ability.poisonDamagePerStack:number} 피해를 줍니다. </green>",
-                "<green> 독침은 최대 {ability.maxPoisonStacks:integer}스택까지 중첩됩니다. </green>",
-                "<green> 같은 벌 타워마다 스택당 피해가 {ability.poisonDamagePerAnimalStack:number}, 최대 독침이 {ability.poisonStacksPerAnimalStack:integer} 증가합니다. </green>"
-        ));
-        TowerDescriptionRegistry.registerTemplate(T3_BEE_TOWER, List.of(
-                "<gray> 오래 싸울수록 독 피해를 누적시키는 여왕벌입니다. </gray>",
-                "<green> 공격 시 {ability.poisonDurationTicks:seconds} 동안 유지되는 독침을 부여합니다. </green>",
-                "<green> 독침은 {ability.poisonTickIntervalTicks:seconds}마다 스택당 {ability.poisonDamagePerStack:number} 피해를 줍니다. </green>",
-                "<green> 독침은 최대 {ability.maxPoisonStacks:integer}스택까지 중첩됩니다. </green>",
-                "<green> 같은 벌 타워마다 스택당 피해가 {ability.poisonDamagePerAnimalStack:number}, 최대 독침이 {ability.poisonStacksPerAnimalStack:integer} 증가합니다. </green>"
         ));
     }
 }

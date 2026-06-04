@@ -174,6 +174,54 @@ public class LegionTowers {
             )
     );
 
+    public static final TowerType T1_BEE_TOWER = tower(
+            "t1_bee_tower",
+            "정찰 벌 타워",
+            80,
+            28,
+            7,
+            4,
+            18,
+            0,
+            EntityVisual.vanilla("minecraft:bee"),
+            List.of(
+                    "<gray> 무리 빌더의 정찰 벌떼가 독침으로 오래 버티는 적을 갉아먹습니다. </gray>",
+                    "<green> 공격 시 대상에게 독침 스택을 부여합니다. </green>"
+            )
+    );
+
+    public static final TowerType T2_BEE_TOWER = tower(
+            "t2_bee_tower",
+            "벌떼 타워",
+            160,
+            36,
+            7,
+            6,
+            17,
+            0,
+            EntityVisual.vanilla("minecraft:bee"),
+            List.of(
+                    "<gray> 더 큰 무리로 독침 스택을 오래 유지하는 벌떼 타워입니다. </gray>",
+                    "<green> 높은 독 스택으로 탱커를 압박합니다. </green>"
+            )
+    );
+
+    public static final TowerType T3_BEE_TOWER = tower(
+            "t3_bee_tower",
+            "여왕벌 타워",
+            310,
+            48,
+            8,
+            8,
+            16,
+            0,
+            EntityVisual.vanilla("minecraft:bee"),
+            List.of(
+                    "<gray> 여왕벌이 무리를 이끌어 장기전에 독 피해를 누적시킵니다. </gray>",
+                    "<green> 더 많은 독침 스택으로 보스와 고체력 몬스터를 압박합니다. </green>"
+            )
+    );
+
     public static final TowerType ILLUSION_TOWER = tower(
             "illusion_tower",
             "환술 타워",
@@ -201,6 +249,9 @@ public class LegionTowers {
             T2_PENGUIN.id(),
             T1_PARROT_TOWER.id(),
             T2_PARROT_TOWER.id(),
+            T1_BEE_TOWER.id(),
+            T2_BEE_TOWER.id(),
+            T3_BEE_TOWER.id(),
             ILLUSION_TOWER.id()
     );
 
@@ -253,6 +304,27 @@ public class LegionTowers {
         TowerDescriptionRegistry.registerTemplate(T2_PARROT_TOWER, List.of(
                 "<gray>동물 빌더가 리워크될 때 실직당한 앵무 타워가 원한을 풀기위해 돌아왔습니다.</gray>",
                 "<green> 공격 시 마다 이 타워의 공격력과 공격속도가 {ability.attackStackBonus:percent} 증가합니다. 최대 {ability.attackStackBonus*ability.maxAttackStacks:percent} </green>"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T1_BEE_TOWER, List.of(
+                "<gray> 무리 빌더의 정찰 벌떼가 독침으로 오래 버티는 적을 갉아먹습니다. </gray>",
+                "<green> 공격 시 {ability.poisonDurationTicks:seconds} 동안 유지되는 독침을 부여합니다. </green>",
+                "<green> 독침은 {ability.poisonTickIntervalTicks:seconds}마다 스택당 {ability.poisonDamagePerStack:number} 피해를 줍니다. </green>",
+                "<green> 독침은 최대 {ability.maxPoisonStacks:integer}스택까지 중첩됩니다. </green>",
+                "<green> 같은 벌 타워마다 스택당 피해가 {ability.poisonDamagePerSwarmStack:number}, 최대 독침이 {ability.poisonStacksPerSwarmStack:integer} 증가합니다. </green>"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T2_BEE_TOWER, List.of(
+                "<gray> 더 큰 무리로 독침 스택을 오래 유지하는 벌떼 타워입니다. </gray>",
+                "<green> 공격 시 {ability.poisonDurationTicks:seconds} 동안 유지되는 독침을 부여합니다. </green>",
+                "<green> 독침은 {ability.poisonTickIntervalTicks:seconds}마다 스택당 {ability.poisonDamagePerStack:number} 피해를 줍니다. </green>",
+                "<green> 독침은 최대 {ability.maxPoisonStacks:integer}스택까지 중첩됩니다. </green>",
+                "<green> 같은 벌 타워마다 스택당 피해가 {ability.poisonDamagePerSwarmStack:number}, 최대 독침이 {ability.poisonStacksPerSwarmStack:integer} 증가합니다. </green>"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T3_BEE_TOWER, List.of(
+                "<gray> 여왕벌이 무리를 이끌어 장기전에 독 피해를 누적시킵니다. </gray>",
+                "<green> 공격 시 {ability.poisonDurationTicks:seconds} 동안 유지되는 독침을 부여합니다. </green>",
+                "<green> 독침은 {ability.poisonTickIntervalTicks:seconds}마다 스택당 {ability.poisonDamagePerStack:number} 피해를 줍니다. </green>",
+                "<green> 독침은 최대 {ability.maxPoisonStacks:integer}스택까지 중첩됩니다. </green>",
+                "<green> 같은 벌 타워마다 스택당 피해가 {ability.poisonDamagePerSwarmStack:number}, 최대 독침이 {ability.poisonStacksPerSwarmStack:integer} 증가합니다. </green>"
         ));
         TowerDescriptionRegistry.registerTemplate(ILLUSION_TOWER, List.of(
                 "<red><bold> 이 유닛은 최대 1기만 설치할 수 있습니다. </red></bold>",
