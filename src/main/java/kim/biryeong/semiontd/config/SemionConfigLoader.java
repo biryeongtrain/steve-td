@@ -147,18 +147,35 @@ public final class SemionConfigLoader {
                     "purchaseEmeraldCostIncrease"
             );
             boolean killRewardMissing = !hasObjectProperty(json, "killReward");
-            if (towerLimitPurchaseMissing) {
+            boolean teamTransferMissing = !hasObjectProperty(json, "teamTransfer");
+            boolean teamTransferEnabledMissing = teamTransferMissing
+                    || !hasNestedObjectProperty(json, "teamTransfer", "enabled");
+            boolean teamTransferCooldownMissing = teamTransferMissing
+                    || !hasNestedObjectProperty(json, "teamTransfer", "receiveCooldownRounds");
+            boolean teamTransferMaxMissing = teamTransferMissing
+                    || !hasNestedObjectProperty(json, "teamTransfer", "maxDiamondPerRound");
+            EconomyConfig.TeamTransferConfig teamTransfer = mergedTeamTransfer(
+                    value.teamTransfer(),
+                    defaults.teamTransfer(),
+                    teamTransferEnabledMissing,
+                    teamTransferCooldownMissing,
+                    teamTransferMaxMissing
+            );
+            if (towerLimitPurchaseMissing || teamTransferMissing || teamTransferEnabledMissing
+                    || teamTransferCooldownMissing || teamTransferMaxMissing) {
                 value = new EconomyConfig(
                         value.startingDiamond(),
                         value.startingEmerald(),
                         value.startingIncome(),
                         value.emeraldCap(),
                         value.emeraldProduction(),
-                        value.towerLimit().withDefaultPurchaseSettings(),
-                        value.killReward()
+                        towerLimitPurchaseMissing ? value.towerLimit().withDefaultPurchaseSettings() : value.towerLimit(),
+                        value.killReward(),
+                        teamTransfer
                 );
             }
-            if (towerLimitMissing || towerLimitPurchaseMissing || killRewardMissing) {
+            if (towerLimitMissing || towerLimitPurchaseMissing || killRewardMissing || teamTransferMissing
+                    || teamTransferEnabledMissing || teamTransferCooldownMissing || teamTransferMaxMissing) {
                 write(path, value, logger);
             }
             return value;
@@ -166,6 +183,21 @@ public final class SemionConfigLoader {
             logger.warn("Failed to load config {}; using defaults.", path, exception);
             return defaults;
         }
+    }
+
+    private static EconomyConfig.TeamTransferConfig mergedTeamTransfer(
+            EconomyConfig.TeamTransferConfig loaded,
+            EconomyConfig.TeamTransferConfig defaults,
+            boolean enabledMissing,
+            boolean cooldownMissing,
+            boolean maxMissing
+    ) {
+        EconomyConfig.TeamTransferConfig safeLoaded = loaded == null ? defaults : loaded;
+        return new EconomyConfig.TeamTransferConfig(
+                enabledMissing ? defaults.enabled() : safeLoaded.enabled(),
+                cooldownMissing ? defaults.receiveCooldownRounds() : safeLoaded.receiveCooldownRounds(),
+                maxMissing ? defaults.maxDiamondPerRound() : safeLoaded.maxDiamondPerRound()
+        );
     }
 
     private static TowerBalanceConfig loadOrCreateTowerBalance(

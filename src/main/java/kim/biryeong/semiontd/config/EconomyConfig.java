@@ -13,7 +13,8 @@ public record EconomyConfig(
         @SerializedName(value = "emeraldProduction", alternate = "gasProduction")
         GasProductionConfig emeraldProduction,
         TowerLimitConfig towerLimit,
-        KillRewardConfig killReward
+        KillRewardConfig killReward,
+        TeamTransferConfig teamTransfer
 ) {
     public EconomyConfig(
             long startingDiamond,
@@ -29,7 +30,8 @@ public record EconomyConfig(
                 emeraldCap,
                 emeraldProduction,
                 TowerLimitConfig.defaultConfig(),
-                KillRewardConfig.defaultConfig()
+                KillRewardConfig.defaultConfig(),
+                TeamTransferConfig.defaultConfig()
         );
     }
 
@@ -48,7 +50,29 @@ public record EconomyConfig(
                 emeraldCap,
                 emeraldProduction,
                 towerLimit,
-                KillRewardConfig.defaultConfig()
+                KillRewardConfig.defaultConfig(),
+                TeamTransferConfig.defaultConfig()
+        );
+    }
+
+    public EconomyConfig(
+            long startingDiamond,
+            long startingEmerald,
+            long startingIncome,
+            GasCapConfig emeraldCap,
+            GasProductionConfig emeraldProduction,
+            TowerLimitConfig towerLimit,
+            KillRewardConfig killReward
+    ) {
+        this(
+                startingDiamond,
+                startingEmerald,
+                startingIncome,
+                emeraldCap,
+                emeraldProduction,
+                towerLimit,
+                killReward,
+                TeamTransferConfig.defaultConfig()
         );
     }
 
@@ -68,6 +92,9 @@ public record EconomyConfig(
         if (killReward == null) {
             killReward = KillRewardConfig.defaultConfig();
         }
+        if (teamTransfer == null) {
+            teamTransfer = TeamTransferConfig.defaultConfig();
+        }
     }
 
     public static EconomyConfig defaultConfig() {
@@ -78,7 +105,8 @@ public record EconomyConfig(
                 GasCapConfig.defaultConfig(),
                 GasProductionConfig.defaultConfig(),
                 TowerLimitConfig.defaultConfig(),
-                KillRewardConfig.defaultConfig()
+                KillRewardConfig.defaultConfig(),
+                TeamTransferConfig.defaultConfig()
         );
     }
 
@@ -179,6 +207,26 @@ public record EconomyConfig(
 
         public static KillRewardConfig defaultConfig() {
             return new KillRewardConfig(true, 0.40, 0.90, false);
+        }
+    }
+
+    public record TeamTransferConfig(
+            boolean enabled,
+            int receiveCooldownRounds,
+            long maxDiamondPerRound
+    ) {
+        public TeamTransferConfig {
+            if (receiveCooldownRounds < 0 || maxDiamondPerRound < 0) {
+                throw new IllegalArgumentException("Team transfer config values are invalid.");
+            }
+        }
+
+        public static TeamTransferConfig defaultConfig() {
+            return new TeamTransferConfig(true, 3, 30);
+        }
+
+        public long maxRequestDiamond(int round) {
+            return maxDiamondPerRound * Math.max(1, round);
         }
     }
 

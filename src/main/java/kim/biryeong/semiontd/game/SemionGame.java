@@ -66,6 +66,8 @@ public final class SemionGame {
     private final Set<UUID> matchSpectatorIds = new HashSet<>();
     private final Set<TeamId> announcedEliminations = new HashSet<>();
     private final Set<TeamId> currentWaveTeamIds = new HashSet<>();
+    private final Map<String, TeamMoneyTransferRequest> teamMoneyRequests = new java.util.LinkedHashMap<>();
+    private final Map<UUID, Integer> lastTeamMoneyReceivedRound = new java.util.HashMap<>();
     private final List<TeamEliminationRecord> eliminationOrder = new ArrayList<>();
     private MatchId matchId = MatchId.newId();
     private long startedAtEpochMillis;
@@ -248,6 +250,144 @@ public final class SemionGame {
     public boolean purchaseTowerLimit(UUID playerId) {
         SemionPlayer player = players.get(playerId);
         return player != null && player.economy().purchaseTowerLimit(economyConfig.towerLimit());
+    }
+
+    public TeamMoneyTransferResult requestTeamMoney(UUID requesterId, long amount) {
+        EconomyConfig.TeamTransferConfig config = economyConfig.teamTransfer();
+        pruneExpiredTeamMoneyRequests();
+        if (!config.enabled()) {
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.DISABLED);
+        }
+        if (phase == RoundPhase.ENDED) {
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.MATCH_ENDED);
+        }
+        if (amount <= 0) {
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.INVALID_AMOUNT);
+        }
+
+        SemionPlayer requester = players.get(requesterId);
+        if (requester == null) {
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.PLAYER_NOT_IN_GAME);
+        }
+        if (!teamCanTransfer(requester.teamId())) {
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.TEAM_NOT_ACTIVE);
+        }
+
+        Optional<TeamMoneyTransferResult> cooldownResult = receiveCooldownResult(requester.uuid(), config);
+        if (cooldownResult.isPresent()) {
+            return cooldownResult.get();
+        }
+        if (teamMoneyRequests.values().stream().anyMatch(request -> request.requesterId().equals(requester.uuid()))) {
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.REQUEST_ALREADY_OPEN);
+        }
+
+        long maxAllowed = config.maxRequestDiamond(currentRound);
+        if (amount > maxAllowed) {
+            return TeamMoneyTransferResult.failure(
+                    TeamMoneyTransferResultType.AMOUNT_EXCEEDS_ROUND_LIMIT,
+                    0,
+                    maxAllowed
+            );
+        }
+
+        TeamMoneyTransferRequest request = new TeamMoneyTransferRequest(
+                UUID.randomUUID().toString(),
+                requester.uuid(),
+                requester.teamId(),
+                amount,
+                currentRound
+        );
+        teamMoneyRequests.put(request.id(), request);
+        return TeamMoneyTransferResult.requestCreated(request, maxAllowed);
+    }
+
+    public TeamMoneyTransferResult acceptTeamMoneyRequest(UUID senderId, String requestId) {
+        EconomyConfig.TeamTransferConfig config = economyConfig.teamTransfer();
+        if (!config.enabled()) {
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.DISABLED);
+        }
+        if (phase == RoundPhase.ENDED) {
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.MATCH_ENDED);
+        }
+
+        TeamMoneyTransferRequest request = requestId == null ? null : teamMoneyRequests.get(requestId);
+        if (request == null) {
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.REQUEST_NOT_FOUND);
+        }
+        if (request.requestedRound() < currentRound) {
+            teamMoneyRequests.remove(request.id());
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.REQUEST_EXPIRED);
+        }
+
+        SemionPlayer sender = players.get(senderId);
+        if (sender == null) {
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.PLAYER_NOT_IN_GAME);
+        }
+        SemionPlayer requester = players.get(request.requesterId());
+        if (requester == null || requester.teamId() != request.teamId() || !teamCanTransfer(requester.teamId())) {
+            teamMoneyRequests.remove(request.id());
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.REQUESTER_NO_LONGER_ELIGIBLE);
+        }
+        if (sender.uuid().equals(requester.uuid())) {
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.SELF_TRANSFER);
+        }
+        if (!teamCanTransfer(sender.teamId())) {
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.TEAM_NOT_ACTIVE);
+        }
+        if (sender.teamId() != request.teamId()) {
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.NOT_TEAMMATE);
+        }
+
+        Optional<TeamMoneyTransferResult> cooldownResult = receiveCooldownResult(requester.uuid(), config);
+        if (cooldownResult.isPresent()) {
+            return cooldownResult.get();
+        }
+        long maxAllowed = config.maxRequestDiamond(currentRound);
+        if (request.amount() > maxAllowed) {
+            return TeamMoneyTransferResult.failure(
+                    TeamMoneyTransferResultType.AMOUNT_EXCEEDS_ROUND_LIMIT,
+                    0,
+                    maxAllowed
+            );
+        }
+        if (!economyService.transferDiamond(sender, requester, request.amount())) {
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.NOT_ENOUGH_DIAMOND);
+        }
+
+        teamMoneyRequests.remove(request.id());
+        lastTeamMoneyReceivedRound.put(requester.uuid(), currentRound);
+        return TeamMoneyTransferResult.success(request, sender.uuid());
+    }
+
+    Optional<TeamMoneyTransferRequest> teamMoneyRequest(String requestId) {
+        pruneExpiredTeamMoneyRequests();
+        return Optional.ofNullable(teamMoneyRequests.get(requestId));
+    }
+
+    private void pruneExpiredTeamMoneyRequests() {
+        teamMoneyRequests.entrySet().removeIf(entry -> entry.getValue().requestedRound() < currentRound || phase == RoundPhase.ENDED);
+    }
+
+    private boolean teamCanTransfer(TeamId teamId) {
+        SemionTeam team = teams.get(teamId);
+        return team != null && team.active() && !team.eliminated();
+    }
+
+    private Optional<TeamMoneyTransferResult> receiveCooldownResult(UUID requesterId, EconomyConfig.TeamTransferConfig config) {
+        Integer lastReceivedRound = lastTeamMoneyReceivedRound.get(requesterId);
+        if (lastReceivedRound == null || config.receiveCooldownRounds() <= 0) {
+            return Optional.empty();
+        }
+        int nextAllowedRound = lastReceivedRound + config.receiveCooldownRounds();
+        if (currentRound >= nextAllowedRound) {
+            return Optional.empty();
+        }
+        int remainingRounds = nextAllowedRound - currentRound;
+        return Optional.of(TeamMoneyTransferResult.failure(
+                TeamMoneyTransferResultType.RECEIVE_COOLDOWN_ACTIVE,
+                remainingRounds,
+                0
+        ));
     }
 
     public int towerCount(UUID playerId) {

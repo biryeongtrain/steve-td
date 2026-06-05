@@ -64,6 +64,63 @@ final class SemionConfigLoaderTest {
     }
 
     @Test
+    void defaultEconomyConfigEnablesTeamTransferEveryThreeRoundsWithThirtyPerRound() {
+        EconomyConfig.TeamTransferConfig config = EconomyConfig.defaultConfig().teamTransfer();
+
+        assertTrue(config.enabled());
+        assertEquals(3, config.receiveCooldownRounds());
+        assertEquals(30, config.maxDiamondPerRound());
+        assertEquals(90, config.maxRequestDiamond(3));
+    }
+
+    @Test
+    void loadBackfillsTeamTransferConfigDefaults() throws Exception {
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("economy.json"), """
+                {
+                  "startingDiamond": 200,
+                  "startingEmerald": 50,
+                  "startingIncome": 0,
+                  "teamTransfer": {
+                    "receiveCooldownRounds": 5
+                  }
+                }
+                """);
+
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+
+        assertTrue(configs.economy().teamTransfer().enabled());
+        assertEquals(5, configs.economy().teamTransfer().receiveCooldownRounds());
+        assertEquals(30, configs.economy().teamTransfer().maxDiamondPerRound());
+        String written = Files.readString(tempDir.resolve("economy.json"));
+        assertTrue(written.contains("enabled"));
+        assertTrue(written.contains("maxDiamondPerRound"));
+    }
+
+    @Test
+    void loadPreservesExplicitTeamTransferDisabled() throws Exception {
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("economy.json"), """
+                {
+                  "startingDiamond": 200,
+                  "startingEmerald": 50,
+                  "startingIncome": 0,
+                  "teamTransfer": {
+                    "enabled": false,
+                    "receiveCooldownRounds": 2,
+                    "maxDiamondPerRound": 10
+                  }
+                }
+                """);
+
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+
+        assertEquals(false, configs.economy().teamTransfer().enabled());
+        assertEquals(2, configs.economy().teamTransfer().receiveCooldownRounds());
+        assertEquals(10, configs.economy().teamTransfer().maxDiamondPerRound());
+    }
+
+    @Test
     void loadBackfillsTowerLimitPurchaseDefaults() throws Exception {
         Files.createDirectories(tempDir);
         Files.writeString(tempDir.resolve("economy.json"), """

@@ -30,9 +30,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -97,6 +99,21 @@ public final class SemionCommands {
                                 ))))
                 .then(literal("economy")
                         .executes(context -> economy(context.getSource(), gameManager)))
+                .then(literal("money")
+                        .then(literal("request")
+                                .then(argument("amount", IntegerArgumentType.integer(1))
+                                        .executes(context -> requestTeamMoney(
+                                                context.getSource(),
+                                                gameManager,
+                                                IntegerArgumentType.getInteger(context, "amount")
+                                        ))))
+                        .then(literal("accept")
+                                .then(argument("requestId", StringArgumentType.word())
+                                        .executes(context -> acceptTeamMoney(
+                                                context.getSource(),
+                                                gameManager,
+                                                StringArgumentType.getString(context, "requestId")
+                                        )))))
                 .then(literal("profile")
                         .executes(context -> profile(context.getSource(), gameManager)))
                 .then(literal("rating")
@@ -235,6 +252,13 @@ public final class SemionCommands {
                 .executes(context -> ratingTop(context.getSource(), gameManager)));
         dispatcher.register(literal("준비")
                 .executes(context -> ready(context.getSource(), gameManager)));
+        dispatcher.register(literal("요청")
+                .then(argument("amount", IntegerArgumentType.integer(1))
+                        .executes(context -> requestTeamMoney(
+                                context.getSource(),
+                                gameManager,
+                                IntegerArgumentType.getInteger(context, "amount")
+                        ))));
         dispatcher.register(literal("빌드")
                 .then(literal("기록")
                         .then(argument("title", StringArgumentType.greedyString())
@@ -781,6 +805,116 @@ public final class SemionCommands {
                 + ", 생산업글=" + economy.emeraldProductionUpgradeCount()
                 + ", 다음업글비용=" + (nextGasUpgradeCost >= 0 ? nextGasUpgradeCost : "최대"));
         return 1;
+    }
+
+    private static int requestTeamMoney(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            int amount
+    ) throws CommandSyntaxException {
+        ServerPlayer requesterPlayer = source.getPlayerOrException();
+        SemionGame game = gameManager.activeGame().orElse(null);
+        if (game == null) {
+            failure(source, "진행 중인 게임이 없습니다.");
+            return 0;
+        }
+
+        TeamMoneyTransferResult result = game.requestTeamMoney(requesterPlayer.getUUID(), amount);
+        if (result.type() != TeamMoneyTransferResultType.SUCCESS) {
+            failure(source, teamMoneyFailureMessage(result));
+            return 0;
+        }
+
+        String requestId = result.requestId().orElseThrow();
+        SemionPlayer requester = game.players().get(requesterPlayer.getUUID());
+        int notified = notifyTeamMoneyRequest(source, game, requester, requestId, result.amount());
+        success(source, "다이아 " + result.amount() + "개 지원 요청을 보냈습니다. 요청 ID=" + requestId
+                + ", 온라인 팀원 알림=" + notified);
+        return 1;
+    }
+
+    private static int acceptTeamMoney(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            String requestId
+    ) throws CommandSyntaxException {
+        ServerPlayer senderPlayer = source.getPlayerOrException();
+        SemionGame game = gameManager.activeGame().orElse(null);
+        if (game == null) {
+            failure(source, "진행 중인 게임이 없습니다.");
+            return 0;
+        }
+
+        TeamMoneyTransferResult result = game.acceptTeamMoneyRequest(senderPlayer.getUUID(), requestId);
+        if (result.type() != TeamMoneyTransferResultType.SUCCESS) {
+            failure(source, teamMoneyFailureMessage(result));
+            return 0;
+        }
+
+        result.requesterId()
+                .flatMap(requesterId -> Optional.ofNullable(source.getServer().getPlayerList().getPlayer(requesterId)))
+                .ifPresent(requester -> requester.sendSystemMessage(SemionText.prefixed(Component.literal(
+                        senderPlayer.getGameProfile().getName() + "님에게 다이아 " + result.amount() + "개를 받았습니다."
+                ).withStyle(ChatFormatting.GREEN))));
+        success(source, "다이아 " + result.amount() + "개를 보냈습니다.");
+        return 1;
+    }
+
+    private static int notifyTeamMoneyRequest(
+            CommandSourceStack source,
+            SemionGame game,
+            SemionPlayer requester,
+            String requestId,
+            long amount
+    ) {
+        if (requester == null) {
+            return 0;
+        }
+        int notified = 0;
+        String acceptCommand = "/semiontd money accept " + requestId;
+        Component message = SemionText.prefixed(Component.empty()
+                .append(Component.literal(requester.name() + "님이 다이아 " + amount + "개 지원을 요청했습니다. ")
+                        .withStyle(ChatFormatting.YELLOW))
+                .append(Component.literal("[보내기]")
+                        .withStyle(style -> style
+                                .withColor(ChatFormatting.GREEN)
+                                .withClickEvent(new ClickEvent.RunCommand(acceptCommand))))
+                .append(Component.literal(" 클릭 시 즉시 송금됩니다.").withStyle(ChatFormatting.GRAY)));
+
+        for (SemionPlayer candidate : game.players().values()) {
+            if (candidate.uuid().equals(requester.uuid()) || candidate.teamId() != requester.teamId()) {
+                continue;
+            }
+            ServerPlayer onlinePlayer = source.getServer().getPlayerList().getPlayer(candidate.uuid());
+            if (onlinePlayer == null) {
+                continue;
+            }
+            onlinePlayer.sendSystemMessage(message);
+            notified++;
+        }
+        return notified;
+    }
+
+    private static String teamMoneyFailureMessage(TeamMoneyTransferResult result) {
+        return switch (result.type()) {
+            case DISABLED -> "팀원 간 다이아 지원 요청 기능이 비활성화되어 있습니다.";
+            case INVALID_AMOUNT -> "요청 금액은 1 이상이어야 합니다.";
+            case PLAYER_NOT_IN_GAME -> "현재 게임 참가자가 아닙니다.";
+            case TEAM_NOT_ACTIVE -> "활성 팀 참가자만 다이아 지원을 요청하거나 보낼 수 있습니다.";
+            case NOT_TEAMMATE -> "같은 팀원의 요청에만 보낼 수 있습니다.";
+            case SELF_TRANSFER -> "자기 자신의 요청에는 보낼 수 없습니다.";
+            case RECEIVE_COOLDOWN_ACTIVE -> "아직 다이아를 받을 수 없습니다. 남은 라운드="
+                    + result.remainingCooldownRounds();
+            case AMOUNT_EXCEEDS_ROUND_LIMIT -> "요청 금액이 현재 라운드 한도를 초과했습니다. 최대="
+                    + result.maxAllowedAmount();
+            case REQUEST_NOT_FOUND -> "지원 요청을 찾을 수 없습니다. 이미 처리되었거나 만료된 요청입니다.";
+            case REQUEST_ALREADY_OPEN -> "이미 처리 대기 중인 지원 요청이 있습니다. 팀원이 [보내기]를 누르거나 다음 라운드에 다시 요청해주세요.";
+            case REQUEST_EXPIRED -> "지원 요청이 만료되었습니다. 같은 라운드 안에서만 보낼 수 있습니다.";
+            case REQUESTER_NO_LONGER_ELIGIBLE -> "요청자가 더 이상 받을 수 없는 상태입니다.";
+            case MATCH_ENDED -> "경기가 종료되어 다이아 지원을 요청하거나 보낼 수 없습니다.";
+            case NOT_ENOUGH_DIAMOND -> "보낼 다이아가 부족합니다.";
+            case SUCCESS -> "성공";
+        };
     }
 
     private enum CurrencyDebugType {

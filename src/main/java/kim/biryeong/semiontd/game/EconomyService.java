@@ -95,6 +95,18 @@ public final class EconomyService {
         player.economy().addIncome(Math.max(0, incomeGain));
     }
 
+    public boolean transferDiamond(SemionPlayer sender, SemionPlayer receiver, long amount) {
+        long boundedAmount = Math.max(0, amount);
+        if (sender == null || receiver == null || boundedAmount <= 0) {
+            return false;
+        }
+        if (!sender.economy().spendDiamond(boundedAmount)) {
+            return false;
+        }
+        receiver.economy().addDiamond(boundedAmount);
+        return true;
+    }
+
     public void awardMonsterKillReward(Monster monster, Map<UUID, SemionPlayer> players) {
         if (monster == null || monster.rewardGranted() || monster.mineralReward() <= 0) {
             return;
