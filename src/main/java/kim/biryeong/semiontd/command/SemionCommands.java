@@ -827,10 +827,13 @@ public final class SemionCommands {
 
         String requestId = result.requestId().orElseThrow();
         SemionPlayer requester = game.players().get(requesterPlayer.getUUID());
-        int notified = notifyTeamMoneyRequest(source, game, requester, requestId, result.amount());
-        success(source, "다이아 " + result.amount() + "개 지원 요청을 보냈습니다. 요청 ID=" + requestId
-                + ", 온라인 팀원 알림=" + notified);
+        notifyTeamMoneyRequest(source, game, requester, requestId, result.amount());
+        success(source, teamMoneyRequestSuccessMessage(result.amount()));
         return 1;
+    }
+
+    static String teamMoneyRequestSuccessMessage(long amount) {
+        return "다이아 " + amount + "개 지원 요청을 보냈습니다.";
     }
 
     private static int acceptTeamMoney(
