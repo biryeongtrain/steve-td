@@ -48,12 +48,22 @@ public final class ResonanceTower extends EntityBackedTower {
     }
 
     void updateResonanceState(int level, int links) {
-        resonanceLevel = Math.max(0, level);
-        resonanceLinks = Math.max(0, links);
+        resonanceLevel = Math.max(resonanceLevel, Math.max(0, level));
+        resonanceLinks = Math.max(resonanceLinks, Math.max(0, links));
     }
 
     void updateAuraAttackSpeedBonus(double bonus) {
-        auraAttackSpeedBonus = Math.max(0.0, bonus);
+        auraAttackSpeedBonus = Math.max(auraAttackSpeedBonus, Math.max(0.0, bonus));
+    }
+
+    @Override
+    protected void copyRuntimeStateFrom(Tower previousTower) {
+        if (previousTower instanceof ResonanceTower previousResonanceTower) {
+            resonanceLevel = previousResonanceTower.resonanceLevel;
+            resonanceLinks = previousResonanceTower.resonanceLinks;
+            pulseCharge = previousResonanceTower.pulseCharge;
+            auraAttackSpeedBonus = previousResonanceTower.auraAttackSpeedBonus;
+        }
     }
 
     @Override

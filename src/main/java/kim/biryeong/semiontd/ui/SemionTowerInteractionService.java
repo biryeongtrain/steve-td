@@ -32,7 +32,8 @@ public final class SemionTowerInteractionService {
         if (world.isClientSide() || hand != InteractionHand.MAIN_HAND || !(player instanceof ServerPlayer serverPlayer)) {
             return InteractionResult.PASS;
         }
-        if (!(entity instanceof SemionTowerEntity towerEntity) || towerEntity.runtimeTower() == null) {
+        SemionTowerEntity towerEntity = resolveTowerEntity(world, entity);
+        if (towerEntity == null || towerEntity.runtimeTower() == null) {
             return InteractionResult.PASS;
         }
 
@@ -43,5 +44,22 @@ public final class SemionTowerInteractionService {
 
         gameManager.dialogService().showTowerDetails(serverPlayer, game, towerEntity.runtimeTower(), gameManager.buildGuideService());
         return InteractionResult.SUCCESS;
+    }
+
+    static SemionTowerEntity resolveTowerEntity(Level world, Entity entity) {
+        if (entity instanceof SemionTowerEntity towerEntity) {
+            return towerEntity;
+        }
+        if (world == null || entity == null) {
+            return null;
+        }
+        return world.getEntitiesOfClass(
+                        SemionTowerEntity.class,
+                        entity.getBoundingBox().inflate(2.0),
+                        candidate -> candidate.ownsMoobloomVisualEntity(entity)
+                )
+                .stream()
+                .findFirst()
+                .orElse(null);
     }
 }

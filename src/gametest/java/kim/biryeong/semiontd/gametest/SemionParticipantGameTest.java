@@ -251,6 +251,18 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             if (!assertEquals(context, "dandelion", visual.getEntityData().get(MoobloomAccessor.semiontd$dataVariant()), "Moobloom visual should carry the tower variant for the Polymer patch.")) {
                 return;
             }
+            if (!assertTrue(context, towerEntity.ownsMoobloomVisualEntity(visual), "Moobloom visual should be linked back to the tower for right-click UI resolution.")) {
+                return;
+            }
+            if (!assertClose(context, towerEntity.getX(), visual.getX(), "Moobloom visual X should stay on the tower hitbox anchor.")) {
+                return;
+            }
+            if (!assertClose(context, towerEntity.getY(), visual.getY(), "Moobloom visual Y should stay on the tower hitbox anchor.")) {
+                return;
+            }
+            if (!assertClose(context, towerEntity.getZ(), visual.getZ(), "Moobloom visual Z should stay on the tower hitbox anchor.")) {
+                return;
+            }
             if (!assertTrue(context, visual.isNoAi() && visual.isInvulnerable(), "Moobloom visual should be passive cosmetic state only.")) {
                 return;
             }

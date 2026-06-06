@@ -12,8 +12,8 @@ public final class ResonanceTowers {
     private static final String LINK_DESCRIPTION = "<gray>{ability.linkRange:integer}칸 안에 다른 종의 무블룸을 모으면 공명합니다.</gray>";
 
     public static final TowerType FOCUS_CRYSTAL = tower(
-            "resonance_focus_crystal",
-            "민들레 집중 무블룸",
+            "t1_resonance_focus_moobloom",
+            "민들레 무블룸",
             95,
             55,
             6,
@@ -22,15 +22,14 @@ public final class ResonanceTowers {
             5,
             moobloom("dandelion"),
             List.of(
-                    "<gray>역할: 초반 단일 딜러</gray>",
-                    "<gray>첫 타워로 적합합니다. 저렴한 비용으로 초반 라인의 킬 속도를 확보합니다.</gray>",
-                    "<green>해금: 공명 1단계. 다른 종 2기를 붙이면 공격속도 보너스로 초반 누수를 줄입니다.</green>"
+                    "<gray>단일 타겟 무블룸입니다.</gray>",
+                    "<green>다른 무블룸 종류를 옆에 설치하면 추가 효과를 받아요.</green>"
             )
     );
 
     public static final TowerType FOCUS_PRISM = tower(
-            "resonance_focus_prism",
-            "해바라기 집속 무블룸",
+            "t2_resonance_focus_moobloom",
+            "해바라기 무블룸",
             180,
             75,
             6.5,
@@ -39,15 +38,14 @@ public final class ResonanceTowers {
             8,
             moobloom("sunflower"),
             List.of(
-                    "<gray>역할: 중반 단일 딜러</gray>",
-                    "<gray>체력이 높은 몬스터와 선두 몬스터를 빠르게 처리합니다.</gray>",
-                    "<green>해금: 공명 2단계. 다른 종 4기를 붙이면 단일 피해 보너스가 열립니다.</green>"
+                    "<gray>단일 타겟 무블룸입니다.</gray>",
+                    "<green>다른 무블룸 종류를 옆에 설치하면 추가 효과를 받아요.</green>"
             )
     );
 
     public static final TowerType FOCUS_CORE = tower(
-            "resonance_focus_core",
-            "주황 튤립 초점 무블룸",
+            "t3_resonance_focus_moobloom",
+            "주황 튤립 무블룸",
             320,
             95,
             7,
@@ -56,15 +54,14 @@ public final class ResonanceTowers {
             12,
             moobloom("orange_tulip"),
             List.of(
-                    "<gray>역할: 후반 단일 딜러</gray>",
-                    "<gray>높은 체력의 적을 오래 추적해 보스와 선두 몬스터를 처리합니다.</gray>",
-                    "<green>해금: 공명 3단계. 다른 종 6기를 붙이면 주 대상 추가 타격이 열립니다.</green>"
+                    "<gray>단일 타겟 무블룸입니다.</gray>",
+                    "<green>다른 무블룸 종류를 옆에 설치하면 추가 효과를 받아요.</green>"
             )
     );
 
     public static final TowerType WAVE_CRYSTAL = tower(
-            "resonance_wave_crystal",
-            "수레국화 파동 무블룸",
+            "t1_resonance_wave_moobloom",
+            "수레국화 무블룸",
             85,
             45,
             5,
@@ -73,15 +70,14 @@ public final class ResonanceTowers {
             10,
             moobloom("cornflower"),
             List.of(
-                    "<gray>역할: 저비용 보조 딜러</gray>",
-                    "<gray>첫 단일 딜러 옆에 세우기 좋은 두 번째 타워입니다.</gray>",
-                    "<green>해금: 공명 1단계. 다른 종 2기를 붙이면 공격속도 보너스로 초반 소형 몬스터 처리에 보탬이 됩니다.</green>"
+                    "<gray>업그레이드 시 범위 공격을 하는 무블룸입니다.</gray>",
+                    "<green>다른 무블룸 종류를 옆에 설치하면 추가 효과를 받아요.</green>"
             )
     );
 
     public static final TowerType WAVE_PRISM = tower(
-            "resonance_wave_prism",
-            "파란 난초 진동 무블룸",
+            "t2_resonance_wave_moobloom",
+            "파란 난초 무블룸",
             160,
             60,
             5.5,
@@ -90,15 +86,14 @@ public final class ResonanceTowers {
             12,
             moobloom("blue_orchid"),
             List.of(
-                    "<gray>역할: 중반 보조 딜러</gray>",
-                    "<gray>몬스터가 뭉치는 구간에서 꾸준한 피해를 넣습니다.</gray>",
-                    "<green>해금: 공명 2단계. 다른 종 4기를 붙이면 매 공격 스플래시가 열립니다.</green>"
+                    "<gray>업그레이드 시 범위 공격을 하는 무블룸입니다.</gray>",
+                    "<green>다른 무블룸 종류를 옆에 설치하면 추가 효과를 받아요.</green>"
             )
     );
 
     public static final TowerType WAVE_CORE = tower(
-            "resonance_wave_core",
-            "푸른 들꽃 파동 무블룸",
+            "t3_resonance_wave_moobloom",
+            "푸른 들꽃 무블룸",
             300,
             80,
             6,
@@ -107,15 +102,14 @@ public final class ResonanceTowers {
             15,
             moobloom("azure_bluet"),
             List.of(
-                    "<gray>역할: 후반 범위 보조</gray>",
-                    "<gray>소형 몬스터 무리와 체력이 남은 적을 정리합니다.</gray>",
-                    "<green>해금: 공명 3단계. 다른 종 6기를 붙이면 넓은 파동 폭발이 열립니다.</green>"
+                    "<gray>업그레이드 시 범위 공격을 하는 무블룸입니다.</gray>",
+                    "<green>다른 무블룸 종류를 옆에 설치하면 추가 효과를 받아요.</green>"
             )
     );
 
     public static final TowerType FROST_CRYSTAL = tower(
-            "resonance_frost_crystal",
-            "은방울꽃 결빙 무블룸",
+            "t1_resonance_frost_moobloom",
+            "은방울꽃 무블룸",
             80,
             50,
             6,
@@ -124,15 +118,14 @@ public final class ResonanceTowers {
             0,
             moobloom("lily_of_the_valley"),
             List.of(
-                    "<gray>역할: 저비용 둔화 준비</gray>",
-                    "<gray>피해는 낮지만 사거리가 길어 배치 부담이 적습니다.</gray>",
-                    "<green>해금: 공명 1단계. 다른 종 2기를 붙이면 공격 대상 둔화가 열립니다.</green>"
+                    "<gray>업그레이드 시 광역 둔화를 주고, 둔화를 준 적에게 추가 피해를 입히는 무블룸입니다.</gray>",
+                    "<green>다른 무블룸 종류를 옆에 설치하면 추가 효과를 받아요.</green>"
             )
     );
 
     public static final TowerType FROST_PRISM = tower(
-            "resonance_frost_prism",
-            "하얀 튤립 서리 무블룸",
+            "t2_resonance_frost_moobloom",
+            "하얀 튤립 무블룸",
             150,
             75,
             6.5,
@@ -141,15 +134,14 @@ public final class ResonanceTowers {
             2,
             moobloom("white_tulip"),
             List.of(
-                    "<gray>역할: 중반 둔화 보조</gray>",
-                    "<gray>긴 사거리로 딜러 주변 빈칸을 메우기 쉽습니다.</gray>",
-                    "<green>해금: 공명 2단계. 다른 종 4기를 붙이면 둔화 강화와 둔화 대상 추가 피해가 열립니다.</green>"
+                    "<gray>업그레이드 시 광역 둔화를 주고, 둔화를 준 적에게 추가 피해를 입히는 무블룸입니다.</gray>",
+                    "<green>다른 무블룸 종류를 옆에 설치하면 추가 효과를 받아요.</green>"
             )
     );
 
     public static final TowerType FROST_CORE = tower(
-            "resonance_frost_core",
-            "데이지 빙결 무블룸",
+            "t3_resonance_frost_moobloom",
+            "데이지 무블룸",
             280,
             105,
             7,
@@ -158,15 +150,14 @@ public final class ResonanceTowers {
             5,
             moobloom("oxeye_daisy"),
             List.of(
-                    "<gray>역할: 후반 둔화 보조</gray>",
-                    "<gray>긴 사거리로 선두와 후속 몬스터를 함께 견제합니다.</gray>",
-                    "<green>해금: 공명 3단계. 다른 종 6기를 붙이면 범위 둔화 파동이 열립니다.</green>"
+                    "<gray>업그레이드 시 광역 둔화를 주고, 둔화를 준 적에게 추가 피해를 입히는 무블룸입니다.</gray>",
+                    "<green>다른 무블룸 종류를 옆에 설치하면 추가 효과를 받아요.</green>"
             )
     );
 
     public static final TowerType AMPLIFY_CRYSTAL = tower(
-            "resonance_amplify_crystal",
-            "알리움 만개 무블룸",
+            "t1_resonance_amplify_moobloom",
+            "알리움 무블룸",
             110,
             65,
             5,
@@ -175,15 +166,14 @@ public final class ResonanceTowers {
             20,
             moobloom("allium"),
             List.of(
-                    "<gray>역할: 연결용 전방 타워</gray>",
-                    "<gray>체력과 어그로가 높아 앞줄에 세우기 좋습니다.</gray>",
-                    "<green>해금: 공명 1단계. 다른 종 2기를 붙이면 받는 피해 감소가 열립니다.</green>"
+                    "<gray>업그레이드 시 매우 단단해지며 아군에게 저항 효과를 주는 무블룸입니다.</gray>",
+                    "<green>다른 무블룸 종류를 옆에 설치하면 추가 효과를 받아요.</green>"
             )
     );
 
     public static final TowerType AMPLIFY_PRISM = tower(
-            "resonance_amplify_prism",
-            "라일락 정원 무블룸",
+            "t2_resonance_amplify_moobloom",
+            "라일락 무블룸",
             200,
             100,
             5.5,
@@ -192,15 +182,14 @@ public final class ResonanceTowers {
             25,
             moobloom("lilac"),
             List.of(
-                    "<gray>역할: 중반 연결 탱커</gray>",
-                    "<gray>전선을 버티면서 주변 딜러의 공명 단계를 유지합니다.</gray>",
-                    "<green>해금: 공명 2단계. 다른 종 4기를 붙이면 주변 무블룸 공격속도 보조가 열립니다.</green>"
+                    "<gray>업그레이드 시 매우 단단해지며 아군에게 저항 효과를 주는 무블룸입니다.</gray>",
+                    "<green>다른 무블룸 종류를 옆에 설치하면 추가 효과를 받아요.</green>"
             )
     );
 
     public static final TowerType AMPLIFY_CORE = tower(
-            "resonance_amplify_core",
-            "작약 공명 무블룸",
+            "t3_resonance_amplify_moobloom",
+            "작약 무블룸",
             350,
             140,
             6,
@@ -209,9 +198,8 @@ public final class ResonanceTowers {
             30,
             moobloom("peony"),
             List.of(
-                    "<gray>역할: 후반 연결 탱커</gray>",
-                    "<gray>높은 체력으로 후반 라인의 압박을 받아냅니다.</gray>",
-                    "<green>해금: 공명 3단계. 다른 종 6기를 붙이면 주변 무블룸 회복과 보호가 열립니다.</green>"
+                    "<gray>업그레이드 시 매우 단단해지며 아군에게 저항 효과를 주는 무블룸입니다.</gray>",
+                    "<green>다른 무블룸 종류를 옆에 설치하면 추가 효과를 받아요.</green>"
             )
     );
 
@@ -260,8 +248,8 @@ public final class ResonanceTowers {
     private static void registerDescription(TowerType type) {
         java.util.ArrayList<String> template = new java.util.ArrayList<>(type.description());
         template.add(LINK_DESCRIPTION);
-        template.add("<green>조건: 다른 종 {ability.level1RequiredLinks:integer}/{ability.level2RequiredLinks:integer}/{ability.level3RequiredLinks:integer}기 이상에서 1/2/3단계 공명합니다.</green>");
-        template.add("<green>현재 해금: 공명 {ability.maxResonanceLevel:integer}단계까지 사용합니다.</green>");
+        template.add("<green>다른 무블룸 종류(업그레이드 무관, 처음 설치할 때 다른 종류)를 주위에 설치하면 추가 효과를 받습니다. 타워 업그레이드마다 {ability.level1RequiredLinks:integer}/{ability.level2RequiredLinks:integer}/{ability.level3RequiredLinks:integer}기에서 1/2/3단계 효과를 얻을 수 있어요.</green>");
+        template.add("<green>현재 해금: 공명 {ability.maxResonanceLevel:integer}단계 까지 활성화 가능합니다.</green>");
         switch (aspectOf(type)) {
             case FOCUS -> addFocusDescription(template, type);
             case WAVE -> addWaveDescription(template, type);
@@ -278,7 +266,7 @@ public final class ResonanceTowers {
         }
         if (unlockedResonanceLevel(type) >= 3) {
             template.add("<green>공명 3단계: 공격속도 +{ability.focusLevel3AttackSpeedBonus:percent}, 피해 +{ability.focusLevel3DamageBonus:percent}</green>");
-            template.add("<green>3단계부터 {ability.focusStrikeEveryAttacks:integer}번째 공격마다 주 대상에게 {ability.focusStrikeDamageRatio:percent} 추가 피해를 줍니다.</green>");
+            template.add("<green>{ability.focusStrikeEveryAttacks:integer}번째 공격마다 주 대상에게 {ability.focusStrikeDamageRatio:percent} 추가 피해를 줍니다.</green>");
         }
     }
 
@@ -289,7 +277,7 @@ public final class ResonanceTowers {
         }
         if (unlockedResonanceLevel(type) >= 3) {
             template.add("<green>공명 3단계: 스플래시가 {ability.waveLevel3SplashRadius:blocks}, {ability.waveLevel3SplashDamageRatio:percent}로 강화됩니다.</green>");
-            template.add("<green>3단계부터 {ability.wavePulseEveryAttacks:integer}번째 공격마다 {ability.wavePulseRadius:blocks} 범위에 {ability.wavePulseDamageRatio:percent} 파동 피해를 줍니다.</green>");
+            template.add("<green>{ability.wavePulseEveryAttacks:integer}번째 공격마다 {ability.wavePulseRadius:blocks} 범위에 {ability.wavePulseDamageRatio:percent} 파동 피해를 줍니다.</green>");
         }
     }
 
@@ -300,7 +288,7 @@ public final class ResonanceTowers {
         }
         if (unlockedResonanceLevel(type) >= 3) {
             template.add("<green>공명 3단계: 둔화가 {ability.frostLevel3SlowTicks:seconds}, -{ability.frostLevel3SlowMagnitude:percent}로 강화되고 둔화 대상 피해가 +{ability.frostLevel3DamageVsSlowedBonus:percent} 증가합니다.</green>");
-            template.add("<green>3단계부터 {ability.frostPulseEveryAttacks:integer}번째 공격마다 {ability.frostPulseRadius:blocks} 범위에 {ability.frostPulseDamageRatio:percent} 피해와 {ability.frostPulseSlowTicks:seconds} 둔화를 줍니다.</green>");
+            template.add("<green>{ability.frostPulseEveryAttacks:integer}번째 공격마다 {ability.frostPulseRadius:blocks} 범위에 {ability.frostPulseDamageRatio:percent} 피해와 {ability.frostPulseSlowTicks:seconds} 둔화를 줍니다.</green>");
         }
     }
 
@@ -311,7 +299,7 @@ public final class ResonanceTowers {
         }
         if (unlockedResonanceLevel(type) >= 3) {
             template.add("<green>공명 3단계: 받는 피해 -{ability.bloomLevel3DamageReduction:percent}, {ability.bloomAuraRange:blocks} 안 무블룸 공격속도 +{ability.bloomLevel3AuraAttackSpeedBonus:percent}</green>");
-            template.add("<green>3단계부터 {ability.bloomProtectEveryAttacks:integer}번째 공격마다 {ability.bloomProtectRadius:blocks} 안 무블룸을 공격력의 {ability.bloomProtectHealRatio:percent}만큼 회복하고 {ability.bloomProtectTicks:seconds} 동안 받는 피해 -{ability.bloomProtectDamageReduction:percent}를 줍니다.</green>");
+            template.add("<green>{ability.bloomProtectEveryAttacks:integer}번째 공격마다 {ability.bloomProtectRadius:blocks} 안 무블룸을 공격력의 {ability.bloomProtectHealRatio:percent}만큼 회복하고 {ability.bloomProtectTicks:seconds} 동안 받는 피해 -{ability.bloomProtectDamageReduction:percent}를 줍니다.</green>");
         }
     }
 

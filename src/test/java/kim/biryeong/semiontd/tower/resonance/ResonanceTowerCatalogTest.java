@@ -72,10 +72,26 @@ class ResonanceTowerCatalogTest {
     }
 
     @Test
+    void resonanceTowerIdsUseTierPrefixesForConfigEditing() {
+        assertEquals("t1_resonance_focus_moobloom", ResonanceTowers.FOCUS_CRYSTAL.id());
+        assertEquals("t2_resonance_focus_moobloom", ResonanceTowers.FOCUS_PRISM.id());
+        assertEquals("t3_resonance_focus_moobloom", ResonanceTowers.FOCUS_CORE.id());
+        assertEquals("t1_resonance_wave_moobloom", ResonanceTowers.WAVE_CRYSTAL.id());
+        assertEquals("t2_resonance_wave_moobloom", ResonanceTowers.WAVE_PRISM.id());
+        assertEquals("t3_resonance_wave_moobloom", ResonanceTowers.WAVE_CORE.id());
+        assertEquals("t1_resonance_frost_moobloom", ResonanceTowers.FROST_CRYSTAL.id());
+        assertEquals("t2_resonance_frost_moobloom", ResonanceTowers.FROST_PRISM.id());
+        assertEquals("t3_resonance_frost_moobloom", ResonanceTowers.FROST_CORE.id());
+        assertEquals("t1_resonance_amplify_moobloom", ResonanceTowers.AMPLIFY_CRYSTAL.id());
+        assertEquals("t2_resonance_amplify_moobloom", ResonanceTowers.AMPLIFY_PRISM.id());
+        assertEquals("t3_resonance_amplify_moobloom", ResonanceTowers.AMPLIFY_CORE.id());
+    }
+
+    @Test
     void resonanceTowersUseMoobloomNamesAndFloweryVariants() {
-        assertEquals("민들레 집중 무블룸", ResonanceTowers.FOCUS_CRYSTAL.displayName());
-        assertEquals("알리움 만개 무블룸", ResonanceTowers.AMPLIFY_CRYSTAL.displayName());
-        assertEquals("라일락 정원 무블룸", ResonanceTowers.AMPLIFY_PRISM.displayName());
+        assertEquals("민들레 무블룸", ResonanceTowers.FOCUS_CRYSTAL.displayName());
+        assertEquals("알리움 무블룸", ResonanceTowers.AMPLIFY_CRYSTAL.displayName());
+        assertEquals("라일락 무블룸", ResonanceTowers.AMPLIFY_PRISM.displayName());
         assertEquals("무블룸 빌더", new ResonanceTowerJob().displayName().getString());
 
         assertMoobloomVariant(ResonanceTowers.FOCUS_CRYSTAL, "dandelion");
@@ -103,13 +119,13 @@ class ResonanceTowerCatalogTest {
         playerFacingLines.addAll(bloomDescription);
         new ResonanceTowerJob().description().forEach(line -> playerFacingLines.add(line.getString()));
 
-        assertTrue(focusDescription.stream().anyMatch(line -> line.contains("첫 타워로 적합")));
+        assertTrue(focusDescription.stream().anyMatch(line -> line.contains("단일 타겟")));
         assertTrue(focusDescription.stream().anyMatch(line -> line.contains("현재 해금") && line.contains("1단계")));
         assertTrue(focusDescription.stream().anyMatch(line -> line.contains("공명 1단계")));
         assertFalse(focusDescription.stream().anyMatch(line -> line.contains("공명 2단계")));
         assertFalse(focusDescription.stream().anyMatch(line -> line.contains("공명 3단계")));
-        assertTrue(waveDescription.stream().anyMatch(line -> line.contains("두 번째 타워")));
-        assertTrue(bloomDescription.stream().anyMatch(line -> line.contains("연결용 전방 타워")));
+        assertTrue(waveDescription.stream().anyMatch(line -> line.contains("범위 공격")));
+        assertTrue(bloomDescription.stream().anyMatch(line -> line.contains("저항 효과")));
         assertFalse(playerFacingLines.stream().anyMatch(line -> line.contains("꽃밭")));
         assertFalse(playerFacingLines.stream().anyMatch(line -> line.contains("꽃향")));
         assertFalse(playerFacingLines.stream().anyMatch(line -> line.contains("증폭")));

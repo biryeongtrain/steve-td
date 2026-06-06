@@ -31,6 +31,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.entity.MoverType;
@@ -125,6 +126,10 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     public Tower runtimeTower() {
         return runtimeTower;
+    }
+
+    public boolean ownsMoobloomVisualEntity(Entity entity) {
+        return entity != null && entity == moobloomVisualEntity;
     }
 
     public void useAttackTargetFrom(SemionTowerEntity source) {
@@ -528,6 +533,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
             moobloomVisualEntity.setSilent(true);
             moobloomVisualEntity.setInvulnerable(true);
             moobloomVisualEntity.setPersistenceRequired();
+            moobloomVisualEntity.setPos(getX(), getY(), getZ());
             serverLevel.addFreshEntity(moobloomVisualEntity);
         }
         applyMoobloomVisualVariant();
