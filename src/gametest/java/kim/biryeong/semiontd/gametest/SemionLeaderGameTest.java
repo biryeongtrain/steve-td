@@ -1,8 +1,11 @@
 package kim.biryeong.semiontd.gametest;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.EconomyConfig;
+import kim.biryeong.semiontd.config.TowerBalanceConfig;
+import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.game.LeaderTargetResult;
 import kim.biryeong.semiontd.game.PlayerEconomy;
@@ -10,7 +13,11 @@ import kim.biryeong.semiontd.game.SemionGame;
 import kim.biryeong.semiontd.game.SemionPlayer;
 import kim.biryeong.semiontd.game.SemionTeam;
 import kim.biryeong.semiontd.game.TeamId;
+import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.map.GameArena;
+import kim.biryeong.semiontd.tower.resonance.ResonanceService;
+import kim.biryeong.semiontd.tower.resonance.ResonanceTower;
+import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
 import kim.biryeong.semiontd.ui.SemionDialogService;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.network.chat.Component;
@@ -55,6 +62,32 @@ public final class SemionLeaderGameTest {
     }
 
     @GameTest
+    public void towerRuntimeDetailsAreAvailableInRuntimeDialogPath(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        UUID owner = UUID.nameUUIDFromBytes("gametest-runtime-detail-owner".getBytes());
+        ResonanceTower focus = resonanceTower(ResonanceTowers.FOCUS_CORE, owner, new GridPosition(0, 0, 0));
+        ResonanceService.refresh(List.of(
+                focus,
+                resonanceTower(ResonanceTowers.WAVE_CRYSTAL, owner, new GridPosition(1, 0, 0)),
+                resonanceTower(ResonanceTowers.FROST_CRYSTAL, owner, new GridPosition(-1, 0, 0)),
+                resonanceTower(ResonanceTowers.AMPLIFY_CRYSTAL, owner, new GridPosition(0, 0, 1)),
+                resonanceTower(ResonanceTowers.WAVE_PRISM, owner, new GridPosition(1, 0, -1)),
+                resonanceTower(ResonanceTowers.FROST_PRISM, owner, new GridPosition(-1, 0, -1)),
+                resonanceTower(ResonanceTowers.AMPLIFY_PRISM, owner, new GridPosition(0, 0, -1))
+        ));
+        List<String> details = SemionDialogService.towerRuntimeDetailLines(focus);
+        if (details.stream().noneMatch(line -> line.contains("무블룸 공명 Lv 3"))) {
+            context.fail(Component.literal("Tower detail dialog runtime lines should include the earned moobloom resonance level."));
+            return;
+        }
+        if (details.stream().noneMatch(line -> line.contains("링크 6"))) {
+            context.fail(Component.literal("Tower detail dialog runtime lines should include moobloom resonance link count."));
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void onlyTwoTeamsCanDesignateTheSameLeaderTarget(GameTestHelper context) {
         SemionGame game = new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(), new GameArena(Map.of()));
         UUID redLeader = addLeader(game, TeamId.RED);
@@ -80,6 +113,10 @@ public final class SemionLeaderGameTest {
             return;
         }
         context.succeed();
+    }
+
+    private static ResonanceTower resonanceTower(kim.biryeong.semiontd.tower.TowerType type, UUID owner, GridPosition position) {
+        return new ResonanceTower(type, owner, TeamId.RED, 1, position, position);
     }
 
     private static UUID addLeader(SemionGame game, TeamId teamId) {

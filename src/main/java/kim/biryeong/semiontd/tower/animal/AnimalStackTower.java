@@ -52,6 +52,11 @@ abstract class AnimalStackTower extends EntityBackedTower {
         return currentStacks >= maxStacks();
     }
 
+    @Override
+    public java.util.List<String> runtimeDetailLines() {
+        return java.util.List.of("무리 스택 " + currentStacks + "/" + maxStacks());
+    }
+
     protected final int refreshStacks(PlayerLane lane) {
         int previousStacks = currentStacks;
         currentStacks = countMatchingTowers(lane);

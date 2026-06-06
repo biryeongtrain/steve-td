@@ -52,6 +52,15 @@ public class VillagerSplashTower extends SplashTower {
     }
 
     @Override
+    public java.util.List<String> runtimeDetailLines() {
+        java.util.ArrayList<String> lines = new java.util.ArrayList<>();
+        double bonus = value("bonusPerSurvivedRound") * survivalBouns;
+        String effect = isT3() ? "피해/공속 +" + percent(bonus) : "피해 +" + percent(bonus);
+        lines.add("생존 스택 " + survivalBouns + "/" + maxSurvivalStacks() + " (" + effect + ")");
+        return lines;
+    }
+
+    @Override
     public void onAttack(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount, boolean killedTarget) {
         super.onAttack(towerEntity, target, damageAmount, killedTarget); // splash
         if (isT3()) {
@@ -87,6 +96,10 @@ public class VillagerSplashTower extends SplashTower {
 
     private double value(String key) {
         return TowerBalanceRuntime.ability(type().id(), key);
+    }
+
+    private int maxSurvivalStacks() {
+        return TowerBalanceRuntime.abilityInt(type().id(), "maxSurvivalStacks");
     }
 
     private boolean isT3() {

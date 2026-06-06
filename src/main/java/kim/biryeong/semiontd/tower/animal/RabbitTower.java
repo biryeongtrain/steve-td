@@ -39,6 +39,19 @@ public class RabbitTower extends AnimalStackTower {
     }
 
     @Override
+    public java.util.List<String> runtimeDetailLines() {
+        java.util.ArrayList<String> lines = new java.util.ArrayList<>(super.runtimeDetailLines());
+        lines.add("무리 효과 공격력 +" + oneDecimal(currentStacks() * value("damagePerStack")));
+        if ((is(AnimalTowers.T2_RABBIT_TOWER) || is(AnimalTowers.T3_RABBIT_TOWER)) && atMaxStacks()) {
+            lines.add("최대 무리 효과 공격 간격 -" + ticks("maxStackExtraIntervalReduction") + "틱");
+        }
+        if (is(AnimalTowers.T3_RABBIT_TOWER) && atMaxStacks()) {
+            lines.add("최대 무리 효과 추가 공격 피해 " + percent(value("extraAttackDamageRatio")));
+        }
+        return lines;
+    }
+
+    @Override
     public void onAttack(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount, boolean killedTarget) {
         if (!is(AnimalTowers.T3_RABBIT_TOWER) || !atMaxStacks() || killedTarget || towerEntity == null || target == null || !target.isAlive()) {
             return;

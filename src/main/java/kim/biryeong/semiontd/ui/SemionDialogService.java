@@ -318,6 +318,7 @@ public final class SemionDialogService {
                 .append(statDeltaSuffix(baseAttacksPerSecond, currentAttacksPerSecond, true));
         body.append(" <dark_gray>(</dark_gray><gray>").append(currentAttackIntervalTicks).append("틱</gray><dark_gray>)</dark_gray>\n");
         towerEntity.ifPresent(entity -> appendTowerTimedEffects(body, entity));
+        appendTowerRuntimeDetails(body, tower);
         body.append("<aqua>💎 판매 환불 ").append(tower.sellRefundAmount()).append(" 다이아</aqua>\n");
         appendTowerDescription(body, tower.type().description());
         if (!ownedByPlayer) {
@@ -682,6 +683,23 @@ public final class SemionDialogService {
         appendTimedEffect(effects, entity, TimedEffectType.TOWER_RANGE_REDUCTION, "<red>🎯 사거리 감소 -", "</red>");
         if (effects.length() > 0) {
             body.append("<yellow>✨ 활성 효과</yellow>\n").append(effects);
+        }
+    }
+
+    public static List<String> towerRuntimeDetailLines(Tower tower) {
+        return tower == null ? List.of() : tower.runtimeDetailLines();
+    }
+
+    private static void appendTowerRuntimeDetails(StringBuilder body, Tower tower) {
+        List<String> lines = towerRuntimeDetailLines(tower);
+        if (lines.isEmpty()) {
+            return;
+        }
+        body.append("<yellow>✨ 성장/시너지 상태</yellow>\n");
+        for (String line : lines) {
+            if (line != null && !line.isBlank()) {
+                body.append("<dark_gray>-</dark_gray> <green>").append(line).append("</green>\n");
+            }
         }
     }
 

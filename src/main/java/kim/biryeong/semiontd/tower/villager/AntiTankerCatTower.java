@@ -42,6 +42,11 @@ public class AntiTankerCatTower extends EntityBackedTower {
     }
 
     @Override
+    public java.util.List<String> runtimeDetailLines() {
+        return java.util.List.of(killStackLine(killStackDamage, stackDamageStep(), stackDamageCap()));
+    }
+
+    @Override
     protected void copyRuntimeStateFrom(Tower previousTower) {
         if (previousTower instanceof AntiTankerCatTower catTower) {
             this.killStackDamage = Math.min(stackDamageCap(), catTower.killStackDamage);
@@ -54,6 +59,12 @@ public class AntiTankerCatTower extends EntityBackedTower {
 
     private double stackDamageCap() {
         return value("stackDamageCap");
+    }
+
+    private String killStackLine(double damage, double step, double cap) {
+        int stacks = step <= 0.0 ? 0 : (int) Math.round(damage / step);
+        int maxStacks = step <= 0.0 ? 0 : (int) Math.round(cap / step);
+        return "킬 스택 " + stacks + "/" + maxStacks + " (공격력 +" + oneDecimal(damage) + ")";
     }
 
     private double value(String key) {

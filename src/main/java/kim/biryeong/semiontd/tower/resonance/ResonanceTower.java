@@ -1,5 +1,6 @@
 package kim.biryeong.semiontd.tower.resonance;
 
+import java.util.List;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.effect.TimedEffectType;
@@ -54,6 +55,12 @@ public final class ResonanceTower extends EntityBackedTower {
 
     void updateAuraAttackSpeedBonus(double bonus) {
         auraAttackSpeedBonus = Math.max(auraAttackSpeedBonus, Math.max(0.0, bonus));
+    }
+
+    @Override
+    public List<String> runtimeDetailLines() {
+        return List.of("무블룸 공명 Lv " + resonanceLevel
+                + " (링크 " + resonanceLinks + ") / 받는 오라 공속 +" + percent(auraAttackSpeedBonus));
     }
 
     @Override

@@ -55,6 +55,13 @@ public class VillagerThornTower extends EntityBackedTower {
     }
 
     @Override
+    public java.util.List<String> runtimeDetailLines() {
+        double bonus = value("healthBonusPerSurvivedRound") * survivalBonus;
+        return java.util.List.of("생존 스택 " + survivalBonus + "/" + maxSurvivalStacks()
+                + " (체력 +" + percent(bonus) + ")");
+    }
+
+    @Override
     public void resetForRound(PlayerLane lane) {
         if (!deployedAtFinalDefense()) {
             increaseSurvivalBonus();
@@ -90,6 +97,10 @@ public class VillagerThornTower extends EntityBackedTower {
 
     private int ticks(String key) {
         return TowerBalanceRuntime.abilityTicks(type().id(), key);
+    }
+
+    private int maxSurvivalStacks() {
+        return TowerBalanceRuntime.abilityInt(type().id(), "maxSurvivalStacks");
     }
 
     private void increaseSurvivalBonus() {

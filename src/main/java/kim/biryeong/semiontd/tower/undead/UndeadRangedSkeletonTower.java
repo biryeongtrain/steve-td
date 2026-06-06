@@ -36,6 +36,14 @@ public class UndeadRangedSkeletonTower extends EntityBackedTower {
     }
 
     @Override
+    public java.util.List<String> runtimeDetailLines() {
+        double step = stackDamageStep();
+        int stacks = step <= 0.0 ? 0 : (int) Math.round(killStackDamage / step);
+        int maxStacks = step <= 0.0 ? 0 : (int) Math.round(stackDamageCap() / step);
+        return java.util.List.of("킬 스택 " + stacks + "/" + maxStacks + " (공격력 +" + oneDecimal(killStackDamage) + ")");
+    }
+
+    @Override
     public void onAttack(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount, boolean killedTarget) {
         heal(towerEntity, damageAmount);
         for (SemionMonsterEntity extraTarget : pickExtraTargets(towerEntity, target, extraTargetCount())) {

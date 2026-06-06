@@ -10,6 +10,7 @@ import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -288,6 +289,18 @@ public abstract class Tower {
             double magnitude,
             int durationTicks
     ) {
+    }
+
+    public List<String> runtimeDetailLines() {
+        return List.of();
+    }
+
+    protected static String oneDecimal(double value) {
+        return String.format(Locale.ROOT, "%.1f", value);
+    }
+
+    protected static String percent(double value) {
+        return oneDecimal(value * 100.0) + "%";
     }
 
     public int adjustAttackInterval(int baseIntervalTicks) {

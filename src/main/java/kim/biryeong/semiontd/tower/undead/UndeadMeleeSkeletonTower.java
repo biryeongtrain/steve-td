@@ -40,6 +40,13 @@ public class UndeadMeleeSkeletonTower extends SplashTower {
     }
 
     @Override
+    public java.util.List<String> runtimeDetailLines() {
+        return java.util.List.of("킬 스택 " + killStacks + "/" + stackCap()
+                + " (공격력 +" + oneDecimal(killStacks * damagePerStack())
+                + ", 체력 +" + oneDecimal(killStacks * healthPerStack()) + ")");
+    }
+
+    @Override
     public void onAttack(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount, boolean killedTarget) {
         super.onAttack(towerEntity, target, damageAmount, killedTarget);
         heal(towerEntity, damageAmount);
