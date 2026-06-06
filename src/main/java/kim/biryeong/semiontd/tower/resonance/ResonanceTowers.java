@@ -118,7 +118,7 @@ public final class ResonanceTowers {
             0,
             moobloom("lily_of_the_valley"),
             List.of(
-                    "<gray>업그레이드 시 광역 둔화를 주고, 둔화를 준 적에게 추가 피해를 입히는 무블룸입니다.</gray>",
+                    "<gray>적의 이동속도와 공격속도를 낮추는 무블룸입니다.</gray>",
                     "<green>다른 무블룸 종류를 옆에 설치하면 추가 효과를 받아요.</green>"
             )
     );
@@ -134,7 +134,7 @@ public final class ResonanceTowers {
             2,
             moobloom("white_tulip"),
             List.of(
-                    "<gray>업그레이드 시 광역 둔화를 주고, 둔화를 준 적에게 추가 피해를 입히는 무블룸입니다.</gray>",
+                    "<gray>적의 이동속도와 공격속도를 낮추고, 주위 무블룸이 둔화 대상을 더 세게 치게 합니다.</gray>",
                     "<green>다른 무블룸 종류를 옆에 설치하면 추가 효과를 받아요.</green>"
             )
     );
@@ -150,7 +150,7 @@ public final class ResonanceTowers {
             5,
             moobloom("oxeye_daisy"),
             List.of(
-                    "<gray>업그레이드 시 광역 둔화를 주고, 둔화를 준 적에게 추가 피해를 입히는 무블룸입니다.</gray>",
+                    "<gray>광역 제어와 둔화 대상 피해 오라를 맡는 무블룸입니다.</gray>",
                     "<green>다른 무블룸 종류를 옆에 설치하면 추가 효과를 받아요.</green>"
             )
     );
@@ -282,13 +282,14 @@ public final class ResonanceTowers {
     }
 
     private static void addFrostDescription(java.util.List<String> template, TowerType type) {
-        template.add("<green>공명 1단계: 공격 대상에게 {ability.frostLevel1SlowTicks:seconds} 동안 이동속도 -{ability.frostLevel1SlowMagnitude:percent}를 줍니다.</green>");
+        template.add("<green>공명 1단계: 공격 대상에게 {ability.frostLevel1SlowTicks:seconds} 동안 이동속도 -{ability.frostLevel1SlowMagnitude:percent}, 공격속도 -{ability.frostLevel1AttackSpeedReductionMagnitude:percent}를 줍니다.</green>");
         if (unlockedResonanceLevel(type) >= 2) {
-            template.add("<green>공명 2단계: 둔화가 {ability.frostLevel2SlowTicks:seconds}, -{ability.frostLevel2SlowMagnitude:percent}로 강화되고 둔화 대상 피해가 +{ability.frostLevel2DamageVsSlowedBonus:percent} 증가합니다.</green>");
+            template.add("<green>공명 2단계: 디버프가 {ability.frostLevel2SlowTicks:seconds}, 이동속도 -{ability.frostLevel2SlowMagnitude:percent}, 공격속도 -{ability.frostLevel2AttackSpeedReductionMagnitude:percent}로 강화됩니다.</green>");
+            template.add("<green>{ability.frostAuraRange:blocks} 안 무블룸은 둔화 대상에게 피해 +{ability.frostLevel2AuraDamageVsSlowedBonus:percent}를 얻습니다.</green>");
         }
         if (unlockedResonanceLevel(type) >= 3) {
-            template.add("<green>공명 3단계: 둔화가 {ability.frostLevel3SlowTicks:seconds}, -{ability.frostLevel3SlowMagnitude:percent}로 강화되고 둔화 대상 피해가 +{ability.frostLevel3DamageVsSlowedBonus:percent} 증가합니다.</green>");
-            template.add("<green>{ability.frostPulseEveryAttacks:integer}번째 공격마다 {ability.frostPulseRadius:blocks} 범위에 {ability.frostPulseDamageRatio:percent} 피해와 {ability.frostPulseSlowTicks:seconds} 둔화를 줍니다.</green>");
+            template.add("<green>공명 3단계: 디버프가 {ability.frostLevel3SlowTicks:seconds}, 이동속도 -{ability.frostLevel3SlowMagnitude:percent}, 공격속도 -{ability.frostLevel3AttackSpeedReductionMagnitude:percent}로 강화되고 오라 피해가 +{ability.frostLevel3AuraDamageVsSlowedBonus:percent}가 됩니다.</green>");
+            template.add("<green>{ability.frostPulseEveryAttacks:integer}번째 공격마다 {ability.frostPulseRadius:blocks} 범위에 {ability.frostPulseDamageRatio:percent} 피해와 {ability.frostPulseSlowTicks:seconds} 동안 이동속도 -{ability.frostPulseSlowMagnitude:percent}, 공격속도 -{ability.frostPulseAttackSpeedReductionMagnitude:percent}를 줍니다.</green>");
         }
     }
 

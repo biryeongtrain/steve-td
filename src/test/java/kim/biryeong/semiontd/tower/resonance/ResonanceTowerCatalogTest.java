@@ -68,6 +68,10 @@ class ResonanceTowerCatalogTest {
         assertEquals(0.16, config.ability(ResonanceTowers.FOCUS_CORE.id(), "focusLevel3DamageBonus", -1.0), 0.0001);
         assertEquals(0.30, config.ability(ResonanceTowers.WAVE_CORE.id(), "waveLevel3SplashDamageRatio", -1.0), 0.0001);
         assertEquals(0.20, config.ability(ResonanceTowers.FROST_CORE.id(), "frostLevel3SlowMagnitude", -1.0), 0.0001);
+        assertEquals(0.20, config.ability(ResonanceTowers.FROST_CORE.id(), "frostLevel3AttackSpeedReductionMagnitude", -1.0), 0.0001);
+        assertEquals(0.10, config.ability(ResonanceTowers.FROST_CORE.id(), "frostLevel3AuraDamageVsSlowedBonus", -1.0), 0.0001);
+        assertEquals(1.0, config.ability(ResonanceTowers.FROST_CORE.id(), "frostAuraRange", -1.0), 0.0001);
+        assertEquals(0.25, config.ability(ResonanceTowers.FROST_CORE.id(), "frostPulseAttackSpeedReductionMagnitude", -1.0), 0.0001);
         assertEquals(0.08, config.ability(ResonanceTowers.AMPLIFY_CORE.id(), "bloomLevel3AuraAttackSpeedBonus", -1.0), 0.0001);
     }
 

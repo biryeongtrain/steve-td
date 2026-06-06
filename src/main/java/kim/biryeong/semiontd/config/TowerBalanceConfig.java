@@ -682,17 +682,22 @@ public record TowerBalanceConfig(
             }
             case FROST -> {
                 values.put("frostLevel1SlowMagnitude", 0.10);
+                values.put("frostLevel1AttackSpeedReductionMagnitude", 0.10);
                 values.put("frostLevel1SlowTicks", 20.0);
                 values.put("frostLevel2SlowMagnitude", 0.15);
+                values.put("frostLevel2AttackSpeedReductionMagnitude", 0.15);
                 values.put("frostLevel2SlowTicks", 30.0);
-                values.put("frostLevel2DamageVsSlowedBonus", 0.08);
+                values.put("frostLevel2AuraDamageVsSlowedBonus", 0.08);
                 values.put("frostLevel3SlowMagnitude", 0.20);
+                values.put("frostLevel3AttackSpeedReductionMagnitude", 0.20);
                 values.put("frostLevel3SlowTicks", 40.0);
-                values.put("frostLevel3DamageVsSlowedBonus", 0.10);
+                values.put("frostLevel3AuraDamageVsSlowedBonus", 0.10);
+                values.put("frostAuraRange", 1.0);
                 values.put("frostPulseEveryAttacks", 5.0);
                 values.put("frostPulseRadius", 1.75);
                 values.put("frostPulseDamageRatio", 0.20);
                 values.put("frostPulseSlowMagnitude", 0.25);
+                values.put("frostPulseAttackSpeedReductionMagnitude", 0.25);
                 values.put("frostPulseSlowTicks", 40.0);
             }
             case AMPLIFY -> {

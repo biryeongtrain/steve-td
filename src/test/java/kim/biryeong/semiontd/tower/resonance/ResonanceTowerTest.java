@@ -148,6 +148,22 @@ class ResonanceTowerTest {
     }
 
     @Test
+    void frostAuraGivesNearbyMoobloomsDamageBonusAgainstDebuffedTargets() {
+        ResonanceTower recipient = tower(ResonanceTowers.FOCUS_CRYSTAL, new GridPosition(1, 0, 0));
+        ResonanceTower frost = tower(ResonanceTowers.FROST_CORE, new GridPosition(0, 0, 0));
+        ResonanceService.refresh(concat(frost, nearbyNonFrostSpecies()));
+        ResonanceService.refresh(List.of(recipient, frost));
+
+        assertEquals(3, frost.resonanceLevel());
+        assertEquals(0.10, recipient.auraDamageVsSlowedBonus(), 0.0001);
+        assertEquals(0.0, frost.auraDamageVsSlowedBonus(), 0.0001);
+
+        ResonanceService.refresh(List.of(recipient));
+
+        assertEquals(0.10, recipient.auraDamageVsSlowedBonus(), 0.0001);
+    }
+
+    @Test
     void upgradedResonanceTowerCopiesPermanentState() {
         ResonanceTower previous = tower(ResonanceTowers.FOCUS_PRISM, new GridPosition(0, 0, 0));
         ResonanceService.refresh(concat(previous, nearbyDifferentSpecies()));
@@ -158,6 +174,7 @@ class ResonanceTowerTest {
 
         assertEquals(2, upgraded.resonanceLevel());
         assertEquals(6, upgraded.resonanceLinks());
+        assertEquals(previous.auraDamageVsSlowedBonus(), upgraded.auraDamageVsSlowedBonus(), 0.0001);
     }
 
     private List<ResonanceTower> nearbyDifferentSpecies() {
@@ -179,6 +196,17 @@ class ResonanceTowerTest {
                 tower(ResonanceTowers.FROST_CRYSTAL, new GridPosition(0, 0, -1)),
                 tower(ResonanceTowers.FROST_PRISM, new GridPosition(1, 0, 1)),
                 tower(ResonanceTowers.FROST_CORE, new GridPosition(-1, 0, -1))
+        );
+    }
+
+    private List<ResonanceTower> nearbyNonFrostSpecies() {
+        return List.of(
+                tower(ResonanceTowers.FOCUS_CRYSTAL, new GridPosition(1, 0, 0)),
+                tower(ResonanceTowers.FOCUS_PRISM, new GridPosition(-1, 0, 0)),
+                tower(ResonanceTowers.WAVE_CRYSTAL, new GridPosition(0, 0, 1)),
+                tower(ResonanceTowers.WAVE_PRISM, new GridPosition(0, 0, -1)),
+                tower(ResonanceTowers.AMPLIFY_CRYSTAL, new GridPosition(1, 0, 1)),
+                tower(ResonanceTowers.AMPLIFY_PRISM, new GridPosition(-1, 0, -1))
         );
     }
 

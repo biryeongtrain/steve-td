@@ -59,22 +59,38 @@ public final class ResonanceService {
     }
 
     private static void applyAura(ResonanceTower tower, List<ResonanceTower> towers) {
-        double auraBonus = towers.stream()
+        double attackSpeedAuraBonus = towers.stream()
                 .filter(candidate -> candidate != tower)
                 .filter(candidate -> candidate.aspect() == ResonanceAspect.AMPLIFY)
                 .filter(candidate -> candidate.resonanceLevel() >= 2)
                 .filter(candidate -> sameOwnerLane(tower, candidate))
                 .filter(candidate -> distance(tower.position(), candidate.position()) <= ability(candidate, "bloomAuraRange"))
-                .mapToDouble(ResonanceService::auraBonus)
+                .mapToDouble(ResonanceService::bloomAuraAttackSpeedBonus)
                 .max()
                 .orElse(0.0);
-        tower.updateAuraAttackSpeedBonus(auraBonus);
+        double damageVsSlowedAuraBonus = towers.stream()
+                .filter(candidate -> candidate != tower)
+                .filter(candidate -> candidate.aspect() == ResonanceAspect.FROST)
+                .filter(candidate -> candidate.resonanceLevel() >= 2)
+                .filter(candidate -> sameOwnerLane(tower, candidate))
+                .filter(candidate -> distance(tower.position(), candidate.position()) <= ability(candidate, "frostAuraRange"))
+                .mapToDouble(ResonanceService::frostAuraDamageVsSlowedBonus)
+                .max()
+                .orElse(0.0);
+        tower.updateAuraAttackSpeedBonus(attackSpeedAuraBonus);
+        tower.updateAuraDamageVsSlowedBonus(damageVsSlowedAuraBonus);
     }
 
-    private static double auraBonus(ResonanceTower tower) {
+    private static double bloomAuraAttackSpeedBonus(ResonanceTower tower) {
         return tower.resonanceLevel() >= 3
                 ? ability(tower, "bloomLevel3AuraAttackSpeedBonus")
                 : ability(tower, "bloomLevel2AuraAttackSpeedBonus");
+    }
+
+    private static double frostAuraDamageVsSlowedBonus(ResonanceTower tower) {
+        return tower.resonanceLevel() >= 3
+                ? ability(tower, "frostLevel3AuraDamageVsSlowedBonus")
+                : ability(tower, "frostLevel2AuraDamageVsSlowedBonus");
     }
 
     private static int resonanceLevel(ResonanceTower tower, int linkedTowers, int maxLevel) {

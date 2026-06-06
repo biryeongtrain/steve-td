@@ -20,6 +20,7 @@ public final class ResonanceTower extends EntityBackedTower {
     private int resonanceLinks;
     private int pulseCharge;
     private double auraAttackSpeedBonus;
+    private double auraDamageVsSlowedBonus;
 
     public ResonanceTower(
             TowerType type,
@@ -48,6 +49,10 @@ public final class ResonanceTower extends EntityBackedTower {
         return auraAttackSpeedBonus;
     }
 
+    public double auraDamageVsSlowedBonus() {
+        return auraDamageVsSlowedBonus;
+    }
+
     void updateResonanceState(int level, int links) {
         resonanceLevel = Math.max(resonanceLevel, Math.max(0, level));
         resonanceLinks = Math.max(resonanceLinks, Math.max(0, links));
@@ -57,10 +62,15 @@ public final class ResonanceTower extends EntityBackedTower {
         auraAttackSpeedBonus = Math.max(auraAttackSpeedBonus, Math.max(0.0, bonus));
     }
 
+    void updateAuraDamageVsSlowedBonus(double bonus) {
+        auraDamageVsSlowedBonus = Math.max(auraDamageVsSlowedBonus, Math.max(0.0, bonus));
+    }
+
     @Override
     public List<String> runtimeDetailLines() {
         return List.of("무블룸 공명 Lv " + resonanceLevel
-                + " (링크 " + resonanceLinks + ") / 받는 오라 공속 +" + percent(auraAttackSpeedBonus));
+                + " (링크 " + resonanceLinks + ") / 받는 오라 공속 +" + percent(auraAttackSpeedBonus)
+                + " / 둔화 대상 피해 +" + percent(auraDamageVsSlowedBonus));
     }
 
     @Override
@@ -70,6 +80,7 @@ public final class ResonanceTower extends EntityBackedTower {
             resonanceLinks = previousResonanceTower.resonanceLinks;
             pulseCharge = previousResonanceTower.pulseCharge;
             auraAttackSpeedBonus = previousResonanceTower.auraAttackSpeedBonus;
+            auraDamageVsSlowedBonus = previousResonanceTower.auraDamageVsSlowedBonus;
         }
     }
 
@@ -93,11 +104,8 @@ public final class ResonanceTower extends EntityBackedTower {
 
     @Override
     public double modifyAttackDamage(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
-        double damageBonus = switch (aspect()) {
-            case FOCUS -> focusDamageBonus();
-            case FROST -> frostDamageBonus(target);
-            default -> 0.0;
-        };
+        double damageBonus = (aspect() == ResonanceAspect.FOCUS ? focusDamageBonus() : 0.0)
+                + auraDamageVsSlowedBonus(target);
         return damageAmount * Math.max(0.0, 1.0 + damageBonus);
     }
 
@@ -146,11 +154,16 @@ public final class ResonanceTower extends EntityBackedTower {
         };
     }
 
-    private double frostDamageBonus(SemionMonsterEntity target) {
-        if (resonanceLevel < 2 || target == null || target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION) <= 0.0) {
+    private double auraDamageVsSlowedBonus(SemionMonsterEntity target) {
+        if (target == null || auraDamageVsSlowedBonus <= 0.0 || !hasFrostDebuff(target)) {
             return 0.0;
         }
-        return resonanceLevel >= 3 ? ability("frostLevel3DamageVsSlowedBonus") : ability("frostLevel2DamageVsSlowedBonus");
+        return auraDamageVsSlowedBonus;
+    }
+
+    private boolean hasFrostDebuff(SemionMonsterEntity target) {
+        return target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION) > 0.0
+                || target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION) > 0.0;
     }
 
     private void focusStrike(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
@@ -167,7 +180,7 @@ public final class ResonanceTower extends EntityBackedTower {
         if (resonanceLevel >= 2) {
             double splashRadius = resonanceLevel >= 3 ? ability("waveLevel3SplashRadius") : ability("waveLevel2SplashRadius");
             double splashRatio = resonanceLevel >= 3 ? ability("waveLevel3SplashDamageRatio") : ability("waveLevel2SplashDamageRatio");
-            areaDamage(towerEntity, target, splashRadius, damageAmount * splashRatio, false, 0, 0.0);
+            areaDamage(towerEntity, target, splashRadius, damageAmount * splashRatio, false, 0, 0.0, 0.0);
         }
         if (resonanceLevel >= 3 && chargeReady("wavePulseEveryAttacks")) {
             areaDamage(
@@ -177,13 +190,14 @@ public final class ResonanceTower extends EntityBackedTower {
                     damageAmount * ability("wavePulseDamageRatio"),
                     true,
                     0,
+                    0.0,
                     0.0
             );
         }
     }
 
     private void frostAttack(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
-        applyFrostSlow(target);
+        applyFrostDebuff(target);
         if (resonanceLevel >= 3 && chargeReady("frostPulseEveryAttacks")) {
             areaDamage(
                     towerEntity,
@@ -192,7 +206,8 @@ public final class ResonanceTower extends EntityBackedTower {
                     damageAmount * ability("frostPulseDamageRatio"),
                     true,
                     abilityTicks("frostPulseSlowTicks"),
-                    ability("frostPulseSlowMagnitude")
+                    ability("frostPulseSlowMagnitude"),
+                    ability("frostPulseAttackSpeedReductionMagnitude")
             );
         }
     }
@@ -229,19 +244,27 @@ public final class ResonanceTower extends EntityBackedTower {
         }
     }
 
-    private void applyFrostSlow(SemionMonsterEntity target) {
+    private void applyFrostDebuff(SemionMonsterEntity target) {
         int ticks = switch (resonanceLevel) {
             case 1 -> abilityTicks("frostLevel1SlowTicks");
             case 2 -> abilityTicks("frostLevel2SlowTicks");
             default -> abilityTicks("frostLevel3SlowTicks");
         };
-        double magnitude = switch (resonanceLevel) {
+        double moveSpeedReduction = switch (resonanceLevel) {
             case 1 -> ability("frostLevel1SlowMagnitude");
             case 2 -> ability("frostLevel2SlowMagnitude");
             default -> ability("frostLevel3SlowMagnitude");
         };
-        if (ticks > 0 && magnitude > 0.0) {
-            target.applyTimedEffect(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION, magnitude, ticks);
+        double attackSpeedReduction = switch (resonanceLevel) {
+            case 1 -> ability("frostLevel1AttackSpeedReductionMagnitude");
+            case 2 -> ability("frostLevel2AttackSpeedReductionMagnitude");
+            default -> ability("frostLevel3AttackSpeedReductionMagnitude");
+        };
+        if (ticks > 0 && moveSpeedReduction > 0.0) {
+            target.applyTimedEffect(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION, moveSpeedReduction, ticks);
+        }
+        if (ticks > 0 && attackSpeedReduction > 0.0) {
+            target.applyTimedEffect(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION, attackSpeedReduction, ticks);
         }
     }
 
@@ -261,10 +284,11 @@ public final class ResonanceTower extends EntityBackedTower {
             double radius,
             double damageAmount,
             boolean includePrimaryTarget,
-            int slowTicks,
-            double slowMagnitude
+            int debuffTicks,
+            double moveSpeedReduction,
+            double attackSpeedReduction
     ) {
-        if (radius <= 0.0 || damageAmount <= 0.0 && (slowTicks <= 0 || slowMagnitude <= 0.0)) {
+        if (radius <= 0.0 || damageAmount <= 0.0 && (debuffTicks <= 0 || moveSpeedReduction <= 0.0 && attackSpeedReduction <= 0.0)) {
             return;
         }
         double radiusSqr = radius * radius;
@@ -284,8 +308,11 @@ public final class ResonanceTower extends EntityBackedTower {
                     if (damageAmount > 0.0 && damageTarget(towerEntity, monster, damageAmount)) {
                         onKill(towerEntity, monster, damageAmount);
                     }
-                    if (slowTicks > 0 && slowMagnitude > 0.0) {
-                        monster.applyTimedEffect(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION, slowMagnitude, slowTicks);
+                    if (debuffTicks > 0 && moveSpeedReduction > 0.0) {
+                        monster.applyTimedEffect(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION, moveSpeedReduction, debuffTicks);
+                    }
+                    if (debuffTicks > 0 && attackSpeedReduction > 0.0) {
+                        monster.applyTimedEffect(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION, attackSpeedReduction, debuffTicks);
                     }
                 });
     }

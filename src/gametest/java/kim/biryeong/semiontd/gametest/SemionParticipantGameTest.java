@@ -157,6 +157,7 @@ import kim.biryeong.semiontd.tower.legion.LegionParrotTower;
 import kim.biryeong.semiontd.tower.legion.LegionSlimeTower;
 import kim.biryeong.semiontd.tower.legion.LegionTowerCatalogs;
 import kim.biryeong.semiontd.tower.legion.LegionTowers;
+import kim.biryeong.semiontd.tower.resonance.ResonanceService;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTower;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
 import kim.biryeong.semiontd.tower.villager.AllayTower;
@@ -6955,6 +6956,79 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
         focus = (ResonanceTower) lane.towerAt(GridPosition.from(focusPos));
         if (!assertEquals(context, 3, focus.resonanceLevel(), "T3 focus should unlock resonance level 3 with six nearby different species.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void resonanceFrostMoobloomAppliesAttackSpeedDebuffAndSharesDamageAura(GameTestHelper context) {
+        UUID playerId = stableUuid("resonance-frost-aura-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, ResonanceTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos frostPos = towerPlacementPos(lane);
+        GridPosition frostGrid = GridPosition.from(frostPos);
+        ResonanceTower frost = new ResonanceTower(
+                TowerBalanceRuntime.resolve(ResonanceTowers.FROST_CORE),
+                playerId,
+                TeamId.RED,
+                1,
+                frostGrid,
+                frostGrid
+        );
+        lane.addTower(frost);
+        BlockPos focusPos = frostPos.offset(1, 0, 0);
+        GridPosition focusGrid = GridPosition.from(focusPos);
+        ResonanceTower focus = new ResonanceTower(
+                TowerBalanceRuntime.resolve(ResonanceTowers.FOCUS_CRYSTAL),
+                playerId,
+                TeamId.RED,
+                1,
+                focusGrid,
+                focusGrid
+        );
+        lane.addTower(focus);
+        addResonanceTower(lane, playerId, ResonanceTowers.FOCUS_PRISM, frostPos.offset(-1, 0, 0));
+        addResonanceTower(lane, playerId, ResonanceTowers.WAVE_CRYSTAL, frostPos.offset(0, 0, 1));
+        addResonanceTower(lane, playerId, ResonanceTowers.WAVE_PRISM, frostPos.offset(0, 0, -1));
+        addResonanceTower(lane, playerId, ResonanceTowers.AMPLIFY_CRYSTAL, frostPos.offset(1, 0, 1));
+        addResonanceTower(lane, playerId, ResonanceTowers.AMPLIFY_PRISM, frostPos.offset(-1, 0, -1));
+        ResonanceService.refresh(lane.towers());
+
+        if (!assertEquals(context, 3, frost.resonanceLevel(), "T3 frost should unlock level 3 with six nearby different mooblooms.")) {
+            return;
+        }
+        if (!assertClose(context, 0.10, focus.auraDamageVsSlowedBonus(), "Nearby mooblooms should receive frost's damage-vs-debuffed aura.")) {
+            return;
+        }
+        SemionTowerEntity frostEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(frost.entityId().orElseThrow());
+        if (frostEntity == null) {
+            context.fail(Component.literal("Frost moobloom entity should exist."));
+            return;
+        }
+        SemionMonsterEntity target = spawnRoleMonsterEntity(
+                context,
+                "frost-aura-target",
+                Optional.empty(),
+                TeamId.RED,
+                1,
+                frostEntity.position().add(0.0, 0.0, 1.0),
+                100.0,
+                List.of(SummonRole.RUSH)
+        );
+        if (!assertClose(context, 100.0, focus.modifyAttackDamage(null, target, 100.0), "Frost aura should require an active frost debuff.")) {
+            return;
+        }
+
+        frost.onAttack(frostEntity, target, 20.0, false);
+
+        if (!assertClose(context, 0.20, target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION), "T3 frost should reduce movement speed.")) {
+            return;
+        }
+        if (!assertClose(context, 0.20, target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION), "T3 frost should reduce attack speed.")) {
+            return;
+        }
+        if (!assertClose(context, 110.0, focus.modifyAttackDamage(null, target, 100.0), "Frost aura should make nearby mooblooms deal bonus damage to debuffed targets.")) {
             return;
         }
         context.succeed();
