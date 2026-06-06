@@ -3,6 +3,7 @@ package kim.biryeong.semiontd.command;
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
+import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -27,12 +28,16 @@ import kim.biryeong.semiontd.tower.TowerPlacementPositions;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
 import kim.biryeong.semiontd.ui.SemionText;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.GameProfileArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
@@ -85,6 +90,24 @@ public final class SemionCommands {
                 .then(literal("autojoin")
                         .requires(source -> source.hasPermission(2))
                         .executes(context -> autojoin(context.getSource(), gameManager)))
+                .then(literal("playerlimit")
+                        .requires(source -> source.hasPermission(2))
+                        .then(literal("add")
+                                .then(argument("player", GameProfileArgument.gameProfile())
+                                        .executes(context -> addPlayerLimitBypass(
+                                                context.getSource(),
+                                                gameManager,
+                                                GameProfileArgument.getGameProfiles(context, "player")
+                                        ))))
+                        .then(literal("remove")
+                                .then(argument("player", GameProfileArgument.gameProfile())
+                                        .executes(context -> removePlayerLimitBypass(
+                                                context.getSource(),
+                                                gameManager,
+                                                GameProfileArgument.getGameProfiles(context, "player")
+                                        ))))
+                        .then(literal("list")
+                                .executes(context -> listPlayerLimitBypasses(context.getSource(), gameManager))))
                 .then(literal("ready")
                         .executes(context -> ready(context.getSource(), gameManager)))
                 .then(literal("unready")
@@ -492,6 +515,84 @@ public final class SemionCommands {
                 + ", 모드=" + gameManager.matchMode()
                 + lobbyLoaded);
         return plan.get().activePlayerCount();
+    }
+
+    private static int addPlayerLimitBypass(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            Collection<GameProfile> profiles
+    ) {
+        List<String> added = new ArrayList<>();
+        List<String> existing = new ArrayList<>();
+        for (GameProfile profile : profiles) {
+            if (profile.getId() == null) {
+                continue;
+            }
+            String name = playerLimitBypassName(profile);
+            if (gameManager.addPlayerLimitBypass(profile.getId(), name)) {
+                added.add(name);
+            } else {
+                existing.add(name);
+            }
+        }
+        if (added.isEmpty() && existing.isEmpty()) {
+            failure(source, "정원 초과 입장을 허용할 플레이어를 찾지 못했습니다.");
+            return 0;
+        }
+        if (!added.isEmpty()) {
+            success(source, "정원 초과 입장 허용 목록에 추가했습니다: " + String.join(", ", added));
+            return added.size();
+        }
+        success(source, "이미 정원 초과 입장 허용 목록에 있습니다: " + String.join(", ", existing));
+        return 1;
+    }
+
+    private static int removePlayerLimitBypass(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            Collection<GameProfile> profiles
+    ) {
+        List<String> removed = new ArrayList<>();
+        List<String> missing = new ArrayList<>();
+        for (GameProfile profile : profiles) {
+            if (profile.getId() == null) {
+                continue;
+            }
+            String name = playerLimitBypassName(profile);
+            if (gameManager.removePlayerLimitBypass(profile.getId())) {
+                removed.add(name);
+            } else {
+                missing.add(name);
+            }
+        }
+        if (removed.isEmpty() && missing.isEmpty()) {
+            failure(source, "정원 초과 입장 허용 목록에서 제거할 플레이어를 찾지 못했습니다.");
+            return 0;
+        }
+        if (!removed.isEmpty()) {
+            success(source, "정원 초과 입장 허용 목록에서 제거했습니다: " + String.join(", ", removed));
+            return removed.size();
+        }
+        success(source, "정원 초과 입장 허용 목록에 없습니다: " + String.join(", ", missing));
+        return 1;
+    }
+
+    private static int listPlayerLimitBypasses(CommandSourceStack source, SemionGameManager gameManager) {
+        Map<UUID, String> entries = gameManager.playerLimitBypasses();
+        if (entries.isEmpty()) {
+            success(source, "정원 초과 입장 허용 목록이 비어 있습니다.");
+            return 1;
+        }
+        List<String> names = entries.entrySet().stream()
+                .sorted(Comparator.comparing(Map.Entry::getValue, String.CASE_INSENSITIVE_ORDER))
+                .map(entry -> entry.getValue() + " (" + entry.getKey() + ")")
+                .toList();
+        success(source, "정원 초과 입장 허용 목록: " + String.join(", ", names));
+        return entries.size();
+    }
+
+    private static String playerLimitBypassName(GameProfile profile) {
+        return profile.getName() == null || profile.getName().isBlank() ? profile.getId().toString() : profile.getName();
     }
 
     private static int ready(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {

@@ -5,6 +5,7 @@ import de.tomalbrc.bil.api.AnimatedEntityHolder;
 import de.tomalbrc.bil.core.holder.entity.living.LivingEntityHolder;
 import eu.pb4.polymer.virtualentity.api.attachment.EntityAttachment;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.effect.TimedEffectSet;
@@ -50,6 +51,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     private static final double TARGET_SEARCH_HORIZONTAL_PADDING = 8.0;
     private static final double TARGET_SEARCH_VERTICAL_PADDING = 3.0;
     private static final double FINAL_DEFENSE_RETURN_SPEED_MULTIPLIER = 1.25;
+    private static final double MOOBLOOM_VISUAL_POSITION_EPSILON = 1.0E-4;
 
     private Tower runtimeTower;
     private TeamId teamId;
@@ -72,6 +74,16 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     private LivingEntityHolder<SemionTowerEntity> holder;
     private EntityAttachment holderAttachment;
     private MoobloomEntity moobloomVisualEntity;
+    private String syncedMoobloomVisualVariant;
+    private Component syncedMoobloomVisualName;
+    private boolean syncedMoobloomVisualNameVisible;
+    private double syncedMoobloomVisualX = Double.NaN;
+    private double syncedMoobloomVisualY = Double.NaN;
+    private double syncedMoobloomVisualZ = Double.NaN;
+    private float syncedMoobloomVisualYRot = Float.NaN;
+    private float syncedMoobloomVisualXRot = Float.NaN;
+    private float syncedMoobloomVisualYHeadRot = Float.NaN;
+    private float syncedMoobloomVisualYBodyRot = Float.NaN;
     private SemionTowerEntity attackTargetSource;
     private SemionMonsterEntity currentAttackTarget;
 
@@ -528,6 +540,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         }
         if (moobloomVisualEntity == null || moobloomVisualEntity.isRemoved() || moobloomVisualEntity.level() != serverLevel) {
             moobloomVisualEntity = new MoobloomEntity((EntityType<? extends MoobloomEntity>) polymerEntityType, serverLevel);
+            resetMoobloomVisualSyncState();
             moobloomVisualEntity.setNoAi(true);
             moobloomVisualEntity.setNoGravity(true);
             moobloomVisualEntity.setSilent(true);
@@ -537,13 +550,9 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
             serverLevel.addFreshEntity(moobloomVisualEntity);
         }
         applyMoobloomVisualVariant();
-        moobloomVisualEntity.setCustomName(getCustomName());
-        moobloomVisualEntity.setCustomNameVisible(isCustomNameVisible());
-        moobloomVisualEntity.setYRot(getYRot());
-        moobloomVisualEntity.setXRot(getXRot());
-        moobloomVisualEntity.setYHeadRot(getYHeadRot());
-        moobloomVisualEntity.setYBodyRot(yBodyRot);
-        moobloomVisualEntity.teleportTo(getX(), getY(), getZ());
+        syncMoobloomVisualName();
+        syncMoobloomVisualRotation();
+        syncMoobloomVisualPosition();
     }
 
     private void applyMoobloomVisualVariant() {
@@ -554,7 +563,64 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         if (variant == null || variant.isBlank()) {
             return;
         }
+        if (Objects.equals(variant, syncedMoobloomVisualVariant)) {
+            return;
+        }
         moobloomVisualEntity.getEntityData().set(MoobloomAccessor.semiontd$dataVariant(), variant);
+        syncedMoobloomVisualVariant = variant;
+    }
+
+    private void syncMoobloomVisualName() {
+        Component customName = getCustomName();
+        if (!Objects.equals(customName, syncedMoobloomVisualName)) {
+            moobloomVisualEntity.setCustomName(customName);
+            syncedMoobloomVisualName = customName;
+        }
+        boolean customNameVisible = isCustomNameVisible();
+        if (customNameVisible != syncedMoobloomVisualNameVisible) {
+            moobloomVisualEntity.setCustomNameVisible(customNameVisible);
+            syncedMoobloomVisualNameVisible = customNameVisible;
+        }
+    }
+
+    private void syncMoobloomVisualRotation() {
+        float yRot = getYRot();
+        float xRot = getXRot();
+        float yHeadRot = getYHeadRot();
+        float yBodyRot = this.yBodyRot;
+        if (Float.compare(yRot, syncedMoobloomVisualYRot) == 0
+                && Float.compare(xRot, syncedMoobloomVisualXRot) == 0
+                && Float.compare(yHeadRot, syncedMoobloomVisualYHeadRot) == 0
+                && Float.compare(yBodyRot, syncedMoobloomVisualYBodyRot) == 0) {
+            return;
+        }
+        moobloomVisualEntity.setYRot(yRot);
+        moobloomVisualEntity.setXRot(xRot);
+        moobloomVisualEntity.setYHeadRot(yHeadRot);
+        moobloomVisualEntity.setYBodyRot(yBodyRot);
+        syncedMoobloomVisualYRot = yRot;
+        syncedMoobloomVisualXRot = xRot;
+        syncedMoobloomVisualYHeadRot = yHeadRot;
+        syncedMoobloomVisualYBodyRot = yBodyRot;
+    }
+
+    private void syncMoobloomVisualPosition() {
+        double x = getX();
+        double y = getY();
+        double z = getZ();
+        if (sameMoobloomVisualPosition(x, y, z)) {
+            return;
+        }
+        moobloomVisualEntity.teleportTo(x, y, z);
+        syncedMoobloomVisualX = x;
+        syncedMoobloomVisualY = y;
+        syncedMoobloomVisualZ = z;
+    }
+
+    private boolean sameMoobloomVisualPosition(double x, double y, double z) {
+        return Math.abs(x - syncedMoobloomVisualX) <= MOOBLOOM_VISUAL_POSITION_EPSILON
+                && Math.abs(y - syncedMoobloomVisualY) <= MOOBLOOM_VISUAL_POSITION_EPSILON
+                && Math.abs(z - syncedMoobloomVisualZ) <= MOOBLOOM_VISUAL_POSITION_EPSILON;
     }
 
     private void discardMoobloomVisualEntity() {
@@ -562,6 +628,20 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
             moobloomVisualEntity.discard();
         }
         moobloomVisualEntity = null;
+        resetMoobloomVisualSyncState();
+    }
+
+    private void resetMoobloomVisualSyncState() {
+        syncedMoobloomVisualVariant = null;
+        syncedMoobloomVisualName = null;
+        syncedMoobloomVisualNameVisible = false;
+        syncedMoobloomVisualX = Double.NaN;
+        syncedMoobloomVisualY = Double.NaN;
+        syncedMoobloomVisualZ = Double.NaN;
+        syncedMoobloomVisualYRot = Float.NaN;
+        syncedMoobloomVisualXRot = Float.NaN;
+        syncedMoobloomVisualYHeadRot = Float.NaN;
+        syncedMoobloomVisualYBodyRot = Float.NaN;
     }
 
     private void setPolymerEntityType(String entityTypeId) {

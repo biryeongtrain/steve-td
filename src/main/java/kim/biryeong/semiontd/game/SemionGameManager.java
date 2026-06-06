@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.buildguide.BuildGuide;
@@ -105,6 +106,7 @@ public final class SemionGameManager {
     private LobbyWorld lobbyWorld;
     private MatchResult lastMatchResult;
     private final Set<UUID> nextMatchPriorityPlayerIds = new HashSet<>();
+    private final Map<UUID, String> playerLimitBypassNames = new ConcurrentHashMap<>();
     private SemionGame pendingFinishedGame;
     private int pendingFinishDelayTicks;
     private MatchResult pendingMatchResultDialog;
@@ -524,6 +526,22 @@ public final class SemionGameManager {
         return Set.copyOf(nextMatchPriorityPlayerIds);
     }
 
+    public boolean addPlayerLimitBypass(UUID playerId, String playerName) {
+        if (playerId == null) {
+            return false;
+        }
+        String displayName = playerName == null || playerName.isBlank() ? playerId.toString() : playerName;
+        return playerLimitBypassNames.put(playerId, displayName) == null;
+    }
+
+    public boolean removePlayerLimitBypass(UUID playerId) {
+        return playerId != null && playerLimitBypassNames.remove(playerId) != null;
+    }
+
+    public Map<UUID, String> playerLimitBypasses() {
+        return Map.copyOf(playerLimitBypassNames);
+    }
+
     public SemionDialogService dialogService() {
         return dialogService;
     }
@@ -695,6 +713,9 @@ public final class SemionGameManager {
     public boolean canBypassPlayerLimit(UUID playerId) {
         if (playerId == null) {
             return false;
+        }
+        if (playerLimitBypassNames.containsKey(playerId)) {
+            return true;
         }
         ParticipantSelectionPlan pendingPlan = pendingStartPlan;
         if (pendingPlan != null && isSelectedForPendingMatch(pendingPlan, playerId)) {

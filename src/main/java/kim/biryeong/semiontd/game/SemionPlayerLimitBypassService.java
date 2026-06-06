@@ -8,8 +8,10 @@ public final class SemionPlayerLimitBypassService {
     private SemionPlayerLimitBypassService() {
     }
 
-    public static void configure(SemionGameManager manager) {
+    public static SemionGameManager configure(SemionGameManager manager) {
+        SemionGameManager previous = gameManager;
         gameManager = manager;
+        return previous;
     }
 
     public static boolean canBypassPlayerLimit(GameProfile profile) {

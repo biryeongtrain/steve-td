@@ -12,8 +12,12 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.phys.AABB;
 
 public final class TowerAttackMonsterGoal extends Goal {
+    private static final int TARGET_RECHECK_INTERVAL_TICKS = 5;
+
     private final SemionTowerEntity tower;
     private int cooldownTicks;
+    private int targetSearchCooldownTicks;
+    private SemionMonsterEntity cachedTarget;
 
     public TowerAttackMonsterGoal(SemionTowerEntity tower) {
         this.tower = tower;
@@ -79,12 +83,35 @@ public final class TowerAttackMonsterGoal extends Goal {
     private SemionMonsterEntity findTarget() {
         SemionMonsterEntity sharedTarget = tower.sharedAttackTarget();
         if (sharedTarget != null) {
+            cachedTarget = sharedTarget;
             return sharedTarget;
         }
         if (tower.usesSharedAttackTarget()) {
+            cachedTarget = null;
             return null;
         }
 
+        if (targetSearchCooldownTicks > 0) {
+            targetSearchCooldownTicks--;
+        }
+        boolean hadCachedTarget = cachedTarget != null;
+        if (isUsableCachedTarget()) {
+            if (targetSearchCooldownTicks > 0) {
+                return cachedTarget;
+            }
+        } else {
+            cachedTarget = null;
+            if (!hadCachedTarget && targetSearchCooldownTicks > 0) {
+                return null;
+            }
+        }
+
+        cachedTarget = selectTarget();
+        targetSearchCooldownTicks = TARGET_RECHECK_INTERVAL_TICKS;
+        return cachedTarget;
+    }
+
+    private SemionMonsterEntity selectTarget() {
         List<SemionMonsterEntity> targets = targetCandidates();
         if (targets.isEmpty()) {
             return null;
@@ -117,6 +144,10 @@ public final class TowerAttackMonsterGoal extends Goal {
                 .filter(SemionMonsterEntity.class::isInstance)
                 .map(SemionMonsterEntity.class::cast)
                 .toList();
+    }
+
+    private boolean isUsableCachedTarget() {
+        return tower.isValidAttackTarget(cachedTarget);
     }
 
     private boolean isInAttackRange(SemionMonsterEntity monster) {

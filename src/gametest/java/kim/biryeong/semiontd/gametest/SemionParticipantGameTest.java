@@ -280,6 +280,57 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         });
     }
 
+    @GameTest
+    public void moobloomTowerSkipsStaticVisualTeleportResync(GameTestHelper context) {
+        UUID playerId = UUID.nameUUIDFromBytes("gametest-moobloom-visual-static-sync".getBytes(StandardCharsets.UTF_8));
+        BlockPos anchor = context.absolutePos(BlockPos.ZERO);
+        TowerType type = new TowerType(
+                "moobloom_visual_static_sync_probe",
+                "Moobloom Visual Static Sync Probe",
+                TowerCategory.DIRECT,
+                0,
+                50.0,
+                4.0,
+                1.0,
+                20,
+                0,
+                MoobloomVisual.builder().variant("sunflower").build(),
+                List.of()
+        );
+        SemionTowerEntity towerEntity = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+        towerEntity.configure(new TestTower(type, playerId, TeamId.RED, 1, GridPosition.from(anchor)), null);
+        towerEntity.setNoAi(true);
+        towerEntity.setPos(anchor.getX() + 0.5, anchor.getY(), anchor.getZ() + 0.5);
+        context.getLevel().addFreshEntity(towerEntity);
+
+        context.runAfterDelay(2, () -> {
+            List<MoobloomEntity> visuals = context.getLevel().getEntitiesOfClass(
+                    MoobloomEntity.class,
+                    new AABB(anchor).inflate(3.0)
+            );
+            if (!assertEquals(context, 1, visuals.size(), "Moobloom tower should spawn one visual before static sync check.")) {
+                return;
+            }
+            MoobloomEntity visual = visuals.getFirst();
+            double shiftedX = visual.getX() + 0.75;
+            visual.teleportTo(shiftedX, visual.getY(), visual.getZ());
+
+            context.runAfterDelay(2, () -> {
+                if (!assertClose(context, shiftedX, visual.getX(), "Static Moobloom visual should not be teleported again while the owning tower has not moved.")) {
+                    return;
+                }
+                towerEntity.teleportTo(towerEntity.getX() + 1.0, towerEntity.getY(), towerEntity.getZ());
+                context.runAfterDelay(1, () -> {
+                    if (!assertClose(context, towerEntity.getX(), visual.getX(), "Moobloom visual should resync when the owning tower position changes.")) {
+                        return;
+                    }
+                    towerEntity.discard();
+                    context.succeed();
+                });
+            });
+        });
+    }
+
     private static kim.biryeong.semiontd.map.GameArena testArena(GameTestHelper context) {
         return SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(net.minecraft.core.BlockPos.ZERO));
     }
