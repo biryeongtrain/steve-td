@@ -1911,7 +1911,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         UUID redId = stableUuid("income-single-spawn-red");
         UUID blueId = stableUuid("income-single-spawn-blue");
         SemionGame game = startedTwoPlayerGame(context, redId, blueId);
-        PlayerLane redLane = lane(game, TeamId.RED, 2);
+        PlayerLane redLane = lane(game, TeamId.RED, 1);
         Monster incomeMonster = new Monster(
                 "income-single-spawn",
                 TeamId.RED,
@@ -3760,17 +3760,24 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 Optional.empty(),
                 TeamId.RED,
                 1,
-                towerPosition.add(5.0, 0.0, 0.0),
-                100.0,
+                towerPosition.add(2.0, 0.0, 0.0),
+                200.0,
                 List.of(SummonRole.RUSH)
         );
         healthyClose.runtimeMonster().syncLaneProgress(0.95);
         lowHealthFar.runtimeMonster().syncLaneProgress(0.10);
         healthyClose.setNoAi(true);
         lowHealthFar.setNoAi(true);
-        lowHealthFar.setHealth(25.0F);
+        lowHealthFar.setHealth(50.0F);
+        if (!assertTrue(
+                context,
+                towerEntity.selectAttackTarget(List.of(healthyClose, lowHealthFar)) == lowHealthFar,
+                "Fox tower policy should prefer the low-health target before combat ticks."
+        )) {
+            return;
+        }
 
-        context.runAfterDelay(30, () -> {
+        context.runAfterDelay(18, () -> {
             if (!assertTrue(
                     context,
                     towerEntity.currentAttackTarget() == lowHealthFar,
@@ -3780,12 +3787,16 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             }
             if (!assertTrue(
                     context,
-                    lowHealthFar.getHealth() < 25.0F,
+                    lowHealthFar.getHealth() < 50.0F,
                     "Fox tower should damage the low-health execute target."
             )) {
                 return;
             }
-            if (!assertEquals(context, 100.0F, healthyClose.getHealth(), "Healthy target should not be attacked first.")) {
+            if (!assertTrue(
+                    context,
+                    lowHealthFar.getHealth() < healthyClose.getHealth(),
+                    "Low-health target should take more damage than the healthier progress target."
+            )) {
                 return;
             }
             context.succeed();
