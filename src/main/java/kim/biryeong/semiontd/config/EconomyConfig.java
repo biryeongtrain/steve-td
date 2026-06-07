@@ -14,7 +14,8 @@ public record EconomyConfig(
         GasProductionConfig emeraldProduction,
         TowerLimitConfig towerLimit,
         KillRewardConfig killReward,
-        TeamTransferConfig teamTransfer
+        TeamTransferConfig teamTransfer,
+        EmeraldIncomeBoostConfig emeraldIncomeBoost
 ) {
     public EconomyConfig(
             long startingDiamond,
@@ -31,7 +32,8 @@ public record EconomyConfig(
                 emeraldProduction,
                 TowerLimitConfig.defaultConfig(),
                 KillRewardConfig.defaultConfig(),
-                TeamTransferConfig.defaultConfig()
+                TeamTransferConfig.defaultConfig(),
+                EmeraldIncomeBoostConfig.defaultConfig()
         );
     }
 
@@ -51,7 +53,8 @@ public record EconomyConfig(
                 emeraldProduction,
                 towerLimit,
                 KillRewardConfig.defaultConfig(),
-                TeamTransferConfig.defaultConfig()
+                TeamTransferConfig.defaultConfig(),
+                EmeraldIncomeBoostConfig.defaultConfig()
         );
     }
 
@@ -72,7 +75,31 @@ public record EconomyConfig(
                 emeraldProduction,
                 towerLimit,
                 killReward,
-                TeamTransferConfig.defaultConfig()
+                TeamTransferConfig.defaultConfig(),
+                EmeraldIncomeBoostConfig.defaultConfig()
+        );
+    }
+
+    public EconomyConfig(
+            long startingDiamond,
+            long startingEmerald,
+            long startingIncome,
+            GasCapConfig emeraldCap,
+            GasProductionConfig emeraldProduction,
+            TowerLimitConfig towerLimit,
+            KillRewardConfig killReward,
+            TeamTransferConfig teamTransfer
+    ) {
+        this(
+                startingDiamond,
+                startingEmerald,
+                startingIncome,
+                emeraldCap,
+                emeraldProduction,
+                towerLimit,
+                killReward,
+                teamTransfer,
+                EmeraldIncomeBoostConfig.defaultConfig()
         );
     }
 
@@ -95,6 +122,9 @@ public record EconomyConfig(
         if (teamTransfer == null) {
             teamTransfer = TeamTransferConfig.defaultConfig();
         }
+        if (emeraldIncomeBoost == null) {
+            emeraldIncomeBoost = EmeraldIncomeBoostConfig.defaultConfig();
+        }
     }
 
     public static EconomyConfig defaultConfig() {
@@ -106,7 +136,8 @@ public record EconomyConfig(
                 GasProductionConfig.defaultConfig(),
                 TowerLimitConfig.defaultConfig(),
                 KillRewardConfig.defaultConfig(),
-                TeamTransferConfig.defaultConfig()
+                TeamTransferConfig.defaultConfig(),
+                EmeraldIncomeBoostConfig.defaultConfig()
         );
     }
 
@@ -132,6 +163,10 @@ public record EconomyConfig(
 
     public long gasCapForRound(int round) {
         return emeraldCapForRound(round);
+    }
+
+    public long emeraldIncomeMultiplierForRound(int round) {
+        return emeraldIncomeBoost.multiplierForRound(round);
     }
 
     public int towerLimitForRound(int round) {
@@ -227,6 +262,28 @@ public record EconomyConfig(
 
         public long maxRequestDiamond(int round) {
             return maxDiamondPerRound * Math.max(1, round);
+        }
+    }
+
+    public record EmeraldIncomeBoostConfig(boolean enabled, int startRound) {
+        private static final long BOOST_MULTIPLIER = 2L;
+
+        public EmeraldIncomeBoostConfig {
+            if (startRound < 1) {
+                startRound = 1;
+            }
+        }
+
+        public static EmeraldIncomeBoostConfig defaultConfig() {
+            return new EmeraldIncomeBoostConfig(true, 25);
+        }
+
+        public boolean activeForRound(int round) {
+            return enabled && Math.max(1, round) >= startRound;
+        }
+
+        public long multiplierForRound(int round) {
+            return activeForRound(round) ? BOOST_MULTIPLIER : 1L;
         }
     }
 

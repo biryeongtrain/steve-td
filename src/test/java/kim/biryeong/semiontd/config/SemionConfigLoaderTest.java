@@ -153,6 +153,59 @@ final class SemionConfigLoaderTest {
     }
 
     @Test
+    void defaultEconomyConfigEnablesEmeraldIncomeBoostFromRoundTwentyFive() {
+        EconomyConfig.EmeraldIncomeBoostConfig config = EconomyConfig.defaultConfig().emeraldIncomeBoost();
+
+        assertTrue(config.enabled());
+        assertEquals(25, config.startRound());
+        assertTrue(config.activeForRound(25));
+    }
+
+    @Test
+    void loadBackfillsEmeraldIncomeBoostDefaults() throws Exception {
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("economy.json"), """
+                {
+                  "startingDiamond": 200,
+                  "startingEmerald": 50,
+                  "startingIncome": 0,
+                  "emeraldIncomeBoost": {
+                    "startRound": 30
+                  }
+                }
+                """);
+
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+
+        assertTrue(configs.economy().emeraldIncomeBoost().enabled());
+        assertEquals(30, configs.economy().emeraldIncomeBoost().startRound());
+        String written = Files.readString(tempDir.resolve("economy.json"));
+        assertTrue(written.contains("emeraldIncomeBoost"));
+        assertTrue(written.contains("enabled"));
+    }
+
+    @Test
+    void loadPreservesExplicitEmeraldIncomeBoostDisabled() throws Exception {
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("economy.json"), """
+                {
+                  "startingDiamond": 200,
+                  "startingEmerald": 50,
+                  "startingIncome": 0,
+                  "emeraldIncomeBoost": {
+                    "enabled": false,
+                    "startRound": 30
+                  }
+                }
+                """);
+
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+
+        assertEquals(false, configs.economy().emeraldIncomeBoost().enabled());
+        assertEquals(30, configs.economy().emeraldIncomeBoost().startRound());
+    }
+
+    @Test
     void loadBackfillsTowerLimitPurchaseDefaults() throws Exception {
         Files.createDirectories(tempDir);
         Files.writeString(tempDir.resolve("economy.json"), """

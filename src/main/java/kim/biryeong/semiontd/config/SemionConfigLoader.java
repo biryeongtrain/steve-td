@@ -174,6 +174,11 @@ public final class SemionConfigLoader {
                     || !hasNestedObjectProperty(json, "teamTransfer", "receiveCooldownRounds");
             boolean teamTransferMaxMissing = teamTransferMissing
                     || !hasNestedObjectProperty(json, "teamTransfer", "maxDiamondPerRound");
+            boolean emeraldIncomeBoostMissing = !hasObjectProperty(json, "emeraldIncomeBoost");
+            boolean emeraldIncomeBoostEnabledMissing = emeraldIncomeBoostMissing
+                    || !hasNestedObjectProperty(json, "emeraldIncomeBoost", "enabled");
+            boolean emeraldIncomeBoostStartRoundMissing = emeraldIncomeBoostMissing
+                    || !hasNestedObjectProperty(json, "emeraldIncomeBoost", "startRound");
             EconomyConfig.TeamTransferConfig teamTransfer = mergedTeamTransfer(
                     value.teamTransfer(),
                     defaults.teamTransfer(),
@@ -181,8 +186,15 @@ public final class SemionConfigLoader {
                     teamTransferCooldownMissing,
                     teamTransferMaxMissing
             );
+            EconomyConfig.EmeraldIncomeBoostConfig emeraldIncomeBoost = mergedEmeraldIncomeBoost(
+                    value.emeraldIncomeBoost(),
+                    defaults.emeraldIncomeBoost(),
+                    emeraldIncomeBoostEnabledMissing,
+                    emeraldIncomeBoostStartRoundMissing
+            );
             if (towerLimitPurchaseMissing || teamTransferMissing || teamTransferEnabledMissing
-                    || teamTransferCooldownMissing || teamTransferMaxMissing) {
+                    || teamTransferCooldownMissing || teamTransferMaxMissing || emeraldIncomeBoostMissing
+                    || emeraldIncomeBoostEnabledMissing || emeraldIncomeBoostStartRoundMissing) {
                 value = new EconomyConfig(
                         value.startingDiamond(),
                         value.startingEmerald(),
@@ -191,11 +203,13 @@ public final class SemionConfigLoader {
                         value.emeraldProduction(),
                         towerLimitPurchaseMissing ? value.towerLimit().withDefaultPurchaseSettings() : value.towerLimit(),
                         value.killReward(),
-                        teamTransfer
+                        teamTransfer,
+                        emeraldIncomeBoost
                 );
             }
             if (towerLimitMissing || towerLimitPurchaseMissing || killRewardMissing || teamTransferMissing
-                    || teamTransferEnabledMissing || teamTransferCooldownMissing || teamTransferMaxMissing) {
+                    || teamTransferEnabledMissing || teamTransferCooldownMissing || teamTransferMaxMissing
+                    || emeraldIncomeBoostMissing || emeraldIncomeBoostEnabledMissing || emeraldIncomeBoostStartRoundMissing) {
                 write(path, value, logger);
             }
             return value;
@@ -254,6 +268,19 @@ public final class SemionConfigLoader {
                 enabledMissing ? defaults.enabled() : safeLoaded.enabled(),
                 cooldownMissing ? defaults.receiveCooldownRounds() : safeLoaded.receiveCooldownRounds(),
                 maxMissing ? defaults.maxDiamondPerRound() : safeLoaded.maxDiamondPerRound()
+        );
+    }
+
+    private static EconomyConfig.EmeraldIncomeBoostConfig mergedEmeraldIncomeBoost(
+            EconomyConfig.EmeraldIncomeBoostConfig loaded,
+            EconomyConfig.EmeraldIncomeBoostConfig defaults,
+            boolean enabledMissing,
+            boolean startRoundMissing
+    ) {
+        EconomyConfig.EmeraldIncomeBoostConfig safeLoaded = loaded == null ? defaults : loaded;
+        return new EconomyConfig.EmeraldIncomeBoostConfig(
+                enabledMissing ? defaults.enabled() : safeLoaded.enabled(),
+                startRoundMissing ? defaults.startRound() : safeLoaded.startRound()
         );
     }
 

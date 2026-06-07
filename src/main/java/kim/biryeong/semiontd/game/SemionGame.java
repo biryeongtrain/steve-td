@@ -35,6 +35,7 @@ import kim.biryeong.semiontd.ui.SemionHotbarService;
 import kim.biryeong.semiontd.ui.SemionLaneIndicatorService;
 import kim.biryeong.semiontd.ui.SemionSidebarHudService;
 import kim.biryeong.semiontd.ui.SemionText;
+import kim.biryeong.semiontd.ui.SemionTitleService;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -78,6 +79,7 @@ public final class SemionGame {
     private long tickCounter;
     private int phaseTicks;
     private boolean finalDefenseForcedThisRound;
+    private boolean emeraldIncomeBoostAnnounced;
 
     public SemionGame(EconomyConfig economyConfig, WaveConfig waveConfig, GameArena arena) {
         this(economyConfig, waveConfig, arena, null);
@@ -555,6 +557,7 @@ public final class SemionGame {
         matchId = MatchId.newId();
         startedAtEpochMillis = System.currentTimeMillis();
         endedAtEpochMillis = 0L;
+        emeraldIncomeBoostAnnounced = false;
         rosterLocked = true;
         notifyMatchStarted();
         if (buildGuideService != null) {
@@ -879,8 +882,24 @@ public final class SemionGame {
         }
         prepareActivePlayers(server);
         notifyRoundStarted(currentRound);
+        announceEmeraldIncomeBoostIfNeeded(server);
         if (buildGuideService != null) {
             buildGuideService.onPreparePhaseStarted(server, this, currentRound);
+        }
+    }
+
+    private void announceEmeraldIncomeBoostIfNeeded(MinecraftServer server) {
+        if (server == null || emeraldIncomeBoostAnnounced || !economyConfig.emeraldIncomeBoost().activeForRound(currentRound)) {
+            return;
+        }
+        emeraldIncomeBoostAnnounced = true;
+        Set<UUID> recipientIds = new HashSet<>(players.keySet());
+        recipientIds.addAll(matchSpectatorIds);
+        for (UUID playerId : recipientIds) {
+            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+            if (player != null) {
+                SemionTitleService.showEmeraldIncomeBoostActivated(player);
+            }
         }
     }
 

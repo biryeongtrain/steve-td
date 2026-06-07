@@ -33,9 +33,10 @@ public final class EconomyService {
 
     public void tickEmerald(Collection<SemionPlayer> players, Map<TeamId, SemionTeam> teams, int currentRound) {
         long emeraldCap = economyConfig.emeraldCapForRound(currentRound);
+        long multiplier = economyConfig.emeraldIncomeMultiplierForRound(currentRound);
         for (SemionPlayer player : players) {
             if (isEconomyEligible(player, teams)) {
-                player.economy().addEmerald(player.economy().emeraldPerSec(), emeraldCap);
+                player.economy().addEmerald(player.economy().emeraldPerSec() * multiplier, emeraldCap);
             }
         }
     }
