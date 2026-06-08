@@ -5390,6 +5390,32 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void incomeSummonFeedbackTargetsColoredLaneOwnerNickname(GameTestHelper context) {
+        UUID redId = stableUuid("summon-feedback-red-owner");
+        UUID blueId = stableUuid("summon-feedback-blue-owner");
+        SemionGame game = startedTwoPlayerGame(context, redId, blueId);
+
+        var result = game.summonMonster(redId, "chicken");
+        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.SUCCESS, result.type(), "Income summon should succeed for feedback formatting.")) {
+            return;
+        }
+        String markup = SemionCommands.summonSuccessMarkup(
+                game,
+                result,
+                "chicken",
+                game.currentRound(),
+                result.scheduledRound().orElse(game.currentRound())
+        );
+        if (!assertEquals(context, "소환했습니다: chicken, 대상=<blue>blue</blue>", markup, "Income summon feedback should use the target lane owner's colored nickname.")) {
+            return;
+        }
+        if (!assertTrue(context, !markup.contains("팀=") && !markup.contains("라인="), "Income summon feedback should not expose team/lane labels.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void wavePhaseIncomeSummonQueuesForNextRound(GameTestHelper context) {
         UUID redId = stableUuid("wave-summon-red-owner");
         UUID blueId = stableUuid("wave-summon-blue-owner");

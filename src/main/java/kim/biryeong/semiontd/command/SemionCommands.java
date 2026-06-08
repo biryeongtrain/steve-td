@@ -9,6 +9,7 @@ import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.buildguide.BuildAction;
 import kim.biryeong.semiontd.buildguide.BuildGuide;
@@ -45,6 +46,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
 public final class SemionCommands {
+    private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
+
     private SemionCommands() {
     }
 
@@ -56,6 +59,10 @@ public final class SemionCommands {
 
     private static void success(CommandSourceStack source, String message) {
         source.sendSuccess(() -> SemionText.prefixedPlain(message), false);
+    }
+
+    private static void successMini(CommandSourceStack source, String markup) {
+        source.sendSuccess(() -> SemionText.prefixedMini(markup), false);
     }
 
     private static void failure(CommandSourceStack source, String message) {
@@ -1251,7 +1258,7 @@ public final class SemionCommands {
             return 0;
         }
 
-        success(source, "테스트 타워를 설치했습니다: " + player.blockPosition());
+        success(source, towerPlacementSuccessMessage("테스트 타워"));
         return 1;
     }
 
@@ -1294,7 +1301,10 @@ public final class SemionCommands {
             return 0;
         }
 
-        success(source, "타워를 설치했습니다: " + towerId + ", 위치=" + player.blockPosition());
+        String towerName = ProductionTowerCatalog.find(towerId)
+                .map(entry -> entry.type().displayName())
+                .orElse(towerId);
+        success(source, towerPlacementSuccessMessage(towerName));
         return 1;
     }
 
@@ -1415,18 +1425,67 @@ public final class SemionCommands {
         }
 
         int scheduledRound = result.scheduledRound().orElse(game.currentRound());
-        if (scheduledRound > game.currentRound()) {
-            success(source, "다음 라운드에 소환 예약했습니다: " + summonId
-                    + ", 팀=" + result.targetTeam().orElseThrow()
-                    + ", 라인=" + result.targetLaneId().orElseThrow()
-                    + ", 라운드=" + scheduledRound);
-        } else {
-            success(source, "소환했습니다: " + summonId
-                    + ", 팀=" + result.targetTeam().orElseThrow()
-                    + ", 라인=" + result.targetLaneId().orElseThrow());
-        }
+        successMini(source, summonSuccessMarkup(game, result, summonId, game.currentRound(), scheduledRound));
         gameManager.dialogService().showSummonShop(player, game);
         return 1;
+    }
+
+    static String towerPlacementSuccessMessage(String towerDisplayName) {
+        String normalizedName = towerDisplayName == null || towerDisplayName.isBlank()
+                ? "타워"
+                : towerDisplayName.trim();
+        return normalizedName.endsWith("타워")
+                ? normalizedName + "를 소환했습니다"
+                : normalizedName + " 타워를 소환했습니다";
+    }
+
+    public static String summonSuccessMarkup(
+            SemionGame game,
+            SummonResult result,
+            String summonId,
+            int currentRound,
+            int scheduledRound
+    ) {
+        return summonSuccessMarkup(summonId, summonTargetOwnerMarkup(game, result), currentRound, scheduledRound);
+    }
+
+    static String summonSuccessMarkup(String summonId, String targetOwnerMarkup, int currentRound, int scheduledRound) {
+        String escapedSummonId = MINI_MESSAGE.escapeTags(summonId);
+        if (scheduledRound > currentRound) {
+            return "다음 라운드에 소환 예약했습니다: " + escapedSummonId
+                    + ", 대상=" + targetOwnerMarkup
+                    + ", 라운드=" + scheduledRound;
+        }
+        return "소환했습니다: " + escapedSummonId + ", 대상=" + targetOwnerMarkup;
+    }
+
+    private static String summonTargetOwnerMarkup(SemionGame game, SummonResult result) {
+        TeamId teamId = result.targetTeam().orElse(null);
+        Integer laneId = result.targetLaneId().orElse(null);
+        if (teamId == null || laneId == null) {
+            return MINI_MESSAGE.escapeTags("알 수 없음");
+        }
+        SemionTeam team = game.teams().get(teamId);
+        if (team == null) {
+            return MINI_MESSAGE.escapeTags("알 수 없음");
+        }
+        return team.laneGroup().lane(laneId)
+                .map(PlayerLane::ownerPlayer)
+                .map(game.players()::get)
+                .map(SemionPlayer::name)
+                .map(name -> teamColoredNameMarkup(teamId, name))
+                .orElseGet(() -> MINI_MESSAGE.escapeTags("알 수 없음"));
+    }
+
+    private static String teamColoredNameMarkup(TeamId teamId, String playerName) {
+        String color = switch (teamId) {
+            case RED -> "red";
+            case BLUE -> "blue";
+            case GREEN -> "green";
+            case YELLOW -> "yellow";
+            case PURPLE -> "light_purple";
+        };
+        return "<" + color + ">" + MINI_MESSAGE.escapeTags(playerName) + "</" + color + ">";
     }
 
     private static int leaderTarget(CommandSourceStack source, SemionGameManager gameManager, String teamName)
