@@ -7,7 +7,8 @@
   "entrypoints": {
     "fabric-gametest": [
       "kim.biryeong.semiontd.gametest.SemionParticipantGameTest",
-      "kim.biryeong.semiontd.gametest.SemionEmeraldIncomeBoostGameTest"
+      "kim.biryeong.semiontd.gametest.SemionEmeraldIncomeBoostGameTest",
+      "kim.biryeong.semiontd.gametest.SemionSandboxGameTest"
     ]
   }
 }

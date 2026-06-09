@@ -107,6 +107,7 @@ public final class SemionGameManager {
     private MatchResult lastMatchResult;
     private final Set<UUID> nextMatchPriorityPlayerIds = new HashSet<>();
     private final Map<UUID, String> playerLimitBypassNames = new ConcurrentHashMap<>();
+    private final Map<UUID, SemionGame> sandboxGames = new ConcurrentHashMap<>();
     private SemionGame pendingFinishedGame;
     private int pendingFinishDelayTicks;
     private MatchResult pendingMatchResultDialog;
@@ -126,6 +127,13 @@ public final class SemionGameManager {
         NOT_WAITING,
         ALREADY_PENDING,
         PRELOAD_FAILED
+    }
+
+    public enum SandboxStartResult {
+        STARTED,
+        REPLACED,
+        PLAYER_IN_MATCH,
+        FAILED
     }
 
     public record ReloadConfigResult(boolean reloaded, boolean activeGameUpdated, Path configDir) {
@@ -710,6 +718,167 @@ public final class SemionGameManager {
         return Optional.ofNullable(activeGame);
     }
 
+    public Optional<SemionGame> sandboxGame(UUID playerId) {
+        return Optional.ofNullable(playerId == null ? null : sandboxGames.get(playerId));
+    }
+
+    public Optional<SemionGame> playableGame(UUID playerId) {
+        if (playerId == null) {
+            return Optional.empty();
+        }
+        if (activeGame != null && activeGame.isActiveParticipant(playerId)) {
+            return Optional.of(activeGame);
+        }
+        return sandboxGame(playerId);
+    }
+
+    public SemionGame protectionGame(UUID playerId) {
+        if (playerId == null) {
+            return null;
+        }
+        if (activeGame != null && (activeGame.isActiveParticipant(playerId) || activeGame.isMatchSpectator(playerId))) {
+            return activeGame;
+        }
+        return sandboxGames.get(playerId);
+    }
+
+    public SandboxStartResult startSandbox(MinecraftServer server, ServerPlayer player) {
+        if (player == null) {
+            return SandboxStartResult.FAILED;
+        }
+        if (isCommittedToActiveMatch(player.getUUID())) {
+            return SandboxStartResult.PLAYER_IN_MATCH;
+        }
+        try {
+            return startSandbox(server, player.getUUID(), player.getGameProfile().getName(), GameArenaLoader.load(server, mapConfig));
+        } catch (ArenaLoadException | RuntimeException exception) {
+            SemionTd.LOGGER.warn("Failed to start Semion TD sandbox for {}.", player.getGameProfile().getName(), exception);
+            return SandboxStartResult.FAILED;
+        }
+    }
+
+    public SandboxStartResult startSandbox(MinecraftServer server, UUID playerId, String playerName, GameArena arena) {
+        if (server == null || playerId == null || arena == null) {
+            return SandboxStartResult.FAILED;
+        }
+        if (isCommittedToActiveMatch(playerId)) {
+            arena.unload();
+            return SandboxStartResult.PLAYER_IN_MATCH;
+        }
+
+        boolean replacing = stopSandbox(playerId);
+        SemionGame sandbox = new SemionGame(
+                economyConfig,
+                waveConfig,
+                leaderTargetingConfig,
+                incomeLaneRoutingConfig,
+                arena,
+                null
+        );
+        kim.biryeong.semiontd.job.JobRegistry.all().stream()
+                .filter(job -> !job.id().equals(kim.biryeong.semiontd.job.JobRegistry.defaultJob().id()))
+                .findFirst()
+                .ifPresent(job -> sandbox.selectJob(playerId, job.id()));
+        ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                MatchMode.TEST,
+                List.of(
+                        new AssignedParticipant(playerId, playerName == null || playerName.isBlank() ? "sandbox" : playerName, TeamId.RED, 1),
+                        new AssignedParticipant(sandboxDummyPlayerId(playerId), "Sandbox Dummy", TeamId.BLUE, 1)
+                ),
+                Set.of(),
+                2
+        );
+        if (!sandbox.start(server, plan)) {
+            sandbox.close();
+            return SandboxStartResult.FAILED;
+        }
+        grantSandboxResources(sandbox, playerId);
+        sandboxGames.put(playerId, sandbox);
+        return replacing ? SandboxStartResult.REPLACED : SandboxStartResult.STARTED;
+    }
+
+    public boolean resetSandbox(MinecraftServer server, ServerPlayer player) {
+        return startSandbox(server, player) != SandboxStartResult.FAILED;
+    }
+
+    public boolean leaveSandbox(MinecraftServer server, ServerPlayer player) {
+        if (player == null || !stopSandbox(player.getUUID())) {
+            return false;
+        }
+        if (server != null) {
+            try {
+                sendPlayerToLobby(server, player);
+            } catch (ArenaLoadException exception) {
+                SemionTd.LOGGER.warn("Failed to return sandbox player {} to lobby.", player.getGameProfile().getName(), exception);
+            }
+        }
+        return true;
+    }
+
+    public boolean stopSandbox(UUID playerId) {
+        SemionGame existing = playerId == null ? null : sandboxGames.remove(playerId);
+        if (existing == null) {
+            return false;
+        }
+        try {
+            existing.close();
+        } catch (RuntimeException exception) {
+            SemionTd.LOGGER.warn("Failed to close Semion TD sandbox for player {}.", playerId, exception);
+        }
+        return true;
+    }
+
+    private boolean isCommittedToActiveMatch(UUID playerId) {
+        if (playerId == null) {
+            return false;
+        }
+        ParticipantSelectionPlan pendingPlan = pendingStartPlan;
+        if (pendingPlan != null && isSelectedForPendingMatch(pendingPlan, playerId)) {
+            return true;
+        }
+        SemionGame game = activeGame;
+        if (game == null || game.phase() == RoundPhase.ENDED) {
+            return false;
+        }
+        if (game.rosterLocked()) {
+            return game.isActiveParticipant(playerId) || game.isMatchSpectator(playerId);
+        }
+        return game.isReady(playerId);
+    }
+
+    private static UUID sandboxDummyPlayerId(UUID ownerId) {
+        return UUID.nameUUIDFromBytes(("semion-td-sandbox-dummy:" + ownerId).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    private static void grantSandboxResources(SemionGame sandbox, UUID playerId) {
+        SemionPlayer player = sandbox.players().get(playerId);
+        if (player != null) {
+            player.economy().overrideStartingValues(999_999L, 999_999L, 999_999L, 0L);
+        }
+    }
+
+    private void closeSandboxesFor(ParticipantSelectionPlan plan) {
+        if (plan == null) {
+            return;
+        }
+        plan.spectatorIds().forEach(this::stopSandbox);
+        plan.activeParticipants().stream()
+                .map(AssignedParticipant::uuid)
+                .forEach(this::stopSandbox);
+    }
+
+    private void tickSandboxGames(MinecraftServer server) {
+        for (SemionGame sandbox : sandboxGames.values()) {
+            sandbox.tick(server);
+        }
+    }
+
+    private void closeAllSandboxes() {
+        for (UUID playerId : List.copyOf(sandboxGames.keySet())) {
+            stopSandbox(playerId);
+        }
+    }
+
     public boolean canBypassPlayerLimit(UUID playerId) {
         if (playerId == null) {
             return false;
@@ -761,6 +930,7 @@ public final class SemionGameManager {
             return StartCountdownResult.PRELOAD_FAILED;
         }
 
+        closeSandboxesFor(plan);
         pendingStartPlan = plan;
         startCountdownTicks = START_COUNTDOWN_TICKS;
         nextStartCountdownAnnouncementSecond = startCountdownSecondsRemaining();
@@ -785,6 +955,7 @@ public final class SemionGameManager {
         musicService.tick(server, activeGame);
         tickPendingRatingRetry(server);
         tickPendingMatchResultDialog(server);
+        tickSandboxGames(server);
         if (activeGame == null) {
             clearStartCountdown();
             return;
@@ -859,6 +1030,7 @@ public final class SemionGameManager {
 
     public void shutdown() {
         IllusionCloneSpawnQueue.clear();
+        closeAllSandboxes();
         if (activeGame != null) {
             activeGame.close();
             activeGame = null;
@@ -942,6 +1114,7 @@ public final class SemionGameManager {
 
         ParticipantSelectionPlan plan = pendingStartPlan;
         clearStartCountdown();
+        closeSandboxesFor(plan);
         if (!activeGame.start(server, plan)) {
             server.getPlayerList().broadcastSystemMessage(
                     SemionText.prefixedPlain("시작 카운트다운이 취소되었습니다. 참가자 확정에 실패했습니다."),

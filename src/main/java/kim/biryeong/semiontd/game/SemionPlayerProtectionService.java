@@ -14,7 +14,7 @@ public final class SemionPlayerProtectionService {
     public static void register(SemionGameManager gameManager) {
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> {
             if (entity instanceof ServerPlayer player
-                    && shouldProtectPlayer(gameManager.activeGame().orElse(null), player.getUUID())) {
+                    && shouldProtectPlayer(gameManager.protectionGame(player.getUUID()), player.getUUID())) {
                 return false;
             }
             return true;
@@ -26,7 +26,7 @@ public final class SemionPlayerProtectionService {
                     || !(player instanceof ServerPlayer serverPlayer)) {
                 return InteractionResult.PASS;
             }
-            if (shouldProtectPlayer(gameManager.activeGame().orElse(null), serverPlayer.getUUID())) {
+            if (shouldProtectPlayer(gameManager.protectionGame(serverPlayer.getUUID()), serverPlayer.getUUID())) {
                 return InteractionResult.FAIL;
             }
             return InteractionResult.PASS;

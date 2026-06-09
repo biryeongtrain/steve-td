@@ -69,6 +69,10 @@ public final class SemionCommands {
         source.sendFailure(SemionText.prefixedError(message));
     }
 
+    private static SemionGame playableGame(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
+        return gameManager.playableGame(source.getPlayerOrException().getUUID()).orElse(null);
+    }
+
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, SemionGameManager gameManager) {
         dispatcher.register(literal("semiontd")
                 .then(literal("create")
@@ -127,6 +131,14 @@ public final class SemionCommands {
                                         gameManager,
                                         StringArgumentType.getString(context, "team")
                                 ))))
+                .then(literal("sandbox")
+                        .executes(context -> startSandbox(context.getSource(), gameManager))
+                        .then(literal("start")
+                                .executes(context -> startSandbox(context.getSource(), gameManager)))
+                        .then(literal("reset")
+                                .executes(context -> resetSandbox(context.getSource(), gameManager)))
+                        .then(literal("leave")
+                                .executes(context -> leaveSandbox(context.getSource(), gameManager))))
                 .then(literal("economy")
                         .executes(context -> economy(context.getSource(), gameManager)))
                 .then(literal("money")
@@ -681,6 +693,53 @@ public final class SemionCommands {
         return 1;
     }
 
+    private static int startSandbox(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGameManager.SandboxStartResult result = gameManager.startSandbox(source.getServer(), player);
+        return switch (result) {
+            case STARTED -> {
+                success(source, "샌드박스 모드를 시작했습니다. 타워/인컴 명령은 샌드박스 세션에만 적용됩니다.");
+                yield 1;
+            }
+            case REPLACED -> {
+                success(source, "기존 샌드박스를 초기화하고 새 샌드박스를 시작했습니다.");
+                yield 1;
+            }
+            case PLAYER_IN_MATCH -> {
+                failure(source, "현재 경기 참가자/관전자 또는 시작 대기자로 등록되어 있어 샌드박스를 시작할 수 없습니다.");
+                yield 0;
+            }
+            case FAILED -> {
+                failure(source, "샌드박스 모드 시작에 실패했습니다.");
+                yield 0;
+            }
+        };
+    }
+
+    private static int resetSandbox(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGameManager.SandboxStartResult result = gameManager.startSandbox(source.getServer(), player);
+        if (result == SemionGameManager.SandboxStartResult.STARTED || result == SemionGameManager.SandboxStartResult.REPLACED) {
+            success(source, "샌드박스를 초기화했습니다.");
+            return 1;
+        }
+        if (result == SemionGameManager.SandboxStartResult.PLAYER_IN_MATCH) {
+            failure(source, "현재 경기 참가자/관전자 또는 시작 대기자로 등록되어 있어 샌드박스를 초기화할 수 없습니다.");
+            return 0;
+        }
+        failure(source, "샌드박스 초기화에 실패했습니다.");
+        return 0;
+    }
+
+    private static int leaveSandbox(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
+        if (!gameManager.leaveSandbox(source.getServer(), source.getPlayerOrException())) {
+            failure(source, "종료할 샌드박스 세션이 없습니다.");
+            return 0;
+        }
+        success(source, "샌드박스 모드를 종료했습니다.");
+        return 1;
+    }
+
     private static int setTestMode(CommandSourceStack source, SemionGameManager gameManager, boolean enabled) {
         SemionGame activeGame = gameManager.activeGame().orElse(null);
         if (activeGame != null && activeGame.rosterLocked()) {
@@ -892,9 +951,9 @@ public final class SemionCommands {
     }
 
     private static int economy(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
-        SemionGame game = gameManager.activeGame().orElse(null);
+        SemionGame game = playableGame(source, gameManager);
         if (game == null) {
-            failure(source, "진행 중인 게임이 없습니다.");
+            failure(source, "진행 중인 게임 또는 샌드박스가 없습니다. /semiontd sandbox start를 사용하세요.");
             return 0;
         }
 
@@ -1199,9 +1258,9 @@ public final class SemionCommands {
     }
 
     private static int emeraldUp(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
-        SemionGame game = gameManager.activeGame().orElse(null);
+        SemionGame game = playableGame(source, gameManager);
         if (game == null) {
-            failure(source, "진행 중인 게임이 없습니다.");
+            failure(source, "진행 중인 게임 또는 샌드박스가 없습니다. /semiontd sandbox start를 사용하세요.");
             return 0;
         }
 
@@ -1221,9 +1280,9 @@ public final class SemionCommands {
     }
 
     private static int towerLimitUp(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
-        SemionGame game = gameManager.activeGame().orElse(null);
+        SemionGame game = playableGame(source, gameManager);
         if (game == null) {
-            failure(source, "진행 중인 게임이 없습니다.");
+            failure(source, "진행 중인 게임 또는 샌드박스가 없습니다. /semiontd sandbox start를 사용하세요.");
             return 0;
         }
 
@@ -1245,9 +1304,9 @@ public final class SemionCommands {
 
     private static int placeTestTower(CommandSourceStack source, SemionGameManager gameManager)
             throws CommandSyntaxException {
-        SemionGame game = gameManager.activeGame().orElse(null);
+        SemionGame game = playableGame(source, gameManager);
         if (game == null) {
-            failure(source, "진행 중인 게임이 없습니다.");
+            failure(source, "진행 중인 게임 또는 샌드박스가 없습니다. /semiontd sandbox start를 사용하세요.");
             return 0;
         }
 
@@ -1264,9 +1323,9 @@ public final class SemionCommands {
 
     private static int listProductionTowers(CommandSourceStack source, SemionGameManager gameManager)
             throws CommandSyntaxException {
-        SemionGame game = gameManager.activeGame().orElse(null);
+        SemionGame game = playableGame(source, gameManager);
         if (game == null) {
-            failure(source, "진행 중인 게임이 없습니다.");
+            failure(source, "진행 중인 게임 또는 샌드박스가 없습니다. /semiontd sandbox start를 사용하세요.");
             return 0;
         }
 
@@ -1288,9 +1347,9 @@ public final class SemionCommands {
 
     private static int buildProductionTower(CommandSourceStack source, SemionGameManager gameManager, String towerId)
             throws CommandSyntaxException {
-        SemionGame game = gameManager.activeGame().orElse(null);
+        SemionGame game = playableGame(source, gameManager);
         if (game == null) {
-            failure(source, "진행 중인 게임이 없습니다.");
+            failure(source, "진행 중인 게임 또는 샌드박스가 없습니다. /semiontd sandbox start를 사용하세요.");
             return 0;
         }
 
@@ -1310,9 +1369,9 @@ public final class SemionCommands {
 
     private static int towerDialog(CommandSourceStack source, SemionGameManager gameManager)
             throws CommandSyntaxException {
-        SemionGame game = gameManager.activeGame().orElse(null);
+        SemionGame game = playableGame(source, gameManager);
         if (game == null) {
-            failure(source, "진행 중인 게임이 없습니다.");
+            failure(source, "진행 중인 게임 또는 샌드박스가 없습니다. /semiontd sandbox start를 사용하세요.");
             return 0;
         }
         gameManager.dialogService().showTowerControl(source.getPlayerOrException(), game, gameManager.buildGuideService());
@@ -1334,9 +1393,9 @@ public final class SemionCommands {
 
     private static int sellTower(CommandSourceStack source, SemionGameManager gameManager, GridPosition position)
             throws CommandSyntaxException {
-        SemionGame game = gameManager.activeGame().orElse(null);
+        SemionGame game = playableGame(source, gameManager);
         if (game == null) {
-            failure(source, "진행 중인 게임이 없습니다.");
+            failure(source, "진행 중인 게임 또는 샌드박스가 없습니다. /semiontd sandbox start를 사용하세요.");
             return 0;
         }
 
@@ -1356,9 +1415,9 @@ public final class SemionCommands {
 
     private static int listTowerUpgrades(CommandSourceStack source, SemionGameManager gameManager)
             throws CommandSyntaxException {
-        SemionGame game = gameManager.activeGame().orElse(null);
+        SemionGame game = playableGame(source, gameManager);
         if (game == null) {
-            failure(source, "진행 중인 게임이 없습니다.");
+            failure(source, "진행 중인 게임 또는 샌드박스가 없습니다. /semiontd sandbox start를 사용하세요.");
             return 0;
         }
 
@@ -1389,9 +1448,9 @@ public final class SemionCommands {
             String upgradeId,
             GridPosition position
     ) throws CommandSyntaxException {
-        SemionGame game = gameManager.activeGame().orElse(null);
+        SemionGame game = playableGame(source, gameManager);
         if (game == null) {
-            failure(source, "진행 중인 게임이 없습니다.");
+            failure(source, "진행 중인 게임 또는 샌드박스가 없습니다. /semiontd sandbox start를 사용하세요.");
             return 0;
         }
 
@@ -1411,9 +1470,9 @@ public final class SemionCommands {
 
     private static int summon(CommandSourceStack source, SemionGameManager gameManager, String summonId)
             throws CommandSyntaxException {
-        SemionGame game = gameManager.activeGame().orElse(null);
+        SemionGame game = playableGame(source, gameManager);
         if (game == null) {
-            failure(source, "진행 중인 게임이 없습니다.");
+            failure(source, "진행 중인 게임 또는 샌드박스가 없습니다. /semiontd sandbox start를 사용하세요.");
             return 0;
         }
 
@@ -1513,10 +1572,10 @@ public final class SemionCommands {
         return 1;
     }
 
-    private static int summons(CommandSourceStack source, SemionGameManager gameManager) {
-        SemionGame game = gameManager.activeGame().orElse(null);
+    private static int summons(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
+        SemionGame game = playableGame(source, gameManager);
         if (game == null) {
-            failure(source, "진행 중인 게임이 없습니다.");
+            failure(source, "진행 중인 게임 또는 샌드박스가 없습니다. /semiontd sandbox start를 사용하세요.");
             return 0;
         }
 
@@ -1532,9 +1591,9 @@ public final class SemionCommands {
 
     private static int summonDialog(CommandSourceStack source, SemionGameManager gameManager, int page)
             throws CommandSyntaxException {
-        SemionGame game = gameManager.activeGame().orElse(null);
+        SemionGame game = playableGame(source, gameManager);
         if (game == null) {
-            failure(source, "진행 중인 게임이 없습니다.");
+            failure(source, "진행 중인 게임 또는 샌드박스가 없습니다. /semiontd sandbox start를 사용하세요.");
             return 0;
         }
         gameManager.dialogService().showSummonShop(source.getPlayerOrException(), game, page);
