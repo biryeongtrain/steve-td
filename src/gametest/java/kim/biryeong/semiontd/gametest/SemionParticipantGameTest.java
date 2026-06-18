@@ -4539,6 +4539,55 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void gameCloseDiscardsRuntimeEntitiesAndCancelsPendingIllusionClones(GameTestHelper context) {
+        IllusionCloneSpawnQueue.clear();
+        UUID playerId = stableUuid("red-illusion-close-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        GridPosition position = GridPosition.from(towerPlacementPos(lane));
+        TowerType towerType = new TowerType("illusion_close_fixture", "Illusion Close Fixture", TowerCategory.DIRECT, 0, 100.0, 10.0, 20.0, 12, 7);
+        FixtureIllusionTower tower = new FixtureIllusionTower(
+                towerType,
+                playerId,
+                TeamId.RED,
+                1,
+                position,
+                new IllusionProfile(10, 0, 0.25, 0.5, 1.0, 1.0, 1.0, 0)
+        );
+        lane.addTower(tower);
+        int bodyEntityId = tower.entityId().orElse(-1);
+        if (!assertTrue(context, bodyEntityId >= 0, "Illusion source tower entity should spawn before close.")) {
+            return;
+        }
+
+        lane.markWaveStarted(1);
+        tickLaneWithGlobalCloneQueue(lane, context.getLevel().getServer());
+        if (!assertEquals(context, 1, tower.spawnedCloneEntities().size(), "One clone should spawn before close.")) {
+            return;
+        }
+        SemionTowerEntity spawnedClone = tower.spawnedCloneEntities().getFirst();
+
+        game.close();
+        if (!assertTrue(context, lane.towers().isEmpty(), "Closing the game should clear lane tower runtime state.")) {
+            return;
+        }
+        if (!assertTrue(context, spawnedClone.isRemoved(), "Closing the game should discard already spawned illusion clones.")) {
+            return;
+        }
+        if (!assertTrue(context, lane.arenaWorld().getEntity(bodyEntityId) == null || lane.arenaWorld().getEntity(bodyEntityId).isRemoved(), "Closing the game should discard the source tower entity.")) {
+            return;
+        }
+        for (int tick = 0; tick < 40; tick++) {
+            IllusionCloneSpawnQueue.tick();
+        }
+        if (!assertEquals(context, 1, tower.spawnedCloneEntities().size(), "Closing the game should cancel pending illusion clone spawns.")) {
+            return;
+        }
+        IllusionCloneSpawnQueue.clear();
+        context.succeed();
+    }
+
+    @GameTest
     public void illusionCloneSpawnsAboveTenCompleteWithinConfiguredSpreadTicks(GameTestHelper context) {
         UUID playerId = stableUuid("red-illusion-spread-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);

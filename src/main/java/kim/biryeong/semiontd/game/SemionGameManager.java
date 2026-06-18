@@ -827,6 +827,7 @@ public final class SemionGameManager {
                 null
         );
         sandbox.enableSandboxMode();
+        sandbox.disableWaveSpawnsForTeam(TeamId.BLUE);
         if (!applyPersistedJobSelection(server, sandbox, playerId, playerName)) {
             applyFallbackSandboxJob(sandbox, playerId);
         }

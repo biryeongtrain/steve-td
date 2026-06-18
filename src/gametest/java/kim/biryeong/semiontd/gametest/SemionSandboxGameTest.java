@@ -18,6 +18,7 @@ import kim.biryeong.semiontd.game.AssignedParticipant;
 import kim.biryeong.semiontd.game.MatchMode;
 import kim.biryeong.semiontd.game.ParticipantSelectionPlan;
 import kim.biryeong.semiontd.game.PlayerLane;
+import kim.biryeong.semiontd.game.RoundPhase;
 import kim.biryeong.semiontd.game.SemionGame;
 import kim.biryeong.semiontd.game.SemionGameManager;
 import kim.biryeong.semiontd.game.TeamId;
@@ -570,6 +571,47 @@ public final class SemionSandboxGameTest {
             context.succeed();
         } catch (Exception exception) {
             context.fail(Component.literal("Sandbox elimination test failed: " + exception.getMessage()));
+        } finally {
+            manager.shutdown();
+        }
+    }
+
+    @GameTest
+    public void sandboxDummyTeamDoesNotSpawnRoundWaveMonsters(GameTestHelper context) {
+        SemionGameManager manager = new SemionGameManager();
+        try {
+            configureManager(manager);
+            MinecraftServer server = context.getLevel().getServer();
+            UUID sandboxOwnerId = uuid("sandbox-dummy-wave-owner");
+            SemionGameManager.SandboxStartResult startResult = manager.startSandbox(
+                    server,
+                    sandboxOwnerId,
+                    "sandbox-dummy-wave-owner",
+                    SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(BlockPos.ZERO))
+            );
+            if (!assertEquals(context, SemionGameManager.SandboxStartResult.STARTED, startResult, "Sandbox should start before dummy wave test.")) {
+                return;
+            }
+
+            SemionGame sandboxGame = manager.sandboxGame(sandboxOwnerId).orElseThrow();
+            for (int tick = 0; tick < SemionGame.DEFAULT_PREPARE_TICKS + 2; tick++) {
+                manager.tick(server);
+            }
+            if (!assertEquals(context, RoundPhase.LANE_WAVE, sandboxGame.phase(), "Sandbox should enter the first wave phase.")) {
+                return;
+            }
+            if (!assertTrue(context, !lane(sandboxGame, TeamId.RED, 1).activeMonsters().isEmpty(), "Sandbox owner team should still spawn normal round wave monsters.")) {
+                return;
+            }
+            if (!assertTrue(context, lane(sandboxGame, TeamId.BLUE, 1).activeMonsters().isEmpty(), "Sandbox dummy team must not spawn round wave monsters.")) {
+                return;
+            }
+            if (!assertTrue(context, !sandboxGame.teams().get(TeamId.BLUE).eliminated(), "Sandbox dummy team should not be eliminated by skipped round waves.")) {
+                return;
+            }
+            context.succeed();
+        } catch (Exception exception) {
+            context.fail(Component.literal("Sandbox dummy wave test failed: " + exception.getMessage()));
         } finally {
             manager.shutdown();
         }

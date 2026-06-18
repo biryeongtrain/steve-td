@@ -75,8 +75,15 @@ public final class SemionTeam {
         this.eliminated = false;
         this.leaderTargeting = null;
         this.memberIds.clear();
-        this.laneGroup.clearTowers();
-        this.laneGroup.discardBossEntity();
+        this.laneGroup.closeRuntime();
+    }
+
+    public void closeRuntime() {
+        this.active = false;
+        this.eliminated = false;
+        this.leaderTargeting = null;
+        this.memberIds.clear();
+        this.laneGroup.closeRuntime();
     }
 
     public boolean addPlayer(SemionPlayer player, ServerLevel arenaWorld, LaneRegionLayout laneLayout) {

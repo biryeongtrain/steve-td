@@ -78,6 +78,7 @@ public final class SemionGame {
     private final Set<UUID> matchSpectatorIds = new HashSet<>();
     private final Set<TeamId> announcedEliminations = new HashSet<>();
     private final Set<TeamId> currentWaveTeamIds = new HashSet<>();
+    private final Set<TeamId> waveSpawnDisabledTeams = new HashSet<>();
     private final Map<String, TeamMoneyTransferRequest> teamMoneyRequests = new java.util.LinkedHashMap<>();
     private final Map<UUID, Integer> lastTeamMoneyReceivedRound = new java.util.HashMap<>();
     private final List<TeamEliminationRecord> eliminationOrder = new ArrayList<>();
@@ -205,6 +206,12 @@ public final class SemionGame {
     public void enableSandboxMode() {
         sandboxMode = true;
         enableSelfTargetIncomeSummons();
+    }
+
+    public void disableWaveSpawnsForTeam(TeamId teamId) {
+        if (teamId != null) {
+            waveSpawnDisabledTeams.add(teamId);
+        }
     }
 
     public Optional<BuildGuideService> buildGuideService() {
@@ -662,7 +669,30 @@ public final class SemionGame {
     }
 
     public void close() {
-        arena.unload();
+        try {
+            closeRuntimeState();
+        } finally {
+            arena.unload();
+        }
+    }
+
+    private void closeRuntimeState() {
+        for (SemionTeam team : teams.values()) {
+            team.closeRuntime();
+        }
+        players.clear();
+        selectedJobs.clear();
+        selectedTraitLoadouts.clear();
+        readyPlayerIds.clear();
+        initialSpectatorIds.clear();
+        matchSpectatorIds.clear();
+        announcedEliminations.clear();
+        currentWaveTeamIds.clear();
+        teamMoneyRequests.clear();
+        lastTeamMoneyReceivedRound.clear();
+        eliminationOrder.clear();
+        rosterLocked = false;
+        phase = RoundPhase.ENDED;
     }
 
     public SummonResult summonMonster(UUID playerId, String summonId) {
@@ -985,6 +1015,9 @@ public final class SemionGame {
     }
 
     private void enqueueWave(SemionTeam team) {
+        if (team == null || waveSpawnDisabledTeams.contains(team.id())) {
+            return;
+        }
         Optional<RoundWaveConfig> config = waveConfig.configForRound(currentRound);
         if (config.isEmpty()) {
             return;

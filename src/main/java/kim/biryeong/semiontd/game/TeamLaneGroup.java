@@ -118,6 +118,15 @@ public final class TeamLaneGroup {
         finalDefenseDefenders.clear();
     }
 
+    public void closeRuntime() {
+        disableMonsters();
+        clearTowers();
+        discardBossEntity();
+        lanes.clear();
+        finalDefenseDefenders.clear();
+        currentRound = 1;
+    }
+
     public void forceFinalDefense() {
         for (PlayerLane lane : lanes) {
             finalDefenseDefenders.addAll(lane.forceFinalDefense());
