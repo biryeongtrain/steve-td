@@ -53,17 +53,21 @@ public final class ResonanceTower extends EntityBackedTower {
         return auraDamageVsSlowedBonus;
     }
 
-    void updateResonanceState(int level, int links) {
-        resonanceLevel = Math.max(resonanceLevel, Math.max(0, level));
-        resonanceLinks = Math.max(resonanceLinks, Math.max(0, links));
+    void updateResonanceState(int level, int links, boolean allowDecrease) {
+        int normalizedLevel = Math.max(0, level);
+        int normalizedLinks = Math.max(0, links);
+        resonanceLevel = allowDecrease ? normalizedLevel : Math.max(resonanceLevel, normalizedLevel);
+        resonanceLinks = allowDecrease ? normalizedLinks : Math.max(resonanceLinks, normalizedLinks);
     }
 
-    void updateAuraAttackSpeedBonus(double bonus) {
-        auraAttackSpeedBonus = Math.max(auraAttackSpeedBonus, Math.max(0.0, bonus));
+    void updateAuraAttackSpeedBonus(double bonus, boolean allowDecrease) {
+        double normalizedBonus = Math.max(0.0, bonus);
+        auraAttackSpeedBonus = allowDecrease ? normalizedBonus : Math.max(auraAttackSpeedBonus, normalizedBonus);
     }
 
-    void updateAuraDamageVsSlowedBonus(double bonus) {
-        auraDamageVsSlowedBonus = Math.max(auraDamageVsSlowedBonus, Math.max(0.0, bonus));
+    void updateAuraDamageVsSlowedBonus(double bonus, boolean allowDecrease) {
+        double normalizedBonus = Math.max(0.0, bonus);
+        auraDamageVsSlowedBonus = allowDecrease ? normalizedBonus : Math.max(auraDamageVsSlowedBonus, normalizedBonus);
     }
 
     @Override

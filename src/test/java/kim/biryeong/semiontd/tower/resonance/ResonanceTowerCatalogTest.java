@@ -161,6 +161,31 @@ class ResonanceTowerCatalogTest {
     }
 
     @Test
+    void towerSaleRefreshCanLowerResonanceWithoutChangingNormalRetention() {
+        UUID playerId = UUID.fromString("00000000-0000-0000-0000-000000000123");
+        ResonanceTower focus = resonanceTower(ResonanceTowers.FOCUS_CORE, playerId, 0);
+        ResonanceTower wave = resonanceTower(ResonanceTowers.WAVE_CRYSTAL, playerId, 1, 0);
+        ResonanceTower frost = resonanceTower(ResonanceTowers.FROST_CRYSTAL, playerId, -1, 0);
+        var towers = withLinks(focus, java.util.List.of(wave, frost));
+
+        ResonanceService.refresh(towers);
+
+        assertEquals(1, focus.resonanceLevel());
+        assertEquals(2, focus.resonanceLinks());
+
+        towers.remove(frost);
+        ResonanceService.refresh(towers);
+
+        assertEquals(1, focus.resonanceLevel());
+        assertEquals(2, focus.resonanceLinks());
+
+        ResonanceService.refreshAfterTowerSale(towers);
+
+        assertEquals(0, focus.resonanceLevel());
+        assertEquals(1, focus.resonanceLinks());
+    }
+
+    @Test
     void resonanceTowerJobAllowsOnlyResonanceTowers() {
         ResonanceTowerJob job = new ResonanceTowerJob();
 
