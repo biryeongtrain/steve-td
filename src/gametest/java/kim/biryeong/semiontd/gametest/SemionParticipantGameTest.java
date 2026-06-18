@@ -6962,7 +6962,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
         LegionTowerCatalogs.register();
 
-        if (!assertEquals(context, 5L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Legion catalog should expose chicken, slime, penguin, parrot, and illusion starters.")) {
+        if (!assertEquals(context, 6L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Legion catalog should expose chicken, slime, penguin, parrot, goat, and illusion starters.")) {
             return;
         }
         if (!assertEquals(context, 2, ProductionTowerCatalog.upgrades(LegionTowers.T1_CHICKEN).size(), "Chicken starter should branch to social and DPS upgrades.")) {
@@ -7100,7 +7100,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertPresent(context, JobRegistry.find(ResonanceTowerJob.ID), "Built-in reload should register the resonance tower job.")) {
             return;
         }
-        if (!assertEquals(context, 23L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose villager, undead, animal, warlock, legion, and resonance starter families.")) {
+        if (!assertEquals(context, 24L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose villager, undead, animal, warlock, legion, and resonance starter families.")) {
             return;
         }
         context.succeed();
@@ -7123,10 +7123,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                         LegionTowers.T1_SLIME_TOWER.id(),
                         LegionTowers.T1_PENGUIN.id(),
                         LegionTowers.T1_PARROT_TOWER.id(),
+                        LegionTowers.T1_GOAT_TOWER.id(),
                         LegionTowers.ILLUSION_TOWER.id()
                 ),
                 starterIds,
-                "Legion job should expose all legion starters including illusion tower."
+                "Legion job should expose all legion starters including goat and illusion tower."
         )) {
             return;
         }
@@ -7962,7 +7963,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 1,
                 new kim.biryeong.semiontd.game.GridPosition(0, 0, 0)
         );
-        t2Anti.onKill(null, null, 0.0);
+        t2Anti.onNearbyMonsterDeath(null, null, new Vec3(0.5, 1.0, 0.5));
         AntiTankerCatTower t3Anti = new AntiTankerCatTower(
                 VillagerTowers.T3_ANTI_TANKER_CAT_TOWER,
                 playerId,
@@ -7982,7 +7983,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 100.0,
                 List.of(SummonRole.RUSH)
         );
-        if (!assertClose(context, 40.2, t3Anti.modifyAttackDamage(null, rushSummon, 20.0), "Anti-tanker cat upgrade should keep kill stack damage before applying T3 summon bonus.")) {
+        if (!assertClose(context, 40.04, t3Anti.modifyAttackDamage(null, rushSummon, 20.0), "Anti-tanker cat upgrade should keep death stack count before applying T3 summon bonus.")) {
             return;
         }
 
@@ -7993,7 +7994,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 1,
                 new kim.biryeong.semiontd.game.GridPosition(0, 0, 0)
         );
-        t2LaneClear.onKill(null, null, 0.0);
+        t2LaneClear.onNearbyMonsterDeath(null, null, new Vec3(0.5, 1.0, 0.5));
         LaneClearCatTower t3LaneClear = new LaneClearCatTower(
                 VillagerTowers.T3_LANE_CLEAR_CAT_TOWER,
                 playerId,
@@ -8013,7 +8014,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 100.0,
                 List.of(SummonRole.RUSH)
         );
-        if (!assertClose(context, 35.21875, t3LaneClear.modifyAttackDamage(null, wave, 20.0), "Lane-clear cat upgrade should keep kill stack damage before applying T3 wave bonus.")) {
+        if (!assertClose(context, 35.04375, t3LaneClear.modifyAttackDamage(null, wave, 20.0), "Lane-clear cat upgrade should keep death stack damage before applying T3 wave bonus.")) {
             return;
         }
         context.succeed();
