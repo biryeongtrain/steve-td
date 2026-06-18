@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import kim.biryeong.semiontd.config.SemionConfigLoader.LoadedConfigs;
 import kim.biryeong.semiontd.rating.RatingConfig;
+import kim.biryeong.semiontd.tower.legion.LegionTowers;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
 import org.junit.jupiter.api.BeforeAll;
@@ -93,6 +94,44 @@ final class SemionConfigLoaderTest {
         assertEquals(true, configs.rating().teamEloMatchmakingEnabled());
         String written = Files.readString(tempDir.resolve("rating.json"));
         assertTrue(written.contains("teamEloMatchmakingEnabled"));
+    }
+
+    @Test
+    void loadBackfillsTowerBalanceDefaultsWithoutReplacingOverrides() throws Exception {
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("tower_balance.json"), """
+                {
+                  "towers": {
+                    "t1_goat_tower": {
+                      "mineralCost": 99
+                    }
+                  },
+                  "upgradeCosts": {
+                  },
+                  "abilities": {
+                    "t3_extreme_goat_tower": {
+                      "maxStacks": 2.0
+                    }
+                  }
+                }
+                """);
+
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+
+        TowerBalanceConfig towerBalance = configs.towerBalance();
+        assertEquals(99, towerBalance.towers().get(LegionTowers.T1_GOAT_TOWER.id()).mineralCost());
+        assertEquals(70.0, towerBalance.towers().get(LegionTowers.T1_GOAT_TOWER.id()).maxHealth());
+        assertTrue(towerBalance.towers().containsKey(LegionTowers.T2_STRONG_GOAT_TOWER.id()));
+        assertEquals(150, towerBalance.upgradeCost(
+                LegionTowers.T1_GOAT_TOWER.id(),
+                LegionTowers.T2_STRONG_GOAT_TOWER.id(),
+                0
+        ));
+        assertEquals(2.0, towerBalance.abilities().get(LegionTowers.T3_EXTREME_GOAT_TOWER.id()).get("maxStacks"));
+        assertEquals(0.065, towerBalance.abilities().get(LegionTowers.T3_EXTREME_GOAT_TOWER.id()).get("cloneDamageBonus"));
+        String written = Files.readString(tempDir.resolve("tower_balance.json"));
+        assertTrue(written.contains("t2_strong_goat_tower"));
+        assertTrue(written.contains("cloneDamageBonus"));
     }
 
     @Test

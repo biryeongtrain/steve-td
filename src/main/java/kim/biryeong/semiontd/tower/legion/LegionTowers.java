@@ -174,6 +174,57 @@ public class LegionTowers {
             )
     );
 
+    public static final TowerType T1_GOAT_TOWER = tower(
+            "t1_goat_tower",
+            "염소 타워",
+            70,
+            70,
+            5,
+            0,
+            100,
+            5,
+            EntityVisual.vanilla("minecraft:goat"),
+            List.of(
+                    "<gray>무리를 향해 나팔을 불어 사기를 끌어올리는 지원 타워입니다.</gray>",
+                    "<green>근처 무리 타워의 피해량을 증가시킵니다.</green>",
+                    "<green>분신은 추가로 피해 증가와 받는 피해 감소를 얻습니다.</green>"
+            )
+    );
+
+    public static final TowerType T2_STRONG_GOAT_TOWER = tower(
+            "t2_strong_goat_tower",
+            "짱쌘 염소 타워",
+            150,
+            110,
+            6,
+            0,
+            90,
+            5,
+            EntityVisual.vanilla("minecraft:goat"),
+            List.of(
+                    "<gray>더 크게 울리는 나팔로 무리의 진형을 단단하게 만듭니다.</gray>",
+                    "<green>근처 무리 타워의 피해량을 증가시킵니다.</green>",
+                    "<green>분신은 추가로 피해 증가와 받는 피해 감소를 얻습니다.</green>"
+            )
+    );
+
+    public static final TowerType T3_EXTREME_GOAT_TOWER = tower(
+            "t3_extreme_goat_tower",
+            "개쌘 염소 타워",
+            250,
+            160,
+            7,
+            0,
+            80,
+            5,
+            EntityVisual.vanilla("minecraft:goat"),
+            List.of(
+                    "<gray>전장의 선두에서 무리를 밀어붙이는 최종 지원 타워입니다.</gray>",
+                    "<green>근처 무리 타워의 피해량을 증가시킵니다.</green>",
+                    "<green>분신은 추가로 피해 증가와 받는 피해 감소를 얻습니다.</green>"
+            )
+    );
+
     public static final TowerType T1_BEE_TOWER = tower(
             "t1_bee_tower",
             "정찰 벌 타워",
@@ -249,6 +300,9 @@ public class LegionTowers {
             T2_PENGUIN.id(),
             T1_PARROT_TOWER.id(),
             T2_PARROT_TOWER.id(),
+            T1_GOAT_TOWER.id(),
+            T2_STRONG_GOAT_TOWER.id(),
+            T3_EXTREME_GOAT_TOWER.id(),
 //            T1_BEE_TOWER.id(),
 //            T2_BEE_TOWER.id(),
 //            T3_BEE_TOWER.id(),
@@ -304,6 +358,24 @@ public class LegionTowers {
         TowerDescriptionRegistry.registerTemplate(T2_PARROT_TOWER, List.of(
                 "<gray>동물 빌더가 리워크될 때 실직당한 앵무 타워가 원한을 풀기위해 돌아왔습니다.</gray>",
                 "<green> 공격 시 마다 이 타워의 공격력과 공격속도가 {ability.attackStackBonus:percent} 증가합니다. 최대 {ability.attackStackBonus*ability.maxAttackStacks:percent} </green>"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T1_GOAT_TOWER, List.of(
+                "<gray>월드컵에서 강렬한 성적을 가지고 무리타워에 합류한 GOAT입니다.</gray>",
+                "<green>반경 {ability.radius:blocks} 내 무리 타워의 피해량을 {ability.damageBonus:percent} 증가시킵니다.</green>",
+                "<green>분신은 위 효과 대신 피해량 {ability.cloneDamageBonus:percent} 증가와 받는 피해 {ability.cloneDamageReduction:percent} 감소를 받습니다.</green>",
+                "<gray>염소 버프는 최대 {ability.maxStacks:integer}회 중첩됩니다.</gray>"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T2_STRONG_GOAT_TOWER, List.of(
+                "<gray>월드컵에서 강렬한 성적을 가지고 무리타워에 합류한 GOAT입니다.</gray>",
+                "<green>반경 {ability.radius:blocks} 내 무리 타워의 피해량을 {ability.damageBonus:percent} 증가시킵니다.</green>",
+                "<green>분신은 위 효과 대신 피해량 {ability.cloneDamageBonus:percent} 증가와 받는 피해 {ability.cloneDamageReduction:percent} 감소를 받습니다.</green>",
+                "<gray>염소 버프는 최대 {ability.maxStacks:integer}회 중첩됩니다.</gray>"
+        ));
+        TowerDescriptionRegistry.registerTemplate(T3_EXTREME_GOAT_TOWER, List.of(
+                "<gray>월드컵에서 강렬한 성적을 가지고 무리타워에 합류한 GOAT입니다.</gray>",
+                "<green>반경 {ability.radius:blocks} 내 무리 타워의 피해량을 {ability.damageBonus:percent} 증가시킵니다.</green>",
+                "<green>분신은 위 효과 대신 피해량 {ability.cloneDamageBonus:percent} 증가와 받는 피해 {ability.cloneDamageReduction:percent} 감소를 받습니다.</green>",
+                "<gray>염소 버프는 최대 {ability.maxStacks:integer}회 중첩됩니다.</gray>"
         ));
         TowerDescriptionRegistry.registerTemplate(T1_BEE_TOWER, List.of(
                 "<gray> 야꿀벌. </gray>",

@@ -154,6 +154,7 @@ import kim.biryeong.semiontd.tower.legion.IllusionProfile;
 import kim.biryeong.semiontd.tower.legion.IllusionRuntimeTower;
 import kim.biryeong.semiontd.tower.legion.IllusionSummonerTower;
 import kim.biryeong.semiontd.tower.legion.LegionGlobalIllusionTower;
+import kim.biryeong.semiontd.tower.legion.LegionGoatTower;
 import kim.biryeong.semiontd.tower.legion.LegionParrotTower;
 import kim.biryeong.semiontd.tower.legion.LegionSlimeTower;
 import kim.biryeong.semiontd.tower.legion.LegionTowerCatalogs;
@@ -7391,6 +7392,125 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertEquals(context, (int) Math.ceil(baseInterval / 1.2), cloneTower.adjustAttackInterval(baseInterval), "T2 parrot clone should apply configured attack stack speed bonus.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void legionGoatTowerCatalogRegistersStarterAndUpgradeTree(GameTestHelper context) {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+
+        ProductionTowerCatalog.CatalogEntry t1Entry = ProductionTowerCatalog.entry(LegionTowers.T1_GOAT_TOWER).orElseThrow();
+        ProductionTowerCatalog.CatalogEntry t2Entry = ProductionTowerCatalog.entry(LegionTowers.T2_STRONG_GOAT_TOWER).orElseThrow();
+        ProductionTowerCatalog.CatalogEntry t3Entry = ProductionTowerCatalog.entry(LegionTowers.T3_EXTREME_GOAT_TOWER).orElseThrow();
+        if (!assertTrue(context, t1Entry.starter(), "T1 goat should be a starter legion tower.")) {
+            return;
+        }
+        if (!assertEquals(context, 2, t2Entry.tier(), "Strong goat should be registered as tier 2.")) {
+            return;
+        }
+        if (!assertEquals(context, 3, t3Entry.tier(), "Extreme goat should be registered as tier 3.")) {
+            return;
+        }
+        if (!assertEquals(context, 70L, t1Entry.type().mineralCost(), "T1 goat should cost 70 minerals.")) {
+            return;
+        }
+        if (!assertEquals(context, 150L, t2Entry.type().mineralCost(), "T2 goat should cost 150 minerals.")) {
+            return;
+        }
+        if (!assertEquals(context, 250L, t3Entry.type().mineralCost(), "T3 goat should cost 250 minerals.")) {
+            return;
+        }
+        TowerUpgradeOption t2Upgrade = ProductionTowerCatalog.upgrade(LegionTowers.T1_GOAT_TOWER, LegionTowers.T2_STRONG_GOAT_TOWER.id()).orElseThrow();
+        TowerUpgradeOption t3Upgrade = ProductionTowerCatalog.upgrade(LegionTowers.T2_STRONG_GOAT_TOWER, LegionTowers.T3_EXTREME_GOAT_TOWER.id()).orElseThrow();
+        if (!assertEquals(context, 150L, t2Upgrade.mineralCost(), "T2 goat upgrade should cost 150 minerals.")) {
+            return;
+        }
+        if (!assertEquals(context, 250L, t3Upgrade.mineralCost(), "T3 goat upgrade should cost 250 minerals.")) {
+            return;
+        }
+        Tower created = t1Entry.create(stableUuid("legion-goat-catalog-owner"), TeamId.RED, 1, new GridPosition(0, 0, 0));
+        if (!assertTrue(context, created instanceof LegionGoatTower, "Goat catalog entry should create LegionGoatTower runtime.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void legionGoatTowerBuffsLegionBodiesAndClonesUpToThreeStacks(GameTestHelper context) {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        UUID playerId = stableUuid("legion-goat-buff-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos slimePos = towerPlacementPos(lane);
+        CapturingLegionSlimeTower slime = new CapturingLegionSlimeTower(
+                ProductionTowerCatalog.entry(LegionTowers.T2_SLIME_TOWER).orElseThrow().type(),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(slimePos)
+        );
+        lane.addTower(slime);
+
+        BlockPos goatPos = nearbyTowerPlacementPos(lane, slimePos);
+        LegionGoatTower goat = new LegionGoatTower(
+                ProductionTowerCatalog.entry(LegionTowers.T3_EXTREME_GOAT_TOWER).orElseThrow().type(),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(goatPos)
+        );
+        lane.addTower(goat);
+        BlockPos secondGoatPos = nearbyTowerPlacementPos(lane, slimePos);
+        LegionGoatTower secondGoat = new LegionGoatTower(
+                ProductionTowerCatalog.entry(LegionTowers.T3_EXTREME_GOAT_TOWER).orElseThrow().type(),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(secondGoatPos)
+        );
+        lane.addTower(secondGoat);
+        BlockPos thirdGoatPos = nearbyTowerPlacementPos(lane, slimePos);
+        LegionGoatTower thirdGoat = new LegionGoatTower(
+                ProductionTowerCatalog.entry(LegionTowers.T3_EXTREME_GOAT_TOWER).orElseThrow().type(),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(thirdGoatPos)
+        );
+        lane.addTower(thirdGoat);
+        BlockPos fourthGoatPos = nearbyTowerPlacementPos(lane, slimePos);
+        LegionGoatTower fourthGoat = new LegionGoatTower(
+                ProductionTowerCatalog.entry(LegionTowers.T3_EXTREME_GOAT_TOWER).orElseThrow().type(),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(fourthGoatPos)
+        );
+        lane.addTower(fourthGoat);
+
+        lane.markWaveStarted(1);
+        for (int tick = 0; tick < 40; tick++) {
+            tickLaneWithGlobalCloneQueue(lane, context.getLevel().getServer());
+        }
+        if (!assertEquals(context, 2, slime.spawnedCloneEntities().size(), "T2 slime should spawn clones for goat buff targeting.")) {
+            return;
+        }
+
+        SemionTowerEntity bodyEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(slime.entityId().orElseThrow());
+        SemionTowerEntity cloneEntity = slime.spawnedCloneEntities().getFirst();
+        goat.tick(lane);
+        secondGoat.tick(lane);
+        thirdGoat.tick(lane);
+        fourthGoat.tick(lane);
+        if (!assertClose(context, 0.15, bodyEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_BONUS), "Goat body damage buff should stack up to three times.")) {
+            return;
+        }
+        if (!assertClose(context, 0.195, cloneEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_BONUS), "Goat clone damage buff should stack up to three times.")) {
+            return;
+        }
+        if (!assertClose(context, 0.195, cloneEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_REDUCTION), "Goat clone damage reduction should stack up to three times.")) {
             return;
         }
         context.succeed();

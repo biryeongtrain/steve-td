@@ -90,6 +90,9 @@ public record TowerBalanceConfig(
         addTower(towers, LegionTowers.T2_PENGUIN);
         addTower(towers, LegionTowers.T1_PARROT_TOWER);
         addTower(towers, LegionTowers.T2_PARROT_TOWER);
+        addTower(towers, LegionTowers.T1_GOAT_TOWER);
+        addTower(towers, LegionTowers.T2_STRONG_GOAT_TOWER);
+        addTower(towers, LegionTowers.T3_EXTREME_GOAT_TOWER);
         addTower(towers, LegionTowers.ILLUSION_TOWER);
         addTower(towers, ResonanceTowers.FOCUS_CRYSTAL);
         addTower(towers, ResonanceTowers.FOCUS_PRISM);
@@ -145,6 +148,8 @@ public record TowerBalanceConfig(
         putUpgrade(upgradeCosts, LegionTowers.T1_SLIME_TOWER, LegionTowers.T2_SLIME_TOWER.id(), 85);
         putUpgrade(upgradeCosts, LegionTowers.T1_PENGUIN, LegionTowers.T2_PENGUIN.id(), 225);
         putUpgrade(upgradeCosts, LegionTowers.T1_PARROT_TOWER, LegionTowers.T2_PARROT_TOWER.id(), 225);
+        putUpgrade(upgradeCosts, LegionTowers.T1_GOAT_TOWER, LegionTowers.T2_STRONG_GOAT_TOWER.id(), 150);
+        putUpgrade(upgradeCosts, LegionTowers.T2_STRONG_GOAT_TOWER, LegionTowers.T3_EXTREME_GOAT_TOWER.id(), 250);
         putUpgrade(upgradeCosts, ResonanceTowers.FOCUS_CRYSTAL, ResonanceTowers.FOCUS_PRISM.id(), 180);
         putUpgrade(upgradeCosts, ResonanceTowers.FOCUS_PRISM, ResonanceTowers.FOCUS_CORE.id(), 320);
         putUpgrade(upgradeCosts, ResonanceTowers.WAVE_CRYSTAL, ResonanceTowers.WAVE_PRISM.id(), 160);
@@ -554,6 +559,30 @@ public record TowerBalanceConfig(
         putAbilities(abilities, LegionTowers.T2_PARROT_TOWER.id(), Map.of(
                 "attackStackBonus", 0.20,
                 "maxAttackStacks", 5.0
+        ));
+        putAbilities(abilities, LegionTowers.T1_GOAT_TOWER.id(), Map.of(
+                "radius", 5.0,
+                "damageBonus", 0.02,
+                "cloneDamageBonus", 0.015,
+                "cloneDamageReduction", 0.02,
+                "maxStacks", 3.0,
+                "buffDurationTicks", 120.0
+        ));
+        putAbilities(abilities, LegionTowers.T2_STRONG_GOAT_TOWER.id(), Map.of(
+                "radius", 6.0,
+                "damageBonus", 0.035,
+                "cloneDamageBonus", 0.03,
+                "cloneDamageReduction", 0.04,
+                "maxStacks", 3.0,
+                "buffDurationTicks", 120.0
+        ));
+        putAbilities(abilities, LegionTowers.T3_EXTREME_GOAT_TOWER.id(), Map.of(
+                "radius", 7.0,
+                "damageBonus", 0.05,
+                "cloneDamageBonus", 0.065,
+                "cloneDamageReduction", 0.065,
+                "maxStacks", 3.0,
+                "buffDurationTicks", 120.0
         ));
         putAbilities(abilities, LegionTowers.ILLUSION_TOWER.id(), Map.ofEntries(
                 Map.entry("cloneCount", 1.0),
