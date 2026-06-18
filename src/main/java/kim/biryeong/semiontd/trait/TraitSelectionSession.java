@@ -21,7 +21,8 @@ public final class TraitSelectionSession {
         NOT_PARTICIPANT,
         UNKNOWN_TRAIT,
         DUPLICATE_TRAIT,
-        STARTED
+        STARTED,
+        DISABLED
     }
 
     public TraitSelectionSession(ParticipantSelectionPlan plan, Map<UUID, TraitLoadout> preselectedLoadouts, int durationTicks) {

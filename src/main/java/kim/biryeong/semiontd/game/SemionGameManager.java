@@ -87,6 +87,7 @@ public final class SemionGameManager {
     public static final int MATCH_RESULT_DELAY_TICKS = 5 * 20;
     public static final int MATCH_RESULT_DIALOG_AFTER_LOBBY_DELAY_TICKS = 2 * 20;
     static final int RATING_RETRY_DELAY_TICKS = 20;
+    private static final boolean TRAIT_FEATURE_ENABLED = false;
 
     private EconomyConfig economyConfig = EconomyConfig.defaultConfig();
     private WaveConfig waveConfig = WaveConfig.defaultConfig();
@@ -984,6 +985,10 @@ public final class SemionGameManager {
         return pendingTraitSelection != null;
     }
 
+    public boolean traitsEnabled() {
+        return TRAIT_FEATURE_ENABLED;
+    }
+
     public int traitSelectionSecondsRemaining() {
         return pendingTraitSelection == null ? 0 : pendingTraitSelection.remainingSeconds();
     }
@@ -1018,6 +1023,15 @@ public final class SemionGameManager {
         }
 
         closeSandboxesFor(plan);
+        if (!TRAIT_FEATURE_ENABLED) {
+            pendingStartPlan = plan;
+            pendingStartTraitSnapshot = TraitSelectionSnapshot.empty();
+            startCountdownTicks = START_COUNTDOWN_TICKS;
+            nextStartCountdownAnnouncementSecond = startCountdownSecondsRemaining();
+            announceStartCountdown(server, nextStartCountdownAnnouncementSecond);
+            return StartCountdownResult.SCHEDULED;
+        }
+
         pendingTraitSelection = new TraitSelectionSession(
                 plan,
                 activeGame.selectedTraitLoadouts(),
@@ -1037,6 +1051,9 @@ public final class SemionGameManager {
             TraitSlot slot,
             ResourceLocation traitId
     ) {
+        if (!TRAIT_FEATURE_ENABLED) {
+            return TraitSelectionSession.SelectionResult.DISABLED;
+        }
         if (activeGame == null) {
             return TraitSelectionSession.SelectionResult.NOT_PARTICIPANT;
         }

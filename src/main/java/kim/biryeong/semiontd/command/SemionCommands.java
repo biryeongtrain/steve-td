@@ -451,7 +451,7 @@ public final class SemionCommands {
                 .then(literal("current")
                         .executes(context -> currentTrait(context.getSource(), gameManager)))
                 .then(literal("list")
-                        .executes(context -> listTraits(context.getSource())))
+                        .executes(context -> listTraits(context.getSource(), gameManager)))
                 .then(literal("select")
                         .then(argument("slot", StringArgumentType.word())
                                 .then(argument("id", StringArgumentType.string())
@@ -1324,6 +1324,9 @@ public final class SemionCommands {
     }
 
     private static int traitDialog(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
+        if (!ensureTraitsEnabled(source, gameManager)) {
+            return 0;
+        }
         ServerPlayer player = source.getPlayerOrException();
         SemionGame game = gameManager.activeGame().orElse(null);
         if (game == null) {
@@ -1340,6 +1343,9 @@ public final class SemionCommands {
     }
 
     private static int traitDialog(CommandSourceStack source, SemionGameManager gameManager, String rawSlot) throws CommandSyntaxException {
+        if (!ensureTraitsEnabled(source, gameManager)) {
+            return 0;
+        }
         ServerPlayer player = source.getPlayerOrException();
         SemionGame game = gameManager.activeGame().orElse(null);
         if (game == null) {
@@ -1364,6 +1370,9 @@ public final class SemionCommands {
     }
 
     private static int currentTrait(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
+        if (!ensureTraitsEnabled(source, gameManager)) {
+            return 0;
+        }
         ServerPlayer player = source.getPlayerOrException();
         if (gameManager.activeGame().isEmpty()) {
             failure(source, "열린 로비가 없습니다. 관리자에게 /semiontd create 실행을 요청하세요.");
@@ -1377,7 +1386,10 @@ public final class SemionCommands {
         return 1;
     }
 
-    private static int listTraits(CommandSourceStack source) {
+    private static int listTraits(CommandSourceStack source, SemionGameManager gameManager) {
+        if (!ensureTraitsEnabled(source, gameManager)) {
+            return 0;
+        }
         List<String> lines = new ArrayList<>();
         for (SemionTrait trait : TraitRegistry.all()) {
             lines.add(trait.id() + " => " + trait.displayName().getString());
@@ -1388,6 +1400,9 @@ public final class SemionCommands {
 
     private static int selectTrait(CommandSourceStack source, SemionGameManager gameManager, String rawSlot, String rawTraitId)
             throws CommandSyntaxException {
+        if (!ensureTraitsEnabled(source, gameManager)) {
+            return 0;
+        }
         if (gameManager.activeGame().isEmpty()) {
             failure(source, "열린 로비가 없습니다. 먼저 /semiontd create를 실행하세요.");
             return 0;
@@ -2139,8 +2154,17 @@ public final class SemionCommands {
             case UNKNOWN_TRAIT -> "알 수 없는 특성입니다: " + traitId + ". /semiontd trait list를 확인하세요.";
             case DUPLICATE_TRAIT -> "같은 특성은 주특성/부특성에 동시에 선택할 수 없습니다: " + traitId;
             case STARTED -> "게임 시작 후에는 특성을 변경할 수 없습니다.";
+            case DISABLED -> "특성 기능은 현재 비활성화되어 있습니다.";
             case SELECTED -> "특성을 선택했습니다.";
         };
+    }
+
+    private static boolean ensureTraitsEnabled(CommandSourceStack source, SemionGameManager gameManager) {
+        if (!gameManager.traitsEnabled()) {
+            failure(source, "특성 기능은 현재 비활성화되어 있습니다.");
+            return false;
+        }
+        return true;
     }
 
     private static boolean ensureWaitingSetup(CommandSourceStack source, SemionGame game, String action) {
