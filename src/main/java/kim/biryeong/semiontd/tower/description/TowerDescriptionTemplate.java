@@ -91,7 +91,19 @@ public final class TowerDescriptionTemplate {
 
     private static double value(String token, TowerType type) {
         if (token.startsWith("ability.")) {
-            return TowerBalanceRuntime.ability(type.id(), token.substring("ability.".length()));
+            String abilityKey = token.substring("ability.".length());
+            int idSeparator = abilityKey.lastIndexOf('.');
+            if (idSeparator > 0 && idSeparator < abilityKey.length() - 1) {
+                double configured = TowerBalanceRuntime.ability(
+                        abilityKey.substring(0, idSeparator),
+                        abilityKey.substring(idSeparator + 1),
+                        Double.NaN
+                );
+                if (!Double.isNaN(configured)) {
+                    return configured;
+                }
+            }
+            return TowerBalanceRuntime.ability(type.id(), abilityKey);
         }
         if (token.startsWith("stat.")) {
             return stat(type, token.substring("stat.".length()));

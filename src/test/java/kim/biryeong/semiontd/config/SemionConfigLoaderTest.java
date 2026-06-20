@@ -7,6 +7,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import kim.biryeong.semiontd.config.SemionConfigLoader.LoadedConfigs;
 import kim.biryeong.semiontd.rating.RatingConfig;
+import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
+import kim.biryeong.semiontd.tower.illager.IllagerTowers;
 import kim.biryeong.semiontd.tower.legion.LegionTowers;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
@@ -132,6 +134,54 @@ final class SemionConfigLoaderTest {
         String written = Files.readString(tempDir.resolve("tower_balance.json"));
         assertTrue(written.contains("t2_strong_goat_tower"));
         assertTrue(written.contains("cloneDamageBonus"));
+    }
+
+    @Test
+    void loadBackfillsIllagerTowerBalanceDefaultsIntoExistingConfigFile() throws Exception {
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("tower_balance.json"), """
+                {
+                  "towers": {
+                    "t1_goat_tower": {
+                      "mineralCost": 99,
+                      "maxHealth": 70.0,
+                      "range": 3.0,
+                      "damage": 8.0,
+                      "attackIntervalTicks": 18,
+                      "aggroPriority": 35
+                    }
+                  },
+                  "upgradeCosts": {
+                  },
+                  "abilities": {
+                    "t3_extreme_goat_tower": {
+                      "maxStacks": 2.0,
+                      "cloneDamageBonus": 0.065
+                    }
+                  },
+                  "illusionCloneQueue": {
+                    "spreadTicks": 40,
+                    "maxSpawnsPerTick": 8
+                  }
+                }
+                """);
+
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+
+        TowerBalanceConfig towerBalance = configs.towerBalance();
+        assertTrue(towerBalance.towers().containsKey(IllagerTowers.T1_VINDICATOR.id()));
+        assertEquals(170, towerBalance.upgradeCost(
+                IllagerTowers.T1_VINDICATOR.id(),
+                IllagerTowers.T2_VINDICATOR_CAPTAIN.id(),
+                0
+        ));
+        assertEquals(100.0, towerBalance.ability(IllagerRaidStates.RAID_CONFIG_ID, "gaugeMax", -1), 0.0001);
+        assertEquals(0.10, towerBalance.ability(IllagerTowers.T1_VINDICATOR.id(), "raidDamageReduction", -1), 0.0001);
+        String written = Files.readString(tempDir.resolve("tower_balance.json"));
+        assertTrue(written.contains("illager_vindicator_t1"));
+        assertTrue(written.contains("illager_vindicator_t1->illager_vindicator_captain_t2"));
+        assertTrue(written.contains("illager_raid"));
+        assertTrue(written.contains("raidDamageReduction"));
     }
 
     @Test

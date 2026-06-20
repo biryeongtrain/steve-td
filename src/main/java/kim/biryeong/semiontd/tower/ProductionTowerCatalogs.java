@@ -4,6 +4,7 @@ import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.tower.animal.AnimalTowerCatalogs;
+import kim.biryeong.semiontd.tower.illager.IllagerTowerCatalogs;
 import kim.biryeong.semiontd.tower.legion.LegionTowerCatalogs;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowerCatalogs;
 import kim.biryeong.semiontd.tower.undead.UndeadTowerCatalogs;
@@ -24,5 +25,6 @@ public final class ProductionTowerCatalogs {
         WarlockTowerCatalogs.register();
         LegionTowerCatalogs.register();
         ResonanceTowerCatalogs.register();
+        IllagerTowerCatalogs.register();
     }
 }

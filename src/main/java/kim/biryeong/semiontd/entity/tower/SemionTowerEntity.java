@@ -331,6 +331,22 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         return applied;
     }
 
+    public boolean refreshTimedEffect(TimedEffectType type, ResourceLocation sourceId, double magnitude, int durationTicks) {
+        double previousMagnitude = type == null ? 0.0 : activeTimedEffectMagnitude(type);
+        int previousTicks = type == null ? 0 : activeTimedEffectTicks(type);
+        boolean refreshed = timedEffects.refresh(type, sourceId, magnitude, durationTicks);
+        double currentMagnitude = type == null ? 0.0 : activeTimedEffectMagnitude(type);
+        int currentTicks = type == null ? 0 : activeTimedEffectTicks(type);
+        if (refreshed
+                && runtimeTower != null
+                && type != null
+                && currentTicks > 0
+                && (Double.compare(previousMagnitude, currentMagnitude) != 0 || previousTicks != currentTicks)) {
+            runtimeTower.onTimedEffectApplied(this, type, currentMagnitude, currentTicks);
+        }
+        return refreshed;
+    }
+
     public double activeTimedEffectMagnitude(TimedEffectType type) {
         return timedEffects.magnitude(type);
     }

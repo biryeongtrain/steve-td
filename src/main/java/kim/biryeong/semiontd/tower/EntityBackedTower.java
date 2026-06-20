@@ -42,7 +42,11 @@ public abstract class EntityBackedTower extends Tower {
 
         if (lane.arenaWorld().addFreshEntity(entity)) {
             entityId = entity.getId();
+            configureEntityAfterSpawn(entity, lane);
         }
+    }
+
+    protected void configureEntityAfterSpawn(SemionTowerEntity entity, PlayerLane lane) {
     }
 
     @Override

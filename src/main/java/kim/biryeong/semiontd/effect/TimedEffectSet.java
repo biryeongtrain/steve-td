@@ -49,6 +49,28 @@ public final class TimedEffectSet {
         return true;
     }
 
+    public boolean refresh(TimedEffectType type, ResourceLocation sourceId, double magnitude, int durationTicks) {
+        if (type == null || sourceId == null || durationTicks <= 0) {
+            return false;
+        }
+
+        double cappedMagnitude = type.cappedMagnitude(magnitude);
+        if (cappedMagnitude <= 0.0) {
+            return false;
+        }
+
+        Map<ResourceLocation, ActiveTimedEffect> effectsBySource = sourcedEffects.computeIfAbsent(type, ignored -> new HashMap<>());
+        ActiveTimedEffect active = effectsBySource.get(sourceId);
+        if (active == null || Double.compare(cappedMagnitude, active.magnitude) != 0) {
+            effectsBySource.put(sourceId, new ActiveTimedEffect(cappedMagnitude, durationTicks));
+            return true;
+        }
+
+        int previousTicks = active.remainingTicks;
+        active.remainingTicks = Math.max(active.remainingTicks, durationTicks);
+        return active.remainingTicks != previousTicks;
+    }
+
     public double magnitude(TimedEffectType type) {
         ActiveTimedEffect active = effects.get(type);
         double totalMagnitude = active == null ? 0.0 : active.magnitude;

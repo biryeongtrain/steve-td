@@ -5,6 +5,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
+import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
+import kim.biryeong.semiontd.tower.illager.IllagerTowers;
 import kim.biryeong.semiontd.tower.legion.LegionTowers;
 import kim.biryeong.semiontd.tower.resonance.ResonanceAspect;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
@@ -106,6 +108,19 @@ public record TowerBalanceConfig(
         addTower(towers, ResonanceTowers.AMPLIFY_CRYSTAL);
         addTower(towers, ResonanceTowers.AMPLIFY_PRISM);
         addTower(towers, ResonanceTowers.AMPLIFY_CORE);
+        addTower(towers, IllagerTowers.T1_VINDICATOR);
+        addTower(towers, IllagerTowers.T2_VINDICATOR_CAPTAIN);
+        addTower(towers, IllagerTowers.T3_RAVAGER);
+        addTower(towers, IllagerTowers.T1_PILLAGER);
+        addTower(towers, IllagerTowers.T2_PILLAGER_CAPTAIN_SINGLE);
+        addTower(towers, IllagerTowers.T2_PILLAGER_CAPTAIN_SPLASH);
+        addTower(towers, IllagerTowers.T3_EVOKER_SINGLE);
+        addTower(towers, IllagerTowers.T3_EVOKER_SPLASH);
+        addTower(towers, IllagerTowers.T1_VEX);
+        addTower(towers, IllagerTowers.T2_WITCH_LOW);
+        addTower(towers, IllagerTowers.T2_WITCH_HIGH);
+        addTower(towers, IllagerTowers.T3_ILLUSIONER_LOW);
+        addTower(towers, IllagerTowers.T3_ILLUSIONER_HIGH);
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
         putUpgrade(upgradeCosts, VillagerTowers.T1_SPLASH_TOWER, "villager_splash_t2", 110);
@@ -158,8 +173,111 @@ public record TowerBalanceConfig(
         putUpgrade(upgradeCosts, ResonanceTowers.FROST_PRISM, ResonanceTowers.FROST_CORE.id(), 280);
         putUpgrade(upgradeCosts, ResonanceTowers.AMPLIFY_CRYSTAL, ResonanceTowers.AMPLIFY_PRISM.id(), 200);
         putUpgrade(upgradeCosts, ResonanceTowers.AMPLIFY_PRISM, ResonanceTowers.AMPLIFY_CORE.id(), 350);
+        putUpgrade(upgradeCosts, IllagerTowers.T1_VINDICATOR, IllagerTowers.T2_VINDICATOR_CAPTAIN.id(), 170);
+        putUpgrade(upgradeCosts, IllagerTowers.T2_VINDICATOR_CAPTAIN, IllagerTowers.T3_RAVAGER.id(), 330);
+        putUpgrade(upgradeCosts, IllagerTowers.T1_PILLAGER, IllagerTowers.T2_PILLAGER_CAPTAIN_SINGLE.id(), 160);
+        putUpgrade(upgradeCosts, IllagerTowers.T1_PILLAGER, IllagerTowers.T2_PILLAGER_CAPTAIN_SPLASH.id(), 155);
+        putUpgrade(upgradeCosts, IllagerTowers.T2_PILLAGER_CAPTAIN_SINGLE, IllagerTowers.T3_EVOKER_SINGLE.id(), 310);
+        putUpgrade(upgradeCosts, IllagerTowers.T2_PILLAGER_CAPTAIN_SPLASH, IllagerTowers.T3_EVOKER_SPLASH.id(), 300);
+        putUpgrade(upgradeCosts, IllagerTowers.T1_VEX, IllagerTowers.T2_WITCH_LOW.id(), 150);
+        putUpgrade(upgradeCosts, IllagerTowers.T1_VEX, IllagerTowers.T2_WITCH_HIGH.id(), 150);
+        putUpgrade(upgradeCosts, IllagerTowers.T2_WITCH_LOW, IllagerTowers.T3_ILLUSIONER_LOW.id(), 280);
+        putUpgrade(upgradeCosts, IllagerTowers.T2_WITCH_HIGH, IllagerTowers.T3_ILLUSIONER_HIGH.id(), 280);
 
         LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>();
+        putAbilities(abilities, IllagerRaidStates.RAID_CONFIG_ID, Map.of(
+                "gaugeMax", 100.0,
+                "waveKillGauge", 3.0,
+                "incomeKillGauge", 8.0,
+                "markedKillBonusGauge", 7.0,
+                "illagerTowerDeathGauge", 20.0,
+                "attackSpeedPercentPerTower", 0.02,
+                "damagePercentPerTower", 0.05,
+                "timedEffectDurationTicks", 40.0
+        ));
+        putAbilities(abilities, IllagerTowers.T1_VINDICATOR.id(), Map.of(
+                "raidDamageReduction", 0.10
+        ));
+        putAbilities(abilities, IllagerTowers.T2_VINDICATOR_CAPTAIN.id(), Map.of(
+                "raidDamageReduction", 0.18
+        ));
+        putAbilities(abilities, IllagerTowers.T3_RAVAGER.id(), Map.of(
+                "raidDamageReduction", 0.25,
+                "splashRadius", 1.25,
+                "splashDamageRatio", 0.35,
+                "raidSplashRadiusBonus", 0.50,
+                "raidSplashDamageRatioBonus", 0.15
+        ));
+        putAbilities(abilities, IllagerTowers.T1_PILLAGER.id(), Map.of(
+                "raidMarkedDamageBonus", 0.15
+        ));
+        putAbilities(abilities, IllagerTowers.T2_PILLAGER_CAPTAIN_SINGLE.id(), Map.of(
+                "incomeDamageBonus", 0.35,
+                "raidIncomeDamageBonus", 0.25,
+                "raidMarkedDamageBonus", 0.15
+        ));
+        putAbilities(abilities, IllagerTowers.T3_EVOKER_SINGLE.id(), Map.of(
+                "incomeDamageBonus", 0.65,
+                "raidIncomeDamageBonus", 0.35,
+                "raidMarkedDamageBonus", 0.25,
+                "markDamageTakenBonus", 0.08,
+                "markDurationTicks", 60.0,
+                "raidMarkDurationBonusTicks", 20.0
+        ));
+        putAbilities(abilities, IllagerTowers.T2_PILLAGER_CAPTAIN_SPLASH.id(), Map.of(
+                "splashRadius", 1.25,
+                "splashDamageRatio", 0.45,
+                "raidSplashRadiusBonus", 0.25,
+                "raidSplashDamageRatioBonus", 0.10
+        ));
+        putAbilities(abilities, IllagerTowers.T3_EVOKER_SPLASH.id(), Map.of(
+                "splashRadius", 1.75,
+                "splashDamageRatio", 0.55,
+                "raidSplashRadiusBonus", 0.50,
+                "raidSplashDamageRatioBonus", 0.15
+        ));
+        putAbilities(abilities, IllagerTowers.T1_VEX.id(), Map.of(
+                "markDamageTakenBonus", 0.08,
+                "markDurationTicks", 60.0,
+                "raidMarkDamageTakenBonus", 0.04,
+                "raidMarkDurationBonusTicks", 20.0
+        ));
+        putAbilities(abilities, IllagerTowers.T2_WITCH_LOW.id(), Map.of(
+                "markDamageTakenBonus", 0.14,
+                "raidMarkDamageTakenBonus", 0.04,
+                "raidLowHealthMarkDamageTakenBonus", 0.08,
+                "markDurationTicks", 80.0,
+                "raidMarkDurationBonusTicks", 20.0,
+                "forceTargetRadius", 1.0,
+                "raidForceTargetRadiusBonus", 0.5
+        ));
+        putAbilities(abilities, IllagerTowers.T2_WITCH_HIGH.id(), Map.of(
+                "markDamageTakenBonus", 0.14,
+                "raidMarkDamageTakenBonus", 0.04,
+                "raidHighHealthMarkDamageTakenBonus", 0.08,
+                "markDurationTicks", 80.0,
+                "raidMarkDurationBonusTicks", 20.0,
+                "forceTargetRadius", 1.0,
+                "raidForceTargetRadiusBonus", 0.5
+        ));
+        putAbilities(abilities, IllagerTowers.T3_ILLUSIONER_LOW.id(), Map.of(
+                "markDamageTakenBonus", 0.22,
+                "raidMarkDamageTakenBonus", 0.08,
+                "raidLowHealthMarkDamageTakenBonus", 0.12,
+                "markDurationTicks", 100.0,
+                "raidMarkDurationBonusTicks", 30.0,
+                "forceTargetRadius", 1.0,
+                "raidForceTargetRadiusBonus", 1.0
+        ));
+        putAbilities(abilities, IllagerTowers.T3_ILLUSIONER_HIGH.id(), Map.of(
+                "markDamageTakenBonus", 0.22,
+                "raidMarkDamageTakenBonus", 0.08,
+                "raidHighHealthMarkDamageTakenBonus", 0.12,
+                "markDurationTicks", 100.0,
+                "raidMarkDurationBonusTicks", 30.0,
+                "forceTargetRadius", 1.0,
+                "raidForceTargetRadiusBonus", 1.0
+        ));
         putAbilities(abilities, VillagerTowers.T2_LIBRARIAN_TOWER.id(), Map.of(
                 "bonusPerSurvivedRound", 0.05,
                 "maxSurvivalStacks", 6.0,

@@ -59,6 +59,7 @@ import kim.biryeong.semiontd.rating.RatingMatchResult;
 import kim.biryeong.semiontd.rating.RatingService;
 import kim.biryeong.semiontd.summon.IncomeSummons;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
+import kim.biryeong.semiontd.tower.illager.IllagerRaidBossBarService;
 import kim.biryeong.semiontd.tower.legion.IllusionCloneSpawnQueue;
 import kim.biryeong.semiontd.trait.TraitLoadout;
 import kim.biryeong.semiontd.trait.TraitSelectionConfig;
@@ -108,6 +109,7 @@ public final class SemionGameManager {
     private SemionMusicService musicService = SemionMusicService.disabled();
     private final SemionDialogService dialogService = new SemionDialogService();
     private final SemionSidebarHudService sidebarHudService = new SemionSidebarHudService();
+    private final IllagerRaidBossBarService illagerRaidBossBarService = new IllagerRaidBossBarService();
     private final BuildGuideService buildGuideService = new BuildGuideService(null);
     private MatchMode matchMode = MatchMode.NORMAL;
     private SemionGame activeGame;
@@ -727,6 +729,7 @@ public final class SemionGameManager {
 
         if (activeGame != null) {
             sidebarHudService.clear(server);
+            illagerRaidBossBarService.clear(server);
             sendAllPlayersToLobby(server);
             closeActiveGameSafely(activeGame, "replacing active game during create");
         }
@@ -749,6 +752,7 @@ public final class SemionGameManager {
         ensureLobby(server);
         boolean hadActiveGame = activeGame != null;
         sidebarHudService.clear(server);
+        illagerRaidBossBarService.clear(server);
         sendAllPlayersToLobby(server);
         if (activeGame != null) {
             finalizeBuildGuideRecording(activeGame, activeGame.matchResult());
@@ -760,6 +764,7 @@ public final class SemionGameManager {
         clearPendingMatchResultDialog();
         lastMatchResult = null;
         sidebarHudService.clear(server);
+        illagerRaidBossBarService.clear(server);
         return hadActiveGame;
     }
 
@@ -892,6 +897,7 @@ public final class SemionGameManager {
         if (existing == null) {
             return false;
         }
+        illagerRaidBossBarService.removePlayer(playerId);
         try {
             existing.close();
         } catch (RuntimeException exception) {
@@ -944,6 +950,7 @@ public final class SemionGameManager {
             SemionGame sandbox = entry.getValue();
             sandbox.tick(server);
             sidebarHudService.refreshPlayersNow(server, sandbox, MatchMode.TEST, Set.of(entry.getKey()));
+            illagerRaidBossBarService.refreshPlayersNow(server, sandbox, Set.of(entry.getKey()));
         }
     }
 
@@ -1102,6 +1109,7 @@ public final class SemionGameManager {
         if (activeGame == null) {
             clearStartCountdown();
             clearTraitSelection();
+            illagerRaidBossBarService.clear(server);
             return;
         }
 
@@ -1132,6 +1140,7 @@ public final class SemionGameManager {
             return;
         }
         if (activeGame != null) {
+            illagerRaidBossBarService.tick(server, activeGame, sandboxGames.keySet());
             sidebarHudService.tick(server, activeGame, matchMode, sandboxGames.keySet());
         }
     }
@@ -1432,6 +1441,7 @@ public final class SemionGameManager {
         Optional<MatchResult> result = finishedGame.matchResult();
         finalizeBuildGuideRecording(finishedGame, result);
         sidebarHudService.clear(server);
+        illagerRaidBossBarService.clear(server);
         server.getPlayerList().broadcastSystemMessage(
                 SemionText.prefixedMini("<gold>경기 종료.</gold> 결과를 집계하는 중입니다..."),
                 false
@@ -1450,6 +1460,7 @@ public final class SemionGameManager {
 
     private void finishActiveGame(MinecraftServer server, SemionGame finishedGame) {
         sidebarHudService.clear(server);
+        illagerRaidBossBarService.clear(server);
         Optional<MatchResult> result = finishedGame.matchResult();
         Optional<RatingMatchResult> ratingResult = Optional.empty();
         if (result.isPresent()) {

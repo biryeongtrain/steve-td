@@ -31,7 +31,7 @@ public abstract class SemionJob {
         return displayName;
     }
 
-    public final List<Component> description() {
+    public List<Component> description() {
         return description;
     }
 

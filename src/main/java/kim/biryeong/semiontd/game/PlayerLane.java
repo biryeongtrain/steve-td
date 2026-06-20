@@ -16,6 +16,7 @@ import kim.biryeong.semiontd.entity.monster.MonsterState;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -233,6 +234,7 @@ public final class PlayerLane {
                 if (economyService != null) {
                     economyService.awardMonsterKillReward(monster, players);
                 }
+                IllagerRaidStates.onMonsterKilled(players, monster);
                 notifyNearbyMonsterDeath(monster, monsterDeathPosition(monster));
                 discardMinecraftEntity(monster);
                 monster.markRemoved();
@@ -249,6 +251,7 @@ public final class PlayerLane {
                 && waveMonsterSpawnQueue.isEmpty() && summonedMonsterSpawnQueue.isEmpty()) {
             clearedThisRound = true;
         }
+        IllagerRaidStates.playPendingActivationSounds(server, players);
     }
 
     public void clearTowers() {
@@ -358,6 +361,7 @@ public final class PlayerLane {
     }
 
     private void notifyNearbyTowerDeath(Tower destroyedTower) {
+        IllagerRaidStates.onTowerDeath(this, destroyedTower);
         for (Tower tower : List.copyOf(towers)) {
             if (tower != destroyedTower && towers.contains(tower)) {
                 tower.onNearbyTowerDeath(this, destroyedTower);

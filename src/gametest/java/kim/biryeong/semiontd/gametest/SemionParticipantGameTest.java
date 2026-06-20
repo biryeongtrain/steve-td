@@ -97,6 +97,8 @@ import kim.biryeong.semiontd.game.TowerSellResult;
 import kim.biryeong.semiontd.game.TowerUpgradeResult;
 import kim.biryeong.semiontd.game.VanillaTeamBridge;
 import kim.biryeong.semiontd.job.AnimalTowerJob;
+import kim.biryeong.semiontd.job.IllagerTowerJob;
+import kim.biryeong.semiontd.job.JobContext;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.LegionTowerJob;
 import kim.biryeong.semiontd.job.ResonanceTowerJob;
@@ -140,6 +142,11 @@ import kim.biryeong.semiontd.tower.animal.FoxTower;
 import kim.biryeong.semiontd.tower.animal.PigTower;
 import kim.biryeong.semiontd.tower.animal.RabbitTower;
 import kim.biryeong.semiontd.tower.animal.WolfTower;
+import kim.biryeong.semiontd.tower.illager.IllagerTower;
+import kim.biryeong.semiontd.tower.illager.IllagerRaidState;
+import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
+import kim.biryeong.semiontd.tower.illager.IllagerTowerCatalogs;
+import kim.biryeong.semiontd.tower.illager.IllagerTowers;
 import kim.biryeong.semiontd.tower.undead.UndeadAnimalTower;
 import kim.biryeong.semiontd.tower.undead.UndeadDrownedTower;
 import kim.biryeong.semiontd.tower.undead.UndeadHuskTower;
@@ -6220,6 +6227,33 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void sourcedTimedEffectsCanBeRefreshedForPersistentAuras(GameTestHelper context) {
+        TimedEffectSet effects = new TimedEffectSet();
+        ResourceLocation source = ResourceLocation.fromNamespaceAndPath("semion-td", "test/refresh_damage_bonus");
+
+        if (!assertTrue(context, effects.refresh(TimedEffectType.TOWER_DAMAGE_BONUS, source, 0.10, 20), "Refresh should apply a missing sourced effect.")) {
+            return;
+        }
+        effects.tick();
+        if (!assertEquals(context, 19, effects.remainingTicks(TimedEffectType.TOWER_DAMAGE_BONUS), "Refresh test should tick the sourced effect.")) {
+            return;
+        }
+        if (!assertTrue(context, effects.refresh(TimedEffectType.TOWER_DAMAGE_BONUS, source, 0.10, 40), "Refresh should extend an existing sourced effect.")) {
+            return;
+        }
+        if (!assertEquals(context, 40, effects.remainingTicks(TimedEffectType.TOWER_DAMAGE_BONUS), "Refresh should expose the extended duration.")) {
+            return;
+        }
+        if (!assertTrue(context, effects.refresh(TimedEffectType.TOWER_DAMAGE_BONUS, source, 0.15, 30), "Refresh should replace a changed source magnitude.")) {
+            return;
+        }
+        if (!assertEquals(context, 0.15, effects.magnitude(TimedEffectType.TOWER_DAMAGE_BONUS), "Refresh should expose the changed source magnitude.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void nullImpDebuffsOnlyNearestTargetLaneTower(GameTestHelper context) {
         Vec3 origin = Vec3.atCenterOf(context.absolutePos(BlockPos.ZERO));
         SemionMonsterEntity caster = spawnSummonEntity(context, "null_imp", TeamId.RED, TeamId.BLUE, 1, origin, 100.0, 0.0);
@@ -6878,6 +6912,32 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void illagerTowerCatalogRegistersAndLinksAllFamilies(GameTestHelper context) {
+        ProductionTowerCatalog.clearForTesting();
+        IllagerTowerCatalogs.register();
+
+        if (!assertEquals(context, 3L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Illager catalog should expose three starter tower families.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, ProductionTowerCatalog.upgrades(IllagerTowers.T1_VINDICATOR).size(), "Vindicator starter should link to captain tank tower.")) {
+            return;
+        }
+        if (!assertEquals(context, 2, ProductionTowerCatalog.upgrades(IllagerTowers.T1_PILLAGER).size(), "Pillager starter should branch to single and splash captain towers.")) {
+            return;
+        }
+        if (!assertEquals(context, 2, ProductionTowerCatalog.upgrades(IllagerTowers.T1_VEX).size(), "Vex starter should branch to low-health and high-health witch towers.")) {
+            return;
+        }
+        if (!assertTrue(context, ProductionTowerCatalog.entry(IllagerTowers.T2_PILLAGER_CAPTAIN_SINGLE).orElseThrow().create(stableUuid("illager-single-catalog-owner"), TeamId.RED, 1, new GridPosition(0, 0, 0)) instanceof IllagerTower, "Single captain catalog entry should create IllagerTower.")) {
+            return;
+        }
+        if (!assertTrue(context, ProductionTowerCatalog.entry(IllagerTowers.T2_WITCH_LOW).orElseThrow().create(stableUuid("illager-witch-catalog-owner"), TeamId.RED, 1, new GridPosition(0, 0, 0)) instanceof IllagerTower, "Witch catalog entry should create IllagerTower.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void undeadTowerCatalogRegistersAndLinksAllFamilies(GameTestHelper context) {
         ProductionTowerCatalog.clearForTesting();
         UndeadTowerCatalogs.register();
@@ -7100,7 +7160,108 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertPresent(context, JobRegistry.find(ResonanceTowerJob.ID), "Built-in reload should register the resonance tower job.")) {
             return;
         }
-        if (!assertEquals(context, 24L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose villager, undead, animal, warlock, legion, and resonance starter families.")) {
+        if (!assertPresent(context, JobRegistry.find(IllagerTowerJob.ID), "Built-in reload should register the illager tower job.")) {
+            return;
+        }
+        if (!assertEquals(context, 27L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose villager, undead, animal, warlock, legion, resonance, and illager starter families.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void illagerTowerJobUsesIllagerStartersAndBranchUpgrades(GameTestHelper context) {
+        UUID playerId = stableUuid("illager-job-tower-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, IllagerTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos pillagerPos = towerPlacementPos(lane);
+
+        Set<String> starterIds = ProductionTowerService.availableTowers(game, playerId).stream()
+                .map(entry -> entry.type().id())
+                .collect(java.util.stream.Collectors.toSet());
+        if (!assertEquals(
+                context,
+                Set.of(
+                        IllagerTowers.T1_VINDICATOR.id(),
+                        IllagerTowers.T1_PILLAGER.id(),
+                        IllagerTowers.T1_VEX.id()
+                ),
+                starterIds,
+                "Illager job should expose exactly vindicator, pillager, and vex starters."
+        )) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                TowerPlacementResult.TOWER_NOT_ALLOWED,
+                ProductionTowerService.placeTower(game, playerId, pillagerPos, AnimalTowers.T1_PIG_TOWER.id()),
+                "Illager job should reject non-illager starter placement."
+        )) {
+            return;
+        }
+        if (!assertEquals(context, TowerPlacementResult.SUCCESS, ProductionTowerService.placeTower(game, playerId, pillagerPos, IllagerTowers.T1_PILLAGER.id()), "Illager job should place pillager tower.")) {
+            return;
+        }
+        Set<String> pillagerUpgradeIds = ProductionTowerService.availableUpgrades(game, playerId, pillagerPos).stream()
+                .map(option -> option.targetType().id())
+                .collect(java.util.stream.Collectors.toSet());
+        if (!assertEquals(
+                context,
+                Set.of(IllagerTowers.T2_PILLAGER_CAPTAIN_SINGLE.id(), IllagerTowers.T2_PILLAGER_CAPTAIN_SPLASH.id()),
+                pillagerUpgradeIds,
+                "Pillager tower should branch to single and splash captain upgrades."
+        )) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void illagerRaidBonusesAreExposedAsTowerTimedEffects(GameTestHelper context) {
+        UUID playerId = stableUuid("illager-raid-effect-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, IllagerTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos base = towerPlacementPos(lane);
+        GridPosition towerPosition = new GridPosition(base.getX(), base.getY(), base.getZ());
+        IllagerTower tower = new IllagerTower(
+                IllagerTowers.T3_RAVAGER,
+                playerId,
+                TeamId.RED,
+                1,
+                towerPosition,
+                towerPosition
+        );
+        lane.addTower(tower);
+        if (!assertTrue(context, tower.entityId().isPresent(), "Illager tower should spawn a runtime tower entity.")) {
+            return;
+        }
+        if (!(lane.arenaWorld().getEntity(tower.entityId().getAsInt()) instanceof SemionTowerEntity towerEntity)) {
+            context.fail(Component.literal("Illager tower entity should exist."));
+            return;
+        }
+
+        SemionPlayer player = game.players().get(playerId);
+        if (player == null) {
+            context.fail(Component.literal("Illager raid test player should exist."));
+            return;
+        }
+        IllagerRaidStates.onRoundStarted(new JobContext(game, player));
+        IllagerRaidState state = IllagerRaidStates.get(playerId).orElseThrow();
+        state.resetForRound(4);
+        state.addGauge(100, 100);
+
+        tower.tick(lane);
+
+        if (!assertClose(context, 0.20, towerEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_BONUS), "Illager raid damage bonus should be exposed as a tower timed effect.")) {
+            return;
+        }
+        if (!assertClose(context, 0.08, towerEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_ATTACK_SPEED_BONUS), "Illager raid attack speed bonus should be exposed as a tower timed effect.")) {
+            return;
+        }
+        if (!assertClose(context, 0.25, towerEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_REDUCTION), "Illager raid damage reduction should be exposed as a tower timed effect.")) {
+            return;
+        }
+        if (!assertEquals(context, 40, towerEntity.activeTimedEffectTicks(TimedEffectType.TOWER_DAMAGE_REDUCTION), "Illager raid timed effect duration should come from towerbalance.")) {
             return;
         }
         context.succeed();

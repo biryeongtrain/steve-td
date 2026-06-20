@@ -8,7 +8,9 @@ import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.summon.SummonBalancePolicy;
 import kim.biryeong.semiontd.summon.SummonRole;
 import kim.biryeong.semiontd.summon.SummonTier;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -47,6 +49,7 @@ public final class Monster {
     private int laneBreachTicks;
     private int survivalScalingIntervalTicks;
     private int survivalScalingStacks;
+    private final Map<MonsterDataKey<?>, Object> data = new HashMap<>();
 
     public Monster(
             String id,
@@ -392,6 +395,34 @@ public final class Monster {
 
     public double attributionThreat() {
         return Math.max(1.0, maxHealth + Math.max(0.0, attackDamage));
+    }
+
+    public <T> void setData(MonsterDataKey<T> key, T value) {
+        if (key == null) {
+            return;
+        }
+        if (value == null) {
+            removeData(key);
+            return;
+        }
+        if (!key.type().isInstance(value)) {
+            throw new IllegalArgumentException("Monster data " + key.id() + " requires " + key.type().getName());
+        }
+        data.put(key, value);
+    }
+
+    public <T> Optional<T> getData(MonsterDataKey<T> key) {
+        if (key == null) {
+            return Optional.empty();
+        }
+        Object value = data.get(key);
+        return value == null ? Optional.empty() : Optional.of(key.cast(value));
+    }
+
+    public void removeData(MonsterDataKey<?> key) {
+        if (key != null) {
+            data.remove(key);
+        }
     }
 
     public boolean isAlive() {
