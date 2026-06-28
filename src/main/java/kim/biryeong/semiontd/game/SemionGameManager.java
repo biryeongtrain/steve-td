@@ -776,6 +776,10 @@ public final class SemionGameManager {
         return Optional.ofNullable(playerId == null ? null : sandboxGames.get(playerId));
     }
 
+    public boolean hasIllagerRaidBossBar(UUID playerId) {
+        return illagerRaidBossBarService.hasPlayer(playerId);
+    }
+
     public Optional<SemionGame> playableGame(UUID playerId) {
         if (playerId == null) {
             return Optional.empty();
@@ -1109,7 +1113,7 @@ public final class SemionGameManager {
         if (activeGame == null) {
             clearStartCountdown();
             clearTraitSelection();
-            illagerRaidBossBarService.clear(server);
+            illagerRaidBossBarService.clearExcept(sandboxGames.keySet());
             return;
         }
 
@@ -1165,7 +1169,7 @@ public final class SemionGameManager {
                 } catch (ArenaLoadException exception) {
                     SemionTd.LOGGER.warn("Failed to send late-joining player {} to lobby.", player.getGameProfile().getName(), exception);
                 }
-                player.sendSystemMessage(SemionText.prefixedPlain("게임이 진행 중입니다. 관전하려면 /semiontd spectate를 사용하세요."));
+                player.sendSystemMessage(SemionText.prefixedPlain("이미 게임이 진행중입니다! /semiontd spectate 를 이용해 관전하거나 /샌드박스 start 로 연습모드를 플레이해보세요!"));
                 return;
             }
 
@@ -1187,6 +1191,8 @@ public final class SemionGameManager {
         if (player == null) {
             return;
         }
+        sidebarHudService.remove(player);
+        illagerRaidBossBarService.removePlayer(player.getUUID());
         stopSandbox(player.getUUID());
     }
 

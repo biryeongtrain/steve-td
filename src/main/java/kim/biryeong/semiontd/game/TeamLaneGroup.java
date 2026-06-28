@@ -12,6 +12,8 @@ import kim.biryeong.semiontd.entity.boss.SemionBossEntity;
 import kim.biryeong.semiontd.entity.defender.DefenderEntity;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity.RemovalReason;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.Vec3;
 
 public final class TeamLaneGroup {
@@ -22,6 +24,8 @@ public final class TeamLaneGroup {
     private ServerLevel bossWorld;
     private SemionBossEntity bossEntity;
     private int bossEntityId = -1;
+    private Vec3 bossPosition;
+    private ChunkPos forcedBossChunk;
     private int currentRound = 1;
 
     public TeamLaneGroup(TeamId teamId, BossMonster boss) {
@@ -155,6 +159,8 @@ public final class TeamLaneGroup {
     public void spawnBossEntity(ServerLevel world, Vec3 position) {
         discardBossEntity();
         bossWorld = world;
+        bossPosition = position;
+        forceBossChunk();
 
         SemionBossEntity entity = new SemionBossEntity(SemionEntityTypes.BOSS, world);
         entity.configure(teamId, boss);
@@ -170,43 +176,103 @@ public final class TeamLaneGroup {
 
     public void discardBossEntity() {
         if (bossWorld == null || bossEntityId < 0) {
-            bossEntityId = -1;
-            bossEntity = null;
+            clearBossRuntime();
             return;
         }
 
         if (bossEntity != null) {
             bossEntity.discard();
         }
-        bossEntityId = -1;
-        bossEntity = null;
-        bossWorld = null;
+        clearBossRuntime();
     }
 
     private void syncBossEntity() {
-        if (bossWorld == null || bossEntityId < 0 || bossEntity == null) {
+        if (bossWorld == null || bossPosition == null) {
+            return;
+        }
+        if (bossEntityId < 0 || bossEntity == null) {
+            respawnBossEntity();
             return;
         }
 
         if (bossEntity.isRemoved()) {
+            RemovalReason removalReason = bossEntity.getRemovalReason();
+            if (isUnloadRemoval(removalReason)) {
+                clearBossEntityReference();
+                respawnBossEntity();
+                return;
+            }
             boss.damage(Double.MAX_VALUE);
-            bossEntityId = -1;
-            bossEntity = null;
-            bossWorld = null;
+            clearBossRuntime();
             return;
         }
 
         if (!boss.isAlive() || !bossEntity.isAlive()) {
             boss.damage(Double.MAX_VALUE);
             bossEntity.discard();
-            bossEntityId = -1;
-            bossEntity = null;
-            bossWorld = null;
+            clearBossRuntime();
             return;
         }
 
         if (Math.abs(bossEntity.getHealth() - boss.health()) > 0.01F) {
             bossEntity.setHealth((float) Math.max(0.1, boss.health()));
         }
+    }
+
+    private void respawnBossEntity() {
+        if (bossWorld == null || bossPosition == null || !boss.isAlive()) {
+            return;
+        }
+
+        forceBossChunk();
+        ChunkPos chunkPos = new ChunkPos((int) Math.floor(bossPosition.x) >> 4, (int) Math.floor(bossPosition.z) >> 4);
+        bossWorld.getChunk(chunkPos.x, chunkPos.z);
+        SemionBossEntity entity = new SemionBossEntity(SemionEntityTypes.BOSS, bossWorld);
+        entity.configure(teamId, boss);
+        entity.setCurrentRound(currentRound);
+        entity.setPos(bossPosition.x, bossPosition.y, bossPosition.z);
+        entity.setAnchorPosition(bossPosition);
+
+        if (bossWorld.addFreshEntity(entity)) {
+            bossEntity = entity;
+            bossEntityId = entity.getId();
+        }
+    }
+
+    private void clearBossEntityReference() {
+        bossEntityId = -1;
+        bossEntity = null;
+    }
+
+    private void clearBossRuntime() {
+        clearBossEntityReference();
+        bossPosition = null;
+        unforceBossChunk();
+        bossWorld = null;
+    }
+
+    private void forceBossChunk() {
+        if (bossWorld == null || bossPosition == null) {
+            return;
+        }
+        ChunkPos chunkPos = new ChunkPos((int) Math.floor(bossPosition.x) >> 4, (int) Math.floor(bossPosition.z) >> 4);
+        if (chunkPos.equals(forcedBossChunk)) {
+            return;
+        }
+        unforceBossChunk();
+        if (bossWorld.setChunkForced(chunkPos.x, chunkPos.z, true)) {
+            forcedBossChunk = chunkPos;
+        }
+    }
+
+    private void unforceBossChunk() {
+        if (bossWorld != null && forcedBossChunk != null) {
+            bossWorld.setChunkForced(forcedBossChunk.x, forcedBossChunk.z, false);
+        }
+        forcedBossChunk = null;
+    }
+
+    private static boolean isUnloadRemoval(RemovalReason reason) {
+        return reason == RemovalReason.UNLOADED_TO_CHUNK || reason == RemovalReason.UNLOADED_WITH_PLAYER;
     }
 }

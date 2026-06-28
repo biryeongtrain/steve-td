@@ -34,6 +34,7 @@ import kim.biryeong.semiontd.game.SemionGameManager;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.game.TowerPlacementResult;
 import kim.biryeong.semiontd.job.AnimalTowerJob;
+import kim.biryeong.semiontd.job.IllagerTowerJob;
 import kim.biryeong.semiontd.map.GameArena;
 import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.summon.SummonResult;
@@ -50,6 +51,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -246,6 +248,38 @@ public final class SemionSandboxGameTest {
             context.succeed();
         } catch (Exception exception) {
             context.fail(Component.literal("Sandbox job selection test failed: " + exception.getMessage()));
+        } finally {
+            manager.shutdown();
+        }
+    }
+
+    @GameTest
+    public void sandboxIllagerRaidBossBarSurvivesWithoutActiveMatch(GameTestHelper context) {
+        SemionGameManager manager = new SemionGameManager();
+        try {
+            configureManager(manager);
+            MinecraftServer server = context.getLevel().getServer();
+            var player = context.makeMockServerPlayerInLevel();
+            manager.saveSelectedJob(server, player.getUUID(), player.getGameProfile().getName(), IllagerTowerJob.ID);
+
+            SemionGameManager.SandboxStartResult startResult = manager.startSandbox(
+                    server,
+                    player.getUUID(),
+                    player.getGameProfile().getName(),
+                    SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(BlockPos.ZERO))
+            );
+            if (!assertEquals(context, SemionGameManager.SandboxStartResult.STARTED, startResult, "Illager sandbox should start without an active match.")) {
+                return;
+            }
+
+            manager.tick(server);
+
+            if (!assertTrue(context, manager.hasIllagerRaidBossBar(player.getUUID()), "Sandbox illager raid bossbar should not be cleared when no active match exists.")) {
+                return;
+            }
+            context.succeed();
+        } catch (Exception exception) {
+            context.fail(Component.literal("Sandbox illager bossbar test failed: " + exception.getMessage()));
         } finally {
             manager.shutdown();
         }
@@ -688,6 +722,47 @@ public final class SemionSandboxGameTest {
             return;
         }
         context.succeed();
+    }
+
+    @GameTest
+    public void sandboxDummyBossUnloadDoesNotEliminateDummyTeam(GameTestHelper context) {
+        SemionGameManager manager = new SemionGameManager();
+        try {
+            configureManager(manager);
+            MinecraftServer server = context.getLevel().getServer();
+            UUID sandboxOwnerId = uuid("sandbox-dummy-boss-unload-owner");
+            SemionGameManager.SandboxStartResult startResult = manager.startSandbox(
+                    server,
+                    sandboxOwnerId,
+                    "sandbox-dummy-boss-unload-owner",
+                    SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(BlockPos.ZERO))
+            );
+            if (!assertEquals(context, SemionGameManager.SandboxStartResult.STARTED, startResult, "Sandbox should start before dummy boss unload test.")) {
+                return;
+            }
+
+            SemionGame sandboxGame = manager.sandboxGame(sandboxOwnerId).orElseThrow();
+            var blueBoss = sandboxGame.teams().get(TeamId.BLUE).laneGroup().bossEntity().orElseThrow();
+            blueBoss.remove(RemovalReason.UNLOADED_TO_CHUNK);
+            for (int tick = 0; tick < 5; tick++) {
+                manager.tick(server);
+            }
+
+            if (!assertTrue(context, !sandboxGame.teams().get(TeamId.BLUE).eliminated(), "Unloading the sandbox dummy boss entity must not eliminate the dummy team.")) {
+                return;
+            }
+            if (!assertTrue(context, sandboxGame.teams().get(TeamId.BLUE).laneGroup().boss().isAlive(), "Unloading the sandbox dummy boss entity must not kill the runtime boss.")) {
+                return;
+            }
+            if (!assertTrue(context, sandboxGame.phase() != RoundPhase.ENDED, "Unloading the sandbox dummy boss entity must not end the sandbox.")) {
+                return;
+            }
+            context.succeed();
+        } catch (Exception exception) {
+            context.fail(Component.literal("Sandbox dummy boss unload test failed: " + exception.getMessage()));
+        } finally {
+            manager.shutdown();
+        }
     }
 
     @GameTest

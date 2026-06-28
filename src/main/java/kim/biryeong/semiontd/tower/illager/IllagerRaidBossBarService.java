@@ -11,13 +11,17 @@ import kim.biryeong.semiontd.game.SemionGame;
 import kim.biryeong.semiontd.game.SemionPlayer;
 import kim.biryeong.semiontd.job.IllagerTowerJob;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundBossEventPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.BossEvent;
 
 public final class IllagerRaidBossBarService {
+    private static final int CLIENT_RESYNC_INTERVAL_TICKS = 10;
+
     private final Map<UUID, ServerBossEvent> bossBars = new HashMap<>();
+    private final Map<UUID, Integer> clientResyncTicks = new HashMap<>();
 
     public void tick(MinecraftServer server, SemionGame game) {
         tick(server, game, Set.of());
@@ -72,9 +76,10 @@ public final class IllagerRaidBossBarService {
             bossBar.removeAllPlayers();
         }
         bossBars.clear();
+        clientResyncTicks.clear();
     }
 
-    private void clearExcept(Set<UUID> protectedPlayerIds) {
+    public void clearExcept(Set<UUID> protectedPlayerIds) {
         if (protectedPlayerIds == null || protectedPlayerIds.isEmpty()) {
             clear(null);
             return;
@@ -94,20 +99,41 @@ public final class IllagerRaidBossBarService {
 
     public void removePlayer(UUID playerId) {
         ServerBossEvent bossBar = bossBars.remove(playerId);
+        clientResyncTicks.remove(playerId);
         if (bossBar != null) {
             bossBar.removeAllPlayers();
         }
     }
 
+    public boolean hasPlayer(UUID playerId) {
+        return bossBars.containsKey(playerId);
+    }
+
     private void update(ServerPlayer player, IllagerRaidState state, int gaugeMax) {
-        ServerBossEvent bossBar = bossBars.computeIfAbsent(player.getUUID(), ignored -> new ServerBossEvent(
-                title(state, gaugeMax),
+        UUID playerId = player.getUUID();
+        Component title = title(state, gaugeMax);
+        float progress = progress(state, gaugeMax);
+        ServerBossEvent bossBar = bossBars.computeIfAbsent(playerId, ignored -> new ServerBossEvent(
+                title,
                 BossEvent.BossBarColor.RED,
                 BossEvent.BossBarOverlay.PROGRESS
         ));
-        bossBar.setName(title(state, gaugeMax));
-        bossBar.setProgress(progress(state, gaugeMax));
+        bossBar.setName(title);
+        bossBar.setProgress(progress);
         bossBar.addPlayer(player);
+        if (shouldResyncClient(playerId)) {
+            player.connection.send(ClientboundBossEventPacket.createAddPacket(bossBar));
+        }
+    }
+
+    private boolean shouldResyncClient(UUID playerId) {
+        int ticks = clientResyncTicks.getOrDefault(playerId, 0) + 1;
+        if (ticks < CLIENT_RESYNC_INTERVAL_TICKS) {
+            clientResyncTicks.put(playerId, ticks);
+            return false;
+        }
+        clientResyncTicks.put(playerId, 0);
+        return true;
     }
 
     static Component title(IllagerRaidState state, int gaugeMax) {
