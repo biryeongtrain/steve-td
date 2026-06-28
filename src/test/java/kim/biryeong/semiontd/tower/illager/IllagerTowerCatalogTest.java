@@ -46,6 +46,7 @@ class IllagerTowerCatalogTest {
         assertTrue(config.towers().containsKey(IllagerTowers.T1_VINDICATOR.id()));
         assertTrue(config.towers().containsKey(IllagerTowers.T1_PILLAGER.id()));
         assertTrue(config.towers().containsKey(IllagerTowers.T1_VEX.id()));
+        assertEquals(0.70, IllagerTowers.T3_RAVAGER.visual().scale(), 0.0001);
     }
 
     @Test

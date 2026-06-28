@@ -5,6 +5,7 @@ import static kim.biryeong.semiontd.util.EntityTypeUtil.byId;
 
 import java.util.List;
 import java.util.Set;
+import kim.biryeong.semiontd.entity.visual.EntityVisual;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
 import net.minecraft.world.entity.EntityType;
@@ -51,7 +52,7 @@ public final class IllagerTowers {
             16,
             22,
             70,
-            byId(EntityType.RAVAGER),
+            EntityVisual.builder(byId(EntityType.RAVAGER)).scale(0.70).build(),
             List.of(
                     "<gray>라인을 버티는 최종 탱커 타워입니다.</gray>",
                     "<green>습격 중 광역 충돌 피해를 가합니다.</green>"

@@ -39,7 +39,7 @@ import xyz.nucleoid.packettweaker.PacketContext;
 
 public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity, HealingTarget {
     private static final double DEFAULT_MELEE_RANGE = 2.5;
-    private static final double DEFAULT_RANGED_RANGE = 8.0;
+    private static final double DEFAULT_RANGED_RANGE = 6.0;
     private static final double DEFAULT_FOLLOW_RANGE = 5.0;
     private static final double DEFAULT_MOVEMENT_SPEED = 0.42;
     public static final double DEFENSE_SEARCH_HORIZONTAL_PADDING = 5.0;
