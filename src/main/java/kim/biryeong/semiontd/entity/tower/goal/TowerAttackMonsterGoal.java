@@ -3,6 +3,7 @@ package kim.biryeong.semiontd.entity.tower.goal;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.UUID;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.tower.TowerAttackVfxService;
@@ -126,6 +127,7 @@ public final class TowerAttackMonsterGoal extends Goal {
 
         Comparator<SemionMonsterEntity> targetPriority = Comparator
                 .comparingDouble((SemionMonsterEntity monster) -> monster.runtimeMonster().targetPriorityScore())
+                .thenComparingLong(this::stableTargetOffset)
                 .thenComparingDouble(monster -> -tower.distanceToSqr(monster));
         return targets.stream()
                 .filter(this::isInAttackRange)
@@ -155,6 +157,15 @@ public final class TowerAttackMonsterGoal extends Goal {
     private boolean isInAttackRange(SemionMonsterEntity monster) {
         double attackRangeSqr = tower.attackRange() * tower.attackRange();
         return tower.distanceToSqr(monster) <= attackRangeSqr;
+    }
+
+    private long stableTargetOffset(SemionMonsterEntity monster) {
+        UUID towerId = tower.getUUID();
+        UUID monsterId = monster.getUUID();
+        return towerId.getMostSignificantBits()
+                ^ Long.rotateLeft(towerId.getLeastSignificantBits(), 17)
+                ^ Long.rotateLeft(monsterId.getMostSignificantBits(), 31)
+                ^ Long.rotateLeft(monsterId.getLeastSignificantBits(), 47);
     }
 
     private void playRangedAttackSound() {

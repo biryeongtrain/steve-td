@@ -30,10 +30,6 @@ public final class ProductionTowerCatalog {
         return type == null ? Optional.empty() : find(type.id());
     }
 
-    public static void clearForTesting() {
-        clear();
-    }
-
     public static void clear() {
         ENTRIES.clear();
         UPGRADES.clear();

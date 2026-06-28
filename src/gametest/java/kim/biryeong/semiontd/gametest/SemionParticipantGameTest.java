@@ -17,6 +17,7 @@ import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import com.faboslav.friendsandfoes.common.entity.MoobloomEntity;
 import eu.pb4.polymer.resourcepack.api.ResourcePackBuilder;
 import eu.pb4.placeholders.api.PlaceholderContext;
@@ -2291,7 +2292,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void productionTowerCatalogStartsEmptyForManualAuthoring(GameTestHelper context) {
-        ProductionTowerCatalog.clearForTesting();
+        ProductionTowerCatalog.clear();
         if (!assertTrue(context, ProductionTowerCatalog.all().isEmpty(), "Production catalog should start empty so towers can be authored manually.")) {
             return;
         }
@@ -2300,7 +2301,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void emptyProductionTowerCatalogRejectsBuildRequests(GameTestHelper context) {
-        ProductionTowerCatalog.clearForTesting();
+        ProductionTowerCatalog.clear();
         UUID playerId = stableUuid("red-production-villager-owner");
         SemionGame game = startedSinglePlayerGame(
                 context,
@@ -2326,7 +2327,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void emptyProductionTowerCatalogKeepsBuildListsEmpty(GameTestHelper context) {
-        ProductionTowerCatalog.clearForTesting();
+        ProductionTowerCatalog.clear();
         UUID unjobbedId = stableUuid("unjobbed-production-owner");
         SemionGame unjobbedGame = startedSinglePlayerGame(context, unjobbedId, TeamId.RED);
         if (!assertEquals(
@@ -2343,7 +2344,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void animalTowerBuildListIncludesFoxStarterForAnimalJob(GameTestHelper context) {
-        ProductionTowerCatalog.clearForTesting();
+        ProductionTowerCatalog.clear();
         AnimalTowerCatalogs.register();
         UUID playerId = stableUuid("animal-fox-build-ui-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, AnimalTowerJob.ID);
@@ -2424,7 +2425,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         UUID redId = stableUuid("build-guide-red-owner");
         UUID blueId = stableUuid("build-guide-blue-owner");
         reloadDefaultIncomeSummons();
-        ProductionTowerCatalog.clearForTesting();
+        ProductionTowerCatalog.clear();
         TowerType starterType = productionFixtureType("manual_fixture_build_record_starter", List.of());
         TowerType targetType = productionFixtureType("manual_fixture_build_record_target", List.of());
         ProductionTowerCatalog.registerStarter(starterType);
@@ -3020,7 +3021,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void productionTowerUpgradeRejectsUnregisteredTargetType(GameTestHelper context) {
-        ProductionTowerCatalog.clearForTesting();
+        ProductionTowerCatalog.clear();
         TowerType upgradeTarget = new TowerType("manual_fixture_t2", "Manual Fixture T2", TowerCategory.DIRECT, 0, 80.0, 8.0, 8.0, 20, 0);
         TowerType starterType = new TowerType(
                 "manual_fixture_starter",
@@ -3045,7 +3046,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void towerUpgradeServiceAcceptsNonProductionEntityBackedTower(GameTestHelper context) {
-        ProductionTowerCatalog.clearForTesting();
+        ProductionTowerCatalog.clear();
         UUID playerId = stableUuid("red-custom-runtime-upgrade-owner");
         TowerType upgradeTarget = new TowerType("manual_fixture_custom_t2", "Manual Fixture Custom T2", TowerCategory.DIRECT, 0, 80.0, 8.0, 8.0, 20, 0);
         TowerType starterType = new TowerType(
@@ -3109,7 +3110,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void productionTowerRejectsUnknownUpgradeId(GameTestHelper context) {
-        ProductionTowerCatalog.clearForTesting();
+        ProductionTowerCatalog.clear();
         UUID playerId = stableUuid("red-production-upgrade-reject");
         SemionGame game = startedSinglePlayerGame(
                 context,
@@ -3859,6 +3860,55 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                     nearTarget.getHealth() < farProgressTarget.getHealth(),
                     "In-range target should take priority over a farther high-progress target."
             )) {
+                return;
+            }
+            context.succeed();
+        });
+    }
+
+    @GameTest(maxTicks = 80)
+    public void defaultTowerTargetingSplitsEqualPriorityTargets(GameTestHelper context) {
+        UUID playerId = stableUuid("red-target-jitter-owner");
+        Vec3 origin = Vec3.atCenterOf(context.absolutePos(BlockPos.ZERO));
+        TowerType towerType = new TowerType("target_jitter_test", "Target Jitter Test", TowerCategory.DIRECT, 0, 50.0, 8.0, 0.0, 100, 0);
+        List<SemionMonsterEntity> monsters = new ArrayList<>();
+        for (int index = 0; index < 3; index++) {
+            SemionMonsterEntity monster = spawnRoleMonsterEntity(
+                    context,
+                    "jitter-monster-" + index,
+                    Optional.empty(),
+                    TeamId.RED,
+                    1,
+                    origin.add(index * 1.5, 0.0, 4.0),
+                    100.0,
+                    List.of(SummonRole.RUSH)
+            );
+            monster.setUUID(stableUuid("jitter-monster-" + index));
+            monster.runtimeMonster().syncLaneProgress(0.5);
+            monster.setNoAi(true);
+            monsters.add(monster);
+        }
+
+        List<SemionTowerEntity> towers = new ArrayList<>();
+        for (int index = 0; index < 3; index++) {
+            Vec3 position = origin.add(index * 1.5, 0.0, 0.0);
+            SemionTowerEntity tower = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+            tower.configure(new TestTower(towerType, playerId, TeamId.RED, 1, GridPosition.from(BlockPos.containing(position))), null);
+            tower.setUUID(stableUuid("jitter-tower-" + index));
+            tower.setPos(position);
+            context.getLevel().addFreshEntity(tower);
+            towers.add(tower);
+        }
+
+        context.runAfterDelay(20, () -> {
+            Set<SemionMonsterEntity> selectedTargets = towers.stream()
+                    .map(SemionTowerEntity::currentAttackTarget)
+                    .filter(target -> target != null)
+                    .collect(Collectors.toSet());
+            if (!assertTrue(context, selectedTargets.size() >= 2, "Equal-priority targets should be split across default towers.")) {
+                return;
+            }
+            if (!assertTrue(context, monsters.containsAll(selectedTargets), "Default towers should only select valid equal-priority candidates.")) {
                 return;
             }
             context.succeed();
@@ -6881,7 +6931,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void villagerTowerCatalogRegistersAndLinksAllFamilies(GameTestHelper context) {
-        ProductionTowerCatalog.clearForTesting();
+        ProductionTowerCatalog.clear();
         VillagerTowerCatalogs.register();
 
         if (!assertEquals(context, 4L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Villager catalog should expose four starter tower families.")) {
@@ -6913,7 +6963,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void illagerTowerCatalogRegistersAndLinksAllFamilies(GameTestHelper context) {
-        ProductionTowerCatalog.clearForTesting();
+        ProductionTowerCatalog.clear();
         IllagerTowerCatalogs.register();
 
         if (!assertEquals(context, 3L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Illager catalog should expose three starter tower families.")) {
@@ -6939,7 +6989,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void undeadTowerCatalogRegistersAndLinksAllFamilies(GameTestHelper context) {
-        ProductionTowerCatalog.clearForTesting();
+        ProductionTowerCatalog.clear();
         UndeadTowerCatalogs.register();
 
         if (!assertEquals(context, 3L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Undead catalog should expose three starter tower families.")) {
@@ -6977,7 +7027,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void animalTowerCatalogRegistersAndLinksAnimalFamilies(GameTestHelper context) {
-        ProductionTowerCatalog.clearForTesting();
+        ProductionTowerCatalog.clear();
         AnimalTowerCatalogs.register();
 
         if (!assertEquals(context, 4L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Animal catalog should expose pig, wolf, rabbit, and fox starter families.")) {
@@ -7018,7 +7068,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void legionTowerCatalogRegistersAndLinksLegionFamilies(GameTestHelper context) {
-        ProductionTowerCatalog.clearForTesting();
+        ProductionTowerCatalog.clear();
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
         LegionTowerCatalogs.register();
 
