@@ -13,10 +13,6 @@ public record TraitLoadout(ResourceLocation primaryTraitId, ResourceLocation sec
         return new TraitLoadout(BuiltInTraits.NONE_ID, BuiltInTraits.NONE_ID);
     }
 
-    public boolean complete() {
-        return primaryTraitId != null && secondaryTraitId != null;
-    }
-
     public boolean hasDuplicateNonNoneTrait() {
         return !isNone(primaryTraitId) && Objects.equals(primaryTraitId, secondaryTraitId);
     }

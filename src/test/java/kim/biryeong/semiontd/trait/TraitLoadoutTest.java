@@ -24,7 +24,6 @@ final class TraitLoadoutTest {
 
         assertEquals(BuiltInTraits.NONE_ID, loadout.primaryTraitId());
         assertEquals(BuiltInTraits.NONE_ID, loadout.secondaryTraitId());
-        assertTrue(loadout.complete());
         assertFalse(loadout.hasDuplicateNonNoneTrait());
     }
 

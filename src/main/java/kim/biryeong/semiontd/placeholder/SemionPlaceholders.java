@@ -4,6 +4,7 @@ import eu.pb4.placeholders.api.PlaceholderResult;
 import eu.pb4.placeholders.api.Placeholders;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.game.SemionGame;
 import kim.biryeong.semiontd.game.SemionGameManager;
@@ -97,9 +98,9 @@ public final class SemionPlaceholders {
     private static PlaceholderResult ratingPlaceholder(
             SemionGameManager gameManager,
             UUID playerId,
-            RatingPlaceholderFormatter formatter
+            Function<Optional<PlayerRatingProfile>, String> formatter
     ) {
-        return PlaceholderResult.value(formatter.format(gameManager.ratingProfile(playerId)));
+        return PlaceholderResult.value(formatter.apply(gameManager.ratingProfile(playerId)));
     }
 
     private static SemionJob selectedJob(SemionGameManager gameManager, UUID playerId) {
@@ -116,9 +117,5 @@ public final class SemionPlaceholders {
 
     private static ResourceLocation id(String path) {
         return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, path);
-    }
-
-    private interface RatingPlaceholderFormatter {
-        String format(Optional<PlayerRatingProfile> profile);
     }
 }
