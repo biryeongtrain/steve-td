@@ -20,7 +20,6 @@ import xyz.nucleoid.fantasy.Fantasy;
 import xyz.nucleoid.fantasy.RuntimeWorldConfig;
 import xyz.nucleoid.fantasy.RuntimeWorldHandle;
 import xyz.nucleoid.fantasy.util.VoidChunkGenerator;
-import xyz.nucleoid.map_templates.BlockBounds;
 import xyz.nucleoid.map_templates.MapTemplate;
 import xyz.nucleoid.map_templates.MapTemplatePlacer;
 import xyz.nucleoid.map_templates.MapTemplateSerializer;
@@ -49,8 +48,7 @@ public final class GameArenaLoader {
 //                new MapTemplatePlacer(template).placeAt(world, origin);
 //                RuntimeWorldWarmup.loadTemplateChunks(world, template, origin);
                 ArenaLayout layout = ArenaLayout.fromTemplate(template, config.regions());
-                BlockBounds worldBounds = template.getBounds().offset(origin);
-                teamArenas.put(teamId, new TeamArena(teamId, worldHandle::unload, world, layout, worldBounds));
+                teamArenas.put(teamId, new TeamArena(teamId, worldHandle::unload, world, layout));
             }
 
             return new GameArena(teamArenas);

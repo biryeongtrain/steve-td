@@ -1,32 +1,22 @@
 package kim.biryeong.semiontd.map;
 
 import kim.biryeong.semiontd.game.TeamId;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import xyz.nucleoid.map_templates.BlockBounds;
+import net.minecraft.world.phys.Vec3;
 
 public final class TeamArena {
+    private static final int TELEPORT_PRELOAD_CHUNK_RADIUS = 1;
     private final TeamId teamId;
     private final Runnable unloadAction;
     private final ServerLevel world;
     private final ArenaLayout layout;
-    private final BlockBounds preloadBounds;
 
     public TeamArena(TeamId teamId, Runnable unloadAction, ServerLevel world, ArenaLayout layout) {
-        this(teamId, unloadAction, world, layout, null);
-    }
-
-    public TeamArena(
-            TeamId teamId,
-            Runnable unloadAction,
-            ServerLevel world,
-            ArenaLayout layout,
-            BlockBounds preloadBounds
-    ) {
         this.teamId = teamId;
         this.unloadAction = unloadAction;
         this.world = world;
         this.layout = layout;
-        this.preloadBounds = preloadBounds;
     }
 
     public TeamId teamId() {
@@ -45,9 +35,7 @@ public final class TeamArena {
         unloadAction.run();
     }
 
-    public void preloadForTeleport() {
-        if (preloadBounds != null) {
-            RuntimeWorldWarmup.loadChunks(world, preloadBounds);
-        }
+    public void preloadForTeleport(Vec3 position) {
+        RuntimeWorldWarmup.warmChunksAround(world, BlockPos.containing(position), TELEPORT_PRELOAD_CHUNK_RADIUS);
     }
 }

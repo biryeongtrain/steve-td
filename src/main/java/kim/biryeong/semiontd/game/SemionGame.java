@@ -653,17 +653,24 @@ public final class SemionGame {
             return false;
         }
 
-        Set<TeamId> activeTeams = new HashSet<>();
         for (AssignedParticipant participant : plan.activeParticipants()) {
-            activeTeams.add(participant.teamId());
-        }
-
-        for (TeamId teamId : activeTeams) {
-            Optional<TeamArena> teamArena = arena.teamArena(teamId);
+            Optional<TeamArena> teamArena = arena.teamArena(participant.teamId());
             if (teamArena.isEmpty()) {
                 return false;
             }
-            teamArena.get().preloadForTeleport();
+            teamArena.get().preloadForTeleport(StartPlacement.activePlayerSpawn(teamArena.get().layout(), participant.laneId()));
+        }
+        Optional<TeamArena> spectatorArena = plan.activeParticipants().stream()
+                .map(AssignedParticipant::teamId)
+                .map(arena::teamArena)
+                .flatMap(Optional::stream)
+                .findFirst();
+        int spectatorIndex = 0;
+        for (UUID ignored : plan.spectatorIds().stream().sorted().toList()) {
+            int index = spectatorIndex++;
+            spectatorArena.ifPresent(teamArena -> teamArena.preloadForTeleport(
+                    StartPlacement.spectatorSpawn(teamArena.layout(), index)
+            ));
         }
         return true;
     }
