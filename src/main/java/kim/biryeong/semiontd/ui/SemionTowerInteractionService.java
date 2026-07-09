@@ -37,8 +37,8 @@ public final class SemionTowerInteractionService {
             return InteractionResult.PASS;
         }
 
-        SemionGame game = gameManager.playableGame(serverPlayer.getUUID()).orElse(null);
-        if (game == null || !game.isActiveParticipant(serverPlayer.getUUID())) {
+        SemionGame game = gameManager.protectionGame(serverPlayer.getUUID());
+        if (game == null) {
             return InteractionResult.PASS;
         }
 
