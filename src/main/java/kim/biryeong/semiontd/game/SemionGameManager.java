@@ -68,6 +68,7 @@ import kim.biryeong.semiontd.summon.IncomeSummons;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidBossBarService;
 import kim.biryeong.semiontd.tower.legion.IllusionCloneSpawnQueue;
+import kim.biryeong.semiontd.tower.villager.VillagerAdvReputationBossBarService;
 import kim.biryeong.semiontd.trait.TraitLoadout;
 import kim.biryeong.semiontd.trait.TraitSelectionConfig;
 import kim.biryeong.semiontd.trait.TraitSelectionSession;
@@ -96,9 +97,9 @@ public final class SemionGameManager {
     public static final int MATCH_RESULT_DIALOG_AFTER_LOBBY_DELAY_TICKS = 2 * 20;
     static final int RATING_RETRY_DELAY_TICKS = 20;
     private static final boolean TRAIT_FEATURE_ENABLED = false;
-
     private static final DateTimeFormatter RATING_BACKUP_TIMESTAMP_FORMATTER =
             DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS").withZone(ZoneOffset.UTC);
+
     private EconomyConfig economyConfig = EconomyConfig.defaultConfig();
     private WaveConfig waveConfig = WaveConfig.defaultConfig();
     private MapConfig mapConfig = MapConfig.defaultConfig();
@@ -119,6 +120,7 @@ public final class SemionGameManager {
     private final SemionDialogService dialogService = new SemionDialogService();
     private final SemionSidebarHudService sidebarHudService = new SemionSidebarHudService();
     private final IllagerRaidBossBarService illagerRaidBossBarService = new IllagerRaidBossBarService();
+    private final VillagerAdvReputationBossBarService villagerAdvReputationBossBarService = new VillagerAdvReputationBossBarService();
     private final BuildGuideService buildGuideService = new BuildGuideService(null);
     private MatchMode matchMode = MatchMode.NORMAL;
     private SemionGame activeGame;
@@ -167,11 +169,11 @@ public final class SemionGameManager {
     public record ReloadConfigResult(boolean reloaded, boolean activeGameUpdated, Path configDir) {
     }
 
-    public void configure(
-            EconomyConfig economyConfig,
     public record RatingSoftResetResult(Path backupPath) {
     }
 
+    public void configure(
+            EconomyConfig economyConfig,
             WaveConfig waveConfig,
             MapConfig mapConfig,
             ProgressionConfig progressionConfig,
@@ -529,8 +531,6 @@ public final class SemionGameManager {
         return new ReloadConfigResult(true, activeGameUpdated, configDir);
     }
 
-    public void configureMusic(SemionMusicService musicService) {
-        this.musicService = musicService == null ? SemionMusicService.disabled() : musicService;
     public RatingSoftResetResult softResetRatingsWithBackup() {
         if (configDir == null) {
             throw new PersistenceException("Semion TD config directory is not configured.");
@@ -623,6 +623,8 @@ public final class SemionGameManager {
         }
     }
 
+    public void configureMusic(SemionMusicService musicService) {
+        this.musicService = musicService == null ? SemionMusicService.disabled() : musicService;
     }
 
     public LobbyWorld ensureLobby(MinecraftServer server) throws ArenaLoadException {
@@ -834,6 +836,7 @@ public final class SemionGameManager {
         if (activeGame != null) {
             sidebarHudService.clear(server);
             illagerRaidBossBarService.clear(server);
+            villagerAdvReputationBossBarService.clear(server);
             sendAllPlayersToLobby(server);
             closeActiveGameSafely(activeGame, "replacing active game during create");
         }
@@ -857,6 +860,7 @@ public final class SemionGameManager {
         boolean hadActiveGame = activeGame != null;
         sidebarHudService.clear(server);
         illagerRaidBossBarService.clear(server);
+        villagerAdvReputationBossBarService.clear(server);
         sendAllPlayersToLobby(server);
         if (activeGame != null) {
             finalizeBuildGuideRecording(activeGame, activeGame.matchResult());
@@ -869,6 +873,7 @@ public final class SemionGameManager {
         lastMatchResult = null;
         sidebarHudService.clear(server);
         illagerRaidBossBarService.clear(server);
+        villagerAdvReputationBossBarService.clear(server);
         return hadActiveGame;
     }
 
@@ -1006,6 +1011,7 @@ public final class SemionGameManager {
             return false;
         }
         illagerRaidBossBarService.removePlayer(playerId);
+        villagerAdvReputationBossBarService.removePlayer(playerId);
         try {
             existing.close();
         } catch (RuntimeException exception) {
@@ -1059,6 +1065,7 @@ public final class SemionGameManager {
             sandbox.tick(server);
             sidebarHudService.refreshPlayersNow(server, sandbox, MatchMode.TEST, Set.of(entry.getKey()));
             illagerRaidBossBarService.refreshPlayersNow(server, sandbox, Set.of(entry.getKey()));
+            villagerAdvReputationBossBarService.refreshPlayersNow(server, sandbox, Set.of(entry.getKey()));
         }
     }
 
@@ -1218,6 +1225,7 @@ public final class SemionGameManager {
             clearStartCountdown();
             clearTraitSelection();
             illagerRaidBossBarService.clearExcept(sandboxGames.keySet());
+            villagerAdvReputationBossBarService.clearExcept(sandboxGames.keySet());
             return;
         }
 
@@ -1249,6 +1257,7 @@ public final class SemionGameManager {
         }
         if (activeGame != null) {
             illagerRaidBossBarService.tick(server, activeGame, sandboxGames.keySet());
+            villagerAdvReputationBossBarService.tick(server, activeGame, sandboxGames.keySet());
             sidebarHudService.tick(server, activeGame, matchMode, sandboxGames.keySet());
         }
     }
@@ -1297,6 +1306,7 @@ public final class SemionGameManager {
         }
         sidebarHudService.remove(player);
         illagerRaidBossBarService.removePlayer(player.getUUID());
+        villagerAdvReputationBossBarService.removePlayer(player.getUUID());
         stopSandbox(player.getUUID());
     }
 
@@ -1552,6 +1562,7 @@ public final class SemionGameManager {
         finalizeBuildGuideRecording(finishedGame, result);
         sidebarHudService.clear(server);
         illagerRaidBossBarService.clear(server);
+        villagerAdvReputationBossBarService.clear(server);
         server.getPlayerList().broadcastSystemMessage(
                 SemionText.prefixedMini("<gold>경기 종료.</gold> 결과를 집계하는 중입니다..."),
                 false
@@ -1571,6 +1582,7 @@ public final class SemionGameManager {
     private void finishActiveGame(MinecraftServer server, SemionGame finishedGame) {
         sidebarHudService.clear(server);
         illagerRaidBossBarService.clear(server);
+        villagerAdvReputationBossBarService.clear(server);
         Optional<MatchResult> result = finishedGame.matchResult();
         Optional<RatingMatchResult> ratingResult = Optional.empty();
         if (result.isPresent()) {

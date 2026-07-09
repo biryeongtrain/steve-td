@@ -89,4 +89,15 @@ public final class TowerBalanceRuntime {
     public static int illusionCloneMaxSpawnsPerTick() {
         return current.illusionCloneQueue().resolvedMaxSpawnsPerTick();
     }
+
+    public static TowerBalanceConfig.VillagerAdvConfig villagerAdv() {
+        return current.villagerAdv();
+    }
+
+    public static double villagerAdvUpgradeRequirement(TowerType from, String upgradeId) {
+        if (from == null || upgradeId == null || upgradeId.isBlank()) {
+            return 0.0;
+        }
+        return current.villagerAdv().upgradeRequirement(from.id(), upgradeId);
+    }
 }

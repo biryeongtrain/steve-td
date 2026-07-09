@@ -2343,6 +2343,7 @@ public final class SemionCommands {
             case UNKNOWN_TARGET_TYPE -> "타워 진화 대상 타입이 등록되지 않았습니다";
             case TOWER_NOT_ALLOWED -> "현재 직업으로 사용할 수 없는 타워입니다";
             case NOT_ENOUGH_MINERAL -> "다이아가 부족합니다";
+            case NOT_ENOUGH_ADV_EXPERIENCE -> "주민 ADV 경험치가 부족합니다";
             case SUCCESS -> "성공";
         };
     }

@@ -16,6 +16,7 @@ import kim.biryeong.semiontd.job.JobContext;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.SemionJob;
 import kim.biryeong.semiontd.tower.resonance.ResonanceService;
+import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import net.minecraft.core.BlockPos;
 
 public final class ProductionTowerService {
@@ -63,6 +64,7 @@ public final class ProductionTowerService {
         );
         tower.recordPlacementEconomy(mineralCost, game.currentRound());
         laneContext.lane.addTower(tower);
+        VillagerAdvStates.refreshTowerEffects(laneContext.player, laneContext.lane, tower);
         game.recordTowerPlacement(playerId, towerType.id(), position, mineralCost);
         return TowerPlacementResult.SUCCESS;
     }
@@ -185,6 +187,9 @@ public final class ProductionTowerService {
         if (!canUseTower(game, laneContext.player, targetType)) {
             return TowerUpgradeResult.TOWER_NOT_ALLOWED;
         }
+        if (!VillagerAdvStates.canUpgrade(laneContext.player, tower, upgrade)) {
+            return TowerUpgradeResult.NOT_ENOUGH_ADV_EXPERIENCE;
+        }
 
         long mineralCost = Math.max(0, upgrade.mineralCost());
         if (!laneContext.player.economy().spendMineral(mineralCost)) {
@@ -203,6 +208,7 @@ public final class ProductionTowerService {
             laneContext.player.economy().addMineral(mineralCost);
             return TowerUpgradeResult.NO_TOWER_AT_POSITION;
         }
+        VillagerAdvStates.refreshTowerEffects(laneContext.player, laneContext.lane, upgradedTower);
         game.recordTowerUpgrade(playerId, upgradeId, position, mineralCost);
         return TowerUpgradeResult.SUCCESS;
     }

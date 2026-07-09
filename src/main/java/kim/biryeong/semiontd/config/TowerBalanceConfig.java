@@ -18,10 +18,20 @@ public record TowerBalanceConfig(
         Map<String, TowerStats> towers,
         Map<String, Long> upgradeCosts,
         Map<String, Map<String, Double>> abilities,
-        IllusionCloneQueueConfig illusionCloneQueue
+        IllusionCloneQueueConfig illusionCloneQueue,
+        VillagerAdvConfig villagerAdv
 ) {
     public TowerBalanceConfig(Map<String, TowerStats> towers, Map<String, Long> upgradeCosts, Map<String, Map<String, Double>> abilities) {
-        this(towers, upgradeCosts, abilities, IllusionCloneQueueConfig.defaultConfig());
+        this(towers, upgradeCosts, abilities, IllusionCloneQueueConfig.defaultConfig(), VillagerAdvConfig.defaultConfig());
+    }
+
+    public TowerBalanceConfig(
+            Map<String, TowerStats> towers,
+            Map<String, Long> upgradeCosts,
+            Map<String, Map<String, Double>> abilities,
+            IllusionCloneQueueConfig illusionCloneQueue
+    ) {
+        this(towers, upgradeCosts, abilities, illusionCloneQueue, VillagerAdvConfig.defaultConfig());
     }
 
     public TowerBalanceConfig {
@@ -29,6 +39,7 @@ public record TowerBalanceConfig(
         upgradeCosts = upgradeCosts == null ? Map.of() : copyUpgradeCosts(upgradeCosts);
         abilities = abilities == null ? Map.of() : copyAbilities(abilities);
         illusionCloneQueue = illusionCloneQueue == null ? IllusionCloneQueueConfig.defaultConfig() : illusionCloneQueue;
+        villagerAdv = villagerAdv == null ? VillagerAdvConfig.defaultConfig() : villagerAdv;
     }
 
     public static TowerBalanceConfig defaultConfig() {
@@ -49,6 +60,7 @@ public record TowerBalanceConfig(
         addTower(towers, VillagerTowers.T2_LANE_CLEAR_CAT_TOWER);
         addTower(towers, VillagerTowers.T3_ANTI_TANKER_CAT_TOWER);
         addTower(towers, VillagerTowers.T3_LANE_CLEAR_CAT_TOWER);
+        addVillagerAdvTowers(towers);
         addTower(towers, UndeadTowers.T1_ZOMBIE_TOWER);
         addTower(towers, UndeadTowers.T2_ZOMBIE_TOWER);
         addTower(towers, UndeadTowers.T3_ZOMBIE_TOWER);
@@ -135,6 +147,7 @@ public record TowerBalanceConfig(
         putUpgrade(upgradeCosts, VillagerTowers.T1_CAT_TOWER, "t2_lane_clear_cat_tower", 200);
         putUpgrade(upgradeCosts, VillagerTowers.T2_ANTI_TANKER_CAT_TOWER, "t3_anti_tanker_cat_tower", 450);
         putUpgrade(upgradeCosts, VillagerTowers.T2_LANE_CLEAR_CAT_TOWER, "t3_lane_clear_cat_tower", 375);
+        putVillagerAdvUpgrades(upgradeCosts);
         putUpgrade(upgradeCosts, UndeadTowers.T1_ZOMBIE_TOWER, "t2_zombie_tower", 180);
         putUpgrade(upgradeCosts, UndeadTowers.T2_ZOMBIE_TOWER, "t3_zombie_tower", 350);
         putUpgrade(upgradeCosts, UndeadTowers.T1_SKELETON_TOWER, "t2_ranged_skeleton_tower", 110);
@@ -358,6 +371,7 @@ public record TowerBalanceConfig(
                 "stackDamageCap", 20.0,
                 "explosionRadius", 1.5
         ));
+        putVillagerAdvAbilities(abilities);
         putAbilities(abilities, UndeadTowers.T1_ZOMBIE_TOWER.id(), Map.of(
                 "lifeStealRatio", 0.20,
                 "killDamageBoost", 2.0,
@@ -724,7 +738,7 @@ public record TowerBalanceConfig(
         putAbilities(abilities, ResonanceTowers.AMPLIFY_PRISM.id(), resonanceAbilities(2, ResonanceAspect.AMPLIFY));
         putAbilities(abilities, ResonanceTowers.AMPLIFY_CORE.id(), resonanceAbilities(3, ResonanceAspect.AMPLIFY));
 
-        return new TowerBalanceConfig(towers, upgradeCosts, abilities, IllusionCloneQueueConfig.defaultConfig());
+        return new TowerBalanceConfig(towers, upgradeCosts, abilities, IllusionCloneQueueConfig.defaultConfig(), VillagerAdvConfig.defaultConfig());
     }
 
     public TowerStats statsFor(TowerType defaults) {
@@ -785,8 +799,9 @@ public record TowerBalanceConfig(
         defaults.abilities.forEach((towerId, values) -> mergedAbilities.putIfAbsent(towerId, values));
 
         IllusionCloneQueueConfig mergedIllusionCloneQueue = illusionCloneQueue.withMissingDefaults(defaults.illusionCloneQueue);
+        VillagerAdvConfig mergedVillagerAdv = villagerAdv.withMissingDefaults(defaults.villagerAdv);
 
-        return new TowerBalanceConfig(mergedTowers, mergedUpgradeCosts, mergedAbilities, mergedIllusionCloneQueue);
+        return new TowerBalanceConfig(mergedTowers, mergedUpgradeCosts, mergedAbilities, mergedIllusionCloneQueue, mergedVillagerAdv);
     }
 
     public static String upgradeKey(String fromTowerId, String upgradeId) {
@@ -797,12 +812,82 @@ public record TowerBalanceConfig(
         towers.put(type.id(), TowerStats.from(type));
     }
 
+    private static void addTower(
+            Map<String, TowerStats> towers,
+            TowerType type,
+            long mineralCost,
+            double maxHealth,
+            double range,
+            double damage,
+            int attackIntervalTicks,
+            int aggroPriority
+    ) {
+        towers.put(type.id(), new TowerStats(mineralCost, maxHealth, range, damage, attackIntervalTicks, aggroPriority));
+    }
+
+    private static void addVillagerAdvTowers(Map<String, TowerStats> towers) {
+        addTower(towers, VillagerTowers.ADV_T1_SPLASH_TOWER, 50, 40.0, 5.5, 5.0, 10, 0);
+        addTower(towers, VillagerTowers.ADV_T2_LIBRARIAN_TOWER, 110, 60.0, 7.0, 8.0, 10, 5);
+        addTower(towers, VillagerTowers.ADV_T3_CLERIC_TOWER, 180, 80.0, 7.0, 10.0, 10, 10);
+        addTower(towers, VillagerTowers.ADV_T1_GOLEM_TOWER, 50, 120.0, 2.0, 5.0, 20, 35);
+        addTower(towers, VillagerTowers.ADV_T2_GOLEM_TOWER, 180, 200.0, 2.0, 8.0, 20, 50);
+        addTower(towers, VillagerTowers.ADV_T3_GOLEM_TOWER, 350, 300.0, 3.0, 10.0, 20, 80);
+        addTower(towers, VillagerTowers.ADV_T1_ALLAY_TOWER, 80, 40.0, 5.0, 2.0, 15, -5);
+        addTower(towers, VillagerTowers.ADV_T2_ALLAY_TOWER, 200, 50.0, 5.0, 4.0, 15, -5);
+        addTower(towers, VillagerTowers.ADV_T2_WEAPON_SMITH_TOWER, 250, 50.0, 12.0, 5.0, 15, -5);
+        addTower(towers, VillagerTowers.ADV_T3_ARMORER_TOWER, 300, 70.0, 7.0, 10.0, 15, -5);
+        addTower(towers, VillagerTowers.ADV_T3_WEAPON_SMITH_TOWER, 350, 60.0, 12.0, 7.0, 15, -5);
+        addTower(towers, VillagerTowers.ADV_T1_CAT_TOWER, 60, 50.0, 10.0, 10.0, 15, 5);
+        addTower(towers, VillagerTowers.ADV_T2_ANTI_TANKER_CAT_TOWER, 180, 50.0, 12.0, 20.0, 15, 5);
+        addTower(towers, VillagerTowers.ADV_T2_LANE_CLEAR_CAT_TOWER, 200, 50.0, 10.0, 15.0, 15, 5);
+        addTower(towers, VillagerTowers.ADV_T3_ANTI_TANKER_CAT_TOWER, 250, 50.0, 15.0, 25.0, 15, 5);
+        addTower(towers, VillagerTowers.ADV_T3_LANE_CLEAR_CAT_TOWER, 275, 50.0, 10.0, 20.0, 10, 5);
+    }
+
     private static void putUpgrade(Map<String, Long> upgrades, TowerType from, String upgradeId, long cost) {
         upgrades.put(upgradeKey(from.id(), upgradeId), cost);
     }
 
+    private static void putVillagerAdvUpgrades(Map<String, Long> upgrades) {
+        putUpgrade(upgrades, VillagerTowers.ADV_T1_SPLASH_TOWER, "villager_splash_t2", 80);
+        putUpgrade(upgrades, VillagerTowers.ADV_T2_LIBRARIAN_TOWER, "villager_splash_t3", 150);
+        putUpgrade(upgrades, VillagerTowers.ADV_T1_GOLEM_TOWER, "t2_golem_tower", 100);
+        putUpgrade(upgrades, VillagerTowers.ADV_T2_GOLEM_TOWER, "t3_golem_tower", 200);
+        putUpgrade(upgrades, VillagerTowers.ADV_T1_ALLAY_TOWER, "t2_allay_tower", 150);
+        putUpgrade(upgrades, VillagerTowers.ADV_T1_ALLAY_TOWER, "t2_weapon_smith_tower", 180);
+        putUpgrade(upgrades, VillagerTowers.ADV_T2_ALLAY_TOWER, "t3_armorer_tower", 200);
+        putUpgrade(upgrades, VillagerTowers.ADV_T2_WEAPON_SMITH_TOWER, "t3_weapon_smith_tower", 200);
+        putUpgrade(upgrades, VillagerTowers.ADV_T1_CAT_TOWER, "t2_anti_tanker_cat_tower", 120);
+        putUpgrade(upgrades, VillagerTowers.ADV_T1_CAT_TOWER, "t2_lane_clear_cat_tower", 120);
+        putUpgrade(upgrades, VillagerTowers.ADV_T2_ANTI_TANKER_CAT_TOWER, "t3_anti_tanker_cat_tower", 210);
+        putUpgrade(upgrades, VillagerTowers.ADV_T2_LANE_CLEAR_CAT_TOWER, "t3_lane_clear_cat_tower", 210);
+    }
+
     private static void putAbilities(Map<String, Map<String, Double>> abilities, String towerId, Map<String, Double> values) {
         abilities.put(towerId, values);
+    }
+
+    private static void putVillagerAdvAbilities(Map<String, Map<String, Double>> abilities) {
+        copyAbility(abilities, VillagerTowers.T2_LIBRARIAN_TOWER, VillagerTowers.ADV_T2_LIBRARIAN_TOWER);
+        copyAbility(abilities, VillagerTowers.T3_CLERIC_TOWER, VillagerTowers.ADV_T3_CLERIC_TOWER);
+        copyAbility(abilities, VillagerTowers.T2_GOLEM_TOWER, VillagerTowers.ADV_T2_GOLEM_TOWER);
+        copyAbility(abilities, VillagerTowers.T3_GOLEM_TOWER, VillagerTowers.ADV_T3_GOLEM_TOWER);
+        copyAbility(abilities, VillagerTowers.T1_ALLAY_TOWER, VillagerTowers.ADV_T1_ALLAY_TOWER);
+        copyAbility(abilities, VillagerTowers.T2_ALLAY_TOWER, VillagerTowers.ADV_T2_ALLAY_TOWER);
+        copyAbility(abilities, VillagerTowers.T2_WEAPON_SMITH_TOWER, VillagerTowers.ADV_T2_WEAPON_SMITH_TOWER);
+        copyAbility(abilities, VillagerTowers.T3_ARMORER_TOWER, VillagerTowers.ADV_T3_ARMORER_TOWER);
+        copyAbility(abilities, VillagerTowers.T3_WEAPON_SMITH_TOWER, VillagerTowers.ADV_T3_WEAPON_SMITH_TOWER);
+        copyAbility(abilities, VillagerTowers.T2_ANTI_TANKER_CAT_TOWER, VillagerTowers.ADV_T2_ANTI_TANKER_CAT_TOWER);
+        copyAbility(abilities, VillagerTowers.T3_ANTI_TANKER_CAT_TOWER, VillagerTowers.ADV_T3_ANTI_TANKER_CAT_TOWER);
+        copyAbility(abilities, VillagerTowers.T2_LANE_CLEAR_CAT_TOWER, VillagerTowers.ADV_T2_LANE_CLEAR_CAT_TOWER);
+        copyAbility(abilities, VillagerTowers.T3_LANE_CLEAR_CAT_TOWER, VillagerTowers.ADV_T3_LANE_CLEAR_CAT_TOWER);
+    }
+
+    private static void copyAbility(Map<String, Map<String, Double>> abilities, TowerType from, TowerType to) {
+        Map<String, Double> values = abilities.get(from.id());
+        if (values != null) {
+            putAbilities(abilities, to.id(), values);
+        }
     }
 
     private static Map<String, Double> resonanceAbilities(int maxResonanceLevel, ResonanceAspect aspect) {
@@ -933,6 +1018,263 @@ public record TowerBalanceConfig(
                     spreadTicks == null ? defaults.spreadTicks() : spreadTicks,
                     maxSpawnsPerTick == null ? defaults.maxSpawnsPerTick() : maxSpawnsPerTick
             );
+        }
+    }
+
+    public record VillagerAdvConfig(
+            Double experienceMax,
+            Double experiencePerTower,
+            Double experiencePerTier,
+            Double reputationMax,
+            Double reputationGainRoundMultiplier,
+            Double reputationLossPerLeak,
+            Integer effectDurationTicks,
+            Double experienceBuffCap,
+            Double reputationBuffCap,
+            Map<String, Double> upgradeRequirements,
+            Map<String, Map<String, Double>> buffs
+    ) {
+        public static VillagerAdvConfig defaultConfig() {
+            LinkedHashMap<String, Double> upgradeRequirements = new LinkedHashMap<>();
+            putAdvUpgrade(upgradeRequirements, VillagerTowers.ADV_T1_SPLASH_TOWER, "villager_splash_t2", 15.0);
+            putAdvUpgrade(upgradeRequirements, VillagerTowers.ADV_T2_LIBRARIAN_TOWER, "villager_splash_t3", 45.0);
+            putAdvUpgrade(upgradeRequirements, VillagerTowers.ADV_T1_GOLEM_TOWER, "t2_golem_tower", 15.0);
+            putAdvUpgrade(upgradeRequirements, VillagerTowers.ADV_T2_GOLEM_TOWER, "t3_golem_tower", 45.0);
+            putAdvUpgrade(upgradeRequirements, VillagerTowers.ADV_T1_ALLAY_TOWER, "t2_allay_tower", 15.0);
+            putAdvUpgrade(upgradeRequirements, VillagerTowers.ADV_T1_ALLAY_TOWER, "t2_weapon_smith_tower", 15.0);
+            putAdvUpgrade(upgradeRequirements, VillagerTowers.ADV_T2_ALLAY_TOWER, "t3_armorer_tower", 45.0);
+            putAdvUpgrade(upgradeRequirements, VillagerTowers.ADV_T2_WEAPON_SMITH_TOWER, "t3_weapon_smith_tower", 45.0);
+            putAdvUpgrade(upgradeRequirements, VillagerTowers.ADV_T1_CAT_TOWER, "t2_anti_tanker_cat_tower", 15.0);
+            putAdvUpgrade(upgradeRequirements, VillagerTowers.ADV_T1_CAT_TOWER, "t2_lane_clear_cat_tower", 15.0);
+            putAdvUpgrade(upgradeRequirements, VillagerTowers.ADV_T2_ANTI_TANKER_CAT_TOWER, "t3_anti_tanker_cat_tower", 45.0);
+            putAdvUpgrade(upgradeRequirements, VillagerTowers.ADV_T2_LANE_CLEAR_CAT_TOWER, "t3_lane_clear_cat_tower", 45.0);
+
+            LinkedHashMap<String, Map<String, Double>> buffs = new LinkedHashMap<>();
+            putAdvBuffs(buffs, VillagerTowers.ADV_T1_SPLASH_TOWER, rangedBuffs());
+            putAdvBuffs(buffs, VillagerTowers.ADV_T2_LIBRARIAN_TOWER, rangedBuffs());
+            putAdvBuffs(buffs, VillagerTowers.ADV_T3_CLERIC_TOWER, rangedBuffs());
+            putAdvBuffs(buffs, VillagerTowers.ADV_T1_GOLEM_TOWER, golemBuffs());
+            putAdvBuffs(buffs, VillagerTowers.ADV_T2_GOLEM_TOWER, golemBuffs());
+            putAdvBuffs(buffs, VillagerTowers.ADV_T3_GOLEM_TOWER, golemBuffs());
+            putAdvBuffs(buffs, VillagerTowers.ADV_T1_ALLAY_TOWER, allayHealBuffs());
+            putAdvBuffs(buffs, VillagerTowers.ADV_T2_ALLAY_TOWER, allayHealBuffs());
+            putAdvBuffs(buffs, VillagerTowers.ADV_T2_WEAPON_SMITH_TOWER, supportIntervalBuffs());
+            putAdvBuffs(buffs, VillagerTowers.ADV_T3_ARMORER_TOWER, allayHealBuffs());
+            putAdvBuffs(buffs, VillagerTowers.ADV_T3_WEAPON_SMITH_TOWER, supportIntervalBuffs());
+            putAdvBuffs(buffs, VillagerTowers.ADV_T1_CAT_TOWER, catBuffs());
+            putAdvBuffs(buffs, VillagerTowers.ADV_T2_ANTI_TANKER_CAT_TOWER, antiTankerCatBuffs());
+            putAdvBuffs(buffs, VillagerTowers.ADV_T2_LANE_CLEAR_CAT_TOWER, laneClearCatBuffs());
+            putAdvBuffs(buffs, VillagerTowers.ADV_T3_ANTI_TANKER_CAT_TOWER, antiTankerCatBuffs());
+            putAdvBuffs(buffs, VillagerTowers.ADV_T3_LANE_CLEAR_CAT_TOWER, laneClearCatBuffs());
+            return new VillagerAdvConfig(
+                    100.0,
+                    1.0,
+                    1.0,
+                    100.0,
+                    1.0,
+                    0.5,
+                    72000,
+                    0.50,
+                    0.30,
+                    upgradeRequirements,
+                    buffs
+            );
+        }
+
+        public VillagerAdvConfig {
+            experienceMax = experienceMax == null ? null : Math.max(0.0, experienceMax);
+            experiencePerTower = experiencePerTower == null ? null : Math.max(0.0, experiencePerTower);
+            experiencePerTier = experiencePerTier == null ? null : Math.max(0.0, experiencePerTier);
+            reputationMax = reputationMax == null ? null : Math.max(0.0, reputationMax);
+            reputationGainRoundMultiplier = reputationGainRoundMultiplier == null ? null : Math.max(0.0, reputationGainRoundMultiplier);
+            reputationLossPerLeak = reputationLossPerLeak == null ? null : Math.max(0.0, reputationLossPerLeak);
+            effectDurationTicks = effectDurationTicks == null ? null : Math.max(1, effectDurationTicks);
+            experienceBuffCap = experienceBuffCap == null ? null : Math.max(0.0, experienceBuffCap);
+            reputationBuffCap = reputationBuffCap == null ? null : Math.max(0.0, reputationBuffCap);
+            upgradeRequirements = copyDoubleMap(upgradeRequirements);
+            buffs = copyNestedDoubleMap(buffs);
+        }
+
+        public double resolvedExperienceMax() {
+            return experienceMax == null ? defaultConfig().experienceMax() : experienceMax;
+        }
+
+        public double resolvedExperiencePerTower() {
+            return experiencePerTower == null ? defaultConfig().experiencePerTower() : experiencePerTower;
+        }
+
+        public double resolvedExperiencePerTier() {
+            return experiencePerTier == null ? defaultConfig().experiencePerTier() : experiencePerTier;
+        }
+
+        public double resolvedReputationMax() {
+            return reputationMax == null ? defaultConfig().reputationMax() : reputationMax;
+        }
+
+        public double resolvedReputationGainRoundMultiplier() {
+            return reputationGainRoundMultiplier == null ? defaultConfig().reputationGainRoundMultiplier() : reputationGainRoundMultiplier;
+        }
+
+        public double resolvedReputationLossPerLeak() {
+            return reputationLossPerLeak == null ? defaultConfig().reputationLossPerLeak() : reputationLossPerLeak;
+        }
+
+        public int resolvedEffectDurationTicks() {
+            return effectDurationTicks == null ? defaultConfig().effectDurationTicks() : effectDurationTicks;
+        }
+
+        public double resolvedExperienceBuffCap() {
+            return experienceBuffCap == null ? defaultConfig().experienceBuffCap() : experienceBuffCap;
+        }
+
+        public double resolvedReputationBuffCap() {
+            return reputationBuffCap == null ? defaultConfig().reputationBuffCap() : reputationBuffCap;
+        }
+
+        public double upgradeRequirement(String fromTowerId, String upgradeId) {
+            Double configured = upgradeRequirements.get(upgradeKey(fromTowerId, upgradeId));
+            if (configured == null) {
+                configured = upgradeRequirements.get(upgradeId);
+            }
+            return configured == null ? 0.0 : Math.max(0.0, configured);
+        }
+
+        public double buff(String towerId, String key) {
+            Map<String, Double> values = buffs.get(towerId);
+            return values == null ? 0.0 : values.getOrDefault(key, 0.0);
+        }
+
+        public double buffInterval(String towerId, String key) {
+            Map<String, Double> values = buffs.get(towerId);
+            if (values == null) {
+                return 1.0;
+            }
+            return Math.max(1.0E-6, values.getOrDefault(key + "Interval", 1.0));
+        }
+
+        public VillagerAdvConfig withMissingDefaults(VillagerAdvConfig defaults) {
+            if (defaults == null) {
+                return this;
+            }
+            LinkedHashMap<String, Double> mergedUpgradeRequirements = new LinkedHashMap<>(upgradeRequirements);
+            defaults.upgradeRequirements.forEach(mergedUpgradeRequirements::putIfAbsent);
+            LinkedHashMap<String, Map<String, Double>> mergedBuffs = new LinkedHashMap<>(buffs);
+            defaults.buffs.forEach((towerId, values) -> mergedBuffs.merge(
+                    towerId,
+                    values,
+                    (configured, defaultValues) -> {
+                        LinkedHashMap<String, Double> merged = new LinkedHashMap<>(configured);
+                        defaultValues.forEach(merged::putIfAbsent);
+                        return Collections.unmodifiableMap(merged);
+                    }
+            ));
+            return new VillagerAdvConfig(
+                    experienceMax == null ? defaults.experienceMax() : experienceMax,
+                    experiencePerTower == null ? defaults.experiencePerTower() : experiencePerTower,
+                    experiencePerTier == null ? defaults.experiencePerTier() : experiencePerTier,
+                    reputationMax == null ? defaults.reputationMax() : reputationMax,
+                    reputationGainRoundMultiplier == null ? defaults.reputationGainRoundMultiplier() : reputationGainRoundMultiplier,
+                    reputationLossPerLeak == null ? defaults.reputationLossPerLeak() : reputationLossPerLeak,
+                    effectDurationTicks == null ? defaults.effectDurationTicks() : effectDurationTicks,
+                    experienceBuffCap == null ? defaults.experienceBuffCap() : experienceBuffCap,
+                    reputationBuffCap == null ? defaults.reputationBuffCap() : reputationBuffCap,
+                    mergedUpgradeRequirements,
+                    mergedBuffs
+            );
+        }
+
+        private static void putAdvUpgrade(Map<String, Double> upgrades, TowerType from, String upgradeId, double requirement) {
+            upgrades.put(upgradeKey(from.id(), upgradeId), requirement);
+        }
+
+        private static void putAdvBuffs(Map<String, Map<String, Double>> buffs, TowerType tower, Map<String, Double> values) {
+            buffs.put(tower.id(), values);
+        }
+
+        private static Map<String, Double> rangedBuffs() {
+            LinkedHashMap<String, Double> values = reputationBuffs();
+            putBuff(values, "rangedDamagePerExperience", 0.0015);
+            putBuff(values, "rangedAttackSpeedPerExperience", 0.0015);
+            return values;
+        }
+
+        private static Map<String, Double> golemBuffs() {
+            LinkedHashMap<String, Double> values = reputationBuffs();
+            putBuff(values, "golemHealthPerExperience", 0.0025);
+            putBuff(values, "golemDamageReductionPerExperience", 0.001);
+            return values;
+        }
+
+        private static Map<String, Double> allayHealBuffs() {
+            LinkedHashMap<String, Double> values = reputationBuffs();
+            putBuff(values, "allayHealAmountPerExperience", 0.003);
+            putBuff(values, "allayIntervalReductionPerExperience", 0.0015);
+            return values;
+        }
+
+        private static Map<String, Double> supportIntervalBuffs() {
+            LinkedHashMap<String, Double> values = reputationBuffs();
+            putBuff(values, "allayIntervalReductionPerExperience", 0.0015);
+            return values;
+        }
+
+        private static Map<String, Double> catBuffs() {
+            LinkedHashMap<String, Double> values = reputationBuffs();
+            putBuff(values, "catDamagePerExperience", 0.0015);
+            putBuff(values, "catAttackSpeedPerExperience", 0.0015);
+            return values;
+        }
+
+        private static Map<String, Double> antiTankerCatBuffs() {
+            LinkedHashMap<String, Double> values = new LinkedHashMap<>(catBuffs());
+            putBuff(values, "catIncomeDamagePerExperience", 0.001);
+            return values;
+        }
+
+        private static Map<String, Double> laneClearCatBuffs() {
+            LinkedHashMap<String, Double> values = new LinkedHashMap<>(catBuffs());
+            putBuff(values, "catWaveDamagePerExperience", 0.001);
+            return values;
+        }
+
+        private static LinkedHashMap<String, Double> reputationBuffs() {
+            LinkedHashMap<String, Double> values = new LinkedHashMap<>();
+            putBuff(values, "reputationDamagePerPoint", 0.001);
+            putBuff(values, "reputationAttackSpeedPerPoint", 0.001);
+            putBuff(values, "reputationHealthPerPoint", 0.001);
+            putBuff(values, "reputationDamageReductionPerPoint", 0.0005);
+            return values;
+        }
+
+        private static void putBuff(Map<String, Double> values, String key, double amount) {
+            values.put(key, amount);
+            values.put(key + "Interval", 1.0);
+        }
+
+        private static Map<String, Double> copyDoubleMap(Map<String, Double> values) {
+            if (values == null) {
+                return Map.of();
+            }
+            LinkedHashMap<String, Double> copy = new LinkedHashMap<>();
+            values.forEach((key, value) -> {
+                if (key != null && !key.isBlank() && value != null) {
+                    copy.put(key, Math.max(0.0, value));
+                }
+            });
+            return Collections.unmodifiableMap(copy);
+        }
+
+        private static Map<String, Map<String, Double>> copyNestedDoubleMap(Map<String, Map<String, Double>> values) {
+            if (values == null) {
+                return Map.of();
+            }
+            LinkedHashMap<String, Map<String, Double>> copy = new LinkedHashMap<>();
+            values.forEach((towerId, buffValues) -> {
+                if (towerId != null && !towerId.isBlank() && buffValues != null) {
+                    copy.put(towerId, copyDoubleMap(buffValues));
+                }
+            });
+            return Collections.unmodifiableMap(copy);
         }
     }
 

@@ -6281,20 +6281,20 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
-    public void timedEffectsKeepStrongestMagnitudeCapAndRefreshDuration(GameTestHelper context) {
+    public void timedEffectsKeepStrongestMagnitudeAndRefreshDuration(GameTestHelper context) {
         TimedEffectSet effects = new TimedEffectSet();
         effects.apply(TimedEffectType.MONSTER_MOVE_SPEED_BONUS, 0.50, 10);
-        if (!assertEquals(context, 0.30, effects.magnitude(TimedEffectType.MONSTER_MOVE_SPEED_BONUS), "Timed effects should clamp to the balance cap.")) {
+        if (!assertEquals(context, 0.50, effects.magnitude(TimedEffectType.MONSTER_MOVE_SPEED_BONUS), "Timed effects should keep the configured magnitude without clamping.")) {
             return;
         }
         effects.apply(TimedEffectType.MONSTER_MOVE_SPEED_BONUS, 0.20, 50);
-        if (!assertEquals(context, 0.30, effects.magnitude(TimedEffectType.MONSTER_MOVE_SPEED_BONUS), "Lower magnitude should not replace a stronger active effect.")) {
+        if (!assertEquals(context, 0.50, effects.magnitude(TimedEffectType.MONSTER_MOVE_SPEED_BONUS), "Lower magnitude should not replace a stronger active effect.")) {
             return;
         }
         if (!assertEquals(context, 10, effects.remainingTicks(TimedEffectType.MONSTER_MOVE_SPEED_BONUS), "Lower magnitude should not refresh the stronger effect duration.")) {
             return;
         }
-        effects.apply(TimedEffectType.MONSTER_MOVE_SPEED_BONUS, 0.30, 40);
+        effects.apply(TimedEffectType.MONSTER_MOVE_SPEED_BONUS, 0.50, 40);
         if (!assertEquals(context, 40, effects.remainingTicks(TimedEffectType.MONSTER_MOVE_SPEED_BONUS), "Equal magnitude should refresh the active effect duration.")) {
             return;
         }
@@ -6992,7 +6992,18 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         ProductionTowerCatalog.clear();
         VillagerTowerCatalogs.register();
 
-        if (!assertEquals(context, 4L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Villager catalog should expose four starter tower families.")) {
+        long baseStarterCount = ProductionTowerCatalog.all().stream()
+                .filter(ProductionTowerCatalog.CatalogEntry::starter)
+                .filter(entry -> VillagerTowers.isBaseVillagerTower(entry.type()))
+                .count();
+        if (!assertEquals(context, 4L, baseStarterCount, "Villager catalog should expose four base starter tower families.")) {
+            return;
+        }
+        long advStarterCount = ProductionTowerCatalog.all().stream()
+                .filter(ProductionTowerCatalog.CatalogEntry::starter)
+                .filter(entry -> VillagerTowers.isAdvVillagerTower(entry.type()))
+                .count();
+        if (!assertEquals(context, 4L, advStarterCount, "Villager ADV catalog should expose four separate starter tower families.")) {
             return;
         }
         if (!assertEquals(context, 1, ProductionTowerCatalog.upgrades(VillagerTowers.T1_SPLASH_TOWER).size(), "Splash starter should link to librarian tower.")) {
@@ -7271,7 +7282,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertPresent(context, JobRegistry.find(IllagerTowerJob.ID), "Built-in reload should register the illager tower job.")) {
             return;
         }
-        if (!assertEquals(context, 27L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose villager, undead, animal, warlock, legion, resonance, and illager starter families.")) {
+        if (!assertEquals(context, 31L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose villager, villager ADV, undead, animal, warlock, legion, resonance, and illager starter families.")) {
             return;
         }
         context.succeed();

@@ -2,6 +2,7 @@ package kim.biryeong.semiontd.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
@@ -346,11 +347,13 @@ public final class SemionConfigLoader {
 
         try {
             String json = Files.readString(path);
-            TowerBalanceConfig value = GSON.fromJson(json, TowerBalanceConfig.class);
+            String migratedJson = migrateLegacyVillagerAdvBuffs(json, defaults);
+            TowerBalanceConfig value = GSON.fromJson(migratedJson, TowerBalanceConfig.class);
             TowerBalanceConfig loaded = value == null ? defaults : value;
             TowerBalanceConfig merged = loaded.withMissingDefaults(defaults);
-            boolean illusionCloneQueueMissing = !hasObjectProperty(json, "illusionCloneQueue");
-            if (illusionCloneQueueMissing || !merged.equals(loaded)) {
+            boolean illusionCloneQueueMissing = !hasObjectProperty(migratedJson, "illusionCloneQueue");
+            boolean villagerAdvMissing = !hasObjectProperty(migratedJson, "villagerAdv");
+            if (!migratedJson.equals(json) || illusionCloneQueueMissing || villagerAdvMissing || !merged.equals(loaded)) {
                 write(path, merged, logger);
             }
             return merged;
@@ -358,6 +361,28 @@ public final class SemionConfigLoader {
             logger.warn("Failed to load config {}; using defaults.", path, exception);
             return defaults;
         }
+    }
+
+    private static String migrateLegacyVillagerAdvBuffs(String json, TowerBalanceConfig defaults) {
+        JsonElement root = JsonParser.parseString(json);
+        if (!root.isJsonObject()) {
+            return json;
+        }
+        JsonObject object = root.getAsJsonObject();
+        if (!object.has("villagerAdv") || !object.get("villagerAdv").isJsonObject()) {
+            return json;
+        }
+        JsonObject villagerAdv = object.getAsJsonObject("villagerAdv");
+        if (!villagerAdv.has("buffs") || !villagerAdv.get("buffs").isJsonObject()) {
+            return json;
+        }
+        JsonObject buffs = villagerAdv.getAsJsonObject("buffs");
+        boolean legacyFlatBuffs = buffs.entrySet().stream().anyMatch(entry -> !entry.getValue().isJsonObject());
+        if (!legacyFlatBuffs) {
+            return json;
+        }
+        villagerAdv.add("buffs", GSON.toJsonTree(defaults.villagerAdv().buffs()));
+        return GSON.toJson(object);
     }
 
     private static SummonConfig loadOrCreateSummons(Path path, SummonConfig defaults, Logger logger) {

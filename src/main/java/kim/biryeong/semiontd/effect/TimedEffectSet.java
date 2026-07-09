@@ -15,17 +15,17 @@ public final class TimedEffectSet {
             return;
         }
 
-        double cappedMagnitude = type.cappedMagnitude(magnitude);
-        if (cappedMagnitude <= 0.0) {
+        double sanitizedMagnitude = Math.max(0.0, magnitude);
+        if (sanitizedMagnitude <= 0.0) {
             return;
         }
 
         ActiveTimedEffect active = effects.get(type);
-        if (active == null || cappedMagnitude > active.magnitude) {
-            effects.put(type, new ActiveTimedEffect(cappedMagnitude, durationTicks));
+        if (active == null || sanitizedMagnitude > active.magnitude) {
+            effects.put(type, new ActiveTimedEffect(sanitizedMagnitude, durationTicks));
             return;
         }
-        if (Double.compare(cappedMagnitude, active.magnitude) == 0) {
+        if (Double.compare(sanitizedMagnitude, active.magnitude) == 0) {
             active.remainingTicks = Math.max(active.remainingTicks, durationTicks);
         }
     }
@@ -35,9 +35,17 @@ public final class TimedEffectSet {
             return false;
         }
 
-        double cappedMagnitude = type.cappedMagnitude(magnitude);
-        if (cappedMagnitude <= 0.0) {
-            return false;
+        double sanitizedMagnitude = Math.max(0.0, magnitude);
+        if (sanitizedMagnitude <= 0.0) {
+            Map<ResourceLocation, ActiveTimedEffect> effectsBySource = sourcedEffects.get(type);
+            if (effectsBySource == null) {
+                return false;
+            }
+            boolean removed = effectsBySource.remove(sourceId) != null;
+            if (effectsBySource.isEmpty()) {
+                sourcedEffects.remove(type);
+            }
+            return removed;
         }
 
         Map<ResourceLocation, ActiveTimedEffect> effectsBySource = sourcedEffects.computeIfAbsent(type, ignored -> new HashMap<>());
@@ -45,7 +53,7 @@ public final class TimedEffectSet {
             return false;
         }
 
-        effectsBySource.put(sourceId, new ActiveTimedEffect(cappedMagnitude, durationTicks));
+        effectsBySource.put(sourceId, new ActiveTimedEffect(sanitizedMagnitude, durationTicks));
         return true;
     }
 
@@ -54,15 +62,23 @@ public final class TimedEffectSet {
             return false;
         }
 
-        double cappedMagnitude = type.cappedMagnitude(magnitude);
-        if (cappedMagnitude <= 0.0) {
-            return false;
+        double sanitizedMagnitude = Math.max(0.0, magnitude);
+        if (sanitizedMagnitude <= 0.0) {
+            Map<ResourceLocation, ActiveTimedEffect> effectsBySource = sourcedEffects.get(type);
+            if (effectsBySource == null) {
+                return false;
+            }
+            boolean removed = effectsBySource.remove(sourceId) != null;
+            if (effectsBySource.isEmpty()) {
+                sourcedEffects.remove(type);
+            }
+            return removed;
         }
 
         Map<ResourceLocation, ActiveTimedEffect> effectsBySource = sourcedEffects.computeIfAbsent(type, ignored -> new HashMap<>());
         ActiveTimedEffect active = effectsBySource.get(sourceId);
-        if (active == null || Double.compare(cappedMagnitude, active.magnitude) != 0) {
-            effectsBySource.put(sourceId, new ActiveTimedEffect(cappedMagnitude, durationTicks));
+        if (active == null || Double.compare(sanitizedMagnitude, active.magnitude) != 0) {
+            effectsBySource.put(sourceId, new ActiveTimedEffect(sanitizedMagnitude, durationTicks));
             return true;
         }
 
@@ -80,7 +96,7 @@ public final class TimedEffectSet {
                 totalMagnitude += sourcedEffect.magnitude;
             }
         }
-        return type == null ? 0.0 : type.cappedMagnitude(totalMagnitude);
+        return type == null ? 0.0 : totalMagnitude;
     }
 
     public int remainingTicks(TimedEffectType type) {

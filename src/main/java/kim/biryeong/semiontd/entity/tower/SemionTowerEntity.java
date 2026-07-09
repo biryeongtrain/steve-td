@@ -13,6 +13,7 @@ import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.defender.LaneDefenseEntity;
 import kim.biryeong.semiontd.entity.healing.HealingTarget;
 import kim.biryeong.semiontd.entity.model.SemionBilModelCache;
+import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.visual.EntityVisual;
 import kim.biryeong.semiontd.entity.visual.EntityVisualApplierRegistry;
@@ -66,13 +67,13 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     private double moveSpeed;
     private LaneRegionLayout laneLayout;
     private Vec3 finalDefenseAnchorPosition;
-    private EntityVisual visual = EntityVisual.vanilla(EntityVisual.DEFAULT_TOWER_ENTITY_TYPE);
     private AABB cachedTargetSearchBox;
     private LaneRegionLayout cachedTargetSearchLaneLayout;
     private double cachedTargetSearchX = Double.NaN;
     private double cachedTargetSearchY = Double.NaN;
     private double cachedTargetSearchZ = Double.NaN;
     private double cachedTargetSearchAcquireRange = Double.NaN;
+    private EntityVisual visual = EntityVisual.vanilla(EntityVisual.DEFAULT_TOWER_ENTITY_TYPE);
     private String blockbenchModelId;
     private SemionAnimationState animationState = SemionAnimationState.IDLE;
     private EntityType<?> polymerEntityType = EntityType.ARMOR_STAND;
@@ -207,7 +208,11 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     public void aiStep() {
         super.aiStep();
         invulnerableTime = 0;
+        double previousMaxHealthBonus = activeTimedEffectMagnitude(TimedEffectType.TOWER_MAX_HEALTH_BONUS);
         timedEffects.tick();
+        if (Double.compare(previousMaxHealthBonus, activeTimedEffectMagnitude(TimedEffectType.TOWER_MAX_HEALTH_BONUS)) != 0) {
+            syncMaxHealthEffect(TimedEffectType.TOWER_MAX_HEALTH_BONUS);
+        }
         syncMoobloomVisualEntity();
         returnToFinalDefenseAreaIfNeeded();
     }
@@ -253,6 +258,14 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         double damageAmount = attackDamage * (1.0 + timedEffects.magnitude(TimedEffectType.TOWER_DAMAGE_BONUS));
         if (runtimeTower != null) {
             damageAmount = runtimeTower.modifyAttackDamage(this, target, damageAmount);
+        }
+        Monster runtimeMonster = target == null ? null : target.runtimeMonster();
+        if (runtimeMonster != null) {
+            if (runtimeMonster.senderTeam().isPresent()) {
+                damageAmount *= 1.0 + timedEffects.magnitude(TimedEffectType.TOWER_INCOME_DAMAGE_BONUS);
+            } else {
+                damageAmount *= 1.0 + timedEffects.magnitude(TimedEffectType.TOWER_WAVE_DAMAGE_BONUS);
+            }
         }
         return Math.max(0.0, damageAmount);
     }
@@ -327,6 +340,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         timedEffects.apply(type, magnitude, durationTicks);
         double currentMagnitude = type == null ? 0.0 : activeTimedEffectMagnitude(type);
         int currentTicks = type == null ? 0 : activeTimedEffectTicks(type);
+        syncMaxHealthEffect(type);
         if (runtimeTower != null
                 && type != null
                 && currentTicks > 0
@@ -341,6 +355,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         boolean applied = timedEffects.apply(type, sourceId, magnitude, durationTicks);
         double currentMagnitude = type == null ? 0.0 : activeTimedEffectMagnitude(type);
         int currentTicks = type == null ? 0 : activeTimedEffectTicks(type);
+        syncMaxHealthEffect(type);
         if (applied
                 && runtimeTower != null
                 && type != null
@@ -357,6 +372,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         boolean refreshed = timedEffects.refresh(type, sourceId, magnitude, durationTicks);
         double currentMagnitude = type == null ? 0.0 : activeTimedEffectMagnitude(type);
         int currentTicks = type == null ? 0 : activeTimedEffectTicks(type);
+        syncMaxHealthEffect(type);
         if (refreshed
                 && runtimeTower != null
                 && type != null
@@ -395,6 +411,18 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     public <T> T getTowerDataOrDefault(TowerDataKey<T> key, T fallback) {
         return runtimeTower == null ? fallback : runtimeTower.getDataOrDefault(key, fallback);
+    }
+
+    private void syncMaxHealthEffect(TimedEffectType type) {
+        if (runtimeTower == null || type != TimedEffectType.TOWER_MAX_HEALTH_BONUS) {
+            return;
+        }
+        double previousMaxHealth = runtimeTower.currentMaxHealth();
+        double nextMaxHealth = runtimeTower.type().maxHealth()
+                * (1.0 + activeTimedEffectMagnitude(TimedEffectType.TOWER_MAX_HEALTH_BONUS));
+        runtimeTower.syncMaxHealth(nextMaxHealth, nextMaxHealth > previousMaxHealth);
+        getAttribute(Attributes.MAX_HEALTH).setBaseValue(runtimeTower.currentMaxHealth());
+        setHealth((float) runtimeTower.health());
     }
 
     public String blockbenchModelId() {

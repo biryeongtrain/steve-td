@@ -39,6 +39,7 @@ public final class JobRegistry {
 
     public static void registerBuiltIns() {
         registerIfAbsent(new VillagerTowerJob());
+        registerIfAbsent(new VillagerAdvTowerJob());
         registerIfAbsent(new UndeadTowerJob());
         registerIfAbsent(new AnimalTowerJob());
         registerIfAbsent(new WarlockTowerJob());

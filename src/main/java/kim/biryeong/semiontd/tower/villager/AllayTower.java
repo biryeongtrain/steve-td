@@ -34,10 +34,10 @@ public class AllayTower extends SupportTower {
     @Override
     protected boolean execute(PlayerLane lane) {
         if (is(VillagerTowers.T1_ALLAY_TOWER)) {
-            return applyHeal(lane, radius(), value("healAmount"));
+            return applyHeal(lane, radius(), healAmount(lane, value("healAmount")));
         }
         if (is(VillagerTowers.T2_ALLAY_TOWER)) {
-            return applyHeal(lane, radius(), value("healAmount"));
+            return applyHeal(lane, radius(), healAmount(lane, value("healAmount")));
         }
         if (is(VillagerTowers.T2_WEAPON_SMITH_TOWER)) {
             return applyWeaponSmithBuff(lane, radius(), value("weaponBuff"));
@@ -58,7 +58,7 @@ public class AllayTower extends SupportTower {
                 continue;
             }
             if (heal(target, lane, amount)) {
-                block(target, HEAL_BLOCKED_UNTIL, lane.arenaWorld().getGameTime());
+                block(target, HEAL_BLOCKED_UNTIL, lane, lane.arenaWorld().getGameTime());
                 applied = true;
             }
         }
@@ -88,7 +88,7 @@ public class AllayTower extends SupportTower {
                     ticks("buffDurationTicks")
             );
             if (damageApplied || speedApplied) {
-                block(target, WEAPON_SMITH_BLOCKED_UNTIL, lane.arenaWorld().getGameTime());
+                block(target, WEAPON_SMITH_BLOCKED_UNTIL, lane, lane.arenaWorld().getGameTime());
                 applied = true;
             }
         }
@@ -101,7 +101,7 @@ public class AllayTower extends SupportTower {
             if (!canApply(target, ARMORER_BLOCKED_UNTIL, lane.arenaWorld().getGameTime())) {
                 continue;
             }
-            boolean healed = heal(target, lane, value("healAmount"));
+            boolean healed = heal(target, lane, healAmount(lane, value("healAmount")));
             Optional<SemionTowerEntity> targetEntity = towerEntity(target, lane);
             boolean reducedDamage = targetEntity
                     .map(entity -> entity.applyTimedEffect(
@@ -112,7 +112,7 @@ public class AllayTower extends SupportTower {
                     ))
                     .orElse(false);
             if (healed || reducedDamage) {
-                block(target, ARMORER_BLOCKED_UNTIL, lane.arenaWorld().getGameTime());
+                block(target, ARMORER_BLOCKED_UNTIL, lane, lane.arenaWorld().getGameTime());
                 applied = true;
             }
         }
@@ -157,8 +157,8 @@ public class AllayTower extends SupportTower {
         return target.getDataOrDefault(key, 0L) <= gameTime;
     }
 
-    private void block(Tower target, TowerDataKey<Long> key, long gameTime) {
-        target.setData(key, gameTime + ticks("supportBlockTicks"));
+    private void block(Tower target, TowerDataKey<Long> key, PlayerLane lane, long gameTime) {
+        target.setData(key, gameTime + supportBlockTicks(lane));
     }
 
     private double distanceSqr(GridPosition first, GridPosition second) {
@@ -184,7 +184,34 @@ public class AllayTower extends SupportTower {
         return TowerBalanceRuntime.abilityTicks(type().id(), key);
     }
 
+    @Override
+    protected int cooldownTicksAfterExecute(PlayerLane lane) {
+        return reducedTicks(super.cooldownTicksAfterExecute(lane), intervalReduction(lane));
+    }
+
+    private double healAmount(PlayerLane lane, double baseAmount) {
+        return baseAmount * (1.0 + activeEffect(lane, TimedEffectType.TOWER_HEAL_AMOUNT_BONUS));
+    }
+
+    private int supportBlockTicks(PlayerLane lane) {
+        return reducedTicks(ticks("supportBlockTicks"), intervalReduction(lane));
+    }
+
+    private int reducedTicks(int baseTicks, double reduction) {
+        return Math.max(1, (int) Math.ceil(baseTicks * Math.max(0.01, 1.0 - reduction)));
+    }
+
+    private double intervalReduction(PlayerLane lane) {
+        return activeEffect(lane, TimedEffectType.TOWER_ABILITY_INTERVAL_REDUCTION);
+    }
+
+    private double activeEffect(PlayerLane lane, TimedEffectType type) {
+        return towerEntity(this, lane)
+                .map(entity -> entity.activeTimedEffectMagnitude(type))
+                .orElse(0.0);
+    }
+
     private boolean is(TowerType towerType) {
-        return type().id().equals(towerType.id());
+        return VillagerTowers.matches(type(), towerType);
     }
 }

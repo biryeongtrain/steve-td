@@ -38,14 +38,13 @@ public class VillagerSplashTower extends SplashTower {
 
     @Override
     public double modifyAttackDamage(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
-        double scale = value("bonusPerSurvivedRound");
-        return damageAmount * (1 + scale * survivalBouns);
+        return damageAmount * (1 + survivalBonus());
     }
 
     @Override
     public int adjustAttackInterval(int baseIntervalTicks) {
         if (isT3()) {
-            return (int) (baseIntervalTicks * (1 - value("bonusPerSurvivedRound") * survivalBouns));
+            return (int) (baseIntervalTicks * (1 - survivalBonus()));
         }
 
         return super.adjustAttackInterval(baseIntervalTicks);
@@ -54,7 +53,7 @@ public class VillagerSplashTower extends SplashTower {
     @Override
     public java.util.List<String> runtimeDetailLines() {
         java.util.ArrayList<String> lines = new java.util.ArrayList<>();
-        double bonus = value("bonusPerSurvivedRound") * survivalBouns;
+        double bonus = survivalBonus();
         String effect = isT3() ? "피해/공속 +" + percent(bonus) : "피해 +" + percent(bonus);
         lines.add("생존 스택 " + survivalBouns + "/" + maxSurvivalStacks() + " (" + effect + ")");
         return lines;
@@ -102,7 +101,11 @@ public class VillagerSplashTower extends SplashTower {
         return TowerBalanceRuntime.abilityInt(type().id(), "maxSurvivalStacks");
     }
 
+    private double survivalBonus() {
+        return value("bonusPerSurvivedRound") * survivalBouns * VillagerAdvStates.survivalBonusMultiplier(this);
+    }
+
     private boolean isT3() {
-        return type().id().equals(VillagerTowers.T3_CLERIC_TOWER.id());
+        return VillagerTowers.matches(type(), VillagerTowers.T3_CLERIC_TOWER);
     }
 }

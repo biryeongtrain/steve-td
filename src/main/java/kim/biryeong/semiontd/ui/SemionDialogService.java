@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import kim.biryeong.semiontd.buildguide.BuildGuide;
 import kim.biryeong.semiontd.buildguide.BuildGuideService;
 import kim.biryeong.semiontd.config.AttackKind;
+import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
@@ -31,6 +32,7 @@ import kim.biryeong.semiontd.tower.ProductionTowerService;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerPlacementPositions;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
+import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import kim.biryeong.semiontd.trait.SemionTrait;
 import kim.biryeong.semiontd.trait.TraitLoadout;
 import kim.biryeong.semiontd.trait.TraitRegistry;
@@ -295,12 +297,13 @@ public final class SemionDialogService {
             }
         } else {
             for (TowerUpgradeOption option : upgrades) {
+                boolean mineralAffordable = economy.diamond() >= option.mineralCost();
                 boolean recommended = buildGuideService != null
                         && buildGuideService.isRecommendedUpgrade(game, player.getUUID(), game.currentRound(), selectedTower.position(), option.id());
                 actions.add(actionButton(
-                        upgradeButtonLabel(option, economy.diamond() >= option.mineralCost(), recommended),
+                        upgradeButtonLabel(option, mineralAffordable && advExperienceAffordable(selectedTower, option), recommended),
                         "/semiontd tower upgrade " + option.id(),
-                        upgradeTooltip(option, economy.diamond() >= option.mineralCost(), recommended),
+                        upgradeTooltip(option, mineralAffordable, recommended, selectedTower),
                         COMPACT_BUTTON_WIDTH
                 ));
             }
@@ -373,16 +376,17 @@ public final class SemionDialogService {
         if (ownedByPlayer && sameLane) {
             List<TowerUpgradeOption> upgrades = ProductionTowerService.availableUpgrades(game, player.getUUID(), tower.position());
             for (TowerUpgradeOption option : upgrades) {
+                boolean mineralAffordable = semionPlayer.economy().diamond() >= option.mineralCost();
                 boolean recommended = buildGuideService != null
                         && buildGuideService.isRecommendedUpgrade(game, player.getUUID(), game.currentRound(), tower.position(), option.id());
                 actions.add(actionButton(
-                        upgradeButtonLabel(option, semionPlayer.economy().diamond() >= option.mineralCost(), recommended),
+                        upgradeButtonLabel(option, mineralAffordable && advExperienceAffordable(tower, option), recommended),
                         "/semiontd tower upgrade "
                                 + option.id() + " "
                                 + tower.position().x() + " "
                                 + tower.position().y() + " "
                                 + tower.position().z(),
-                        upgradeTooltip(option, semionPlayer.economy().diamond() >= option.mineralCost(), recommended),
+                        upgradeTooltip(option, mineralAffordable, recommended, tower),
                         COMPACT_BUTTON_WIDTH
                 ));
             }
@@ -721,6 +725,11 @@ public final class SemionDialogService {
         appendTimedEffect(effects, entity, TimedEffectType.TOWER_ATTACK_SPEED_BONUS, "<green>⚡ 공속 증가 +", "</green>");
         appendTimedEffect(effects, entity, TimedEffectType.TOWER_RANGE_BONUS, "<green>🎯 사거리 증가 +", "</green>");
         appendTimedEffect(effects, entity, TimedEffectType.TOWER_DAMAGE_REDUCTION, "<blue>🛡 받피 감소 +", "</blue>");
+        appendTimedEffect(effects, entity, TimedEffectType.TOWER_MAX_HEALTH_BONUS, "<green>❤ 최대체력 증가 +", "</green>");
+        appendTimedEffect(effects, entity, TimedEffectType.TOWER_INCOME_DAMAGE_BONUS, "<green>⚔ 인컴 피해 증가 +", "</green>");
+        appendTimedEffect(effects, entity, TimedEffectType.TOWER_WAVE_DAMAGE_BONUS, "<green>⚔ 웨이브 피해 증가 +", "</green>");
+        appendTimedEffect(effects, entity, TimedEffectType.TOWER_HEAL_AMOUNT_BONUS, "<green>❤ 회복량 증가 +", "</green>");
+        appendTimedEffect(effects, entity, TimedEffectType.TOWER_ABILITY_INTERVAL_REDUCTION, "<green>⏱ 주기 감소 +", "</green>");
         appendTimedEffect(effects, entity, TimedEffectType.TOWER_ATTACK_SPEED_REDUCTION, "<red>⚡ 공속 감소 -", "</red>");
         appendTimedEffect(effects, entity, TimedEffectType.TOWER_RANGE_REDUCTION, "<red>🎯 사거리 감소 -", "</red>");
         if (effects.length() > 0) {
@@ -729,7 +738,16 @@ public final class SemionDialogService {
     }
 
     public static List<String> towerRuntimeDetailLines(Tower tower) {
-        return tower == null ? List.of() : tower.runtimeDetailLines();
+        if (tower == null) {
+            return List.of();
+        }
+        ArrayList<String> lines = new ArrayList<>();
+        if (VillagerAdvStates.isAdvTower(tower)) {
+            lines.add("경험치 " + oneDecimal(VillagerAdvStates.experience(tower))
+                    + "/" + oneDecimal(TowerBalanceRuntime.villagerAdv().resolvedExperienceMax()));
+        }
+        lines.addAll(tower.runtimeDetailLines());
+        return lines;
     }
 
     private static void appendTowerRuntimeDetails(StringBuilder body, Tower tower) {
@@ -1000,10 +1018,14 @@ public final class SemionDialogService {
     }
 
     private static Component upgradeTooltip(TowerUpgradeOption option) {
-        return upgradeTooltip(option, true, false);
+        return upgradeTooltip(option, true, false, null);
     }
 
     private static Component upgradeTooltip(TowerUpgradeOption option, boolean affordable, boolean recommended) {
+        return upgradeTooltip(option, affordable, recommended, null);
+    }
+
+    private static Component upgradeTooltip(TowerUpgradeOption option, boolean affordable, boolean recommended, Tower currentTower) {
         Optional<ProductionTowerCatalog.CatalogEntry> target = ProductionTowerCatalog.entry(option.targetType());
         if (target.isEmpty()) {
             return Component.literal("대상 타워를 찾을 수 없습니다.\n비용 " + option.mineralCost() + " 다이아");
@@ -1016,6 +1038,7 @@ public final class SemionDialogService {
                         + "<gray>대상</gray> <white>" + type.displayName() + "</white>\n"
                         + "<aqua>💎 " + option.mineralCost() + " 다이아</aqua>"
                         + (affordable ? " <green>(구매 가능)</green>" : " <red>(부족)</red>") + "\n"
+                        + advExperienceRequirementLine(currentTower, option)
                         + "<red>❤ 체력 " + Math.round(type.maxHealth()) + "</red> "
                         + "<yellow>🧲 어그로 " + type.aggroPriority() + "</yellow>\n"
                         + "<dark_red>⚔ 피해 " + oneDecimal(type.damage()) + "</dark_red> "
@@ -1024,6 +1047,28 @@ public final class SemionDialogService {
         );
         appendTowerDescription(tooltip, type.description());
         return tooltip;
+    }
+
+    private static String advExperienceRequirementLine(Tower tower, TowerUpgradeOption option) {
+        double requirement = advExperienceRequirement(tower, option);
+        if (requirement <= 0.0) {
+            return "";
+        }
+        double experience = VillagerAdvStates.experience(tower);
+        String color = advExperienceAffordable(tower, option) ? "green" : "red";
+        return "<" + color + ">경험치 " + oneDecimal(experience) + "/" + oneDecimal(requirement) + "</" + color + ">\n";
+    }
+
+    private static boolean advExperienceAffordable(Tower tower, TowerUpgradeOption option) {
+        double requirement = advExperienceRequirement(tower, option);
+        return requirement <= 0.0 || VillagerAdvStates.experience(tower) + 1.0E-6 >= requirement;
+    }
+
+    private static double advExperienceRequirement(Tower tower, TowerUpgradeOption option) {
+        if (!VillagerAdvStates.isAdvTower(tower) || option == null) {
+            return 0.0;
+        }
+        return TowerBalanceRuntime.villagerAdvUpgradeRequirement(tower.type(), option.id());
     }
 
     public static Component upgradeButtonLabel(TowerUpgradeOption option, boolean affordable, boolean recommended) {

@@ -32,6 +32,7 @@ import kim.biryeong.semiontd.summon.SummonResultType;
 import kim.biryeong.semiontd.summon.SummonShop;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
 import kim.biryeong.semiontd.trait.SemionTrait;
 import kim.biryeong.semiontd.trait.TraitContext;
@@ -684,6 +685,9 @@ public final class SemionGame {
     }
 
     private void closeRuntimeState() {
+        for (UUID playerId : players.keySet()) {
+            VillagerAdvStates.clear(playerId);
+        }
         for (SemionTeam team : teams.values()) {
             team.closeRuntime();
         }
@@ -912,6 +916,7 @@ public final class SemionGame {
 
     public void tick(MinecraftServer server) {
         tickCounter++;
+        VillagerAdvStates.applyPending(this);
         if (phase != RoundPhase.WAITING && phase != RoundPhase.ENDED && tickCounter % 20 == 0) {
             economyService.tickGas(players.values(), teams, currentRound);
         }
@@ -948,6 +953,7 @@ public final class SemionGame {
             }
             enqueueWave(team);
         }
+        VillagerAdvStates.onWaveStarted(this, currentRound);
     }
 
     private void tickWave(MinecraftServer server) {
@@ -984,6 +990,7 @@ public final class SemionGame {
     }
 
     private void tickPayout(MinecraftServer server) {
+        VillagerAdvStates.onWaveCleared(this, currentRound);
         notifyRoundEnded(currentRound);
         economyService.payRoundIncome(players.values(), teams);
         currentWaveTeamIds.clear();

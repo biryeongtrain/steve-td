@@ -104,6 +104,16 @@ public abstract class Tower {
         return maxHealth;
     }
 
+    public void syncMaxHealth(double maxHealth, boolean healIncrease) {
+        double previousMaxHealth = this.maxHealth;
+        this.maxHealth = Math.max(1.0, maxHealth);
+        if (healIncrease && this.maxHealth > previousMaxHealth) {
+            health = Math.min(this.maxHealth, health + (this.maxHealth - previousMaxHealth));
+            return;
+        }
+        syncHealth(health);
+    }
+
     public double health() {
         return health;
     }
@@ -370,8 +380,12 @@ public abstract class Tower {
         }
 
         if (execute(lane)) {
-            cooldownTicks = type.attackIntervalTicks();
+            cooldownTicks = cooldownTicksAfterExecute(lane);
         }
+    }
+
+    protected int cooldownTicksAfterExecute(PlayerLane lane) {
+        return type.attackIntervalTicks();
     }
 
     protected abstract boolean execute(PlayerLane lane);

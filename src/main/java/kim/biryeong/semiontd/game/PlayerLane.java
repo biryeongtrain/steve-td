@@ -17,6 +17,7 @@ import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
+import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -38,6 +39,7 @@ public final class PlayerLane {
     private final List<Tower> towers = new ArrayList<>();
     private final List<DefenderEntity> defenderEntities = new ArrayList<>();
     private boolean clearedThisRound;
+    private boolean leakedThisRound;
     private boolean towersMovedToFinalDefense;
 
     public PlayerLane(
@@ -111,8 +113,13 @@ public final class PlayerLane {
         return clearedThisRound;
     }
 
+    public boolean leakedThisRound() {
+        return leakedThisRound;
+    }
+
     public void resetForRound() {
         clearedThisRound = false;
+        leakedThisRound = false;
         towersMovedToFinalDefense = false;
         for (DefenderEntity defenderEntity : defenderEntities) {
             defenderEntity.remove();
@@ -474,7 +481,9 @@ public final class PlayerLane {
         double threat = monster.attributionThreat();
         SemionPlayer laneOwner = players.get(ownerPlayer);
         if (laneOwner != null) {
+            leakedThisRound = true;
             laneOwner.matchStats().recordOwnLaneLeakedThreat(threat);
+            VillagerAdvStates.onLaneLeak(laneOwner, this);
         }
         monster.ownerPlayer()
                 .map(players::get)
