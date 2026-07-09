@@ -116,6 +116,7 @@ When SQLite is selected but not required, initialization failure falls back to f
 
 - `/semiontd rating`: show the executing player's rating.
 - `/semiontd rating top`: show the top 10 rated players.
+- `/semiontd rating softreset`: require the same admin to confirm twice within 30 seconds, create a backup, then soft-reset rating data.
 - Aliases are provided for convenience: `/레이팅`, `/랭크`, `/순위`.
 
 Aliases are intentionally not covered by the full GameTest matrix; canonical `/semiontd rating` commands are the tested contract.
@@ -125,10 +126,10 @@ Aliases are intentionally not covered by the full GameTest matrix; canonical `/s
 The following policies are intentionally deferred:
 
 - Global cross-server ladder.
-- Season resets.
+- Automated ladder seasons.
 - Inactivity decay.
 - Provisional placement matches.
 - Draw handling.
 - TrueSkill2-style placement/team uncertainty modeling beyond the current placement-band ELO scores.
 - TrueSkill2 migration.
-- Admin re-rating or event replay commands.
+- Manual rating rewrites or event replay commands.

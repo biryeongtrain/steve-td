@@ -169,7 +169,7 @@ semion:lane_spawn centerBottom
 `semion:team_spawn`
 
 - 플레이어 여러 명이 겹치지 않게 3x3 이상 권장
-- 나중에 lane별 스폰으로 확장할 수 있으므로 주변 여유 공간 확보
+- 추후 lane별 스폰으로 확장할 수 있으므로 주변 여유 공간 확보
 
 `semion:boss_spawn`
 

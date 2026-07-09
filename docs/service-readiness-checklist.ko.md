@@ -258,7 +258,7 @@ stop
 
 ### 3. 프로덕션 타워 배치/카탈로그 정리
 
-프로덕션 타워 등록 방식은 [프로덕션 타워 카탈로그](production-tower-catalog.ko.md)에 정리되어 있다. 현재 built-in reload는 주민/언데드/동물 카탈로그와 직업별 허용 타워를 등록한다.
+프로덕션 타워 등록 방식은 [프로덕션 타워 카탈로그](production-tower-catalog.ko.md)에 정리되어 있다. 현재 built-in reload는 주민, 주민 ADV, 언데드, 동물, 흑마법사, 무리, 무블룸, 우민 카탈로그와 빌더별 허용 타워를 등록한다.
 엔티티를 가진 타워 런타임은 `EntityBackedTower`/`SemionTowerEntity`로 공용화되어 있으며, `ProductionTower`는 `TestTower`와 독립적인 형제 계열이다.
 
 확인 항목:

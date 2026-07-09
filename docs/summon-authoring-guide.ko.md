@@ -134,9 +134,9 @@ id
 
 displayName
   UI와 명령 출력에 쓸 표시명.
-  나중에 수정하기 쉽도록 `SummonDisplayNames`의 상수를 사용한다.
+  추후 수정하기 쉽도록 `SummonDisplayNames`의 상수를 사용한다.
 
-gasCost
+emeraldCost
   소환 비용.
 
 incomeGain
@@ -181,8 +181,8 @@ roles
 abilityActivations
   PASSIVE, CONDITIONAL, COOLDOWN 중 하나 이상.
 
-mineralReward
-  이 몬스터가 죽었을 때 방어 측에 지급할 mineral.
+diamondReward
+  이 몬스터가 죽었을 때 방어 측에 지급할 다이아.
 ```
 
 ## 역할 선택 기준
@@ -235,16 +235,16 @@ TANK는 같은 진행도에서 SUPPORT보다 먼저 맞도록 설계
 
 ## 티어와 income 효율
 
-가격이 높아질수록 gas 대비 income 효율은 낮아지고, 전투 가치와 능력 가치가 커져야 한다.
+가격이 높아질수록 에메랄드 대비 income 효율은 낮아지고, 전투 가치와 능력 가치가 커져야 한다.
 
 권장 범위:
 
 ```text
-T1: gasCost의 10-13%
-T2: gasCost의 8-11%
-T3: gasCost의 6-9%
-T4: gasCost의 4-7%
-T5: gasCost의 3-5%
+T1: emeraldCost의 10-13%
+T2: emeraldCost의 8-11%
+T3: emeraldCost의 6-9%
+T4: emeraldCost의 4-7%
+T5: emeraldCost의 3-5%
 ```
 
 예외:
@@ -306,7 +306,7 @@ blockbenchModelId
 SummonRegistry.find(id)가 성공하는가
 tier와 roles가 의도대로 들어갔는가
 displayName이 `SummonDisplayNames`의 상수를 사용하는가
-gasCost와 incomeGain이 정책 범위에 맞는가
+emeraldCost와 incomeGain이 정책 범위에 맞는가
 createMonster(...) 후 runtime Monster에 tier/roles/damageType/resistance가 보존되는가
 특수 능력이 있다면 onSummoned 또는 능력 시스템에서 적용되는가
 entityTypeId 또는 blockbenchModelId가 보존되는가

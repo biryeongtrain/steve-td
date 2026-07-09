@@ -4,7 +4,7 @@
 
 ## 직업 추가
 
-직업은 `kim.biryeong.semionTd.job.SemionJob`을 상속해서 Java 코드로 만든다.
+직업은 `kim.biryeong.semiontd.job.SemionJob`을 상속해서 Java 코드로 만든다.
 
 기본 등록 위치는 새 직업 클래스를 만든 뒤 `JobRegistry.register(...)`를 호출하는 방식이다. 예시는 다음 형태다.
 
@@ -72,7 +72,7 @@ public final class RefinerJob extends SemionJob {
 4. 직업 제한이 필요하면 직업의 `canUseTower(...)`에서 `TowerType.id()`를 기준으로 제한한다.
 5. 직업별 비용 보정은 `modifyTowerMineralCost(...)`에서 처리한다.
 
-현재 테스트 타워는 `kim.biryeong.semionTd.test` 패키지에만 둔다. 실제 게임 타워는 `kim.biryeong.semionTd.tower` 또는 하위 패키지에 추가하는 편이 좋다.
+현재 테스트 타워는 `kim.biryeong.semiontd.test` 패키지에만 둔다. 실제 게임 타워는 `kim.biryeong.semiontd.tower` 또는 하위 패키지에 추가하는 편이 좋다.
 
 ## 소환 유닛 설정
 
@@ -84,14 +84,14 @@ public final class RefinerJob extends SemionJob {
 {
   "id": "grunt",
   "displayName": "Grunt",
-  "gasCost": 20,
+  "emeraldCost": 20,
   "incomeGain": 2,
   "maxHealth": 45,
   "armor": 0,
   "attackDamage": 4,
   "attackKind": "MELEE",
   "entityTypeId": "minecraft:zombie",
-  "mineralReward": 3
+  "diamondReward": 3
 }
 ```
 
@@ -104,7 +104,7 @@ public final class RefinerJob extends SemionJob {
 
 ## 웨이브 설정
 
-웨이브는 `config/semion-td/waves.json`에서 설정한다.
+웨이브는 `config/semion-td/wave.json`에서 설정한다.
 
 각 몬스터 필드:
 
@@ -116,7 +116,7 @@ public final class RefinerJob extends SemionJob {
   "attackDamage": 4,
   "attackKind": "MELEE",
   "entityType": "minecraft:zombie",
-  "bliModelId": null,
+  "blockbenchModelId": null,
   "count": 12,
   "mineralReward": 2
 }
@@ -137,22 +137,22 @@ public final class RefinerJob extends SemionJob {
 
 ```json
 {
-  "startingMineral": 200,
-  "startingGas": 50,
+  "startingDiamond": 200,
+  "startingEmerald": 50,
   "startingIncome": 0,
-  "gasCap": {
-    "base": 500,
-    "roundOffsetMultiplier": 2,
+  "emeraldCap": {
+    "base": 1500,
+    "roundOffsetMultiplier": 6,
     "roundOffsetStep": 20,
-    "flatBonus": 10
+    "flatBonus": 30
   },
-  "gasProduction": {
-    "initialGasPerSec": 1,
+  "emeraldProduction": {
+    "initialEmeraldPerSec": 1,
     "maxUpgradeCount": 20,
     "initialUpgradeCost": 50,
     "upgradeCostIncrease": 25,
-    "gasPerSecIncrease": 1,
-    "upgradeCurrency": "MINERAL"
+    "emeraldPerSecIncrease": 1,
+    "upgradeCurrency": "DIAMOND"
   }
 }
 ```

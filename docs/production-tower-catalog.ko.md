@@ -2,9 +2,9 @@
 
 ## 현재 상태
 
-기본 reload 기준으로 주민/언데드/동물 프로덕션 타워가 등록된다.
+기본 reload 기준으로 주민, 주민 ADV, 언데드, 동물, 흑마법사, 무리, 무블룸, 우민 프로덕션 타워가 등록된다.
 
-`ProductionTowerCatalogs.reloadBuiltIns(...)`는 villager, undead, animal built-in 카탈로그를 다시 등록한다. 현재 starter family는 주민 4개, 언데드 3개, 동물 2개이며, `/semiontd tower list`와 빌드 UI는 선택한 직업이 허용하는 starter tower만 보여준다.
+`ProductionTowerCatalogs.reloadBuiltIns(...)`는 villager, undead, animal, warlock, legion, resonance, illager built-in 카탈로그를 다시 등록한다. 주민 ADV 계열은 `VillagerTowerCatalogs` 안에서 `villager_adv_` prefix를 가진 타입으로 함께 등록된다. `/semiontd tower list`와 빌드 UI는 선택한 빌더가 허용하는 starter tower만 보여준다.
 
 ## 패키지 구조
 
@@ -25,6 +25,10 @@ src/main/java/kim/biryeong/semiontd/tower/catalog/
 src/main/java/kim/biryeong/semiontd/tower/villager/
 src/main/java/kim/biryeong/semiontd/tower/undead/
 src/main/java/kim/biryeong/semiontd/tower/animal/
+src/main/java/kim/biryeong/semiontd/tower/warlock/
+src/main/java/kim/biryeong/semiontd/tower/legion/
+src/main/java/kim/biryeong/semiontd/tower/resonance/
+src/main/java/kim/biryeong/semiontd/tower/illager/
   *TowerCatalogs.java              built-in 카탈로그 등록
 ```
 
@@ -235,7 +239,7 @@ WolfVisual.builder()
 현재 GameTest 기준:
 
 - `ProductionTowerCatalog.clearForTesting()` 후에는 수동 authoring fixture를 위해 카탈로그를 비울 수 있다.
-- built-in reload는 주민/언데드/동물 카탈로그와 각 tower job을 등록한다.
+- built-in reload는 주민, 주민 ADV, 언데드, 동물, 흑마법사, 무리, 무블룸, 우민 카탈로그와 각 tower job을 등록한다.
 - `ProductionTower`의 업그레이드 에러 처리는 테스트 fixture로 검증한다.
 - `TestTower`와 `ProductionTower`는 모두 `SemionTowerEntity`를 사용한다.
 - `./gradlew runGameTest --console=plain --no-daemon`로 검증한다.
