@@ -26,44 +26,45 @@ final class SyntheticArenaFactory {
         Map<TeamId, TeamArena> arenas = new EnumMap<>(TeamId.class);
         for (TeamId teamId : TeamId.values()) {
             arenas.put(teamId, new TeamArena(teamId, () -> {
-            }, level, layoutFor(teamId, origin)));
+            }, level, layoutFor(origin)));
         }
         return new GameArena(arenas);
     }
 
-    private static ArenaLayout layoutFor(TeamId teamId, BlockPos origin) {
-        int baseX = origin.getX() + teamId.ordinal() * 12;
+    private static ArenaLayout layoutFor(BlockPos origin) {
+        // Default Fabric GameTests use an 8x8 structure and run in parallel, so every runtime position must stay inside it.
+        int baseX = origin.getX();
         int baseY = origin.getY();
         int baseZ = origin.getZ();
-        Vec3 teamSpawn = new Vec3(baseX + 2.5, baseY + 2.0, baseZ + 1.5);
-        Vec3 bossSpawn = new Vec3(baseX + 2.5, baseY + 2.0, baseZ + 9.5);
+        Vec3 teamSpawn = new Vec3(baseX + 4.0, baseY + 2.0, baseZ + 0.5);
+        Vec3 bossSpawn = new Vec3(baseX + 3.5, baseY + 2.0, baseZ + 6.5);
         Map<Integer, LaneRegionLayout> lanes = new HashMap<>();
 
         for (int laneId = 1; laneId <= SemionTeam.MAX_PLAYERS; laneId++) {
-            int laneOffset = laneId - 3;
-            Vec3 spawn = new Vec3(baseX + 2.5 + laneOffset, baseY + 2.0, baseZ + 3.5);
+            double laneX = baseX + laneId + 0.5;
+            Vec3 spawn = new Vec3(laneX, baseY + 2.0, baseZ + 1.5);
             List<Vec3> waypoints = new ArrayList<>();
-            waypoints.add(new Vec3(baseX + 2.5 + laneOffset, baseY + 2.0, baseZ + 5.5));
-            waypoints.add(new Vec3(baseX + 2.5, baseY + 2.0, baseZ + 7.5));
+            waypoints.add(new Vec3(laneX, baseY + 2.0, baseZ + 3.5));
+            waypoints.add(new Vec3(baseX + 3.5, baseY + 2.0, baseZ + 5.5));
             BlockBounds laneArea = BlockBounds.of(
-                    new BlockPos(baseX + laneOffset, baseY + 1, baseZ + 3),
-                    new BlockPos(baseX + 4 + laneOffset, baseY + 4, baseZ + 8)
+                    new BlockPos(baseX, baseY + 1, baseZ + 1),
+                    new BlockPos(baseX + 7, baseY + 4, baseZ + 5)
             );
             BlockBounds spawnArea = BlockBounds.of(
-                    new BlockPos(baseX + 1 + laneOffset, baseY + 2, baseZ + 3),
-                    new BlockPos(baseX + 3 + laneOffset, baseY + 2, baseZ + 3)
+                    new BlockPos(baseX + laneId - 1, baseY + 2, baseZ + 1),
+                    new BlockPos(baseX + laneId + 1, baseY + 2, baseZ + 1)
             );
-            List<GridPosition> finalDefenseSlots = finalDefenseSlots(baseX, baseY, baseZ, laneId, bossSpawn);
+            List<GridPosition> finalDefenseSlots = finalDefenseSlots(baseX, baseY, baseZ, bossSpawn);
             lanes.put(laneId, new LaneRegionLayout(laneId, spawn, spawnArea, waypoints, bossSpawn, laneArea, finalDefenseSlots));
         }
 
         return new ArenaLayout(teamSpawn, bossSpawn, lanes);
     }
 
-    private static List<GridPosition> finalDefenseSlots(int baseX, int baseY, int baseZ, int laneId, Vec3 bossSpawn) {
-        int minX = baseX - 3;
-        int maxX = baseX + 3;
-        int minZ = baseZ + 9 + ((laneId - 3) * 2);
+    private static List<GridPosition> finalDefenseSlots(int baseX, int baseY, int baseZ, Vec3 bossSpawn) {
+        int minX = baseX;
+        int maxX = baseX + 6;
+        int minZ = baseZ + 1;
         int maxZ = minZ + 6;
         List<GridPosition> slots = new ArrayList<>(49);
         for (int z = minZ; z <= maxZ; z++) {

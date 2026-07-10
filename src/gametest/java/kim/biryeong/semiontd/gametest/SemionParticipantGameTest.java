@@ -23,6 +23,14 @@ import eu.pb4.polymer.resourcepack.api.ResourcePackBuilder;
 import eu.pb4.placeholders.api.PlaceholderContext;
 import eu.pb4.placeholders.api.PlaceholderResult;
 import eu.pb4.placeholders.api.Placeholders;
+import kim.biryeong.semiontd.api.SemionTdApi;
+import kim.biryeong.semiontd.api.area.AreaEffectOutcome;
+import kim.biryeong.semiontd.api.area.AreaEffectResult;
+import kim.biryeong.semiontd.api.area.AreaTowerTarget;
+import kim.biryeong.semiontd.api.area.AreaVfxSpec;
+import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
+import kim.biryeong.semiontd.api.area.TowerAreaEffectRequest;
+import kim.biryeong.semiontd.api.area.TowerAreaTargetMode;
 import kim.biryeong.semiontd.command.SemionCommands;
 import kim.biryeong.semiontd.buildguide.BuildAction;
 import kim.biryeong.semiontd.buildguide.BuildActionType;
@@ -102,6 +110,7 @@ import kim.biryeong.semiontd.job.IllagerTowerJob;
 import kim.biryeong.semiontd.job.JobContext;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.LegionTowerJob;
+import kim.biryeong.semiontd.job.NetherTowerJob;
 import kim.biryeong.semiontd.job.ResonanceTowerJob;
 import kim.biryeong.semiontd.job.SemionJob;
 import kim.biryeong.semiontd.job.UndeadTowerJob;
@@ -167,6 +176,8 @@ import kim.biryeong.semiontd.tower.legion.LegionParrotTower;
 import kim.biryeong.semiontd.tower.legion.LegionSlimeTower;
 import kim.biryeong.semiontd.tower.legion.LegionTowerCatalogs;
 import kim.biryeong.semiontd.tower.legion.LegionTowers;
+import kim.biryeong.semiontd.tower.nether.NetherTower;
+import kim.biryeong.semiontd.tower.nether.NetherTowers;
 import kim.biryeong.semiontd.tower.resonance.ResonanceService;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTower;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
@@ -4965,6 +4976,248 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void criticalPiglinBruteBonusesTankAndHighHealthTargets(GameTestHelper context) {
+        NetherTower tower = new NetherTower(
+                TowerBalanceRuntime.resolve(NetherTowers.T3_PIGLIN_BRUTE),
+                stableUuid("piglin-brute-bonus-owner"),
+                TeamId.RED,
+                1,
+                new GridPosition(0, 64, 0)
+        );
+        tower.syncHealth(tower.currentMaxHealth() * 0.30);
+
+        SemionMonsterEntity normal = spawnRoleMonsterEntity(
+                context, "piglin-brute-normal", Optional.empty(), TeamId.RED, 1,
+                Vec3.ZERO, 100.0, List.of(SummonRole.RUSH)
+        );
+        SemionMonsterEntity tank = spawnRoleMonsterEntity(
+                context, "piglin-brute-tank", Optional.empty(), TeamId.RED, 1,
+                Vec3.ZERO.add(1.0, 0.0, 0.0), 100.0, List.of(SummonRole.TANK)
+        );
+        SemionMonsterEntity highHealth = spawnRoleMonsterEntity(
+                context, "piglin-brute-high-health", Optional.empty(), TeamId.RED, 1,
+                Vec3.ZERO.add(2.0, 0.0, 0.0), 200.0, List.of(SummonRole.RUSH)
+        );
+        SemionMonsterEntity income = spawnRoleMonsterEntity(
+                context, "piglin-brute-income", Optional.of(TeamId.BLUE), TeamId.RED, 1,
+                Vec3.ZERO.add(3.0, 0.0, 0.0), 100.0, List.of(SummonRole.RUSH)
+        );
+
+        if (!assertClose(context, 100.0, tower.modifyAttackDamage(null, normal, 100.0), "Piglin brute should not bonus ordinary targets.")) {
+            return;
+        }
+        if (!assertClose(context, 175.0, tower.modifyAttackDamage(null, tank, 100.0), "Critical piglin brute should deal 75% bonus damage to tank targets.")) {
+            return;
+        }
+        if (!assertClose(context, 175.0, tower.modifyAttackDamage(null, highHealth, 100.0), "Critical piglin brute should deal 75% bonus damage to high-health targets.")) {
+            return;
+        }
+        if (!assertClose(context, 150.0, tower.modifyAttackDamage(null, income, 100.0), "Piglin brute should retain the piglin income damage bonus.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void criticalGhastAppliesTwentyPercentDamageTakenMark(GameTestHelper context) {
+        NetherTower tower = new NetherTower(
+                TowerBalanceRuntime.resolve(NetherTowers.T3_GHAST),
+                stableUuid("ghast-mark-owner"),
+                TeamId.RED,
+                1,
+                new GridPosition(0, 64, 0)
+        );
+        tower.syncHealth(tower.currentMaxHealth() * 0.30);
+        SemionMonsterEntity target = spawnRoleMonsterEntity(
+                context, "ghast-mark-target", Optional.empty(), TeamId.RED, 1,
+                Vec3.ZERO, 100.0, List.of(SummonRole.RUSH)
+        );
+
+        tower.onAttack(null, target, 10.0, false);
+
+        if (!assertClose(
+                context,
+                0.20,
+                target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS),
+                "Critical ghast should apply a 20% tower-damage-taken mark."
+        )) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void criticalMagmaCubePulseScalesWithBaseAttackDamage(GameTestHelper context) {
+        UUID playerId = stableUuid("magma-pulse-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, NetherTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        NetherTower tower = new NetherTower(
+                TowerBalanceRuntime.resolve(NetherTowers.T1_MAGMA_CUBE),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(towerPlacementPos(lane))
+        );
+        lane.addTower(tower);
+        tower.syncHealth(tower.currentMaxHealth() * 0.30);
+        SemionTowerEntity towerEntity = lane.arenaWorld().getEntity(tower.entityId().orElseThrow()) instanceof SemionTowerEntity entity
+                ? entity
+                : null;
+        if (!assertPresent(context, Optional.ofNullable(towerEntity), "Placed magma cube tower entity should exist.")) {
+            return;
+        }
+        SemionMonsterEntity target = spawnRoleMonsterEntity(
+                context,
+                "magma-pulse-target",
+                Optional.empty(),
+                TeamId.RED,
+                1,
+                towerEntity.position().add(4.0, 0.0, 0.0),
+                100.0,
+                List.of(SummonRole.RUSH)
+        );
+        SemionMonsterEntity nearby = spawnRoleMonsterEntity(
+                context,
+                "magma-pulse-nearby",
+                Optional.empty(),
+                TeamId.RED,
+                1,
+                target.position().add(1.5, 0.0, 0.0),
+                100.0,
+                List.of(SummonRole.RUSH)
+        );
+
+        tower.onAttack(towerEntity, target, tower.type().damage(), false);
+
+        if (!assertClose(context, 89.5, target.getHealth(), "Magma cube pulse should deal 150% of its configured 7 base damage.")) {
+            return;
+        }
+        if (!assertClose(context, 89.5, nearby.getHealth(), "Magma cube pulse should be centered on the attack target.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void ghastAttackSpeedScalesWithMissingHealth(GameTestHelper context) {
+        UUID playerId = stableUuid("ghast-missing-health-speed-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, NetherTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        NetherTower tower = new NetherTower(
+                TowerBalanceRuntime.resolve(NetherTowers.T3_GHAST),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(towerPlacementPos(lane))
+        );
+        lane.addTower(tower);
+        tower.syncHealth(tower.currentMaxHealth() * 0.50);
+        SemionTowerEntity towerEntity = lane.arenaWorld().getEntity(tower.entityId().orElseThrow()) instanceof SemionTowerEntity entity
+                ? entity
+                : null;
+        if (!assertPresent(context, Optional.ofNullable(towerEntity), "Placed ghast tower entity should exist.")) {
+            return;
+        }
+
+        tower.tick(lane);
+
+        if (!assertClose(
+                context,
+                0.375,
+                towerEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_ATTACK_SPEED_BONUS),
+                "Ghast at half health should receive half of its 75% attack-speed cap."
+        )) {
+            return;
+        }
+        if (!assertEquals(context, 18, towerEntity.attackIntervalTicks(), "Ghast attack interval should reflect the missing-health speed bonus.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void witherPrioritizesBossTargetsThenLowestHealthTargets(GameTestHelper context) {
+        NetherTower tower = new NetherTower(
+                TowerBalanceRuntime.resolve(NetherTowers.T3_WITHER),
+                stableUuid("wither-priority-owner"),
+                TeamId.RED,
+                1,
+                new GridPosition(0, 64, 0)
+        );
+        SemionMonsterEntity boss = spawnRoleMonsterEntity(
+                context, "wither-priority-boss", Optional.empty(), TeamId.RED, 1,
+                Vec3.ZERO, 600.0, List.of(SummonRole.TANK)
+        );
+        SemionMonsterEntity lowHealth = spawnRoleMonsterEntity(
+                context, "wither-priority-low", Optional.empty(), TeamId.RED, 1,
+                Vec3.ZERO.add(1.0, 0.0, 0.0), 100.0, List.of(SummonRole.RUSH)
+        );
+        lowHealth.setHealth(10.0F);
+        SemionMonsterEntity ordinary = spawnRoleMonsterEntity(
+                context, "wither-priority-ordinary", Optional.empty(), TeamId.RED, 1,
+                Vec3.ZERO.add(2.0, 0.0, 0.0), 200.0, List.of(SummonRole.RUSH)
+        );
+
+        SemionMonsterEntity selectedBoss = tower.selectAttackTarget(null, List.of(lowHealth, boss)).orElse(null);
+        if (!assertEquals(context, boss, selectedBoss, "Wither should prioritize monsters above its high-health threshold.")) {
+            return;
+        }
+        SemionMonsterEntity selectedLowHealth = tower.selectAttackTarget(null, List.of(ordinary, lowHealth)).orElse(null);
+        if (!assertEquals(context, lowHealth, selectedLowHealth, "Wither should fall back to the lowest-health target when no boss target exists.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void destroyedNetherTowerRespawnsWithConfiguredProxy(GameTestHelper context) {
+        UUID playerId = stableUuid("nether-proxy-respawn-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, NetherTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        NetherTower tower = new NetherTower(
+                TowerBalanceRuntime.resolve(NetherTowers.T1_STRIDER),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(towerPlacementPos(lane))
+        );
+        lane.addTower(tower);
+
+        int originalEntityId = tower.entityId().orElseThrow();
+        if (!(lane.arenaWorld().getEntity(originalEntityId) instanceof SemionTowerEntity originalEntity)) {
+            context.fail(Component.literal("Placed nether tower entity should exist."));
+            return;
+        }
+        if (!assertEquals(context, EntityType.STRIDER, originalEntity.getPolymerEntityType(null), "Initial nether tower proxy should be a strider.")) {
+            return;
+        }
+
+        originalEntity.discard();
+        game.teams().get(TeamId.RED).resetForRound();
+
+        int respawnedEntityId = tower.entityId().orElseThrow();
+        if (!assertTrue(context, respawnedEntityId != originalEntityId, "Destroyed nether tower should use a fresh entity id after reset.")) {
+            return;
+        }
+        if (!(lane.arenaWorld().getEntity(respawnedEntityId) instanceof SemionTowerEntity respawnedEntity)) {
+            context.fail(Component.literal("Respawned nether tower entity should exist."));
+            return;
+        }
+        if (!assertEquals(context, EntityType.STRIDER, respawnedEntity.getPolymerEntityType(null), "Respawned nether tower proxy should remain a strider.")) {
+            return;
+        }
+        long visibleTowerEntities = lane.arenaWorld().getEntitiesOfClass(
+                SemionTowerEntity.class,
+                respawnedEntity.getBoundingBox().inflate(64.0),
+                entity -> !entity.isRemoved() && entity.runtimeTower() == tower
+        ).size();
+        if (!assertEquals(context, 1L, visibleTowerEntities, "Round reset should leave one live tower entity.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void towerProducedDefendersResetOnNextRound(GameTestHelper context) {
         UUID playerId = stableUuid("defender-reset-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
@@ -6939,6 +7192,127 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void areaEffectApiFiltersOtherLanesAndReportsAppliedTargets(GameTestHelper context) {
+        UUID playerId = stableUuid("area-effect-api-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPosition = towerPlacementPos(lane);
+        TestTower tower = new TestTower(playerId, TeamId.RED, 1, GridPosition.from(towerPosition));
+        lane.addTower(tower);
+        SemionTowerEntity towerEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(tower.entityId().orElseThrow());
+        Vec3 center = towerEntity.position().add(1.5, 0.0, 0.0);
+        SemionMonsterEntity sameLane = spawnRoleMonsterEntity(
+                context,
+                "area-api-same-lane",
+                Optional.empty(),
+                TeamId.RED,
+                1,
+                center,
+                100.0,
+                List.of(SummonRole.RUSH)
+        );
+        SemionMonsterEntity otherLane = spawnRoleMonsterEntity(
+                context,
+                "area-api-other-lane",
+                Optional.empty(),
+                TeamId.RED,
+                2,
+                center.add(0.5, 0.0, 0.0),
+                100.0,
+                List.of(SummonRole.RUSH)
+        );
+        MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
+                ResourceLocation.fromNamespaceAndPath("semion-td", "gametest/area_api_lane_filter"),
+                towerEntity,
+                center,
+                3.0,
+                Set.of(),
+                null,
+                AreaVfxSpec.none()
+        );
+
+        AreaEffectResult<SemionMonsterEntity> result = SemionTdApi.areaEffects().applyToMonsters(request, target -> {
+            target.setHealth(target.getHealth() - 10.0F);
+            return AreaEffectOutcome.APPLIED;
+        });
+
+        if (!assertEquals(context, 1, result.candidateCount(), "Area API should only query the defended lane.")) {
+            return;
+        }
+        if (!assertEquals(context, 1, result.appliedCount(), "Area API should report the changed target.")) {
+            return;
+        }
+        if (!assertEquals(context, 0, result.killedCount(), "Non-lethal area effects should not report kills.")) {
+            return;
+        }
+        if (!assertClose(context, 90.0, sameLane.getHealth(), "Area API should apply the action to the defended lane.")) {
+            return;
+        }
+        if (!assertClose(context, 100.0, otherLane.getHealth(), "Area API should ignore monsters assigned to another lane.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void areaEffectApiRegisteredAndClonesModeOnlyAddsIllusions(GameTestHelper context) {
+        UUID playerId = stableUuid("area-effect-api-clone-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos sourcePosition = towerPlacementPos(lane);
+        BlockPos targetPosition = nearbyTowerPlacementPos(lane, sourcePosition);
+        TestTower source = new TestTower(playerId, TeamId.RED, 1, GridPosition.from(sourcePosition));
+        TestTower registeredTarget = new TestTower(playerId, TeamId.RED, 1, GridPosition.from(targetPosition));
+        lane.addTower(source);
+        lane.addTower(registeredTarget);
+        SemionTowerEntity sourceEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(source.entityId().orElseThrow());
+
+        Vec3 illusionPosition = sourceEntity.position().add(1.0, 0.0, 0.0);
+        IllusionRuntimeTower illusion = new IllusionRuntimeTower(
+                TestTowerTypes.TEST_DIRECT,
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(BlockPos.containing(illusionPosition))
+        );
+        SemionTowerEntity illusionEntity = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+        illusionEntity.configure(illusion, lane.laneLayout());
+        illusionEntity.setPos(illusionPosition);
+        context.getLevel().addFreshEntity(illusionEntity);
+
+        Vec3 strayPosition = sourceEntity.position().add(1.5, 0.0, 0.0);
+        TestTower unregisteredTower = new TestTower(playerId, TeamId.RED, 1, GridPosition.from(BlockPos.containing(strayPosition)));
+        SemionTowerEntity unregisteredEntity = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+        unregisteredEntity.configure(unregisteredTower, lane.laneLayout());
+        unregisteredEntity.setPos(strayPosition);
+        context.getLevel().addFreshEntity(unregisteredEntity);
+
+        TowerAreaEffectRequest request = new TowerAreaEffectRequest(
+                ResourceLocation.fromNamespaceAndPath("semion-td", "gametest/area_api_clone_filter"),
+                sourceEntity,
+                sourceEntity.position(),
+                6.0,
+                TowerAreaTargetMode.REGISTERED_AND_CLONES,
+                false,
+                null,
+                AreaVfxSpec.none()
+        );
+        AreaEffectResult<AreaTowerTarget> result = SemionTdApi.areaEffects()
+                .applyToTowers(request, ignored -> AreaEffectOutcome.APPLIED);
+
+        if (!assertEquals(context, 2, result.candidateCount(), "Registered-and-clones mode should include one registered target and one illusion.")) {
+            return;
+        }
+        if (!assertEquals(context, 1L, result.hits().stream().filter(hit -> hit.target().illusion()).count(), "Only IllusionRuntimeTower should be marked as an illusion.")) {
+            return;
+        }
+        if (!assertTrue(context, result.hits().stream().noneMatch(hit -> hit.target().tower() == unregisteredTower), "An unrelated unregistered tower entity should not be treated as an illusion.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void deathStackTowersGainStacksFromNearbyWaveIncomeAndTowerDeaths(GameTestHelper context) {
         UUID playerId = stableUuid("death-stack-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
@@ -7282,7 +7656,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertPresent(context, JobRegistry.find(IllagerTowerJob.ID), "Built-in reload should register the illager tower job.")) {
             return;
         }
-        if (!assertEquals(context, 31L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose villager, villager ADV, undead, animal, warlock, legion, resonance, and illager starter families.")) {
+        if (!assertPresent(context, JobRegistry.find(NetherTowerJob.ID), "Built-in reload should register the nether tower job.")) {
+            return;
+        }
+        if (!assertEquals(context, 35L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose villager, villager ADV, undead, animal, warlock, legion, resonance, illager, and nether starter families.")) {
             return;
         }
         context.succeed();
