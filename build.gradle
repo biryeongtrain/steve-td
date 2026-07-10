@@ -105,6 +105,7 @@ dependencies {
     modImplementation "dev.isxander:yet-another-config-lib:${project.yacl_version}"
     modImplementation "maven.modrinth:friends-and-foes:${project.friends_and_foes_version}"
     modImplementation "maven.modrinth:friends-and-foes-flowery-mooblooms-fabric:${project.flowery_mooblooms_version}"
+    modImplementation "maven.modrinth:apel:${project.apel_maven_version}"
     modLocalRuntime files(fileTree("run/mods") {
         include "friends-and-foes-patch-*.jar"
         include "flowery-mooblooms-polymer-patch-*.jar"

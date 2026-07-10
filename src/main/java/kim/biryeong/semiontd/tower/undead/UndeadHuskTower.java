@@ -1,12 +1,17 @@
 package kim.biryeong.semiontd.tower.undead;
 
 import java.util.UUID;
+import kim.biryeong.semiontd.api.area.AreaVfxSpec;
+import kim.biryeong.semiontd.api.area.AreaVfxStyles;
+import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.area.AreaEffectIds;
+import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
 import net.minecraft.world.damagesource.DamageSource;
 
 public class UndeadHuskTower extends UndeadTowerSupport {
@@ -64,14 +69,11 @@ public class UndeadHuskTower extends UndeadTowerSupport {
         if (thornCooldownTicks > 0 || towerEntity == null) {
             return;
         }
-        int hitCount = 0;
-        for (SemionMonsterEntity monster : monstersAround(towerEntity, thornRadius(), null)) {
-            double thornDamage = towerEntity.attackDamageAmount(monster);
-            if (damageTarget(towerEntity, monster, thornDamage)) {
-                onKill(towerEntity, monster, thornDamage);
-            }
-            hitCount++;
-        }
+        MonsterAreaEffectRequest request = MonsterAreaEffectRequest.aroundTower(
+                AreaEffectIds.tower(this, "thorns"), towerEntity, thornRadius(),
+                AreaVfxSpec.onTrigger(AreaVfxStyles.PULSE)
+        );
+        int hitCount = TowerAreaDamage.apply(this, towerEntity, request, towerEntity::attackDamageAmount, true).appliedCount();
         if (hitCount > 0) {
             towerEntity.receiveHealing(value("thornHealPerHit") * hitCount);
             thornCooldownTicks = thornCooldownTicks();

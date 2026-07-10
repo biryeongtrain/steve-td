@@ -28,6 +28,7 @@ import kim.biryeong.semiontd.tower.ProductionTowerService;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerPlacementPositions;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
+import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.trait.SemionTrait;
 import kim.biryeong.semiontd.trait.TraitLoadout;
 import kim.biryeong.semiontd.trait.TraitRegistry;
@@ -378,6 +379,11 @@ public final class SemionCommands {
                 .then(literal("tower")
                         .then(literal("ui")
                                 .executes(context -> debugTowerDialog(context.getSource(), gameManager))))
+                .then(literal("vfx")
+                        .then(literal("stats")
+                                .executes(context -> debugVfxStats(context.getSource())))
+                        .then(literal("reset")
+                                .executes(context -> resetVfxStats(context.getSource()))))
                 .then(literal("summonui")
                         .executes(context -> debugSummonDialog(context.getSource(), gameManager, 1))
                         .then(argument("page", IntegerArgumentType.integer(1))
@@ -438,6 +444,17 @@ public final class SemionCommands {
                                 .executes(context -> debugBuildGuideVisual(context.getSource(), gameManager, DebugBuildGuideView.DETAIL)))
                         .then(literal("towerui")
                                 .executes(context -> debugBuildGuideVisual(context.getSource(), gameManager, DebugBuildGuideView.TOWER_UI)))));
+    }
+
+    private static int debugVfxStats(CommandSourceStack source) {
+        success(source, TowerVfxService.statsSummary());
+        return 1;
+    }
+
+    private static int resetVfxStats(CommandSourceStack source) {
+        TowerVfxService.resetStats();
+        success(source, "VFX 통계를 초기화했습니다.");
+        return 1;
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> traitCommand(

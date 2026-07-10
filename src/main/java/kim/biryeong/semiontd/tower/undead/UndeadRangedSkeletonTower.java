@@ -7,6 +7,7 @@ import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
+import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
@@ -51,6 +52,7 @@ public class UndeadRangedSkeletonTower extends EntityBackedTower {
         heal(towerEntity, damageAmount);
         for (SemionMonsterEntity extraTarget : pickExtraTargets(towerEntity, target, extraTargetCount())) {
             boolean killed = damageTarget(towerEntity, extraTarget, damageAmount);
+            TowerVfxService.showSecondaryAttack(towerEntity, extraTarget);
             heal(towerEntity, damageAmount);
             if (killed) {
                 onKill(towerEntity, extraTarget, damageAmount);

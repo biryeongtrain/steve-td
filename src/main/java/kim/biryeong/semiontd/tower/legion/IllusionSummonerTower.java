@@ -134,6 +134,7 @@ public abstract class IllusionSummonerTower extends SummonerTower {
 
         SemionTowerEntity entity = new SemionTowerEntity(SemionEntityTypes.TOWER, lane.arenaWorld());
         entity.configure(cloneTower, lane.laneLayout());
+        entity.markIllusionClone();
         sourceTowerEntity(lane, sourceTower).ifPresent(entity::useAttackTargetFrom);
         entity.setPos(spawnPosition.x, spawnPosition.y, spawnPosition.z);
 

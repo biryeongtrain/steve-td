@@ -1,19 +1,28 @@
 package kim.biryeong.semiontd.tower.resonance;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import kim.biryeong.semiontd.api.SemionTdApi;
+import kim.biryeong.semiontd.api.area.AreaEffectOutcome;
+import kim.biryeong.semiontd.api.area.AreaVfxSpec;
+import kim.biryeong.semiontd.api.area.AreaVfxStyles;
+import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
+import kim.biryeong.semiontd.api.area.TowerAreaEffectRequest;
+import kim.biryeong.semiontd.api.area.TowerAreaTargetMode;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
+import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.phys.AABB;
 
 public final class ResonanceTower extends EntityBackedTower {
     private int resonanceLevel;
@@ -175,8 +184,12 @@ public final class ResonanceTower extends EntityBackedTower {
             return;
         }
         double strikeDamage = damageAmount * ability("focusStrikeDamageRatio");
-        if (strikeDamage > 0.0 && damageTarget(towerEntity, target, strikeDamage)) {
-            onKill(towerEntity, target, strikeDamage);
+        if (strikeDamage > 0.0) {
+            boolean killed = damageTarget(towerEntity, target, strikeDamage);
+            TowerVfxService.showSecondaryAttack(towerEntity, target);
+            if (killed) {
+                onKill(towerEntity, target, strikeDamage);
+            }
         }
     }
 
@@ -221,31 +234,38 @@ public final class ResonanceTower extends EntityBackedTower {
             return;
         }
         double radius = ability("bloomProtectRadius");
-        double radiusSqr = radius * radius;
         double healAmount = type().damage() * ability("bloomProtectHealRatio");
         double reduction = ability("bloomProtectDamageReduction");
         int ticks = abilityTicks("bloomProtectTicks");
-        protectTower(towerEntity, healAmount, reduction, ticks);
-        AABB box = towerEntity.getBoundingBox().inflate(radius);
-        towerEntity.level().getEntitiesOfClass(SemionTowerEntity.class, box, candidate ->
-                        candidate.isAlive()
-                                && candidate.getId() != towerEntity.getId()
-                                && candidate.runtimeTower() instanceof ResonanceTower
-                                && candidate.ownerPlayer().equals(towerEntity.ownerPlayer())
-                                && candidate.teamId() == towerEntity.teamId()
-                                && candidate.laneId() == towerEntity.laneId()
-                                && candidate.distanceToSqr(towerEntity) <= radiusSqr
-                )
-                .forEach(candidate -> protectTower(candidate, healAmount, reduction, ticks));
+        TowerAreaEffectRequest request = new TowerAreaEffectRequest(
+                AreaEffectIds.tower(this, "bloom_protect"),
+                towerEntity,
+                towerEntity.position(),
+                radius,
+                TowerAreaTargetMode.ENTITIES,
+                true,
+                candidate -> candidate.tower() instanceof ResonanceTower,
+                AreaVfxSpec.onChange(AreaVfxStyles.BUFF)
+        );
+        SemionTdApi.areaEffects().applyToTowers(request, candidate ->
+                protectTower(candidate.entity().orElseThrow(), healAmount, reduction, ticks)
+                        ? AreaEffectOutcome.APPLIED
+                        : AreaEffectOutcome.UNCHANGED);
     }
 
-    private void protectTower(SemionTowerEntity towerEntity, double healAmount, double reduction, int ticks) {
+    private boolean protectTower(SemionTowerEntity towerEntity, double healAmount, double reduction, int ticks) {
+        boolean changed = false;
         if (healAmount > 0.0 && towerEntity.receiveHealing(healAmount)) {
             towerEntity.playHealingAnimation();
+            changed = true;
         }
         if (reduction > 0.0 && ticks > 0) {
+            double previous = towerEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_REDUCTION);
             towerEntity.applyTimedEffect(TimedEffectType.TOWER_DAMAGE_REDUCTION, reduction, ticks);
+            changed |= Double.compare(previous,
+                    towerEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_REDUCTION)) != 0;
         }
+        return changed;
     }
 
     private void applyFrostDebuff(SemionMonsterEntity target) {
@@ -295,30 +315,44 @@ public final class ResonanceTower extends EntityBackedTower {
         if (radius <= 0.0 || damageAmount <= 0.0 && (debuffTicks <= 0 || moveSpeedReduction <= 0.0 && attackSpeedReduction <= 0.0)) {
             return;
         }
-        double radiusSqr = radius * radius;
-        AABB pulseBox = target.getBoundingBox().inflate(radius);
-        towerEntity.level().getEntities(towerEntity, pulseBox, entity ->
-                        entity instanceof SemionMonsterEntity pulseTarget
-                                && pulseTarget.isAlive()
-                                && pulseTarget.runtimeMonster() != null
-                                && (includePrimaryTarget || pulseTarget != target)
-                                && towerEntity.defendsLane(pulseTarget.runtimeMonster().targetLaneId())
-                                && pulseTarget.distanceToSqr(target) <= radiusSqr
-                )
-                .stream()
-                .filter(SemionMonsterEntity.class::isInstance)
-                .map(SemionMonsterEntity.class::cast)
-                .forEach(monster -> {
-                    if (damageAmount > 0.0 && damageTarget(towerEntity, monster, damageAmount)) {
-                        onKill(towerEntity, monster, damageAmount);
-                    }
-                    if (debuffTicks > 0 && moveSpeedReduction > 0.0) {
-                        monster.applyTimedEffect(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION, moveSpeedReduction, debuffTicks);
-                    }
-                    if (debuffTicks > 0 && attackSpeedReduction > 0.0) {
-                        monster.applyTimedEffect(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION, attackSpeedReduction, debuffTicks);
-                    }
-                });
+        AreaVfxSpec vfx = damageAmount > 0.0
+                ? AreaVfxSpec.onTrigger(includePrimaryTarget ? AreaVfxStyles.PULSE : AreaVfxStyles.SPLASH)
+                : AreaVfxSpec.onChange(AreaVfxStyles.DEBUFF);
+        MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
+                AreaEffectIds.tower(this, damageAmount > 0.0 ? "area_damage" : "area_debuff"),
+                towerEntity,
+                target.position(),
+                radius,
+                includePrimaryTarget ? Set.of() : Set.of(target.getUUID()),
+                null,
+                vfx
+        );
+        SemionTdApi.areaEffects().applyToMonsters(request, monster -> {
+            boolean killed = false;
+            boolean changed = damageAmount > 0.0;
+            if (damageAmount > 0.0) {
+                killed = damageTarget(towerEntity, monster, damageAmount);
+                if (killed) {
+                    onKill(towerEntity, monster, damageAmount);
+                }
+            }
+            if (debuffTicks > 0 && moveSpeedReduction > 0.0) {
+                double previous = monster.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION);
+                monster.applyTimedEffect(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION, moveSpeedReduction, debuffTicks);
+                changed |= Double.compare(previous,
+                        monster.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION)) != 0;
+            }
+            if (debuffTicks > 0 && attackSpeedReduction > 0.0) {
+                double previous = monster.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION);
+                monster.applyTimedEffect(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION, attackSpeedReduction, debuffTicks);
+                changed |= Double.compare(previous,
+                        monster.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION)) != 0;
+            }
+            if (killed) {
+                return AreaEffectOutcome.KILLED;
+            }
+            return changed ? AreaEffectOutcome.APPLIED : AreaEffectOutcome.UNCHANGED;
+        });
     }
 
     private double ability(String key) {

@@ -4,6 +4,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import kim.biryeong.semiontd.api.area.AreaVfxSpec;
+import kim.biryeong.semiontd.api.area.AreaVfxStyles;
+import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.effect.TimedEffectType;
@@ -15,11 +18,12 @@ import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.area.AreaEffectIds;
+import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.raid.Raid;
-import net.minecraft.world.phys.AABB;
 
 public class IllagerTower extends EntityBackedTower {
     private static final ResourceLocation RAID_DAMAGE_SOURCE = raidSource("damage");
@@ -157,24 +161,11 @@ public class IllagerTower extends EntityBackedTower {
         }
 
         double finalSplashRatio = splashRatio;
-        AABB splashBox = target.getBoundingBox().inflate(splashRadius);
-        double splashRadiusSqr = splashRadius * splashRadius;
-        towerEntity.level().getEntities(towerEntity, splashBox,
-                        entity -> entity instanceof SemionMonsterEntity splashTarget
-                                && splashTarget.isAlive()
-                                && splashTarget != target
-                                && splashTarget.runtimeMonster() != null
-                                && towerEntity.defendsLane(splashTarget.runtimeMonster().targetLaneId())
-                                && splashTarget.distanceToSqr(target) <= splashRadiusSqr)
-                .stream()
-                .filter(SemionMonsterEntity.class::isInstance)
-                .map(SemionMonsterEntity.class::cast)
-                .forEach(entity -> {
-                    double splashDamage = damageAmount * finalSplashRatio;
-                    if (damageTarget(towerEntity, entity, splashDamage)) {
-                        onKill(towerEntity, entity, splashDamage);
-                    }
-                });
+        MonsterAreaEffectRequest request = MonsterAreaEffectRequest.aroundTarget(
+                AreaEffectIds.tower(this, "splash"), towerEntity, target, splashRadius,
+                AreaVfxSpec.onTrigger(AreaVfxStyles.SPLASH)
+        );
+        TowerAreaDamage.apply(this, towerEntity, request, entity -> damageAmount * finalSplashRatio, true);
     }
 
     protected double ability(String key) {

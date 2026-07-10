@@ -1,10 +1,15 @@
 package kim.biryeong.semiontd.tower;
 
+import kim.biryeong.semiontd.api.SemionTdApi;
+import kim.biryeong.semiontd.api.area.AreaEffectOutcome;
+import kim.biryeong.semiontd.api.area.AreaVfxSpec;
+import kim.biryeong.semiontd.api.area.AreaVfxStyles;
+import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.TeamId;
-import net.minecraft.world.phys.AABB;
+import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 
 import java.util.UUID;
 
@@ -20,24 +25,25 @@ public abstract class SplashTower extends EntityBackedTower {
 
     @Override
     public void onAttack(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount, boolean killedTarget) {
-        AABB splashBox = target.getBoundingBox().inflate(getSplashRange());
-        double splashRadiusSqr = getSplashRange() * getSplashRange();
-        towerEntity.level().getEntities(towerEntity, splashBox,
-                entity -> entity instanceof SemionMonsterEntity splashTarget && splashTarget.isAlive() &&
-                        splashTarget != target && splashTarget.runtimeMonster() != null &&
-                        towerEntity.defendsLane(splashTarget.runtimeMonster().targetLaneId()) &&
-                        splashTarget.distanceToSqr(target) <= splashRadiusSqr)
-                .stream()
-                .filter(SemionMonsterEntity.class::isInstance)
-                .map(SemionMonsterEntity.class::cast)
-                .forEach(entity -> damage(towerEntity, entity, damageAmount));
+        float splashRange = getSplashRange();
+        if (splashRange <= 0.0F) {
+            return;
+        }
+        MonsterAreaEffectRequest request = MonsterAreaEffectRequest.aroundTarget(
+                AreaEffectIds.tower(this, "splash"), towerEntity, target, splashRange,
+                AreaVfxSpec.onTrigger(AreaVfxStyles.SPLASH)
+        );
+        SemionTdApi.areaEffects().applyToMonsters(request, entity ->
+                damage(towerEntity, entity, damageAmount) ? AreaEffectOutcome.KILLED : AreaEffectOutcome.APPLIED);
     }
 
-    protected void damage(SemionTowerEntity tower, SemionMonsterEntity monster, double damage) {
+    protected boolean damage(SemionTowerEntity tower, SemionMonsterEntity monster, double damage) {
         double splashDamage = damage * getSplashRatio();
-        if (damageTarget(tower, monster, splashDamage)) {
+        boolean killed = damageTarget(tower, monster, splashDamage);
+        if (killed) {
             onKill(tower, monster, splashDamage);
         }
+        return killed;
     }
 
     public abstract float getSplashRange();

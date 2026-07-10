@@ -1,5 +1,8 @@
 package kim.biryeong.semiontd.tower.villager;
 
+import kim.biryeong.semiontd.api.area.AreaVfxSpec;
+import kim.biryeong.semiontd.api.area.AreaVfxStyles;
+import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
@@ -9,6 +12,8 @@ import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.area.AreaEffectIds;
+import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
 import net.minecraft.world.damagesource.DamageSource;
 
 import java.util.UUID;
@@ -30,20 +35,12 @@ public class VillagerThornTower extends EntityBackedTower {
             return;
         }
         float range = (float) value("thornRadius");
-        float splashRadiusSqr = range * range;
         double damage = value("thornDamage");
-
-        var box = towerEntity.getBoundingBox().inflate(range);
-        towerEntity.level().getEntities(towerEntity, box, entity ->
-            entity instanceof SemionMonsterEntity monster &&
-                    monster.isAlive() && monster.runtimeMonster() != null &&
-                    towerEntity.defendsLane(monster.runtimeMonster().targetLaneId()) &&
-                    monster.distanceToSqr(towerEntity) <= splashRadiusSqr
-        )
-                .stream()
-                .filter(SemionMonsterEntity.class::isInstance)
-                .map(SemionMonsterEntity.class::cast)
-                .forEach(entity -> damageTarget(towerEntity, entity, damage));
+        MonsterAreaEffectRequest request = MonsterAreaEffectRequest.aroundTower(
+                AreaEffectIds.tower(this, "thorns"), towerEntity, range,
+                AreaVfxSpec.onTrigger(AreaVfxStyles.PULSE)
+        );
+        TowerAreaDamage.apply(this, towerEntity, request, monster -> damage, false);
 
         this.thornCooldownTicks = ticks("thornCooldownTicks");
     }

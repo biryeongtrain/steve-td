@@ -1,5 +1,6 @@
 package kim.biryeong.semiontd;
 
+import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.game.SemionGameManager;
 import kim.biryeong.semiontd.game.SemionPlayerProtectionService;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
@@ -18,10 +19,14 @@ public final class Events {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             gameManager.tick(server);
             gameManager.tickStartupLobbyLoad(server);
+            TowerVfxService.endServerTick(server);
         });
 
         ServerLifecycleEvents.SERVER_STARTED.register(gameManager::scheduleStartupLobbyLoad);
-        ServerLifecycleEvents.SERVER_STOPPING.register(server -> gameManager.shutdown());
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            TowerVfxService.shutdown();
+            gameManager.shutdown();
+        });
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             gameManager.handlePlayerJoin(handler.getPlayer());
         });

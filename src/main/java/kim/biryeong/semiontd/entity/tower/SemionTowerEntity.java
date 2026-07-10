@@ -28,6 +28,7 @@ import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerDataKey;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -94,6 +95,8 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     private boolean moobloomVisualSyncDirty = true;
     private SemionTowerEntity attackTargetSource;
     private SemionMonsterEntity currentAttackTarget;
+    private boolean forceAttackReady;
+    private boolean illusionClone;
 
     public SemionTowerEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
@@ -174,6 +177,24 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     public void recordCurrentAttackTarget(SemionMonsterEntity target) {
         currentAttackTarget = isValidAttackTarget(target) ? target : null;
+    }
+
+    public void forceAttackReady() {
+        forceAttackReady = true;
+    }
+
+    public boolean consumeForceAttackReady() {
+        boolean forced = forceAttackReady;
+        forceAttackReady = false;
+        return forced;
+    }
+
+    public void markIllusionClone() {
+        illusionClone = true;
+    }
+
+    public boolean isIllusionClone() {
+        return illusionClone;
     }
 
     public SemionMonsterEntity selectAttackTarget(List<SemionMonsterEntity> candidates) {
@@ -576,6 +597,13 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     @Override
     public void remove(RemovalReason reason) {
         discardMoobloomVisualEntity();
+        if (!isRemoved() && level() instanceof ServerLevel serverLevel) {
+            // Lane ticks may discard this entity before vanilla tracking sends Polymer proxy removal.
+            ClientboundRemoveEntitiesPacket packet = new ClientboundRemoveEntitiesPacket(getId());
+            for (ServerPlayer player : serverLevel.players()) {
+                player.connection.send(packet);
+            }
+        }
         super.remove(reason);
     }
 

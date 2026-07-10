@@ -11,7 +11,7 @@
       "kim.biryeong.semiontd.gametest.SemionEmeraldIncomeBoostGameTest",
       "kim.biryeong.semiontd.gametest.SemionSandboxGameTest",
       "kim.biryeong.semiontd.gametest.SemionTraitSelectionGameTest",
-      "kim.biryeong.semiontd.entity.tower.TowerAttackVfxGameTest",
+      "kim.biryeong.semiontd.entity.tower.vfx.TowerVfxGameTest",
       "kim.biryeong.semiontd.game.RatingProfileCacheGameTest"
     ]
   }

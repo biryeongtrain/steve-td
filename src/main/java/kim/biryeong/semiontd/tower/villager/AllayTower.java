@@ -3,6 +3,13 @@ package kim.biryeong.semiontd.tower.villager;
 import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.SemionTd;
+import kim.biryeong.semiontd.api.SemionTdApi;
+import kim.biryeong.semiontd.api.area.AreaEffectOutcome;
+import kim.biryeong.semiontd.api.area.AreaTowerTarget;
+import kim.biryeong.semiontd.api.area.AreaVfxSpec;
+import kim.biryeong.semiontd.api.area.AreaVfxStyles;
+import kim.biryeong.semiontd.api.area.TowerAreaEffectRequest;
+import kim.biryeong.semiontd.api.area.TowerAreaTargetMode;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
@@ -14,6 +21,7 @@ import kim.biryeong.semiontd.tower.SupportTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import net.minecraft.resources.ResourceLocation;
 
 public class AllayTower extends SupportTower {
@@ -52,58 +60,61 @@ public class AllayTower extends SupportTower {
     }
 
     private boolean applyHeal(PlayerLane lane, double radius, double amount) {
-        boolean applied = false;
-        for (Tower target : nearbyTowers(lane, radius)) {
-            if (!canApply(target, HEAL_BLOCKED_UNTIL, lane.arenaWorld().getGameTime())) {
-                continue;
-            }
-            if (heal(target, lane, amount)) {
-                block(target, HEAL_BLOCKED_UNTIL, lane, lane.arenaWorld().getGameTime());
-                applied = true;
-            }
+        SemionTowerEntity source = towerEntity(this, lane).orElse(null);
+        if (source == null) {
+            return false;
         }
-        return applied;
+        TowerAreaEffectRequest request = supportRequest(source, radius, "heal")
+                .withFilter(target -> canApply(target.tower(), HEAL_BLOCKED_UNTIL, lane.arenaWorld().getGameTime()));
+        return SemionTdApi.areaEffects().applyToTowers(request, target -> {
+            if (!heal(target.tower(), lane, amount)) {
+                return AreaEffectOutcome.UNCHANGED;
+            }
+            block(target.tower(), HEAL_BLOCKED_UNTIL, lane, lane.arenaWorld().getGameTime());
+            return AreaEffectOutcome.APPLIED;
+        }).appliedCount() > 0;
     }
 
     private boolean applyWeaponSmithBuff(PlayerLane lane, double radius, double magnitude) {
-        boolean applied = false;
-        for (Tower target : nearbyTowers(lane, radius)) {
-            if (!canApply(target, WEAPON_SMITH_BLOCKED_UNTIL, lane.arenaWorld().getGameTime())) {
-                continue;
-            }
-            Optional<SemionTowerEntity> targetEntity = towerEntity(target, lane);
-            if (targetEntity.isEmpty()) {
-                continue;
-            }
-            boolean damageApplied = targetEntity.get().applyTimedEffect(
+        SemionTowerEntity source = towerEntity(this, lane).orElse(null);
+        if (source == null) {
+            return false;
+        }
+        TowerAreaEffectRequest request = supportRequest(source, radius, "weapon_smith")
+                .withFilter(target -> canApply(target.tower(), WEAPON_SMITH_BLOCKED_UNTIL, lane.arenaWorld().getGameTime())
+                        && target.entity().isPresent());
+        return SemionTdApi.areaEffects().applyToTowers(request, target -> {
+            SemionTowerEntity entity = target.entity().orElseThrow();
+            boolean damageApplied = entity.applyTimedEffect(
                     TimedEffectType.TOWER_DAMAGE_BONUS,
                     WEAPON_SMITH_SOURCE,
                     magnitude,
                     ticks("buffDurationTicks")
             );
-            boolean speedApplied = targetEntity.get().applyTimedEffect(
+            boolean speedApplied = entity.applyTimedEffect(
                     TimedEffectType.TOWER_ATTACK_SPEED_BONUS,
                     WEAPON_SMITH_SOURCE,
                     magnitude,
                     ticks("buffDurationTicks")
             );
             if (damageApplied || speedApplied) {
-                block(target, WEAPON_SMITH_BLOCKED_UNTIL, lane, lane.arenaWorld().getGameTime());
-                applied = true;
+                block(target.tower(), WEAPON_SMITH_BLOCKED_UNTIL, lane, lane.arenaWorld().getGameTime());
+                return AreaEffectOutcome.APPLIED;
             }
-        }
-        return applied;
+            return AreaEffectOutcome.UNCHANGED;
+        }).appliedCount() > 0;
     }
 
     private boolean applyArmorerSupport(PlayerLane lane) {
-        boolean applied = false;
-        for (Tower target : nearbyTowers(lane, radius())) {
-            if (!canApply(target, ARMORER_BLOCKED_UNTIL, lane.arenaWorld().getGameTime())) {
-                continue;
-            }
-            boolean healed = heal(target, lane, healAmount(lane, value("healAmount")));
-            Optional<SemionTowerEntity> targetEntity = towerEntity(target, lane);
-            boolean reducedDamage = targetEntity
+        SemionTowerEntity source = towerEntity(this, lane).orElse(null);
+        if (source == null) {
+            return false;
+        }
+        TowerAreaEffectRequest request = supportRequest(source, radius(), "armorer")
+                .withFilter(target -> canApply(target.tower(), ARMORER_BLOCKED_UNTIL, lane.arenaWorld().getGameTime()));
+        return SemionTdApi.areaEffects().applyToTowers(request, target -> {
+            boolean healed = heal(target.tower(), lane, healAmount(lane, value("healAmount")));
+            boolean reducedDamage = target.entity()
                     .map(entity -> entity.applyTimedEffect(
                             TimedEffectType.TOWER_DAMAGE_REDUCTION,
                             ARMORER_SOURCE,
@@ -112,19 +123,21 @@ public class AllayTower extends SupportTower {
                     ))
                     .orElse(false);
             if (healed || reducedDamage) {
-                block(target, ARMORER_BLOCKED_UNTIL, lane, lane.arenaWorld().getGameTime());
-                applied = true;
+                block(target.tower(), ARMORER_BLOCKED_UNTIL, lane, lane.arenaWorld().getGameTime());
+                return AreaEffectOutcome.APPLIED;
             }
-        }
-        return applied;
+            return AreaEffectOutcome.UNCHANGED;
+        }).appliedCount() > 0;
     }
 
-    private java.util.List<Tower> nearbyTowers(PlayerLane lane, double radius) {
-        double radiusSqr = radius * radius;
-        return lane.towers().stream()
-                .filter(tower -> tower != this)
-                .filter(tower -> distanceSqr(tower.position(), position()) <= radiusSqr)
-                .toList();
+    private TowerAreaEffectRequest supportRequest(SemionTowerEntity source, double radius, String effect) {
+        return TowerAreaEffectRequest.aroundTower(
+                AreaEffectIds.tower(this, effect),
+                source,
+                radius,
+                TowerAreaTargetMode.REGISTERED,
+                AreaVfxSpec.onChange(AreaVfxStyles.BUFF)
+        );
     }
 
     private boolean heal(Tower target, PlayerLane lane, double amount) {
@@ -159,13 +172,6 @@ public class AllayTower extends SupportTower {
 
     private void block(Tower target, TowerDataKey<Long> key, PlayerLane lane, long gameTime) {
         target.setData(key, gameTime + supportBlockTicks(lane));
-    }
-
-    private double distanceSqr(GridPosition first, GridPosition second) {
-        double dx = first.x() - second.x();
-        double dy = first.y() - second.y();
-        double dz = first.z() - second.z();
-        return dx * dx + dy * dy + dz * dz;
     }
 
     private static ResourceLocation supportId(String path) {

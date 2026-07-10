@@ -1,6 +1,11 @@
 package kim.biryeong.semiontd.tower.warlock;
 
 import java.util.UUID;
+import kim.biryeong.semiontd.api.SemionTdApi;
+import kim.biryeong.semiontd.api.area.AreaEffectOutcome;
+import kim.biryeong.semiontd.api.area.AreaVfxSpec;
+import kim.biryeong.semiontd.api.area.AreaVfxStyles;
+import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
@@ -10,7 +15,7 @@ import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.TowerType;
-import net.minecraft.world.phys.AABB;
+import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 
 public class WarlockSacrificeTower extends EntityBackedTower {
     public WarlockSacrificeTower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
@@ -56,20 +61,20 @@ public class WarlockSacrificeTower extends EntityBackedTower {
             return;
         }
         double radius = value("deathEffectRadius");
-        double radiusSqr = radius * radius;
-        AABB box = towerEntity.getBoundingBox().inflate(radius);
         int durationTicks = ticks("deathEffectDurationTicks");
-        towerEntity.level().getEntities(towerEntity, box, entity ->
-                        entity instanceof SemionMonsterEntity monster
-                                && monster.isAlive()
-                                && monster.runtimeMonster() != null
-                                && towerEntity.defendsLane(monster.runtimeMonster().targetLaneId())
-                                && monster.distanceToSqr(towerEntity) <= radiusSqr
-                )
-                .stream()
-                .filter(SemionMonsterEntity.class::isInstance)
-                .map(SemionMonsterEntity.class::cast)
-                .forEach(monster -> monster.applyTimedEffect(effectType, magnitude, durationTicks));
+        MonsterAreaEffectRequest request = MonsterAreaEffectRequest.aroundTower(
+                AreaEffectIds.tower(this, "death_debuff"),
+                towerEntity,
+                radius,
+                AreaVfxSpec.onChange(AreaVfxStyles.DEBUFF)
+        );
+        SemionTdApi.areaEffects().applyToMonsters(request, monster -> {
+            double previous = monster.activeTimedEffectMagnitude(effectType);
+            monster.applyTimedEffect(effectType, magnitude, durationTicks);
+            return Double.compare(previous, monster.activeTimedEffectMagnitude(effectType)) != 0
+                    ? AreaEffectOutcome.APPLIED
+                    : AreaEffectOutcome.UNCHANGED;
+        });
     }
 
     private SemionTowerEntity towerEntity(PlayerLane lane) {

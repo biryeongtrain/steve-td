@@ -8,7 +8,6 @@ import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.TowerType;
-import net.minecraft.world.phys.AABB;
 
 abstract class UndeadTowerSupport extends EntityBackedTower {
     private long damageBoostExpiresAt;
@@ -53,27 +52,4 @@ abstract class UndeadTowerSupport extends EntityBackedTower {
                 + TowerBalanceRuntime.abilityTicks(type().id(), "damageBoostTicks");
     }
 
-    protected final java.util.List<SemionMonsterEntity> monstersAround(
-            SemionTowerEntity towerEntity,
-            double radius,
-            SemionMonsterEntity excluded
-    ) {
-        if (towerEntity == null || radius <= 0.0) {
-            return java.util.List.of();
-        }
-        double radiusSqr = radius * radius;
-        AABB box = towerEntity.getBoundingBox().inflate(radius);
-        return towerEntity.level().getEntities(towerEntity, box, entity ->
-                        entity instanceof SemionMonsterEntity monster
-                                && monster.isAlive()
-                                && monster != excluded
-                                && monster.runtimeMonster() != null
-                                && towerEntity.defendsLane(monster.runtimeMonster().targetLaneId())
-                                && monster.distanceToSqr(towerEntity) <= radiusSqr
-                )
-                .stream()
-                .filter(SemionMonsterEntity.class::isInstance)
-                .map(SemionMonsterEntity.class::cast)
-                .toList();
-    }
 }

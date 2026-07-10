@@ -1,6 +1,10 @@
 package kim.biryeong.semiontd.tower.villager;
 
 import java.util.UUID;
+import java.util.Set;
+import kim.biryeong.semiontd.api.area.AreaVfxSpec;
+import kim.biryeong.semiontd.api.area.AreaVfxStyles;
+import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
@@ -11,7 +15,8 @@ import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
-import net.minecraft.world.phys.AABB;
+import kim.biryeong.semiontd.tower.area.AreaEffectIds;
+import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
 import net.minecraft.world.phys.Vec3;
 
 public class LaneClearCatTower extends EntityBackedTower {
@@ -74,22 +79,16 @@ public class LaneClearCatTower extends EntityBackedTower {
             return;
         }
         double radius = value("explosionRadius");
-        double radiusSqr = radius * radius;
-        AABB explosionBox = target.getBoundingBox().inflate(radius);
-        towerEntity.level().getEntities(towerEntity, explosionBox, entity ->
-                        entity instanceof SemionMonsterEntity monster
-                                && monster.isAlive()
-                                && monster != target
-                                && monster.runtimeMonster() != null
-                                && towerEntity.defendsLane(monster.runtimeMonster().targetLaneId())
-                                && monster.distanceToSqr(target) <= radiusSqr
-                )
-                .stream()
-                .filter(SemionMonsterEntity.class::isInstance)
-                .map(SemionMonsterEntity.class::cast)
-                .forEach(monster -> {
-                    damageTarget(towerEntity, monster, damageAmount);
-                });
+        MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
+                AreaEffectIds.tower(this, "corpse_explosion"),
+                towerEntity,
+                target.position(),
+                radius,
+                Set.of(target.getUUID()),
+                null,
+                AreaVfxSpec.onTrigger(AreaVfxStyles.CORPSE_EXPLOSION)
+        );
+        TowerAreaDamage.apply(this, towerEntity, request, monster -> damageAmount, false);
     }
 
     private void incrementDeathStack() {

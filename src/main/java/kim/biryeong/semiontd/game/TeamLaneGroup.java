@@ -10,6 +10,7 @@ import kim.biryeong.semiontd.entity.SemionEntityTypes;
 import kim.biryeong.semiontd.entity.boss.BossMonster;
 import kim.biryeong.semiontd.entity.boss.SemionBossEntity;
 import kim.biryeong.semiontd.entity.defender.DefenderEntity;
+import kim.biryeong.semiontd.tower.area.AreaEffectLaneIndex;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity.RemovalReason;
@@ -47,6 +48,7 @@ public final class TeamLaneGroup {
 
     public void addLane(PlayerLane lane) {
         lanes.add(lane);
+        AreaEffectLaneIndex.register(lane);
     }
 
     public Optional<PlayerLane> lane(int laneId) {
@@ -126,6 +128,7 @@ public final class TeamLaneGroup {
         disableMonsters();
         clearTowers();
         discardBossEntity();
+        lanes.forEach(AreaEffectLaneIndex::unregister);
         lanes.clear();
         finalDefenseDefenders.clear();
         currentRound = 1;

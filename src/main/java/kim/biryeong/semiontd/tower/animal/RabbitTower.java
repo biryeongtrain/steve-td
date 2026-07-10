@@ -4,6 +4,7 @@ import java.util.UUID;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
+import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.Tower;
@@ -57,6 +58,7 @@ public class RabbitTower extends AnimalStackTower {
             return;
         }
         boolean killed = damageTarget(towerEntity, target, damageAmount * value("extraAttackDamageRatio"));
+        TowerVfxService.showSecondaryAttack(towerEntity, target);
         if (killed) {
             onKill(towerEntity, target, damageAmount);
         }

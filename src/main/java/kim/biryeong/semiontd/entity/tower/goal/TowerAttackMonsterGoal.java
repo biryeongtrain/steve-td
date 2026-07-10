@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.UUID;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
-import kim.biryeong.semiontd.entity.tower.TowerAttackVfxService;
 import kim.biryeong.semiontd.entity.visual.SemionAnimationState;
+import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -38,6 +38,9 @@ public final class TowerAttackMonsterGoal extends Goal {
 
     @Override
     public void tick() {
+        if (tower.consumeForceAttackReady()) {
+            cooldownTicks = 0;
+        }
         if (cooldownTicks > 0) {
             cooldownTicks--;
         }
@@ -76,10 +79,16 @@ public final class TowerAttackMonsterGoal extends Goal {
 
         tower.playAnimation(SemionAnimationState.ATTACK);
         double damageAmount = tower.attackDamageAmount(target);
+        float healthBeforeAttack = tower.getHealth();
         playRangedAttackSound();
         boolean killedPrimaryTarget = tower.damageTarget(target, damageAmount);
-        TowerAttackVfxService.showHit(tower, target);
         tower.recordAttack(target, damageAmount, killedPrimaryTarget);
+        TowerVfxService.showAttack(
+                tower,
+                target,
+                killedPrimaryTarget,
+                tower.getHealth() > healthBeforeAttack + 0.01F
+        );
         cooldownTicks = tower.attackIntervalTicks();
     }
 

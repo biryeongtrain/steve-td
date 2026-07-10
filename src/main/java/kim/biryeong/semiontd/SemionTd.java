@@ -1,11 +1,13 @@
 package kim.biryeong.semiontd;
 
 import java.nio.file.Path;
+import kim.biryeong.semiontd.api.SemionTdApi;
 import kim.biryeong.semiontd.command.SemionCommands;
 import kim.biryeong.semiontd.config.SemionConfigLoader;
 import kim.biryeong.semiontd.config.SemionConfigLoader.LoadedConfigs;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
 import kim.biryeong.semiontd.entity.SemionPolymerEntityDataWarmup;
+import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.game.SemionGameManager;
 import kim.biryeong.semiontd.game.SemionPlayerLimitBypassService;
 import kim.biryeong.semiontd.music.SemionMusicLibrary;
@@ -14,6 +16,9 @@ import kim.biryeong.semiontd.music.SemionMusicService;
 import kim.biryeong.semiontd.placeholder.SemionPlaceholders;
 import kim.biryeong.semiontd.summon.IncomeSummons;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
+import kim.biryeong.semiontd.tower.area.AreaEffectService;
+import kim.biryeong.semiontd.tower.area.AreaVfxStyleRegistryImpl;
+import kim.biryeong.semiontd.tower.area.BuiltinAreaVfxStyles;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
 import kim.biryeong.semiontd.ui.SemionHotbarService;
 import kim.biryeong.semiontd.ui.SemionTowerInteractionService;
@@ -69,6 +74,11 @@ public class SemionTd implements ModInitializer {
                 configDir.resolve("profiles.json")
         );
         gameManager.configureMusic(new SemionMusicService(musicLibrary));
+        AreaVfxStyleRegistryImpl areaVfxStyles = new AreaVfxStyleRegistryImpl();
+        BuiltinAreaVfxStyles.register(areaVfxStyles);
+        SemionTdApi.initializeInternal(new AreaEffectService(gameManager), areaVfxStyles);
+        TowerVfxService.initialize(configs.vfx(), gameManager, areaVfxStyles);
+        ServerLifecycleEvents.SERVER_STARTING.register(server -> areaVfxStyles.freeze());
         SemionPlayerLimitBypassService.configure(gameManager);
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->

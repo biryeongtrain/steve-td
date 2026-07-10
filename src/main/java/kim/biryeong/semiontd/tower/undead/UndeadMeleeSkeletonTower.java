@@ -55,13 +55,14 @@ public class UndeadMeleeSkeletonTower extends SplashTower {
     }
 
     @Override
-    protected void damage(SemionTowerEntity tower, SemionMonsterEntity monster, double damage) {
+    protected boolean damage(SemionTowerEntity tower, SemionMonsterEntity monster, double damage) {
         double splashDamage = damage * getSplashRatio();
         boolean killed = damageTarget(tower, monster, splashDamage);
         heal(tower, splashDamage);
         if (killed) {
             onKill(tower, monster, splashDamage);
         }
+        return killed;
     }
 
     @Override

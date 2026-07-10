@@ -6,6 +6,12 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
 import kim.biryeong.semiontd.SemionTd;
+import kim.biryeong.semiontd.api.SemionTdApi;
+import kim.biryeong.semiontd.api.area.AreaEffectOutcome;
+import kim.biryeong.semiontd.api.area.AreaVfxSpec;
+import kim.biryeong.semiontd.api.area.AreaVfxStyles;
+import kim.biryeong.semiontd.api.area.TowerAreaEffectRequest;
+import kim.biryeong.semiontd.api.area.TowerAreaTargetMode;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
@@ -16,8 +22,8 @@ import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.SupportTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.phys.AABB;
 
 public class LegionGoatTower extends SupportTower {
     private static final int MAX_STACKS = 3;
@@ -47,56 +53,47 @@ public class LegionGoatTower extends SupportTower {
 
     @Override
     protected boolean execute(PlayerLane lane) {
-        boolean applied = false;
-        for (Tower target : lane.towers()) {
-            if (target == this || !isBuffTarget(target)) {
-                continue;
-            }
-            OptionalInt stackIndex = stackIndexFor(target, lane);
-            if (stackIndex.isEmpty()) {
-                continue;
-            }
-            applied |= towerEntity(target, lane)
-                    .map(entity -> applyEffect(
-                            entity,
-                            TimedEffectType.TOWER_DAMAGE_BONUS,
-                            DAMAGE_SOURCES[stackIndex.getAsInt()],
-                            value("damageBonus")
-                    ))
-                    .orElse(false);
+        SemionTowerEntity source = towerEntity(this, lane).orElse(null);
+        if (source == null) {
+            return false;
         }
-
-        double radius = radius();
-        double radiusSqr = radius * radius;
-        AABB searchBox = new AABB(
-                position().x() + 0.5,
-                position().y() + 1.0,
-                position().z() + 0.5,
-                position().x() + 0.5,
-                position().y() + 1.0,
-                position().z() + 0.5
-        ).inflate(radius);
-        for (SemionTowerEntity cloneEntity : lane.arenaWorld().getEntitiesOfClass(SemionTowerEntity.class, searchBox, entity ->
-                isCloneBuffTarget(entity, lane) && entity.distanceToSqr(position().x() + 0.5, position().y() + 1.0, position().z() + 0.5) <= radiusSqr
-        )) {
-            OptionalInt stackIndex = stackIndexFor(cloneEntity.runtimeTower(), lane);
-            if (stackIndex.isEmpty()) {
-                continue;
+        TowerAreaEffectRequest request = TowerAreaEffectRequest.aroundTower(
+                AreaEffectIds.tower(this, "goat_buff"),
+                source,
+                radius(),
+                TowerAreaTargetMode.REGISTERED_AND_CLONES,
+                AreaVfxSpec.onChange(AreaVfxStyles.BUFF)
+        ).withFilter(target -> isBuffTarget(target.tower()) && stackIndexFor(target.tower(), lane).isPresent());
+        return SemionTdApi.areaEffects().applyToTowers(request, target -> {
+            OptionalInt stackIndex = stackIndexFor(target.tower(), lane);
+            if (stackIndex.isEmpty() || target.entity().isEmpty()) {
+                return AreaEffectOutcome.UNCHANGED;
             }
-            applied |= applyEffect(
-                    cloneEntity,
-                    TimedEffectType.TOWER_DAMAGE_BONUS,
-                    CLONE_DAMAGE_SOURCES[stackIndex.getAsInt()],
-                    value("cloneDamageBonus")
-            );
-            applied |= applyEffect(
-                    cloneEntity,
-                    TimedEffectType.TOWER_DAMAGE_REDUCTION,
-                    CLONE_DAMAGE_REDUCTION_SOURCES[stackIndex.getAsInt()],
-                    value("cloneDamageReduction")
-            );
-        }
-        return applied;
+            SemionTowerEntity entity = target.entity().orElseThrow();
+            boolean applied;
+            if (target.illusion()) {
+                applied = applyEffect(
+                        entity,
+                        TimedEffectType.TOWER_DAMAGE_BONUS,
+                        CLONE_DAMAGE_SOURCES[stackIndex.getAsInt()],
+                        value("cloneDamageBonus")
+                );
+                applied |= applyEffect(
+                        entity,
+                        TimedEffectType.TOWER_DAMAGE_REDUCTION,
+                        CLONE_DAMAGE_REDUCTION_SOURCES[stackIndex.getAsInt()],
+                        value("cloneDamageReduction")
+                );
+            } else {
+                applied = applyEffect(
+                        entity,
+                        TimedEffectType.TOWER_DAMAGE_BONUS,
+                        DAMAGE_SOURCES[stackIndex.getAsInt()],
+                        value("damageBonus")
+                );
+            }
+            return applied ? AreaEffectOutcome.APPLIED : AreaEffectOutcome.UNCHANGED;
+        }).appliedCount() > 0;
     }
 
     private boolean isBuffTarget(Tower target) {
@@ -108,14 +105,6 @@ public class LegionGoatTower extends SupportTower {
                 && target.laneId() == laneId()
                 && LegionTowers.isLegionTower(target.type())
                 && isWithinRange(target.position());
-    }
-
-    private boolean isCloneBuffTarget(SemionTowerEntity entity, PlayerLane lane) {
-        if (entity == null || !entity.isAlive() || entity.isRemoved()) {
-            return false;
-        }
-        Tower target = entity.runtimeTower();
-        return isBuffTarget(target) && !lane.towers().contains(target);
     }
 
     private OptionalInt stackIndexFor(Tower target, PlayerLane lane) {

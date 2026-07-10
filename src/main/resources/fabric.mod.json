@@ -29,6 +29,7 @@
     "placeholder-api": ">=2.7.2+1.21.8",
     "sidebar-api": ">=0.5.1+1.21.1",
     "factorytools": ">=0.7.5+1.21.8",
+    "apel": "=0.1.5+1.21.8",
     "friendsandfoes": ">=4.0.10",
     "flowerymooblooms": ">=3.0.2",
     "friendsandfoes-polymer-patch": ">=4.0.10-0+1.21.8",

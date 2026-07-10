@@ -1,6 +1,11 @@
 package kim.biryeong.semiontd.tower.undead;
 
 import java.util.UUID;
+import kim.biryeong.semiontd.api.SemionTdApi;
+import kim.biryeong.semiontd.api.area.AreaEffectOutcome;
+import kim.biryeong.semiontd.api.area.AreaVfxSpec;
+import kim.biryeong.semiontd.api.area.AreaVfxStyles;
+import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
@@ -10,7 +15,7 @@ import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.TowerType;
-import net.minecraft.world.phys.AABB;
+import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 
 public class UndeadAnimalTower extends EntityBackedTower {
     private int scanCooldownTicks;
@@ -47,41 +52,35 @@ public class UndeadAnimalTower extends EntityBackedTower {
         if (towerEntity == null) {
             return false;
         }
-        boolean applied = false;
-        for (SemionMonsterEntity monster : monstersAround(towerEntity)) {
+        MonsterAreaEffectRequest request = MonsterAreaEffectRequest.aroundTower(
+                AreaEffectIds.tower(this, "debuff"),
+                towerEntity,
+                value("radius"),
+                AreaVfxSpec.onChange(AreaVfxStyles.DEBUFF)
+        ).withFilter(monster -> monster.runtimeMonster().targetTeam() == teamId());
+        var result = SemionTdApi.areaEffects().applyToMonsters(request, monster -> {
+            boolean changed = false;
+            double previousAttack = monster.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION);
             monster.applyTimedEffect(
                     TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION,
                     value("attackDamageReduction"),
                     ticks("debuffDurationTicks")
             );
+            changed |= Double.compare(previousAttack,
+                    monster.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION)) != 0;
             if (is(UndeadTowers.T2_UNDEAD_ANIMAL_TOWER)) {
+                double previousTaken = monster.activeTimedEffectMagnitude(TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS);
                 monster.applyTimedEffect(
                         TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS,
                         value("towerDamageTakenBonus"),
                         ticks("debuffDurationTicks")
                 );
+                changed |= Double.compare(previousTaken,
+                        monster.activeTimedEffectMagnitude(TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS)) != 0;
             }
-            applied = true;
-        }
-        return applied;
-    }
-
-    private java.util.List<SemionMonsterEntity> monstersAround(SemionTowerEntity towerEntity) {
-        double radius = value("radius");
-        double radiusSqr = radius * radius;
-        AABB box = towerEntity.getBoundingBox().inflate(radius);
-        return towerEntity.level().getEntities(towerEntity, box, entity ->
-                        entity instanceof SemionMonsterEntity monster
-                                && monster.isAlive()
-                                && monster.runtimeMonster() != null
-                                && monster.runtimeMonster().targetTeam() == teamId()
-                                && towerEntity.defendsLane(monster.runtimeMonster().targetLaneId())
-                                && monster.distanceToSqr(towerEntity) <= radiusSqr
-                )
-                .stream()
-                .filter(SemionMonsterEntity.class::isInstance)
-                .map(SemionMonsterEntity.class::cast)
-                .toList();
+            return changed ? AreaEffectOutcome.APPLIED : AreaEffectOutcome.UNCHANGED;
+        });
+        return result.candidateCount() > 0;
     }
 
     private SemionTowerEntity towerEntity(PlayerLane lane) {

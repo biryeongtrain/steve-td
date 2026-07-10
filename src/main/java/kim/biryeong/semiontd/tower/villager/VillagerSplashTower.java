@@ -2,6 +2,7 @@ package kim.biryeong.semiontd.tower.villager;
 
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
+import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
@@ -68,6 +69,7 @@ public class VillagerSplashTower extends SplashTower {
             if (!killedTarget && attackAttempt >= every) { // skip if target is dead. but stack attack attempt value
                 attackAttempt -= every + 1; // remove stack. it will stack 1 because calls itself
                 boolean killed = damageTarget(towerEntity, target, damageAmount); // damage main target
+                TowerVfxService.showSecondaryAttack(towerEntity, target);
                 this.onAttack(towerEntity, target, damageAmount, killed); // splash and trigger addition attack if has more stack
                 if (killed) {
                     this.onKill(towerEntity, target, damageAmount); // trigger kill event

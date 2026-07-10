@@ -31,6 +31,7 @@ import kim.biryeong.semiontd.config.SemionConfigLoader.LoadedConfigs;
 import kim.biryeong.semiontd.config.SummonConfig;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.WaveConfig;
+import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.map.ArenaLoadException;
 import kim.biryeong.semiontd.map.GameArena;
 import kim.biryeong.semiontd.map.GameArenaLoader;
@@ -504,6 +505,7 @@ public final class SemionGameManager {
         }
 
         LoadedConfigs configs = SemionConfigLoader.load(configDir, SemionTd.LOGGER);
+        TowerVfxService.configure(configs.vfx());
         configure(
                 configs.economy(),
                 configs.waves(),

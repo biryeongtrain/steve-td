@@ -37,7 +37,8 @@ public final class SemionConfigLoader {
                     SummonConfig.defaultConfig(),
                     LeaderTargetingConfig.defaultConfig(),
                     IncomeLaneRoutingConfig.defaultConfig(),
-                    MonsterScalingConfig.defaultConfig()
+                    MonsterScalingConfig.defaultConfig(),
+                    VfxConfig.defaultConfig()
             );
         }
 
@@ -102,7 +103,12 @@ public final class SemionConfigLoader {
                 MonsterScalingConfig.defaultConfig(),
                 logger
         );
-        return new LoadedConfigs(economy, waves, map, progression, rating, persistence, towerBalance, summons, leaderTargeting, incomeLaneRouting, monsterScaling);
+        VfxConfig vfx = loadOrCreateVfx(
+                configDir.resolve("vfx.json"),
+                VfxConfig.defaultConfig(),
+                logger
+        );
+        return new LoadedConfigs(economy, waves, map, progression, rating, persistence, towerBalance, summons, leaderTargeting, incomeLaneRouting, monsterScaling, vfx);
     }
 
     private static <T> T loadOrCreate(Path path, T defaults, Class<T> type, Logger logger) {
@@ -405,6 +411,27 @@ public final class SemionConfigLoader {
         }
     }
 
+    private static VfxConfig loadOrCreateVfx(Path path, VfxConfig defaults, Logger logger) {
+        if (Files.notExists(path)) {
+            write(path, defaults, logger);
+            return defaults;
+        }
+
+        try (Reader reader = Files.newBufferedReader(path)) {
+            VfxConfig loaded = GSON.fromJson(reader, VfxConfig.class);
+            VfxConfig value = (loaded == null ? defaults : loaded).normalized();
+            if (loaded == null || !value.equals(loaded)) {
+                logger.warn("Normalized invalid or missing VFX config values in {}.", path);
+                write(path, value, logger);
+            }
+            return value;
+        } catch (IOException | JsonParseException | IllegalArgumentException exception) {
+            logger.warn("Failed to load config {}; using defaults.", path, exception);
+            write(path, defaults, logger);
+            return defaults;
+        }
+    }
+
     private static void write(Path path, Object value, Logger logger) {
         try (Writer writer = Files.newBufferedWriter(path)) {
             GSON.toJson(value, writer);
@@ -470,7 +497,8 @@ public final class SemionConfigLoader {
             SummonConfig summons,
             LeaderTargetingConfig leaderTargeting,
             IncomeLaneRoutingConfig incomeLaneRouting,
-            MonsterScalingConfig monsterScaling
+            MonsterScalingConfig monsterScaling,
+            VfxConfig vfx
     ) {
     }
 }
