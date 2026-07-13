@@ -29,6 +29,7 @@ import kim.biryeong.semiontd.config.ProgressionConfig;
 import kim.biryeong.semiontd.config.SemionConfigLoader;
 import kim.biryeong.semiontd.config.SemionConfigLoader.LoadedConfigs;
 import kim.biryeong.semiontd.config.SummonConfig;
+import kim.biryeong.semiontd.config.TipConfig;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
@@ -112,6 +113,7 @@ public final class SemionGameManager {
     private LeaderTargetingConfig leaderTargetingConfig = LeaderTargetingConfig.defaultConfig();
     private IncomeLaneRoutingConfig incomeLaneRoutingConfig = IncomeLaneRoutingConfig.defaultConfig();
     private MonsterScalingConfig monsterScalingConfig = MonsterScalingConfig.defaultConfig();
+    private TipConfig tipConfig = TipConfig.defaultConfig();
     private Path configDir;
     private Path progressionStorePath;
     private ProgressionService progressionService = new ProgressionService(progressionConfig, null);
@@ -506,6 +508,7 @@ public final class SemionGameManager {
 
         LoadedConfigs configs = SemionConfigLoader.load(configDir, SemionTd.LOGGER);
         TowerVfxService.configure(configs.vfx());
+        configureTips(configs.tips());
         configure(
                 configs.economy(),
                 configs.waves(),
@@ -629,6 +632,14 @@ public final class SemionGameManager {
         this.musicService = musicService == null ? SemionMusicService.disabled() : musicService;
     }
 
+    public void configureTips(TipConfig tipConfig) {
+        this.tipConfig = tipConfig == null ? TipConfig.defaultConfig() : tipConfig;
+    }
+
+    public TipConfig tipConfig() {
+        return tipConfig;
+    }
+
     public LobbyWorld ensureLobby(MinecraftServer server) throws ArenaLoadException {
         if (lobbyWorld != null) {
             return lobbyWorld;
@@ -681,6 +692,14 @@ public final class SemionGameManager {
 
     public SemionPlayerProfile saveSelectedJob(MinecraftServer server, UUID playerId, String playerName, ResourceLocation jobId) {
         return progressionService.saveSelectedJob(server, playerId, playerName, jobId);
+    }
+
+    public SemionPlayerProfile saveSelectedSkybox(MinecraftServer server, UUID playerId, String playerName, String skyboxId) {
+        return progressionService.saveSelectedSkybox(server, playerId, playerName, skyboxId);
+    }
+
+    public SemionPlayerProfile saveTipsEnabled(MinecraftServer server, UUID playerId, String playerName, boolean enabled) {
+        return progressionService.saveTipsEnabled(server, playerId, playerName, enabled);
     }
 
     public Optional<MatchResult> lastMatchResult() {

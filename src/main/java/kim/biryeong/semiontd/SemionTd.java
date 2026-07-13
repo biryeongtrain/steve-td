@@ -15,10 +15,14 @@ import kim.biryeong.semiontd.music.SemionMusicResourcePack;
 import kim.biryeong.semiontd.music.SemionMusicService;
 import kim.biryeong.semiontd.placeholder.SemionPlaceholders;
 import kim.biryeong.semiontd.summon.IncomeSummons;
+import kim.biryeong.semiontd.skybox.SemionSkyboxLibrary;
+import kim.biryeong.semiontd.skybox.SemionSkyboxResourcePack;
+import kim.biryeong.semiontd.skybox.SemionSkyboxService;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.tower.area.AreaEffectService;
 import kim.biryeong.semiontd.tower.area.AreaVfxStyleRegistryImpl;
 import kim.biryeong.semiontd.tower.area.BuiltinAreaVfxStyles;
+import kim.biryeong.semiontd.tip.SemionTipService;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
 import kim.biryeong.semiontd.ui.SemionHotbarService;
 import kim.biryeong.semiontd.ui.SemionTowerInteractionService;
@@ -58,7 +62,11 @@ public class SemionTd implements ModInitializer {
         IncomeSummons.reloadBuiltIns(configs.summons());
         SemionPolymerEntityDataWarmup.warm(configs, LOGGER);
         SemionMusicLibrary musicLibrary = SemionMusicLibrary.load(configDir.resolve("music"), LOGGER);
-        SemionMusicResourcePack.register(musicLibrary, LOGGER);
+        SemionSkyboxLibrary skyboxLibrary = SemionSkyboxLibrary.load(configDir.resolve("skyboxes"), LOGGER);
+        SemionMusicService musicService = new SemionMusicService(musicLibrary);
+        SemionSkyboxService skyboxService = new SemionSkyboxService(skyboxLibrary, gameManager);
+        SemionMusicResourcePack.register(musicService::library, LOGGER);
+        SemionSkyboxResourcePack.register(skyboxService::library, LOGGER);
         gameManager.configure(
                 configs.economy(),
                 configs.waves(),
@@ -73,7 +81,9 @@ public class SemionTd implements ModInitializer {
                 configs.monsterScaling(),
                 configDir.resolve("profiles.json")
         );
-        gameManager.configureMusic(new SemionMusicService(musicLibrary));
+        gameManager.configureTips(configs.tips());
+        gameManager.configureMusic(musicService);
+        SemionTipService tipService = new SemionTipService(gameManager);
         AreaVfxStyleRegistryImpl areaVfxStyles = new AreaVfxStyleRegistryImpl();
         BuiltinAreaVfxStyles.register(areaVfxStyles);
         SemionTdApi.initializeInternal(new AreaEffectService(gameManager), areaVfxStyles);
@@ -82,11 +92,11 @@ public class SemionTd implements ModInitializer {
         SemionPlayerLimitBypassService.configure(gameManager);
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
-                SemionCommands.register(dispatcher, gameManager));
+                SemionCommands.register(dispatcher, gameManager, skyboxService, musicService, tipService, configDir));
         SemionPlaceholders.register(gameManager);
         SemionHotbarService.register(gameManager);
         SemionTowerInteractionService.register(gameManager);
-        Events.initialize(gameManager);
+        Events.initialize(gameManager, skyboxService, tipService);
 
         Registry.register(BuiltInRegistries.DIALOG_BODY_TYPE, ResourceLocation.fromNamespaceAndPath("ttt", "aligned_message"), AlignedMessage.MAP_CODEC);
         Registry.register(BuiltInRegistries.DIALOG_BODY_TYPE, ResourceLocation.fromNamespaceAndPath("ttt", "aligned_item"), AlignedItemBody.MAP_CODEC);

@@ -38,7 +38,8 @@ public final class SemionConfigLoader {
                     LeaderTargetingConfig.defaultConfig(),
                     IncomeLaneRoutingConfig.defaultConfig(),
                     MonsterScalingConfig.defaultConfig(),
-                    VfxConfig.defaultConfig()
+                    VfxConfig.defaultConfig(),
+                    TipConfig.defaultConfig()
             );
         }
 
@@ -108,7 +109,12 @@ public final class SemionConfigLoader {
                 VfxConfig.defaultConfig(),
                 logger
         );
-        return new LoadedConfigs(economy, waves, map, progression, rating, persistence, towerBalance, summons, leaderTargeting, incomeLaneRouting, monsterScaling, vfx);
+        TipConfig tips = loadOrCreateTips(
+                configDir.resolve("tips.json"),
+                TipConfig.defaultConfig(),
+                logger
+        );
+        return new LoadedConfigs(economy, waves, map, progression, rating, persistence, towerBalance, summons, leaderTargeting, incomeLaneRouting, monsterScaling, vfx, tips);
     }
 
     private static <T> T loadOrCreate(Path path, T defaults, Class<T> type, Logger logger) {
@@ -432,6 +438,40 @@ public final class SemionConfigLoader {
         }
     }
 
+    private static TipConfig loadOrCreateTips(Path path, TipConfig defaults, Logger logger) {
+        if (Files.notExists(path)) {
+            write(path, defaults, logger);
+            return defaults;
+        }
+
+        try {
+            String json = Files.readString(path);
+            TipConfig loaded = GSON.fromJson(json, TipConfig.class);
+            TipConfig safeLoaded = loaded == null ? defaults : loaded;
+            boolean enabledMissing = !hasObjectProperty(json, "enabled");
+            boolean joinEnabledMissing = !hasObjectProperty(json, "joinEnabled");
+            boolean joinMessageMissing = !hasObjectProperty(json, "joinMessage");
+            boolean intervalMissing = !hasObjectProperty(json, "intervalSeconds");
+            boolean messagesMissing = !hasObjectProperty(json, "messages");
+            TipConfig value = new TipConfig(
+                    enabledMissing ? defaults.enabled() : safeLoaded.enabled(),
+                    joinEnabledMissing ? defaults.joinEnabled() : safeLoaded.joinEnabled(),
+                    joinMessageMissing ? defaults.joinMessage() : safeLoaded.joinMessage(),
+                    intervalMissing ? defaults.intervalSeconds() : safeLoaded.intervalSeconds(),
+                    messagesMissing ? defaults.messages() : safeLoaded.messages()
+            );
+            if (loaded == null || enabledMissing || joinEnabledMissing || joinMessageMissing
+                    || intervalMissing || messagesMissing || !value.equals(loaded)) {
+                write(path, value, logger);
+            }
+            return value;
+        } catch (IOException | JsonParseException | IllegalArgumentException exception) {
+            logger.warn("Failed to load config {}; using defaults.", path, exception);
+            write(path, defaults, logger);
+            return defaults;
+        }
+    }
+
     private static void write(Path path, Object value, Logger logger) {
         try (Writer writer = Files.newBufferedWriter(path)) {
             GSON.toJson(value, writer);
@@ -498,7 +538,8 @@ public final class SemionConfigLoader {
             LeaderTargetingConfig leaderTargeting,
             IncomeLaneRoutingConfig incomeLaneRouting,
             MonsterScalingConfig monsterScaling,
-            VfxConfig vfx
+            VfxConfig vfx,
+            TipConfig tips
     ) {
     }
 }

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import kim.biryeong.semiontd.config.SemionConfigLoader.LoadedConfigs;
 import kim.biryeong.semiontd.rating.RatingConfig;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
@@ -528,5 +529,59 @@ final class SemionConfigLoaderTest {
         String written = Files.readString(tempDir.resolve("monster_scaling.json"));
         assertTrue(written.contains("laneBreachDelayTicks"));
         assertTrue(written.contains("scaleIncomeMonsters"));
+    }
+
+    @Test
+    void loadCreatesTipConfigFileWithDefaults() {
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+
+        assertTrue(Files.exists(tempDir.resolve("tips.json")));
+        assertEquals(TipConfig.defaultConfig(), configs.tips());
+    }
+
+    @Test
+    void loadReadsTipConfigMiniMessageOverrides() throws Exception {
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("tips.json"), """
+                {
+                  "enabled": true,
+                  "joinEnabled": false,
+                  "joinMessage": "<aqua><bold>접속 안내</bold></aqua>",
+                  "intervalSeconds": 30,
+                  "messages": [
+                    "<gradient:#ff0000:#00ff00><bold>테스트 팁</bold></gradient>"
+                  ]
+                }
+                """);
+
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+
+        assertEquals(false, configs.tips().joinEnabled());
+        assertEquals("<aqua><bold>접속 안내</bold></aqua>", configs.tips().joinMessage());
+        assertEquals(30, configs.tips().intervalSeconds());
+        assertEquals(List.of("<gradient:#ff0000:#00ff00><bold>테스트 팁</bold></gradient>"), configs.tips().messages());
+    }
+
+    @Test
+    void loadBackfillsMissingTipConfigFields() throws Exception {
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("tips.json"), """
+                {
+                  "messages": ["<yellow>운영 팁</yellow>"]
+                }
+                """);
+
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+
+        assertEquals(true, configs.tips().enabled());
+        assertEquals(true, configs.tips().joinEnabled());
+        assertEquals(TipConfig.defaultConfig().joinMessage(), configs.tips().joinMessage());
+        assertEquals(120, configs.tips().intervalSeconds());
+        assertEquals(List.of("<yellow>운영 팁</yellow>"), configs.tips().messages());
+        String written = Files.readString(tempDir.resolve("tips.json"));
+        assertTrue(written.contains("enabled"));
+        assertTrue(written.contains("joinEnabled"));
+        assertTrue(written.contains("joinMessage"));
+        assertTrue(written.contains("intervalSeconds"));
     }
 }

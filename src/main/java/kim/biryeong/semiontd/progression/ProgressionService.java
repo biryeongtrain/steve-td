@@ -53,6 +53,18 @@ public final class ProgressionService {
         return store.putProfile(playerId, updated);
     }
 
+    public SemionPlayerProfile saveSelectedSkybox(MinecraftServer server, UUID playerId, String playerName, String skyboxId) {
+        SemionPlayerProfile updated = store.getOrCreateProfile(playerId, playerName)
+                .updateSelectedSkybox(playerName, skyboxId);
+        return store.putProfile(playerId, updated);
+    }
+
+    public SemionPlayerProfile saveTipsEnabled(MinecraftServer server, UUID playerId, String playerName, boolean enabled) {
+        SemionPlayerProfile updated = store.getOrCreateProfile(playerId, playerName)
+                .updateTipsEnabled(playerName, enabled);
+        return store.putProfile(playerId, updated);
+    }
+
     public SemionPlayerProfile rememberRecentBuildCode(MinecraftServer server, UUID playerId, String playerName, String code) {
         SemionPlayerProfile updated = store.getOrCreateProfile(playerId, playerName)
                 .rememberRecentBuildCode(playerName, code);

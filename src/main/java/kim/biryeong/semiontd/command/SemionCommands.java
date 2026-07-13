@@ -18,11 +18,16 @@ import kim.biryeong.semiontd.game.*;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.SemionJob;
 import kim.biryeong.semiontd.map.ArenaLoadException;
+import kim.biryeong.semiontd.music.SemionMusicLibrary;
+import kim.biryeong.semiontd.music.SemionMusicService;
 import kim.biryeong.semiontd.rating.PlayerRatingProfile;
+import kim.biryeong.semiontd.skybox.SemionSkybox;
+import kim.biryeong.semiontd.skybox.SemionSkyboxService;
 import kim.biryeong.semiontd.summon.SummonMonsterType;
 import kim.biryeong.semiontd.summon.SummonResult;
 import kim.biryeong.semiontd.summon.SummonResultType;
 import kim.biryeong.semiontd.test.TestTowerService;
+import kim.biryeong.semiontd.tip.SemionTipService;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerService;
 import kim.biryeong.semiontd.tower.Tower;
@@ -43,8 +48,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.nio.file.Path;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.GameProfileArgument;
 import net.minecraft.core.BlockPos;
@@ -83,7 +90,14 @@ public final class SemionCommands {
         return gameManager.playableGame(source.getPlayerOrException().getUUID()).orElse(null);
     }
 
-    public static void register(CommandDispatcher<CommandSourceStack> dispatcher, SemionGameManager gameManager) {
+    public static void register(
+            CommandDispatcher<CommandSourceStack> dispatcher,
+            SemionGameManager gameManager,
+            SemionSkyboxService skyboxService,
+            SemionMusicService musicService,
+            SemionTipService tipService,
+            Path configDir
+    ) {
         dispatcher.register(literal("semiontd")
                 .then(literal("create")
                         .requires(source -> source.hasPermission(2))
@@ -100,6 +114,15 @@ public final class SemionCommands {
                 .then(literal("reload")
                         .requires(source -> source.hasPermission(2))
                         .executes(context -> reloadConfigs(context.getSource(), gameManager)))
+                .then(literal("resourcepack")
+                        .requires(source -> source.hasPermission(2))
+                        .then(literal("reload")
+                                .executes(context -> reloadResourcePackAssets(
+                                        context.getSource(),
+                                        skyboxService,
+                                        musicService,
+                                        configDir
+                                ))))
                 .then(literal("testmode")
                         .requires(source -> source.hasPermission(2))
                         .then(argument("enabled", BoolArgumentType.bool())
@@ -161,6 +184,8 @@ public final class SemionCommands {
                                         )))))
                 .then(literal("profile")
                         .executes(context -> profile(context.getSource(), gameManager)))
+                .then(skyboxCommand("skybox", skyboxService))
+                .then(tipCommand("tip", gameManager, tipService))
                 .then(literal("rating")
                         .executes(context -> rating(context.getSource(), gameManager))
                         .then(literal("top")
@@ -285,6 +310,7 @@ public final class SemionCommands {
 
         dispatcher.register(literal("직업")
                 .executes(context -> jobDialog(context.getSource(), gameManager)));
+        dispatcher.register(skyboxCommand("스카이박스", skyboxService));
         dispatcher.register(traitCommand("특성", gameManager));
         dispatcher.register(literal("레이팅")
                 .executes(context -> rating(context.getSource(), gameManager))
@@ -457,6 +483,43 @@ public final class SemionCommands {
         return 1;
     }
 
+    private static LiteralArgumentBuilder<CommandSourceStack> skyboxCommand(
+            String name,
+            SemionSkyboxService skyboxService
+    ) {
+        return literal(name)
+                .executes(context -> listSkyboxes(context.getSource(), skyboxService))
+                .then(literal("off")
+                        .executes(context -> selectSkybox(
+                                context.getSource(),
+                                skyboxService,
+                                SemionSkyboxService.OFF_SELECTION
+                        )))
+                .then(argument("id", StringArgumentType.word())
+                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                skyboxService.availableSkyboxes().stream().map(SemionSkybox::id),
+                                builder
+                        ))
+                        .executes(context -> selectSkybox(
+                                context.getSource(),
+                                skyboxService,
+                                StringArgumentType.getString(context, "id")
+                        )));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> tipCommand(
+            String name,
+            SemionGameManager gameManager,
+            SemionTipService tipService
+    ) {
+        return literal(name)
+                .executes(context -> tipStatus(context.getSource(), gameManager, tipService))
+                .then(literal("on")
+                        .executes(context -> setTipsEnabled(context.getSource(), tipService, true)))
+                .then(literal("off")
+                        .executes(context -> setTipsEnabled(context.getSource(), tipService, false)));
+    }
+
     private static LiteralArgumentBuilder<CommandSourceStack> traitCommand(
             String name,
             SemionGameManager gameManager
@@ -581,6 +644,37 @@ public final class SemionCommands {
         }
     }
 
+    private static int reloadResourcePackAssets(
+            CommandSourceStack source,
+            SemionSkyboxService skyboxService,
+            SemionMusicService musicService,
+            Path configDir
+    ) {
+        try {
+            SemionMusicLibrary musicLibrary = SemionMusicLibrary.load(configDir.resolve("music"), SemionTd.LOGGER);
+            kim.biryeong.semiontd.skybox.SemionSkyboxLibrary skyboxLibrary =
+                    kim.biryeong.semiontd.skybox.SemionSkyboxLibrary.load(
+                            configDir.resolve("skyboxes"),
+                            SemionTd.LOGGER
+                    );
+            musicService.replaceLibrary(source.getServer(), musicLibrary);
+            skyboxService.replaceLibrary(skyboxLibrary);
+
+            source.getServer().getCommands().performPrefixedCommand(
+                    source.getServer().createCommandSourceStack(),
+                    "polymer generate-pack reload"
+            );
+            success(source, "스카이박스 " + skyboxLibrary.skyboxes().size()
+                    + "개와 음악 " + musicLibrary.tracks().size()
+                    + "개를 다시 읽었습니다. 생성팩 재생성과 접속자 재전송을 시작합니다.");
+            return 1;
+        } catch (RuntimeException exception) {
+            SemionTd.LOGGER.error("Unexpected Semion TD resource-pack asset reload failure.", exception);
+            failure(source, "스카이박스/음악 리로드 중 예기치 못한 오류가 발생했습니다: " + exception.getMessage());
+            return 0;
+        }
+    }
+
     private static int autojoin(CommandSourceStack source, SemionGameManager gameManager) {
         SemionGame game = activeWaitingGame(source, gameManager, "autojoin");
         if (game == null) {
@@ -678,6 +772,66 @@ public final class SemionCommands {
                 .toList();
         success(source, "정원 초과 입장 허용 목록: " + String.join(", ", names));
         return entries.size();
+    }
+
+    private static int listSkyboxes(CommandSourceStack source, SemionSkyboxService skyboxService)
+            throws CommandSyntaxException {
+        if (skyboxService.availableSkyboxes().isEmpty()) {
+            failure(source, "등록된 스카이박스가 없습니다. config/semion-td/skyboxes/에 2:1 PNG를 추가한 뒤 /semiontd resourcepack reload를 실행하세요.");
+            return 0;
+        }
+        ServerPlayer player = source.getPlayerOrException();
+        String selected = skyboxService.selectedSkybox(player)
+                .map(SemionSkybox::id)
+                .orElse(SemionSkyboxService.OFF_SELECTION);
+        String available = skyboxService.availableSkyboxes().stream()
+                .map(skybox -> skybox.id() + " (" + skybox.displayName() + ")")
+                .collect(java.util.stream.Collectors.joining(", "));
+        success(source, "현재 스카이박스: " + selected + ". 사용 가능: " + available
+                + ". 선택: /semiontd skybox <id>, 끄기: /semiontd skybox off");
+        return skyboxService.availableSkyboxes().size();
+    }
+
+    private static int selectSkybox(
+            CommandSourceStack source,
+            SemionSkyboxService skyboxService,
+            String skyboxId
+    ) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        if (!skyboxService.select(player, skyboxId)) {
+            failure(source, "알 수 없는 스카이박스입니다: " + skyboxId + ". /semiontd skybox를 확인하세요.");
+            return 0;
+        }
+        if (SemionSkyboxService.OFF_SELECTION.equalsIgnoreCase(skyboxId)) {
+            success(source, "개인 스카이박스를 껐습니다.");
+        } else {
+            success(source, "개인 스카이박스를 " + skyboxId + "(으)로 변경했습니다.");
+        }
+        return 1;
+    }
+
+    private static int tipStatus(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            SemionTipService tipService
+    ) throws CommandSyntaxException {
+        boolean personalEnabled = tipService.tipsEnabled(source.getPlayerOrException());
+        String globalStatus = gameManager.tipConfig().enabled() ? "활성화" : "서버 설정에서 비활성화";
+        success(source, "팁 수신=" + (personalEnabled ? "켜짐" : "꺼짐") + ", 전체 설정=" + globalStatus
+                + ". 끄기: /semiontd tip off, 켜기: /semiontd tip on");
+        return 1;
+    }
+
+    private static int setTipsEnabled(
+            CommandSourceStack source,
+            SemionTipService tipService,
+            boolean enabled
+    ) throws CommandSyntaxException {
+        tipService.setTipsEnabled(source.getPlayerOrException(), enabled);
+        success(source, enabled
+                ? "팁을 켰습니다."
+                : "팁을 껐습니다. 다시 받으려면 /semiontd tip on을 사용하세요.");
+        return 1;
     }
 
     private static String playerLimitBypassName(GameProfile profile) {

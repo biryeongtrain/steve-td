@@ -36,6 +36,26 @@ class SemionMusicServiceTest {
         assertEquals(third.eventId(), afterFullCycle.track().eventId());
     }
 
+    @Test
+    void replacingLibraryResetsPlaybackSchedule() {
+        SemionMusicTrack first = track("first", 40L);
+        SemionMusicTrack replacement = track("replacement", 60L);
+        SemionMusicService service = new SemionMusicService(
+                new SemionMusicLibrary(List.of(first)),
+                () -> 100L,
+                bound -> 0
+        );
+        UUID playerId = UUID.nameUUIDFromBytes("music-reload".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        service.decisionFor(playerId, 0L, true);
+
+        service.replaceLibrary(null, new SemionMusicLibrary(List.of(replacement)));
+        SemionMusicService.PlaybackDecision decision = service.decisionFor(playerId, 0L, true);
+
+        assertEquals(List.of(replacement), service.library().tracks());
+        assertEquals(SemionMusicService.PlaybackAction.START_TRACK, decision.action());
+        assertEquals(replacement.eventId(), decision.track().eventId());
+    }
+
     private static SemionMusicTrack track(String id, long durationTicks) {
         return new SemionMusicTrack(
                 id,

@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -24,7 +25,7 @@ public final class SemionMusicService {
     public static final long MIN_INTER_TRACK_GAP_TICKS = 5L * 20L;
     public static final long MAX_INTER_TRACK_GAP_TICKS = 10L * 20L;
 
-    private final SemionMusicLibrary library;
+    private SemionMusicLibrary library;
     private final LongSupplier interTrackGapTicks;
     private final IntUnaryOperator nextTrackSelector;
     private final Map<UUID, PlayerMusicState> playerStates = new HashMap<>();
@@ -57,6 +58,23 @@ public final class SemionMusicService {
 
     public static long randomInterTrackGapTicks() {
         return ThreadLocalRandom.current().nextLong(MIN_INTER_TRACK_GAP_TICKS, MAX_INTER_TRACK_GAP_TICKS + 1L);
+    }
+
+    public SemionMusicLibrary library() {
+        return library;
+    }
+
+    public void replaceLibrary(MinecraftServer server, SemionMusicLibrary replacement) {
+        if (server != null) {
+            stopAll(server);
+        } else {
+            playerStates.clear();
+        }
+        library = Objects.requireNonNull(replacement, "replacement");
+        active = false;
+        musicTick = 0L;
+        schedule.clear();
+        playedTrackIndices.clear();
     }
 
     public void tick(MinecraftServer server, SemionGame game) {

@@ -9,6 +9,8 @@ import eu.pb4.polymer.resourcepack.api.PolymerResourcePackUtils;
 import eu.pb4.polymer.resourcepack.api.ResourcePackBuilder;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Objects;
+import java.util.function.Supplier;
 import kim.biryeong.semiontd.SemionTd;
 import org.slf4j.Logger;
 
@@ -20,7 +22,13 @@ public final class SemionMusicResourcePack {
     }
 
     public static void register(SemionMusicLibrary library, Logger logger) {
-        PolymerResourcePackUtils.RESOURCE_PACK_CREATION_EVENT.register(builder -> addToResourcePack(library, builder, logger));
+        register(() -> library, logger);
+    }
+
+    public static void register(Supplier<SemionMusicLibrary> librarySupplier, Logger logger) {
+        Objects.requireNonNull(librarySupplier, "librarySupplier");
+        PolymerResourcePackUtils.RESOURCE_PACK_CREATION_EVENT.register(builder ->
+                addToResourcePack(librarySupplier.get(), builder, logger));
     }
 
     public static void addToResourcePack(SemionMusicLibrary library, ResourcePackBuilder builder, Logger logger) {
