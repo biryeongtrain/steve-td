@@ -945,13 +945,14 @@ public final class SemionGame {
         phaseTicks = 0;
         finalDefenseForcedThisRound = false;
         currentWaveTeamIds.clear();
+        RoundWaveConfig roundWave = waveConfig.selectForRound(currentRound, random).orElse(null);
         for (SemionTeam team : livingTeams()) {
             currentWaveTeamIds.add(team.id());
             team.laneGroup().setCurrentRound(currentRound);
             for (PlayerLane lane : team.laneGroup().lanes()) {
                 lane.markWaveStarted(currentRound);
             }
-            enqueueWave(team);
+            enqueueWave(team, roundWave);
         }
         VillagerAdvStates.onWaveStarted(this, currentRound);
     }
@@ -1028,20 +1029,14 @@ public final class SemionGame {
         }
     }
 
-    private void enqueueWave(SemionTeam team) {
-        if (team == null || waveSpawnDisabledTeams.contains(team.id())) {
-            return;
-        }
-        Optional<RoundWaveConfig> config = waveConfig.configForRound(currentRound);
-        if (config.isEmpty()) {
+    private void enqueueWave(SemionTeam team, RoundWaveConfig round) {
+        if (team == null || round == null || waveSpawnDisabledTeams.contains(team.id())) {
             return;
         }
 
         for (PlayerLane lane : team.laneGroup().lanes()) {
             String laneKey = "lane_" + lane.laneId();
-            for (var entry : config.get().entriesForLane(laneKey)) {
-                lane.enqueueWaveMonster(entry);
-            }
+            lane.enqueueWave(round.entriesForLane(laneKey), round.spawnMode(), round.spawnIntervalTicks());
         }
     }
 

@@ -267,14 +267,7 @@ public abstract class IllusionSummonerTower extends SummonerTower {
             return;
         }
 
-        List<GridPosition> slots = lane.laneLayout().finalDefenseTowerSlots();
-        if (slots.isEmpty()) {
-            return;
-        }
-
-        int slotIndex = lane.towers().size();
-        for (int index = 0; index < clones.size(); index++) {
-            CloneInstance clone = clones.get(index);
+        for (CloneInstance clone : clones) {
             var entity = lane.arenaWorld().getEntity(clone.entityId());
             if (!(entity instanceof SemionTowerEntity towerEntity) || towerEntity.isRemoved() || !towerEntity.isAlive()) {
                 continue;
@@ -284,10 +277,7 @@ public abstract class IllusionSummonerTower extends SummonerTower {
                 continue;
             }
 
-            GridPosition finalDefensePosition = finalDefenseTowerPosition(
-                    lane,
-                    slots.get(Math.min(slotIndex + index, slots.size() - 1))
-            );
+            GridPosition finalDefensePosition = lane.nextFinalDefenseTowerPosition(cloneTower);
             cloneTower.moveToFinalDefense(lane, finalDefensePosition);
             towerEntity.syncTowerState(cloneTower);
             towerEntity.setPos(
@@ -297,15 +287,6 @@ public abstract class IllusionSummonerTower extends SummonerTower {
             );
             towerEntity.getNavigation().stop();
         }
-    }
-
-    private GridPosition finalDefenseTowerPosition(PlayerLane lane, GridPosition slot) {
-        BlockPos slotPos = new BlockPos(slot.x(), slot.y(), slot.z());
-        BlockPos below = slotPos.below();
-        if (lane.arenaWorld().getBlockState(slotPos).isAir() && !lane.arenaWorld().getBlockState(below).isAir()) {
-            return GridPosition.from(below);
-        }
-        return slot;
     }
 
     protected final void cleanupClones(PlayerLane lane) {

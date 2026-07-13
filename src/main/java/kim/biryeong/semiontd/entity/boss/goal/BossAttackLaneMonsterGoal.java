@@ -10,7 +10,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 public final class BossAttackLaneMonsterGoal extends Goal {
-    private static final double ATTACK_RANGE = 5;
     private static final double SPLASH_RADIUS = 3.0;
     private static final double RANGED_PULL_RANGE = 10.0;
     private static final double RANGED_PULL_STEP = 0.45;
@@ -46,7 +45,7 @@ public final class BossAttackLaneMonsterGoal extends Goal {
                                 && monster.isAlive()
                                 && monster.runtimeMonster() != null
                                 && monster.runtimeMonster().targetTeam() == boss.teamId()
-                                && (monster.distanceToSqr(boss) <= ATTACK_RANGE * ATTACK_RANGE
+                                && (monster.distanceToSqr(boss) <= attackRangeSqr()
                                 || monster.runtimeMonster().attackKind() == AttackKind.RANGED)
                 ).stream()
                 .filter(SemionMonsterEntity.class::isInstance)
@@ -63,12 +62,12 @@ public final class BossAttackLaneMonsterGoal extends Goal {
         Monster runtimeMonster = target.runtimeMonster();
         if (runtimeMonster != null
                 && runtimeMonster.attackKind() == AttackKind.RANGED
-                && distanceSqr > ATTACK_RANGE * ATTACK_RANGE) {
+                && distanceSqr > attackRangeSqr()) {
             pullTowardBoss(target);
             return;
         }
 
-        if (cooldownTicks <= 0 && distanceSqr <= ATTACK_RANGE * ATTACK_RANGE) {
+        if (cooldownTicks <= 0 && distanceSqr <= attackRangeSqr()) {
             attackTargetAndSplash(target);
             cooldownTicks = boss.attackIntervalTicks();
         }
@@ -131,5 +130,10 @@ public final class BossAttackLaneMonsterGoal extends Goal {
         double z = target.getZ() + delta.z / horizontalDistance * step;
         target.teleportTo(x, target.getY(), z);
         target.getNavigation().stop();
+    }
+
+    private static double attackRangeSqr() {
+        return SemionBossEntity.FINAL_DEFENSE_ENGAGEMENT_RANGE
+                * SemionBossEntity.FINAL_DEFENSE_ENGAGEMENT_RANGE;
     }
 }

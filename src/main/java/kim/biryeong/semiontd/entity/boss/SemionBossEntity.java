@@ -16,6 +16,7 @@ import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.packettweaker.PacketContext;
 
 public class SemionBossEntity extends PathfinderMob implements PolymerEntity {
+    public static final double FINAL_DEFENSE_ENGAGEMENT_RANGE = Monster.FINAL_DEFENSE_ATTACK_RANGE;
     private static final double DAMAGE_SCALING_PER_ROUND = 0.10;
     private static final double SUMMON_DAMAGE_MULTIPLIER = 3.0;
 

@@ -48,6 +48,7 @@ import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.packettweaker.PacketContext;
 
 public final class SemionTowerEntity extends PathfinderMob implements AnimatedEntity, LaneDefenseEntity, HealingTarget {
+    public static final double FINAL_DEFENSE_TARGET_RANGE = 7.0;
     private static final double DEFAULT_MOVE_SPEED = 0.23;
     private static final double DEFAULT_TARGET_ACQUIRE_RANGE = 24.0;
     private static final double TARGET_SEARCH_HORIZONTAL_PADDING = 8.0;
@@ -222,6 +223,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
                 && target.isAlive()
                 && !target.isRemoved()
                 && target.runtimeMonster() != null
+                && target.runtimeMonster().targetTeam() == teamId
                 && defendsLane(target.runtimeMonster().targetLaneId());
     }
 
@@ -255,6 +257,9 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     }
 
     public AABB targetSearchBox() {
+        if (finalDefense) {
+            return getBoundingBox().inflate(FINAL_DEFENSE_TARGET_RANGE);
+        }
         if (cachedTargetSearchBox != null
                 && cachedTargetSearchLaneLayout == laneLayout
                 && Double.compare(cachedTargetSearchX, getX()) == 0

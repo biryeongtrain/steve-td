@@ -6,7 +6,7 @@ import de.tomalbrc.bil.core.holder.entity.living.LivingEntityHolder;
 import eu.pb4.polymer.virtualentity.api.attachment.EntityAttachment;
 import java.util.ArrayList;
 import java.util.List;
-import kim.biryeong.semiontd.config.AttackKind;
+import kim.biryeong.semiontd.config.WaveMonsterEntry;
 import kim.biryeong.semiontd.effect.TimedEffectSet;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.defender.LaneDefenseEntity;
@@ -39,13 +39,11 @@ import xyz.nucleoid.packettweaker.PacketContext;
 
 public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity, HealingTarget {
     private static final double DEFAULT_MELEE_RANGE = 2.5;
-    private static final double DEFAULT_RANGED_RANGE = 6.0;
     private static final double DEFAULT_FOLLOW_RANGE = 5.0;
     private static final double DEFAULT_MOVEMENT_SPEED = 0.42;
     public static final double DEFENSE_SEARCH_HORIZONTAL_PADDING = 5.0;
     public static final double DEFENSE_TARGET_LEASH_RANGE = 8.0;
     private static final double DEFENSE_SEARCH_VERTICAL_PADDING = 3.0;
-    private static final int DEFAULT_ATTACK_INTERVAL_TICKS = 13;
 
     private EntityType<?> polymerEntityType = EntityType.ZOMBIE;
     private Monster runtimeMonster;
@@ -166,8 +164,13 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         if (!(target instanceof LaneDefenseEntity defenseEntity) || runtimeMonster == null) {
             return true;
         }
-        double leashRangeSqr = DEFENSE_TARGET_LEASH_RANGE * DEFENSE_TARGET_LEASH_RANGE;
+        double targetSearchRange = defenseTargetSearchRange();
+        double leashRangeSqr = targetSearchRange * targetSearchRange;
         return defenseEntity.defendsLane(runtimeMonster.targetLaneId()) && distanceToSqr(target) <= leashRangeSqr;
+    }
+
+    public double defenseTargetSearchRange() {
+        return Math.max(DEFENSE_TARGET_LEASH_RANGE, attackRange());
     }
 
     public int nextPathPointIndex() {
@@ -274,13 +277,16 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         if (runtimeMonster == null) {
             return DEFAULT_MELEE_RANGE;
         }
-        return runtimeMonster.attackKind() == AttackKind.RANGED ? DEFAULT_RANGED_RANGE : DEFAULT_MELEE_RANGE;
+        return runtimeMonster.attackRange();
     }
 
     public int attackIntervalTicks() {
+        int baseInterval = runtimeMonster == null
+                ? WaveMonsterEntry.DEFAULT_ATTACK_INTERVAL_TICKS
+                : runtimeMonster.attackIntervalTicks();
         double speedBonus = timedEffects.magnitude(TimedEffectType.MONSTER_ATTACK_SPEED_BONUS);
         double speedReduction = timedEffects.magnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION);
-        return Math.max(1, (int) Math.ceil(DEFAULT_ATTACK_INTERVAL_TICKS / Math.max(0.01, 1.0 + speedBonus - speedReduction)));
+        return Math.max(1, (int) Math.ceil(baseInterval / Math.max(0.01, 1.0 + speedBonus - speedReduction)));
     }
 
     public double attackDamageAmount() {
@@ -312,9 +318,10 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
     }
 
     public double movementSpeedMultiplier() {
+        double baseMultiplier = runtimeMonster == null ? 1.0 : runtimeMonster.movementSpeedMultiplier();
         double speedBonus = timedEffects.magnitude(TimedEffectType.MONSTER_MOVE_SPEED_BONUS);
         double speedReduction = timedEffects.magnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION);
-        return Math.max(0.01, 1.0 + speedBonus - speedReduction);
+        return Math.max(0.01, baseMultiplier * (1.0 + speedBonus - speedReduction));
     }
 
     public double towerDamageTaken(double baseDamage) {
@@ -324,8 +331,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
     }
 
     private double followRangeFor(Monster monster) {
-        double baseAttackRange = monster.attackKind() == AttackKind.RANGED ? DEFAULT_RANGED_RANGE : DEFAULT_MELEE_RANGE;
-        return Math.max(DEFAULT_FOLLOW_RANGE, baseAttackRange + 2.0);
+        return Math.max(DEFAULT_FOLLOW_RANGE, monster.attackRange() + 2.0);
     }
 
     @Override

@@ -28,6 +28,7 @@ public final class TeamLaneGroup {
     private Vec3 bossPosition;
     private ChunkPos forcedBossChunk;
     private int currentRound = 1;
+    private FinalDefenseSlotAllocator finalDefenseSlotAllocator = FinalDefenseSlotAllocator.fromLanes(List.of());
 
     public TeamLaneGroup(TeamId teamId, BossMonster boss) {
         this.teamId = teamId;
@@ -48,6 +49,8 @@ public final class TeamLaneGroup {
 
     public void addLane(PlayerLane lane) {
         lanes.add(lane);
+        finalDefenseSlotAllocator = FinalDefenseSlotAllocator.fromLanes(lanes);
+        lanes.forEach(existingLane -> existingLane.setFinalDefenseSlotAllocator(finalDefenseSlotAllocator));
         AreaEffectLaneIndex.register(lane);
     }
 
@@ -65,6 +68,7 @@ public final class TeamLaneGroup {
         for (PlayerLane lane : lanes) {
             lane.resetForRound();
         }
+        finalDefenseSlotAllocator.reset();
         for (DefenderEntity defenderEntity : finalDefenseDefenders) {
             defenderEntity.remove();
         }

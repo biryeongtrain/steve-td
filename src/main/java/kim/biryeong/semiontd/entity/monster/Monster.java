@@ -16,6 +16,7 @@ import java.util.UUID;
 
 public final class Monster {
     private static final double DEFAULT_PROGRESS_PER_TICK = 0.004;
+    public static final double FINAL_DEFENSE_ATTACK_RANGE = 2.0;
 
     private final String id;
     private final TeamId targetTeam;
@@ -34,6 +35,10 @@ public final class Monster {
     private final long mineralReward;
     private final SummonTier summonTier;
     private final List<SummonRole> summonRoles;
+    private final double targetPriority;
+    private final double movementSpeedMultiplier;
+    private final double attackRange;
+    private final int attackIntervalTicks;
     private double health;
     private double laneProgress;
     private int minecraftEntityId = -1;
@@ -49,6 +54,7 @@ public final class Monster {
     private int laneBreachTicks;
     private int survivalScalingIntervalTicks;
     private int survivalScalingStacks;
+    private boolean finalDefenseCombat;
     private final Map<MonsterDataKey<?>, Object> data = new HashMap<>();
 
     public Monster(
@@ -214,6 +220,54 @@ public final class Monster {
             List<SummonRole> summonRoles,
             long mineralReward
     ) {
+        this(
+                id,
+                targetTeam,
+                targetLaneId,
+                ownerPlayer,
+                senderTeam,
+                maxHealth,
+                armor,
+                attackDamage,
+                attackKind,
+                entityTypeId,
+                blockbenchModelId,
+                damageType,
+                resistance,
+                dimensions,
+                summonTier,
+                summonRoles,
+                mineralReward,
+                0.0,
+                WaveMonsterEntry.DEFAULT_MOVEMENT_SPEED_MULTIPLIER,
+                WaveMonsterEntry.defaultAttackRange(attackKind),
+                WaveMonsterEntry.DEFAULT_ATTACK_INTERVAL_TICKS
+        );
+    }
+
+    private Monster(
+            String id,
+            TeamId targetTeam,
+            int targetLaneId,
+            Optional<UUID> ownerPlayer,
+            Optional<TeamId> senderTeam,
+            double maxHealth,
+            double armor,
+            double attackDamage,
+            AttackKind attackKind,
+            String entityTypeId,
+            String blockbenchModelId,
+            DamageType damageType,
+            double resistance,
+            MonsterDimensions dimensions,
+            SummonTier summonTier,
+            List<SummonRole> summonRoles,
+            long mineralReward,
+            double targetPriority,
+            double movementSpeedMultiplier,
+            double attackRange,
+            int attackIntervalTicks
+    ) {
         this.id = id;
         this.targetTeam = targetTeam;
         this.targetLaneId = targetLaneId;
@@ -232,6 +286,10 @@ public final class Monster {
         this.mineralReward = mineralReward;
         this.summonTier = summonTier;
         this.summonRoles = summonRoles == null ? List.of() : List.copyOf(summonRoles);
+        this.targetPriority = targetPriority;
+        this.movementSpeedMultiplier = movementSpeedMultiplier;
+        this.attackRange = attackRange;
+        this.attackIntervalTicks = attackIntervalTicks;
         this.health = maxHealth;
     }
 
@@ -248,8 +306,16 @@ public final class Monster {
                 entry.attackKind(),
                 entry.entityType(),
                 entry.blockbenchModelId(),
+                DamageType.PHYSICAL,
+                0.0,
                 entry.dimensions(),
-                entry.mineralReward()
+                null,
+                List.of(),
+                entry.mineralReward(),
+                entry.targetPriority(),
+                entry.movementSpeedMultiplier(),
+                entry.attackRange(),
+                entry.attackIntervalTicks()
         );
     }
 
@@ -313,6 +379,30 @@ public final class Monster {
         return summonRoles;
     }
 
+    public double targetPriority() {
+        return targetPriority;
+    }
+
+    public double movementSpeedMultiplier() {
+        return movementSpeedMultiplier;
+    }
+
+    public double attackRange() {
+        return inFinalDefenseCombat() ? FINAL_DEFENSE_ATTACK_RANGE : attackRange;
+    }
+
+    public int attackIntervalTicks() {
+        return attackIntervalTicks;
+    }
+
+    public void enterFinalDefenseCombat() {
+        finalDefenseCombat = true;
+    }
+
+    public boolean inFinalDefenseCombat() {
+        return finalDefenseCombat;
+    }
+
     public double targetPriorityScore() {
         double rolePriority = summonRoles.stream()
                 .mapToInt(SummonRole::targetPriority)
@@ -322,7 +412,7 @@ public final class Monster {
                 && laneProgress >= SummonBalancePolicy.SIEGE_NEAR_BOSS_PROGRESS
                 ? SummonBalancePolicy.SIEGE_NEAR_BOSS_TARGET_BONUS
                 : 0;
-        return (laneProgress * 100.0) + rolePriority + threatBonus;
+        return (laneProgress * 100.0) + targetPriority + rolePriority + threatBonus;
     }
 
     public long mineralReward() {
@@ -563,6 +653,10 @@ public final class Monster {
 
     public void markRemoved() {
         state = MonsterState.REMOVED;
+    }
+
+    public void clearMinecraftEntityReference() {
+        minecraftEntityId = -1;
     }
 
     public void markMinecraftEntitySpawned(int minecraftEntityId, double spawnX, double spawnY, double spawnZ) {

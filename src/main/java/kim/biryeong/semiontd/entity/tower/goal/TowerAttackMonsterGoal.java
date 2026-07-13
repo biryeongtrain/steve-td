@@ -94,21 +94,26 @@ public final class TowerAttackMonsterGoal extends Goal {
 
     private SemionMonsterEntity findTarget() {
         SemionMonsterEntity sharedTarget = tower.sharedAttackTarget();
-        if (sharedTarget != null) {
-            cachedTarget = sharedTarget;
-            return sharedTarget;
+        if (isUsableTarget(sharedTarget)) {
+            cachedTarget = preferAttackableFinalDefenseTarget(sharedTarget);
+            return cachedTarget;
         }
         if (tower.usesSharedAttackTarget()) {
+            if (tower.deployedAtFinalDefense()) {
+                cachedTarget = selectAttackableTarget();
+                return cachedTarget;
+            }
             cachedTarget = null;
             return null;
         }
 
         if (isUsableCachedTarget()) {
+            cachedTarget = preferAttackableFinalDefenseTarget(cachedTarget);
             return cachedTarget;
         }
         SemionMonsterEntity currentTarget = tower.currentAttackTarget();
         if (cachedTarget == null && isUsableTarget(currentTarget)) {
-            cachedTarget = currentTarget;
+            cachedTarget = preferAttackableFinalDefenseTarget(currentTarget);
             targetSearchCooldownTicks = 0;
             return cachedTarget;
         }
@@ -124,6 +129,14 @@ public final class TowerAttackMonsterGoal extends Goal {
         cachedTarget = selectTarget();
         targetSearchCooldownTicks = cachedTarget == null ? EMPTY_TARGET_RECHECK_INTERVAL_TICKS : 0;
         return cachedTarget;
+    }
+
+    private SemionMonsterEntity preferAttackableFinalDefenseTarget(SemionMonsterEntity target) {
+        if (!tower.deployedAtFinalDefense() || target == null || isInAttackRange(target)) {
+            return target;
+        }
+        SemionMonsterEntity replacement = selectAttackableTarget();
+        return replacement == null ? target : replacement;
     }
 
     private SemionMonsterEntity selectTarget() {
@@ -149,6 +162,26 @@ public final class TowerAttackMonsterGoal extends Goal {
                         .orElse(null));
     }
 
+    private SemionMonsterEntity selectAttackableTarget() {
+        List<SemionMonsterEntity> targets = targetCandidates().stream()
+                .filter(this::isInAttackRange)
+                .toList();
+        if (targets.isEmpty()) {
+            return null;
+        }
+
+        SemionMonsterEntity towerSelectedTarget = tower.selectAttackTarget(targets);
+        if (towerSelectedTarget != null) {
+            return towerSelectedTarget;
+        }
+
+        Comparator<SemionMonsterEntity> targetPriority = Comparator
+                .comparingDouble((SemionMonsterEntity monster) -> monster.runtimeMonster().targetPriorityScore())
+                .thenComparingLong(this::stableTargetOffset)
+                .thenComparingDouble(monster -> -tower.distanceToSqr(monster));
+        return targets.stream().max(targetPriority).orElse(null);
+    }
+
     private List<SemionMonsterEntity> targetCandidates() {
         AABB searchBox = tower.targetSearchBox();
         return tower.level().getEntities(
@@ -159,6 +192,7 @@ public final class TowerAttackMonsterGoal extends Goal {
                 ).stream()
                 .filter(SemionMonsterEntity.class::isInstance)
                 .map(SemionMonsterEntity.class::cast)
+                .filter(this::isInTargetSearchRange)
                 .toList();
     }
 
@@ -171,6 +205,10 @@ public final class TowerAttackMonsterGoal extends Goal {
     }
 
     private boolean isInTargetSearchRange(SemionMonsterEntity monster) {
+        if (tower.deployedAtFinalDefense()) {
+            double range = SemionTowerEntity.FINAL_DEFENSE_TARGET_RANGE;
+            return tower.distanceToSqr(monster) <= range * range;
+        }
         return tower.targetSearchBox().intersects(monster.getBoundingBox());
     }
 

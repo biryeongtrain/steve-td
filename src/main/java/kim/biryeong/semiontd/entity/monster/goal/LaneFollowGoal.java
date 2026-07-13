@@ -1,5 +1,6 @@
 package kim.biryeong.semiontd.entity.monster.goal;
 
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
 import kim.biryeong.semiontd.entity.boss.SemionBossEntity;
@@ -55,7 +56,7 @@ public final class LaneFollowGoal extends Goal {
         if (waypointIndex >= points.size()) {
             SemionBossEntity boss = findBossTarget();
             if (boss != null) {
-                monster.setTarget(boss);
+                enterFinalDefenseCombat(boss);
             }
             monster.playAnimation(SemionAnimationState.IDLE);
             return;
@@ -68,7 +69,7 @@ public final class LaneFollowGoal extends Goal {
             if (waypointIndex >= points.size()) {
                 SemionBossEntity boss = findBossTarget();
                 if (boss != null) {
-                    monster.setTarget(boss);
+                    enterFinalDefenseCombat(boss);
                 }
                 monster.getNavigation().stop();
                 monster.playAnimation(SemionAnimationState.IDLE);
@@ -91,7 +92,14 @@ public final class LaneFollowGoal extends Goal {
                 .filter(SemionBossEntity.class::isInstance)
                 .map(SemionBossEntity.class::cast)
                 .filter(boss -> monster.runtimeMonster() != null && boss.teamId() == monster.runtimeMonster().targetTeam())
-                .findFirst()
+                .min(Comparator.comparingDouble(monster::distanceToSqr))
                 .orElse(null);
+    }
+
+    private void enterFinalDefenseCombat(SemionBossEntity boss) {
+        if (monster.runtimeMonster() != null) {
+            monster.runtimeMonster().enterFinalDefenseCombat();
+        }
+        monster.setTarget(boss);
     }
 }

@@ -8,6 +8,7 @@ import java.util.UUID;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.MonsterScalingConfig;
 import kim.biryeong.semiontd.config.WaveMonsterEntry;
+import kim.biryeong.semiontd.config.WaveSpawnMode;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
 import kim.biryeong.semiontd.entity.defender.DefenderEntity;
 import kim.biryeong.semiontd.entity.defender.DefenderEntityState;
@@ -25,6 +26,10 @@ import net.minecraft.world.phys.Vec3;
 
 public final class PlayerLane {
     private static final double FINAL_DEFENSE_MONSTER_PROGRESS = 0.90;
+    private static final int FORCED_FINAL_DEFENSE_COLUMNS = 5;
+    private static final int FORCED_FINAL_DEFENSE_ROWS = 20;
+    private static final double FORCED_FINAL_DEFENSE_COLUMN_SPACING = 0.9;
+    private static final double FORCED_FINAL_DEFENSE_ROW_SPACING = 0.9;
 
     private final TeamId teamId;
     private final int laneId;
@@ -41,6 +46,10 @@ public final class PlayerLane {
     private boolean clearedThisRound;
     private boolean leakedThisRound;
     private boolean towersMovedToFinalDefense;
+    private boolean laneDefenseBroken;
+    private int waveMonsterSpawnIntervalTicks = 1;
+    private int waveMonsterSpawnCooldownTicks;
+    private FinalDefenseSlotAllocator finalDefenseSlotAllocator;
 
     public PlayerLane(
             TeamId teamId,
@@ -55,6 +64,7 @@ public final class PlayerLane {
         this.arenaWorld = arenaWorld;
         this.laneLayout = laneLayout;
         this.waveSpawnPositionPolicy = new WaveSpawnPositionPolicy(laneLayout);
+        this.finalDefenseSlotAllocator = FinalDefenseSlotAllocator.fromLayouts(List.of(laneLayout));
     }
 
     public TeamId teamId() {
@@ -121,6 +131,7 @@ public final class PlayerLane {
         clearedThisRound = false;
         leakedThisRound = false;
         towersMovedToFinalDefense = false;
+        laneDefenseBroken = false;
         for (DefenderEntity defenderEntity : defenderEntities) {
             defenderEntity.remove();
         }
@@ -135,6 +146,39 @@ public final class PlayerLane {
         for (int i = 0; i < entry.count(); i++) {
             waveMonsterSpawnQueue.add(Monster.fromWaveEntry(entry, teamId, laneId));
         }
+    }
+
+    public void enqueueWave(List<WaveMonsterEntry> entries, WaveSpawnMode spawnMode, int spawnIntervalTicks) {
+        waveMonsterSpawnIntervalTicks = Math.max(1, spawnIntervalTicks);
+        waveMonsterSpawnCooldownTicks = 0;
+        for (WaveMonsterEntry entry : expandWaveEntries(entries, spawnMode)) {
+            waveMonsterSpawnQueue.add(Monster.fromWaveEntry(entry, teamId, laneId));
+        }
+    }
+
+    static List<WaveMonsterEntry> expandWaveEntries(List<WaveMonsterEntry> entries, WaveSpawnMode spawnMode) {
+        if (entries == null || entries.isEmpty()) {
+            return List.of();
+        }
+        List<WaveMonsterEntry> expanded = new ArrayList<>();
+        if (spawnMode != WaveSpawnMode.ROUND_ROBIN) {
+            for (WaveMonsterEntry entry : entries) {
+                for (int i = 0; i < entry.count(); i++) {
+                    expanded.add(entry);
+                }
+            }
+            return expanded;
+        }
+
+        int maxCount = entries.stream().mapToInt(WaveMonsterEntry::count).max().orElse(0);
+        for (int index = 0; index < maxCount; index++) {
+            for (WaveMonsterEntry entry : entries) {
+                if (index < entry.count()) {
+                    expanded.add(entry);
+                }
+            }
+        }
+        return expanded;
     }
 
     public void enqueueSummonedMonster(Monster monster) {
@@ -223,7 +267,7 @@ public final class PlayerLane {
             MonsterScalingConfig monsterScalingConfig,
             int roundElapsedTicks
     ) {
-        spawnQueuedMonster(waveMonsterSpawnQueue, players, true);
+        spawnQueuedWaveMonster(players);
         spawnQueuedMonster(summonedMonsterSpawnQueue, players, false);
 
         for (Tower tower : List.copyOf(towers)) {
@@ -272,12 +316,18 @@ public final class PlayerLane {
         spawnAllQueuedMonsters(waveMonsterSpawnQueue);
         spawnAllQueuedMonsters(summonedMonsterSpawnQueue);
 
-        Vec3 finalDefenseMonsterPosition = laneLayout.positionAt(FINAL_DEFENSE_MONSTER_PROGRESS);
-        for (Monster monster : activeMonsters) {
-            monster.syncLaneProgress(FINAL_DEFENSE_MONSTER_PROGRESS);
+        for (int index = 0; index < activeMonsters.size(); index++) {
+            Monster monster = activeMonsters.get(index);
+            Vec3 finalDefenseMonsterPosition = forcedFinalDefensePosition(index);
+            monster.enterFinalDefenseCombat();
+            monster.syncLaneProgress(laneLayout.progressAt(finalDefenseMonsterPosition));
             if (monster.hasMinecraftEntity()) {
                 var entity = arenaWorld.getEntity(monster.minecraftEntityId());
                 if (entity instanceof SemionMonsterEntity monsterEntity && !monsterEntity.isRemoved()) {
+                    Vec3 movement = finalDefenseMonsterPosition.subtract(monsterEntity.position());
+                    if (!arenaWorld.noCollision(monsterEntity, monsterEntity.getBoundingBox().move(movement))) {
+                        finalDefenseMonsterPosition = laneLayout.positionAt(monster.laneProgress());
+                    }
                     monsterEntity.teleportTo(finalDefenseMonsterPosition.x, finalDefenseMonsterPosition.y, finalDefenseMonsterPosition.z);
                     monsterEntity.getNavigation().stop();
                 }
@@ -292,6 +342,31 @@ public final class PlayerLane {
         return defenders;
     }
 
+    Vec3 forcedFinalDefensePosition(int index) {
+        int positionIndex = Math.floorMod(index, FORCED_FINAL_DEFENSE_COLUMNS * FORCED_FINAL_DEFENSE_ROWS);
+        int row = positionIndex / FORCED_FINAL_DEFENSE_COLUMNS;
+        int column = positionIndex % FORCED_FINAL_DEFENSE_COLUMNS;
+        Vec3 center = laneLayout.positionAt(FINAL_DEFENSE_MONSTER_PROGRESS);
+        Vec3 previous = laneLayout.positionAt(FINAL_DEFENSE_MONSTER_PROGRESS - 0.10);
+        Vec3 direction = center.subtract(previous);
+        Vec3 forward = direction.horizontalDistanceSqr() <= 1.0E-6
+                ? new Vec3(0.0, 0.0, 1.0)
+                : new Vec3(direction.x, 0.0, direction.z).normalize();
+        center = center.subtract(forward.scale(row * FORCED_FINAL_DEFENSE_ROW_SPACING));
+        Vec3 lateral = direction.horizontalDistanceSqr() <= 1.0E-6
+                ? new Vec3(1.0, 0.0, 0.0)
+                : new Vec3(-forward.z, 0.0, forward.x);
+        double lateralOffset = (column - (FORCED_FINAL_DEFENSE_COLUMNS - 1) / 2.0)
+                * FORCED_FINAL_DEFENSE_COLUMN_SPACING;
+        Vec3 candidate = center.add(lateral.scale(lateralOffset));
+        var bounds = laneLayout.laneArea();
+        return new Vec3(
+                Math.max(bounds.min().getX() + 0.5, Math.min(bounds.max().getX() + 0.5, candidate.x)),
+                candidate.y,
+                Math.max(bounds.min().getZ() + 0.5, Math.min(bounds.max().getZ() + 0.5, candidate.z))
+        );
+    }
+
     public void disableMonsters() {
         for (Monster monster : activeMonsters) {
             discardMinecraftEntity(monster);
@@ -299,6 +374,7 @@ public final class PlayerLane {
         }
         activeMonsters.clear();
         waveMonsterSpawnQueue.clear();
+        waveMonsterSpawnCooldownTicks = 0;
         summonedMonsterSpawnQueue.clear();
         nextRoundSummonedMonsterSpawnQueue.clear();
         clearedThisRound = true;
@@ -323,13 +399,22 @@ public final class PlayerLane {
             return;
         }
 
-        List<GridPosition> slots = laneLayout.finalDefenseTowerSlots();
-        for (int i = 0; i < towers.size(); i++) {
-            Tower tower = towers.get(i);
-            GridPosition finalDefensePosition = finalDefenseTowerPosition(slots.get(Math.min(i, slots.size() - 1)));
-            tower.moveToFinalDefense(this, finalDefensePosition);
+        for (Tower tower : towers) {
+            tower.moveToFinalDefense(this, nextFinalDefenseTowerPosition(tower));
         }
         towersMovedToFinalDefense = true;
+    }
+
+    public GridPosition nextFinalDefenseTowerPosition(Tower tower) {
+        GridPosition slot = finalDefenseSlotAllocator.allocate(tower)
+                .orElseGet(() -> GridPosition.from(BlockPos.containing(laneLayout.bossPosition())));
+        return finalDefenseTowerPosition(slot);
+    }
+
+    void setFinalDefenseSlotAllocator(FinalDefenseSlotAllocator finalDefenseSlotAllocator) {
+        this.finalDefenseSlotAllocator = finalDefenseSlotAllocator == null
+                ? FinalDefenseSlotAllocator.fromLayouts(List.of(laneLayout))
+                : finalDefenseSlotAllocator;
     }
 
     private GridPosition finalDefenseTowerPosition(GridPosition slot) {
@@ -350,12 +435,24 @@ public final class PlayerLane {
     }
 
     private void syncTowerStates() {
+        boolean towerDeathDetected = false;
+        boolean allTowersDestroyed = !towers.isEmpty();
         for (Tower tower : towers) {
-            if (tower.isDestroyed(this)) {
+            boolean destroyed = tower.isDestroyed(this);
+            if (destroyed) {
                 if (tower.notifyDeath(this)) {
                     notifyNearbyTowerDeath(tower);
+                    towerDeathDetected = true;
                 }
+            } else {
+                allTowersDestroyed = false;
             }
+        }
+        if (!laneDefenseBroken && towerDeathDetected && allTowersDestroyed) {
+            laneDefenseBroken = true;
+        }
+        if (laneDefenseBroken) {
+            activeMonsters.forEach(Monster::enterFinalDefenseCombat);
         }
     }
 
@@ -398,6 +495,19 @@ public final class PlayerLane {
         }
     }
 
+    private void spawnQueuedWaveMonster(Map<UUID, SemionPlayer> players) {
+        if (waveMonsterSpawnQueue.isEmpty()) {
+            waveMonsterSpawnCooldownTicks = 0;
+            return;
+        }
+        if (waveMonsterSpawnCooldownTicks > 0) {
+            waveMonsterSpawnCooldownTicks--;
+            return;
+        }
+        spawnQueuedMonster(waveMonsterSpawnQueue, players, true);
+        waveMonsterSpawnCooldownTicks = waveMonsterSpawnIntervalTicks - 1;
+    }
+
     private void spawnAllQueuedMonsters(List<Monster> queue) {
         while (!queue.isEmpty()) {
             Monster monster = queue.removeFirst();
@@ -407,6 +517,11 @@ public final class PlayerLane {
     }
 
     private void spawnMinecraftEntity(Monster monster, boolean distributeWaveSpawn) {
+        Vec3 spawn = distributeWaveSpawn ? waveSpawnPositionPolicy.next() : laneLayout.spawn();
+        spawnMinecraftEntity(monster, spawn);
+    }
+
+    private void spawnMinecraftEntity(Monster monster, Vec3 spawn) {
         if (monster.hasMinecraftEntity()) {
             return;
         }
@@ -414,7 +529,6 @@ public final class PlayerLane {
         SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, arenaWorld);
         entity.configureFrom(monster, laneLayout);
 
-        var spawn = distributeWaveSpawn ? waveSpawnPositionPolicy.next() : laneLayout.spawn();
         entity.setPos(spawn.x, spawn.y, spawn.z);
 
         if (arenaWorld.addFreshEntity(entity)) {
@@ -429,6 +543,7 @@ public final class PlayerLane {
             int roundElapsedTicks
     ) {
         if (!monster.hasMinecraftEntity()) {
+            restoreMinecraftEntity(monster);
             return;
         }
 
@@ -444,7 +559,8 @@ public final class PlayerLane {
             if (monster.health() <= 0) {
                 monster.syncHealth(0);
             } else {
-                monster.markRemoved();
+                monster.clearMinecraftEntityReference();
+                restoreMinecraftEntity(monster);
             }
             return;
         }
@@ -462,6 +578,16 @@ public final class PlayerLane {
             monsterEntity.syncAttributesFromRuntimeMonster();
             monsterEntity.setHealth((float) Math.max(0.1, monster.health()));
         }
+    }
+
+    private void restoreMinecraftEntity(Monster monster) {
+        if (monster == null || monster.isRemoved() || monster.health() <= 0.0) {
+            return;
+        }
+        Vec3 position = laneLayout.positionAt(monster.laneProgress());
+        BlockPos blockPos = BlockPos.containing(position);
+        arenaWorld.getChunk(blockPos.getX() >> 4, blockPos.getZ() >> 4);
+        spawnMinecraftEntity(monster, position);
     }
 
     private void recordIncomingThreat(Monster monster, Map<UUID, SemionPlayer> players) {
