@@ -21,6 +21,7 @@
     "fabricloader": ">=${loader_version}",
     "fabric-api": "*",
     "minecraft": "${minecraft_version}",
+    "sgui": "*",
     "bil": "*",
     "polymer-core": "*",
     "polymer-networking": "*",

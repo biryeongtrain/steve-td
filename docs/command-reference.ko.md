@@ -14,6 +14,7 @@
 | `/semiontd money request <amount>` | 같은 팀에게 다이아 지원을 요청합니다. |
 | `/semiontd money accept <requestId>` | 팀원의 지원 요청을 수락합니다. |
 | `/semiontd profile` | 내 프로필을 봅니다. |
+| `/semiontd cosmetic` | 9×6 치장 상점을 엽니다. 미보유 상품은 구매하고, 보유 상품은 착용하거나 해제합니다. |
 | `/semiontd skybox` | 등록된 스카이박스와 현재 선택을 봅니다. |
 | `/semiontd skybox <id>` | 개인 스카이박스를 선택합니다. |
 | `/semiontd skybox off` | 개인 스카이박스를 끕니다. |
@@ -68,10 +69,17 @@
 | `/semiontd playerlimit add <player>` | 정원 초과 입장 허용 목록에 플레이어를 추가합니다. |
 | `/semiontd playerlimit remove <player>` | 정원 초과 입장 허용 목록에서 플레이어를 제거합니다. |
 | `/semiontd playerlimit list` | 정원 초과 입장 허용 목록을 봅니다. |
+| `/semiontd cosmetic add <id> <price>` | 주 손의 머리 착용 아이템을 1개로 복사해 판매 목록에 추가합니다. |
+| `/semiontd cosmetic update <id> <price>` | 기존 상품을 주 손 아이템과 새 가격으로 교체합니다. |
+| `/semiontd cosmetic remove <id>` | 상품을 판매 목록에서 제거하고 해당 상품의 착용을 해제합니다. 구매 기록은 유지합니다. |
+| `/semiontd cosmetic list` | 등록된 상품 ID와 가격을 봅니다. |
+| `/semiontd cosmetic reload` | `cosmetics.json`을 다시 읽고 온라인 플레이어의 착용 상태를 갱신합니다. |
 | `/semiontd killboss <team>` | 지정 팀의 보스를 제거합니다. |
 | `/semiontd rating softreset` | ELO 데이터를 백업한 뒤 소프트 리셋합니다. 같은 관리자가 30초 안에 두 번 입력해야 실행됩니다. |
 
 `/semiontd reload`는 경제, 웨이브, 타워 카탈로그를 즉시 갱신합니다. 맵 설정은 다음 게임 생성부터 반영됩니다. 스카이박스와 음악은 이 명령에 포함되지 않으며 `/semiontd resourcepack reload`로 갱신합니다.
+
+치장 상품 등록과 수정에는 `EQUIPPABLE` 컴포넌트의 슬롯이 `HEAD`인 아이템만 쓸 수 있습니다. 가격은 `0` 이상이어야 합니다. 첫 클릭은 구매만 처리하며, 같은 상품을 다시 클릭하면 착용합니다. 착용 중인 상품을 클릭하면 해제합니다. 머리 슬롯에 일반 아이템이 있으면 착용하지 않습니다.
 
 ## 샌드박스 명령어
 
@@ -114,6 +122,7 @@
 | alias | 연결 명령 |
 |---|---|
 | `/직업` | `/semiontd job ui` |
+| `/치장` | `/semiontd cosmetic` |
 | `/스카이박스 [id or off]` | `/semiontd skybox [id or off]` |
 | `/특성` | `/semiontd trait` |
 | `/레이팅` | `/semiontd rating` |

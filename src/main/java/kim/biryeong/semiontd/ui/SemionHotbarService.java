@@ -10,6 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -30,7 +31,9 @@ public final class SemionHotbarService {
     }
 
     public static void grantMatchTools(ServerPlayer player) {
+        ItemStack head = player.getItemBySlot(EquipmentSlot.HEAD).copy();
         player.getInventory().clearContent();
+        player.setItemSlot(EquipmentSlot.HEAD, head);
         setTool(player, TOWER_TOOL_SLOT, towerTool());
         setTool(player, SUMMON_TOOL_SLOT, summonTool());
     }

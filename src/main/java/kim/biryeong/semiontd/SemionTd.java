@@ -5,6 +5,7 @@ import kim.biryeong.semiontd.api.SemionTdApi;
 import kim.biryeong.semiontd.command.SemionCommands;
 import kim.biryeong.semiontd.config.SemionConfigLoader;
 import kim.biryeong.semiontd.config.SemionConfigLoader.LoadedConfigs;
+import kim.biryeong.semiontd.cosmetic.CosmeticService;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
 import kim.biryeong.semiontd.entity.SemionPolymerEntityDataWarmup;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
@@ -83,6 +84,7 @@ public class SemionTd implements ModInitializer {
         );
         gameManager.configureTips(configs.tips());
         gameManager.configureMusic(musicService);
+        CosmeticService cosmeticService = new CosmeticService(gameManager, configDir.resolve("cosmetics.json"));
         SemionTipService tipService = new SemionTipService(gameManager);
         AreaVfxStyleRegistryImpl areaVfxStyles = new AreaVfxStyleRegistryImpl();
         BuiltinAreaVfxStyles.register(areaVfxStyles);
@@ -92,11 +94,12 @@ public class SemionTd implements ModInitializer {
         SemionPlayerLimitBypassService.configure(gameManager);
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
-                SemionCommands.register(dispatcher, gameManager, skyboxService, musicService, tipService, configDir));
+                SemionCommands.register(dispatcher, gameManager, skyboxService, musicService, tipService, cosmeticService, configDir));
         SemionPlaceholders.register(gameManager);
         SemionHotbarService.register(gameManager);
         SemionTowerInteractionService.register(gameManager);
-        Events.initialize(gameManager, skyboxService, tipService);
+        cosmeticService.registerUseProtection();
+        Events.initialize(gameManager, skyboxService, tipService, cosmeticService);
 
         Registry.register(BuiltInRegistries.DIALOG_BODY_TYPE, ResourceLocation.fromNamespaceAndPath("ttt", "aligned_message"), AlignedMessage.MAP_CODEC);
         Registry.register(BuiltInRegistries.DIALOG_BODY_TYPE, ResourceLocation.fromNamespaceAndPath("ttt", "aligned_item"), AlignedItemBody.MAP_CODEC);

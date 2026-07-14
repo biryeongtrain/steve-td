@@ -31,6 +31,7 @@ Semion TD는 서버 시작 또는 `/semiontd reload` 시 `config/semion-td/` 아
 | 파일 | 역할 |
 |---|---|
 | `profiles.json` | 플레이어 프로필 데이터입니다. |
+| `cosmetics.json` | 치장 상품 ID, 가격, 전체 `ItemStack` 데이터를 등록 순서대로 저장합니다. |
 | `build_guides.json` | 플레이어가 저장한 빌드 기록입니다. |
 | `semiontd.db` | SQLite 영속 저장소입니다. `persistence.json`의 `sqlitePath` 기본값입니다. |
 | `semiontd.db-shm`, `semiontd.db-wal` | SQLite 런타임 보조 파일입니다. |
@@ -39,7 +40,30 @@ Semion TD는 서버 시작 또는 `/semiontd reload` 시 `config/semion-td/` 아
 
 운영 데이터는 서버를 끈 뒤 백업하고, 가능하면 명령어로 갱신합니다.
 
-`profiles.json`에는 플레이어가 선택한 스카이박스 ID와 팁 수신 여부도 저장됩니다.
+`profiles.json`에는 플레이어가 구매한 치장 상품 ID와 현재 착용 선택, 선택한 스카이박스 ID, 팁 수신 여부도 저장됩니다.
+
+## `cosmetics.json`: 치장 상품 목록
+
+`/semiontd cosmetic add <id> <price>`를 처음 실행하면 `cosmetics.json`이 생성됩니다. 서버는 주 손 아이템을 1개로 복사하고 이름, 로어, 아이템 모델, 인챈트 등 모든 컴포넌트를 함께 저장합니다. 파일을 저장할 때 임시 파일을 만든 뒤 교체하므로, 운영자는 이 파일을 직접 수정하지 않는 편이 안전합니다. 파일을 직접 수정했다면 `/semiontd cosmetic reload`로 다시 불러옵니다.
+
+```json
+{
+  "entries": [
+    {
+      "id": "gold_crown",
+      "price": 100,
+      "item": {
+        "id": "minecraft:golden_helmet",
+        "count": 1
+      }
+    }
+  ]
+}
+```
+
+위 `item` 내용은 실제 아이템 컴포넌트에 따라 달라집니다. 상품 순서는 GUI 표시 순서이며 한 페이지에 45개를 표시합니다. `update`는 같은 ID의 상품과 가격을 바꾸고 온라인 착용본도 갱신합니다. `remove`는 판매와 착용 선택만 해제합니다. 플레이어의 구매 기록은 남으므로, 같은 ID를 다시 등록하면 이전 구매자도 계속 보유한 것으로 처리합니다. 완전히 다른 상품은 새 ID를 사용합니다.
+
+구매와 착용 선택은 `profiles.json`에 저장되며 재접속, 서버 재시작, 경기 전환 뒤에도 유지됩니다. 결제 저장에 실패하면 포인트 차감과 구매 기록을 모두 되돌립니다.
 
 ## `skyboxes/`: 개인 스카이박스
 

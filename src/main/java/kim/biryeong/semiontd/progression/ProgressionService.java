@@ -19,6 +19,14 @@ public final class ProgressionService {
     private final SemionProgressionStore store;
     private final AppliedMatchRepository appliedMatchRepository;
 
+    public enum CosmeticUpdateResult {
+        SUCCESS,
+        ALREADY_OWNED,
+        INSUFFICIENT_FUNDS,
+        NOT_OWNED,
+        PERSISTENCE_FAILED
+    }
+
     public ProgressionService(ProgressionConfig progressionConfig, Path storePath) {
         this(
                 progressionConfig,
@@ -69,6 +77,38 @@ public final class ProgressionService {
         SemionPlayerProfile updated = store.getOrCreateProfile(playerId, playerName)
                 .rememberRecentBuildCode(playerName, code);
         return store.putProfile(playerId, updated);
+    }
+
+    public synchronized CosmeticUpdateResult purchaseCosmetic(UUID playerId, String playerName, String cosmeticId, long price) {
+        SemionPlayerProfile current = store.getOrCreateProfile(playerId, playerName);
+        if (current.ownsCosmetic(cosmeticId)) {
+            return CosmeticUpdateResult.ALREADY_OWNED;
+        }
+        if (current.cosmeticCurrency() < price) {
+            return CosmeticUpdateResult.INSUFFICIENT_FUNDS;
+        }
+        SemionPlayerProfile updated = current.purchaseCosmetic(playerName, cosmeticId, price);
+        return store.putProfilePersisted(playerId, updated)
+                ? CosmeticUpdateResult.SUCCESS
+                : CosmeticUpdateResult.PERSISTENCE_FAILED;
+    }
+
+    public synchronized CosmeticUpdateResult selectCosmetic(UUID playerId, String playerName, String cosmeticId) {
+        SemionPlayerProfile current = store.getOrCreateProfile(playerId, playerName);
+        if (cosmeticId != null && !cosmeticId.isBlank() && !current.ownsCosmetic(cosmeticId)) {
+            return CosmeticUpdateResult.NOT_OWNED;
+        }
+        SemionPlayerProfile updated = current.updateSelectedCosmetic(playerName, cosmeticId);
+        if (updated.equals(current)) {
+            return CosmeticUpdateResult.SUCCESS;
+        }
+        return store.putProfilePersisted(playerId, updated)
+                ? CosmeticUpdateResult.SUCCESS
+                : CosmeticUpdateResult.PERSISTENCE_FAILED;
+    }
+
+    public synchronized boolean clearSelectedCosmetic(String cosmeticId) {
+        return store.clearSelectedCosmetic(cosmeticId);
     }
 
     public synchronized Map<UUID, MatchProgressionReward> applyMatchResult(MinecraftServer server, MatchResult matchResult) {

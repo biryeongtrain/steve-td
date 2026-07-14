@@ -7,6 +7,7 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -14,6 +15,8 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.buildguide.BuildAction;
 import kim.biryeong.semiontd.buildguide.BuildGuide;
+import kim.biryeong.semiontd.cosmetic.CosmeticCatalog;
+import kim.biryeong.semiontd.cosmetic.CosmeticService;
 import kim.biryeong.semiontd.game.*;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.SemionJob;
@@ -97,6 +100,7 @@ public final class SemionCommands {
             SemionSkyboxService skyboxService,
             SemionMusicService musicService,
             SemionTipService tipService,
+            CosmeticService cosmeticService,
             Path configDir
     ) {
         dispatcher.register(literal("semiontd")
@@ -185,6 +189,7 @@ public final class SemionCommands {
                                         )))))
                 .then(literal("profile")
                         .executes(context -> profile(context.getSource(), gameManager)))
+                .then(cosmeticCommand("cosmetic", cosmeticService))
                 .then(skyboxCommand("skybox", skyboxService))
                 .then(tipCommand("tip", gameManager, tipService))
                 .then(literal("rating")
@@ -319,6 +324,8 @@ public final class SemionCommands {
 
         dispatcher.register(literal("직업")
                 .executes(context -> jobDialog(context.getSource(), gameManager)));
+        dispatcher.register(literal("치장")
+                .executes(context -> openCosmeticShop(context.getSource(), cosmeticService)));
         dispatcher.register(skyboxCommand("스카이박스", skyboxService));
         dispatcher.register(traitCommand("특성", gameManager));
         dispatcher.register(literal("레이팅")
@@ -490,6 +497,155 @@ public final class SemionCommands {
         TowerVfxService.resetStats();
         success(source, "VFX 통계를 초기화했습니다.");
         return 1;
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> cosmeticCommand(
+            String rootName,
+            CosmeticService cosmeticService
+    ) {
+        return literal(rootName)
+                .executes(context -> openCosmeticShop(context.getSource(), cosmeticService))
+                .then(literal("add")
+                        .requires(source -> source.hasPermission(2))
+                        .then(argument("id", StringArgumentType.word())
+                                .then(argument("price", LongArgumentType.longArg(0))
+                                        .executes(context -> addCosmetic(
+                                                context.getSource(),
+                                                cosmeticService,
+                                                StringArgumentType.getString(context, "id"),
+                                                LongArgumentType.getLong(context, "price")
+                                        )))))
+                .then(literal("update")
+                        .requires(source -> source.hasPermission(2))
+                        .then(argument("id", StringArgumentType.word())
+                                .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                        cosmeticService.entries().stream().map(CosmeticCatalog.Entry::id),
+                                        builder
+                                ))
+                                .then(argument("price", LongArgumentType.longArg(0))
+                                        .executes(context -> updateCosmetic(
+                                                context.getSource(),
+                                                cosmeticService,
+                                                StringArgumentType.getString(context, "id"),
+                                                LongArgumentType.getLong(context, "price")
+                                        )))))
+                .then(literal("remove")
+                        .requires(source -> source.hasPermission(2))
+                        .then(argument("id", StringArgumentType.word())
+                                .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                        cosmeticService.entries().stream().map(CosmeticCatalog.Entry::id),
+                                        builder
+                                ))
+                                .executes(context -> removeCosmetic(
+                                        context.getSource(),
+                                        cosmeticService,
+                                        StringArgumentType.getString(context, "id")
+                                ))))
+                .then(literal("list")
+                        .requires(source -> source.hasPermission(2))
+                        .executes(context -> listCosmetics(context.getSource(), cosmeticService)))
+                .then(literal("reload")
+                        .requires(source -> source.hasPermission(2))
+                        .executes(context -> reloadCosmetics(context.getSource(), cosmeticService)));
+    }
+
+    private static int openCosmeticShop(CommandSourceStack source, CosmeticService cosmeticService) throws CommandSyntaxException {
+        cosmeticService.openShop(source.getPlayerOrException());
+        return 1;
+    }
+
+    private static int addCosmetic(
+            CommandSourceStack source,
+            CosmeticService cosmeticService,
+            String id,
+            long price
+    ) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        if (player.getMainHandItem().isEmpty()) {
+            failure(source, "주 손에 등록할 머리 아이템을 들어 주세요.");
+            return 0;
+        }
+        CosmeticCatalog.MutationResult result = cosmeticService.add(
+                source.getServer(), id, price, player.getMainHandItem()
+        );
+        if (result != CosmeticCatalog.MutationResult.SUCCESS) {
+            return cosmeticMutationFailure(source, result, true);
+        }
+        success(source, "치장 아이템 '" + id + "'을(를) " + price + " 포인트로 등록했습니다.");
+        return 1;
+    }
+
+    private static int updateCosmetic(
+            CommandSourceStack source,
+            CosmeticService cosmeticService,
+            String id,
+            long price
+    ) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        if (player.getMainHandItem().isEmpty()) {
+            failure(source, "주 손에 교체할 머리 아이템을 들어 주세요.");
+            return 0;
+        }
+        CosmeticCatalog.MutationResult result = cosmeticService.update(
+                source.getServer(), id, price, player.getMainHandItem()
+        );
+        if (result != CosmeticCatalog.MutationResult.SUCCESS) {
+            return cosmeticMutationFailure(source, result, false);
+        }
+        success(source, "치장 아이템 '" + id + "'의 아이템과 가격을 갱신했습니다.");
+        return 1;
+    }
+
+    private static int removeCosmetic(CommandSourceStack source, CosmeticService cosmeticService, String id) {
+        CosmeticService.RemoveResult result = cosmeticService.remove(source.getServer(), id);
+        if (result.catalogResult() != CosmeticCatalog.MutationResult.SUCCESS) {
+            return cosmeticMutationFailure(source, result.catalogResult(), false);
+        }
+        if (!result.profilesSaved()) {
+            failure(source, "목록에서는 제거했지만 일부 착용 선택을 저장하지 못했습니다.");
+            return 0;
+        }
+        success(source, "치장 아이템 '" + id + "'을(를) 판매 목록에서 제거했습니다.");
+        return 1;
+    }
+
+    private static int listCosmetics(CommandSourceStack source, CosmeticService cosmeticService) {
+        List<CosmeticCatalog.Entry> entries = cosmeticService.entries();
+        if (entries.isEmpty()) {
+            success(source, "등록된 치장 아이템이 없습니다.");
+            return 1;
+        }
+        success(source, "치장 아이템 " + entries.size() + "개:");
+        for (CosmeticCatalog.Entry entry : entries) {
+            source.sendSuccess(() -> Component.literal("- " + entry.id() + ": " + entry.price()), false);
+        }
+        return entries.size();
+    }
+
+    private static int reloadCosmetics(CommandSourceStack source, CosmeticService cosmeticService) {
+        if (!cosmeticService.reload(source.getServer())) {
+            failure(source, "치장 목록을 다시 불러오지 못했습니다. 기존 목록을 유지합니다.");
+            return 0;
+        }
+        success(source, "치장 목록을 다시 불러왔습니다. 등록 상품: " + cosmeticService.entries().size() + "개");
+        return 1;
+    }
+
+    private static int cosmeticMutationFailure(
+            CommandSourceStack source,
+            CosmeticCatalog.MutationResult result,
+            boolean adding
+    ) {
+        String message = switch (result) {
+            case DUPLICATE -> "이미 같은 ID의 치장 아이템이 있습니다.";
+            case MISSING -> "해당 ID의 치장 아이템이 없습니다.";
+            case INVALID -> "주 손 아이템은 머리 슬롯에 착용 가능한 아이템이어야 합니다.";
+            case SAVE_FAILED -> "치장 목록을 저장하지 못해 변경을 취소했습니다.";
+            case UNAVAILABLE -> "치장 목록을 불러오지 못해 변경할 수 없습니다.";
+            default -> adding ? "치장 아이템을 등록하지 못했습니다." : "치장 아이템을 변경하지 못했습니다.";
+        };
+        failure(source, message);
+        return 0;
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> skyboxCommand(

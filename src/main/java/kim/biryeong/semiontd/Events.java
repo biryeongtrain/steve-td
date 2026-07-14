@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd;
 
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
+import kim.biryeong.semiontd.cosmetic.CosmeticService;
 import kim.biryeong.semiontd.game.SemionGameManager;
 import kim.biryeong.semiontd.game.SemionPlayerProtectionService;
 import kim.biryeong.semiontd.skybox.SemionSkyboxService;
@@ -9,6 +10,7 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import xyz.nucleoid.stimuli.Stimuli;
 import xyz.nucleoid.stimuli.event.EventResult;
 import xyz.nucleoid.stimuli.event.player.PlayerConsumeHungerEvent;
@@ -18,7 +20,8 @@ public final class Events {
     public static void initialize(
             SemionGameManager gameManager,
             SemionSkyboxService skyboxService,
-            SemionTipService tipService
+            SemionTipService tipService,
+            CosmeticService cosmeticService
     ) {
         SemionPlayerProtectionService.register(gameManager);
 
@@ -30,7 +33,10 @@ public final class Events {
             TowerVfxService.endServerTick(server);
         });
 
-        ServerLifecycleEvents.SERVER_STARTED.register(gameManager::scheduleStartupLobbyLoad);
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            cosmeticService.load(server);
+            gameManager.scheduleStartupLobbyLoad(server);
+        });
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
             TowerVfxService.shutdown();
             skyboxService.shutdown();
@@ -40,7 +46,9 @@ public final class Events {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             gameManager.handlePlayerJoin(handler.getPlayer());
             tipService.handlePlayerJoin(handler.getPlayer());
+            cosmeticService.syncPlayer(handler.getPlayer());
         });
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> cosmeticService.syncPlayer(newPlayer));
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             skyboxService.handlePlayerDisconnect(handler.getPlayer());
             tipService.handlePlayerDisconnect(handler.getPlayer());

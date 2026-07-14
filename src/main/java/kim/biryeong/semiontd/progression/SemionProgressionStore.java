@@ -59,6 +59,39 @@ public final class SemionProgressionStore {
         return profile;
     }
 
+    public synchronized boolean putProfilePersisted(UUID playerId, SemionPlayerProfile profile) {
+        ensureLoaded();
+        SemionPlayerProfile previous = profiles.put(playerId, profile);
+        if (save(false)) {
+            return true;
+        }
+        if (previous == null) {
+            profiles.remove(playerId);
+        } else {
+            profiles.put(playerId, previous);
+        }
+        save();
+        return false;
+    }
+
+    public synchronized boolean clearSelectedCosmetic(String cosmeticId) {
+        ensureLoaded();
+        Map<UUID, SemionPlayerProfile> previous = new HashMap<>();
+        for (Map.Entry<UUID, SemionPlayerProfile> entry : profiles.entrySet()) {
+            if (!entry.getValue().selectedCosmeticId().equals(cosmeticId)) {
+                continue;
+            }
+            previous.put(entry.getKey(), entry.getValue());
+            entry.setValue(entry.getValue().updateSelectedCosmetic(entry.getValue().lastKnownName(), ""));
+        }
+        if (previous.isEmpty() || save(false)) {
+            return true;
+        }
+        profiles.putAll(previous);
+        save();
+        return false;
+    }
+
     public synchronized Optional<Map<UUID, MatchProgressionReward>> recordMatch(
             MatchResult matchResult,
             ProgressionConfig progressionConfig
@@ -109,6 +142,10 @@ public final class SemionProgressionStore {
     }
 
     private boolean save() {
+        return save(true);
+    }
+
+    private boolean save(boolean appendFallback) {
         if (path == null) {
             return true;
         }
@@ -127,8 +164,10 @@ public final class SemionProgressionStore {
             }
             return true;
         } catch (IOException exception) {
-            SemionTd.LOGGER.warn("Failed to save progression store {}; writing progression snapshot to fallback log.", path, exception);
-            appendFallbackLog(raw);
+            SemionTd.LOGGER.warn("Failed to save progression store {}.", path, exception);
+            if (appendFallback) {
+                appendFallbackLog(raw);
+            }
             return false;
         }
     }

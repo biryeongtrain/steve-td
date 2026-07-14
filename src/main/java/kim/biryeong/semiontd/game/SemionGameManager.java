@@ -711,6 +711,18 @@ public final class SemionGameManager {
         return progressionService.saveTipsEnabled(server, playerId, playerName, enabled);
     }
 
+    public ProgressionService.CosmeticUpdateResult purchaseCosmetic(UUID playerId, String playerName, String cosmeticId, long price) {
+        return progressionService.purchaseCosmetic(playerId, playerName, cosmeticId, price);
+    }
+
+    public ProgressionService.CosmeticUpdateResult selectCosmetic(UUID playerId, String playerName, String cosmeticId) {
+        return progressionService.selectCosmetic(playerId, playerName, cosmeticId);
+    }
+
+    public boolean clearSelectedCosmetic(String cosmeticId) {
+        return progressionService.clearSelectedCosmetic(cosmeticId);
+    }
+
     public Optional<MatchResult> lastMatchResult() {
         return Optional.ofNullable(lastMatchResult);
     }
