@@ -4,6 +4,7 @@ import java.util.Comparator;
 import java.util.EnumSet;
 import kim.biryeong.semiontd.entity.defender.LaneDefenseEntity;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
+import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.phys.AABB;
@@ -30,6 +31,11 @@ public final class AcquireLaneDefenseTargetGoal extends Goal {
     public void start() {
         LivingEntity target = findTarget();
         if (target != null) {
+            if (target instanceof SemionTowerEntity towerEntity
+                    && towerEntity.deployedAtFinalDefense()
+                    && monster.runtimeMonster() != null) {
+                monster.runtimeMonster().enterFinalDefenseCombat();
+            }
             monster.setTarget(target);
         }
     }

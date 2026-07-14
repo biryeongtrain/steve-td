@@ -17,7 +17,8 @@ public class SiegeIncomeSummon extends BasicIncomeSummon {
                 entity,
                 abilityValue("bonusDamage", 20.0),
                 abilityInt("cooldownTicks", 80),
-                abilityInt("retryDelayTicks", 20)
+                abilityInt("retryDelayTicks", 20),
+                abilityValue("progressThreshold", 0.0)
         ));
     }
 }

@@ -12,7 +12,10 @@ import kim.biryeong.semiontd.entity.boss.SemionBossEntity;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.MonsterDimensions;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
+import kim.biryeong.semiontd.entity.monster.goal.AcquireLaneDefenseTargetGoal;
 import kim.biryeong.semiontd.entity.monster.goal.LaneFollowGoal;
+import kim.biryeong.semiontd.entity.monster.goal.MonsterAttackTargetGoal;
+import kim.biryeong.semiontd.entity.goal.SiegeTrueDamageGoal;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
@@ -330,6 +333,158 @@ public final class SemionWaveGameTest {
         }
         assertClose(2.0, runtimeMonster.attackRange(), "natural final-defense attack range");
         assertClose(2.0, SemionBossEntity.FINAL_DEFENSE_ENGAGEMENT_RANGE, "boss engagement range");
+        context.succeed();
+    }
+
+    @GameTest
+    public void targetingFinalDefenseTowerBeforeBossCapsAttackRangeImmediately(GameTestHelper context) {
+        PlayerLane lane = lane(context, "final-defense-tower-interception");
+        WaveMonsterEntry artillery = new WaveMonsterEntry(
+                "intercepted-artillery",
+                100.0,
+                4.0,
+                1.0,
+                AttackKind.RANGED,
+                "minecraft:skeleton",
+                null,
+                MonsterDimensions.DEFAULT,
+                0,
+                1,
+                0.0,
+                1.0,
+                11.0,
+                24
+        );
+        Monster runtimeMonster = Monster.fromWaveEntry(artillery, TeamId.RED, 1);
+        SemionMonsterEntity monsterEntity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
+        monsterEntity.configureFrom(runtimeMonster, lane.laneLayout());
+        monsterEntity.setPos(lane.laneLayout().spawn());
+        context.getLevel().addFreshEntity(monsterEntity);
+
+        Vec3 finalDefensePosition = lane.laneLayout().bossPosition();
+        GridPosition finalDefenseBlock = GridPosition.from(BlockPos.containing(finalDefensePosition.add(0.0, -1.0, 0.0)));
+        TestTower finalDefenseTower = new TestTower(
+                TestTowerTypes.TEST_DIRECT,
+                lane.ownerPlayer(),
+                TeamId.RED,
+                1,
+                finalDefenseBlock
+        );
+        finalDefenseTower.moveToFinalDefense(lane, finalDefenseBlock);
+        SemionTowerEntity towerEntity = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+        towerEntity.configure(finalDefenseTower, lane.laneLayout());
+        towerEntity.setPos(finalDefensePosition);
+        context.getLevel().addFreshEntity(towerEntity);
+
+        AcquireLaneDefenseTargetGoal targetGoal = new AcquireLaneDefenseTargetGoal(monsterEntity);
+        if (!targetGoal.canUse()) {
+            throw new AssertionError("A ranged monster should detect the final-defense tower before reaching the boss.");
+        }
+        targetGoal.start();
+
+        if (monsterEntity.getTarget() != towerEntity || !runtimeMonster.inFinalDefenseCombat()) {
+            throw new AssertionError("Targeting a final-defense tower should immediately enter final-defense combat.");
+        }
+        assertClose(Monster.FINAL_DEFENSE_ATTACK_RANGE, runtimeMonster.attackRange(), "intercepted final-defense attack range");
+
+        float towerHealth = towerEntity.getHealth();
+        new MonsterAttackTargetGoal(monsterEntity, 1.1).tick();
+        if (towerEntity.getHealth() != towerHealth || !monsterEntity.getMoveControl().hasWanted()) {
+            throw new AssertionError("The monster should approach the tower instead of attacking beyond two blocks.");
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void siegeAbilityRespectsFinalDefenseRangeAndProgress(GameTestHelper context) {
+        PlayerLane lane = lane(context, "siege-final-defense-range");
+        Monster runtimeMonster = Monster.fromWaveEntry(
+                entry("siege-artillery", AttackKind.RANGED, 1, 0.0, 1.0, 11.0, 24),
+                TeamId.RED,
+                1
+        );
+        runtimeMonster.enterFinalDefenseCombat();
+        runtimeMonster.syncLaneProgress(0.64);
+
+        Vec3 towerPosition = lane.laneLayout().bossPosition();
+        SemionMonsterEntity monsterEntity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
+        monsterEntity.configureFrom(runtimeMonster, lane.laneLayout());
+        monsterEntity.setPos(towerPosition.add(7.0, 0.0, 0.0));
+        context.getLevel().addFreshEntity(monsterEntity);
+
+        GridPosition towerBlock = GridPosition.from(BlockPos.containing(towerPosition.add(0.0, -1.0, 0.0)));
+        TestTower tower = new TestTower(TestTowerTypes.TEST_DIRECT, lane.ownerPlayer(), TeamId.RED, 1, towerBlock);
+        SemionTowerEntity towerEntity = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+        towerEntity.configure(tower, lane.laneLayout());
+        towerEntity.setPos(towerPosition);
+        context.getLevel().addFreshEntity(towerEntity);
+        monsterEntity.setTarget(towerEntity);
+
+        float initialHealth = towerEntity.getHealth();
+        new SiegeTrueDamageGoal(monsterEntity, 10.0, 20, 1, 0.65).tick();
+        if (towerEntity.getHealth() != initialHealth) {
+            throw new AssertionError("A final-defense siege monster must not deal damage beyond two blocks.");
+        }
+
+        monsterEntity.setPos(towerPosition.add(1.0, 0.0, 0.0));
+        new SiegeTrueDamageGoal(monsterEntity, 10.0, 20, 1, 0.65).tick();
+        if (towerEntity.getHealth() != initialHealth) {
+            throw new AssertionError("A siege ability must wait for its configured progress threshold.");
+        }
+
+        runtimeMonster.syncLaneProgress(0.65);
+        new SiegeTrueDamageGoal(monsterEntity, 10.0, 20, 1, 0.65).tick();
+        if (towerEntity.getHealth() >= initialHealth) {
+            throw new AssertionError("A siege ability should work inside two blocks after its progress threshold.");
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void reachingFinalDefenseProgressCapsMonsterAttackRange(GameTestHelper context) {
+        Monster runtimeMonster = Monster.fromWaveEntry(
+                entry("area-artillery", AttackKind.RANGED, 1, 0.0, 1.0, 11.0, 24),
+                TeamId.RED,
+                1
+        );
+        runtimeMonster.syncLaneProgress(Monster.FINAL_DEFENSE_PROGRESS);
+
+        assertClose(Monster.FINAL_DEFENSE_ATTACK_RANGE, runtimeMonster.attackRange(), "final-defense progress attack range");
+        if (!runtimeMonster.inFinalDefenseCombat()) {
+            throw new AssertionError("Reaching final-defense progress should enter final-defense combat.");
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void preNotifiedDestroyedTowerStillBreaksLaneDefense(GameTestHelper context) {
+        PlayerLane lane = lane(context, "pre-notified-destroyed-tower");
+        BlockPos towerBlock = context.absolutePos(new BlockPos(1, 1, 2));
+        TestTower tower = new TestTower(
+                TestTowerTypes.TEST_DIRECT,
+                lane.ownerPlayer(),
+                TeamId.RED,
+                1,
+                GridPosition.from(towerBlock)
+        );
+        lane.addTower(tower);
+        lane.enqueueWave(
+                List.of(entry("pre-notified-artillery", AttackKind.RANGED, 1, 0.0, 1.0, 11.0, 24)),
+                WaveSpawnMode.SEQUENTIAL,
+                1
+        );
+        lane.tick(context.getLevel().getServer());
+        Monster monster = lane.activeMonsters().getFirst();
+
+        if (!lane.killTower(tower)) {
+            throw new AssertionError("The last lane tower should be killed by the test setup.");
+        }
+        lane.tick(context.getLevel().getServer());
+
+        if (!monster.inFinalDefenseCombat()) {
+            throw new AssertionError("A pre-notified destroyed tower should still break lane defense.");
+        }
+        assertClose(Monster.FINAL_DEFENSE_ATTACK_RANGE, monster.attackRange(), "pre-notified final-defense attack range");
         context.succeed();
     }
 

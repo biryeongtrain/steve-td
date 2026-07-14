@@ -25,7 +25,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
 
 public final class PlayerLane {
-    private static final double FINAL_DEFENSE_MONSTER_PROGRESS = 0.90;
+    private static final double FINAL_DEFENSE_MONSTER_PROGRESS = Monster.FINAL_DEFENSE_PROGRESS;
     private static final int FORCED_FINAL_DEFENSE_COLUMNS = 5;
     private static final int FORCED_FINAL_DEFENSE_ROWS = 20;
     private static final double FORCED_FINAL_DEFENSE_COLUMN_SPACING = 0.9;
@@ -435,20 +435,18 @@ public final class PlayerLane {
     }
 
     private void syncTowerStates() {
-        boolean towerDeathDetected = false;
         boolean allTowersDestroyed = !towers.isEmpty();
         for (Tower tower : towers) {
             boolean destroyed = tower.isDestroyed(this);
             if (destroyed) {
                 if (tower.notifyDeath(this)) {
                     notifyNearbyTowerDeath(tower);
-                    towerDeathDetected = true;
                 }
             } else {
                 allTowersDestroyed = false;
             }
         }
-        if (!laneDefenseBroken && towerDeathDetected && allTowersDestroyed) {
+        if (!laneDefenseBroken && allTowersDestroyed) {
             laneDefenseBroken = true;
         }
         if (laneDefenseBroken) {

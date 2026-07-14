@@ -6882,7 +6882,8 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 bombard,
                 SummonBalancePolicy.BOMBARD_TOAD_TRUE_DAMAGE,
                 SummonBalancePolicy.BOMBARD_TOAD_TRUE_DAMAGE_COOLDOWN_TICKS,
-                SummonBalancePolicy.SUPPORT_HEAL_RETRY_TICKS
+                SummonBalancePolicy.SUPPORT_HEAL_RETRY_TICKS,
+                0.0
         ).tick();
         if (!assertEquals(context, 30.0F, tower.getHealth(), "Bombard toad should bonus-damage towers without a progress condition.")) {
             return;
@@ -6899,7 +6900,8 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 siege,
                 SummonBalancePolicy.SIEGE_BREAKER_TRUE_DAMAGE,
                 SummonBalancePolicy.SIEGE_BREAKER_TRUE_DAMAGE_COOLDOWN_TICKS,
-                SummonBalancePolicy.SUPPORT_HEAL_RETRY_TICKS
+                SummonBalancePolicy.SUPPORT_HEAL_RETRY_TICKS,
+                0.0
         ).tick();
         if (!assertEquals(context, 955.0F, boss.getHealth(), "Siege breaker should bonus-damage boss targets.")) {
             return;

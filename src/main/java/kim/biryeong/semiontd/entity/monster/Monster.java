@@ -17,6 +17,7 @@ import java.util.UUID;
 public final class Monster {
     private static final double DEFAULT_PROGRESS_PER_TICK = 0.004;
     public static final double FINAL_DEFENSE_ATTACK_RANGE = 2.0;
+    public static final double FINAL_DEFENSE_PROGRESS = 0.90;
 
     private final String id;
     private final TeamId targetTeam;
@@ -541,6 +542,9 @@ public final class Monster {
         this.laneProgress = Math.max(0.0, Math.min(1.0, laneProgress));
         if (state == MonsterState.SPAWNING) {
             state = MonsterState.ALIVE;
+        }
+        if (this.laneProgress >= FINAL_DEFENSE_PROGRESS) {
+            enterFinalDefenseCombat();
         }
         if (state == MonsterState.ALIVE && this.laneProgress >= 1.0) {
             state = MonsterState.REACHED_BOSS;

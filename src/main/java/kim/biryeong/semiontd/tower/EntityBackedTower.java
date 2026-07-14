@@ -86,7 +86,7 @@ public abstract class EntityBackedTower extends Tower {
     @Override
     public boolean isDestroyed(PlayerLane lane) {
         if (entityId < 0) {
-            return false;
+            return super.isDestroyed(lane);
         }
 
         var entity = lane.arenaWorld().getEntity(entityId);
