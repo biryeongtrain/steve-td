@@ -257,8 +257,8 @@ Roster rules:
 - `TEST` mode always selects exactly `1v1` if at least two players are online.
 - `NORMAL` mode avoids `1v1` and one-player teams.
 - `NORMAL` mode uses all online players when possible, up to 20 active players.
-- `NORMAL` mode chooses the smallest active team count that keeps every team at or below 5 players.
-- Teams are then distributed as evenly as possible for that team count.
+- `NORMAL` mode first chooses the smallest active team count that divides all active players evenly while keeping every team at or below 5 players.
+- If no exact split exists, teams are distributed as evenly as possible using the smallest valid team count.
 - Two-player teams are only used when a 3+ player split is impossible, such as `4 -> 2/2` or `5 -> 3/2`.
 - Players above the 20 active-player cap are assigned to `semion_spectator`.
 
@@ -269,7 +269,7 @@ Examples:
 4 players, NORMAL  -> 2/2
 6 players, NORMAL  -> 3/3
 8 players, NORMAL  -> 4/4
-9 players, NORMAL  -> 5/4
+9 players, NORMAL  -> 3/3/3
 10 players, NORMAL -> 5v5
 12 players, NORMAL -> 4/4/4
 16 players, NORMAL -> 4/4/4/4
@@ -1232,8 +1232,8 @@ Implemented first compile-safe skeleton:
   - start-time roster lock with spectator tracking
   - only selected start participants become active `SemionPlayer` entries
   - inactive teams stay out of victory and summon targeting
-  - normal mode now uses the smallest team count that keeps teams at or under 5 players, then distributes players as evenly as possible
-  - example compositions now include `5/4`, `4/4/4`, and `4/4/4/4`
+  - normal mode first prefers the smallest exact split that keeps teams at or under 5 players, then distributes players as evenly as possible when no exact split exists
+  - example compositions now include `3/3/3`, `4/4/4`, and `4/4/4/4`
 - Added start placement handling:
   - `StartPlacement`
   - active players are teleported into their team Fantasy world at `team_spawn` with lane-based offsets
@@ -1360,7 +1360,7 @@ Verified:
   - `4 -> 2/2`
   - `6 -> 3/3`
   - `8 -> 4/4`
-  - `9 -> 5/4`
+  - `9 -> 3/3/3`
   - `12 -> 4/4/4`
   - `16 -> 4/4/4/4`
   - normal-mode rejection of one-player-team rosters

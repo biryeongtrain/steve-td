@@ -231,7 +231,8 @@ public final class ParticipantSelectionService {
         }
 
         int activePlayerCount = Math.min(playerCount, MAX_ACTIVE_PLAYERS);
-        SelectionShape fallback = null;
+        SelectionShape balancedFallback = null;
+        SelectionShape twoPlayerFallback = null;
         int maxTeams = Math.min(TEAM_ORDER.size(), activePlayerCount);
         for (int teamCount = 2; teamCount <= maxTeams; teamCount++) {
             int maxTeamSize = (activePlayerCount + teamCount - 1) / teamCount;
@@ -240,15 +241,23 @@ public final class ParticipantSelectionService {
             }
 
             int minTeamSize = activePlayerCount / teamCount;
-            List<Integer> capacities = distributedCapacities(activePlayerCount, teamCount);
-            if (minTeamSize >= 3) {
-                return new SelectionShape(activePlayerCount, capacities);
+            if (minTeamSize < 2) {
+                continue;
             }
-            if (minTeamSize >= 2 && fallback == null) {
-                fallback = new SelectionShape(activePlayerCount, capacities);
+            List<Integer> capacities = distributedCapacities(activePlayerCount, teamCount);
+            SelectionShape shape = new SelectionShape(activePlayerCount, capacities);
+            if (activePlayerCount % teamCount == 0) {
+                return shape;
+            }
+            if (minTeamSize >= 3) {
+                if (balancedFallback == null) {
+                    balancedFallback = shape;
+                }
+            } else if (twoPlayerFallback == null) {
+                twoPlayerFallback = shape;
             }
         }
-        return fallback;
+        return balancedFallback != null ? balancedFallback : twoPlayerFallback;
     }
 
     private static List<Integer> distributedCapacities(int activePlayerCount, int teamCount) {

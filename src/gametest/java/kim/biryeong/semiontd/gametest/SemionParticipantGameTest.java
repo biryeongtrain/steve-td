@@ -431,7 +431,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
-    public void normalModeSelectsFiveVersusFourWithoutSpectator(GameTestHelper context) {
+    public void normalModePrefersThreeBalancedTeamsFromNine(GameTestHelper context) {
         Optional<ParticipantSelectionPlan> plan = ParticipantSelectionService.select(List.of(
                 candidate("p1"),
                 candidate("p2"),
@@ -452,13 +452,13 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertEquals(context, 9, value.activePlayerCount(), "9 players should use all 9 active players.")) {
             return;
         }
-        if (!assertEquals(context, 2, value.activeTeamCount(), "9 players should produce 2 active teams.")) {
+        if (!assertEquals(context, 3, value.activeTeamCount(), "9 players should produce 3 balanced active teams.")) {
             return;
         }
         if (!assertEquals(context, 0, value.spectatorCount(), "9 players should not leave a spectator.")) {
             return;
         }
-        if (!assertTeamSizes(context, value, Map.of(TeamId.RED, 5, TeamId.BLUE, 4))) {
+        if (!assertTeamSizes(context, value, Map.of(TeamId.RED, 3, TeamId.BLUE, 3, TeamId.GREEN, 3))) {
             return;
         }
         context.succeed();
@@ -2175,7 +2175,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertTrue(context, game.teams().get(TeamId.BLUE).active(), "BLUE should be active.")) {
             return;
         }
-        if (!assertTrue(context, !game.teams().get(TeamId.GREEN).active(), "GREEN should be inactive.")) {
+        if (!assertTrue(context, game.teams().get(TeamId.GREEN).active(), "GREEN should be active.")) {
             return;
         }
         if (!assertTrue(context, !game.teams().get(TeamId.YELLOW).active(), "YELLOW should be inactive.")) {
