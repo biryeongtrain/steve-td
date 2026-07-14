@@ -82,12 +82,15 @@ public final class SemionGame {
     private final Set<TeamId> waveSpawnDisabledTeams = new HashSet<>();
     private final Map<String, TeamMoneyTransferRequest> teamMoneyRequests = new java.util.LinkedHashMap<>();
     private final Map<UUID, Integer> lastTeamMoneyReceivedRound = new java.util.HashMap<>();
+    private final Map<UUID, Set<Integer>> attemptedRoundsByPlayer = new java.util.HashMap<>();
+    private final Map<UUID, Set<Integer>> clearedRoundsByPlayer = new java.util.HashMap<>();
     private final List<TeamEliminationRecord> eliminationOrder = new ArrayList<>();
     private boolean sandboxMode;
     private boolean selfTargetIncomeSummons;
     private MatchId matchId = MatchId.newId();
     private long startedAtEpochMillis;
     private long endedAtEpochMillis;
+    private MatchMode matchMode;
     private RoundPhase phase = RoundPhase.WAITING;
     private boolean rosterLocked;
     private int currentRound = 1;
@@ -581,7 +584,10 @@ public final class SemionGame {
                         player.name(),
                         player.teamId(),
                         winningTeams.contains(player.teamId()),
-                        player.matchStats().snapshot(player.economy().income())
+                        player.matchStats().snapshot(player.economy().income()),
+                        player.job().map(job -> job.id().toString()).orElse(null),
+                        recordedRounds(attemptedRoundsByPlayer, player.uuid()),
+                        recordedRounds(clearedRoundsByPlayer, player.uuid())
                 ))
                 .toList();
         return Optional.of(new MatchResult(
@@ -592,7 +598,8 @@ public final class SemionGame {
                 initialSpectatorIds,
                 winningTeams,
                 teamResults(winningTeams),
-                currentRound
+                currentRound,
+                matchMode
         ));
     }
 
@@ -609,6 +616,8 @@ public final class SemionGame {
         matchSpectatorIds.clear();
         announcedEliminations.clear();
         eliminationOrder.clear();
+        attemptedRoundsByPlayer.clear();
+        clearedRoundsByPlayer.clear();
         initialSpectatorIds.addAll(plan.spectatorIds());
         matchSpectatorIds.addAll(plan.spectatorIds());
 
@@ -636,6 +645,7 @@ public final class SemionGame {
         placeActivePlayers(server, plan.activeParticipants());
         sendTowerControlHint(server);
         placeSpectators(server, plan.spectatorIds());
+        matchMode = plan.mode();
         matchId = MatchId.newId();
         startedAtEpochMillis = System.currentTimeMillis();
         endedAtEpochMillis = 0L;
@@ -701,6 +711,8 @@ public final class SemionGame {
         currentWaveTeamIds.clear();
         teamMoneyRequests.clear();
         lastTeamMoneyReceivedRound.clear();
+        attemptedRoundsByPlayer.clear();
+        clearedRoundsByPlayer.clear();
         eliminationOrder.clear();
         rosterLocked = false;
         phase = RoundPhase.ENDED;
@@ -956,6 +968,10 @@ public final class SemionGame {
             currentWaveTeamIds.add(team.id());
             team.laneGroup().setCurrentRound(currentRound);
             for (PlayerLane lane : team.laneGroup().lanes()) {
+                if (roundWave != null && !waveSpawnDisabledTeams.contains(team.id())
+                        && !roundWave.entriesForLane("lane_" + lane.laneId()).isEmpty()) {
+                    recordBuilderRoundAttempt(lane.ownerPlayer(), currentRound);
+                }
                 lane.markWaveStarted(currentRound);
             }
             enqueueWave(team, roundWave);
@@ -997,6 +1013,7 @@ public final class SemionGame {
     }
 
     private void tickPayout(MinecraftServer server) {
+        recordBuilderRoundResults(currentRound);
         VillagerAdvStates.onWaveCleared(this, currentRound);
         notifyRoundEnded(currentRound);
         economyService.payRoundIncome(players.values(), teams);
@@ -1046,9 +1063,44 @@ public final class SemionGame {
         }
     }
 
+    private void recordBuilderRoundAttempt(UUID playerId, int round) {
+        if (playerId == null || round <= 0) {
+            return;
+        }
+        attemptedRoundsByPlayer.computeIfAbsent(playerId, ignored -> new HashSet<>()).add(round);
+    }
+
+    private void recordBuilderRoundResults(int round) {
+        if (round <= 0) {
+            return;
+        }
+        for (SemionTeam team : teams.values()) {
+            for (PlayerLane lane : team.laneGroup().lanes()) {
+                UUID playerId = lane.ownerPlayer();
+                Set<Integer> attemptedRounds = attemptedRoundsByPlayer.get(playerId);
+                if (attemptedRounds == null || !attemptedRounds.contains(round)) {
+                    continue;
+                }
+                if (!team.eliminated() && lane.clearedThisRound()
+                        && !lane.leakedThisRound() && !lane.laneDefenseBroken()) {
+                    clearedRoundsByPlayer.computeIfAbsent(playerId, ignored -> new HashSet<>()).add(round);
+                }
+            }
+        }
+    }
+
+    private static List<Integer> recordedRounds(Map<UUID, Set<Integer>> roundsByPlayer, UUID playerId) {
+        Set<Integer> rounds = roundsByPlayer.get(playerId);
+        if (rounds == null || rounds.isEmpty()) {
+            return List.of();
+        }
+        return rounds.stream().sorted().toList();
+    }
+
     private boolean checkVictory() {
         List<SemionTeam> living = livingTeams();
         if (living.size() <= 1 && phase != RoundPhase.WAITING) {
+            recordBuilderRoundResults(currentRound);
             if (endedAtEpochMillis == 0L) {
                 endedAtEpochMillis = System.currentTimeMillis();
             }

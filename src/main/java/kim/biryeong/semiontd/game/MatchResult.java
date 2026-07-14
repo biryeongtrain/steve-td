@@ -14,7 +14,8 @@ public record MatchResult(
         Set<UUID> spectatorIds,
         Set<TeamId> winningTeams,
         List<TeamMatchResult> teamResults,
-        int finalRound
+        int finalRound,
+        MatchMode matchMode
 ) {
     public MatchResult(
             List<MatchParticipantResult> participants,
@@ -30,7 +31,31 @@ public record MatchResult(
                 spectatorIds,
                 winningTeams,
                 fallbackTeamResults(participants, winningTeams),
-                finalRound
+                finalRound,
+                MatchMode.NORMAL
+        );
+    }
+
+    public MatchResult(
+            MatchId matchId,
+            long startedAtEpochMillis,
+            long endedAtEpochMillis,
+            List<MatchParticipantResult> participants,
+            Set<UUID> spectatorIds,
+            Set<TeamId> winningTeams,
+            List<TeamMatchResult> teamResults,
+            int finalRound
+    ) {
+        this(
+                matchId,
+                startedAtEpochMillis,
+                endedAtEpochMillis,
+                participants,
+                spectatorIds,
+                winningTeams,
+                teamResults,
+                finalRound,
+                MatchMode.NORMAL
         );
     }
 

@@ -4,11 +4,17 @@ import de.tomalbrc.avatarrenderer.AvatarRendererMod;
 import de.tomalbrc.avatarrenderer.impl.AvatarRenderer;
 import de.tomalbrc.avatarrenderer.impl.SkinLoader;
 import java.awt.image.BufferedImage;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -49,6 +55,10 @@ import kim.biryeong.semiontd.game.SemionTeam;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.progression.MatchProgressionReward;
 import kim.biryeong.semiontd.progression.SemionPlayerProfile;
+import kim.biryeong.semiontd.statistics.JobStatisticsEntry;
+import kim.biryeong.semiontd.statistics.JobStatisticsSnapshot;
+import kim.biryeong.semiontd.statistics.JobStatisticsState;
+import kim.biryeong.semiontd.statistics.JobStatisticsTotals;
 import kim.biryeong.semiontd.ui.dialog.body.AlignedMessage;
 import kim.biryeong.semiontd.ui.dialog.body.SplitAlignedMessage;
 import kim.biryeong.semiontd.util.TextUncenterer;
@@ -72,6 +82,7 @@ public final class SemionDialogService {
     private static final int BODY_WIDTH = 256;
     private static final int TITLE_HEADER_WIDTH = 200;
     private static final int PLAYER_STATUS_WIDTH = 480;
+    private static final int JOB_STATISTICS_WIDTH = 460;
     private static final int PLAYER_STATUS_AVATAR_WIDTH = 16;
     private static final int PLAYER_STATUS_NAME_WIDTH = 112;
     private static final int PLAYER_STATUS_NUMBER_WIDTH = 56;
@@ -86,6 +97,9 @@ public final class SemionDialogService {
     private static final int SUMMON_COLUMNS = 5;
     private static final int SUMMON_PAGE_SIZE = 25;
     private static final int BUILD_GUIDE_PAGE_SIZE = 4;
+    private static final DateTimeFormatter STATISTICS_TIME_FORMAT = DateTimeFormatter
+            .ofPattern("yyyy-MM-dd HH:mm")
+            .withZone(ZoneId.systemDefault());
     private static final ConcurrentMap<SmallAvatarKey, Component> SMALL_AVATAR_CACHE = new ConcurrentHashMap<>();
     public void showGameStatus(ServerPlayer player, SemionGame game) {
         ArrayList<DialogBody> bodies = new ArrayList<>();
@@ -202,6 +216,166 @@ public final class SemionDialogService {
         }
 
         showActions(player, "세미온 TD 직업", body, actions, 2);
+    }
+
+    public void showJobStatistics(
+            ServerPlayer player,
+            JobStatisticsSnapshot snapshot,
+            JobStatisticsState state
+    ) {
+        if (snapshot.participantAppearances() == 0L && state == JobStatisticsState.LOADING) {
+            show(player, "세미온 TD 직업 통계", "<yellow>직업 통계를 집계하고 있습니다.</yellow>");
+            return;
+        }
+        if (snapshot.participantAppearances() == 0L && state == JobStatisticsState.FAILED) {
+            show(player, "세미온 TD 직업 통계", "<red>직업 통계를 불러오지 못했습니다.</red>");
+            return;
+        }
+
+        ArrayList<DialogBody> bodies = new ArrayList<>();
+        bodies.add(decoratedHeader(
+                miniMessage("<gradient:#67e8f9:#facc15><bold>직업 통계</bold></gradient>"),
+                JOB_STATISTICS_WIDTH
+        ));
+        bodies.add(new PlainMessage(statisticsOverview(snapshot), JOB_STATISTICS_WIDTH));
+        if (state == JobStatisticsState.LOADING) {
+            bodies.add(new PlainMessage(
+                    Component.literal("재집계 중입니다. 마지막 정상 통계를 표시합니다.").withStyle(ChatFormatting.YELLOW),
+                    JOB_STATISTICS_WIDTH
+            ));
+        } else if (state == JobStatisticsState.FAILED) {
+            bodies.add(new PlainMessage(
+                    Component.literal("최근 갱신에 실패했습니다. 마지막 정상 통계를 표시합니다.").withStyle(ChatFormatting.RED),
+                    JOB_STATISTICS_WIDTH
+            ));
+        }
+        bodies.add(new HeaderMessage(Component.literal("직업별 요약").withStyle(ChatFormatting.YELLOW), JOB_STATISTICS_WIDTH));
+
+        ArrayList<ActionButton> actions = new ArrayList<>();
+        for (JobStatisticsRow row : jobStatisticsRows(snapshot)) {
+            bodies.add(new PlainMessage(jobStatisticsSummaryLine(snapshot, row), JOB_STATISTICS_WIDTH));
+            bodies.add(new PlainMessage(jobStatisticsRoundMilestonesLine(row), JOB_STATISTICS_WIDTH));
+            actions.add(jobStatisticsButton(row));
+        }
+        showActions(player, "세미온 TD 직업 통계", bodies, actions, 3);
+    }
+
+    public void showJobStatisticsDetail(
+            ServerPlayer player,
+            JobStatisticsSnapshot snapshot,
+            JobStatisticsState state,
+            String jobId
+    ) {
+        if (snapshot.participantAppearances() == 0L && state == JobStatisticsState.LOADING) {
+            show(player, "세미온 TD 직업 통계", "<yellow>직업 통계를 집계하고 있습니다.</yellow>");
+            return;
+        }
+        if (snapshot.participantAppearances() == 0L && state == JobStatisticsState.FAILED) {
+            show(player, "세미온 TD 직업 통계", "<red>직업 통계를 불러오지 못했습니다.</red>");
+            return;
+        }
+        JobStatisticsRow row = jobStatisticsRows(snapshot).stream()
+                .filter(candidate -> candidate.jobId().equals(jobId))
+                .findFirst()
+                .orElse(null);
+        if (row == null) {
+            show(player, "세미온 TD 직업 통계", "<red>해당 직업 통계를 찾을 수 없습니다.</red>");
+            return;
+        }
+
+        JobStatisticsEntry entry = row.entry();
+        JobStatisticsTotals totals = entry.totals();
+        ArrayList<DialogBody> bodies = new ArrayList<>();
+        bodies.add(decoratedHeader(
+                Component.literal(row.displayName() + " 통계").withStyle(ChatFormatting.AQUA),
+                JOB_STATISTICS_WIDTH
+        ));
+        if (state != JobStatisticsState.READY && snapshot.participantAppearances() > 0L) {
+            bodies.add(new PlainMessage(
+                    Component.literal("마지막 정상 통계를 표시합니다.").withStyle(ChatFormatting.YELLOW),
+                    JOB_STATISTICS_WIDTH
+            ));
+        }
+
+        addStatisticsSection(bodies, "표본");
+        addStatisticsLine(bodies, "선택", formatCount(entry.appearances()) + "회");
+        addStatisticsLine(bodies, "선택률", formatPercent(snapshot.selectionRate(entry)));
+        addStatisticsLine(bodies, "승리", formatCount(entry.wins()) + "승 "
+                + formatCount(entry.appearances() - entry.wins()) + "패");
+        addStatisticsLine(bodies, "승률", formatPercent(entry.winRate()));
+        addStatisticsLine(bodies, "평균 순위", formatAverage(entry.averagePlacement(), "위"));
+        addStatisticsLine(bodies, "평균 최종 라운드", formatRound(entry.averageFinalRound()));
+        if (entry.appearances() > 0L) {
+            addStatisticsLine(bodies, "기록 기간", formatTime(entry.firstMatchAtEpochMillis())
+                    + " ~ " + formatTime(entry.lastMatchAtEpochMillis()));
+        }
+
+        addStatisticsSection(bodies, "라운드 통과율");
+        if (entry.appearances() == 0L) {
+            addStatisticsLine(bodies, "R1~R40", "-");
+        } else {
+            bodies.add(new PlainMessage(jobStatisticsRoundTable(entry), JOB_STATISTICS_WIDTH));
+        }
+
+        addStatisticsSection(bodies, "전투");
+        addStatisticsLine(bodies, "평균 처치", formatAverage(entry.averageValue(totals.monsterKills()), ""));
+        addStatisticsLine(bodies, "평균 처치 미네랄", formatAverage(entry.averageValue(totals.killMinerals()), ""));
+
+        addStatisticsSection(bodies, "인컴·소환");
+        addStatisticsLine(bodies, "평균 소환", formatAverage(entry.averageValue(totals.summonedMonsters()), ""));
+        addStatisticsLine(bodies, "평균 최종 인컴", formatAverage(entry.averageValue(totals.finalIncome()), ""));
+        addStatisticsLine(bodies, "평균 생성 인컴", formatAverage(entry.averageValue(totals.incomeGenerated()), ""));
+        addStatisticsLine(bodies, "평균 보낸 위협", formatAverage(entry.averageValue(totals.sentIncomeThreat()), ""));
+        addStatisticsLine(bodies, "평균 공격 성공 위협", formatAverage(
+                entry.averageValue(totals.incomeAttackSuccessThreat()), ""));
+        addStatisticsLine(bodies, "인컴 공격 성공률", formatPercent(entry.incomeAttackSuccessRate()));
+        addStatisticsLine(bodies, "평균 받은 인컴 위협", formatAverage(
+                entry.averageValue(totals.incomingIncomeThreat()), ""));
+
+        addStatisticsSection(bodies, "라인 방어·지원");
+        addStatisticsLine(bodies, "평균 라인 유입 위협", formatAverage(
+                entry.averageValue(totals.ownLaneIncomingThreat()), ""));
+        addStatisticsLine(bodies, "평균 누수 위협", formatAverage(
+                entry.averageValue(totals.ownLaneLeakedThreat()), ""));
+        addStatisticsLine(bodies, "방어율", formatPercent(entry.defenseSuccessRate()));
+        addStatisticsLine(bodies, "평균 본인 라인 다이아", formatAverage(
+                entry.averageValue(totals.ownLaneDiamondGain()), ""));
+        addStatisticsLine(bodies, "평균 지원 다이아", formatAverage(
+                entry.averageValue(totals.assistClearDiamondGain()), ""));
+        addStatisticsLine(bodies, "평균 지원 정리 위협", formatAverage(
+                entry.averageValue(totals.assistClearThreat()), ""));
+
+        showActions(
+                player,
+                "세미온 TD " + row.displayName() + " 통계",
+                bodies,
+                List.of(actionButton("전체 통계", "/semiontd job stats", "직업 통계 목록으로 돌아갑니다.")),
+                1
+        );
+    }
+
+    public static List<JobStatisticsRow> jobStatisticsRows(JobStatisticsSnapshot snapshot) {
+        LinkedHashMap<String, JobStatisticsEntry> remaining = new LinkedHashMap<>();
+        for (JobStatisticsEntry entry : snapshot.jobs()) {
+            remaining.put(entry.jobId(), entry);
+        }
+
+        ArrayList<JobStatisticsRow> rows = new ArrayList<>();
+        for (SemionJob job : JobRegistry.all()) {
+            String jobId = job.id().toString();
+            JobStatisticsEntry entry = remaining.remove(jobId);
+            rows.add(new JobStatisticsRow(
+                    jobId,
+                    job.displayName().getString(),
+                    entry == null ? emptyJobStatisticsEntry(jobId) : entry,
+                    true
+            ));
+        }
+        remaining.values().stream()
+                .sorted(Comparator.comparing(JobStatisticsEntry::jobId))
+                .map(entry -> new JobStatisticsRow(entry.jobId(), entry.jobId(), entry, false))
+                .forEach(rows::add);
+        return List.copyOf(rows);
     }
 
     public void showTraitSelection(ServerPlayer player, TraitLoadout loadout, int secondsRemaining) {
@@ -1511,6 +1685,144 @@ public final class SemionDialogService {
         return outlined;
     }
 
+    private static Component statisticsOverview(JobStatisticsSnapshot snapshot) {
+        return Component.literal("일반 경기 ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(formatCount(snapshot.eligibleMatchCount()) + "회").withStyle(ChatFormatting.WHITE))
+                .append(Component.literal("  참가 표본 ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(formatCount(snapshot.participantAppearances()) + "건").withStyle(ChatFormatting.WHITE))
+                .append(Component.literal("  최근 갱신 ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(formatTime(snapshot.generatedAtEpochMillis())).withStyle(ChatFormatting.WHITE));
+    }
+
+    private static Component jobStatisticsSummaryLine(JobStatisticsSnapshot snapshot, JobStatisticsRow row) {
+        JobStatisticsEntry entry = row.entry();
+        MutableComponent line = Component.literal(row.displayName()).withStyle(ChatFormatting.AQUA);
+        if (!row.registered()) {
+            line.append(Component.literal(" [미등록]").withStyle(ChatFormatting.DARK_GRAY));
+        }
+        return line
+                .append(Component.literal("  선택 ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(formatCount(entry.appearances()) + "회").withStyle(ChatFormatting.WHITE))
+                .append(Component.literal(" (" + formatPercent(snapshot.selectionRate(entry)) + ")").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal("  승률 ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(formatPercent(entry.winRate())).withStyle(ChatFormatting.GREEN))
+                .append(Component.literal("  평균 ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(formatAverage(entry.averagePlacement(), "위")).withStyle(ChatFormatting.WHITE))
+                .append(Component.literal(" / ").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal(formatRound(entry.averageFinalRound())).withStyle(ChatFormatting.WHITE));
+    }
+
+    private static Component jobStatisticsRoundMilestonesLine(JobStatisticsRow row) {
+        MutableComponent line = Component.literal("  통과 ").withStyle(ChatFormatting.DARK_GRAY);
+        int[] rounds = {10, 20, 30, 40};
+        for (int index = 0; index < rounds.length; index++) {
+            if (index > 0) {
+                line.append(Component.literal("   ").withStyle(ChatFormatting.DARK_GRAY));
+            }
+            int round = rounds[index];
+            line.append(Component.literal("R" + round + " ").withStyle(ChatFormatting.GRAY));
+            line.append(Component.literal(formatPercent(row.entry().roundPassRate(round)))
+                    .withStyle(ChatFormatting.AQUA));
+        }
+        return line;
+    }
+
+    private static Component jobStatisticsRoundRangeLine(
+            JobStatisticsEntry entry,
+            int firstRound,
+            int lastRound
+    ) {
+        MutableComponent line = Component.empty();
+        for (int round = firstRound; round <= lastRound; round++) {
+            if (round > firstRound) {
+                line.append(Component.literal("   ").withStyle(ChatFormatting.DARK_GRAY));
+            }
+            line.append(Component.literal(String.format(Locale.ROOT, "R%02d ", round))
+                    .withStyle(ChatFormatting.GRAY));
+            line.append(Component.literal(formatPercent(entry.roundPassRate(round)))
+                    .withStyle(ChatFormatting.AQUA));
+        }
+        return line;
+    }
+
+    private static Component jobStatisticsRoundTable(JobStatisticsEntry entry) {
+        MutableComponent table = Component.empty();
+        for (int firstRound = 1; firstRound <= JobStatisticsEntry.MAX_TRACKED_ROUND; firstRound += 5) {
+            if (firstRound > 1) {
+                table.append(Component.literal("\n"));
+            }
+            table.append(jobStatisticsRoundRangeLine(entry, firstRound, firstRound + 4));
+        }
+        return table;
+    }
+
+    private static ActionButton jobStatisticsButton(JobStatisticsRow row) {
+        String tooltip = "선택 " + formatCount(row.entry().appearances()) + "회 · 승률 "
+                + formatPercent(row.entry().winRate());
+        return actionButton(
+                Component.literal(row.displayName()),
+                "/semiontd job stats " + row.jobId(),
+                Component.literal(tooltip),
+                COMPACT_BUTTON_WIDTH
+        );
+    }
+
+    private static JobStatisticsEntry emptyJobStatisticsEntry(String jobId) {
+        return new JobStatisticsEntry(
+                jobId,
+                0L,
+                0L,
+                0L,
+                0L,
+                0L,
+                JobStatisticsTotals.empty(),
+                0L,
+                0L,
+                0L
+        );
+    }
+
+    private static void addStatisticsSection(List<DialogBody> bodies, String title) {
+        bodies.add(new HeaderMessage(Component.literal(title).withStyle(ChatFormatting.YELLOW), JOB_STATISTICS_WIDTH));
+    }
+
+    private static void addStatisticsLine(List<DialogBody> bodies, String label, String value) {
+        bodies.add(new PlainMessage(
+                Component.literal(label + ": ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal(value).withStyle(ChatFormatting.WHITE)),
+                JOB_STATISTICS_WIDTH
+        ));
+    }
+
+    private static String formatPercent(OptionalDouble value) {
+        if (value.isEmpty() || !Double.isFinite(value.getAsDouble())) {
+            return "-";
+        }
+        return String.format(Locale.ROOT, "%.1f%%", value.getAsDouble() * 100.0);
+    }
+
+    private static String formatAverage(OptionalDouble value, String suffix) {
+        if (value.isEmpty() || !Double.isFinite(value.getAsDouble())) {
+            return "-";
+        }
+        return String.format(Locale.ROOT, "%.1f%s", value.getAsDouble(), suffix);
+    }
+
+    private static String formatRound(OptionalDouble value) {
+        if (value.isEmpty() || !Double.isFinite(value.getAsDouble())) {
+            return "-";
+        }
+        return String.format(Locale.ROOT, "R%.1f", value.getAsDouble());
+    }
+
+    private static String formatCount(long value) {
+        return String.format(Locale.ROOT, "%,d", value);
+    }
+
+    private static String formatTime(long epochMillis) {
+        return epochMillis <= 0L ? "-" : STATISTICS_TIME_FORMAT.format(Instant.ofEpochMilli(epochMillis));
+    }
+
     private static int skinPixel(BufferedImage skin, int x, int y) {
         if (x < 0 || y < 0 || x >= skin.getWidth() || y >= skin.getHeight()) {
             return 0;
@@ -1585,6 +1897,14 @@ public final class SemionDialogService {
             long income,
             int towerCount,
             String jobName
+    ) {
+    }
+
+    public record JobStatisticsRow(
+            String jobId,
+            String displayName,
+            JobStatisticsEntry entry,
+            boolean registered
     ) {
     }
 

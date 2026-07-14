@@ -127,6 +127,10 @@ public final class PlayerLane {
         return leakedThisRound;
     }
 
+    public boolean laneDefenseBroken() {
+        return laneDefenseBroken;
+    }
+
     public void resetForRound() {
         clearedThisRound = false;
         leakedThisRound = false;

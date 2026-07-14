@@ -66,6 +66,9 @@ import kim.biryeong.semiontd.rating.RatingAdjustment;
 import kim.biryeong.semiontd.rating.RatingConfig;
 import kim.biryeong.semiontd.rating.RatingMatchResult;
 import kim.biryeong.semiontd.rating.RatingService;
+import kim.biryeong.semiontd.statistics.JobStatisticsService;
+import kim.biryeong.semiontd.statistics.JobStatisticsSnapshot;
+import kim.biryeong.semiontd.statistics.JobStatisticsState;
 import kim.biryeong.semiontd.summon.IncomeSummons;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidBossBarService;
@@ -119,6 +122,7 @@ public final class SemionGameManager {
     private ProgressionService progressionService = new ProgressionService(progressionConfig, null);
     private RatingService ratingService = new RatingService(null);
     private MatchResultRepository matchResultRepository = new FileMatchResultRepository(null);
+    private final JobStatisticsService jobStatisticsService = new JobStatisticsService();
     private SemionMusicService musicService = SemionMusicService.disabled();
     private final SemionDialogService dialogService = new SemionDialogService();
     private final SemionSidebarHudService sidebarHudService = new SemionSidebarHudService();
@@ -350,6 +354,11 @@ public final class SemionGameManager {
         );
         clearRatingProfileCache();
         this.matchResultRepository = createMatchResultRepository(this.persistenceConfig, sqlitePath, matchResultPath, this.configDir);
+        this.jobStatisticsService.configure(
+                sqlitePath,
+                matchResultPath,
+                this.configDir == null ? null : this.configDir.resolve("job-statistics.db")
+        );
         this.buildGuideService.configure(this.configDir == null ? null : this.configDir.resolve("build_guides.json"));
         ProductionTowerCatalogs.reloadBuiltIns(this.towerBalanceConfig);
         IncomeSummons.reloadBuiltIns(this.summonConfig);
@@ -728,6 +737,14 @@ public final class SemionGameManager {
 
     public SemionDialogService dialogService() {
         return dialogService;
+    }
+
+    public JobStatisticsSnapshot jobStatisticsSnapshot() {
+        return jobStatisticsService.snapshot();
+    }
+
+    public JobStatisticsState jobStatisticsState() {
+        return jobStatisticsService.state();
     }
 
     public SemionSidebarHudService sidebarHudService() {
@@ -1338,6 +1355,7 @@ public final class SemionGameManager {
 
     public void shutdown() {
         IllusionCloneSpawnQueue.clear();
+        jobStatisticsService.shutdown();
         closeAllSandboxes();
         if (activeGame != null) {
             activeGame.close();
@@ -1610,6 +1628,7 @@ public final class SemionGameManager {
         if (result.isPresent()) {
             lastMatchResult = result.get();
             matchResultRepository.saveMatchResult(result.get());
+            jobStatisticsService.record(result.get());
             ratingResult = applyRatingOrQueueRetry(server, result.get());
             finalizeBuildGuideRecording(finishedGame, result);
             nextMatchPriorityPlayerIds.addAll(result.get().spectatorIds());

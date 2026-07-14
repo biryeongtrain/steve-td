@@ -125,6 +125,10 @@ import kim.biryeong.semiontd.placeholder.SemionPlaceholders;
 import kim.biryeong.semiontd.persistence.FileAppliedMatchRepository;
 import kim.biryeong.semiontd.persistence.FileMatchResultRepository;
 import kim.biryeong.semiontd.persistence.SemionPersistenceBackendType;
+import kim.biryeong.semiontd.statistics.JobStatisticsEntry;
+import kim.biryeong.semiontd.statistics.JobStatisticsSnapshot;
+import kim.biryeong.semiontd.statistics.JobStatisticsState;
+import kim.biryeong.semiontd.statistics.JobStatisticsTotals;
 import kim.biryeong.semiontd.test.TestTowerService;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.tower.goal.TowerAttackMonsterGoal;
@@ -973,6 +977,59 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertTrue(context, first.get().endedAtEpochMillis() >= first.get().startedAtEpochMillis(), "End timestamp should not precede start timestamp.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void matchResultCapturesParticipantJobAndMode(GameTestHelper context) {
+        UUID redId = stableUuid("job-statistics-result-red");
+        UUID blueId = stableUuid("job-statistics-result-blue");
+        ResourceLocation netherJobId = ResourceLocation.fromNamespaceAndPath("semion-td", "nether");
+        SemionGame game = new SemionGame(
+                EconomyConfig.defaultConfig(),
+                new WaveConfig(List.of(), 20, null),
+                testArena(context)
+        );
+        if (!assertTrue(context, game.selectJob(redId, netherJobId), "Nether job should be selectable before match start.")) {
+            return;
+        }
+        ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                MatchMode.NORMAL,
+                List.of(
+                        new AssignedParticipant(redId, "job-statistics-red", TeamId.RED, 1),
+                        new AssignedParticipant(blueId, "job-statistics-blue", TeamId.BLUE, 1)
+                ),
+                Set.of(),
+                2
+        );
+        if (!assertTrue(context, game.start(context.getLevel().getServer(), plan), "Job-statistics game should start.")) {
+            return;
+        }
+        if (!assertTrue(context, game.killBoss(TeamId.BLUE), "BLUE boss kill should end the job-statistics game.")) {
+            return;
+        }
+
+        Optional<MatchResult> result = game.matchResult();
+        if (!assertPresent(context, result, "Ended game should expose a job-aware match result.")) {
+            return;
+        }
+        MatchResult matchResult = result.get();
+        if (!assertEquals(context, MatchMode.NORMAL, matchResult.matchMode(), "Match result should preserve the start mode.")) {
+            return;
+        }
+        Map<UUID, String> jobsByPlayer = matchResult.participants().stream()
+                .collect(Collectors.toMap(MatchParticipantResult::playerId, MatchParticipantResult::jobId));
+        if (!assertEquals(context, netherJobId.toString(), jobsByPlayer.get(redId), "Selected job id should be captured.")) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                JobRegistry.defaultJob().id().toString(),
+                jobsByPlayer.get(blueId),
+                "Default job id should be captured."
+        )) {
             return;
         }
         context.succeed();
@@ -2303,6 +2360,79 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                         3
                 ),
                 Map.of()
+        );
+        context.succeed();
+    }
+
+    @GameTest
+    public void jobStatisticsDialogKeepsRegistryOrderAndAppendsRemovedJobs(GameTestHelper context) {
+        var player = context.makeMockServerPlayerInLevel();
+        JobStatisticsEntry villager = new JobStatisticsEntry(
+                VillagerTowerJob.ID.toString(),
+                3L,
+                2L,
+                3L,
+                4L,
+                30L,
+                JobStatisticsTotals.empty(),
+                1_000L,
+                2_000L,
+                3_000L,
+                java.util.stream.IntStream.rangeClosed(1, JobStatisticsEntry.MAX_TRACKED_ROUND)
+                        .mapToObj(round -> round <= 20 ? 3L : round <= 30 ? 1L : 0L)
+                        .toList()
+        );
+        JobStatisticsEntry removed = new JobStatisticsEntry(
+                "external:removed",
+                2L,
+                1L,
+                2L,
+                3L,
+                20L,
+                JobStatisticsTotals.empty(),
+                1_000L,
+                2_000L,
+                3_000L
+        );
+        JobStatisticsSnapshot snapshot = new JobStatisticsSnapshot(
+                3_000L,
+                2L,
+                5L,
+                1_000L,
+                2_000L,
+                List.of(removed, villager)
+        );
+
+        List<SemionDialogService.JobStatisticsRow> rows = SemionDialogService.jobStatisticsRows(snapshot);
+        List<String> registryOrder = JobRegistry.all().stream().map(job -> job.id().toString()).toList();
+        if (!assertEquals(context, registryOrder, rows.subList(0, registryOrder.size()).stream()
+                .map(SemionDialogService.JobStatisticsRow::jobId)
+                .toList(), "Statistics rows should keep JobRegistry order.")) {
+            return;
+        }
+        SemionDialogService.JobStatisticsRow last = rows.getLast();
+        if (!assertEquals(context, "external:removed", last.jobId(), "Removed job ids should be appended.")) {
+            return;
+        }
+        if (!assertTrue(context, !last.registered(), "Removed job ids should be marked unregistered.")) {
+            return;
+        }
+        if (!assertEquals(context, 3L, villager.roundPassCount(20), "Round 20 pass count should be retained.")) {
+            return;
+        }
+        if (!assertEquals(context, 1L, villager.roundPassCount(30), "Round 30 pass count should be retained.")) {
+            return;
+        }
+        if (!assertEquals(context, 0L, villager.roundPassCount(40), "Round 40 pass count should be retained.")) {
+            return;
+        }
+        SemionDialogService dialogService = new SemionDialogService();
+        dialogService.showJobStatistics(player, snapshot, JobStatisticsState.READY);
+        dialogService.showJobStatisticsDetail(
+                player,
+                snapshot,
+                JobStatisticsState.READY,
+                VillagerTowerJob.ID.toString()
         );
         context.succeed();
     }
@@ -6057,6 +6187,75 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertEquals(context, 2, game.currentRound(), "Next prepare phase should be round 2 after all teams clear.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void matchResultRecordsPerBuilderWaveOutcomes(GameTestHelper context) {
+        UUID redId = stableUuid("builder-outcome-red");
+        UUID blueId = stableUuid("builder-outcome-blue");
+        WaveMonsterEntry entry = new WaveMonsterEntry(
+                "builder-outcome",
+                100.0,
+                0.0,
+                0.0,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                null,
+                0,
+                1
+        );
+        SemionGame game = new SemionGame(
+                EconomyConfig.defaultConfig(),
+                new WaveConfig(List.of(
+                        new kim.biryeong.semiontd.config.RoundWaveConfig(1, Map.of("lane_1", List.of(entry)))
+                ), 20, null),
+                testArena(context)
+        );
+        ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                MatchMode.NORMAL,
+                List.of(
+                        new AssignedParticipant(redId, "builder-outcome-red", TeamId.RED, 1),
+                        new AssignedParticipant(blueId, "builder-outcome-blue", TeamId.BLUE, 1)
+                ),
+                Set.of(),
+                2
+        );
+        if (!assertTrue(context, game.start(context.getLevel().getServer(), plan), "Builder outcome game should start.")) {
+            return;
+        }
+        tickGame(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS + 1);
+
+        PlayerLane redLane = redLane(game, 1);
+        redLane.activeMonsters().getFirst().damage(Double.MAX_VALUE);
+        tickGame(game, context.getLevel().getServer(), 1);
+        if (!assertTrue(context, redLane.clearedThisRound(), "RED builder should clear its own lane.")) {
+            return;
+        }
+        if (!assertTrue(context, game.killBoss(TeamId.BLUE), "BLUE boss kill should end the game.")) {
+            return;
+        }
+
+        Optional<MatchResult> result = game.matchResult();
+        if (!assertPresent(context, result, "Ended game should expose individual wave results.")) {
+            return;
+        }
+        Map<UUID, MatchParticipantResult> participants = result.get().participants().stream()
+                .collect(Collectors.toMap(MatchParticipantResult::playerId, participant -> participant));
+        MatchParticipantResult red = participants.get(redId);
+        MatchParticipantResult blue = participants.get(blueId);
+        if (!assertEquals(context, List.of(1), red.attemptedRounds(), "RED should record the first wave attempt.")) {
+            return;
+        }
+        if (!assertEquals(context, List.of(1), red.clearedRounds(), "RED should record only its own cleared wave.")) {
+            return;
+        }
+        if (!assertEquals(context, List.of(1), blue.attemptedRounds(), "BLUE should record the first wave attempt.")) {
+            return;
+        }
+        if (!assertEquals(context, List.of(), blue.clearedRounds(), "An eliminated BLUE lane must not inherit the team result.")) {
             return;
         }
         context.succeed();

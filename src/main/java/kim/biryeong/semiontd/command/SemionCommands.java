@@ -54,6 +54,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.GameProfileArgument;
+import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
@@ -196,6 +197,14 @@ public final class SemionCommands {
                 .then(literal("job")
                         .then(literal("list")
                                 .executes(context -> listJobs(context.getSource())))
+                        .then(literal("stats")
+                                .executes(context -> jobStatisticsDialog(context.getSource(), gameManager))
+                                .then(argument("id", ResourceLocationArgument.id())
+                                        .executes(context -> jobStatisticsDetailDialog(
+                                                context.getSource(),
+                                                gameManager,
+                                                ResourceLocationArgument.getId(context, "id").toString()
+                                        ))))
                         .then(literal("ui")
                                 .executes(context -> jobDialog(context.getSource(), gameManager)))
                         .then(literal("current")
@@ -1526,6 +1535,37 @@ public final class SemionCommands {
         }
         gameManager.dialogService().showJobSelection(source.getPlayerOrException(), game);
         success(source, "직업 선택 창을 열었습니다.");
+        return 1;
+    }
+
+    private static int jobStatisticsDialog(
+            CommandSourceStack source,
+            SemionGameManager gameManager
+    ) throws CommandSyntaxException {
+        gameManager.dialogService().showJobStatistics(
+                source.getPlayerOrException(),
+                gameManager.jobStatisticsSnapshot(),
+                gameManager.jobStatisticsState()
+        );
+        return 1;
+    }
+
+    private static int jobStatisticsDetailDialog(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            String rawJobId
+    ) throws CommandSyntaxException {
+        ResourceLocation jobId = ResourceLocation.tryParse(rawJobId);
+        if (jobId == null) {
+            failure(source, "올바르지 않은 직업 ID입니다: " + rawJobId);
+            return 0;
+        }
+        gameManager.dialogService().showJobStatisticsDetail(
+                source.getPlayerOrException(),
+                gameManager.jobStatisticsSnapshot(),
+                gameManager.jobStatisticsState(),
+                jobId.toString()
+        );
         return 1;
     }
 

@@ -26,6 +26,8 @@
 | `/semiontd job ui` | 빌더 선택 UI를 엽니다. |
 | `/semiontd job current` | 현재 선택한 빌더를 봅니다. |
 | `/semiontd job select <id>` | 빌더를 선택합니다. |
+| `/semiontd job stats` | 빌더별 선택률, 승률, 평균 순위와 평균 라운드를 봅니다. |
+| `/semiontd job stats <id>` | 지정 빌더의 전투, 인컴, 라인 방어 상세 통계를 봅니다. |
 | `/semiontd trait` | 특성 UI를 엽니다. |
 | `/semiontd trait ui [slot]` | 특성 UI를 열거나 특정 slot을 엽니다. |
 | `/semiontd trait current` | 현재 특성을 봅니다. |
