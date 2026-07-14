@@ -24,6 +24,7 @@ public final class Monster {
     private final int targetLaneId;
     private final Optional<UUID> ownerPlayer;
     private final Optional<TeamId> senderTeam;
+    private String senderName;
     private double maxHealth;
     private final double armor;
     private final double resistance;
@@ -338,6 +339,14 @@ public final class Monster {
 
     public Optional<TeamId> senderTeam() {
         return senderTeam;
+    }
+
+    public Optional<String> senderName() {
+        return Optional.ofNullable(senderName);
+    }
+
+    public void setSenderName(String senderName) {
+        this.senderName = senderName;
     }
 
     public double laneProgress() {

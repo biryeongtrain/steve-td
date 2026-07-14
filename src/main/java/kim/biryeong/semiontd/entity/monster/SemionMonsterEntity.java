@@ -16,9 +16,11 @@ import kim.biryeong.semiontd.entity.monster.goal.AcquireLaneDefenseTargetGoal;
 import kim.biryeong.semiontd.entity.monster.goal.LaneFollowGoal;
 import kim.biryeong.semiontd.entity.monster.goal.MonsterAttackTargetGoal;
 import kim.biryeong.semiontd.entity.visual.SemionAnimationState;
+import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.summon.SummonRegistry;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -105,7 +107,11 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         this.blockbenchModelId = monster.blockbenchModelId().orElse(null);
         this.runtimeDimensions = monster.dimensions().toEntityDimensions();
         refreshDimensions();
-        setCustomName(Component.literal(monster.id()));
+        String senderName = monster.senderName().orElse(null);
+        TeamId senderTeam = monster.senderTeam().orElse(null);
+        setCustomName(senderName != null && senderTeam != null
+                ? Component.literal(senderName).withStyle(teamColor(senderTeam))
+                : Component.literal(monster.id()));
         setCustomNameVisible(true);
         setPolymerEntityType(monster.entityTypeId());
         getAttribute(Attributes.MAX_HEALTH).setBaseValue(monster.maxHealth());
@@ -117,6 +123,16 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         installBilModel(blockbenchModelId);
         installSummonAbilityGoals();
         playAnimation(SemionAnimationState.IDLE);
+    }
+
+    private static ChatFormatting teamColor(TeamId teamId) {
+        return switch (teamId) {
+            case RED -> ChatFormatting.RED;
+            case BLUE -> ChatFormatting.BLUE;
+            case GREEN -> ChatFormatting.GREEN;
+            case YELLOW -> ChatFormatting.YELLOW;
+            case PURPLE -> ChatFormatting.LIGHT_PURPLE;
+        };
     }
 
     @Override

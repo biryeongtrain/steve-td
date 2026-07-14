@@ -6182,6 +6182,41 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void incomeSummonDisplaysColoredSenderName(GameTestHelper context) {
+        UUID redId = stableUuid("summon-display-name-red-owner");
+        UUID blueId = stableUuid("summon-display-name-blue-owner");
+        SemionGame game = startedTwoPlayerGame(context, redId, blueId);
+
+        var result = game.summonMonster(redId, "chicken");
+        if (!assertEquals(context, kim.biryeong.semiontd.summon.SummonResultType.SUCCESS, result.type(), "Income summon should succeed before checking its display name.")) {
+            return;
+        }
+
+        PlayerLane targetLane = lane(game, result.targetTeam().orElseThrow(), result.targetLaneId().orElseThrow());
+        targetLane.tick(context.getLevel().getServer());
+        if (!assertEquals(context, 1, targetLane.activeMonsters().size(), "Income summon should spawn in its target lane.")) {
+            return;
+        }
+
+        Monster monster = targetLane.activeMonsters().getFirst();
+        if (!(targetLane.arenaWorld().getEntity(monster.minecraftEntityId()) instanceof SemionMonsterEntity entity)) {
+            context.fail(Component.literal("Spawned income monster entity should exist."));
+            return;
+        }
+        Component displayName = entity.getCustomName();
+        if (!assertTrue(context, displayName != null, "Income monster should have a custom display name.")) {
+            return;
+        }
+        if (!assertEquals(context, "red", displayName.getString(), "Income monster should display the sending player's name.")) {
+            return;
+        }
+        if (!assertEquals(context, ChatFormatting.RED.getColor(), displayName.getStyle().getColor().getValue(), "Income monster sender name should use the sender team's color.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void incomeSummonFeedbackTargetsColoredLaneOwnerNickname(GameTestHelper context) {
         UUID redId = stableUuid("summon-feedback-red-owner");
         UUID blueId = stableUuid("summon-feedback-blue-owner");
