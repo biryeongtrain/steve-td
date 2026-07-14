@@ -67,7 +67,7 @@ public class IllagerTower extends EntityBackedTower {
 
     @Override
     public Optional<SemionMonsterEntity> selectAttackTarget(SemionTowerEntity towerEntity, List<SemionMonsterEntity> candidates) {
-        Optional<SemionMonsterEntity> forced = forcedMarkedTarget(candidates);
+        Optional<SemionMonsterEntity> forced = selectForcedAttackTarget(towerEntity, candidates);
         if (forced.isPresent()) {
             return forced;
         }
@@ -84,6 +84,16 @@ public class IllagerTower extends EntityBackedTower {
                     .max(Comparator.comparingDouble(monster -> monster.runtimeMonster().targetPriorityScore()));
             case DEFAULT -> Optional.empty();
         };
+    }
+
+    @Override
+    public boolean supportsForcedAttackTargeting() {
+        return true;
+    }
+
+    @Override
+    public Optional<SemionMonsterEntity> selectForcedAttackTarget(SemionTowerEntity towerEntity, List<SemionMonsterEntity> candidates) {
+        return forcedMarkedTarget(candidates);
     }
 
     @Override

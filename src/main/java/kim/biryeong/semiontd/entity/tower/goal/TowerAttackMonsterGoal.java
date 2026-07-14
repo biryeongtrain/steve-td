@@ -93,6 +93,11 @@ public final class TowerAttackMonsterGoal extends Goal {
     }
 
     private SemionMonsterEntity findTarget() {
+        SemionMonsterEntity forcedTarget = selectForcedTarget();
+        if (forcedTarget != null) {
+            cachedTarget = forcedTarget;
+            return forcedTarget;
+        }
         SemionMonsterEntity sharedTarget = tower.sharedAttackTarget();
         if (isUsableTarget(sharedTarget)) {
             cachedTarget = preferAttackableFinalDefenseTarget(sharedTarget);
@@ -129,6 +134,14 @@ public final class TowerAttackMonsterGoal extends Goal {
         cachedTarget = selectTarget();
         targetSearchCooldownTicks = cachedTarget == null ? EMPTY_TARGET_RECHECK_INTERVAL_TICKS : 0;
         return cachedTarget;
+    }
+
+    private SemionMonsterEntity selectForcedTarget() {
+        var runtimeTower = tower.runtimeTower();
+        if (runtimeTower == null || !runtimeTower.supportsForcedAttackTargeting()) {
+            return null;
+        }
+        return runtimeTower.selectForcedAttackTarget(tower, targetCandidates()).orElse(null);
     }
 
     private SemionMonsterEntity preferAttackableFinalDefenseTarget(SemionMonsterEntity target) {

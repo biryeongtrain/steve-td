@@ -245,6 +245,14 @@ public abstract class Tower {
         return Optional.empty();
     }
 
+    public boolean supportsForcedAttackTargeting() {
+        return false;
+    }
+
+    public Optional<SemionMonsterEntity> selectForcedAttackTarget(SemionTowerEntity towerEntity, List<SemionMonsterEntity> candidates) {
+        return Optional.empty();
+    }
+
     public double modifyAttackDamage(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
         return damageAmount;
     }

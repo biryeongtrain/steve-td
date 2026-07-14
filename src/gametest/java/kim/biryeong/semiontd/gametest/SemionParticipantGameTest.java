@@ -154,6 +154,7 @@ import kim.biryeong.semiontd.tower.animal.PigTower;
 import kim.biryeong.semiontd.tower.animal.RabbitTower;
 import kim.biryeong.semiontd.tower.animal.WolfTower;
 import kim.biryeong.semiontd.tower.illager.IllagerTower;
+import kim.biryeong.semiontd.tower.illager.IllagerMarks;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidState;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
 import kim.biryeong.semiontd.tower.illager.IllagerTowerCatalogs;
@@ -4053,6 +4054,59 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                     context.succeed();
                 });
             });
+        });
+    }
+
+    @GameTest
+    public void illagerMarkOverridesCachedTargetForNearbyIllagerTower(GameTestHelper context) {
+        UUID playerId = stableUuid("illager-forced-target-owner");
+        int testLaneId = 99;
+        Vec3 origin = Vec3.atCenterOf(context.absolutePos(BlockPos.ZERO));
+        GridPosition towerPosition = GridPosition.from(BlockPos.containing(origin));
+        TowerType towerType = new TowerType("illager_forced_target", "Illager Forced Target", TowerCategory.DIRECT, 0, 50.0, 8.0, 0.0, 100, 0);
+        SemionTowerEntity tower = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+        tower.configure(new IllagerTower(towerType, playerId, TeamId.RED, testLaneId, towerPosition, towerPosition), null);
+        tower.setPos(origin);
+        context.getLevel().addFreshEntity(tower);
+
+        SemionMonsterEntity cachedTarget = spawnRoleMonsterEntity(
+                context,
+                "illager-forced-cached",
+                Optional.empty(),
+                TeamId.RED,
+                testLaneId,
+                origin.add(0.0, 0.0, 4.0),
+                100.0,
+                List.of(SummonRole.SIEGE)
+        );
+        cachedTarget.setNoAi(true);
+        cachedTarget.runtimeMonster().syncLaneProgress(0.9);
+        context.runAfterDelay(1, () -> {
+            TowerAttackMonsterGoal targetingGoal = new TowerAttackMonsterGoal(tower);
+            targetingGoal.tick();
+            if (!assertTrue(context, tower.currentAttackTarget() == cachedTarget, "Illager tower should cache its original target before a mark appears.")) {
+                return;
+            }
+
+            SemionMonsterEntity markedTarget = spawnRoleMonsterEntity(
+                    context,
+                    "illager-forced-marked",
+                    Optional.empty(),
+                    TeamId.RED,
+                    testLaneId,
+                    origin.add(1.0, 0.0, 4.0),
+                    100.0,
+                    List.of(SummonRole.RUSH)
+            );
+            markedTarget.setNoAi(true);
+            markedTarget.runtimeMonster().syncLaneProgress(0.1);
+            IllagerMarks.apply(markedTarget.runtimeMonster(), playerId, 0.2, 100, towerPosition, 2.0);
+
+            targetingGoal.tick();
+            if (!assertTrue(context, tower.currentAttackTarget() == markedTarget, "Nearby illager towers should replace cached targets with an active forced mark.")) {
+                return;
+            }
+            context.succeed();
         });
     }
 
