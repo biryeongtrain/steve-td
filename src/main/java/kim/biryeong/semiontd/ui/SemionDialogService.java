@@ -59,6 +59,8 @@ import kim.biryeong.semiontd.statistics.JobStatisticsEntry;
 import kim.biryeong.semiontd.statistics.JobStatisticsSnapshot;
 import kim.biryeong.semiontd.statistics.JobStatisticsState;
 import kim.biryeong.semiontd.statistics.JobStatisticsTotals;
+import kim.biryeong.semiontd.statistics.TraitCombinationStatisticsEntry;
+import kim.biryeong.semiontd.statistics.TraitTowerStatisticsEntry;
 import kim.biryeong.semiontd.ui.dialog.body.AlignedMessage;
 import kim.biryeong.semiontd.ui.dialog.body.SplitAlignedMessage;
 import kim.biryeong.semiontd.util.TextUncenterer;
@@ -318,6 +320,8 @@ public final class SemionDialogService {
         } else {
             bodies.add(new PlainMessage(jobStatisticsRoundTable(entry), JOB_STATISTICS_WIDTH));
         }
+
+        addTraitCombinationStatistics(bodies, snapshot.traitCombinationsForJob(jobId), entry.appearances());
 
         addStatisticsSection(bodies, "전투");
         addStatisticsLine(bodies, "평균 처치", formatAverage(entry.averageValue(totals.monsterKills()), ""));
@@ -728,6 +732,9 @@ public final class SemionDialogService {
                 miniMessage("<blue><bold>" + guide.code() + "</bold></blue>"
                         + " <dark_gray>|</dark_gray> <gray>작성자</gray> <yellow>" + guide.authorName() + "</yellow>\n"
                         + "<gray>직업</gray> <white>" + guide.jobId() + "</white>"
+                        + " <dark_gray>|</dark_gray> <gray>특성</gray> <light_purple>"
+                        + traitName(guide.traitLoadout().primaryTraitId()) + " / "
+                        + traitName(guide.traitLoadout().secondaryTraitId()) + "</light_purple>"
                         + " <dark_gray>|</dark_gray> <gray>최종 라운드</gray> <aqua>" + guide.finalRound() + "</aqua>"
                         + " <dark_gray>|</dark_gray> <gray>행동</gray> <green>" + guide.actions().size() + "</green>"
                         + " <dark_gray>|</dark_gray> <gray>상태</gray> " + visibilityMarkup(guide)),
@@ -1870,6 +1877,69 @@ public final class SemionDialogService {
                         .append(Component.literal(value).withStyle(ChatFormatting.WHITE)),
                 JOB_STATISTICS_WIDTH
         ));
+    }
+
+    private static void addTraitCombinationStatistics(
+            List<DialogBody> bodies,
+            List<TraitCombinationStatisticsEntry> combinations,
+            long jobAppearances
+    ) {
+        addStatisticsSection(bodies, "특성 조합");
+        if (combinations.isEmpty()) {
+            addStatisticsLine(bodies, "조합", "-");
+            return;
+        }
+        int visibleCount = Math.min(8, combinations.size());
+        for (int index = 0; index < visibleCount; index++) {
+            TraitCombinationStatisticsEntry combination = combinations.get(index);
+            String label = traitName(combination.primaryTraitId())
+                    + traitVersionSuffix(combination.primaryTraitVersion())
+                    + " / "
+                    + traitName(combination.secondaryTraitId())
+                    + traitVersionSuffix(combination.secondaryTraitVersion());
+            addStatisticsLine(
+                    bodies,
+                    label,
+                    formatCount(combination.appearances()) + "회 · 선택률 "
+                            + formatPercent(combination.selectionRate(jobAppearances))
+            );
+            addStatisticsLine(
+                    bodies,
+                    "  성과",
+                    "승률 " + formatPercent(combination.winRate())
+                            + " · 평균 순위 " + formatAverage(combination.averagePlacement(), "위")
+                            + " · " + formatRound(combination.averageFinalRound())
+            );
+            addStatisticsLine(
+                    bodies,
+                    "  통과",
+                    "R10 " + formatPercent(combination.roundPassRate(10))
+                            + " · R20 " + formatPercent(combination.roundPassRate(20))
+                            + " · R30 " + formatPercent(combination.roundPassRate(30))
+                            + " · R40 " + formatPercent(combination.roundPassRate(40))
+            );
+            if (!combination.finalTowers().isEmpty()) {
+                addStatisticsLine(bodies, "  최종 타워", combination.finalTowers().stream()
+                        .limit(3)
+                        .map(tower -> traitTowerSummary(tower, combination.appearances()))
+                        .collect(Collectors.joining(", ")));
+            }
+        }
+        if (visibleCount < combinations.size()) {
+            addStatisticsLine(bodies, "나머지", formatCount(combinations.size() - visibleCount) + "개 조합");
+        }
+    }
+
+    private static String traitVersionSuffix(int version) {
+        return version <= 0 ? "" : " v" + version;
+    }
+
+    private static String traitTowerSummary(TraitTowerStatisticsEntry tower, long combinationAppearances) {
+        String displayName = ProductionTowerCatalog.find(tower.towerTypeId())
+                .map(entry -> entry.type().displayName())
+                .orElse(tower.towerTypeId());
+        return displayName + " T" + tower.tier() + " "
+                + formatAverage(tower.averageCount(combinationAppearances), "개");
     }
 
     private static String formatPercent(OptionalDouble value) {

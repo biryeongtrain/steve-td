@@ -3,6 +3,7 @@ package kim.biryeong.semiontd.game;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import kim.biryeong.semiontd.trait.TraitLoadoutSnapshot;
 
 public record MatchParticipantResult(
         UUID playerId,
@@ -12,10 +13,13 @@ public record MatchParticipantResult(
         PlayerMatchStatsSnapshot stats,
         String jobId,
         List<Integer> attemptedRounds,
-        List<Integer> clearedRounds
+        List<Integer> clearedRounds,
+        TraitLoadoutSnapshot traitLoadout,
+        List<TowerCompositionEntry> finalTowerComposition
 ) {
     public MatchParticipantResult(UUID playerId, String playerName, TeamId teamId, boolean winner) {
-        this(playerId, playerName, teamId, winner, PlayerMatchStatsSnapshot.empty(), null, List.of(), List.of());
+        this(playerId, playerName, teamId, winner, PlayerMatchStatsSnapshot.empty(), null, List.of(), List.of(),
+                TraitLoadoutSnapshot.none(), List.of());
     }
 
     public MatchParticipantResult(
@@ -25,7 +29,8 @@ public record MatchParticipantResult(
             boolean winner,
             PlayerMatchStatsSnapshot stats
     ) {
-        this(playerId, playerName, teamId, winner, stats, null, List.of(), List.of());
+        this(playerId, playerName, teamId, winner, stats, null, List.of(), List.of(),
+                TraitLoadoutSnapshot.none(), List.of());
     }
 
     public MatchParticipantResult(
@@ -36,7 +41,22 @@ public record MatchParticipantResult(
             PlayerMatchStatsSnapshot stats,
             String jobId
     ) {
-        this(playerId, playerName, teamId, winner, stats, jobId, List.of(), List.of());
+        this(playerId, playerName, teamId, winner, stats, jobId, List.of(), List.of(),
+                TraitLoadoutSnapshot.none(), List.of());
+    }
+
+    public MatchParticipantResult(
+            UUID playerId,
+            String playerName,
+            TeamId teamId,
+            boolean winner,
+            PlayerMatchStatsSnapshot stats,
+            String jobId,
+            List<Integer> attemptedRounds,
+            List<Integer> clearedRounds
+    ) {
+        this(playerId, playerName, teamId, winner, stats, jobId, attemptedRounds, clearedRounds,
+                TraitLoadoutSnapshot.none(), List.of());
     }
 
     public MatchParticipantResult {
@@ -48,6 +68,14 @@ public record MatchParticipantResult(
         attemptedRounds = normalizeRounds(attemptedRounds);
         clearedRounds = normalizeRounds(clearedRounds).stream()
                 .filter(attemptedRounds::contains)
+                .toList();
+        traitLoadout = traitLoadout == null ? TraitLoadoutSnapshot.none() : traitLoadout;
+        finalTowerComposition = finalTowerComposition == null
+                ? List.of()
+                : finalTowerComposition.stream()
+                .filter(Objects::nonNull)
+                .sorted(java.util.Comparator.comparing(TowerCompositionEntry::towerTypeId)
+                        .thenComparingInt(TowerCompositionEntry::tier))
                 .toList();
     }
 

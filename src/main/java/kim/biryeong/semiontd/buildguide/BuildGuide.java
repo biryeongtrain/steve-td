@@ -3,6 +3,7 @@ package kim.biryeong.semiontd.buildguide;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import kim.biryeong.semiontd.trait.TraitLoadoutSnapshot;
 
 public record BuildGuide(
         String code,
@@ -10,6 +11,7 @@ public record BuildGuide(
         UUID authorId,
         String authorName,
         String jobId,
+        TraitLoadoutSnapshot traitLoadout,
         int finalRound,
         long publishedAtEpochMillis,
         String visibility,
@@ -25,6 +27,7 @@ public record BuildGuide(
         title = normalizeTitle(title);
         authorName = authorName == null ? "" : authorName;
         jobId = jobId == null ? "" : jobId;
+        traitLoadout = traitLoadout == null ? TraitLoadoutSnapshot.none() : traitLoadout;
         finalRound = Math.max(1, finalRound);
         publishedAtEpochMillis = Math.max(0L, publishedAtEpochMillis);
         visibility = normalizeVisibility(visibility);
@@ -70,6 +73,7 @@ public record BuildGuide(
                 authorId,
                 authorName,
                 jobId,
+                traitLoadout,
                 finalRound,
                 publishedAtEpochMillis,
                 normalizeVisibility(visibility),

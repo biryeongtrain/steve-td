@@ -1,5 +1,6 @@
 package kim.biryeong.semiontd.buildguide;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
@@ -12,14 +13,20 @@ import kim.biryeong.semiontd.game.SemionGame;
 import kim.biryeong.semiontd.game.SemionPlayer;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.map.GameArena;
+import kim.biryeong.semiontd.trait.BuiltInTraits;
+import kim.biryeong.semiontd.trait.TraitLoadout;
 import org.junit.jupiter.api.Test;
 
 final class BuildGuideServiceTest {
     @Test
-    void lastRecordingSurvivesDelayedFinishUntilNextMatchStarts() {
+    void lastRecordingSurvivesUntilNextMatchFinishes() {
         BuildGuideService service = new BuildGuideService(null);
         UUID playerId = UUID.fromString("00000000-0000-0000-0000-000000000201");
         SemionGame finishedGame = gameWithPlayer(playerId, "player");
+        finishedGame.players().get(playerId).assignTraitLoadout(new TraitLoadout(
+                BuiltInTraits.STRENGTH_IN_NUMBERS_ID,
+                BuiltInTraits.SUPPLY_DEPOT_ID
+        ));
 
         service.startMatch(finishedGame);
         service.recordSummon(finishedGame, playerId, "zombie", 10, 1, TeamId.BLUE, 1, 2);
@@ -33,10 +40,12 @@ final class BuildGuideServiceTest {
         Optional<BuildGuide> published = service.publishLastRecording(playerId, "마지막 경기 빌드");
         assertTrue(published.isPresent());
         assertTrue(published.get().actions().stream().anyMatch(action -> action.type() == BuildActionType.SUMMON));
+        assertEquals(BuiltInTraits.STRENGTH_IN_NUMBERS_ID.toString(), published.get().traitLoadout().primaryTraitId());
+        assertEquals(BuiltInTraits.SUPPLY_DEPOT_ID.toString(), published.get().traitLoadout().secondaryTraitId());
 
         service.startMatch(gameWithPlayer(playerId, "player"));
 
-        assertTrue(service.publishLastRecording(playerId, "너무 늦은 저장").isEmpty());
+        assertTrue(service.publishLastRecording(playerId, "다음 경기 중 저장").isPresent());
     }
 
     private static SemionGame gameWithPlayer(UUID playerId, String playerName) {

@@ -22,8 +22,12 @@ import kim.biryeong.semiontd.game.MatchResultGroup;
 import kim.biryeong.semiontd.game.PlayerMatchStatsSnapshot;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.game.TeamMatchResult;
+import kim.biryeong.semiontd.game.TowerCompositionEntry;
 import kim.biryeong.semiontd.statistics.JobStatisticsEntry;
 import kim.biryeong.semiontd.statistics.JobStatisticsSnapshot;
+import kim.biryeong.semiontd.statistics.TraitCombinationStatisticsEntry;
+import kim.biryeong.semiontd.statistics.TraitTowerStatisticsEntry;
+import kim.biryeong.semiontd.trait.TraitLoadoutSnapshot;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -123,6 +127,65 @@ final class SQLiteJobStatisticsStoreTest {
         assertEquals(1L, villager.roundPassCount(2));
         assertEquals(0.5, villager.roundPassRate(2).orElseThrow(), 0.0001);
         assertTrue(villager.roundPassRate(3).isEmpty());
+    }
+
+    @Test
+    void tracksTraitCombinationRoundsAndFinalTowerCompositionOnce() {
+        SQLiteJobStatisticsStore store = new SQLiteJobStatisticsStore(tempDir.resolve("job-statistics.db"));
+        TraitLoadoutSnapshot loadout = new TraitLoadoutSnapshot(
+                "semion-td:test_economy",
+                2,
+                "semion-td:test_defense",
+                1
+        );
+        MatchParticipantResult villager = new MatchParticipantResult(
+                UUID.nameUUIDFromBytes("trait-villager".getBytes(StandardCharsets.UTF_8)),
+                "trait-villager",
+                TeamId.RED,
+                true,
+                PlayerMatchStatsSnapshot.empty(),
+                VILLAGER,
+                rounds(1, 20),
+                rounds(1, 19),
+                loadout,
+                List.of(
+                        new TowerCompositionEntry("semion-td:goat", 1, 2),
+                        new TowerCompositionEntry("semion-td:archer", 2, 1)
+                )
+        );
+        MatchResult result = twoPlayerResult(
+                4L,
+                20,
+                villager,
+                participant("trait-nether", TeamId.BLUE, false, NETHER, PlayerMatchStatsSnapshot.empty()),
+                MatchMode.NORMAL
+        );
+
+        store.ingest(result);
+        JobStatisticsSnapshot snapshot = store.ingest(result);
+
+        TraitCombinationStatisticsEntry combination = snapshot.traitCombinationsForJob(VILLAGER).getFirst();
+        assertEquals(1, snapshot.traitCombinationsForJob(VILLAGER).size());
+        assertEquals("semion-td:test_economy", combination.primaryTraitId());
+        assertEquals(2, combination.primaryTraitVersion());
+        assertEquals("semion-td:test_defense", combination.secondaryTraitId());
+        assertEquals(1, combination.secondaryTraitVersion());
+        assertEquals(1L, combination.appearances());
+        assertEquals(1L, combination.wins());
+        assertEquals(1.0, combination.selectionRate(1L).orElseThrow(), 0.0001);
+        assertEquals(1.0, combination.averagePlacement().orElseThrow(), 0.0001);
+        assertEquals(20.0, combination.averageFinalRound().orElseThrow(), 0.0001);
+        assertEquals(1.0, combination.roundPassRate(19).orElseThrow(), 0.0001);
+        assertEquals(0.0, combination.roundPassRate(20).orElseThrow(), 0.0001);
+
+        TraitTowerStatisticsEntry goat = combination.finalTowers().stream()
+                .filter(tower -> tower.towerTypeId().equals("semion-td:goat"))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(1, goat.tier());
+        assertEquals(1L, goat.participantAppearances());
+        assertEquals(2L, goat.totalCount());
+        assertEquals(2.0, goat.averageCount(combination.appearances()).orElseThrow(), 0.0001);
     }
 
     @Test
@@ -237,12 +300,16 @@ final class SQLiteJobStatisticsStoreTest {
         json.getAsJsonArray("participants").get(0).getAsJsonObject().remove("jobId");
         json.getAsJsonArray("participants").get(0).getAsJsonObject().remove("attemptedRounds");
         json.getAsJsonArray("participants").get(0).getAsJsonObject().remove("clearedRounds");
+        json.getAsJsonArray("participants").get(0).getAsJsonObject().remove("traitLoadout");
+        json.getAsJsonArray("participants").get(0).getAsJsonObject().remove("finalTowerComposition");
 
         MatchResult legacy = gson.fromJson(json, MatchResult.class);
         assertNull(legacy.matchMode());
         assertNull(legacy.participants().getFirst().jobId());
         assertEquals(List.of(), legacy.participants().getFirst().attemptedRounds());
         assertEquals(List.of(), legacy.participants().getFirst().clearedRounds());
+        assertEquals(TraitLoadoutSnapshot.none(), legacy.participants().getFirst().traitLoadout());
+        assertEquals(List.of(), legacy.participants().getFirst().finalTowerComposition());
 
         JobStatisticsSnapshot snapshot = new SQLiteJobStatisticsStore(tempDir.resolve("job-statistics.db"))
                 .ingest(legacy);

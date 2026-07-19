@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.job.SemionJob;
 import kim.biryeong.semiontd.trait.TraitLoadout;
+import kim.biryeong.semiontd.trait.TraitLoadoutSnapshot;
 
 public final class SemionPlayer {
     private final UUID uuid;
@@ -14,6 +15,7 @@ public final class SemionPlayer {
     private final PlayerEconomy economy;
     private final PlayerMatchStats matchStats = new PlayerMatchStats();
     private TraitLoadout traitLoadout = TraitLoadout.none();
+    private TraitLoadoutSnapshot traitLoadoutSnapshot = TraitLoadoutSnapshot.none();
     private SemionJob job;
 
     public SemionPlayer(UUID uuid, String name, TeamId teamId, int laneId, PlayerEconomy economy) {
@@ -56,8 +58,13 @@ public final class SemionPlayer {
         return traitLoadout;
     }
 
+    public TraitLoadoutSnapshot traitLoadoutSnapshot() {
+        return traitLoadoutSnapshot;
+    }
+
     public void assignTraitLoadout(TraitLoadout traitLoadout) {
         this.traitLoadout = traitLoadout == null ? TraitLoadout.none() : traitLoadout;
+        this.traitLoadoutSnapshot = TraitLoadoutSnapshot.from(this.traitLoadout);
     }
 
     public void assignJob(SemionJob job) {

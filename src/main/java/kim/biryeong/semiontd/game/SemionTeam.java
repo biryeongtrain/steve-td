@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.game;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -17,6 +18,7 @@ public final class SemionTeam {
     private final TeamId id;
     private final List<UUID> memberIds = new ArrayList<>();
     private final TeamLaneGroup laneGroup;
+    private final Map<UUID, List<TowerCompositionEntry>> finalTowerCompositions = new HashMap<>();
     private boolean active;
     private boolean eliminated;
     private LeaderTargetingState leaderTargeting;
@@ -68,6 +70,7 @@ public final class SemionTeam {
     public void activate() {
         this.active = true;
         this.eliminated = false;
+        this.finalTowerCompositions.clear();
     }
 
     public void deactivate() {
@@ -75,6 +78,7 @@ public final class SemionTeam {
         this.eliminated = false;
         this.leaderTargeting = null;
         this.memberIds.clear();
+        this.finalTowerCompositions.clear();
         this.laneGroup.closeRuntime();
     }
 
@@ -83,6 +87,7 @@ public final class SemionTeam {
         this.eliminated = false;
         this.leaderTargeting = null;
         this.memberIds.clear();
+        this.finalTowerCompositions.clear();
         this.laneGroup.closeRuntime();
     }
 
@@ -135,9 +140,24 @@ public final class SemionTeam {
         }
         eliminated = true;
         leaderTargeting = null;
+        finalTowerCompositions.clear();
+        for (PlayerLane lane : laneGroup.lanes()) {
+            finalTowerCompositions.put(lane.ownerPlayer(), lane.towerComposition());
+        }
         laneGroup.disableMonsters();
         laneGroup.clearTowers();
         laneGroup.discardBossEntity();
         return true;
+    }
+
+    public List<TowerCompositionEntry> finalTowerComposition(UUID playerId, int laneId) {
+        List<TowerCompositionEntry> captured = finalTowerCompositions.get(playerId);
+        if (captured != null) {
+            return captured;
+        }
+        return laneGroup.lane(laneId)
+                .filter(lane -> lane.ownerPlayer().equals(playerId))
+                .map(PlayerLane::towerComposition)
+                .orElse(List.of());
     }
 }

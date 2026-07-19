@@ -29,9 +29,13 @@ import kim.biryeong.semiontd.game.MatchMode;
 import kim.biryeong.semiontd.game.PlayerMatchStatsSnapshot;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.game.TeamMatchResult;
+import kim.biryeong.semiontd.game.TowerCompositionEntry;
 import kim.biryeong.semiontd.statistics.JobStatisticsEntry;
 import kim.biryeong.semiontd.statistics.JobStatisticsSnapshot;
 import kim.biryeong.semiontd.statistics.JobStatisticsTotals;
+import kim.biryeong.semiontd.statistics.TraitCombinationStatisticsEntry;
+import kim.biryeong.semiontd.statistics.TraitTowerStatisticsEntry;
+import kim.biryeong.semiontd.trait.TraitLoadoutSnapshot;
 import net.minecraft.resources.ResourceLocation;
 
 public final class SQLiteJobStatisticsStore {
@@ -45,7 +49,8 @@ public final class SQLiteJobStatisticsStore {
             own_lane_incoming_threat, own_lane_leaked_threat,
             sent_income_threat, income_attack_success_threat,
             own_lane_diamond_gain, assist_clear_diamond_gain, income_generated,
-            assist_clear_threat, incoming_income_threat
+            assist_clear_threat, incoming_income_threat,
+            primary_trait_id, primary_trait_version, secondary_trait_id, secondary_trait_version
             """;
     private static final String AGGREGATE_COLUMNS = """
             job_id, appearances, wins, placement_samples, placement_sum, final_round_sum,
@@ -57,10 +62,15 @@ public final class SQLiteJobStatisticsStore {
             first_match_at_epoch_millis, last_match_at_epoch_millis, updated_at_epoch_millis
             """;
     private static final String INSERT_FACT = "INSERT OR IGNORE INTO job_stat_participant_facts ("
-            + FACT_COLUMNS + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            + FACT_COLUMNS + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String UPSERT_HISTORY_FACT = "INSERT INTO job_stat_participant_facts ("
-            + FACT_COLUMNS + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
-            + "ON CONFLICT(match_id, player_id) DO UPDATE SET cleared_round = excluded.cleared_round";
+            + FACT_COLUMNS + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            + "ON CONFLICT(match_id, player_id) DO UPDATE SET "
+            + "cleared_round = excluded.cleared_round, "
+            + "primary_trait_id = excluded.primary_trait_id, "
+            + "primary_trait_version = excluded.primary_trait_version, "
+            + "secondary_trait_id = excluded.secondary_trait_id, "
+            + "secondary_trait_version = excluded.secondary_trait_version";
     private static final String UPSERT_AGGREGATE = """
             INSERT INTO job_statistics (
             """ + AGGREGATE_COLUMNS + """
@@ -104,6 +114,15 @@ public final class SQLiteJobStatisticsStore {
             DELETE FROM job_stat_participant_rounds
             WHERE match_id = ? AND player_id = ?
             """;
+    private static final String INSERT_PARTICIPANT_TOWER = """
+            INSERT OR REPLACE INTO job_stat_participant_towers (
+                match_id, player_id, tower_type_id, tier, count
+            ) VALUES (?, ?, ?, ?, ?)
+            """;
+    private static final String DELETE_PARTICIPANT_TOWERS = """
+            DELETE FROM job_stat_participant_towers
+            WHERE match_id = ? AND player_id = ?
+            """;
 
     private final Path path;
 
@@ -118,12 +137,15 @@ public final class SQLiteJobStatisticsStore {
             connection.setAutoCommit(false);
             try (PreparedStatement insert = connection.prepareStatement(UPSERT_HISTORY_FACT);
                  PreparedStatement deleteRounds = connection.prepareStatement(DELETE_PARTICIPANT_ROUNDS);
-                 PreparedStatement insertRound = connection.prepareStatement(INSERT_PARTICIPANT_ROUND)) {
+                 PreparedStatement insertRound = connection.prepareStatement(INSERT_PARTICIPANT_ROUND);
+                 PreparedStatement deleteTowers = connection.prepareStatement(DELETE_PARTICIPANT_TOWERS);
+                 PreparedStatement insertTower = connection.prepareStatement(INSERT_PARTICIPANT_TOWER)) {
                 for (MatchResult matchResult : history) {
                     for (ParticipantFact fact : participantFacts(matchResult)) {
                         bindFact(insert, fact);
                         insert.executeUpdate();
                         replaceParticipantRounds(deleteRounds, insertRound, fact);
+                        replaceParticipantTowers(deleteTowers, insertTower, fact);
                     }
                 }
                 connection.commit();
@@ -151,7 +173,8 @@ public final class SQLiteJobStatisticsStore {
             try (PreparedStatement insert = connection.prepareStatement(INSERT_FACT);
                  PreparedStatement aggregate = connection.prepareStatement(UPSERT_AGGREGATE);
                  PreparedStatement insertRound = connection.prepareStatement(INSERT_PARTICIPANT_ROUND);
-                 PreparedStatement roundAggregate = connection.prepareStatement(UPSERT_ROUND_AGGREGATE)) {
+                 PreparedStatement roundAggregate = connection.prepareStatement(UPSERT_ROUND_AGGREGATE);
+                 PreparedStatement insertTower = connection.prepareStatement(INSERT_PARTICIPANT_TOWER)) {
                 for (ParticipantFact fact : facts) {
                     bindFact(insert, fact);
                     if (insert.executeUpdate() == 0) {
@@ -161,6 +184,7 @@ public final class SQLiteJobStatisticsStore {
                     aggregate.executeUpdate();
                     insertParticipantRounds(insertRound, fact);
                     incrementRoundAggregates(roundAggregate, fact);
+                    insertParticipantTowers(insertTower, fact);
                 }
                 connection.commit();
             } catch (SQLException exception) {
@@ -195,6 +219,7 @@ public final class SQLiteJobStatisticsStore {
             }
 
             Map<String, RoundCounts> roundCounts = loadRoundCounts(connection);
+            List<TraitCombinationStatisticsEntry> traitCombinations = loadTraitCombinations(connection);
             ArrayList<JobStatisticsEntry> jobs = new ArrayList<>();
             try (Statement statement = connection.createStatement();
                  ResultSet results = statement.executeQuery("SELECT " + AGGREGATE_COLUMNS
@@ -209,7 +234,8 @@ public final class SQLiteJobStatisticsStore {
                     participantAppearances,
                     firstMatchAt,
                     lastMatchAt,
-                    jobs
+                    jobs,
+                    traitCombinations
             );
         } catch (SQLException exception) {
             throw new PersistenceException("Failed to load job statistics from SQLite " + path, exception);
@@ -247,6 +273,10 @@ public final class SQLiteJobStatisticsStore {
                         income_generated INTEGER NOT NULL,
                         assist_clear_threat REAL NOT NULL,
                         incoming_income_threat REAL NOT NULL,
+                        primary_trait_id TEXT NOT NULL DEFAULT 'semion-td:none',
+                        primary_trait_version INTEGER NOT NULL DEFAULT 0,
+                        secondary_trait_id TEXT NOT NULL DEFAULT 'semion-td:none',
+                        secondary_trait_version INTEGER NOT NULL DEFAULT 0,
                         PRIMARY KEY (match_id, player_id)
                     )
                     """);
@@ -256,12 +286,23 @@ public final class SQLiteJobStatisticsStore {
                     "cleared_round",
                     "INTEGER NOT NULL DEFAULT 0"
             );
+            ensureColumn(connection, "job_stat_participant_facts", "primary_trait_id",
+                    "TEXT NOT NULL DEFAULT 'semion-td:none'");
+            ensureColumn(connection, "job_stat_participant_facts", "primary_trait_version",
+                    "INTEGER NOT NULL DEFAULT 0");
+            ensureColumn(connection, "job_stat_participant_facts", "secondary_trait_id",
+                    "TEXT NOT NULL DEFAULT 'semion-td:none'");
+            ensureColumn(connection, "job_stat_participant_facts", "secondary_trait_version",
+                    "INTEGER NOT NULL DEFAULT 0");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_facts_job_id "
                     + "ON job_stat_participant_facts (job_id)");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_facts_ended_at "
                     + "ON job_stat_participant_facts (ended_at_epoch_millis)");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_facts_job_ended_at "
                     + "ON job_stat_participant_facts (job_id, ended_at_epoch_millis)");
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_facts_traits "
+                    + "ON job_stat_participant_facts (job_id, primary_trait_id, primary_trait_version, "
+                    + "secondary_trait_id, secondary_trait_version)");
             statement.executeUpdate("""
                     CREATE TABLE IF NOT EXISTS job_statistics (
                         job_id TEXT PRIMARY KEY,
@@ -309,6 +350,20 @@ public final class SQLiteJobStatisticsStore {
                         CHECK (round_number BETWEEN 1 AND 40)
                     )
                     """);
+            statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS job_stat_participant_towers (
+                        match_id INTEGER NOT NULL,
+                        player_id TEXT NOT NULL,
+                        tower_type_id TEXT NOT NULL,
+                        tier INTEGER NOT NULL,
+                        count INTEGER NOT NULL,
+                        PRIMARY KEY (match_id, player_id, tower_type_id, tier),
+                        CHECK (tier >= 0),
+                        CHECK (count > 0)
+                    )
+                    """);
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_towers_type "
+                    + "ON job_stat_participant_towers (tower_type_id, tier)");
             ensureColumn(
                     connection,
                     "job_round_statistics",
@@ -491,7 +546,9 @@ public final class SQLiteJobStatisticsStore {
                     matchResult.startedAtEpochMillis(),
                     matchResult.endedAtEpochMillis(),
                     participant.stats(),
-                    roundOutcomes
+                    roundOutcomes,
+                    participant.traitLoadout(),
+                    participant.finalTowerComposition()
             ));
         }
         return facts;
@@ -542,6 +599,10 @@ public final class SQLiteJobStatisticsStore {
         statement.setLong(21, stats.incomeGenerated());
         statement.setDouble(22, stats.assistClearThreat());
         statement.setDouble(23, stats.incomingIncomeThreat());
+        statement.setString(24, fact.traitLoadout().primaryTraitId());
+        statement.setInt(25, fact.traitLoadout().primaryTraitVersion());
+        statement.setString(26, fact.traitLoadout().secondaryTraitId());
+        statement.setInt(27, fact.traitLoadout().secondaryTraitVersion());
     }
 
     private static void bindAggregate(PreparedStatement statement, ParticipantFact fact, long updatedAt) throws SQLException {
@@ -604,6 +665,155 @@ public final class SQLiteJobStatisticsStore {
         }
     }
 
+    private static void replaceParticipantTowers(
+            PreparedStatement deleteStatement,
+            PreparedStatement insertStatement,
+            ParticipantFact fact
+    ) throws SQLException {
+        deleteStatement.setLong(1, fact.matchId());
+        deleteStatement.setString(2, fact.playerId());
+        deleteStatement.executeUpdate();
+        insertParticipantTowers(insertStatement, fact);
+    }
+
+    private static void insertParticipantTowers(PreparedStatement statement, ParticipantFact fact) throws SQLException {
+        for (TowerCompositionEntry tower : fact.finalTowerComposition()) {
+            statement.setLong(1, fact.matchId());
+            statement.setString(2, fact.playerId());
+            statement.setString(3, tower.towerTypeId());
+            statement.setInt(4, tower.tier());
+            statement.setInt(5, tower.count());
+            statement.executeUpdate();
+        }
+    }
+
+    private static List<TraitCombinationStatisticsEntry> loadTraitCombinations(Connection connection) throws SQLException {
+        Map<TraitCombinationKey, RoundCounts> roundCounts = loadTraitRoundCounts(connection);
+        Map<TraitCombinationKey, List<TraitTowerStatisticsEntry>> towerCounts = loadTraitTowerCounts(connection);
+        ArrayList<TraitCombinationStatisticsEntry> entries = new ArrayList<>();
+        try (Statement statement = connection.createStatement();
+             ResultSet results = statement.executeQuery("""
+                     SELECT job_id,
+                            primary_trait_id, primary_trait_version,
+                            secondary_trait_id, secondary_trait_version,
+                            COUNT(*), COALESCE(SUM(won), 0),
+                            COUNT(placement), COALESCE(SUM(placement), 0),
+                            COALESCE(SUM(final_round), 0)
+                     FROM job_stat_participant_facts
+                     GROUP BY job_id,
+                              primary_trait_id, primary_trait_version,
+                              secondary_trait_id, secondary_trait_version
+                     ORDER BY job_id, COUNT(*) DESC,
+                              primary_trait_id, secondary_trait_id
+                     """)) {
+            while (results.next()) {
+                TraitCombinationKey key = readTraitCombinationKey(results);
+                RoundCounts rounds = roundCounts.get(key);
+                entries.add(new TraitCombinationStatisticsEntry(
+                        key.jobId(),
+                        key.primaryTraitId(),
+                        key.primaryTraitVersion(),
+                        key.secondaryTraitId(),
+                        key.secondaryTraitVersion(),
+                        results.getLong(6),
+                        results.getLong(7),
+                        results.getLong(8),
+                        results.getLong(9),
+                        results.getLong(10),
+                        rounds == null ? null : rounds.passCounts(),
+                        rounds == null ? null : rounds.attemptCounts(),
+                        towerCounts.getOrDefault(key, List.of())
+                ));
+            }
+        }
+        return List.copyOf(entries);
+    }
+
+    private static Map<TraitCombinationKey, RoundCounts> loadTraitRoundCounts(Connection connection) throws SQLException {
+        LinkedHashMap<TraitCombinationKey, long[]> passCounts = new LinkedHashMap<>();
+        LinkedHashMap<TraitCombinationKey, long[]> attemptCounts = new LinkedHashMap<>();
+        try (Statement statement = connection.createStatement();
+             ResultSet results = statement.executeQuery("""
+                     SELECT facts.job_id,
+                            facts.primary_trait_id, facts.primary_trait_version,
+                            facts.secondary_trait_id, facts.secondary_trait_version,
+                            outcomes.round_number, COUNT(*), COALESCE(SUM(outcomes.cleared), 0)
+                     FROM job_stat_participant_rounds AS outcomes
+                     INNER JOIN job_stat_participant_facts AS facts
+                             ON facts.match_id = outcomes.match_id
+                            AND facts.player_id = outcomes.player_id
+                     GROUP BY facts.job_id,
+                              facts.primary_trait_id, facts.primary_trait_version,
+                              facts.secondary_trait_id, facts.secondary_trait_version,
+                              outcomes.round_number
+                     """)) {
+            while (results.next()) {
+                int round = results.getInt(6);
+                if (round < 1 || round > JobStatisticsEntry.MAX_TRACKED_ROUND) {
+                    continue;
+                }
+                TraitCombinationKey key = readTraitCombinationKey(results);
+                attemptCounts.computeIfAbsent(key, ignored -> new long[JobStatisticsEntry.MAX_TRACKED_ROUND])
+                        [round - 1] = results.getLong(7);
+                passCounts.computeIfAbsent(key, ignored -> new long[JobStatisticsEntry.MAX_TRACKED_ROUND])
+                        [round - 1] = results.getLong(8);
+            }
+        }
+        LinkedHashMap<TraitCombinationKey, RoundCounts> counts = new LinkedHashMap<>();
+        for (Map.Entry<TraitCombinationKey, long[]> entry : attemptCounts.entrySet()) {
+            counts.put(entry.getKey(), new RoundCounts(
+                    asCountList(passCounts.get(entry.getKey())),
+                    asCountList(entry.getValue())
+            ));
+        }
+        return counts;
+    }
+
+    private static Map<TraitCombinationKey, List<TraitTowerStatisticsEntry>> loadTraitTowerCounts(
+            Connection connection
+    ) throws SQLException {
+        LinkedHashMap<TraitCombinationKey, List<TraitTowerStatisticsEntry>> counts = new LinkedHashMap<>();
+        try (Statement statement = connection.createStatement();
+             ResultSet results = statement.executeQuery("""
+                     SELECT facts.job_id,
+                            facts.primary_trait_id, facts.primary_trait_version,
+                            facts.secondary_trait_id, facts.secondary_trait_version,
+                            towers.tower_type_id, towers.tier,
+                            COUNT(*), COALESCE(SUM(towers.count), 0)
+                     FROM job_stat_participant_towers AS towers
+                     INNER JOIN job_stat_participant_facts AS facts
+                             ON facts.match_id = towers.match_id
+                            AND facts.player_id = towers.player_id
+                     GROUP BY facts.job_id,
+                              facts.primary_trait_id, facts.primary_trait_version,
+                              facts.secondary_trait_id, facts.secondary_trait_version,
+                              towers.tower_type_id, towers.tier
+                     ORDER BY COUNT(*) DESC, towers.tower_type_id, towers.tier
+                     """)) {
+            while (results.next()) {
+                TraitCombinationKey key = readTraitCombinationKey(results);
+                counts.computeIfAbsent(key, ignored -> new ArrayList<>()).add(new TraitTowerStatisticsEntry(
+                        results.getString(6),
+                        results.getInt(7),
+                        results.getLong(8),
+                        results.getLong(9)
+                ));
+            }
+        }
+        counts.replaceAll((key, value) -> List.copyOf(value));
+        return counts;
+    }
+
+    private static TraitCombinationKey readTraitCombinationKey(ResultSet results) throws SQLException {
+        return new TraitCombinationKey(
+                results.getString(1),
+                results.getString(2),
+                results.getInt(3),
+                results.getString(4),
+                results.getInt(5)
+        );
+    }
+
     private static Map<String, RoundCounts> loadRoundCounts(Connection connection) throws SQLException {
         LinkedHashMap<String, long[]> passCounts = new LinkedHashMap<>();
         LinkedHashMap<String, long[]> attemptCounts = new LinkedHashMap<>();
@@ -638,7 +848,8 @@ public final class SQLiteJobStatisticsStore {
 
     private static List<Long> asCountList(long[] values) {
         ArrayList<Long> counts = new ArrayList<>(JobStatisticsEntry.MAX_TRACKED_ROUND);
-        for (long value : values) {
+        long[] safeValues = values == null ? new long[JobStatisticsEntry.MAX_TRACKED_ROUND] : values;
+        for (long value : safeValues) {
             counts.add(value);
         }
         return List.copyOf(counts);
@@ -707,8 +918,14 @@ public final class SQLiteJobStatisticsStore {
             long startedAtEpochMillis,
             long endedAtEpochMillis,
             PlayerMatchStatsSnapshot stats,
-            List<RoundOutcome> roundOutcomes
+            List<RoundOutcome> roundOutcomes,
+            TraitLoadoutSnapshot traitLoadout,
+            List<TowerCompositionEntry> finalTowerComposition
     ) {
+        private ParticipantFact {
+            traitLoadout = traitLoadout == null ? TraitLoadoutSnapshot.none() : traitLoadout;
+            finalTowerComposition = finalTowerComposition == null ? List.of() : List.copyOf(finalTowerComposition);
+        }
     }
 
     private record RoundOutcome(int round, boolean cleared) {
@@ -717,6 +934,15 @@ public final class SQLiteJobStatisticsStore {
     private record RoundCounts(
             List<Long> passCounts,
             List<Long> attemptCounts
+    ) {
+    }
+
+    private record TraitCombinationKey(
+            String jobId,
+            String primaryTraitId,
+            int primaryTraitVersion,
+            String secondaryTraitId,
+            int secondaryTraitVersion
     ) {
     }
 }

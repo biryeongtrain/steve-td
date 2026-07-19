@@ -22,6 +22,7 @@ import kim.biryeong.semiontd.summon.SummonRegistry;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
+import kim.biryeong.semiontd.trait.TraitLoadoutSnapshot;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -56,10 +57,17 @@ public final class BuildGuideService {
         if (game == null) {
             return;
         }
-        lastRecordings.clear();
         for (SemionPlayer player : game.players().values()) {
             String jobId = player.job().map(job -> job.id().toString()).orElse("");
-            activeRecordings.put(player.uuid(), new Recording(player.uuid(), player.name(), jobId, new ArrayList<>(), false, game.currentRound()));
+            activeRecordings.put(player.uuid(), new Recording(
+                    player.uuid(),
+                    player.name(),
+                    jobId,
+                    player.traitLoadoutSnapshot(),
+                    new ArrayList<>(),
+                    false,
+                    game.currentRound()
+            ));
         }
     }
 
@@ -86,6 +94,7 @@ public final class BuildGuideService {
                 recording.playerId(),
                 recording.playerName(),
                 recording.jobId(),
+                recording.traitLoadout(),
                 recording.finalRound(),
                 Instant.now().toEpochMilli(),
                 BuildGuide.VISIBILITY_PRIVATE,
@@ -121,6 +130,7 @@ public final class BuildGuideService {
                 playerId,
                 playerName,
                 jobId,
+                TraitLoadoutSnapshot.none(),
                 finalRound,
                 Instant.now().toEpochMilli(),
                 BuildGuide.VISIBILITY_PUBLIC,
@@ -461,12 +471,13 @@ public final class BuildGuideService {
             UUID playerId,
             String playerName,
             String jobId,
+            TraitLoadoutSnapshot traitLoadout,
             List<BuildAction> actions,
             boolean ended,
             int finalRound
     ) {
         private Recording withEnded(int finalRound) {
-            return new Recording(playerId, playerName, jobId, List.copyOf(actions), true, finalRound);
+            return new Recording(playerId, playerName, jobId, traitLoadout, List.copyOf(actions), true, finalRound);
         }
     }
 }

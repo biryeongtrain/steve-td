@@ -2674,7 +2674,19 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 java.util.Set.of(),
                 2
         );
-        if (!assertTrue(context, game.start(context.getLevel().getServer(), plan), "Build recording game should start.")) {
+        TraitLoadout selectedTraits = new TraitLoadout(
+                BuiltInTraits.STRENGTH_IN_NUMBERS_ID,
+                BuiltInTraits.SUPPLY_DEPOT_ID
+        );
+        if (!assertTrue(
+                context,
+                game.start(
+                        context.getLevel().getServer(),
+                        plan,
+                        new TraitSelectionSnapshot(Map.of(redId, selectedTraits))
+                ),
+                "Build recording game should start."
+        )) {
             return;
         }
 
@@ -2720,6 +2732,22 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertTrue(context, guide.isPrivate(), "Newly recorded build guides should be private by default.")) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                BuiltInTraits.STRENGTH_IN_NUMBERS_ID.toString(),
+                guide.traitLoadout().primaryTraitId(),
+                "Published build guide should keep the selected primary trait."
+        )) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                BuiltInTraits.SUPPLY_DEPOT_ID.toString(),
+                guide.traitLoadout().secondaryTraitId(),
+                "Published build guide should keep the selected secondary trait."
+        )) {
             return;
         }
         String guideCode = guide.code();
@@ -2818,7 +2846,16 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
 
         BuildGuideService reloaded = new BuildGuideService(storePath);
-        if (!assertPresent(context, reloaded.find(guide.code()), "Published guide should survive build store reload.")) {
+        Optional<BuildGuide> reloadedGuide = reloaded.find(guide.code());
+        if (!assertPresent(context, reloadedGuide, "Published guide should survive build store reload.")) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                guide.traitLoadout(),
+                reloadedGuide.get().traitLoadout(),
+                "Persisted build guide should keep the selected traits after reload."
+        )) {
             return;
         }
         context.succeed();
@@ -2829,6 +2866,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         MinecraftServer server = context.getLevel().getServer();
         var player = context.makeMockServerPlayerInLevel();
         SemionGameManager manager = new SemionGameManager();
+        manager.configureTraits(new TraitSelectionConfig(false, 45));
         Path storePath;
         try {
             storePath = Files.createTempDirectory("semion-build-guide-manager-test").resolve("profiles.json");
@@ -2864,6 +2902,21 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             PlayerLane lane = redLane(finishedGame, 1);
             finishedGame.recordTowerPlacement(redId, "waiting_publish_tower", GridPosition.from(towerPlacementPos(lane)), 0L);
             if (!assertTrue(context, finishedGame.killBoss(TeamId.BLUE), "First game should end before the next game is created.")) {
+                return;
+            }
+
+            manager.tick(server);
+            for (int tick = 0; tick <= SemionGameManager.MATCH_RESULT_DELAY_TICKS; tick++) {
+                manager.tick(server);
+            }
+            for (int tick = 0; tick <= SemionGameManager.MATCH_RESULT_DIALOG_AFTER_LOBBY_DELAY_TICKS; tick++) {
+                manager.tick(server);
+            }
+            if (!assertPresent(
+                    context,
+                    manager.publishLastBuild(player, "통계 화면 후 저장"),
+                    "The surviving winner should publish after the result dialog is shown."
+            )) {
                 return;
             }
 
@@ -2910,10 +2963,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             if (!assertEquals(context, RoundPhase.PREPARE_AND_SUMMON, waitingGame.phase(), "Final countdown tick should start the next game.")) {
                 return;
             }
-            if (!assertTrue(
+            if (!assertPresent(
                     context,
-                    manager.publishLastBuild(player, "너무 늦은 저장").isEmpty(),
-                    "Previous match recording should expire when the next game starts."
+                    manager.publishLastBuild(player, "다음 경기 시작 후 저장"),
+                    "Previous match recording should remain publishable until the next match finishes."
             )) {
                 return;
             }
@@ -2933,6 +2986,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 stableUuid("build-round-author"),
                 "author",
                 "semion-td:default",
+                kim.biryeong.semiontd.trait.TraitLoadoutSnapshot.none(),
                 4,
                 1L,
                 BuildGuide.VISIBILITY_PUBLIC,

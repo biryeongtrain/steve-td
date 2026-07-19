@@ -599,7 +599,9 @@ public final class SemionGame {
                         player.matchStats().snapshot(player.economy().income()),
                         player.job().map(job -> job.id().toString()).orElse(null),
                         recordedRounds(attemptedRoundsByPlayer, player.uuid()),
-                        recordedRounds(clearedRoundsByPlayer, player.uuid())
+                        recordedRounds(clearedRoundsByPlayer, player.uuid()),
+                        player.traitLoadoutSnapshot(),
+                        finalTowerComposition(player)
                 ))
                 .toList();
         return Optional.of(new MatchResult(
@@ -1120,6 +1122,13 @@ public final class SemionGame {
             return List.of();
         }
         return rounds.stream().sorted().toList();
+    }
+
+    private List<TowerCompositionEntry> finalTowerComposition(SemionPlayer player) {
+        SemionTeam team = teams.get(player.teamId());
+        return team == null
+                ? List.of()
+                : team.finalTowerComposition(player.uuid(), player.laneId());
     }
 
     private boolean checkVictory() {
