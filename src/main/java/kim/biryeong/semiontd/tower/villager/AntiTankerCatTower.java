@@ -1,5 +1,8 @@
 package kim.biryeong.semiontd.tower.villager;
 
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
@@ -23,6 +26,19 @@ public class AntiTankerCatTower extends EntityBackedTower {
 
     public AntiTankerCatTower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition originalPosition, GridPosition currentPosition) {
         super(type, ownerPlayer, teamId, laneId, originalPosition, currentPosition);
+    }
+
+    @Override
+    public Optional<SemionMonsterEntity> selectAttackTarget(
+            SemionTowerEntity towerEntity,
+            List<SemionMonsterEntity> candidates
+    ) {
+        if (candidates == null) {
+            return Optional.empty();
+        }
+        return candidates.stream()
+                .filter(candidate -> candidate != null && candidate.isAlive())
+                .max(Comparator.comparingDouble(SemionMonsterEntity::getHealth));
     }
 
     @Override

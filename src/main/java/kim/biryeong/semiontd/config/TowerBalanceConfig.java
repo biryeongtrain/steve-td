@@ -400,12 +400,14 @@ public record TowerBalanceConfig(
         ));
         putAbilities(abilities, UndeadTowers.T2_RANGED_SKELETON_TOWER.id(), Map.of(
                 "extraTargets", 1.0,
+                "extraTargetRangeBonus", 0.0,
                 "lifeStealRatio", 0.10,
                 "stackDamage", 0.1,
                 "stackDamageCap", 20.0
         ));
         putAbilities(abilities, UndeadTowers.T3_RANGED_SKELETON_TOWER.id(), Map.of(
                 "extraTargets", 2.0,
+                "extraTargetRangeBonus", 2.0,
                 "lifeStealRatio", 0.15,
                 "stackDamage", 0.3,
                 "stackDamageCap", 30.0
@@ -416,7 +418,8 @@ public record TowerBalanceConfig(
                 "lifeStealRatio", 0.05,
                 "damagePerStack", 0.02,
                 "healthPerStack", 0.2,
-                "stackCap", 250.0
+                "stackCap", 250.0,
+                "deathStackRange", 5.0
         ));
         putAbilities(abilities, UndeadTowers.T3_MELEE_TOWER.id(), Map.of(
                 "splashRadius", 1.75,
@@ -424,7 +427,8 @@ public record TowerBalanceConfig(
                 "lifeStealRatio", 0.07,
                 "damagePerStack", 0.03,
                 "healthPerStack", 0.3,
-                "stackCap", 500.0
+                "stackCap", 500.0,
+                "deathStackRange", 5.0
         ));
         putAbilities(abilities, UndeadTowers.T1_UNDEAD_ANIMAL_TOWER.id(), Map.of(
                 "scanIntervalTicks", 100.0,

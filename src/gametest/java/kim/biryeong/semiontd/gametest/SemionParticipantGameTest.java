@@ -9212,6 +9212,126 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void sniperCatPrioritizesHighestCurrentHealthIncludingAdv(GameTestHelper context) {
+        SemionMonsterEntity lowerHealth = spawnRoleMonsterEntity(
+                context,
+                "sniper-cat-lower-health",
+                Optional.empty(),
+                TeamId.RED,
+                1,
+                Vec3.ZERO,
+                100.0,
+                List.of(SummonRole.RUSH)
+        );
+        SemionMonsterEntity higherHealth = spawnRoleMonsterEntity(
+                context,
+                "sniper-cat-higher-health",
+                Optional.empty(),
+                TeamId.RED,
+                1,
+                Vec3.ZERO.add(1.0, 0.0, 0.0),
+                200.0,
+                List.of(SummonRole.TANK)
+        );
+        lowerHealth.setHealth(80.0F);
+        higherHealth.setHealth(120.0F);
+
+        for (TowerType type : List.of(
+                VillagerTowers.T2_ANTI_TANKER_CAT_TOWER,
+                VillagerTowers.ADV_T2_ANTI_TANKER_CAT_TOWER
+        )) {
+            AntiTankerCatTower tower = new AntiTankerCatTower(
+                    type,
+                    stableUuid("sniper-cat-" + type.id()),
+                    TeamId.RED,
+                    1,
+                    GridPosition.from(context.absolutePos(BlockPos.ZERO))
+            );
+            if (!assertTrue(
+                    context,
+                    tower.selectAttackTarget(null, List.of(lowerHealth, higherHealth)).orElse(null) == higherHealth,
+                    type.id() + " should prioritize the target with the highest current health."
+            )) {
+                return;
+            }
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void strayAdditionalTargetsUseTwoBlockRangeBonus(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        Vec3 origin = Vec3.atCenterOf(context.absolutePos(BlockPos.ZERO));
+        UndeadRangedSkeletonTower stray = new UndeadRangedSkeletonTower(
+                TowerBalanceRuntime.resolve(UndeadTowers.T3_RANGED_SKELETON_TOWER),
+                stableUuid("stray-extra-range-owner"),
+                TeamId.RED,
+                1,
+                GridPosition.from(context.absolutePos(BlockPos.ZERO))
+        );
+        SemionTowerEntity towerEntity = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+        towerEntity.configure(stray, null);
+        towerEntity.setNoGravity(true);
+        towerEntity.setPos(origin);
+        context.getLevel().addFreshEntity(towerEntity);
+
+        SemionMonsterEntity primary = spawnRoleMonsterEntity(
+                context, "stray-primary", Optional.empty(), TeamId.RED, 1,
+                origin.add(1.0, 0.0, 0.0), 100.0, List.of(SummonRole.RUSH)
+        );
+        SemionMonsterEntity insideBonusRange = spawnRoleMonsterEntity(
+                context, "stray-inside-bonus-range", Optional.empty(), TeamId.RED, 1,
+                origin.add(7.5, 0.0, 0.0), 100.0, List.of(SummonRole.RUSH)
+        );
+        SemionMonsterEntity outsideBonusRange = spawnRoleMonsterEntity(
+                context, "stray-outside-bonus-range", Optional.empty(), TeamId.RED, 1,
+                origin.add(8.5, 0.0, 0.0), 100.0, List.of(SummonRole.RUSH)
+        );
+        stray.onAttack(towerEntity, primary, 10.0, false);
+
+        if (!assertTrue(context, insideBonusRange.getHealth() < 100.0F, "Stray should acquire an extra target within attack range +2 blocks.")) {
+            return;
+        }
+        if (!assertClose(context, 100.0, outsideBonusRange.getHealth(), "Stray should not acquire an extra target beyond attack range +2 blocks.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void witherSkeletonDeathStacksUseFiveBlockRange(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        GridPosition position = GridPosition.from(context.absolutePos(BlockPos.ZERO));
+        Vec3 center = new Vec3(position.x() + 0.5, position.y() + 1.0, position.z() + 0.5);
+
+        for (TowerType type : List.of(UndeadTowers.T2_MELEE_TOWER, UndeadTowers.T3_MELEE_TOWER)) {
+            UndeadMeleeSkeletonTower tower = new UndeadMeleeSkeletonTower(
+                    TowerBalanceRuntime.resolve(type),
+                    stableUuid("wither-stack-range-" + type.id()),
+                    TeamId.RED,
+                    1,
+                    position
+            );
+            double baseDamage = tower.modifyAttackDamage(null, null, type.damage());
+            tower.onNearbyMonsterDeath(null, null, center.add(4.0, 0.0, 0.0));
+            double damageAfterInsideDeath = tower.modifyAttackDamage(null, null, type.damage());
+            if (!assertTrue(context, damageAfterInsideDeath > baseDamage, type.id() + " should gain a stack from a death four blocks away.")) {
+                return;
+            }
+            tower.onNearbyMonsterDeath(null, null, center.add(5.1, 0.0, 0.0));
+            if (!assertClose(
+                    context,
+                    damageAfterInsideDeath,
+                    tower.modifyAttackDamage(null, null, type.damage()),
+                    type.id() + " should not gain a stack from beyond five blocks."
+            )) {
+                return;
+            }
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void villagerCatUpgradesCopyKillStackDamage(GameTestHelper context) {
         UUID playerId = stableUuid("cat-stack-copy-owner");
         AntiTankerCatTower t2Anti = new AntiTankerCatTower(

@@ -83,6 +83,19 @@ public class UndeadMeleeSkeletonTower extends SplashTower {
         }
     }
 
+    @Override
+    protected boolean isWithinDeathStackRange(Vec3 deathPosition) {
+        if (deathPosition == null) {
+            return false;
+        }
+        double radius = Math.max(0.0, value("deathStackRange"));
+        return deathPosition.distanceToSqr(
+                position().x() + 0.5,
+                position().y() + 1.0,
+                position().z() + 0.5
+        ) <= radius * radius;
+    }
+
     private void incrementDeathStack(PlayerLane lane) {
         if (killStacks >= stackCap()) {
             return;

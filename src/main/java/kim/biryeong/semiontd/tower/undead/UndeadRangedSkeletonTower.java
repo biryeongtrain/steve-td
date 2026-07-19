@@ -93,6 +93,7 @@ public class UndeadRangedSkeletonTower extends EntityBackedTower {
         if (towerEntity == null || count <= 0) {
             return List.of();
         }
+        double extraTargetRange = towerEntity.attackRange() + Math.max(0.0, value("extraTargetRangeBonus"));
         List<SemionMonsterEntity> candidates = new ArrayList<>(towerEntity.level().getEntities(
                 towerEntity,
                 towerEntity.targetSearchBox(),
@@ -101,7 +102,7 @@ public class UndeadRangedSkeletonTower extends EntityBackedTower {
                         && monster != primary
                         && monster.runtimeMonster() != null
                         && towerEntity.defendsLane(monster.runtimeMonster().targetLaneId())
-                        && towerEntity.distanceToSqr(monster) <= towerEntity.attackRange() * towerEntity.attackRange()
+                        && towerEntity.distanceToSqr(monster) <= extraTargetRange * extraTargetRange
         ).stream()
                 .filter(SemionMonsterEntity.class::isInstance)
                 .map(SemionMonsterEntity.class::cast)

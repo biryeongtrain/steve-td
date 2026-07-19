@@ -234,6 +234,7 @@ public final class VillagerTowers {
             5,
             CatVisual.builder().variant(CatVariants.ALL_BLACK).tame(true).build(),
             List.of(
+                    "<green> + 현재 체력이 가장 높은 적을 우선 공격합니다. </green>",
                     "<green> + 웨이브가 아닌 대상을 공격할 때 피해를 100% 더 입힙니다. </green>",
                     "<green> + 대상이 </green><red>탱커</red><green>태그를 가질 경우 대신 200% 추가 피해를 입힙니다.</green>",
                     "<green> + 주위 타워/웨이브/인컴 몹 사망 시마다 공격력이 영구적으로 0.02씩 오르며, 최대 </green><yellow>10</yellow><green>까지 상승합니다. </green>"
@@ -269,6 +270,7 @@ public final class VillagerTowers {
             5,
             CatVisual.builder().variant(CatVariants.BLACK).tame(true).build(),
             List.of(
+                    "<green> + 현재 체력이 가장 높은 적을 우선 공격합니다. </green>",
                     "<green> + 웨이브가 아닌 대상을 공격할 때 피해를 200% 더 입힙니다. </green>",
                     "<green> + 대상이 </green><red>탱커</red><green>태그를 가질 경우 대신 400% 추가 피해를 입힙니다.</green>",
                     "<green> + 주위 타워/웨이브/인컴 몹 사망 시마다 공격력이 영구적으로 0.04씩 오르며, 최대 </green><yellow>20</yellow><green>까지 상승합니다. </green>"
@@ -424,6 +426,7 @@ public final class VillagerTowers {
                 advLine("공격 속도", "catAttackSpeedPerExperience")
         ));
         registerAdvTemplate(ADV_T2_ANTI_TANKER_CAT_TOWER, List.of(
+                "<green> + 현재 체력이 가장 높은 적을 우선 공격합니다. </green>",
                 "<green> + 웨이브가 아닌 대상을 공격할 때 피해를 {ability.nonWaveBonus:percent} 더 입힙니다. </green>",
                 "<green> + 대상이 </green><red>탱커</red><green>태그를 가질 경우 대신 {ability.tankBonus:percent} 추가 피해를 입힙니다.</green>",
                 "<green> + 주위 타워/웨이브/인컴 몹 사망 시마다 공격력이 영구적으로 {ability.stackDamage:number}씩 오르며, 최대 </green><yellow>{ability.stackDamageCap:number}</yellow><green>까지 상승합니다. </green>"
@@ -443,6 +446,7 @@ public final class VillagerTowers {
                 advLine("웨이브 대상 피해", "catWaveDamagePerExperience")
         ));
         registerAdvTemplate(ADV_T3_ANTI_TANKER_CAT_TOWER, List.of(
+                "<green> + 현재 체력이 가장 높은 적을 우선 공격합니다. </green>",
                 "<green> + 웨이브가 아닌 대상을 공격할 때 피해를 {ability.nonWaveBonus:percent} 더 입힙니다. </green>",
                 "<green> + 대상이 </green><red>탱커</red><green>태그를 가질 경우 대신 {ability.tankBonus:percent} 추가 피해를 입힙니다.</green>",
                 "<green> + 주위 타워/웨이브/인컴 몹 사망 시마다 공격력이 영구적으로 {ability.stackDamage:number}씩 오르며, 최대 </green><yellow>{ability.stackDamageCap:number}</yellow><green>까지 상승합니다. </green>"
