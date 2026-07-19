@@ -37,6 +37,7 @@ Semion TD는 서버 시작 또는 `/semiontd reload` 시 `config/semion-td/` 아
 | `semiontd.db-shm`, `semiontd.db-wal` | SQLite 런타임 보조 파일입니다. |
 | `job-statistics.db` | 일반 경기의 직업별 파생 통계입니다. 웹이나 외부 도구에서는 읽기 전용으로 조회합니다. |
 | `job-statistics.db-shm`, `job-statistics.db-wal` | 직업 통계 SQLite의 런타임 보조 파일입니다. |
+| `balance_notification_state.json` | 마지막으로 확인한 밸런스 저장소 커밋 SHA입니다. 서버가 원자적으로 갱신하므로 직접 편집하지 않습니다. |
 
 운영 데이터는 서버를 끈 뒤 백업하고, 가능하면 명령어로 갱신합니다.
 

@@ -3,6 +3,7 @@ package kim.biryeong.semiontd;
 import java.nio.file.Path;
 import eu.pb4.polymer.resourcepack.api.PolymerResourcePackUtils;
 import kim.biryeong.semiontd.api.SemionTdApi;
+import kim.biryeong.semiontd.balance.BalancePatchNotifier;
 import kim.biryeong.semiontd.command.SemionCommands;
 import kim.biryeong.semiontd.config.SemionConfigLoader;
 import kim.biryeong.semiontd.config.SemionConfigLoader.LoadedConfigs;
@@ -70,6 +71,8 @@ public class SemionTd implements ModInitializer {
         SemionSkyboxLibrary skyboxLibrary = SemionSkyboxLibrary.load(configDir.resolve("skyboxes"), LOGGER);
         SemionMusicService musicService = new SemionMusicService(musicLibrary);
         SemionSkyboxService skyboxService = new SemionSkyboxService(skyboxLibrary, gameManager);
+        BalancePatchNotifier balancePatchNotifier =
+                new BalancePatchNotifier(configDir.resolve("balance_notification_state.json"));
         SemionMusicResourcePack.register(musicService::library, LOGGER);
         SemionSkyboxResourcePack.register(skyboxService::library, LOGGER);
         gameManager.configure(
@@ -95,6 +98,8 @@ public class SemionTd implements ModInitializer {
         SemionTdApi.initializeInternal(new AreaEffectService(gameManager), areaVfxStyles);
         TowerVfxService.initialize(configs.vfx(), gameManager, areaVfxStyles);
         ServerLifecycleEvents.SERVER_STARTING.register(server -> areaVfxStyles.freeze());
+        ServerLifecycleEvents.SERVER_STARTED.register(balancePatchNotifier::start);
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> balancePatchNotifier.close());
         SemionPlayerLimitBypassService.configure(gameManager);
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
