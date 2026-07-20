@@ -8300,6 +8300,48 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void enderTowerJobLimitsCoreToOne(GameTestHelper context) {
+        UUID playerId = stableUuid("ender-job-tower-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, EnderTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos corePos = towerPlacementPos(lane);
+        BlockPos secondCorePos = nearbyTowerPlacementPos(lane, corePos);
+
+        Set<String> starterIds = ProductionTowerService.availableTowers(game, playerId).stream()
+                .map(entry -> entry.type().id())
+                .collect(java.util.stream.Collectors.toSet());
+        if (!assertEquals(
+                context,
+                Set.of(
+                        EnderTowers.BASE_ENDER_TOWER.id(),
+                        EnderTowers.T1_ENDERMITE_TOWER.id(),
+                        EnderTowers.T1_SHULKER_TOWER.id()
+                ),
+                starterIds,
+                "Ender job should expose its core and two feeder starters."
+        )) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                TowerPlacementResult.SUCCESS,
+                ProductionTowerService.placeTower(game, playerId, corePos, EnderTowers.BASE_ENDER_TOWER.id()),
+                "Ender job should place its first core tower."
+        )) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                TowerPlacementResult.TOWER_NOT_ALLOWED,
+                ProductionTowerService.placeTower(game, playerId, secondCorePos, EnderTowers.BASE_ENDER_TOWER.id()),
+                "Ender job should reject a second core tower."
+        )) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void illagerTowerJobUsesIllagerStartersAndBranchUpgrades(GameTestHelper context) {
         UUID playerId = stableUuid("illager-job-tower-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, IllagerTowerJob.ID);

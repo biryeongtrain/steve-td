@@ -917,10 +917,10 @@ public record TowerBalanceConfig(
     }
 
     private static void putEnderUpgrades(Map<String, Long> upgrades) {
-        putUpgrade(upgrades, EnderTowers.T1_ENDERMITE_TOWER, EnderTowers.T2_ENDERMAN_TOWER.id(), EnderTowers.T2_ENDERMAN_TOWER.mineralCost());
-        putUpgrade(upgrades, EnderTowers.T2_ENDERMAN_TOWER, EnderTowers.T3_END_CRYSTAL_TOWER.id(), EnderTowers.T3_END_CRYSTAL_TOWER.mineralCost());
-        putUpgrade(upgrades, EnderTowers.T1_SHULKER_TOWER, EnderTowers.T2_SHULKER_TOWER.id(), EnderTowers.T2_SHULKER_TOWER.mineralCost());
-        putUpgrade(upgrades, EnderTowers.T2_SHULKER_TOWER, EnderTowers.T3_SHULKER_TOWER.id(), EnderTowers.T3_SHULKER_TOWER.mineralCost());
+        putUpgrade(upgrades, EnderTowers.T1_ENDERMITE_TOWER, EnderTowers.T2_ENDERMAN_TOWER.id(), 125);
+        putUpgrade(upgrades, EnderTowers.T2_ENDERMAN_TOWER, EnderTowers.T3_END_CRYSTAL_TOWER.id(), 200);
+        putUpgrade(upgrades, EnderTowers.T1_SHULKER_TOWER, EnderTowers.T2_SHULKER_TOWER.id(), 125);
+        putUpgrade(upgrades, EnderTowers.T2_SHULKER_TOWER, EnderTowers.T3_SHULKER_TOWER.id(), 200);
     }
 
     private static void putNetherAbilities(Map<String, Map<String, Double>> abilities) {
