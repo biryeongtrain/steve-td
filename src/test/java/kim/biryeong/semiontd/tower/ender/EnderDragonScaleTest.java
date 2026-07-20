@@ -53,20 +53,24 @@ class EnderDragonScaleTest {
     }
 
     @Test
-    void phantomBecomesVanillaDragonOnlyAfterMaxHealthExceedsThreshold() {
-        applyStateConfig(EnderTowers.BASE_ENDER_TOWER.maxHealth());
+    void phantomBecomesVanillaDragonWhenMaxHealthReachesThreshold() {
+        double baseMaxHealth = EnderTowers.BASE_ENDER_TOWER.maxHealth();
+        applyStateConfig(baseMaxHealth + 0.01);
+
         EnderTower tower = tower();
         tower.onWaveStarted(null, 1);
+        tower.tick(null);
 
-        tower.tick(null);
-        tower.tick(null);
         assertEquals(EnderTowerState.PHANTOM, tower.state());
 
-        applyStateConfig(EnderTowers.BASE_ENDER_TOWER.maxHealth() - 0.01);
+        applyStateConfig(baseMaxHealth);
         tower.tick(null);
 
         assertEquals(EnderTowerState.DRAGON, tower.state());
-        assertEquals("minecraft:ender_dragon", tower.visual().entityTypeId());
+        assertEquals(
+                "minecraft:ender_dragon",
+                tower.visual().entityTypeId()
+        );
         assertTrue(tower.visual().blockbenchModel().isEmpty());
         assertEquals(1.0, tower.visual().scale(), 0.0001);
     }

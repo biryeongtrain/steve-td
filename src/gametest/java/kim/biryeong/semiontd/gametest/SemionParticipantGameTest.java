@@ -9995,15 +9995,15 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             throw new AssertionError("Visual state changes must retain the real Ender tower used by right-click details.");
         }
 
-        tower.syncMaxHealth(5000.0, true);
+        tower.syncMaxHealth(1999.99, true);
         tower.tick(null);
-        if (!assertEquals(context, kim.biryeong.semiontd.tower.ender.EnderTowerState.PHANTOM, tower.state(), "Exactly 5000 max health must remain PHANTOM.")) {
+        if (!assertEquals(context, kim.biryeong.semiontd.tower.ender.EnderTowerState.PHANTOM, tower.state(), "Exactly 2000 max health must remain PHANTOM.")) {
             return;
         }
-        tower.syncMaxHealth(5000.01, true);
+        tower.syncMaxHealth(2000.0, true);
         tower.tick(null);
         entity.syncTowerState(tower);
-        if (!assertEquals(context, EntityType.ENDER_DRAGON, entity.getPolymerEntityType(null), "More than 5000 max health should evolve the Phantom into a vanilla Ender Dragon proxy.")) {
+        if (!assertEquals(context, EntityType.ENDER_DRAGON, entity.getPolymerEntityType(null), "More than 2000 max health should evolve the Phantom into a vanilla Ender Dragon proxy.")) {
             return;
         }
         if (entity.hasBilModelHolder()) {

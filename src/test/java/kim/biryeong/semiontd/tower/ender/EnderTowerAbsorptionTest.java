@@ -68,7 +68,7 @@ class EnderTowerAbsorptionTest {
         assertEquals(5.5, dragon.absorbedDamageBonus(), 0.0001);
         assertEquals(0.0, dragon.absorbedHealthBonus(), 0.0001);
         assertEquals(1, dragon.roundCompletedTransferCount());
-        assertEquals(20, dragon.adjustAttackInterval(20));
+        assertEquals(19, dragon.adjustAttackInterval(20));
 
         tick(dragon, lane, 4);
 
@@ -121,7 +121,7 @@ class EnderTowerAbsorptionTest {
         assertEquals(115.0, dragon.health(), 0.0001);
         assertEquals(0.0, shulker.health(), 0.0001);
         assertEquals(1, dragon.roundCompletedTransferCount());
-        assertEquals(20, dragon.adjustAttackInterval(20));
+        assertEquals(19, dragon.adjustAttackInterval(20));
     }
 
     @Test
@@ -182,7 +182,7 @@ class EnderTowerAbsorptionTest {
         assertEquals(12.5, dragon.modifyAttackDamage(null, null, 5.0), 0.0001);
         assertEquals(5.0, dragon.adjustAttackRange(5.0), 0.0001);
         assertEquals(0.5, dragon.splashRadius(), 0.0001);
-        assertEquals(19, dragon.adjustAttackInterval(20));
+        assertEquals(5, dragon.adjustAttackInterval(20));
         assertEquals(97.5, dragon.modifyIncomingDamage(null, null, 100.0), 0.0001);
         assertTrue(dragon.runtimeDetailLines().stream().anyMatch(line -> line.contains("생명력 흡수 2.0%")));
 

@@ -16,9 +16,8 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.Blocks;
 
 public final class EnderTowers {
-    public static final double PHANTOM_SCALE_REFERENCE_MAX_HEALTH = 100.0;
-    public static final double PHANTOM_BASE_SCALE = 0.1;
-    public static final double PHANTOM_SCALE_PER_100_MAX_HEALTH = 0.1;
+    public static final double PHANTOM_BASE_SCALE = 1.0;
+    public static final double PHANTOM_SCALE_PER_100_MAX_HEALTH = 0.2;
     public static final EntityVisual DRAGON_EGG_VISUAL = BlockDisplayVisual.builder(Blocks.DRAGON_EGG.defaultBlockState())
             .build();
     public static final EntityVisual PHANTOM_VISUAL = EntityVisual.builder(byId(EntityType.PHANTOM))
@@ -54,7 +53,7 @@ public final class EnderTowers {
             byId(EntityType.ENDERMITE),
             List.of(
                     "<gray>공격력이 높은 엔더마이트 입니다.</gray>",
-                    "<green>공격을 하지 않지만, 엔드 크리스탈 계열의 힘 전달을 완료하면 엔더 드래곤의 공격력, 광역 공격, 공격 속도를 강화합니다.</green>"
+                    "<green>공격을 하지 않지만, 엔드 수정 계열의 힘 전달을 완료하면 엔더 드래곤의 공격력, 광역 공격, 공격 속도를 강화합니다.</green>"
             )
     );
 
@@ -70,13 +69,13 @@ public final class EnderTowers {
             byId(EntityType.ENDERMAN),
             List.of(
                     "<gray>공격력이 높은 엔더맨 입니다.</gray>",
-                    "<green>공격을 하지 않지만, 엔드 크리스탈 계열의 힘 전달을 완료하면 엔더 드래곤의 공격력, 광역 공격, 공격 속도를 강화합니다.</green>"
+                    "<green>공격을 하지 않지만, 엔드 수정 계열의 힘 전달을 완료하면 엔더 드래곤의 공격력, 광역 공격, 공격 속도를 강화합니다.</green>"
             )
     );
 
     public static final TowerType T3_END_CRYSTAL_TOWER = tower(
             "t3_end_crystal_tower",
-            "엔드 크리스탈",
+            "엔드 수정",
             200,
             50,
             0,
@@ -85,8 +84,8 @@ public final class EnderTowers {
             10,
             byId(EntityType.END_CRYSTAL),
             List.of(
-                    "<gray>공격력이 매우 높은 엔드 크리스탈 입니다.</gray>",
-                    "<green>공격을 하지 않지만, 엔드 크리스탈 계열의 힘 전달을 완료하면 엔더 드래곤의 공격력, 광역 공격, 공격 속도를 강화합니다.</green>"
+                    "<gray>공격력이 매우 높은 엔드 수정 입니다.</gray>",
+                    "<green>공격을 하지 않지만, 엔드 수정 계열의 힘 전달을 완료하면 엔더 드래곤의 공격력, 광역 공격, 공격 속도를 강화합니다.</green>"
             )
     );
 
@@ -175,7 +174,7 @@ public final class EnderTowers {
                 "<gray>최대 체력이 <yellow>{ability.ender_global.dragonEvolutionMaxHealth:integer}</yellow>을 넘으면 엔더 드래곤으로 진화합니다.</gray>",
                 "<gray>팬텀 크기는 0.1부터 최대 체력 100당 0.1 증가합니다.</gray>",
                 "<green>타워는 {ability.ender_global.absorptionDurationTicks:seconds} 동안 힘을 전달하고 사망합니다.</green>",
-                "<green>엔드 크리스탈 계열: 타워 공격력 {ability.ender_global.permanentDamageRatio:percent} 영구 누적</green>",
+                "<green>엔드 수정 계열: 타워 공격력 {ability.ender_global.permanentDamageRatio:percent} 영구 누적</green>",
                 "<green>{ability.ender_global.endCrystalSplashEvery:integer}기마다 광역 공격 반경 +{ability.ender_global.splashRadiusPerStep:blocks} (최대 {ability.ender_global.splashRadiusCap:blocks})</green>",
                 "<green>{ability.ender_global.endCrystalAttackIntervalEvery:integer}기마다 공격 주기 -{ability.ender_global.attackIntervalReductionPerStep:integer}틱 (최소 {ability.ender_global.minimumAttackIntervalTicks:integer}틱)</green>",
                 "<green>셜커 계열: 타워 체력 {ability.ender_global.permanentHealthRatio:percent} 영구 누적</green>",
@@ -185,15 +184,15 @@ public final class EnderTowers {
         TowerDescriptionRegistry.registerTemplate(BASE_ENDER_TOWER, dragonDescription);
         TowerDescriptionRegistry.registerTemplate(T1_ENDERMITE_TOWER, List.of(
                 "<gray>공격력이 높은 엔더마이트 입니다.</gray>",
-                "<green>공격을 하지 않지만, 엔드 크리스탈 계열의 힘 전달을 완료하면 엔더 드래곤의 공격력, 광역 공격, 공격 속도를 강화합니다.</green>"
+                "<green>공격을 하지 않지만, 엔드 수정 계열의 힘 전달을 완료하면 엔더 드래곤의 공격력, 광역 공격, 공격 속도를 강화합니다.</green>"
         ));
         TowerDescriptionRegistry.registerTemplate(T2_ENDERMAN_TOWER, List.of(
                 "<gray>공격력이 높은 엔더맨 입니다.</gray>",
-                "<green>공격을 하지 않지만, 엔드 크리스탈 계열의 힘 전달을 완료하면 엔더 드래곤의 공격력, 광역 공격, 공격 속도를 강화합니다.</green>"
+                "<green>공격을 하지 않지만, 엔드 수정 계열의 힘 전달을 완료하면 엔더 드래곤의 공격력, 광역 공격, 공격 속도를 강화합니다.</green>"
         ));
         TowerDescriptionRegistry.registerTemplate(T3_END_CRYSTAL_TOWER, List.of(
-                "<gray>공격력이 매우 높은 엔드 크리스탈 입니다.</gray>",
-                "<green>공격을 하지 않지만, 엔드 크리스탈 계열의 힘 전달을 완료하면 엔더 드래곤의 공격력, 광역 공격, 공격 속도를 강화합니다.</green>"
+                "<gray>공격력이 매우 높은 엔드 수정 입니다.</gray>",
+                "<green>공격을 하지 않지만, 엔드 수정 계열의 힘 전달을 완료하면 엔더 드래곤의 공격력, 광역 공격, 공격 속도를 강화합니다.</green>"
         ));
         TowerDescriptionRegistry.registerTemplate(T1_SHULKER_TOWER, List.of(
                 "<gray>체력이 높은 셜커 입니다.</gray>",
@@ -243,9 +242,7 @@ public final class EnderTowers {
     }
 
     public static double phantomScaleForMaxHealth(double maxHealth) {
-        double bonusMaxHealth = Math.max(0.0, maxHealth - PHANTOM_SCALE_REFERENCE_MAX_HEALTH);
-        return PHANTOM_BASE_SCALE
-                + bonusMaxHealth / 100.0 * PHANTOM_SCALE_PER_100_MAX_HEALTH;
+        return PHANTOM_BASE_SCALE + Math.max(0.0, maxHealth) / 100.0 * PHANTOM_SCALE_PER_100_MAX_HEALTH;
     }
 
 }

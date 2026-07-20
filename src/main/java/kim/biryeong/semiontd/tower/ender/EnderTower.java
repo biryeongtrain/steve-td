@@ -219,12 +219,11 @@ public final class EnderTower extends EntityBackedTower {
         ArrayList<String> lines = new ArrayList<>();
         if (isPhantom()) {
             lines.add("팬텀 단계");
-            lines.add("드래곤 진화: 최대 체력 " + oneDecimal(currentMaxHealth())
-                    + " / " + oneDecimal(dragonEvolutionMaxHealth()) + " 초과 필요");
+            lines.add("드래곤 진화: 최대 체력 " + oneDecimal(currentMaxHealth()) + " / " + oneDecimal(dragonEvolutionMaxHealth()) + " 이상 필요");
         } else {
             lines.add("드래곤 진화 완료");
         }
-        lines.add("힘 전달 완료: 엔드 크리스탈 " + absorbedEndCrystalCount + " / 셜커 " + absorbedShulkerCount);
+        lines.add("힘 전달 완료: 엔드 수정 " + absorbedEndCrystalCount + " / 셜커 " + absorbedShulkerCount);
         lines.add("이번 라운드 힘 전달: " + roundCompletedTransferCount);
         lines.add("이번 라운드: 체력 +" + oneDecimal(roundHealthBonus) + ", 공격력 +" + oneDecimal(roundDamageBonus));
         lines.add("영구 누적: 체력 +" + oneDecimal(permanentHealthBonus) + ", 공격력 +" + oneDecimal(permanentDamageBonus));
@@ -261,10 +260,6 @@ public final class EnderTower extends EntityBackedTower {
         roundCompletedTransferCount = enderTower.roundCompletedTransferCount;
         completedTransferSources.addAll(enderTower.completedTransferSources);
         waveActive = enderTower.waveActive;
-    }
-
-    public int absorbedEndermanCount() {
-        return absorbedEndCrystalCount;
     }
 
     public int absorbedEndCrystalCount() {
@@ -463,7 +458,7 @@ public final class EnderTower extends EntityBackedTower {
     }
 
     private void evolveToDragonIfReady(PlayerLane lane) {
-        if (!isPhantom() || currentMaxHealth() <= dragonEvolutionMaxHealth()) {
+        if (!isPhantom() || currentMaxHealth() < dragonEvolutionMaxHealth()) {
             return;
         }
         setData(STATE, EnderTowerState.DRAGON);
@@ -537,9 +532,10 @@ public final class EnderTower extends EntityBackedTower {
         int every = Math.max(1, globalInt("endCrystalAttackIntervalEvery"));
         int permanentReduction = absorbedEndCrystalCount / every
                 * Math.max(0, globalInt("attackIntervalReductionPerStep"));
+        int roundReduction = Math.max(0, roundCompletedTransferCount);
         return Math.min(
                 Math.max(0, globalInt("maxAttackIntervalReductionTicks")),
-                permanentReduction
+                permanentReduction + roundReduction
         );
     }
 

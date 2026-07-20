@@ -45,7 +45,7 @@ class EnderTowerCatalogTest {
         assertTrue(config.towers().containsKey(EnderTowers.T3_END_CRYSTAL_TOWER.id()));
         assertTrue(config.towers().containsKey(EnderTowers.T3_SHULKER_TOWER.id()));
         assertEquals(-1.0, config.ability(EnderTower.CONFIG_ID, "hatchDelayTicks", -1.0), 0.0001);
-        assertEquals(5000.0, config.ability(EnderTower.CONFIG_ID, "dragonEvolutionMaxHealth", -1.0), 0.0001);
+        assertEquals(2000.0, config.ability(EnderTower.CONFIG_ID, "dragonEvolutionMaxHealth", -1.0), 0.0001);
         assertEquals(400.0, config.ability(EnderTower.CONFIG_ID, "absorptionDurationTicks", -1.0), 0.0001);
         assertEquals(1.0, config.ability(EnderTower.CONFIG_ID, "roundHealthRatio", -1.0), 0.0001);
         assertEquals(1.0, config.ability(EnderTower.CONFIG_ID, "roundDamageRatio", -1.0), 0.0001);
@@ -90,7 +90,7 @@ class EnderTowerCatalogTest {
         assertStarter(EnderTowers.T1_ENDERMITE_TOWER.id(), "엔더 마이트");
         assertStarter(EnderTowers.T1_SHULKER_TOWER.id(), "셜커");
         assertUpgrade(EnderTowers.T1_ENDERMITE_TOWER.id(), EnderTowers.T2_ENDERMAN_TOWER.id(), "엔더맨", 125);
-        assertUpgrade(EnderTowers.T2_ENDERMAN_TOWER.id(), EnderTowers.T3_END_CRYSTAL_TOWER.id(), "엔드 크리스탈", 200);
+        assertUpgrade(EnderTowers.T2_ENDERMAN_TOWER.id(), EnderTowers.T3_END_CRYSTAL_TOWER.id(), "엔드 수정", 200);
         assertUpgrade(EnderTowers.T1_SHULKER_TOWER.id(), EnderTowers.T2_SHULKER_TOWER.id(), "견고한 셜커", 125);
         assertUpgrade(EnderTowers.T2_SHULKER_TOWER.id(), EnderTowers.T3_SHULKER_TOWER.id(), "완강한 셜커", 200);
     }
@@ -125,7 +125,7 @@ class EnderTowerCatalogTest {
         assertTrue(description.contains("라운드 시작 시 팬텀"));
         assertTrue(description.contains("20초"));
         assertTrue(description.contains("5%"));
-        assertTrue(description.contains("엔드 크리스탈 계열"));
+        assertTrue(description.contains("엔드 수정 계열"));
         assertTrue(description.contains("전달하고 사망"));
         assertTrue(description.contains("20기마다 공격 주기 -1틱"));
         assertTrue(description.contains("최소 5틱"));
@@ -140,7 +140,7 @@ class EnderTowerCatalogTest {
     void everyEnderFeederRegistersItsDescriptionTemplate() {
         assertDescription(EnderTowers.T1_ENDERMITE_TOWER, "공격력이 높은 엔더마이트", "공격력, 광역 공격, 공격 속도");
         assertDescription(EnderTowers.T2_ENDERMAN_TOWER, "공격력이 높은 엔더맨", "공격력, 광역 공격, 공격 속도");
-        assertDescription(EnderTowers.T3_END_CRYSTAL_TOWER, "공격력이 매우 높은 엔드 크리스탈", "공격력, 광역 공격, 공격 속도");
+        assertDescription(EnderTowers.T3_END_CRYSTAL_TOWER, "공격력이 매우 높은 엔드 수정", "공격력, 광역 공격, 공격 속도");
         assertDescription(EnderTowers.T1_SHULKER_TOWER, "체력이 높은 셜커", "체력, 생명력 흡수, 피해 감소");
         assertDescription(EnderTowers.T2_SHULKER_TOWER, "체력이 높은 견고한 셜커", "체력, 생명력 흡수, 피해 감소");
         assertDescription(EnderTowers.T3_SHULKER_TOWER, "체력이 매우 높은 완강한 셜커", "체력, 생명력 흡수, 피해 감소");

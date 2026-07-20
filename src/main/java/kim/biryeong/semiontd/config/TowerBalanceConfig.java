@@ -1069,7 +1069,7 @@ public record TowerBalanceConfig(
                 "damageReduction", 0.50
         ));
         putAbilities(abilities, EnderTower.CONFIG_ID, Map.ofEntries(
-                Map.entry("dragonEvolutionMaxHealth", 5000.0),
+                Map.entry("dragonEvolutionMaxHealth", 2000.0),
                 Map.entry("absorptionDurationTicks", 400.0),
                 Map.entry("roundHealthRatio", 1.0),
                 Map.entry("roundDamageRatio", 1.0),

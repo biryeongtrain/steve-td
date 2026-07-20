@@ -20,7 +20,7 @@ public final class EnderTowerCatalogs {
         registerTower(EnderTowers.T3_SHULKER_TOWER, 3);
 
         link(EnderTowers.T1_ENDERMITE_TOWER, EnderTowers.T2_ENDERMAN_TOWER, "엔더맨");
-        link(EnderTowers.T2_ENDERMAN_TOWER, EnderTowers.T3_END_CRYSTAL_TOWER, "엔드 크리스탈");
+        link(EnderTowers.T2_ENDERMAN_TOWER, EnderTowers.T3_END_CRYSTAL_TOWER, "엔드 수정");
         link(EnderTowers.T1_SHULKER_TOWER, EnderTowers.T2_SHULKER_TOWER, "견고한 셜커");
         link(EnderTowers.T2_SHULKER_TOWER, EnderTowers.T3_SHULKER_TOWER, "완강한 셜커");
 
