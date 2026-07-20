@@ -19,6 +19,7 @@ import kim.biryeong.semiontd.mixin.accessor.PigAccessor;
 import kim.biryeong.semiontd.mixin.accessor.RabbitAccessor;
 import kim.biryeong.semiontd.mixin.accessor.SalmonAccessor;
 import kim.biryeong.semiontd.mixin.accessor.SheepAccessor;
+import kim.biryeong.semiontd.mixin.accessor.ShulkerAccessor;
 import kim.biryeong.semiontd.mixin.accessor.SlimeAccessor;
 import kim.biryeong.semiontd.mixin.accessor.TamableAnimalAccessor;
 import kim.biryeong.semiontd.mixin.accessor.TropicalFishAccessor;
@@ -71,7 +72,20 @@ public final class EntityVisualApplierRegistry {
         applyHolderVariants(visual, entityType, registryAccess, data);
         applyIntegerVariants(visual, entityType, data);
         applyMoobloomVariant(visual, entityType, data);
+        applyShulkerState(visual, entityType, data);
         applyTamableState(visual, entityType, data);
+    }
+
+    private static void applyShulkerState(
+            EntityVisual visual,
+            EntityType<?> entityType,
+            List<SynchedEntityData.DataValue<?>> data
+    ) {
+        if (entityType != EntityType.SHULKER) {
+            return;
+        }
+        dyeColor(visual, EntityVisualProperties.SHULKER_COLOR)
+                .ifPresent(color -> put(data, ShulkerAccessor.semiontd$dataColorId(), (byte) color.getId()));
     }
 
     private static void applyMoobloomVariant(

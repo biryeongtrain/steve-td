@@ -3,7 +3,11 @@ package kim.biryeong.semiontd.entity.tower;
 import de.tomalbrc.bil.api.AnimatedEntity;
 import de.tomalbrc.bil.api.AnimatedEntityHolder;
 import de.tomalbrc.bil.core.holder.entity.living.LivingEntityHolder;
+import eu.pb4.polymer.core.api.entity.PolymerEntityUtils;
+import eu.pb4.polymer.virtualentity.api.ElementHolder;
 import eu.pb4.polymer.virtualentity.api.attachment.EntityAttachment;
+import eu.pb4.polymer.virtualentity.api.elements.BlockDisplayElement;
+import eu.pb4.polymer.virtualentity.api.elements.InteractionElement;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -17,6 +21,7 @@ import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.visual.EntityVisual;
 import kim.biryeong.semiontd.entity.visual.EntityVisualApplierRegistry;
+import kim.biryeong.semiontd.entity.visual.BlockDisplayVisual;
 import kim.biryeong.semiontd.entity.visual.MoobloomVisual;
 import kim.biryeong.semiontd.entity.visual.SemionAnimationState;
 import kim.biryeong.semiontd.mixin.accessor.MoobloomAccessor;
@@ -26,6 +31,9 @@ import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.entity.tower.goal.TowerAttackMonsterGoal;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerDataKey;
+import kim.biryeong.semiontd.tower.ender.EnderTower;
+import kim.biryeong.semiontd.tower.ender.EnderTowerState;
+import kim.biryeong.semiontd.tower.ender.EnderTowers;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -46,6 +54,7 @@ import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
 import xyz.nucleoid.packettweaker.PacketContext;
 
 public final class SemionTowerEntity extends PathfinderMob implements AnimatedEntity, LaneDefenseEntity, HealingTarget {
@@ -83,6 +92,10 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     private final TimedEffectSet timedEffects = new TimedEffectSet();
     private LivingEntityHolder<SemionTowerEntity> holder;
     private EntityAttachment holderAttachment;
+    private ElementHolder blockDisplayHolder;
+    private BlockDisplayElement blockDisplayElement;
+    private ElementHolder enderDragonInteractionHolder;
+    private InteractionElement enderDragonInteractionElement;
     private MoobloomEntity moobloomVisualEntity;
     private String syncedMoobloomVisualVariant;
     private Component syncedMoobloomVisualName;
@@ -119,16 +132,17 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         laneId = tower.laneId();
         teamId = tower.teamId();
         ownerPlayer = tower.ownerPlayer();
-        attackRange = tower.type().range();
+        attackRange = tower.adjustAttackRange(tower.type().range());
         attackDamage = tower.type().damage();
         attackIntervalTicks = tower.type().attackIntervalTicks();
         aggroPriority = tower.aggroPriority();
         finalDefense = tower.deployedAtFinalDefense();
         finalDefenseAnchorPosition = finalDefense ? towerAnchorPosition(tower.position()) : null;
         setNoGravity(false);
-        visual = tower.type().visual();
+        visual = tower.visual();
         blockbenchModelId = visual.blockbenchModel().orElse(null);
         setPolymerEntityType(visual.entityTypeId());
+        syncBlockDisplayProxyVisibility();
         applyVisualScale(visual);
         targetAcquireRange = Math.max(attackRange + 4.0, DEFAULT_TARGET_ACQUIRE_RANGE);
         moveSpeed = DEFAULT_MOVE_SPEED;
@@ -141,6 +155,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         getAttribute(Attributes.KNOCKBACK_RESISTANCE).setBaseValue(1.0);
         setHealth((float) tower.health());
         installBilModel(blockbenchModelId);
+        applyVisualScale(visual);
         playAnimation(SemionAnimationState.IDLE);
         markMoobloomVisualSyncDirty();
     }
@@ -238,6 +253,8 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
             syncMaxHealthEffect(TimedEffectType.TOWER_MAX_HEALTH_BONUS);
         }
         syncMoobloomVisualEntity();
+        syncBlockDisplayVisual();
+        syncEnderDragonInteractionHitbox();
         returnToFinalDefenseAreaIfNeeded();
     }
 
@@ -522,14 +539,19 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
                 && type != TimedEffectType.TOWER_TRAIT_MAX_HEALTH_BONUS)) {
             return;
         }
-        double nextMaxHealth = runtimeTower.type().maxHealth()
+        double nextMaxHealth = runtimeTower.effectBaseMaxHealth()
                 * (1.0 + activeEffectMagnitude(TimedEffectType.TOWER_MAX_HEALTH_BONUS));
         runtimeTower.syncEffectMaxHealth(
                 nextMaxHealth,
                 activeEffectMagnitude(TimedEffectType.TOWER_TRAIT_MAX_HEALTH_BONUS)
         );
         getAttribute(Attributes.MAX_HEALTH).setBaseValue(runtimeTower.currentMaxHealth());
+        applyVisualScale(visual);
         setHealth((float) runtimeTower.health());
+    }
+
+    public void refreshMaxHealthEffects() {
+        syncMaxHealthEffect(TimedEffectType.TOWER_MAX_HEALTH_BONUS);
     }
 
     public String blockbenchModelId() {
@@ -538,6 +560,10 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     public boolean hasBilModelHolder() {
         return holder != null;
+    }
+
+    public float bilModelScale() {
+        return holder == null ? 0.0F : holder.getScale();
     }
 
     public SemionAnimationState animationState() {
@@ -565,6 +591,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     }
 
     public void syncTowerState(Tower tower) {
+        EntityType<?> previousPolymerEntityType = getPolymerEntityType(null);
         EntityVisual previousVisual = visual;
         String previousDisplayName = getCustomName() == null ? null : getCustomName().getString();
         boolean previousNameVisible = isCustomNameVisible();
@@ -572,7 +599,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         laneId = tower.laneId();
         teamId = tower.teamId();
         ownerPlayer = tower.ownerPlayer();
-        attackRange = tower.type().range();
+        attackRange = tower.adjustAttackRange(tower.type().range());
         attackDamage = tower.type().damage();
         attackIntervalTicks = tower.type().attackIntervalTicks();
         aggroPriority = tower.aggroPriority();
@@ -583,12 +610,13 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         } else if (!finalDefense) {
             finalDefenseAnchorPosition = null;
         }
-        EntityVisual updatedVisual = tower.type().visual();
+        EntityVisual updatedVisual = tower.visual();
         String updatedModelId = updatedVisual.blockbenchModel().orElse(null);
         boolean modelChanged = !java.util.Objects.equals(updatedModelId, blockbenchModelId);
         visual = updatedVisual;
         blockbenchModelId = updatedModelId;
         setPolymerEntityType(visual.entityTypeId());
+        syncBlockDisplayProxyVisibility();
         applyVisualScale(visual);
         targetAcquireRange = Math.max(attackRange + 4.0, DEFAULT_TARGET_ACQUIRE_RANGE);
         String displayName = tower.type().displayName();
@@ -601,12 +629,18 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         }
         if (modelChanged) {
             installBilModel(blockbenchModelId);
+            applyVisualScale(visual);
             playAnimation(SemionAnimationState.IDLE);
         }
         if (!Objects.equals(previousVisual, updatedVisual)
                 || !Objects.equals(previousDisplayName, displayName)
                 || !previousNameVisible) {
             markMoobloomVisualSyncDirty();
+        }
+        syncBlockDisplayVisual();
+        syncEnderDragonInteractionHitbox();
+        if (previousPolymerEntityType != getPolymerEntityType(null)) {
+            PolymerEntityUtils.refreshEntity(this);
         }
     }
 
@@ -655,12 +689,22 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         if (usesMoobloomOverlayVisual()) {
             return EntityType.INTERACTION;
         }
+        if (usesBlockDisplayOverlayVisual()) {
+            // Attribute update packets are still produced by the living tower entity. Polymer
+            // requires the client-side proxy to have a vanilla attribute container when encoding
+            // those packets, which non-living Interaction entities do not have.
+            return EntityType.ARMOR_STAND;
+        }
         return polymerEntityType;
     }
 
     @Override
     public void modifyRawTrackedData(List<SynchedEntityData.DataValue<?>> data, ServerPlayer player, boolean initial) {
-        if (usesMoobloomOverlayVisual()) {
+        if (blockbenchModelId != null) {
+            AnimatedEntity.super.modifyRawTrackedData(data, player, initial);
+            return;
+        }
+        if (usesMoobloomOverlayVisual() || usesBlockDisplayOverlayVisual()) {
             return;
         }
         EntityVisualApplierRegistry.apply(visual, polymerEntityType, level().registryAccess(), data);
@@ -683,6 +727,8 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     @Override
     public void remove(RemovalReason reason) {
         discardMoobloomVisualEntity();
+        discardBlockDisplayVisual();
+        discardEnderDragonInteractionHitbox();
         if (!isRemoved() && level() instanceof ServerLevel serverLevel) {
             // Lane ticks may discard this entity before vanilla tracking sends Polymer proxy removal.
             ClientboundRemoveEntitiesPacket packet = new ClientboundRemoveEntitiesPacket(getId());
@@ -720,6 +766,86 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     private boolean usesMoobloomOverlayVisual() {
         return blockbenchModelId == null && MoobloomVisual.matches(visual);
+    }
+
+    private boolean usesBlockDisplayOverlayVisual() {
+        return blockbenchModelId == null && BlockDisplayVisual.matches(visual);
+    }
+
+    private void syncBlockDisplayProxyVisibility() {
+        // The BlockDisplayElement is the visible model; the living proxy only receives attributes
+        // and forwards interaction packets, so it must remain hidden from vanilla clients.
+        setInvisible(usesBlockDisplayOverlayVisual());
+    }
+
+    private boolean usesEnderDragonInteractionHitbox() {
+        return runtimeTower != null
+                && EnderTowers.isBaseEnderTower(runtimeTower.type())
+                && blockbenchModelId == null
+                && EntityType.ENDER_DRAGON == polymerEntityType;
+    }
+
+    public boolean hasEnderDragonInteractionHitbox() {
+        return enderDragonInteractionHolder != null && enderDragonInteractionElement != null;
+    }
+
+    private void syncEnderDragonInteractionHitbox() {
+        if (!usesEnderDragonInteractionHitbox()) {
+            discardEnderDragonInteractionHitbox();
+            return;
+        }
+        if (enderDragonInteractionHolder == null || enderDragonInteractionElement == null) {
+            enderDragonInteractionElement = InteractionElement.redirect(this);
+            enderDragonInteractionElement.setResponse(true);
+            enderDragonInteractionHolder = new ElementHolder();
+            enderDragonInteractionHolder.addElement(enderDragonInteractionElement);
+            EntityAttachment.ofTicking(enderDragonInteractionHolder, this);
+        }
+        enderDragonInteractionElement.setSize(
+                16.0F,
+                8.0F
+        );
+    }
+
+    private void discardEnderDragonInteractionHitbox() {
+        if (enderDragonInteractionHolder != null) {
+            enderDragonInteractionHolder.destroy();
+        }
+        enderDragonInteractionHolder = null;
+        enderDragonInteractionElement = null;
+    }
+
+    private void syncBlockDisplayVisual() {
+        if (!usesBlockDisplayOverlayVisual()) {
+            discardBlockDisplayVisual();
+            return;
+        }
+        var blockState = BlockDisplayVisual.blockState(visual);
+        if (blockState == null) {
+            discardBlockDisplayVisual();
+            return;
+        }
+        if (blockDisplayHolder == null || blockDisplayElement == null) {
+            blockDisplayElement = new BlockDisplayElement(blockState);
+            blockDisplayElement.setTranslation(new Vector3f(-0.5F, 0.0F, -0.5F));
+            blockDisplayElement.setShadowRadius(0.5F);
+            blockDisplayElement.setShadowStrength(1.0F);
+            blockDisplayHolder = new ElementHolder();
+            blockDisplayHolder.addElement(blockDisplayElement);
+            EntityAttachment.ofTicking(blockDisplayHolder, this);
+        } else if (!blockState.equals(blockDisplayElement.getBlockState())) {
+            blockDisplayElement.setBlockState(blockState);
+        }
+        float scale = (float) visual.scale();
+        blockDisplayElement.setScale(new Vector3f(scale, scale, scale));
+    }
+
+    private void discardBlockDisplayVisual() {
+        if (blockDisplayHolder != null) {
+            blockDisplayHolder.destroy();
+        }
+        blockDisplayHolder = null;
+        blockDisplayElement = null;
     }
 
     @SuppressWarnings("unchecked")
@@ -883,7 +1009,12 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     }
 
     private void applyVisualScale(EntityVisual visual) {
-        getAttribute(Attributes.SCALE).setBaseValue(visual == null ? EntityVisual.DEFAULT_SCALE : visual.scale());
+        double scale = visual == null ? EntityVisual.DEFAULT_SCALE : visual.scale();
+        if (runtimeTower instanceof EnderTower enderTower
+                && enderTower.state() == EnderTowerState.PHANTOM) {
+            scale = EnderTowers.phantomScaleForMaxHealth(runtimeTower.currentMaxHealth());
+        }
+        getAttribute(Attributes.SCALE).setBaseValue(scale);
         refreshDimensions();
         if (holder != null) {
             holder.setScale(1.0F);

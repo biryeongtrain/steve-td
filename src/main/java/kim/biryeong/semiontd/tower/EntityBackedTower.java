@@ -105,6 +105,9 @@ public abstract class EntityBackedTower extends Tower {
     }
 
     private boolean shouldRespawnEntity(PlayerLane lane) {
+        if (lane == null || lane.arenaWorld() == null) {
+            return false;
+        }
         if (entityId < 0) {
             return true;
         }

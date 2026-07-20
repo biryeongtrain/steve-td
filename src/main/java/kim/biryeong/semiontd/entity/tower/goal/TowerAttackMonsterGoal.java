@@ -38,6 +38,16 @@ public final class TowerAttackMonsterGoal extends Goal {
 
     @Override
     public void tick() {
+        if (tower.attackRange() <= 0.0) {
+            cachedTarget = null;
+            targetSearchCooldownTicks = 0;
+            cooldownTicks = 0;
+            tower.recordCurrentAttackTarget(null);
+            tower.getNavigation().stop();
+            tower.playAnimation(SemionAnimationState.IDLE);
+            return;
+        }
+
         if (tower.consumeForceAttackReady()) {
             cooldownTicks = 0;
         }

@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.List;
 import kim.biryeong.semiontd.config.SemionConfigLoader.LoadedConfigs;
 import kim.biryeong.semiontd.rating.RatingConfig;
+import kim.biryeong.semiontd.tower.ender.EnderTowers;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
 import kim.biryeong.semiontd.tower.illager.IllagerTowers;
 import kim.biryeong.semiontd.tower.legion.LegionTowers;
@@ -192,6 +193,84 @@ final class SemionConfigLoaderTest {
         String written = Files.readString(tempDir.resolve("tower_balance.json"));
         assertTrue(written.contains("t2_strong_goat_tower"));
         assertTrue(written.contains("cloneDamageBonus"));
+    }
+
+    @Test
+    void loadMigratesLegacyEnderUpgradePricesToTargetTowerMineralCosts() throws Exception {
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("tower_balance.json"), """
+                {
+                  "towers": {
+                    "base_ender_dragon": {
+                      "damage": 5.0
+                    }
+                  },
+                  "upgradeCosts": {
+                    "t1_endermite_tower->t2_enderman_tower": 75,
+                    "t2_enderman_tower->t3_end_crystal_tower": 75,
+                    "t1_shulker_tower->t2_shulker_tower": 75,
+                    "t2_shulker_tower->t3_shulker_tower": 75,
+                    "t2_enderman_tower->t3_enderman_tower": 75
+                  },
+                  "abilities": {
+                    "t2_shulker_tower": {
+                      "damageReduction": 0.15
+                    },
+                    "t3_shulker_tower": {
+                      "damageReduction": 0.20
+                    },
+                    "ender_global": {
+                      "hatchDelayTicks": 200.0,
+                      "endermanAttackIntervalEvery": 10.0,
+                      "endermanLifeStealEvery": 20.0,
+                      "shulkerSplashEvery": 12.0,
+                      "shulkerAttackRangeEvery": 14.0,
+                      "attackRangePerStep": 0.5
+                    }
+                  }
+                }
+                """);
+
+        TowerBalanceConfig balance = SemionConfigLoader.load(
+                tempDir,
+                LoggerFactory.getLogger("test")
+        ).towerBalance();
+
+        assertEquals(10.0, balance.towers().get(EnderTowers.BASE_ENDER_TOWER.id()).damage(), 0.0001);
+        assertEquals(125, balance.upgradeCost(
+                EnderTowers.T1_ENDERMITE_TOWER.id(),
+                EnderTowers.T2_ENDERMAN_TOWER.id(),
+                -1
+        ));
+        assertEquals(200, balance.upgradeCost(
+                EnderTowers.T2_ENDERMAN_TOWER.id(),
+                EnderTowers.T3_END_CRYSTAL_TOWER.id(),
+                -1
+        ));
+        assertEquals(125, balance.upgradeCost(
+                EnderTowers.T1_SHULKER_TOWER.id(),
+                EnderTowers.T2_SHULKER_TOWER.id(),
+                -1
+        ));
+        assertEquals(200, balance.upgradeCost(
+                EnderTowers.T2_SHULKER_TOWER.id(),
+                EnderTowers.T3_SHULKER_TOWER.id(),
+                -1
+        ));
+        assertEquals(12.0, balance.ability("ender_global", "endCrystalSplashEvery", -1.0), 0.0001);
+        assertEquals(10.0, balance.ability("ender_global", "shulkerLifeStealEvery", -1.0), 0.0001);
+        assertEquals(0.5, balance.ability("ender_global", "splashRadiusPerStep", -1.0), 0.0001);
+        assertEquals(0.30, balance.ability(EnderTowers.T2_SHULKER_TOWER.id(), "damageReduction", -1.0), 0.0001);
+        assertEquals(0.50, balance.ability(EnderTowers.T3_SHULKER_TOWER.id(), "damageReduction", -1.0), 0.0001);
+        String written = Files.readString(tempDir.resolve("tower_balance.json"));
+        assertTrue(written.contains("\"damage\": 10.0"));
+        assertTrue(!written.contains("t2_enderman_tower->t3_enderman_tower"));
+        assertTrue(!written.contains("endermanAttackIntervalEvery"));
+        assertTrue(!written.contains("endermanLifeStealEvery"));
+        assertTrue(!written.contains("hatchDelayTicks"));
+        assertTrue(!written.contains("shulkerSplashEvery"));
+        assertTrue(!written.contains("shulkerAttackRangeEvery"));
+        assertTrue(!written.contains("attackRangePerStep"));
     }
 
     @Test

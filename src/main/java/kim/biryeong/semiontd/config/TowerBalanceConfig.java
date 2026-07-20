@@ -5,6 +5,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
+import kim.biryeong.semiontd.tower.ender.EnderTower;
+import kim.biryeong.semiontd.tower.ender.EnderTowers;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
 import kim.biryeong.semiontd.tower.illager.IllagerTowers;
 import kim.biryeong.semiontd.tower.legion.LegionTowers;
@@ -136,6 +138,7 @@ public record TowerBalanceConfig(
         addTower(towers, IllagerTowers.T3_ILLUSIONER_LOW);
         addTower(towers, IllagerTowers.T3_ILLUSIONER_HIGH);
         addNetherTowers(towers);
+        addEnderTowers(towers);
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
         putUpgrade(upgradeCosts, VillagerTowers.T1_SPLASH_TOWER, "villager_splash_t2", 110);
@@ -200,6 +203,7 @@ public record TowerBalanceConfig(
         putUpgrade(upgradeCosts, IllagerTowers.T2_WITCH_LOW, IllagerTowers.T3_ILLUSIONER_LOW.id(), 280);
         putUpgrade(upgradeCosts, IllagerTowers.T2_WITCH_HIGH, IllagerTowers.T3_ILLUSIONER_HIGH.id(), 280);
         putNetherUpgrades(upgradeCosts);
+        putEnderUpgrades(upgradeCosts);
 
         LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>();
         putAbilities(abilities, IllagerRaidStates.RAID_CONFIG_ID, Map.of(
@@ -749,6 +753,7 @@ public record TowerBalanceConfig(
         putAbilities(abilities, ResonanceTowers.AMPLIFY_PRISM.id(), resonanceAbilities(2, ResonanceAspect.AMPLIFY));
         putAbilities(abilities, ResonanceTowers.AMPLIFY_CORE.id(), resonanceAbilities(3, ResonanceAspect.AMPLIFY));
         putNetherAbilities(abilities);
+        putEnderAbilities(abilities);
 
         return new TowerBalanceConfig(towers, upgradeCosts, abilities, IllusionCloneQueueConfig.defaultConfig(), VillagerAdvConfig.defaultConfig());
     }
@@ -890,6 +895,16 @@ public record TowerBalanceConfig(
         addTower(towers, NetherTowers.T3_WITHER);
     }
 
+    private static void addEnderTowers(Map<String, TowerStats> towers) {
+        addTower(towers, EnderTowers.BASE_ENDER_TOWER);
+        addTower(towers, EnderTowers.T1_ENDERMITE_TOWER);
+        addTower(towers, EnderTowers.T2_ENDERMAN_TOWER);
+        addTower(towers, EnderTowers.T3_END_CRYSTAL_TOWER);
+        addTower(towers, EnderTowers.T1_SHULKER_TOWER);
+        addTower(towers, EnderTowers.T2_SHULKER_TOWER);
+        addTower(towers, EnderTowers.T3_SHULKER_TOWER);
+    }
+
     private static void putNetherUpgrades(Map<String, Long> upgrades) {
         putUpgrade(upgrades, NetherTowers.T1_STRIDER, NetherTowers.T2_PIGLIN.id(), 100);
         putUpgrade(upgrades, NetherTowers.T2_PIGLIN, NetherTowers.T3_PIGLIN_BRUTE.id(), 180);
@@ -899,6 +914,13 @@ public record TowerBalanceConfig(
         putUpgrade(upgrades, NetherTowers.T2_BLAZE, NetherTowers.T3_GHAST.id(), 180);
         putUpgrade(upgrades, NetherTowers.T1_SKELETON, NetherTowers.T2_WITHER_SKELETON.id(), 95);
         putUpgrade(upgrades, NetherTowers.T2_WITHER_SKELETON, NetherTowers.T3_WITHER.id(), 180);
+    }
+
+    private static void putEnderUpgrades(Map<String, Long> upgrades) {
+        putUpgrade(upgrades, EnderTowers.T1_ENDERMITE_TOWER, EnderTowers.T2_ENDERMAN_TOWER.id(), EnderTowers.T2_ENDERMAN_TOWER.mineralCost());
+        putUpgrade(upgrades, EnderTowers.T2_ENDERMAN_TOWER, EnderTowers.T3_END_CRYSTAL_TOWER.id(), EnderTowers.T3_END_CRYSTAL_TOWER.mineralCost());
+        putUpgrade(upgrades, EnderTowers.T1_SHULKER_TOWER, EnderTowers.T2_SHULKER_TOWER.id(), EnderTowers.T2_SHULKER_TOWER.mineralCost());
+        putUpgrade(upgrades, EnderTowers.T2_SHULKER_TOWER, EnderTowers.T3_SHULKER_TOWER.id(), EnderTowers.T3_SHULKER_TOWER.mineralCost());
     }
 
     private static void putNetherAbilities(Map<String, Map<String, Double>> abilities) {
@@ -1033,6 +1055,41 @@ public record TowerBalanceConfig(
                 Map.entry("zombieExecuteThreshold", 0.40),
                 Map.entry("zombieExecuteDamageBonus", 0.90),
                 Map.entry("zombieLifeStealRatio", 0.0)
+        ));
+    }
+
+    private static void putEnderAbilities(Map<String, Map<String, Double>> abilities) {
+        putAbilities(abilities, EnderTowers.T1_SHULKER_TOWER.id(), Map.of(
+                "damageReduction", 0.10
+        ));
+        putAbilities(abilities, EnderTowers.T2_SHULKER_TOWER.id(), Map.of(
+                "damageReduction", 0.30
+        ));
+        putAbilities(abilities, EnderTowers.T3_SHULKER_TOWER.id(), Map.of(
+                "damageReduction", 0.50
+        ));
+        putAbilities(abilities, EnderTower.CONFIG_ID, Map.ofEntries(
+                Map.entry("dragonEvolutionMaxHealth", 5000.0),
+                Map.entry("absorptionDurationTicks", 400.0),
+                Map.entry("roundHealthRatio", 1.0),
+                Map.entry("roundDamageRatio", 1.0),
+                Map.entry("roundStatBonusCapRatio", 0.50),
+                Map.entry("permanentHealthRatio", 0.05),
+                Map.entry("permanentDamageRatio", 0.05),
+                Map.entry("endCrystalAttackIntervalEvery", 20.0),
+                Map.entry("attackIntervalReductionPerStep", 1.0),
+                Map.entry("shulkerLifeStealEvery", 10.0),
+                Map.entry("lifeStealPerStep", 0.01),
+                Map.entry("lifeStealCap", 0.30),
+                Map.entry("endCrystalSplashEvery", 10.0),
+                Map.entry("splashRadiusPerStep", 0.25),
+                Map.entry("splashRadiusCap", 2.5),
+                Map.entry("splashDamageRatio", 1.0),
+                Map.entry("shulkerReductionEvery", 20.0),
+                Map.entry("damageReductionPerStep", 0.025),
+                Map.entry("damageReductionCap", 0.25),
+                Map.entry("maxAttackIntervalReductionTicks", 15.0),
+                Map.entry("minimumAttackIntervalTicks", 5.0)
         ));
     }
 
