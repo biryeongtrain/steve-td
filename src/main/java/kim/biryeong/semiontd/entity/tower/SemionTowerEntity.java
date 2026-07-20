@@ -142,7 +142,6 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         visual = tower.visual();
         blockbenchModelId = visual.blockbenchModel().orElse(null);
         setPolymerEntityType(visual.entityTypeId());
-        syncBlockDisplayProxyVisibility();
         applyVisualScale(visual);
         targetAcquireRange = Math.max(attackRange + 4.0, DEFAULT_TARGET_ACQUIRE_RANGE);
         moveSpeed = DEFAULT_MOVE_SPEED;
@@ -155,7 +154,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         getAttribute(Attributes.KNOCKBACK_RESISTANCE).setBaseValue(1.0);
         setHealth((float) tower.health());
         installBilModel(blockbenchModelId);
-        applyVisualScale(visual);
+        syncBlockDisplayProxyVisibility();
         playAnimation(SemionAnimationState.IDLE);
         markMoobloomVisualSyncDirty();
     }
@@ -690,9 +689,6 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
             return EntityType.INTERACTION;
         }
         if (usesBlockDisplayOverlayVisual()) {
-            // Attribute update packets are still produced by the living tower entity. Polymer
-            // requires the client-side proxy to have a vanilla attribute container when encoding
-            // those packets, which non-living Interaction entities do not have.
             return EntityType.ARMOR_STAND;
         }
         return polymerEntityType;
@@ -704,10 +700,35 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
             AnimatedEntity.super.modifyRawTrackedData(data, player, initial);
             return;
         }
-        if (usesMoobloomOverlayVisual() || usesBlockDisplayOverlayVisual()) {
+        if (usesMoobloomOverlayVisual()) {
             return;
         }
-        EntityVisualApplierRegistry.apply(visual, polymerEntityType, level().registryAccess(), data);
+        if (usesBlockDisplayOverlayVisual()) {
+            applyInvisibleArmorStandProxyData(data);
+            return;
+        }
+        EntityVisualApplierRegistry.apply(
+                visual,
+                polymerEntityType,
+                level().registryAccess(),
+                data
+        );
+    }
+
+    private void applyInvisibleArmorStandProxyData(List<SynchedEntityData.DataValue<?>> data) {
+        byte flags = (byte) (entityData.get(DATA_SHARED_FLAGS_ID) | 0x20);
+        SynchedEntityData.DataValue<Byte> invisibleFlags =
+                SynchedEntityData.DataValue.create(
+                        DATA_SHARED_FLAGS_ID,
+                        flags
+                );
+        for (int index = 0; index < data.size(); index++) {
+            if (data.get(index).id() == DATA_SHARED_FLAGS_ID.id()) {
+                data.set(index, invisibleFlags);
+                return;
+            }
+        }
+        data.add(invisibleFlags);
     }
 
     @Override
@@ -773,8 +794,6 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     }
 
     private void syncBlockDisplayProxyVisibility() {
-        // The BlockDisplayElement is the visible model; the living proxy only receives attributes
-        // and forwards interaction packets, so it must remain hidden from vanilla clients.
         setInvisible(usesBlockDisplayOverlayVisual());
     }
 

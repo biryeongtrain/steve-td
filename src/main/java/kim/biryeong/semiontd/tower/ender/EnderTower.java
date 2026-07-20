@@ -342,10 +342,11 @@ public final class EnderTower extends EntityBackedTower {
             }
             completedTransferSources.add(source);
             roundCompletedTransferCount++;
+            int tier = EnderTowers.absorptionTier(source.type());
             if (EnderTowers.isEndCrystalLine(source.type())) {
-                absorbedEndCrystalCount++;
+                absorbedEndCrystalCount += tier;
             } else if (EnderTowers.isShulkerLine(source.type())) {
-                absorbedShulkerCount++;
+                absorbedShulkerCount += tier;
             }
             countsChanged = true;
         }

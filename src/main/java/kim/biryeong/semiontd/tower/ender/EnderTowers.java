@@ -4,6 +4,7 @@ import static kim.biryeong.semiontd.tower.catalog.ProductionTowerDefinitions.tow
 import static kim.biryeong.semiontd.util.EntityTypeUtil.byId;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import kim.biryeong.semiontd.entity.visual.BlockDisplayVisual;
 import kim.biryeong.semiontd.entity.visual.EntityVisual;
@@ -102,7 +103,7 @@ public final class EnderTowers {
             List.of(
                     "<gray>체력이 높은 셜커 입니다.</gray>",
                     "<yellow>받는 피해가 {ability.damageReduction:percent} 감소합니다.</yellow>",
-                    "<green>공격을 하지 않지만, 셜켜 계열의 힘 전달을 완료하면 엔더 드래곤의 체력, 생명력 흡수, 피해 감소를 강화합니다.</green>"
+                    "<green>공격을 하지 않지만, 셜커 계열의 힘 전달을 완료하면 엔더 드래곤의 체력, 생명력 흡수, 피해 감소를 강화합니다.</green>"
             )
     );
 
@@ -119,7 +120,7 @@ public final class EnderTowers {
             List.of(
                     "<gray>체력이 높은 견고한 셜커 입니다.</gray>",
                     "<yellow>받는 피해가 {ability.damageReduction:percent} 감소합니다.</yellow>",
-                    "<green>공격을 하지 않지만, 셜켜 계열의 힘 전달을 완료하면 엔더 드래곤의 체력, 생명력 흡수, 피해 감소를 강화합니다.</green>"
+                    "<green>공격을 하지 않지만, 셜커 계열의 힘 전달을 완료하면 엔더 드래곤의 체력, 생명력 흡수, 피해 감소를 강화합니다.</green>"
             )
     );
 
@@ -136,7 +137,7 @@ public final class EnderTowers {
             List.of(
                     "<gray>체력이 매우 높은 완강한 셜커 입니다.</gray>",
                     "<yellow>받는 피해가 {ability.damageReduction:percent} 감소합니다.</yellow>",
-                    "<green>공격을 하지 않지만, 셜켜 계열의 힘 전달을 완료하면 엔더 드래곤의 체력, 생명력 흡수, 피해 감소를 강화합니다.</green>"
+                    "<green>공격을 하지 않지만, 셜커 계열의 힘 전달을 완료하면 엔더 드래곤의 체력, 생명력 흡수, 피해 감소를 강화합니다.</green>"
             )
     );
 
@@ -159,9 +160,18 @@ public final class EnderTowers {
             T1_SHULKER_TOWER.id(), T2_SHULKER_TOWER.id(), T3_SHULKER_TOWER.id()
     );
 
+    private static final Map<String, Integer> ABSORPTION_TIER_BY_ID = Map.of(
+            T1_ENDERMITE_TOWER.id(), 1,
+            T2_ENDERMAN_TOWER.id(), 2,
+            T3_END_CRYSTAL_TOWER.id(), 3,
+            T1_SHULKER_TOWER.id(), 1,
+            T2_SHULKER_TOWER.id(), 2,
+            T3_SHULKER_TOWER.id(), 3
+    );
+
     static {
         List<String> dragonDescription = List.of(
-                "<gray>알로 표시되며, 라운드가 시작 시 팬텀으로 변합니다.</gray>",
+                "<gray>알로 소환되며, 라운드 시작 시 팬텀으로 변합니다.</gray>",
                 "<gray>최대 체력이 <yellow>{ability.ender_global.dragonEvolutionMaxHealth:integer}</yellow>을 넘으면 엔더 드래곤으로 진화합니다.</gray>",
                 "<gray>팬텀 크기는 0.1부터 최대 체력 100당 0.1 증가합니다.</gray>",
                 "<green>타워는 {ability.ender_global.absorptionDurationTicks:seconds} 동안 힘을 전달하고 사망합니다.</green>",
@@ -188,17 +198,17 @@ public final class EnderTowers {
         TowerDescriptionRegistry.registerTemplate(T1_SHULKER_TOWER, List.of(
                 "<gray>체력이 높은 셜커 입니다.</gray>",
                 "<yellow>받는 피해가 {ability.damageReduction:percent} 감소합니다.</yellow>",
-                "<green>공격을 하지 않지만, 셜켜 계열의 힘 전달을 완료하면 엔더 드래곤의 체력, 생명력 흡수, 피해 감소를 강화합니다.</green>"
+                "<green>공격을 하지 않지만, 셜커 계열의 힘 전달을 완료하면 엔더 드래곤의 체력, 생명력 흡수, 피해 감소를 강화합니다.</green>"
         ));
         TowerDescriptionRegistry.registerTemplate(T2_SHULKER_TOWER, List.of(
                 "<gray>체력이 높은 견고한 셜커 입니다.</gray>",
                 "<yellow>받는 피해가 {ability.damageReduction:percent} 감소합니다.</yellow>",
-                "<green>공격을 하지 않지만, 셜켜 계열의 힘 전달을 완료하면 엔더 드래곤의 체력, 생명력 흡수, 피해 감소를 강화합니다.</green>"
+                "<green>공격을 하지 않지만, 셜커 계열의 힘 전달을 완료하면 엔더 드래곤의 체력, 생명력 흡수, 피해 감소를 강화합니다.</green>"
         ));
         TowerDescriptionRegistry.registerTemplate(T3_SHULKER_TOWER, List.of(
                 "<gray>체력이 매우 높은 완강한 셜커 입니다.</gray>",
                 "<yellow>받는 피해가 {ability.damageReduction:percent} 감소합니다.</yellow>",
-                "<green>공격을 하지 않지만, 셜켜 계열의 힘 전달을 완료하면 엔더 드래곤의 체력, 생명력 흡수, 피해 감소를 강화합니다.</green>"
+                "<green>공격을 하지 않지만, 셜커 계열의 힘 전달을 완료하면 엔더 드래곤의 체력, 생명력 흡수, 피해 감소를 강화합니다.</green>"
         ));
     }
 
@@ -223,6 +233,13 @@ public final class EnderTowers {
 
     public static boolean isAbsorbableTower(TowerType type) {
         return isEndCrystalLine(type) || isShulkerLine(type);
+    }
+
+    public static int absorptionTier(TowerType type) {
+        if (type == null) {
+            return 0;
+        }
+        return ABSORPTION_TIER_BY_ID.getOrDefault(type.id(), 0);
     }
 
     public static double phantomScaleForMaxHealth(double maxHealth) {

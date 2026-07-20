@@ -121,8 +121,8 @@ class EnderTowerCatalogTest {
         assertEquals(10.0, EnderTowers.BASE_ENDER_TOWER.damage(), 0.0001);
         String description = String.join("\n", TowerBalanceRuntime.resolve(EnderTowers.BASE_ENDER_TOWER).description());
 
-        assertTrue(description.contains("알로 표시되며"));
-        assertTrue(description.contains("라운드가 시작 시 팬텀"));
+        assertTrue(description.contains("알로 소환되며"));
+        assertTrue(description.contains("라운드 시작 시 팬텀"));
         assertTrue(description.contains("20초"));
         assertTrue(description.contains("5%"));
         assertTrue(description.contains("엔드 크리스탈 계열"));
