@@ -45,11 +45,11 @@ class EnderDragonScaleTest {
     }
 
     @Test
-    void phantomScaleGrowsLinearlyByPointOnePerHundredMaxHealth() {
-        assertEquals(0.1, EnderTowers.phantomScaleForMaxHealth(100.0), 0.0001);
-        assertEquals(0.15, EnderTowers.phantomScaleForMaxHealth(150.0), 0.0001);
-        assertEquals(0.2, EnderTowers.phantomScaleForMaxHealth(200.0), 0.0001);
-        assertEquals(0.3, EnderTowers.phantomScaleForMaxHealth(300.0), 0.0001);
+    void phantomScaleStartsAtOneAndGrowsByPointTwoPerHundredMaxHealth() {
+        assertEquals(1.2, EnderTowers.phantomScaleForMaxHealth(100.0), 0.0001);
+        assertEquals(1.3, EnderTowers.phantomScaleForMaxHealth(150.0), 0.0001);
+        assertEquals(1.4, EnderTowers.phantomScaleForMaxHealth(200.0), 0.0001);
+        assertEquals(1.6, EnderTowers.phantomScaleForMaxHealth(300.0), 0.0001);
     }
 
     @Test
