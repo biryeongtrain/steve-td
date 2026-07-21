@@ -31,9 +31,9 @@ import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.entity.tower.goal.TowerAttackMonsterGoal;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerDataKey;
-import kim.biryeong.semiontd.tower.ender.EnderTower;
-import kim.biryeong.semiontd.tower.ender.EnderTowerState;
-import kim.biryeong.semiontd.tower.ender.EnderTowers;
+import kim.biryeong.semiontd.tower.end.EndTower;
+import kim.biryeong.semiontd.tower.end.EndTowerState;
+import kim.biryeong.semiontd.tower.end.EndTowers;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -45,7 +45,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.PathfinderMob;
 import com.faboslav.friendsandfoes.common.entity.MoobloomEntity;
@@ -799,7 +798,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     private boolean usesEnderDragonInteractionHitbox() {
         return runtimeTower != null
-                && EnderTowers.isBaseEnderTower(runtimeTower.type())
+                && EndTowers.isBaseEnderTower(runtimeTower.type())
                 && blockbenchModelId == null
                 && EntityType.ENDER_DRAGON == polymerEntityType;
     }
@@ -1029,9 +1028,9 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     private void applyVisualScale(EntityVisual visual) {
         double scale = visual == null ? EntityVisual.DEFAULT_SCALE : visual.scale();
-        if (runtimeTower instanceof EnderTower enderTower
-                && enderTower.state() == EnderTowerState.PHANTOM) {
-            scale = EnderTowers.phantomScaleForMaxHealth(runtimeTower.currentMaxHealth());
+        if (runtimeTower instanceof EndTower endTower
+                && endTower.state() == EndTowerState.PHANTOM) {
+            scale = EndTowers.phantomScaleForMaxHealth(runtimeTower.currentMaxHealth());
         }
         getAttribute(Attributes.SCALE).setBaseValue(scale);
         refreshDimensions();

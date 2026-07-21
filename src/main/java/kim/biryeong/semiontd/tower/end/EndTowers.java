@@ -1,4 +1,4 @@
-package kim.biryeong.semiontd.tower.ender;
+package kim.biryeong.semiontd.tower.end;
 
 import static kim.biryeong.semiontd.tower.catalog.ProductionTowerDefinitions.tower;
 import static kim.biryeong.semiontd.util.EntityTypeUtil.byId;
@@ -15,7 +15,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.Blocks;
 
-public final class EnderTowers {
+public final class EndTowers {
     public static final double PHANTOM_BASE_SCALE = 1.0;
     public static final double PHANTOM_SCALE_PER_100_MAX_HEALTH = 0.2;
     public static final EntityVisual DRAGON_EGG_VISUAL = BlockDisplayVisual.builder(Blocks.DRAGON_EGG.defaultBlockState())
@@ -202,7 +202,7 @@ public final class EnderTowers {
         ));
     }
 
-    private EnderTowers() {
+    private EndTowers() {
     }
 
     public static boolean isEnderTower(TowerType type) {

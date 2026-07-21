@@ -1,4 +1,4 @@
-package kim.biryeong.semiontd.tower.ender;
+package kim.biryeong.semiontd.tower.end;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,12 +31,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
 
-public final class EnderTower extends EntityBackedTower {
+public final class EndTower extends EntityBackedTower {
     public static final String CONFIG_ID = "ender_global";
     private static final double TRANSFER_PARTICLE_HEIGHT = 1.25;
-    private static final TowerDataKey<EnderTowerState> STATE = TowerDataKey.of(
+    private static final TowerDataKey<EndTowerState> STATE = TowerDataKey.of(
             ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "ender_tower_state"),
-            EnderTowerState.class
+            EndTowerState.class
     );
 
     private final Map<Tower, AbsorptionProgress> absorptionProgress = new IdentityHashMap<>();
@@ -54,12 +54,12 @@ public final class EnderTower extends EntityBackedTower {
     private int absorbedShulkerCount;
     private int roundCompletedTransferCount;
 
-    public EnderTower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
+    public EndTower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
         super(type, ownerPlayer, teamId, laneId, position);
         initializeState();
     }
 
-    public EnderTower(
+    public EndTower(
             TowerType type,
             UUID ownerPlayer,
             TeamId teamId,
@@ -71,8 +71,8 @@ public final class EnderTower extends EntityBackedTower {
         initializeState();
     }
 
-    public EnderTowerState state() {
-        return getDataOrDefault(STATE, EnderTowerState.EGG);
+    public EndTowerState state() {
+        return getDataOrDefault(STATE, EndTowerState.EGG);
     }
 
     @Override
@@ -81,9 +81,9 @@ public final class EnderTower extends EntityBackedTower {
             return super.visual();
         }
         return switch (state()) {
-            case EGG -> EnderTowers.DRAGON_EGG_VISUAL;
-            case PHANTOM -> EnderTowers.PHANTOM_VISUAL;
-            case DRAGON -> EnderTowers.DRAGON_VISUAL;
+            case EGG -> EndTowers.DRAGON_EGG_VISUAL;
+            case PHANTOM -> EndTowers.PHANTOM_VISUAL;
+            case DRAGON -> EndTowers.DRAGON_VISUAL;
         };
     }
 
@@ -108,7 +108,7 @@ public final class EnderTower extends EntityBackedTower {
         absorptionProgress.clear();
         resetRoundTransferBonuses(lane);
         if (isCoreTower()) {
-            setData(STATE, EnderTowerState.EGG);
+            setData(STATE, EndTowerState.EGG);
             syncMaxHealth(effectBaseMaxHealth(), false);
         }
         super.resetForRound(lane);
@@ -188,7 +188,7 @@ public final class EnderTower extends EntityBackedTower {
 
     @Override
     public double modifyIncomingDamage(SemionTowerEntity towerEntity, DamageSource damageSource, double damageAmount) {
-        if (EnderTowers.isShulkerLine(type())) {
+        if (EndTowers.isShulkerLine(type())) {
             return damageAmount * Math.max(0.0, 1.0 - shulkerDamageReduction());
         }
         if (!isHatched()) {
@@ -214,7 +214,7 @@ public final class EnderTower extends EntityBackedTower {
         if (!isCoreTower()) {
             ArrayList<String> lines = new ArrayList<>();
             lines.add("엔더 드래곤에게 힘 전달 대기 중");
-            if (EnderTowers.isShulkerLine(type()) && shulkerDamageReduction() > 0.0) {
+            if (EndTowers.isShulkerLine(type()) && shulkerDamageReduction() > 0.0) {
                 lines.add("받는 피해 감소 " + percent(shulkerDamageReduction()));
             }
             return lines;
@@ -247,22 +247,22 @@ public final class EnderTower extends EntityBackedTower {
 
     @Override
     protected void copyRuntimeStateFrom(Tower previousTower) {
-        if (!(previousTower instanceof EnderTower enderTower) || !isCoreTower()) {
+        if (!(previousTower instanceof EndTower endTower) || !isCoreTower()) {
             return;
         }
-        permanentHealthBonus = enderTower.permanentHealthBonus;
-        permanentDamageBonus = enderTower.permanentDamageBonus;
-        roundHealthContribution = enderTower.roundHealthContribution;
-        roundDamageContribution = enderTower.roundDamageContribution;
-        roundHealthBonus = enderTower.roundHealthBonus;
-        roundDamageBonus = enderTower.roundDamageBonus;
-        syncedPermanentHealthBonus = enderTower.syncedPermanentHealthBonus;
-        syncedPermanentDamageBonus = enderTower.syncedPermanentDamageBonus;
-        absorbedEndCrystalCount = enderTower.absorbedEndCrystalCount;
-        absorbedShulkerCount = enderTower.absorbedShulkerCount;
-        roundCompletedTransferCount = enderTower.roundCompletedTransferCount;
-        completedTransferSources.addAll(enderTower.completedTransferSources);
-        waveActive = enderTower.waveActive;
+        permanentHealthBonus = endTower.permanentHealthBonus;
+        permanentDamageBonus = endTower.permanentDamageBonus;
+        roundHealthContribution = endTower.roundHealthContribution;
+        roundDamageContribution = endTower.roundDamageContribution;
+        roundHealthBonus = endTower.roundHealthBonus;
+        roundDamageBonus = endTower.roundDamageBonus;
+        syncedPermanentHealthBonus = endTower.syncedPermanentHealthBonus;
+        syncedPermanentDamageBonus = endTower.syncedPermanentDamageBonus;
+        absorbedEndCrystalCount = endTower.absorbedEndCrystalCount;
+        absorbedShulkerCount = endTower.absorbedShulkerCount;
+        roundCompletedTransferCount = endTower.roundCompletedTransferCount;
+        completedTransferSources.addAll(endTower.completedTransferSources);
+        waveActive = endTower.waveActive;
     }
 
     public int absorbedEndCrystalCount() {
@@ -340,10 +340,10 @@ public final class EnderTower extends EntityBackedTower {
             }
             completedTransferSources.add(source);
             roundCompletedTransferCount++;
-            int tier = EnderTowers.absorptionTier(source.type());
-            if (EnderTowers.isEndCrystalLine(source.type())) {
+            int tier = EndTowers.absorptionTier(source.type());
+            if (EndTowers.isEndCrystalLine(source.type())) {
                 absorbedEndCrystalCount += tier;
-            } else if (EnderTowers.isShulkerLine(source.type())) {
+            } else if (EndTowers.isShulkerLine(source.type())) {
                 absorbedShulkerCount += tier;
             }
             countsChanged = true;
@@ -387,13 +387,13 @@ public final class EnderTower extends EntityBackedTower {
                 && !completedTransferSources.contains(tower)
                 && tower.ownerPlayer().equals(ownerPlayer())
                 && tower.health() > 0.0
-                && EnderTowers.isAbsorbableTower(tower.type());
+                && EndTowers.isAbsorbableTower(tower.type());
     }
 
     private AbsorptionProgress newAbsorptionProgress(Tower tower) {
         int durationTicks = Math.max(1, globalTicks("absorptionDurationTicks"));
-        boolean endCrystalLine = EnderTowers.isEndCrystalLine(tower.type());
-        boolean shulkerLine = EnderTowers.isShulkerLine(tower.type());
+        boolean endCrystalLine = EndTowers.isEndCrystalLine(tower.type());
+        boolean shulkerLine = EndTowers.isShulkerLine(tower.type());
         double sourceHealth = tower.currentMaxHealth();
         double sourceDamage = tower.modifyAttackDamage(null, null, tower.type().damage());
         return new AbsorptionProgress(
@@ -448,7 +448,7 @@ public final class EnderTower extends EntityBackedTower {
         if (!isEgg()) {
             return;
         }
-        setData(STATE, EnderTowerState.PHANTOM);
+        setData(STATE, EndTowerState.PHANTOM);
         Optional<SemionTowerEntity> entity = towerEntity(lane);
         if (entity.isPresent()) {
             entity.get().refreshMaxHealthEffects();
@@ -464,7 +464,7 @@ public final class EnderTower extends EntityBackedTower {
         if (!isPhantom() || currentMaxHealth() < dragonEvolutionMaxHealth()) {
             return;
         }
-        setData(STATE, EnderTowerState.DRAGON);
+        setData(STATE, EndTowerState.DRAGON);
         if (lane != null) {
             onStateChanged(lane);
         }
@@ -557,11 +557,11 @@ public final class EnderTower extends EntityBackedTower {
     }
 
     private boolean isDragon() {
-        return isCoreTower() && state() == EnderTowerState.DRAGON;
+        return isCoreTower() && state() == EndTowerState.DRAGON;
     }
 
     private boolean isPhantom() {
-        return isCoreTower() && state() == EnderTowerState.PHANTOM;
+        return isCoreTower() && state() == EndTowerState.PHANTOM;
     }
 
     private boolean isHatched() {
@@ -569,16 +569,16 @@ public final class EnderTower extends EntityBackedTower {
     }
 
     private boolean isEgg() {
-        return isCoreTower() && state() == EnderTowerState.EGG;
+        return isCoreTower() && state() == EndTowerState.EGG;
     }
 
     private boolean isCoreTower() {
-        return EnderTowers.isBaseEnderTower(type());
+        return EndTowers.isBaseEnderTower(type());
     }
 
     private void initializeState() {
         if (isCoreTower()) {
-            setData(STATE, EnderTowerState.EGG);
+            setData(STATE, EndTowerState.EGG);
         }
     }
 

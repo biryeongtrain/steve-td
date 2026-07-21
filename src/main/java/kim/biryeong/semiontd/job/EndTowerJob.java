@@ -4,15 +4,15 @@ import java.util.List;
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
-import kim.biryeong.semiontd.tower.ender.EnderTowers;
+import kim.biryeong.semiontd.tower.end.EndTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-public final class EnderTowerJob extends SemionJob {
+public final class EndTowerJob extends SemionJob {
     public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "ender_towers");
 
-    public EnderTowerJob() {
+    public EndTowerJob() {
         super(
                 ID,
                 Component.literal("엔드 빌더"),
@@ -39,16 +39,16 @@ public final class EnderTowerJob extends SemionJob {
 
     @Override
     public boolean canUseTower(JobContext context, TowerType towerType) {
-        if (!EnderTowers.isEnderTower(towerType)) {
+        if (!EndTowers.isEnderTower(towerType)) {
             return false;
         }
-        if (!EnderTowers.isBaseEnderTower(towerType) || context == null) {
+        if (!EndTowers.isBaseEnderTower(towerType) || context == null) {
             return true;
         }
         return context.game().playerLane(context.player().uuid())
                 .map(lane -> lane.towers().stream()
                         .map(Tower::type)
-                        .noneMatch(EnderTowers::isBaseEnderTower))
+                        .noneMatch(EndTowers::isBaseEnderTower))
                 .orElse(true);
     }
 }

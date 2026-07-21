@@ -1,4 +1,4 @@
-package kim.biryeong.semiontd.tower.ender;
+package kim.biryeong.semiontd.tower.end;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -49,8 +49,8 @@ class EnderTowerAbsorptionTest {
     void onlyFullyAbsorbedTowerIsCountedWhileStatsTransferGradually() {
         applyAbsorptionDuration(4);
         PlayerLane lane = lane();
-        EnderTower dragon = tower(EnderTowers.BASE_ENDER_TOWER, 0);
-        EnderTower enderman = tower(EnderTowers.T1_ENDERMITE_TOWER, 1);
+        EndTower dragon = tower(EndTowers.BASE_ENDER_TOWER, 0);
+        EndTower enderman = tower(EndTowers.T1_ENDERMITE_TOWER, 1);
         lane.towers().add(dragon);
         dragon.onWaveStarted(lane, 1);
         dragon.tick(lane);
@@ -89,8 +89,8 @@ class EnderTowerAbsorptionTest {
     void alreadyTransferredStatsRemainWhenAChannelStopsEarlyButTheTowerIsNotCounted() {
         applyAbsorptionDuration(4);
         PlayerLane lane = lane();
-        EnderTower dragon = tower(EnderTowers.BASE_ENDER_TOWER, 0);
-        EnderTower endCrystalLine = tower(EnderTowers.T1_ENDERMITE_TOWER, 1);
+        EndTower dragon = tower(EndTowers.BASE_ENDER_TOWER, 0);
+        EndTower endCrystalLine = tower(EndTowers.T1_ENDERMITE_TOWER, 1);
         lane.towers().add(dragon);
         dragon.onWaveStarted(lane, 1);
         dragon.tick(lane);
@@ -112,8 +112,8 @@ class EnderTowerAbsorptionTest {
                 "endCrystalAttackIntervalEvery", 1.0
         ));
         PlayerLane lane = lane();
-        EnderTower dragon = tower(EnderTowers.BASE_ENDER_TOWER, 0);
-        EnderTower shulker = tower(EnderTowers.T1_SHULKER_TOWER, 1);
+        EndTower dragon = tower(EndTowers.BASE_ENDER_TOWER, 0);
+        EndTower shulker = tower(EndTowers.T1_SHULKER_TOWER, 1);
         lane.towers().add(dragon);
         dragon.onWaveStarted(lane, 1);
         dragon.tick(lane);
@@ -135,8 +135,8 @@ class EnderTowerAbsorptionTest {
     void coreReturnsToEggEachRoundAndPermanentHealthReturnsAfterHatching() {
         applyAbsorptionDuration(1);
         PlayerLane lane = lane();
-        EnderTower core = tower(EnderTowers.BASE_ENDER_TOWER, 0);
-        EnderTower shulker = tower(EnderTowers.T1_SHULKER_TOWER, 1);
+        EndTower core = tower(EndTowers.BASE_ENDER_TOWER, 0);
+        EndTower shulker = tower(EndTowers.T1_SHULKER_TOWER, 1);
         lane.towers().add(core);
         core.onWaveStarted(lane, 1);
         core.tick(lane);
@@ -148,14 +148,14 @@ class EnderTowerAbsorptionTest {
 
         core.resetForRound(null);
 
-        assertEquals(EnderTowerState.EGG, core.state());
+        assertEquals(EndTowerState.EGG, core.state());
         assertEquals(200.0, core.currentMaxHealth(), 0.0001);
         assertEquals(5.0, core.permanentHealthBonus(), 0.0001);
 
         core.onWaveStarted(null, 2);
         core.tick(null);
 
-        assertEquals(EnderTowerState.PHANTOM, core.state());
+        assertEquals(EndTowerState.PHANTOM, core.state());
         assertEquals(205.0, core.currentMaxHealth(), 0.0001);
         assertEquals(5.0, core.permanentHealthBonus(), 0.0001);
     }
@@ -164,13 +164,13 @@ class EnderTowerAbsorptionTest {
     void completedLineCountsApplyRequestedBonusesAndStatCaps() {
         applyAbsorptionDuration(1);
         PlayerLane lane = lane();
-        EnderTower dragon = tower(EnderTowers.BASE_ENDER_TOWER, 0);
+        EndTower dragon = tower(EndTowers.BASE_ENDER_TOWER, 0);
         lane.towers().add(dragon);
         dragon.onWaveStarted(lane, 1);
         dragon.tick(lane);
         for (int index = 0; index < 20; index++) {
-            lane.towers().add(tower(EnderTowers.T1_ENDERMITE_TOWER, index + 1));
-            lane.towers().add(tower(EnderTowers.T1_SHULKER_TOWER, index + 21));
+            lane.towers().add(tower(EndTowers.T1_ENDERMITE_TOWER, index + 1));
+            lane.towers().add(tower(EndTowers.T1_SHULKER_TOWER, index + 21));
         }
         tick(dragon, lane, 1);
 
@@ -220,13 +220,13 @@ class EnderTowerAbsorptionTest {
                 "damageReductionCap", 0.05
         ));
         PlayerLane lane = lane();
-        EnderTower dragon = tower(EnderTowers.BASE_ENDER_TOWER, 0);
+        EndTower dragon = tower(EndTowers.BASE_ENDER_TOWER, 0);
         lane.towers().add(dragon);
         dragon.onWaveStarted(lane, 1);
         dragon.tick(lane);
         for (int index = 0; index < 3; index++) {
-            lane.towers().add(tower(EnderTowers.T1_ENDERMITE_TOWER, index + 1));
-            lane.towers().add(tower(EnderTowers.T1_SHULKER_TOWER, index + 4));
+            lane.towers().add(tower(EndTowers.T1_ENDERMITE_TOWER, index + 1));
+            lane.towers().add(tower(EndTowers.T1_SHULKER_TOWER, index + 4));
         }
 
         dragon.tick(lane);
@@ -243,14 +243,14 @@ class EnderTowerAbsorptionTest {
     void completedTransfersUseRegisteredTowerTiersAsStackWeight() {
         applyAbsorptionDuration(1);
         PlayerLane lane = lane();
-        EnderTower dragon = tower(EnderTowers.BASE_ENDER_TOWER, 0);
+        EndTower dragon = tower(EndTowers.BASE_ENDER_TOWER, 0);
         lane.towers().add(dragon);
         dragon.onWaveStarted(lane, 1);
         dragon.tick(lane);
-        lane.towers().add(tower(EnderTowers.T2_ENDERMAN_TOWER, 1));
-        lane.towers().add(tower(EnderTowers.T3_END_CRYSTAL_TOWER, 2));
-        lane.towers().add(tower(EnderTowers.T2_SHULKER_TOWER, 3));
-        lane.towers().add(tower(EnderTowers.T3_SHULKER_TOWER, 4));
+        lane.towers().add(tower(EndTowers.T2_ENDERMAN_TOWER, 1));
+        lane.towers().add(tower(EndTowers.T3_END_CRYSTAL_TOWER, 2));
+        lane.towers().add(tower(EndTowers.T2_SHULKER_TOWER, 3));
+        lane.towers().add(tower(EndTowers.T3_SHULKER_TOWER, 4));
 
         dragon.tick(lane);
 
@@ -262,9 +262,9 @@ class EnderTowerAbsorptionTest {
     @Test
     void dragonEggAndHatchedPhantomAreStatesOfOneTowerType() {
         applyAbsorptionDuration(1);
-        EnderTower tower = tower(EnderTowers.BASE_ENDER_TOWER, 0);
+        EndTower tower = tower(EndTowers.BASE_ENDER_TOWER, 0);
 
-        assertEquals(EnderTowerState.EGG, tower.state());
+        assertEquals(EndTowerState.EGG, tower.state());
         assertTrue(BlockDisplayVisual.matches(tower.visual()));
         assertEquals(
                 Blocks.DRAGON_EGG.defaultBlockState(),
@@ -274,14 +274,14 @@ class EnderTowerAbsorptionTest {
         tower.onWaveStarted(null, 1);
         tower.tick(null);
 
-        assertEquals(EnderTowerState.PHANTOM, tower.state());
-        assertEquals(EnderTowers.BASE_ENDER_TOWER, tower.type());
+        assertEquals(EndTowerState.PHANTOM, tower.state());
+        assertEquals(EndTowers.BASE_ENDER_TOWER, tower.type());
         assertEquals("minecraft:phantom", tower.visual().entityTypeId());
         assertTrue(tower.visual().blockbenchModel().isEmpty());
 
         tower.resetForRound(null);
 
-        assertEquals(EnderTowerState.EGG, tower.state());
+        assertEquals(EndTowerState.EGG, tower.state());
         assertTrue(BlockDisplayVisual.matches(tower.visual()));
         assertEquals(200.0, tower.currentMaxHealth(), 0.0001);
     }
@@ -290,11 +290,11 @@ class EnderTowerAbsorptionTest {
     void shulkerTiersReduceIncomingDamageByConfiguredAmount() {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
 
-        assertEquals(90.0, tower(EnderTowers.T1_SHULKER_TOWER, 0)
+        assertEquals(90.0, tower(EndTowers.T1_SHULKER_TOWER, 0)
                 .modifyIncomingDamage(null, null, 100.0), 0.0001);
-        assertEquals(70.0, tower(EnderTowers.T2_SHULKER_TOWER, 0)
+        assertEquals(70.0, tower(EndTowers.T2_SHULKER_TOWER, 0)
                 .modifyIncomingDamage(null, null, 100.0), 0.0001);
-        assertEquals(50.0, tower(EnderTowers.T3_SHULKER_TOWER, 0)
+        assertEquals(50.0, tower(EndTowers.T3_SHULKER_TOWER, 0)
                 .modifyIncomingDamage(null, null, 100.0), 0.0001);
     }
 
@@ -307,17 +307,17 @@ class EnderTowerAbsorptionTest {
     private static void applyEnderAbilities(Map<String, Double> overrides) {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
         Map<String, Map<String, Double>> abilities = new LinkedHashMap<>(defaults.abilities());
-        Map<String, Double> ender = new LinkedHashMap<>(abilities.get(EnderTower.CONFIG_ID));
+        Map<String, Double> ender = new LinkedHashMap<>(abilities.get(EndTower.CONFIG_ID));
         ender.putAll(overrides);
-        abilities.put(EnderTower.CONFIG_ID, ender);
+        abilities.put(EndTower.CONFIG_ID, ender);
         TowerBalanceRuntime.apply(new TowerBalanceConfig(defaults.towers(), defaults.upgradeCosts(), abilities));
     }
 
-    private static EnderTower tower(kim.biryeong.semiontd.tower.TowerType type, int x) {
-        return new EnderTower(type, OWNER, TeamId.BLUE, 1, new GridPosition(x, 64, 0));
+    private static EndTower tower(kim.biryeong.semiontd.tower.TowerType type, int x) {
+        return new EndTower(type, OWNER, TeamId.BLUE, 1, new GridPosition(x, 64, 0));
     }
 
-    private static void tick(EnderTower dragon, PlayerLane lane, int ticks) {
+    private static void tick(EndTower dragon, PlayerLane lane, int ticks) {
         for (int index = 0; index < ticks; index++) {
             dragon.tick(lane);
         }

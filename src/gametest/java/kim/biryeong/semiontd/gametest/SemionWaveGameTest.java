@@ -26,8 +26,9 @@ import kim.biryeong.semiontd.test.tower.TestTower;
 import kim.biryeong.semiontd.test.tower.TestTowerTypes;
 import kim.biryeong.semiontd.tower.TowerCategory;
 import kim.biryeong.semiontd.tower.TowerType;
-import kim.biryeong.semiontd.tower.ender.EnderTower;
-import kim.biryeong.semiontd.tower.ender.EnderTowers;
+import kim.biryeong.semiontd.tower.end.EndTower;
+import kim.biryeong.semiontd.tower.end.EndTowerState;
+import kim.biryeong.semiontd.tower.end.EndTowers;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -507,15 +508,15 @@ public final class SemionWaveGameTest {
     @GameTest
     public void destroyedEnderCoreStopsAbsorbing(GameTestHelper context) {
         PlayerLane lane = lane(context, "destroyed-ender-core");
-        EnderTower core = new EnderTower(
-                EnderTowers.BASE_ENDER_TOWER,
+        EndTower core = new EndTower(
+                EndTowers.BASE_ENDER_TOWER,
                 lane.ownerPlayer(),
                 TeamId.RED,
                 1,
                 GridPosition.from(context.absolutePos(new BlockPos(4, 1, 1)))
         );
-        EnderTower source = new EnderTower(
-                EnderTowers.T1_ENDERMITE_TOWER,
+        EndTower source = new EndTower(
+                EndTowers.T1_ENDERMITE_TOWER,
                 lane.ownerPlayer(),
                 TeamId.RED,
                 1,
@@ -542,15 +543,15 @@ public final class SemionWaveGameTest {
         PlayerLane lane = lane(context, "ender-transfer-enchant-particles");
         GridPosition sourcePosition = GridPosition.from(context.absolutePos(new BlockPos(1, 1, 1)));
         GridPosition dragonPosition = GridPosition.from(context.absolutePos(new BlockPos(4, 1, 1)));
-        EnderTower egg = new EnderTower(
-                EnderTowers.BASE_ENDER_TOWER,
+        EndTower egg = new EndTower(
+                EndTowers.BASE_ENDER_TOWER,
                 lane.ownerPlayer(),
                 TeamId.RED,
                 1,
                 dragonPosition
         );
-        EnderTower source = new EnderTower(
-                EnderTowers.T1_ENDERMITE_TOWER,
+        EndTower source = new EndTower(
+                EndTowers.T1_ENDERMITE_TOWER,
                 lane.ownerPlayer(),
                 TeamId.RED,
                 1,
@@ -564,9 +565,9 @@ public final class SemionWaveGameTest {
         for (int tick = 0; tick < 200; tick++) {
             egg.tick(lane);
         }
-        EnderTower dragon = egg;
+        EndTower dragon = egg;
         if (!lane.towers().contains(dragon)
-                || dragon.state() != kim.biryeong.semiontd.tower.ender.EnderTowerState.PHANTOM
+                || dragon.state() != EndTowerState.PHANTOM
                 || dragon.entityId().isEmpty()
                 || dragon.entityId().getAsInt() != coreEntityId) {
             throw new AssertionError("Hatching should switch the existing core tower and entity from EGG to PHANTOM state.");

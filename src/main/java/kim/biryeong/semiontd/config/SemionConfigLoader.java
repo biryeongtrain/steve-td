@@ -14,7 +14,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import kim.biryeong.semiontd.persistence.SemionPersistenceConfig;
 import kim.biryeong.semiontd.rating.RatingConfig;
-import kim.biryeong.semiontd.tower.ender.EnderTowers;
+import kim.biryeong.semiontd.tower.end.EndTowers;
 import kim.biryeong.semiontd.trait.TraitSelectionConfig;
 import org.slf4j.Logger;
 
@@ -452,26 +452,26 @@ public final class SemionConfigLoader {
         JsonObject upgradeCosts = object.getAsJsonObject("upgradeCosts");
         boolean changed = migrateLegacyUpgradeCost(
                 upgradeCosts,
-                TowerBalanceConfig.upgradeKey(EnderTowers.T1_ENDERMITE_TOWER.id(), EnderTowers.T2_ENDERMAN_TOWER.id()),
+                TowerBalanceConfig.upgradeKey(EndTowers.T1_ENDERMITE_TOWER.id(), EndTowers.T2_ENDERMAN_TOWER.id()),
                 defaults
         );
         changed |= migrateLegacyUpgradeCost(
                 upgradeCosts,
-                TowerBalanceConfig.upgradeKey(EnderTowers.T2_ENDERMAN_TOWER.id(), EnderTowers.T3_END_CRYSTAL_TOWER.id()),
+                TowerBalanceConfig.upgradeKey(EndTowers.T2_ENDERMAN_TOWER.id(), EndTowers.T3_END_CRYSTAL_TOWER.id()),
                 defaults
         );
         changed |= migrateLegacyUpgradeCost(
                 upgradeCosts,
-                TowerBalanceConfig.upgradeKey(EnderTowers.T1_SHULKER_TOWER.id(), EnderTowers.T2_SHULKER_TOWER.id()),
+                TowerBalanceConfig.upgradeKey(EndTowers.T1_SHULKER_TOWER.id(), EndTowers.T2_SHULKER_TOWER.id()),
                 defaults
         );
         changed |= migrateLegacyUpgradeCost(
                 upgradeCosts,
-                TowerBalanceConfig.upgradeKey(EnderTowers.T2_SHULKER_TOWER.id(), EnderTowers.T3_SHULKER_TOWER.id()),
+                TowerBalanceConfig.upgradeKey(EndTowers.T2_SHULKER_TOWER.id(), EndTowers.T3_SHULKER_TOWER.id()),
                 defaults
         );
         String removedLegacyKey = TowerBalanceConfig.upgradeKey(
-                EnderTowers.T2_ENDERMAN_TOWER.id(),
+                EndTowers.T2_ENDERMAN_TOWER.id(),
                 "t3_enderman_tower"
         );
         if (upgradeCosts.remove(removedLegacyKey) != null) {
@@ -517,7 +517,7 @@ public final class SemionConfigLoader {
             return json;
         }
         JsonObject towers = object.getAsJsonObject("towers");
-        String towerId = EnderTowers.BASE_ENDER_TOWER.id();
+        String towerId = EndTowers.BASE_ENDER_TOWER.id();
         if (!towers.has(towerId) || !towers.get(towerId).isJsonObject()) {
             return json;
         }
@@ -556,14 +556,14 @@ public final class SemionConfigLoader {
         }
         changed |= migrateLegacyTowerAbilityValue(
                 abilities,
-                EnderTowers.T2_SHULKER_TOWER.id(),
+                EndTowers.T2_SHULKER_TOWER.id(),
                 "damageReduction",
                 0.15,
                 defaults
         );
         changed |= migrateLegacyTowerAbilityValue(
                 abilities,
-                EnderTowers.T3_SHULKER_TOWER.id(),
+                EndTowers.T3_SHULKER_TOWER.id(),
                 "damageReduction",
                 0.20,
                 defaults
