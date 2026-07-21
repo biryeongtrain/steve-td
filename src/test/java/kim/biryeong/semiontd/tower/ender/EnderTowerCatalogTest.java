@@ -123,6 +123,8 @@ class EnderTowerCatalogTest {
 
         assertTrue(description.contains("알로 소환되며"));
         assertTrue(description.contains("라운드 시작 시 팬텀"));
+        assertTrue(description.contains("이상이면"));
+        assertTrue(description.contains("최대 5.0"));
         assertTrue(description.contains("20초"));
         assertTrue(description.contains("5%"));
         assertTrue(description.contains("엔드 수정 계열"));

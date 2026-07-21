@@ -14,6 +14,7 @@ import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.map.LaneRegionLayout;
+import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.Bootstrap;
@@ -21,6 +22,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.block.Blocks;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import xyz.nucleoid.map_templates.BlockBounds;
 
@@ -31,6 +33,11 @@ class EnderTowerAbsorptionTest {
     static void bootstrapMinecraftRegistries() {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
+    }
+
+    @BeforeEach
+    void reloadCatalogs() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
     }
 
     @AfterEach
@@ -68,7 +75,7 @@ class EnderTowerAbsorptionTest {
         assertEquals(5.5, dragon.absorbedDamageBonus(), 0.0001);
         assertEquals(0.0, dragon.absorbedHealthBonus(), 0.0001);
         assertEquals(1, dragon.roundCompletedTransferCount());
-        assertEquals(19, dragon.adjustAttackInterval(20));
+        assertEquals(20, dragon.adjustAttackInterval(20));
 
         tick(dragon, lane, 4);
 
@@ -121,7 +128,7 @@ class EnderTowerAbsorptionTest {
         assertEquals(115.0, dragon.health(), 0.0001);
         assertEquals(0.0, shulker.health(), 0.0001);
         assertEquals(1, dragon.roundCompletedTransferCount());
-        assertEquals(19, dragon.adjustAttackInterval(20));
+        assertEquals(20, dragon.adjustAttackInterval(20));
     }
 
     @Test
@@ -182,7 +189,7 @@ class EnderTowerAbsorptionTest {
         assertEquals(12.5, dragon.modifyAttackDamage(null, null, 5.0), 0.0001);
         assertEquals(5.0, dragon.adjustAttackRange(5.0), 0.0001);
         assertEquals(0.5, dragon.splashRadius(), 0.0001);
-        assertEquals(5, dragon.adjustAttackInterval(20));
+        assertEquals(19, dragon.adjustAttackInterval(20));
         assertEquals(97.5, dragon.modifyIncomingDamage(null, null, 100.0), 0.0001);
         assertTrue(dragon.runtimeDetailLines().stream().anyMatch(line -> line.contains("생명력 흡수 2.0%")));
 
@@ -229,6 +236,26 @@ class EnderTowerAbsorptionTest {
         assertEquals(18, dragon.adjustAttackInterval(20));
         assertEquals(95.0, dragon.modifyIncomingDamage(null, null, 100.0), 0.0001);
         assertTrue(dragon.runtimeDetailLines().stream().anyMatch(line -> line.contains("생명력 흡수 2.0%")));
+    }
+
+    @Test
+    void completedTransfersUseRegisteredTowerTiersAsStackWeight() {
+        applyAbsorptionDuration(1);
+        PlayerLane lane = lane();
+        EnderTower dragon = tower(EnderTowers.BASE_ENDER_TOWER, 0);
+        lane.towers().add(dragon);
+        dragon.onWaveStarted(lane, 1);
+        dragon.tick(lane);
+        lane.towers().add(tower(EnderTowers.T2_ENDERMAN_TOWER, 1));
+        lane.towers().add(tower(EnderTowers.T3_END_CRYSTAL_TOWER, 2));
+        lane.towers().add(tower(EnderTowers.T2_SHULKER_TOWER, 3));
+        lane.towers().add(tower(EnderTowers.T3_SHULKER_TOWER, 4));
+
+        dragon.tick(lane);
+
+        assertEquals(5, dragon.absorbedEndCrystalCount());
+        assertEquals(5, dragon.absorbedShulkerCount());
+        assertEquals(4, dragon.roundCompletedTransferCount());
     }
 
     @Test

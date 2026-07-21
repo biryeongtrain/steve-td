@@ -50,6 +50,7 @@ class EnderDragonScaleTest {
         assertEquals(1.3, EnderTowers.phantomScaleForMaxHealth(150.0), 0.0001);
         assertEquals(1.4, EnderTowers.phantomScaleForMaxHealth(200.0), 0.0001);
         assertEquals(1.6, EnderTowers.phantomScaleForMaxHealth(300.0), 0.0001);
+        assertEquals(5.0, EnderTowers.phantomScaleForMaxHealth(5000.0), 0.0001);
     }
 
     @Test

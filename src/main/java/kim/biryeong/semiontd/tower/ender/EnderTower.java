@@ -516,10 +516,9 @@ public final class EnderTower extends EntityBackedTower {
         int every = Math.max(1, globalInt("endCrystalAttackIntervalEvery"));
         int permanentReduction = absorbedEndCrystalCount / every
                 * Math.max(0, globalInt("attackIntervalReductionPerStep"));
-        int roundReduction = Math.max(0, roundCompletedTransferCount);
         return Math.min(
                 Math.max(0, globalInt("maxAttackIntervalReductionTicks")),
-                permanentReduction + roundReduction
+                permanentReduction
         );
     }
 
