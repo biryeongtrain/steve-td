@@ -15,10 +15,10 @@ public final class EnderTowerJob extends SemionJob {
     public EnderTowerJob() {
         super(
                 ID,
-                Component.literal("엔더 빌더"),
+                Component.literal("엔드 빌더"),
                 List.of(
                         SemionText.mini("<gray>엔더 타워의 힘을 전달받아 핵심 엔더 드래곤을 성장시킵니다.</gray>"),
-                        SemionText.mini("<red><bold>그러나 성장 난이도가 매우 어렵습니다.</bold></red>")
+                        SemionText.mini("<red>그러나 성장 난이도가 매우 어렵습니다.</red>")
                 )
         );
     }
