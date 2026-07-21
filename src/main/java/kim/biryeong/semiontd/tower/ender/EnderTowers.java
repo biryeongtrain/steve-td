@@ -4,11 +4,11 @@ import static kim.biryeong.semiontd.tower.catalog.ProductionTowerDefinitions.tow
 import static kim.biryeong.semiontd.util.EntityTypeUtil.byId;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import kim.biryeong.semiontd.entity.visual.BlockDisplayVisual;
 import kim.biryeong.semiontd.entity.visual.EntityVisual;
 import kim.biryeong.semiontd.entity.visual.ShulkerVisual;
+import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
 import net.minecraft.world.entity.EntityType;
@@ -159,20 +159,11 @@ public final class EnderTowers {
             T1_SHULKER_TOWER.id(), T2_SHULKER_TOWER.id(), T3_SHULKER_TOWER.id()
     );
 
-    private static final Map<String, Integer> ABSORPTION_TIER_BY_ID = Map.of(
-            T1_ENDERMITE_TOWER.id(), 1,
-            T2_ENDERMAN_TOWER.id(), 2,
-            T3_END_CRYSTAL_TOWER.id(), 3,
-            T1_SHULKER_TOWER.id(), 1,
-            T2_SHULKER_TOWER.id(), 2,
-            T3_SHULKER_TOWER.id(), 3
-    );
-
     static {
         List<String> dragonDescription = List.of(
                 "<gray>알로 소환되며, 라운드 시작 시 팬텀으로 변합니다.</gray>",
-                "<gray>최대 체력이 <yellow>{ability.ender_global.dragonEvolutionMaxHealth:integer}</yellow>을 넘으면 엔더 드래곤으로 진화합니다.</gray>",
-                "<gray>팬텀 크기는 1.0부터 최대 체력 100당 0.2 증가합니다.</gray>",
+                "<gray>최대 체력이 <yellow>{ability.ender_global.dragonEvolutionMaxHealth:integer}</yellow> 이상이면 엔더 드래곤으로 진화합니다.</gray>",
+                "<gray>팬텀 크기는 1.0부터 최대 체력 100당 0.2 증가하며, 최대 5.0입니다.</gray>",
                 "<green>타워는 {ability.ender_global.absorptionDurationTicks:seconds} 동안 힘을 전달하고 사망합니다.</green>",
                 "<green>엔드 수정 계열: 타워 공격력 {ability.ender_global.permanentDamageRatio:percent} 영구 누적</green>",
                 "<green>{ability.ender_global.endCrystalSplashEvery:integer}기마다 광역 공격 반경 +{ability.ender_global.splashRadiusPerStep:blocks} (최대 {ability.ender_global.splashRadiusCap:blocks})</green>",
@@ -235,10 +226,9 @@ public final class EnderTowers {
     }
 
     public static int absorptionTier(TowerType type) {
-        if (type == null) {
-            return 0;
-        }
-        return ABSORPTION_TIER_BY_ID.getOrDefault(type.id(), 0);
+        return ProductionTowerCatalog.entry(type)
+                .map(ProductionTowerCatalog.CatalogEntry::tier)
+                .orElse(0);
     }
 
     public static double phantomScaleForMaxHealth(double maxHealth) {
