@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
+import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.KillSourceKind;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
@@ -144,24 +145,19 @@ public class BeeTower extends EntityBackedTower {
 
     private void applyPoisonDamage(SemionTowerEntity towerEntity, SemionMonsterEntity target, double baseDamage) {
         var runtimeMonster = target.runtimeMonster();
-        if (runtimeMonster != null) {
-            runtimeMonster.recordLastHit(ownerPlayer(), KillSourceKind.TOWER);
+        double traitDamage = towerEntity.applyTraitOutgoingDamage(runtimeMonster, baseDamage);
+        double damageAmount = target.towerDamageTaken(traitDamage);
+        if (damageAmount <= 0.0) {
+            return;
         }
-        double damageAmount = target.towerDamageTaken(baseDamage);
-        float previousHealth = target.getHealth();
-        target.hurt(towerEntity.damageSources().mobAttack(towerEntity), (float) damageAmount);
-        boolean damaged = target.getHealth() < previousHealth - 0.01F;
-        if (!damaged || target.getHealth() >= previousHealth - 0.01F) {
-            float nextHealth = Math.max(0.0F, previousHealth - (float) damageAmount);
-            target.setHealth(nextHealth);
-            if (runtimeMonster != null) {
-                runtimeMonster.syncHealth(nextHealth);
-            }
-            if (nextHealth <= 0.0F) {
-                target.discard();
-            }
-        } else if (runtimeMonster != null) {
-            runtimeMonster.syncHealth(target.getHealth());
+        double previousHealth = runtimeMonster == null ? 0.0 : runtimeMonster.health();
+        target.applyRuntimeDamage(
+                towerEntity.damageSources().mobAttack(towerEntity),
+                damageAmount,
+                DamageType.MAGIC
+        );
+        if (runtimeMonster != null && runtimeMonster.health() < previousHealth) {
+            runtimeMonster.recordLastHit(ownerPlayer(), KillSourceKind.TOWER);
         }
     }
 

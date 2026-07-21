@@ -582,15 +582,18 @@ public final class Monster {
     }
 
     public void damage(double amount, DamageType incomingDamageType) {
-        if (!isAlive() && state != MonsterState.REACHED_BOSS) {
+        if (amount <= 0 || (!isAlive() && state != MonsterState.REACHED_BOSS)) {
             return;
         }
-        double reduction = switch (incomingDamageType == null ? DamageType.PHYSICAL : incomingDamageType) {
+        DamageType damageType = incomingDamageType == null ? DamageType.PHYSICAL : incomingDamageType;
+        double defense = switch (damageType) {
             case PHYSICAL -> armor;
             case MAGIC -> resistance;
             case TRUE -> 0;
         };
-        double effectiveDamage = Math.max(1.0, amount - reduction);
+        double effectiveDamage = damageType == DamageType.TRUE
+                ? amount
+                : amount * 100.0 / (100.0 + Math.max(0.0, defense));
         health = Math.max(0, health - effectiveDamage);
         if (health <= 0) {
             state = MonsterState.DEAD;

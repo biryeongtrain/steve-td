@@ -90,7 +90,7 @@ final class WaveConfigTest {
     }
 
     @Test
-    void infiniteScalingPreservesCombatAndSpawnSettings() {
+    void infiniteScalingUpdatesDamageAndPreservesStaticSettings() {
         WaveMonsterEntry entry = new WaveMonsterEntry(
                 "infinite_tank",
                 100.0,
@@ -117,6 +117,7 @@ final class WaveConfigTest {
         WaveMonsterEntry scaledEntry = scaled.entriesForLane("lane_1").getFirst();
 
         assertEquals(140.0, scaledEntry.health(), 0.0001);
+        assertEquals(5.15, scaledEntry.attackDamage(), 0.0001);
         assertEquals(WaveSpawnMode.ROUND_ROBIN, scaled.spawnMode());
         assertEquals(4, scaled.spawnIntervalTicks());
         assertEquals(45.0, scaledEntry.targetPriority());
@@ -142,11 +143,43 @@ final class WaveConfigTest {
 
         assertEquals("second", selected.entriesForLane("lane_1").getFirst().id());
         assertEquals(210.0, selected.entriesForLane("lane_1").getFirst().health(), 0.0001);
+        assertEquals(1.03, selected.entriesForLane("lane_1").getFirst().attackDamage(), 0.0001);
         assertEquals(2, config.candidatesForRound(21).size());
     }
 
     @Test
-    void defaultConfigUsesThemedEntitiesWithoutChangingRoundTotals() {
+    void lateRoundDefaultsUseTempoBalanceValues() {
+        WaveConfig config = WaveConfig.defaultConfig();
+
+        assertCombatStats(config.configForRound(15).orElseThrow().entriesForLane("lane_1").getFirst(), 1100.0, 10.0, 30.0);
+
+        List<WaveMonsterEntry> round16 = config.configForRound(16).orElseThrow().entriesForLane("lane_1");
+        assertCombatStats(round16.get(0), 120.0, 10.0, 4.0);
+        assertCombatStats(round16.get(1), 60.0, 3.0, 6.0);
+        assertCombatStats(round16.get(2), 45.0, 3.0, 5.0);
+
+        List<WaveMonsterEntry> round18 = config.configForRound(18).orElseThrow().entriesForLane("lane_1");
+        assertCombatStats(round18.get(0), 120.0, 14.0, 5.0);
+        assertCombatStats(round18.get(1), 45.0, 7.0, 7.0);
+        assertCombatStats(round18.get(2), 30.0, 4.0, 9.0);
+    }
+
+    @Test
+    void infiniteRoundsScaleHealthAndAttackForLateGameTempo() {
+        WaveConfig config = WaveConfig.defaultConfig();
+        int[] rounds = {20, 30, 33, 40};
+        double[] healthMultipliers = {1.0, 5.0, 6.2, 9.0};
+        double[] attackMultipliers = {1.0, 1.3, 1.39, 1.6};
+
+        for (int index = 0; index < rounds.length; index++) {
+            WaveMonsterEntry entry = config.configForRound(rounds[index]).orElseThrow().entriesForLane("lane_1").getFirst();
+            assertEquals(250.0 * healthMultipliers[index], entry.health(), 0.0001, "round " + rounds[index] + " health");
+            assertEquals(10.0 * attackMultipliers[index], entry.attackDamage(), 0.0001, "round " + rounds[index] + " attack");
+        }
+    }
+
+    @Test
+    void defaultConfigUsesThemedEntitiesAndExpectedRoundTotals() {
         WaveConfig config = WaveConfig.defaultConfig();
         int[] expectedCounts = {12, 14, 18, 16, 20, 35, 30, 40, 40, 25, 35, 40, 50, 35, 4, 60, 100, 80, 80};
         double[] expectedHealth = {
@@ -200,6 +233,12 @@ final class WaveConfigTest {
 
     private static WaveMonsterEntry entry(String id, double health) {
         return new WaveMonsterEntry(id, health, 0.0, 1.0, AttackKind.MELEE, "minecraft:zombie", null, 1);
+    }
+
+    private static void assertCombatStats(WaveMonsterEntry entry, double health, double armor, double attackDamage) {
+        assertEquals(health, entry.health(), 0.0001, entry.id() + " health");
+        assertEquals(armor, entry.armor(), 0.0001, entry.id() + " armor");
+        assertEquals(attackDamage, entry.attackDamage(), 0.0001, entry.id() + " attack");
     }
 
     private static int totalCount(List<WaveMonsterEntry> entries) {

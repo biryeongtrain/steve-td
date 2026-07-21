@@ -52,7 +52,7 @@ public class WolfTower extends AnimalStackTower {
     public java.util.List<String> runtimeDetailLines() {
         java.util.ArrayList<String> lines = new java.util.ArrayList<>(super.runtimeDetailLines());
         lines.add("무리 효과 공격력 +" + oneDecimal(currentStacks() * value("damagePerStack"))
-                + ", 공격 간격 -" + oneDecimal(currentStacks() * value("intervalReductionPerStack")) + "틱");
+                + ", 공격 간격 -" + Math.round(currentStacks() * value("intervalReductionPerStack")) + "틱");
         if (!is(AnimalTowers.T1_WOLF_TOWER) && atMaxStacks()) {
             lines.add("최대 무리 효과 공격 간격 추가 -" + ticks("maxStackExtraIntervalReduction") + "틱");
         }

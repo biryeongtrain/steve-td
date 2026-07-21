@@ -161,14 +161,14 @@ public record TowerBalanceConfig(
         putUpgrade(upgradeCosts, UndeadTowers.T2_RANGED_SKELETON_TOWER, "t3_ranged_skeleton_tower", 200);
         putUpgrade(upgradeCosts, UndeadTowers.T2_MELEE_TOWER, "t3_melee_tower", 250);
         putUpgrade(upgradeCosts, UndeadTowers.T1_UNDEAD_ANIMAL_TOWER, "t2_undead_animal_tower", 300);
-        putUpgrade(upgradeCosts, AnimalTowers.T1_PIG_TOWER, "t2_pig_tower", 180);
-        putUpgrade(upgradeCosts, AnimalTowers.T2_PIG_TOWER, "t3_pig_tower", 300);
-        putUpgrade(upgradeCosts, AnimalTowers.T1_WOLF_TOWER, "t2_wolf_dps_tower", 110);
-        putUpgrade(upgradeCosts, AnimalTowers.T2_WOLF_DPS_TOWER, "t3_wolf_dps_tower", 110);
-        putUpgrade(upgradeCosts, AnimalTowers.T1_RABBIT_TOWER, "t2_rabbit_tower", 180);
-        putUpgrade(upgradeCosts, AnimalTowers.T2_RABBIT_TOWER, "t3_rabbit_tower", 300);
-        putUpgrade(upgradeCosts, AnimalTowers.T1_FOX_TOWER, "t2_fox_tower", 170);
-        putUpgrade(upgradeCosts, AnimalTowers.T2_FOX_TOWER, "t3_fox_tower", 320);
+        putUpgrade(upgradeCosts, AnimalTowers.T1_PIG_TOWER, "t2_pig_tower", 95);
+        putUpgrade(upgradeCosts, AnimalTowers.T2_PIG_TOWER, "t3_pig_tower", 150);
+        putUpgrade(upgradeCosts, AnimalTowers.T1_WOLF_TOWER, "t2_wolf_dps_tower", 90);
+        putUpgrade(upgradeCosts, AnimalTowers.T2_WOLF_DPS_TOWER, "t3_wolf_dps_tower", 180);
+        putUpgrade(upgradeCosts, AnimalTowers.T1_RABBIT_TOWER, "t2_rabbit_tower", 100);
+        putUpgrade(upgradeCosts, AnimalTowers.T2_RABBIT_TOWER, "t3_rabbit_tower", 200);
+        putUpgrade(upgradeCosts, AnimalTowers.T1_FOX_TOWER, "t2_fox_tower", 150);
+        putUpgrade(upgradeCosts, AnimalTowers.T2_FOX_TOWER, "t3_fox_tower", 225);
         putUpgrade(upgradeCosts, LegionTowers.T1_BEE_TOWER, "t2_bee_tower", 160);
         putUpgrade(upgradeCosts, LegionTowers.T2_BEE_TOWER, "t3_bee_tower", 310);
         putUpgrade(upgradeCosts, WarlockTowers.BASE_WARLOCK_TOWER, "ranged_warlock_tower", 0);
@@ -184,14 +184,14 @@ public record TowerBalanceConfig(
         putUpgrade(upgradeCosts, LegionTowers.T1_PARROT_TOWER, LegionTowers.T2_PARROT_TOWER.id(), 225);
         putUpgrade(upgradeCosts, LegionTowers.T1_GOAT_TOWER, LegionTowers.T2_STRONG_GOAT_TOWER.id(), 150);
         putUpgrade(upgradeCosts, LegionTowers.T2_STRONG_GOAT_TOWER, LegionTowers.T3_EXTREME_GOAT_TOWER.id(), 250);
-        putUpgrade(upgradeCosts, ResonanceTowers.FOCUS_CRYSTAL, ResonanceTowers.FOCUS_PRISM.id(), 180);
-        putUpgrade(upgradeCosts, ResonanceTowers.FOCUS_PRISM, ResonanceTowers.FOCUS_CORE.id(), 320);
-        putUpgrade(upgradeCosts, ResonanceTowers.WAVE_CRYSTAL, ResonanceTowers.WAVE_PRISM.id(), 160);
-        putUpgrade(upgradeCosts, ResonanceTowers.WAVE_PRISM, ResonanceTowers.WAVE_CORE.id(), 300);
-        putUpgrade(upgradeCosts, ResonanceTowers.FROST_CRYSTAL, ResonanceTowers.FROST_PRISM.id(), 150);
-        putUpgrade(upgradeCosts, ResonanceTowers.FROST_PRISM, ResonanceTowers.FROST_CORE.id(), 280);
-        putUpgrade(upgradeCosts, ResonanceTowers.AMPLIFY_CRYSTAL, ResonanceTowers.AMPLIFY_PRISM.id(), 200);
-        putUpgrade(upgradeCosts, ResonanceTowers.AMPLIFY_PRISM, ResonanceTowers.AMPLIFY_CORE.id(), 350);
+        putUpgrade(upgradeCosts, ResonanceTowers.FOCUS_CRYSTAL, ResonanceTowers.FOCUS_PRISM.id(), 60);
+        putUpgrade(upgradeCosts, ResonanceTowers.FOCUS_PRISM, ResonanceTowers.FOCUS_CORE.id(), 180);
+        putUpgrade(upgradeCosts, ResonanceTowers.WAVE_CRYSTAL, ResonanceTowers.WAVE_PRISM.id(), 60);
+        putUpgrade(upgradeCosts, ResonanceTowers.WAVE_PRISM, ResonanceTowers.WAVE_CORE.id(), 200);
+        putUpgrade(upgradeCosts, ResonanceTowers.FROST_CRYSTAL, ResonanceTowers.FROST_PRISM.id(), 60);
+        putUpgrade(upgradeCosts, ResonanceTowers.FROST_PRISM, ResonanceTowers.FROST_CORE.id(), 220);
+        putUpgrade(upgradeCosts, ResonanceTowers.AMPLIFY_CRYSTAL, ResonanceTowers.AMPLIFY_PRISM.id(), 60);
+        putUpgrade(upgradeCosts, ResonanceTowers.AMPLIFY_PRISM, ResonanceTowers.AMPLIFY_CORE.id(), 220);
         putUpgrade(upgradeCosts, IllagerTowers.T1_VINDICATOR, IllagerTowers.T2_VINDICATOR_CAPTAIN.id(), 170);
         putUpgrade(upgradeCosts, IllagerTowers.T2_VINDICATOR_CAPTAIN, IllagerTowers.T3_RAVAGER.id(), 330);
         putUpgrade(upgradeCosts, IllagerTowers.T1_PILLAGER, IllagerTowers.T2_PILLAGER_CAPTAIN_SINGLE.id(), 160);
@@ -459,59 +459,59 @@ public record TowerBalanceConfig(
                 "damageReduction", 0.10
         ));
         putAbilities(abilities, AnimalTowers.T3_PIG_TOWER.id(), Map.of(
-                "maxStacks", 3.0,
-                "healthPerStack", 40.0,
-                "damagePerStack", 10.0,
-                "damageReduction", 0.10,
+                "maxStacks", 2.0,
+                "healthPerStack", 90.0,
+                "damagePerStack", 15.0,
+                "damageReduction", 0.30,
                 "splashRadius", 1.0,
                 "splashDamageRatio", 0.50
         ));
         putAbilities(abilities, AnimalTowers.T1_WOLF_TOWER.id(), Map.of(
-                "maxStacks", 5.0,
-                "damagePerStack", 1.5,
-                "intervalReductionPerStack", 1.0
+                "maxStacks", 4.0,
+                "damagePerStack", 2.0,
+                "intervalReductionPerStack", 1.25
         ));
         putAbilities(abilities, AnimalTowers.T2_WOLF_DPS_TOWER.id(), Map.of(
-                "maxStacks", 5.0,
-                "damagePerStack", 4.0,
-                "intervalReductionPerStack", 1.0,
+                "maxStacks", 4.0,
+                "damagePerStack", 5.0,
+                "intervalReductionPerStack", 1.25,
                 "splashRadius", 1.25,
                 "splashDamageRatio", 0.50,
                 "maxStackExtraIntervalReduction", 3.0
         ));
         putAbilities(abilities, AnimalTowers.T3_WOLF_DPS_TOWER.id(), Map.of(
-                "maxStacks", 5.0,
-                "damagePerStack", 6.0,
-                "intervalReductionPerStack", 1.0,
-                "splashRadius", 1.5,
-                "splashDamageRatio", 0.50,
+                "maxStacks", 4.0,
+                "damagePerStack", 10.0,
+                "intervalReductionPerStack", 1.25,
+                "splashRadius", 2.0,
+                "splashDamageRatio", 0.75,
                 "maxStackExtraIntervalReduction", 5.0,
                 "maxStackDamageBonus", 5.0
         ));
         putAbilities(abilities, AnimalTowers.T1_RABBIT_TOWER.id(), Map.of(
-                "maxStacks", 5.0,
-                "damagePerStack", 2.0
+                "maxStacks", 4.0,
+                "damagePerStack", 2.5
         ));
         putAbilities(abilities, AnimalTowers.T2_RABBIT_TOWER.id(), Map.of(
-                "maxStacks", 5.0,
-                "damagePerStack", 5.0,
+                "maxStacks", 4.0,
+                "damagePerStack", 6.25,
                 "maxStackExtraIntervalReduction", 5.0
         ));
         putAbilities(abilities, AnimalTowers.T3_RABBIT_TOWER.id(), Map.of(
-                "maxStacks", 5.0,
-                "damagePerStack", 8.0,
-                "maxStackExtraIntervalReduction", 7.0,
-                "extraAttackDamageRatio", 1.0
+                "maxStacks", 4.0,
+                "damagePerStack", 12.5,
+                "maxStackExtraIntervalReduction", 5.0,
+                "extraAttackDamageRatio", 2.0
         ));
         putAbilities(abilities, AnimalTowers.T1_FOX_TOWER.id(), Map.of(
                 "maxStacks", 4.0,
                 "executeHealthThreshold", 0.30,
                 "executeThresholdPerStack", 0.02,
                 "maxExecuteHealthThreshold", 0.40,
-                "executeDamageBonusRatio", 0.25,
-                "executeDamageBonusPerStack", 0.05,
-                "killBonusDamage", 0.2,
-                "killBonusDamageCap", 12.0
+                "executeDamageBonusRatio", 0.50,
+                "executeDamageBonusPerStack", 0.20,
+                "killBonusDamage", 0.1,
+                "killBonusDamageCap", 10.0
         ));
         putAbilities(abilities, AnimalTowers.T2_FOX_TOWER.id(), Map.of(
                 "maxStacks", 4.0,
@@ -519,19 +519,19 @@ public record TowerBalanceConfig(
                 "executeThresholdPerStack", 0.025,
                 "maxExecuteHealthThreshold", 0.50,
                 "executeDamageBonusRatio", 0.50,
-                "executeDamageBonusPerStack", 0.075,
-                "killBonusDamage", 0.4,
-                "killBonusDamageCap", 24.0
+                "executeDamageBonusPerStack", 0.25,
+                "killBonusDamage", 0.2,
+                "killBonusDamageCap", 20.0
         ));
         putAbilities(abilities, AnimalTowers.T3_FOX_TOWER.id(), Map.of(
                 "maxStacks", 4.0,
                 "executeHealthThreshold", 0.40,
-                "executeThresholdPerStack", 0.03,
+                "executeThresholdPerStack", 0.04,
                 "maxExecuteHealthThreshold", 0.60,
                 "executeDamageBonusRatio", 0.75,
-                "executeDamageBonusPerStack", 0.10,
-                "killBonusDamage", 0.6,
-                "killBonusDamageCap", 36.0
+                "executeDamageBonusPerStack", 0.30,
+                "killBonusDamage", 0.4,
+                "killBonusDamageCap", 40.0
         ));
         putAbilities(abilities, LegionTowers.T1_BEE_TOWER.id(), Map.of(
                 "maxSwarmStacks", 4.0,
@@ -1120,69 +1120,79 @@ public record TowerBalanceConfig(
         }
     }
 
-    private static Map<String, Double> resonanceAbilities(int maxResonanceLevel, ResonanceAspect aspect) {
+    private static Map<String, Double> resonanceAbilities(int tier, ResonanceAspect aspect) {
         LinkedHashMap<String, Double> values = new LinkedHashMap<>();
         values.put("linkRange", 1.0);
         values.put("maxLinksPerTower", 6.0);
-        values.put("maxResonanceLevel", (double) Math.max(1, Math.min(3, maxResonanceLevel)));
-        values.put("level1RequiredLinks", 2.0);
-        values.put("level2RequiredLinks", 4.0);
-        values.put("level3RequiredLinks", 6.0);
+        values.put("maxResonanceLevel", 3.0);
+        values.put("level1RequiredLinks", 1.0);
+        values.put("level2RequiredLinks", 3.0);
+        values.put("level3RequiredLinks", 5.0);
         switch (aspect) {
             case FOCUS -> {
-                values.put("focusLevel1AttackSpeedBonus", 0.08);
-                values.put("focusLevel2AttackSpeedBonus", 0.10);
-                values.put("focusLevel2DamageBonus", 0.12);
-                values.put("focusLevel3AttackSpeedBonus", 0.12);
-                values.put("focusLevel3DamageBonus", 0.16);
-                values.put("focusStrikeEveryAttacks", 5.0);
-                values.put("focusStrikeDamageRatio", 0.45);
+                values.put("focusLevel1AttackSpeedBonus", tierValue(tier, 0.20, 0.30, 0.20));
+                values.put("focusLevel2AttackSpeedBonus", tierValue(tier, 0.40, 0.60, 0.40));
+                values.put("focusLevel2DamageBonus", 0.40);
+                values.put("focusLevel3AttackSpeedBonus", tierValue(tier, 0.60, 0.60, 0.80));
+                values.put("focusLevel3DamageBonus", 0.80);
+                values.put("focusStrikeEveryAttacks", 2.0);
+                values.put("focusStrikeDamageRatio", 2.50);
             }
             case WAVE -> {
-                values.put("waveLevel1AttackSpeedBonus", 0.06);
+                values.put("waveLevel1AttackSpeedBonus", tierValue(tier, 0.30, 0.30, 0.40));
                 values.put("waveLevel2SplashRadius", 1.25);
-                values.put("waveLevel2SplashDamageRatio", 0.25);
-                values.put("waveLevel3SplashRadius", 1.5);
-                values.put("waveLevel3SplashDamageRatio", 0.30);
-                values.put("wavePulseEveryAttacks", 5.0);
-                values.put("wavePulseRadius", 2.0);
-                values.put("wavePulseDamageRatio", 0.35);
+                values.put("waveLevel2SplashDamageRatio", 0.50);
+                values.put("waveLevel3SplashRadius", tierValue(tier, 1.50, 1.25, 1.25));
+                values.put("waveLevel3SplashDamageRatio", tierValue(tier, 0.80, 0.80, 1.00));
+                values.put("wavePulseEveryAttacks", 2.0);
+                values.put("wavePulseRadius", tierValue(tier, 2.0, 1.5, 1.5));
+                values.put("wavePulseDamageRatio", tierValue(tier, 2.0, 2.0, 1.75));
             }
             case FROST -> {
-                values.put("frostLevel1SlowMagnitude", 0.10);
-                values.put("frostLevel1AttackSpeedReductionMagnitude", 0.10);
+                values.put("frostLevel1SlowMagnitude", 0.15);
                 values.put("frostLevel1SlowTicks", 20.0);
-                values.put("frostLevel2SlowMagnitude", 0.15);
-                values.put("frostLevel2AttackSpeedReductionMagnitude", 0.15);
+                values.put("frostLevel2SlowMagnitude", 0.30);
                 values.put("frostLevel2SlowTicks", 30.0);
-                values.put("frostLevel2AuraDamageVsSlowedBonus", 0.08);
-                values.put("frostLevel3SlowMagnitude", 0.20);
-                values.put("frostLevel3AttackSpeedReductionMagnitude", 0.20);
-                values.put("frostLevel3SlowTicks", 40.0);
-                values.put("frostLevel3AuraDamageVsSlowedBonus", 0.10);
+                values.put("frostLevel3SlowMagnitude", 0.40);
+                values.put("frostLevel3SlowTicks", 50.0);
+                values.put("frostPulseEveryAttacks", tierValue(tier, 2.0, 3.0, 2.0));
+                values.put("frostPulseRadius", tierValue(tier, 2.0, 1.5, 1.75));
+                values.put("frostPulseDamageRatio", 0.60);
+                values.put("frostPulseSlowMagnitude", 0.75);
+                values.put("frostPulseSlowTicks", 60.0);
+                values.put("frostLevel1AttackSpeedReductionMagnitude", 0.15);
+                values.put("frostLevel2AttackSpeedReductionMagnitude", 0.30);
+                values.put("frostLevel3AttackSpeedReductionMagnitude", 0.40);
+                values.put("frostLevel2AuraDamageVsSlowedBonus", tierValue(tier, 0.50, 0.50, 0.35));
+                values.put("frostLevel3AuraDamageVsSlowedBonus", tierValue(tier, 1.50, 1.50, 1.00));
                 values.put("frostAuraRange", 1.0);
-                values.put("frostPulseEveryAttacks", 5.0);
-                values.put("frostPulseRadius", 1.75);
-                values.put("frostPulseDamageRatio", 0.20);
-                values.put("frostPulseSlowMagnitude", 0.25);
-                values.put("frostPulseAttackSpeedReductionMagnitude", 0.25);
-                values.put("frostPulseSlowTicks", 40.0);
+                values.put("frostPulseAttackSpeedReductionMagnitude", tierValue(tier, 0.75, 0.75, 0.50));
+                values.put("frostLevel2DamageVsSlowedBonus", 0.15);
+                values.put("frostLevel3DamageVsSlowedBonus", 0.30);
             }
             case AMPLIFY -> {
-                values.put("bloomLevel1DamageReduction", 0.08);
-                values.put("bloomLevel2DamageReduction", 0.12);
-                values.put("bloomLevel2AuraAttackSpeedBonus", 0.05);
-                values.put("bloomLevel3DamageReduction", 0.16);
-                values.put("bloomLevel3AuraAttackSpeedBonus", 0.08);
+                values.put("bloomLevel1DamageReduction", tierValue(tier, 0.15, 0.12, 0.12));
+                values.put("bloomLevel2DamageReduction", tierValue(tier, 0.30, 0.20, 0.20));
+                values.put("bloomLevel2AuraAttackSpeedBonus", tierValue(tier, 0.20, 0.20, 0.25));
+                values.put("bloomLevel3DamageReduction", tierValue(tier, 0.35, 0.35, 0.40));
+                values.put("bloomLevel3AuraAttackSpeedBonus", tierValue(tier, 0.50, 0.50, 0.35));
                 values.put("bloomAuraRange", 1.0);
-                values.put("bloomProtectEveryAttacks", 5.0);
-                values.put("bloomProtectRadius", 1.0);
-                values.put("bloomProtectHealRatio", 0.50);
-                values.put("bloomProtectDamageReduction", 0.08);
+                values.put("bloomProtectEveryAttacks", 3.0);
+                values.put("bloomProtectRadius", 2.0);
+                values.put("bloomProtectHealRatio", tierValue(tier, 0.40, 0.40, 0.60));
+                values.put("bloomProtectDamageReduction", 0.15);
                 values.put("bloomProtectTicks", 60.0);
             }
         }
         return values;
+    }
+
+    private static double tierValue(int tier, double tierOne, double tierTwo, double tierThree) {
+        return switch (tier) {
+            case 1 -> tierOne;
+            case 2 -> tierTwo;
+            default -> tierThree;
+        };
     }
 
     private static Map<String, TowerStats> copyTowerStats(Map<String, TowerStats> values) {

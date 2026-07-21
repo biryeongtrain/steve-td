@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
+import kim.biryeong.semiontd.config.TowerBalanceConfig.TowerStats;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.TeamId;
@@ -48,31 +49,47 @@ class ResonanceTowerCatalogTest {
         assertTrue(config.towers().containsKey(ResonanceTowers.AMPLIFY_CRYSTAL.id()));
         assertTrue(config.towers().containsKey(ResonanceTowers.AMPLIFY_PRISM.id()));
         assertTrue(config.towers().containsKey(ResonanceTowers.AMPLIFY_CORE.id()));
-        assertEquals(180, config.upgradeCost(ResonanceTowers.FOCUS_CRYSTAL.id(), ResonanceTowers.FOCUS_PRISM.id(), -1));
-        assertEquals(320, config.upgradeCost(ResonanceTowers.FOCUS_PRISM.id(), ResonanceTowers.FOCUS_CORE.id(), -1));
-        assertEquals(160, config.upgradeCost(ResonanceTowers.WAVE_CRYSTAL.id(), ResonanceTowers.WAVE_PRISM.id(), -1));
-        assertEquals(300, config.upgradeCost(ResonanceTowers.WAVE_PRISM.id(), ResonanceTowers.WAVE_CORE.id(), -1));
-        assertEquals(150, config.upgradeCost(ResonanceTowers.FROST_CRYSTAL.id(), ResonanceTowers.FROST_PRISM.id(), -1));
-        assertEquals(280, config.upgradeCost(ResonanceTowers.FROST_PRISM.id(), ResonanceTowers.FROST_CORE.id(), -1));
-        assertEquals(200, config.upgradeCost(ResonanceTowers.AMPLIFY_CRYSTAL.id(), ResonanceTowers.AMPLIFY_PRISM.id(), -1));
-        assertEquals(350, config.upgradeCost(ResonanceTowers.AMPLIFY_PRISM.id(), ResonanceTowers.AMPLIFY_CORE.id(), -1));
+        assertEquals(new TowerStats(50L, 45.0, 8.0, 8.0, 20, 5), config.towers().get(ResonanceTowers.FOCUS_CRYSTAL.id()));
+        assertEquals(new TowerStats(180L, 80.0, 6.5, 15.0, 15, 8), config.towers().get(ResonanceTowers.FOCUS_PRISM.id()));
+        assertEquals(new TowerStats(320L, 95.0, 7.0, 28.0, 16, 12), config.towers().get(ResonanceTowers.FOCUS_CORE.id()));
+        assertEquals(new TowerStats(45L, 70.0, 7.0, 8.0, 16, 10), config.towers().get(ResonanceTowers.WAVE_CRYSTAL.id()));
+        assertEquals(new TowerStats(50L, 60.0, 5.5, 15.0, 14, 12), config.towers().get(ResonanceTowers.WAVE_PRISM.id()));
+        assertEquals(new TowerStats(300L, 80.0, 8.0, 22.0, 12, 15), config.towers().get(ResonanceTowers.WAVE_CORE.id()));
+        assertEquals(new TowerStats(45L, 50.0, 7.0, 8.0, 20, 0), config.towers().get(ResonanceTowers.FROST_CRYSTAL.id()));
+        assertEquals(new TowerStats(150L, 75.0, 8.0, 10.0, 16, 2), config.towers().get(ResonanceTowers.FROST_PRISM.id()));
+        assertEquals(new TowerStats(280L, 105.0, 12.0, 16.0, 12, 5), config.towers().get(ResonanceTowers.FROST_CORE.id()));
+        assertEquals(new TowerStats(45L, 100.0, 5.0, 8.0, 15, 40), config.towers().get(ResonanceTowers.AMPLIFY_CRYSTAL.id()));
+        assertEquals(new TowerStats(200L, 200.0, 5.5, 11.0, 12, 45), config.towers().get(ResonanceTowers.AMPLIFY_PRISM.id()));
+        assertEquals(new TowerStats(350L, 450.0, 6.0, 20.0, 10, 50), config.towers().get(ResonanceTowers.AMPLIFY_CORE.id()));
+        assertEquals(60, config.upgradeCost(ResonanceTowers.FOCUS_CRYSTAL.id(), ResonanceTowers.FOCUS_PRISM.id(), -1));
+        assertEquals(180, config.upgradeCost(ResonanceTowers.FOCUS_PRISM.id(), ResonanceTowers.FOCUS_CORE.id(), -1));
+        assertEquals(60, config.upgradeCost(ResonanceTowers.WAVE_CRYSTAL.id(), ResonanceTowers.WAVE_PRISM.id(), -1));
+        assertEquals(200, config.upgradeCost(ResonanceTowers.WAVE_PRISM.id(), ResonanceTowers.WAVE_CORE.id(), -1));
+        assertEquals(60, config.upgradeCost(ResonanceTowers.FROST_CRYSTAL.id(), ResonanceTowers.FROST_PRISM.id(), -1));
+        assertEquals(220, config.upgradeCost(ResonanceTowers.FROST_PRISM.id(), ResonanceTowers.FROST_CORE.id(), -1));
+        assertEquals(60, config.upgradeCost(ResonanceTowers.AMPLIFY_CRYSTAL.id(), ResonanceTowers.AMPLIFY_PRISM.id(), -1));
+        assertEquals(220, config.upgradeCost(ResonanceTowers.AMPLIFY_PRISM.id(), ResonanceTowers.AMPLIFY_CORE.id(), -1));
         assertEquals(1.0, config.ability(ResonanceTowers.FOCUS_CRYSTAL.id(), "linkRange", -1.0), 0.0001);
         assertEquals(1.0, config.ability(ResonanceTowers.FOCUS_CORE.id(), "linkRange", -1.0), 0.0001);
         assertEquals(6.0, config.ability(ResonanceTowers.FOCUS_CORE.id(), "maxLinksPerTower", -1.0), 0.0001);
-        assertEquals(2.0, config.ability(ResonanceTowers.FOCUS_CORE.id(), "level1RequiredLinks", -1.0), 0.0001);
-        assertEquals(4.0, config.ability(ResonanceTowers.FOCUS_CORE.id(), "level2RequiredLinks", -1.0), 0.0001);
-        assertEquals(6.0, config.ability(ResonanceTowers.FOCUS_CORE.id(), "level3RequiredLinks", -1.0), 0.0001);
-        assertEquals(1.0, config.ability(ResonanceTowers.FOCUS_CRYSTAL.id(), "maxResonanceLevel", -1.0), 0.0001);
-        assertEquals(2.0, config.ability(ResonanceTowers.FOCUS_PRISM.id(), "maxResonanceLevel", -1.0), 0.0001);
+        assertEquals(1.0, config.ability(ResonanceTowers.FOCUS_CORE.id(), "level1RequiredLinks", -1.0), 0.0001);
+        assertEquals(3.0, config.ability(ResonanceTowers.FOCUS_CORE.id(), "level2RequiredLinks", -1.0), 0.0001);
+        assertEquals(5.0, config.ability(ResonanceTowers.FOCUS_CORE.id(), "level3RequiredLinks", -1.0), 0.0001);
+        assertEquals(3.0, config.ability(ResonanceTowers.FOCUS_CRYSTAL.id(), "maxResonanceLevel", -1.0), 0.0001);
+        assertEquals(3.0, config.ability(ResonanceTowers.FOCUS_PRISM.id(), "maxResonanceLevel", -1.0), 0.0001);
         assertEquals(3.0, config.ability(ResonanceTowers.FOCUS_CORE.id(), "maxResonanceLevel", -1.0), 0.0001);
-        assertEquals(0.16, config.ability(ResonanceTowers.FOCUS_CORE.id(), "focusLevel3DamageBonus", -1.0), 0.0001);
-        assertEquals(0.30, config.ability(ResonanceTowers.WAVE_CORE.id(), "waveLevel3SplashDamageRatio", -1.0), 0.0001);
-        assertEquals(0.20, config.ability(ResonanceTowers.FROST_CORE.id(), "frostLevel3SlowMagnitude", -1.0), 0.0001);
-        assertEquals(0.20, config.ability(ResonanceTowers.FROST_CORE.id(), "frostLevel3AttackSpeedReductionMagnitude", -1.0), 0.0001);
-        assertEquals(0.10, config.ability(ResonanceTowers.FROST_CORE.id(), "frostLevel3AuraDamageVsSlowedBonus", -1.0), 0.0001);
+        assertEquals(0.20, config.ability(ResonanceTowers.FOCUS_CORE.id(), "focusLevel1AttackSpeedBonus", -1.0), 0.0001);
+        assertEquals(0.40, config.ability(ResonanceTowers.FOCUS_CORE.id(), "focusLevel2AttackSpeedBonus", -1.0), 0.0001);
+        assertEquals(0.80, config.ability(ResonanceTowers.FOCUS_CORE.id(), "focusLevel3DamageBonus", -1.0), 0.0001);
+        assertEquals(1.00, config.ability(ResonanceTowers.WAVE_CORE.id(), "waveLevel3SplashDamageRatio", -1.0), 0.0001);
+        assertEquals(1.75, config.ability(ResonanceTowers.WAVE_CORE.id(), "wavePulseDamageRatio", -1.0), 0.0001);
+        assertEquals(0.40, config.ability(ResonanceTowers.FROST_CORE.id(), "frostLevel3SlowMagnitude", -1.0), 0.0001);
+        assertEquals(0.40, config.ability(ResonanceTowers.FROST_CORE.id(), "frostLevel3AttackSpeedReductionMagnitude", -1.0), 0.0001);
+        assertEquals(0.35, config.ability(ResonanceTowers.FROST_CORE.id(), "frostLevel2AuraDamageVsSlowedBonus", -1.0), 0.0001);
+        assertEquals(1.00, config.ability(ResonanceTowers.FROST_CORE.id(), "frostLevel3AuraDamageVsSlowedBonus", -1.0), 0.0001);
         assertEquals(1.0, config.ability(ResonanceTowers.FROST_CORE.id(), "frostAuraRange", -1.0), 0.0001);
-        assertEquals(0.25, config.ability(ResonanceTowers.FROST_CORE.id(), "frostPulseAttackSpeedReductionMagnitude", -1.0), 0.0001);
-        assertEquals(0.08, config.ability(ResonanceTowers.AMPLIFY_CORE.id(), "bloomLevel3AuraAttackSpeedBonus", -1.0), 0.0001);
+        assertEquals(0.50, config.ability(ResonanceTowers.FROST_CORE.id(), "frostPulseAttackSpeedReductionMagnitude", -1.0), 0.0001);
+        assertEquals(0.35, config.ability(ResonanceTowers.AMPLIFY_CORE.id(), "bloomLevel3AuraAttackSpeedBonus", -1.0), 0.0001);
     }
 
     @Test
@@ -116,6 +133,7 @@ class ResonanceTowerCatalogTest {
     void moobloomDescriptionsUseTowerDefenseRoleTextAndAvoidThematicFlowerBedWording() {
         var focusDescription = TowerBalanceRuntime.resolve(ResonanceTowers.FOCUS_CRYSTAL).description();
         var waveDescription = TowerBalanceRuntime.resolve(ResonanceTowers.WAVE_CRYSTAL).description();
+        var frostDescription = TowerBalanceRuntime.resolve(ResonanceTowers.FROST_CRYSTAL).description();
         var bloomDescription = TowerBalanceRuntime.resolve(ResonanceTowers.AMPLIFY_CRYSTAL).description();
         var playerFacingLines = new java.util.ArrayList<String>();
         playerFacingLines.addAll(focusDescription);
@@ -124,10 +142,13 @@ class ResonanceTowerCatalogTest {
         new ResonanceTowerJob().description().forEach(line -> playerFacingLines.add(line.getString()));
 
         assertTrue(focusDescription.stream().anyMatch(line -> line.contains("단일 타겟")));
-        assertTrue(focusDescription.stream().anyMatch(line -> line.contains("현재 해금") && line.contains("1단계")));
+        assertTrue(focusDescription.stream().anyMatch(line -> line.contains("현재 해금") && line.contains("3단계")));
         assertTrue(focusDescription.stream().anyMatch(line -> line.contains("공명 1단계")));
-        assertFalse(focusDescription.stream().anyMatch(line -> line.contains("공명 2단계")));
-        assertFalse(focusDescription.stream().anyMatch(line -> line.contains("공명 3단계")));
+        assertTrue(focusDescription.stream().anyMatch(line -> line.contains("공명 2단계")));
+        assertTrue(focusDescription.stream().anyMatch(line -> line.contains("공명 3단계")));
+        assertTrue(waveDescription.stream().anyMatch(line -> line.contains("공명 3단계")));
+        assertTrue(frostDescription.stream().anyMatch(line -> line.contains("공명 3단계")));
+        assertTrue(bloomDescription.stream().anyMatch(line -> line.contains("공명 3단계")));
         assertTrue(waveDescription.stream().anyMatch(line -> line.contains("범위 공격")));
         assertTrue(bloomDescription.stream().anyMatch(line -> line.contains("저항 효과")));
         assertFalse(playerFacingLines.stream().anyMatch(line -> line.contains("꽃밭")));
@@ -136,7 +157,7 @@ class ResonanceTowerCatalogTest {
     }
 
     @Test
-    void resonanceLevelUnlocksFollowTowerUpgradeTier() {
+    void allTowerTiersUseLiveMaximumResonanceLevel() {
         UUID playerId = UUID.fromString("00000000-0000-0000-0000-000000000123");
         ResonanceTower focusT1 = resonanceTower(ResonanceTowers.FOCUS_CRYSTAL, playerId, 0);
         ResonanceTower focusT2 = resonanceTower(ResonanceTowers.FOCUS_PRISM, playerId, 0);
@@ -146,18 +167,17 @@ class ResonanceTowerCatalogTest {
         ResonanceTower bloom = resonanceTower(ResonanceTowers.AMPLIFY_CRYSTAL, playerId, 0, 1);
         ResonanceTower waveT2 = resonanceTower(ResonanceTowers.WAVE_PRISM, playerId, 0, -1);
         ResonanceTower frostT2 = resonanceTower(ResonanceTowers.FROST_PRISM, playerId, 1, 1);
-        ResonanceTower bloomT2 = resonanceTower(ResonanceTowers.AMPLIFY_PRISM, playerId, -1, -1);
 
-        var nearbySpecies = java.util.List.of(wave, frost, bloom, waveT2, frostT2, bloomT2);
+        var nearbySpecies = java.util.List.of(wave, frost, bloom, waveT2, frostT2);
 
         ResonanceService.refresh(withLinks(focusT1, nearbySpecies));
         ResonanceService.refresh(withLinks(focusT2, nearbySpecies));
         ResonanceService.refresh(withLinks(focusT3, nearbySpecies));
 
-        assertEquals(1, focusT1.resonanceLevel());
-        assertEquals(2, focusT2.resonanceLevel());
+        assertEquals(3, focusT1.resonanceLevel());
+        assertEquals(3, focusT2.resonanceLevel());
         assertEquals(3, focusT3.resonanceLevel());
-        assertEquals(6, focusT3.resonanceLinks());
+        assertEquals(5, focusT3.resonanceLinks());
     }
 
     @Test
@@ -166,23 +186,24 @@ class ResonanceTowerCatalogTest {
         ResonanceTower focus = resonanceTower(ResonanceTowers.FOCUS_CORE, playerId, 0);
         ResonanceTower wave = resonanceTower(ResonanceTowers.WAVE_CRYSTAL, playerId, 1, 0);
         ResonanceTower frost = resonanceTower(ResonanceTowers.FROST_CRYSTAL, playerId, -1, 0);
-        var towers = withLinks(focus, java.util.List.of(wave, frost));
+        ResonanceTower bloom = resonanceTower(ResonanceTowers.AMPLIFY_CRYSTAL, playerId, 0, 1);
+        var towers = withLinks(focus, java.util.List.of(wave, frost, bloom));
 
         ResonanceService.refresh(towers);
 
-        assertEquals(1, focus.resonanceLevel());
-        assertEquals(2, focus.resonanceLinks());
+        assertEquals(2, focus.resonanceLevel());
+        assertEquals(3, focus.resonanceLinks());
 
-        towers.remove(frost);
+        towers.remove(bloom);
         ResonanceService.refresh(towers);
 
-        assertEquals(1, focus.resonanceLevel());
-        assertEquals(2, focus.resonanceLinks());
+        assertEquals(2, focus.resonanceLevel());
+        assertEquals(3, focus.resonanceLinks());
 
         ResonanceService.refreshAfterTowerSale(towers);
 
-        assertEquals(0, focus.resonanceLevel());
-        assertEquals(1, focus.resonanceLinks());
+        assertEquals(1, focus.resonanceLevel());
+        assertEquals(2, focus.resonanceLinks());
     }
 
     @Test
@@ -215,7 +236,7 @@ class ResonanceTowerCatalogTest {
         assertEquals(2, ProductionTowerCatalog.find(ResonanceTowers.FOCUS_PRISM.id()).orElseThrow().tier());
         assertEquals(3, ProductionTowerCatalog.find(ResonanceTowers.FOCUS_CORE.id()).orElseThrow().tier());
         assertEquals(ResonanceTowers.FOCUS_PRISM.id(), ProductionTowerCatalog.upgrade(ResonanceTowers.FOCUS_CRYSTAL, ResonanceTowers.FOCUS_PRISM.id()).orElseThrow().targetType().id());
-        assertEquals(180, ProductionTowerCatalog.upgrade(ResonanceTowers.FOCUS_CRYSTAL, ResonanceTowers.FOCUS_PRISM.id()).orElseThrow().mineralCost());
+        assertEquals(60, ProductionTowerCatalog.upgrade(ResonanceTowers.FOCUS_CRYSTAL, ResonanceTowers.FOCUS_PRISM.id()).orElseThrow().mineralCost());
         assertEquals(ResonanceTowers.FOCUS_CORE.id(), ProductionTowerCatalog.upgrade(ResonanceTowers.FOCUS_PRISM, ResonanceTowers.FOCUS_CORE.id()).orElseThrow().targetType().id());
         assertEquals(ResonanceTowers.WAVE_PRISM.id(), ProductionTowerCatalog.upgrade(ResonanceTowers.WAVE_CRYSTAL, ResonanceTowers.WAVE_PRISM.id()).orElseThrow().targetType().id());
         assertEquals(ResonanceTowers.WAVE_CORE.id(), ProductionTowerCatalog.upgrade(ResonanceTowers.WAVE_PRISM, ResonanceTowers.WAVE_CORE.id()).orElseThrow().targetType().id());

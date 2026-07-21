@@ -3,6 +3,7 @@ package kim.biryeong.semiontd.entity.boss.goal;
 import java.util.EnumSet;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.entity.boss.SemionBossEntity;
+import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -95,26 +96,18 @@ public final class BossAttackLaneMonsterGoal extends Goal {
 
     private void damage(SemionMonsterEntity target) {
         Monster runtimeMonster = target.runtimeMonster();
-        if (runtimeMonster != null) {
-            runtimeMonster.recordBossHit();
-        }
         double damageAmount = boss.attackDamageAgainst(runtimeMonster);
-        float previousHealth = target.getHealth();
-        target.hurt(boss.damageSources().mobAttack(boss), (float) damageAmount);
-        if (runtimeMonster != null) {
-            runtimeMonster.syncHealth(target.getHealth());
-        }
-        if (target.getHealth() < previousHealth - 0.01F) {
+        if (damageAmount <= 0.0) {
             return;
         }
-
-        float nextHealth = Math.max(0.0F, previousHealth - (float) damageAmount);
-        target.setHealth(nextHealth);
-        if (runtimeMonster != null) {
-            runtimeMonster.syncHealth(nextHealth);
-        }
-        if (nextHealth <= 0.0F) {
-            target.discard();
+        double previousHealth = runtimeMonster == null ? 0.0 : runtimeMonster.health();
+        target.applyRuntimeDamage(
+                boss.damageSources().mobAttack(boss),
+                damageAmount,
+                DamageType.PHYSICAL
+        );
+        if (runtimeMonster != null && runtimeMonster.health() < previousHealth) {
+            runtimeMonster.recordBossHit();
         }
     }
 

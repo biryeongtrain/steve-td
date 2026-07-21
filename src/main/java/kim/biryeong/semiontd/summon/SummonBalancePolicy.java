@@ -4,7 +4,8 @@ public final class SummonBalancePolicy {
     public static final double SUMMON_HEALTH_PER_ROUND = 0.05;
     public static final double SUMMON_ATTACK_DAMAGE_PER_ROUND = 0.05;
     public static final int SUMMON_LATE_SCALING_START_ROUND = 15;
-    public static final double SUMMON_LATE_SCALING_MULTIPLIER = 2.0;
+    public static final double SUMMON_HEALTH_LATE_SCALING_MULTIPLIER = 2.0;
+    public static final double SUMMON_ATTACK_DAMAGE_LATE_SCALING_MULTIPLIER = 2.5;
     public static final double SIEGE_NEAR_BOSS_PROGRESS = 0.80;
     public static final double SIEGE_NEAR_BOSS_TARGET_BONUS = 30.0;
     public static final double STORM_LYNX_MOVE_SPEED_BONUS = 0.22;
@@ -81,16 +82,20 @@ public final class SummonBalancePolicy {
     }
 
     public static double summonAttackDamageMultiplier(int round) {
-        return summonRoundMultiplier(round, SUMMON_ATTACK_DAMAGE_PER_ROUND);
+        return summonRoundMultiplier(
+                round,
+                SUMMON_ATTACK_DAMAGE_PER_ROUND,
+                SUMMON_ATTACK_DAMAGE_LATE_SCALING_MULTIPLIER
+        );
     }
 
     public static double summonHealthMultiplier(int round) {
-        return summonRoundMultiplier(round, SUMMON_HEALTH_PER_ROUND);
+        return summonRoundMultiplier(round, SUMMON_HEALTH_PER_ROUND, SUMMON_HEALTH_LATE_SCALING_MULTIPLIER);
     }
 
-    private static double summonRoundMultiplier(int round, double perRound) {
+    private static double summonRoundMultiplier(int round, double perRound, double lateScalingMultiplier) {
         int normalRounds = Math.max(0, Math.min(round, SUMMON_LATE_SCALING_START_ROUND - 1) - 1);
         int lateRounds = Math.max(0, round - SUMMON_LATE_SCALING_START_ROUND + 1);
-        return 1.0 + normalRounds * perRound + lateRounds * perRound * SUMMON_LATE_SCALING_MULTIPLIER;
+        return 1.0 + normalRounds * perRound + lateRounds * perRound * lateScalingMultiplier;
     }
 }

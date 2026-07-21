@@ -4414,9 +4414,82 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
         if (!assertTrue(
                 context,
-                foxTower.runtimeDetailLines().stream().anyMatch(line -> line.contains("사망 보너스 1/60")),
+                foxTower.runtimeDetailLines().stream().anyMatch(line -> line.contains("사망 보너스 1/100")),
                 "Fox tower runtime details should show the nearby death bonus stack."
         )) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void towerDamageAppliesTraitsTargetModifiersArmorAndSingleReward(GameTestHelper context) {
+        UUID playerId = stableUuid("runtime-damage-owner");
+        Vec3 origin = Vec3.atCenterOf(context.absolutePos(BlockPos.ZERO)).add(2.0, 2.0, 2.0);
+        TestTower tower = new TestTower(
+                TestTowerTypes.TEST_DIRECT,
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(BlockPos.containing(origin))
+        );
+        SemionTowerEntity towerEntity = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+        towerEntity.configure(tower, null);
+        towerEntity.setPos(origin);
+        towerEntity.applyTimedEffect(TimedEffectType.TOWER_TRAIT_DAMAGE_BONUS, 0.20, 40);
+        context.getLevel().addFreshEntity(towerEntity);
+
+        Monster runtimeMonster = new Monster(
+                "runtime-damage-target",
+                TeamId.RED,
+                1,
+                Optional.empty(),
+                Optional.empty(),
+                100.0,
+                20.0,
+                0.0,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                10
+        );
+        SemionMonsterEntity target = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
+        target.configureFrom(runtimeMonster, null);
+        target.setPos(origin.add(2.0, 0.0, 0.0));
+        target.setNoAi(true);
+        target.applyTimedEffect(TimedEffectType.MONSTER_DAMAGE_REDUCTION, 0.25, 40);
+        context.getLevel().addFreshEntity(target);
+
+        boolean firstHitKilled = tower.damageTarget(towerEntity, target, 100.0);
+        if (!assertTrue(context, !firstHitKilled, "First hit should leave the armored target alive.")) {
+            return;
+        }
+        if (!assertClose(context, 25.0, runtimeMonster.health(), "Outgoing bonus, target reduction, then armor should produce 75 damage.")) {
+            return;
+        }
+        if (!assertClose(context, runtimeMonster.health(), target.getHealth(), "Runtime and entity health should stay synchronized.")) {
+            return;
+        }
+        if (!assertTrue(context, runtimeMonster.lastHitPlayerId().filter(playerId::equals).isPresent(), "Tower owner should be recorded as the last hitter.")) {
+            return;
+        }
+        if (!assertTrue(context, runtimeMonster.lastHitSourceKind() == KillSourceKind.TOWER, "Tower damage should record the tower kill source.")) {
+            return;
+        }
+
+        if (!assertTrue(context, tower.damageTarget(towerEntity, target, 40.0), "Second hit should kill the target.")) {
+            return;
+        }
+        SemionPlayer player = new SemionPlayer(
+                playerId,
+                "runtime-damage-owner",
+                TeamId.RED,
+                1,
+                new PlayerEconomy(EconomyConfig.defaultConfig())
+        );
+        EconomyService economyService = new EconomyService(EconomyConfig.defaultConfig());
+        economyService.awardMonsterKillReward(runtimeMonster, Map.of(playerId, player));
+        economyService.awardMonsterKillReward(runtimeMonster, Map.of(playerId, player));
+        if (!assertEquals(context, 210L, player.economy().diamond(), "Monster reward should be granted exactly once.")) {
             return;
         }
         context.succeed();
@@ -4484,6 +4557,12 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 target.getHealth() <= 80.0F,
                 "Bee tower has zero direct damage in this test, so health loss should come from config-driven poison. Actual health=" + target.getHealth()
         )) {
+            return;
+        }
+        if (!assertClose(context, target.runtimeMonster().health(), target.getHealth(), "Bee poison should synchronize runtime and entity health.")) {
+            return;
+        }
+        if (!assertTrue(context, target.runtimeMonster().lastHitSourceKind() == KillSourceKind.TOWER, "Bee poison should preserve tower kill attribution.")) {
             return;
         }
         context.succeed();
@@ -5929,6 +6008,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         boss.configure(TeamId.RED, BossMonster.defaultBoss(TeamId.RED));
         boss.setPos(anchor);
         boss.setAnchorPosition(anchor);
+        boss.setNoAi(true);
         context.getLevel().addFreshEntity(boss);
 
         SemionMonsterEntity primary = spawnBossTargetMonster(context, "boss-splash-primary", anchor.add(2.0, 0.0, 0.0));
@@ -5945,6 +6025,18 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 return;
             }
             if (!assertEquals(context, 100.0F, far.getHealth(), "Boss splash should not hit monsters outside the splash radius.")) {
+                return;
+            }
+            if (!assertClose(context, 73.0, primary.runtimeMonster().health(), "Boss physical damage should use armor, not resistance.")) {
+                return;
+            }
+            if (!assertClose(context, primary.runtimeMonster().health(), primary.getHealth(), "Boss damage should synchronize primary runtime and entity health.")) {
+                return;
+            }
+            if (!assertClose(context, nearby.runtimeMonster().health(), nearby.getHealth(), "Boss splash should synchronize nearby runtime and entity health.")) {
+                return;
+            }
+            if (!assertTrue(context, primary.runtimeMonster().lastHitSourceKind() == KillSourceKind.BOSS, "Boss damage should preserve boss kill attribution.")) {
                 return;
             }
             context.succeed();
@@ -6976,15 +7068,18 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         );
 
         monster.damage(10, DamageType.PHYSICAL);
-        if (!assertEquals(context, 128.0, monster.health(), "Physical damage should be reduced by armor.")) {
+        double expectedHealth = 130.0 - 10.0 * 100.0 / 108.0;
+        if (!assertClose(context, expectedHealth, monster.health(), "Physical damage should use percentage armor mitigation.")) {
             return;
         }
         monster.damage(10, DamageType.MAGIC);
-        if (!assertEquals(context, 119.0, monster.health(), "Magic damage should be reduced by resistance.")) {
+        expectedHealth -= 10.0 * 100.0 / 101.0;
+        if (!assertClose(context, expectedHealth, monster.health(), "Magic damage should use percentage resistance mitigation.")) {
             return;
         }
         monster.damage(10, DamageType.TRUE);
-        if (!assertEquals(context, 109.0, monster.health(), "True damage should ignore armor and resistance.")) {
+        expectedHealth -= 10.0;
+        if (!assertClose(context, expectedHealth, monster.health(), "True damage should ignore armor and resistance.")) {
             return;
         }
         context.succeed();
@@ -7571,18 +7666,17 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         lane.addTower(tower);
         lane.addTower(new PigTower(AnimalTowers.T1_PIG_TOWER, playerId, TeamId.RED, 1, new GridPosition(base.getX() + 1, base.getY(), base.getZ())));
         lane.addTower(new PigTower(AnimalTowers.T1_PIG_TOWER, playerId, TeamId.RED, 1, new GridPosition(base.getX() + 2, base.getY(), base.getZ())));
-        lane.addTower(new PigTower(AnimalTowers.T1_PIG_TOWER, playerId, TeamId.RED, 1, new GridPosition(base.getX() + 3, base.getY(), base.getZ())));
 
-        if (!assertClose(context, 370.0, tower.currentMaxHealth(), "T3 pig should gain max health from three same-owner pig stacks.")) {
+        if (!assertClose(context, 530.0, tower.currentMaxHealth(), "T3 pig should gain max health from two same-owner pig stacks.")) {
             return;
         }
-        if (!assertClose(context, 370.0, tower.health(), "T3 pig should gain current health when stacks increase.")) {
+        if (!assertClose(context, 530.0, tower.health(), "T3 pig should gain current health when stacks increase.")) {
             return;
         }
-        if (!assertClose(context, 45.0, tower.modifyAttackDamage(null, null, 15.0), "T3 pig should gain damage from three pig stacks.")) {
+        if (!assertClose(context, 45.0, tower.modifyAttackDamage(null, null, tower.type().damage()), "T3 pig should gain damage from two pig stacks.")) {
             return;
         }
-        if (!assertClose(context, 90.0, tower.modifyIncomingDamage(null, null, 100.0), "T3 pig should reduce incoming damage at max stacks.")) {
+        if (!assertClose(context, 70.0, tower.modifyIncomingDamage(null, null, 100.0), "T3 pig should reduce incoming damage at max stacks.")) {
             return;
         }
 
@@ -7615,15 +7709,61 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 1,
                 new GridPosition(base.getX(), base.getY(), base.getZ())
         );
+        WolfTower t1Tower = new WolfTower(
+                AnimalTowers.T1_WOLF_TOWER,
+                playerId,
+                TeamId.RED,
+                1,
+                new GridPosition(base.getX() + 1, base.getY(), base.getZ() + 1)
+        );
+        WolfTower t3Tower = new WolfTower(
+                AnimalTowers.T3_WOLF_DPS_TOWER,
+                playerId,
+                TeamId.RED,
+                1,
+                new GridPosition(base.getX() + 2, base.getY(), base.getZ() + 1)
+        );
         lane.addTower(tower);
-        for (int i = 1; i <= 5; i++) {
-            lane.addTower(new WolfTower(AnimalTowers.T1_WOLF_TOWER, playerId, TeamId.RED, 1, new GridPosition(base.getX() + i, base.getY(), base.getZ() + 1)));
-        }
+        lane.addTower(t1Tower);
+        lane.addTower(t3Tower);
+        lane.addTower(new WolfTower(AnimalTowers.T1_WOLF_TOWER, playerId, TeamId.RED, 1, new GridPosition(base.getX() + 3, base.getY(), base.getZ() + 1)));
+        lane.addTower(new RabbitTower(AnimalTowers.T1_RABBIT_TOWER, playerId, TeamId.RED, 1, new GridPosition(base.getX() + 4, base.getY(), base.getZ() + 2)));
+        lane.addTower(new WolfTower(AnimalTowers.T1_WOLF_TOWER, stableUuid("other-wolf-owner"), TeamId.RED, 1, new GridPosition(base.getX() + 5, base.getY(), base.getZ() + 2)));
 
-        if (!assertClose(context, 28.0, tower.modifyAttackDamage(null, null, 8.0), "T2 wolf should gain damage from five same-owner wolf stacks.")) {
+        if (!assertClose(context, 25.0, tower.modifyAttackDamage(null, null, tower.type().damage()), "Four total same-owner wolves should stay below max stacks.")) {
             return;
         }
-        if (!assertEquals(context, 7, tower.adjustAttackInterval(15), "T2 wolf should reduce attack interval from stacks and max-stack bonus.")) {
+        if (!assertEquals(context, 16, tower.adjustAttackInterval(tower.type().attackIntervalTicks()), "Different-family and different-owner towers should not grant wolf stacks.")) {
+            return;
+        }
+        if (!assertTrue(context, tower.runtimeDetailLines().stream().anyMatch(line -> line.contains("무리 스택 3/4")), "Four total same-owner wolves should show three supporting stacks.")) {
+            return;
+        }
+
+        lane.addTower(new WolfTower(AnimalTowers.T1_WOLF_TOWER, playerId, TeamId.RED, 1, new GridPosition(base.getX() + 6, base.getY(), base.getZ() + 1)));
+
+        if (!assertClose(context, 13.0, t1Tower.modifyAttackDamage(null, null, t1Tower.type().damage()), "T1 wolf should reach 13 damage with five total wolves.")) {
+            return;
+        }
+        if (!assertEquals(context, 15, t1Tower.adjustAttackInterval(t1Tower.type().attackIntervalTicks()), "T1 wolf should reach a 15-tick interval at max stacks.")) {
+            return;
+        }
+        if (!assertClose(context, 30.0, tower.modifyAttackDamage(null, null, tower.type().damage()), "T2 wolf should reach 30 damage with five total wolves.")) {
+            return;
+        }
+        if (!assertEquals(context, 12, tower.adjustAttackInterval(tower.type().attackIntervalTicks()), "T2 wolf should reach a 12-tick interval at max stacks.")) {
+            return;
+        }
+        if (!assertClose(context, 65.0, t3Tower.modifyAttackDamage(null, null, t3Tower.type().damage()), "T3 wolf should reach 65 damage with five total wolves.")) {
+            return;
+        }
+        if (!assertEquals(context, 10, t3Tower.adjustAttackInterval(t3Tower.type().attackIntervalTicks()), "T3 wolf should reach a 10-tick interval at max stacks.")) {
+            return;
+        }
+        if (!assertTrue(context, tower.runtimeDetailLines().stream().anyMatch(line -> line.contains("무리 스택 4/4")), "Five total same-owner wolves should activate max stacks.")) {
+            return;
+        }
+        if (!assertTrue(context, tower.runtimeDetailLines().stream().anyMatch(line -> line.contains("공격 간격 -5틱")), "Wolf runtime details should show the rounded interval reduction used in combat.")) {
             return;
         }
 
@@ -7656,15 +7796,34 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 1,
                 new GridPosition(base.getX(), base.getY(), base.getZ())
         );
+        RabbitTower t1Tower = new RabbitTower(
+                AnimalTowers.T1_RABBIT_TOWER,
+                playerId,
+                TeamId.RED,
+                1,
+                new GridPosition(base.getX() + 1, base.getY(), base.getZ() + 2)
+        );
+        RabbitTower t2Tower = new RabbitTower(
+                AnimalTowers.T2_RABBIT_TOWER,
+                playerId,
+                TeamId.RED,
+                1,
+                new GridPosition(base.getX() + 2, base.getY(), base.getZ() + 2)
+        );
         lane.addTower(tower);
-        for (int i = 1; i <= 5; i++) {
-            lane.addTower(new RabbitTower(AnimalTowers.T1_RABBIT_TOWER, playerId, TeamId.RED, 1, new GridPosition(base.getX() + i, base.getY(), base.getZ() + 2)));
-        }
+        lane.addTower(t1Tower);
+        lane.addTower(t2Tower);
+        lane.addTower(new RabbitTower(AnimalTowers.T1_RABBIT_TOWER, playerId, TeamId.RED, 1, new GridPosition(base.getX() + 3, base.getY(), base.getZ() + 2)));
+        lane.addTower(new WolfTower(AnimalTowers.T1_WOLF_TOWER, playerId, TeamId.RED, 1, new GridPosition(base.getX() + 4, base.getY(), base.getZ() + 1)));
+        lane.addTower(new RabbitTower(AnimalTowers.T1_RABBIT_TOWER, stableUuid("other-rabbit-owner"), TeamId.RED, 1, new GridPosition(base.getX() + 5, base.getY(), base.getZ() + 1)));
 
-        if (!assertClose(context, 50.0, tower.modifyAttackDamage(null, null, 10.0), "T3 rabbit should gain damage from five same-owner rabbit stacks.")) {
+        if (!assertClose(context, 47.5, tower.modifyAttackDamage(null, null, tower.type().damage()), "Four total same-owner rabbits should stay below max stacks.")) {
             return;
         }
-        if (!assertEquals(context, 8, tower.adjustAttackInterval(15), "T3 rabbit should reduce attack interval at max stacks.")) {
+        if (!assertEquals(context, 13, tower.adjustAttackInterval(tower.type().attackIntervalTicks()), "Different-family and different-owner towers should not grant rabbit stacks.")) {
+            return;
+        }
+        if (!assertTrue(context, tower.runtimeDetailLines().stream().anyMatch(line -> line.contains("무리 스택 3/4")), "Four total same-owner rabbits should show three supporting stacks.")) {
             return;
         }
 
@@ -7680,7 +7839,35 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 List.of(SummonRole.RUSH)
         );
         tower.onAttack(towerEntity, target, 20.0, false);
-        if (!assertClose(context, 80.0, target.runtimeMonster().health(), "T3 rabbit should make one extra full-damage attack at max stacks.")) {
+        if (!assertClose(context, 100.0, target.runtimeMonster().health(), "Four total rabbits should not activate the max-stack extra attack.")) {
+            return;
+        }
+
+        lane.addTower(new RabbitTower(AnimalTowers.T1_RABBIT_TOWER, playerId, TeamId.RED, 1, new GridPosition(base.getX() + 6, base.getY(), base.getZ() + 2)));
+
+        if (!assertClose(context, 15.0, t1Tower.modifyAttackDamage(null, null, t1Tower.type().damage()), "T1 rabbit should reach 15 damage with five total rabbits.")) {
+            return;
+        }
+        if (!assertEquals(context, 15, t1Tower.adjustAttackInterval(t1Tower.type().attackIntervalTicks()), "T1 rabbit should keep its 15-tick interval at max stacks.")) {
+            return;
+        }
+        if (!assertClose(context, 33.0, t2Tower.modifyAttackDamage(null, null, t2Tower.type().damage()), "T2 rabbit should reach 33 damage with five total rabbits.")) {
+            return;
+        }
+        if (!assertEquals(context, 10, t2Tower.adjustAttackInterval(t2Tower.type().attackIntervalTicks()), "T2 rabbit should reach a 10-tick interval at max stacks.")) {
+            return;
+        }
+        if (!assertClose(context, 60.0, tower.modifyAttackDamage(null, null, tower.type().damage()), "T3 rabbit should reach 60 damage with five total rabbits.")) {
+            return;
+        }
+        if (!assertEquals(context, 8, tower.adjustAttackInterval(tower.type().attackIntervalTicks()), "T3 rabbit should reach an 8-tick interval at max stacks.")) {
+            return;
+        }
+        if (!assertTrue(context, tower.runtimeDetailLines().stream().anyMatch(line -> line.contains("무리 스택 4/4")), "Five total same-owner rabbits should activate max stacks.")) {
+            return;
+        }
+        tower.onAttack(towerEntity, target, 20.0, false);
+        if (!assertClose(context, 60.0, target.runtimeMonster().health(), "T3 rabbit should deal 200% extra damage at max stacks.")) {
             return;
         }
         context.succeed();
@@ -8542,29 +8729,28 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         addResonanceTower(lane, playerId, ResonanceTowers.AMPLIFY_CRYSTAL, focusPos.offset(0, 0, 1));
         addResonanceTower(lane, playerId, ResonanceTowers.WAVE_PRISM, focusPos.offset(0, 0, -1));
         addResonanceTower(lane, playerId, ResonanceTowers.FROST_PRISM, focusPos.offset(1, 0, 1));
-        addResonanceTower(lane, playerId, ResonanceTowers.AMPLIFY_PRISM, focusPos.offset(-1, 0, -1));
         if (!assertTrue(context, lane.towers().get(0) instanceof ResonanceTower, "Placed focus crystal should use ResonanceTower runtime.")) {
             return;
         }
         ResonanceTower focus = (ResonanceTower) lane.towerAt(GridPosition.from(focusPos));
-        if (!assertEquals(context, 1, focus.resonanceLevel(), "T1 focus should cap at resonance level 1 with six nearby different species.")) {
+        if (!assertEquals(context, 3, focus.resonanceLevel(), "T1 focus should reach resonance level 3 with five nearby different species.")) {
             return;
         }
-        if (!assertEquals(context, 6, focus.resonanceLinks(), "Focus should count six nearby different species within one tile.")) {
+        if (!assertEquals(context, 5, focus.resonanceLinks(), "Focus should count five nearby different species within one tile.")) {
             return;
         }
         if (!assertEquals(context, TowerUpgradeResult.SUCCESS, ProductionTowerService.upgradeTower(game, playerId, focusPos, ResonanceTowers.FOCUS_PRISM.id()), "Focus crystal should upgrade into T2 focus prism.")) {
             return;
         }
         focus = (ResonanceTower) lane.towerAt(GridPosition.from(focusPos));
-        if (!assertEquals(context, 2, focus.resonanceLevel(), "T2 focus should unlock resonance level 2 with four or more nearby different species.")) {
+        if (!assertEquals(context, 3, focus.resonanceLevel(), "T2 focus should retain resonance level 3 after upgrading.")) {
             return;
         }
         if (!assertEquals(context, TowerUpgradeResult.SUCCESS, ProductionTowerService.upgradeTower(game, playerId, focusPos, ResonanceTowers.FOCUS_CORE.id()), "Focus prism should upgrade into T3 focus core.")) {
             return;
         }
         focus = (ResonanceTower) lane.towerAt(GridPosition.from(focusPos));
-        if (!assertEquals(context, 3, focus.resonanceLevel(), "T3 focus should unlock resonance level 3 with six nearby different species.")) {
+        if (!assertEquals(context, 3, focus.resonanceLevel(), "T3 focus should retain resonance level 3 after upgrading.")) {
             return;
         }
         context.succeed();
@@ -8607,7 +8793,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertEquals(context, 3, frost.resonanceLevel(), "T3 frost should unlock level 3 with six nearby different mooblooms.")) {
             return;
         }
-        if (!assertClose(context, 0.10, focus.auraDamageVsSlowedBonus(), "Nearby mooblooms should receive frost's damage-vs-debuffed aura.")) {
+        if (!assertClose(context, 1.0, focus.auraDamageVsSlowedBonus(), "Nearby mooblooms should receive frost's damage-vs-debuffed aura.")) {
             return;
         }
         SemionTowerEntity frostEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(frost.entityId().orElseThrow());
@@ -8625,19 +8811,19 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 100.0,
                 List.of(SummonRole.RUSH)
         );
-        if (!assertClose(context, 100.0, focus.modifyAttackDamage(null, target, 100.0), "Frost aura should require an active frost debuff.")) {
+        if (!assertClose(context, 140.0, focus.modifyAttackDamage(null, target, 100.0), "Frost aura should require an active frost debuff.")) {
             return;
         }
 
         frost.onAttack(frostEntity, target, 20.0, false);
 
-        if (!assertClose(context, 0.20, target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION), "T3 frost should reduce movement speed.")) {
+        if (!assertClose(context, 0.40, target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION), "T3 frost should reduce movement speed.")) {
             return;
         }
-        if (!assertClose(context, 0.20, target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION), "T3 frost should reduce attack speed.")) {
+        if (!assertClose(context, 0.40, target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION), "T3 frost should reduce attack speed.")) {
             return;
         }
-        if (!assertClose(context, 110.0, focus.modifyAttackDamage(null, target, 100.0), "Frost aura should make nearby mooblooms deal bonus damage to debuffed targets.")) {
+        if (!assertClose(context, 240.0, focus.modifyAttackDamage(null, target, 100.0), "Frost aura should make nearby mooblooms deal bonus damage to debuffed targets.")) {
             return;
         }
         context.succeed();
@@ -10347,13 +10533,13 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 Optional.empty(),
                 Optional.of(TeamId.BLUE),
                 100.0,
-                0,
+                100,
                 0,
                 AttackKind.MELEE,
                 "minecraft:zombie",
                 null,
                 DamageType.PHYSICAL,
-                0,
+                300,
                 SummonTier.T1,
                 List.of(SummonRole.RUSH),
                 0

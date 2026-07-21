@@ -56,20 +56,20 @@ public record WaveConfig(
                         monster("vindicator_tank_14", 75.0, 9.0, 2.5, AttackKind.MELEE, "minecraft:vindicator", 9, 15, 45, 0.95, 2.5, 18),
                         monster("pillager_artillery_14", 21.1875, 2.0, 4.0, AttackKind.RANGED, "minecraft:pillager", 9, 20, 0, 0.7, 9.0, 24)
                 ),
-                round(15, monster("warden_boss_15", 1100.0, 23.0, 30.0, AttackKind.MELEE, "minecraft:warden", 100, 4, 0, 1.0, 2.5, 13)),
+                round(15, monster("warden_boss_15", 1100.0, 10.0, 30.0, AttackKind.MELEE, "minecraft:warden", 100, 4, 0, 1.0, 2.5, 13)),
                 roundRobin(16,
-                        monster("hoglin_tank_16", 120.0, 10.0, 3.0, AttackKind.MELEE, "minecraft:hoglin", 5, 20, 45, 0.95, 2.5, 20),
-                        monster("zombified_piglin_rush_16", 60.0, 3.0, 5.0, AttackKind.MELEE, "minecraft:zombified_piglin", 5, 20, 5, 1.3, 2.5, 9),
-                        monster("piglin_ranged_16", 45.0, 3.0, 4.0, AttackKind.RANGED, "minecraft:piglin", 5, 20, 0, 0.8, 8.0, 15)
+                        monster("hoglin_tank_16", 120.0, 10.0, 4.0, AttackKind.MELEE, "minecraft:hoglin", 5, 20, 45, 0.95, 2.5, 20),
+                        monster("zombified_piglin_rush_16", 60.0, 3.0, 6.0, AttackKind.MELEE, "minecraft:zombified_piglin", 5, 20, 5, 1.3, 2.5, 9),
+                        monster("piglin_ranged_16", 45.0, 3.0, 5.0, AttackKind.RANGED, "minecraft:piglin", 5, 20, 0, 0.8, 8.0, 15)
                 ),
                 roundRobin(17,
                         monster("piglin_brute_tank_17", 80.0, 10.0, 3.0, AttackKind.MELEE, "minecraft:piglin_brute", 4, 50, 45, 0.95, 2.5, 18),
                         monster("blaze_ranged_17", 40.0, 3.0, 5.0, AttackKind.RANGED, "minecraft:blaze", 4, 50, 0, 0.8, 8.0, 14)
                 ),
                 roundRobin(18,
-                        monster("magma_cube_tank_18", 120.0, 14.0, 4.0, AttackKind.MELEE, "minecraft:magma_cube", 4, 20, 45, 0.95, 2.5, 20),
-                        monster("wither_skeleton_rush_18", 45.0, 7.0, 6.0, AttackKind.MELEE, "minecraft:wither_skeleton", 4, 40, 5, 1.3, 2.5, 10),
-                        monster("piglin_artillery_18", 30.0, 4.0, 8.0, AttackKind.RANGED, "minecraft:piglin", 4, 20, 0, 0.7, 10.0, 24)
+                        monster("magma_cube_tank_18", 120.0, 14.0, 5.0, AttackKind.MELEE, "minecraft:magma_cube", 4, 20, 45, 0.95, 2.5, 20),
+                        monster("wither_skeleton_rush_18", 45.0, 7.0, 7.0, AttackKind.MELEE, "minecraft:wither_skeleton", 4, 40, 5, 1.3, 2.5, 10),
+                        monster("piglin_artillery_18", 30.0, 4.0, 9.0, AttackKind.RANGED, "minecraft:piglin", 4, 20, 0, 0.7, 10.0, 24)
                 ),
                 roundRobin(19,
                         monster("hoglin_tank_19", 160.0, 16.0, 6.0, AttackKind.MELEE, "minecraft:hoglin", 4, 40, 45, 0.95, 2.5, 20),
@@ -127,25 +127,31 @@ public record WaveConfig(
     }
 
     private RoundWaveConfig scaleInfiniteRound(RoundWaveConfig template, int round) {
-        double healthMultiplier = 1.0 + Math.max(0, round - infiniteFromRound) * 0.40;
+        int elapsedRounds = Math.max(0, round - infiniteFromRound);
+        double healthMultiplier = 1.0 + elapsedRounds * 0.40;
+        double attackDamageMultiplier = 1.0 + elapsedRounds * 0.03;
         Map<String, List<WaveMonsterEntry>> scaledLanes = new LinkedHashMap<>();
         for (Map.Entry<String, List<WaveMonsterEntry>> lane : template.lanes().entrySet()) {
             scaledLanes.put(
                     lane.getKey(),
                     lane.getValue().stream()
-                            .map(entry -> scaleInfiniteEntry(entry, healthMultiplier))
+                            .map(entry -> scaleInfiniteEntry(entry, healthMultiplier, attackDamageMultiplier))
                             .toList()
             );
         }
         return new RoundWaveConfig(round, template.spawnMode(), template.spawnIntervalTicks(), scaledLanes);
     }
 
-    private static WaveMonsterEntry scaleInfiniteEntry(WaveMonsterEntry entry, double healthMultiplier) {
+    private static WaveMonsterEntry scaleInfiniteEntry(
+            WaveMonsterEntry entry,
+            double healthMultiplier,
+            double attackDamageMultiplier
+    ) {
         return new WaveMonsterEntry(
                 entry.id(),
                 entry.health() * healthMultiplier,
                 entry.armor(),
-                entry.attackDamage(),
+                entry.attackDamage() * attackDamageMultiplier,
                 entry.attackKind(),
                 entry.entityType(),
                 entry.blockbenchModelId(),

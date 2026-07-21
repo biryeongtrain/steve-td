@@ -47,14 +47,14 @@ public final class CosmeticGameTest {
     public void builtInHatItemsArePolymerHeadwear(GameTestHelper context) {
         try {
             List<net.minecraft.world.item.Item> items = SemionCosmeticItems.items();
-            assertEquals(119, items.size());
+            assertEquals(120, items.size());
             for (int index = 0; index < items.size(); index++) {
                 net.minecraft.world.item.Item item = items.get(index);
                 ItemStack stack = new ItemStack(item);
                 assertTrue(item instanceof PolymerItem, "Cosmetic item should expose a Polymer representation.");
                 assertEquals(1, stack.getMaxStackSize());
                 assertTrue(stack.get(DataComponents.EQUIPPABLE) != null, "Cosmetic item should be equippable.");
-                assertEquals(index == 118 ? EquipmentSlot.OFFHAND : EquipmentSlot.HEAD,
+                assertEquals(index == 119 ? EquipmentSlot.OFFHAND : EquipmentSlot.HEAD,
                         stack.get(DataComponents.EQUIPPABLE).slot());
                 assertEquals(BuiltInRegistries.ITEM.getKey(item), stack.get(DataComponents.ITEM_MODEL));
             }

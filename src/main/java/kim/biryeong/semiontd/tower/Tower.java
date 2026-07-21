@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.tower;
 
 import kim.biryeong.semiontd.effect.TimedEffectType;
+import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.KillSourceKind;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
@@ -295,30 +296,21 @@ public abstract class Tower {
 
     public boolean damageTarget(SemionTowerEntity towerEntity, SemionMonsterEntity target, double baseDamage) {
         Monster runtimeMonster = target.runtimeMonster();
-        if (runtimeMonster != null) {
-            runtimeMonster.recordLastHit(ownerPlayer, KillSourceKind.TOWER);
-        }
         double traitDamage = towerEntity.applyTraitOutgoingDamage(runtimeMonster, baseDamage);
         double damageAmount = target.towerDamageTaken(traitDamage);
-
-        float previousHealth = target.getHealth();
-        target.hurt(towerEntity.damageSources().mobAttack(towerEntity), (float) damageAmount);
-        boolean damaged = target.getHealth() < previousHealth - 0.01F;
-        if (!damaged || target.getHealth() >= previousHealth - 0.01F) {
-            float nextHealth = Math.max(0.0F, previousHealth - (float) damageAmount);
-            target.setHealth(nextHealth);
-            if (runtimeMonster != null) {
-                runtimeMonster.syncHealth(nextHealth);
-            }
-            if (nextHealth <= 0.0F) {
-                target.discard();
-                return true;
-            }
-        } else if (runtimeMonster != null) {
-            runtimeMonster.syncHealth(target.getHealth());
+        if (damageAmount <= 0.0) {
+            return false;
         }
-        return target.isRemoved() || !target.isAlive() || target.getHealth() <= 0.0F
-                || (runtimeMonster != null && !runtimeMonster.isAlive());
+        double previousHealth = runtimeMonster == null ? 0.0 : runtimeMonster.health();
+        boolean killed = target.applyRuntimeDamage(
+                towerEntity.damageSources().mobAttack(towerEntity),
+                damageAmount,
+                DamageType.PHYSICAL
+        );
+        if (runtimeMonster != null && runtimeMonster.health() < previousHealth) {
+            runtimeMonster.recordLastHit(ownerPlayer, KillSourceKind.TOWER);
+        }
+        return killed;
     }
 
     public void onAttack(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount, boolean killedTarget) {

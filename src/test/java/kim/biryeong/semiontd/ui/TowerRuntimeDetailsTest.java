@@ -69,7 +69,7 @@ class TowerRuntimeDetailsTest {
         assertContains(lines, "Lv 3");
         assertContains(lines, "링크 6");
         assertContains(lines, "받는 오라");
-        assertContains(lines, "공속 +5.0%");
+        assertContains(lines, "공속 +50.0%");
     }
 
     @Test

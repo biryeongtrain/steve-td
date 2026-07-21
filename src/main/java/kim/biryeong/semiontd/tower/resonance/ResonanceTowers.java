@@ -14,11 +14,11 @@ public final class ResonanceTowers {
     public static final TowerType FOCUS_CRYSTAL = tower(
             "t1_resonance_focus_moobloom",
             "민들레 무블룸",
-            95,
-            55,
-            6,
-            10,
-            22,
+            50,
+            45,
+            8,
+            8,
+            20,
             5,
             moobloom("dandelion"),
             List.of(
@@ -31,10 +31,10 @@ public final class ResonanceTowers {
             "t2_resonance_focus_moobloom",
             "해바라기 무블룸",
             180,
-            75,
+            80,
             6.5,
-            18,
-            20,
+            15,
+            15,
             8,
             moobloom("sunflower"),
             List.of(
@@ -49,8 +49,8 @@ public final class ResonanceTowers {
             320,
             95,
             7,
-            27,
-            18,
+            28,
+            16,
             12,
             moobloom("orange_tulip"),
             List.of(
@@ -62,11 +62,11 @@ public final class ResonanceTowers {
     public static final TowerType WAVE_CRYSTAL = tower(
             "t1_resonance_wave_moobloom",
             "수레국화 무블룸",
-            85,
             45,
-            5,
+            70,
             7,
-            24,
+            8,
+            16,
             10,
             moobloom("cornflower"),
             List.of(
@@ -78,11 +78,11 @@ public final class ResonanceTowers {
     public static final TowerType WAVE_PRISM = tower(
             "t2_resonance_wave_moobloom",
             "파란 난초 무블룸",
-            160,
+            50,
             60,
             5.5,
-            13,
-            22,
+            15,
+            14,
             12,
             moobloom("blue_orchid"),
             List.of(
@@ -96,9 +96,9 @@ public final class ResonanceTowers {
             "푸른 들꽃 무블룸",
             300,
             80,
-            6,
+            8,
             22,
-            20,
+            12,
             15,
             moobloom("azure_bluet"),
             List.of(
@@ -110,11 +110,11 @@ public final class ResonanceTowers {
     public static final TowerType FROST_CRYSTAL = tower(
             "t1_resonance_frost_moobloom",
             "은방울꽃 무블룸",
-            80,
+            45,
             50,
-            6,
-            6,
-            26,
+            7,
+            8,
+            20,
             0,
             moobloom("lily_of_the_valley"),
             List.of(
@@ -128,9 +128,9 @@ public final class ResonanceTowers {
             "하얀 튤립 무블룸",
             150,
             75,
-            6.5,
+            8,
             10,
-            24,
+            16,
             2,
             moobloom("white_tulip"),
             List.of(
@@ -144,9 +144,9 @@ public final class ResonanceTowers {
             "데이지 무블룸",
             280,
             105,
-            7,
+            12,
             16,
-            22,
+            12,
             5,
             moobloom("oxeye_daisy"),
             List.of(
@@ -158,12 +158,12 @@ public final class ResonanceTowers {
     public static final TowerType AMPLIFY_CRYSTAL = tower(
             "t1_resonance_amplify_moobloom",
             "알리움 무블룸",
-            110,
-            65,
+            45,
+            100,
             5,
-            5,
-            28,
-            20,
+            8,
+            15,
+            40,
             moobloom("allium"),
             List.of(
                     "<gray>업그레이드 시 매우 단단해지며 아군에게 저항 효과를 주는 무블룸입니다.</gray>",
@@ -175,11 +175,11 @@ public final class ResonanceTowers {
             "t2_resonance_amplify_moobloom",
             "라일락 무블룸",
             200,
-            100,
+            200,
             5.5,
             11,
-            25,
-            25,
+            12,
+            45,
             moobloom("lilac"),
             List.of(
                     "<gray>업그레이드 시 매우 단단해지며 아군에게 저항 효과를 주는 무블룸입니다.</gray>",
@@ -191,11 +191,11 @@ public final class ResonanceTowers {
             "t3_resonance_amplify_moobloom",
             "작약 무블룸",
             350,
-            140,
+            450,
             6,
             20,
-            22,
-            30,
+            10,
+            50,
             moobloom("peony"),
             List.of(
                     "<gray>업그레이드 시 매우 단단해지며 아군에게 저항 효과를 주는 무블룸입니다.</gray>",
@@ -248,71 +248,44 @@ public final class ResonanceTowers {
     private static void registerDescription(TowerType type) {
         java.util.ArrayList<String> template = new java.util.ArrayList<>(type.description());
         template.add(LINK_DESCRIPTION);
-        template.add("<green>다른 무블룸 종류(업그레이드 무관, 처음 설치할 때 다른 종류)를 주위에 설치하면 추가 효과를 받습니다. 타워 업그레이드마다 {ability.level1RequiredLinks:integer}/{ability.level2RequiredLinks:integer}/{ability.level3RequiredLinks:integer}기에서 1/2/3단계 효과를 얻을 수 있어요.</green>");
+        template.add("<green>자신을 제외하고 종류가 다른 주변 무블룸 {ability.level1RequiredLinks:integer}/{ability.level2RequiredLinks:integer}/{ability.level3RequiredLinks:integer}기와 연결되면 공명 1/2/3단계 효과를 얻습니다.</green>");
         template.add("<green>현재 해금: 공명 {ability.maxResonanceLevel:integer}단계 까지 활성화 가능합니다.</green>");
         switch (aspectOf(type)) {
-            case FOCUS -> addFocusDescription(template, type);
-            case WAVE -> addWaveDescription(template, type);
-            case FROST -> addFrostDescription(template, type);
-            case AMPLIFY -> addBloomDescription(template, type);
+            case FOCUS -> addFocusDescription(template);
+            case WAVE -> addWaveDescription(template);
+            case FROST -> addFrostDescription(template);
+            case AMPLIFY -> addBloomDescription(template);
         }
         TowerDescriptionRegistry.registerTemplate(type, template);
     }
 
-    private static void addFocusDescription(java.util.List<String> template, TowerType type) {
+    private static void addFocusDescription(java.util.List<String> template) {
         template.add("<green>공명 1단계: 공격속도 +{ability.focusLevel1AttackSpeedBonus:percent}</green>");
-        if (unlockedResonanceLevel(type) >= 2) {
-            template.add("<green>공명 2단계: 공격속도 +{ability.focusLevel2AttackSpeedBonus:percent}, 피해 +{ability.focusLevel2DamageBonus:percent}</green>");
-        }
-        if (unlockedResonanceLevel(type) >= 3) {
-            template.add("<green>공명 3단계: 공격속도 +{ability.focusLevel3AttackSpeedBonus:percent}, 피해 +{ability.focusLevel3DamageBonus:percent}</green>");
-            template.add("<green>{ability.focusStrikeEveryAttacks:integer}번째 공격마다 주 대상에게 {ability.focusStrikeDamageRatio:percent} 추가 피해를 줍니다.</green>");
-        }
+        template.add("<green>공명 2단계: 공격속도 +{ability.focusLevel2AttackSpeedBonus:percent}, 피해 +{ability.focusLevel2DamageBonus:percent}</green>");
+        template.add("<green>공명 3단계: 공격속도 +{ability.focusLevel3AttackSpeedBonus:percent}, 피해 +{ability.focusLevel3DamageBonus:percent}</green>");
+        template.add("<green>{ability.focusStrikeEveryAttacks:integer}번째 공격마다 주 대상에게 {ability.focusStrikeDamageRatio:percent} 추가 피해를 줍니다.</green>");
     }
 
-    private static void addWaveDescription(java.util.List<String> template, TowerType type) {
+    private static void addWaveDescription(java.util.List<String> template) {
         template.add("<green>공명 1단계: 공격속도 +{ability.waveLevel1AttackSpeedBonus:percent}</green>");
-        if (unlockedResonanceLevel(type) >= 2) {
-            template.add("<green>공명 2단계: 매 공격마다 {ability.waveLevel2SplashRadius:blocks} 범위에 {ability.waveLevel2SplashDamageRatio:percent} 스플래시 피해를 줍니다.</green>");
-        }
-        if (unlockedResonanceLevel(type) >= 3) {
-            template.add("<green>공명 3단계: 스플래시가 {ability.waveLevel3SplashRadius:blocks}, {ability.waveLevel3SplashDamageRatio:percent}로 강화됩니다.</green>");
-            template.add("<green>{ability.wavePulseEveryAttacks:integer}번째 공격마다 {ability.wavePulseRadius:blocks} 범위에 {ability.wavePulseDamageRatio:percent} 파동 피해를 줍니다.</green>");
-        }
+        template.add("<green>공명 2단계: 매 공격마다 {ability.waveLevel2SplashRadius:blocks} 범위에 {ability.waveLevel2SplashDamageRatio:percent} 스플래시 피해를 줍니다.</green>");
+        template.add("<green>공명 3단계: 스플래시가 {ability.waveLevel3SplashRadius:blocks}, {ability.waveLevel3SplashDamageRatio:percent}로 강화됩니다.</green>");
+        template.add("<green>{ability.wavePulseEveryAttacks:integer}번째 공격마다 {ability.wavePulseRadius:blocks} 범위에 {ability.wavePulseDamageRatio:percent} 파동 피해를 줍니다.</green>");
     }
 
-    private static void addFrostDescription(java.util.List<String> template, TowerType type) {
+    private static void addFrostDescription(java.util.List<String> template) {
         template.add("<green>공명 1단계: 공격 대상에게 {ability.frostLevel1SlowTicks:seconds} 동안 이동속도 -{ability.frostLevel1SlowMagnitude:percent}, 공격속도 -{ability.frostLevel1AttackSpeedReductionMagnitude:percent}를 줍니다.</green>");
-        if (unlockedResonanceLevel(type) >= 2) {
-            template.add("<green>공명 2단계: 디버프가 {ability.frostLevel2SlowTicks:seconds}, 이동속도 -{ability.frostLevel2SlowMagnitude:percent}, 공격속도 -{ability.frostLevel2AttackSpeedReductionMagnitude:percent}로 강화됩니다.</green>");
-            template.add("<green>{ability.frostAuraRange:blocks} 안 무블룸은 둔화 대상에게 피해 +{ability.frostLevel2AuraDamageVsSlowedBonus:percent}를 얻습니다.</green>");
-        }
-        if (unlockedResonanceLevel(type) >= 3) {
-            template.add("<green>공명 3단계: 디버프가 {ability.frostLevel3SlowTicks:seconds}, 이동속도 -{ability.frostLevel3SlowMagnitude:percent}, 공격속도 -{ability.frostLevel3AttackSpeedReductionMagnitude:percent}로 강화되고 오라 피해가 +{ability.frostLevel3AuraDamageVsSlowedBonus:percent}가 됩니다.</green>");
-            template.add("<green>{ability.frostPulseEveryAttacks:integer}번째 공격마다 {ability.frostPulseRadius:blocks} 범위에 {ability.frostPulseDamageRatio:percent} 피해와 {ability.frostPulseSlowTicks:seconds} 동안 이동속도 -{ability.frostPulseSlowMagnitude:percent}, 공격속도 -{ability.frostPulseAttackSpeedReductionMagnitude:percent}를 줍니다.</green>");
-        }
+        template.add("<green>공명 2단계: 디버프가 {ability.frostLevel2SlowTicks:seconds}, 이동속도 -{ability.frostLevel2SlowMagnitude:percent}, 공격속도 -{ability.frostLevel2AttackSpeedReductionMagnitude:percent}로 강화됩니다.</green>");
+        template.add("<green>{ability.frostAuraRange:blocks} 안 무블룸은 둔화 대상에게 피해 +{ability.frostLevel2AuraDamageVsSlowedBonus:percent}를 얻습니다.</green>");
+        template.add("<green>공명 3단계: 디버프가 {ability.frostLevel3SlowTicks:seconds}, 이동속도 -{ability.frostLevel3SlowMagnitude:percent}, 공격속도 -{ability.frostLevel3AttackSpeedReductionMagnitude:percent}로 강화되고 오라 피해가 +{ability.frostLevel3AuraDamageVsSlowedBonus:percent}가 됩니다.</green>");
+        template.add("<green>{ability.frostPulseEveryAttacks:integer}번째 공격마다 {ability.frostPulseRadius:blocks} 범위에 {ability.frostPulseDamageRatio:percent} 피해와 {ability.frostPulseSlowTicks:seconds} 동안 이동속도 -{ability.frostPulseSlowMagnitude:percent}, 공격속도 -{ability.frostPulseAttackSpeedReductionMagnitude:percent}를 줍니다.</green>");
     }
 
-    private static void addBloomDescription(java.util.List<String> template, TowerType type) {
+    private static void addBloomDescription(java.util.List<String> template) {
         template.add("<green>공명 1단계: 받는 피해 -{ability.bloomLevel1DamageReduction:percent}</green>");
-        if (unlockedResonanceLevel(type) >= 2) {
-            template.add("<green>공명 2단계: 받는 피해 -{ability.bloomLevel2DamageReduction:percent}, {ability.bloomAuraRange:blocks} 안 무블룸 공격속도 +{ability.bloomLevel2AuraAttackSpeedBonus:percent}</green>");
-        }
-        if (unlockedResonanceLevel(type) >= 3) {
-            template.add("<green>공명 3단계: 받는 피해 -{ability.bloomLevel3DamageReduction:percent}, {ability.bloomAuraRange:blocks} 안 무블룸 공격속도 +{ability.bloomLevel3AuraAttackSpeedBonus:percent}</green>");
-            template.add("<green>{ability.bloomProtectEveryAttacks:integer}번째 공격마다 {ability.bloomProtectRadius:blocks} 안 무블룸을 공격력의 {ability.bloomProtectHealRatio:percent}만큼 회복하고 {ability.bloomProtectTicks:seconds} 동안 받는 피해 -{ability.bloomProtectDamageReduction:percent}를 줍니다.</green>");
-        }
-    }
-
-    private static int unlockedResonanceLevel(TowerType type) {
-        String id = type.id();
-        if (FOCUS_CRYSTAL.id().equals(id) || WAVE_CRYSTAL.id().equals(id) || FROST_CRYSTAL.id().equals(id) || AMPLIFY_CRYSTAL.id().equals(id)) {
-            return 1;
-        }
-        if (FOCUS_PRISM.id().equals(id) || WAVE_PRISM.id().equals(id) || FROST_PRISM.id().equals(id) || AMPLIFY_PRISM.id().equals(id)) {
-            return 2;
-        }
-        return 3;
+        template.add("<green>공명 2단계: 받는 피해 -{ability.bloomLevel2DamageReduction:percent}, {ability.bloomAuraRange:blocks} 안 무블룸 공격속도 +{ability.bloomLevel2AuraAttackSpeedBonus:percent}</green>");
+        template.add("<green>공명 3단계: 받는 피해 -{ability.bloomLevel3DamageReduction:percent}, {ability.bloomAuraRange:blocks} 안 무블룸 공격속도 +{ability.bloomLevel3AuraAttackSpeedBonus:percent}</green>");
+        template.add("<green>{ability.bloomProtectEveryAttacks:integer}번째 공격마다 {ability.bloomProtectRadius:blocks} 안 무블룸을 공격력의 {ability.bloomProtectHealRatio:percent}만큼 회복하고 {ability.bloomProtectTicks:seconds} 동안 받는 피해 -{ability.bloomProtectDamageReduction:percent}를 줍니다.</green>");
     }
 
     private static EntityVisual moobloom(String variant) {

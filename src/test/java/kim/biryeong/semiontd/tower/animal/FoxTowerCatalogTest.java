@@ -36,20 +36,20 @@ class FoxTowerCatalogTest {
         assertEquals(0.30, config.ability(AnimalTowers.T1_FOX_TOWER.id(), "executeHealthThreshold", -1.0), 0.0001);
         assertEquals(0.35, config.ability(AnimalTowers.T2_FOX_TOWER.id(), "executeHealthThreshold", -1.0), 0.0001);
         assertEquals(0.40, config.ability(AnimalTowers.T3_FOX_TOWER.id(), "executeHealthThreshold", -1.0), 0.0001);
-        assertEquals(0.2, config.ability(AnimalTowers.T1_FOX_TOWER.id(), "killBonusDamage", -1.0), 0.0001);
-        assertEquals(12.0, config.ability(AnimalTowers.T1_FOX_TOWER.id(), "killBonusDamageCap", -1.0), 0.0001);
-        assertEquals(0.4, config.ability(AnimalTowers.T2_FOX_TOWER.id(), "killBonusDamage", -1.0), 0.0001);
-        assertEquals(24.0, config.ability(AnimalTowers.T2_FOX_TOWER.id(), "killBonusDamageCap", -1.0), 0.0001);
-        assertEquals(0.6, config.ability(AnimalTowers.T3_FOX_TOWER.id(), "killBonusDamage", -1.0), 0.0001);
-        assertEquals(36.0, config.ability(AnimalTowers.T3_FOX_TOWER.id(), "killBonusDamageCap", -1.0), 0.0001);
+        assertEquals(0.1, config.ability(AnimalTowers.T1_FOX_TOWER.id(), "killBonusDamage", -1.0), 0.0001);
+        assertEquals(10.0, config.ability(AnimalTowers.T1_FOX_TOWER.id(), "killBonusDamageCap", -1.0), 0.0001);
+        assertEquals(0.2, config.ability(AnimalTowers.T2_FOX_TOWER.id(), "killBonusDamage", -1.0), 0.0001);
+        assertEquals(20.0, config.ability(AnimalTowers.T2_FOX_TOWER.id(), "killBonusDamageCap", -1.0), 0.0001);
+        assertEquals(0.4, config.ability(AnimalTowers.T3_FOX_TOWER.id(), "killBonusDamage", -1.0), 0.0001);
+        assertEquals(40.0, config.ability(AnimalTowers.T3_FOX_TOWER.id(), "killBonusDamageCap", -1.0), 0.0001);
     }
 
     @Test
     void defaultBalanceConfigIncludesFoxUpgradeCosts() {
         TowerBalanceConfig config = TowerBalanceConfig.defaultConfig();
 
-        assertEquals(170, config.upgradeCost(AnimalTowers.T1_FOX_TOWER.id(), AnimalTowers.T2_FOX_TOWER.id(), -1));
-        assertEquals(320, config.upgradeCost(AnimalTowers.T2_FOX_TOWER.id(), AnimalTowers.T3_FOX_TOWER.id(), -1));
+        assertEquals(150, config.upgradeCost(AnimalTowers.T1_FOX_TOWER.id(), AnimalTowers.T2_FOX_TOWER.id(), -1));
+        assertEquals(225, config.upgradeCost(AnimalTowers.T2_FOX_TOWER.id(), AnimalTowers.T3_FOX_TOWER.id(), -1));
     }
 
     @Test

@@ -212,6 +212,32 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         return runtimeMonster;
     }
 
+    public boolean applyRuntimeDamage(DamageSource damageSource, double amount, DamageType damageType) {
+        if (amount <= 0.0) {
+            return false;
+        }
+        if (runtimeMonster == null) {
+            hurt(damageSource, (float) amount);
+            return isRemoved() || !isAlive() || getHealth() <= 0.0F;
+        }
+
+        runtimeMonster.syncHealth(Math.min(runtimeMonster.health(), getHealth()));
+        double previousHealth = runtimeMonster.health();
+        runtimeMonster.damage(amount, damageType);
+        double appliedDamage = previousHealth - runtimeMonster.health();
+        if (appliedDamage <= 0.0) {
+            return runtimeMonster.isRemoved();
+        }
+
+        hurt(damageSource, (float) appliedDamage);
+        if (runtimeMonster.health() <= 0.0) {
+            discard();
+            return true;
+        }
+        setHealth((float) runtimeMonster.health());
+        return false;
+    }
+
     public void syncAttributesFromRuntimeMonster() {
         if (runtimeMonster == null) {
             return;
