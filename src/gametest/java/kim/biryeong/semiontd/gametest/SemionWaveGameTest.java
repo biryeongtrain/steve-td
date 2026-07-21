@@ -505,6 +505,39 @@ public final class SemionWaveGameTest {
     }
 
     @GameTest
+    public void destroyedEnderCoreStopsAbsorbing(GameTestHelper context) {
+        PlayerLane lane = lane(context, "destroyed-ender-core");
+        EnderTower core = new EnderTower(
+                EnderTowers.BASE_ENDER_TOWER,
+                lane.ownerPlayer(),
+                TeamId.RED,
+                1,
+                GridPosition.from(context.absolutePos(new BlockPos(4, 1, 1)))
+        );
+        EnderTower source = new EnderTower(
+                EnderTowers.T1_ENDERMITE_TOWER,
+                lane.ownerPlayer(),
+                TeamId.RED,
+                1,
+                GridPosition.from(context.absolutePos(new BlockPos(1, 1, 1)))
+        );
+        lane.addTower(core);
+        lane.addTower(source);
+        core.onWaveStarted(lane, 1);
+
+        SemionTowerEntity coreEntity = (SemionTowerEntity) context.getLevel().getEntity(core.entityId().orElseThrow());
+        coreEntity.setHealth(0.0F);
+        lane.tick(context.getLevel().getServer());
+
+        assertClose(0.0, core.roundDamageBonus(), "destroyed core round damage bonus");
+        assertClose(0.0, core.permanentDamageBonus(), "destroyed core permanent damage bonus");
+        if (source.health() <= 0.0) {
+            throw new AssertionError("A destroyed Ender core must not finish absorbing feeder towers.");
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void enderTransferDoesNotSpawnEndCrystals(GameTestHelper context) {
         PlayerLane lane = lane(context, "ender-transfer-enchant-particles");
         GridPosition sourcePosition = GridPosition.from(context.absolutePos(new BlockPos(1, 1, 1)));

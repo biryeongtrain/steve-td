@@ -166,11 +166,11 @@ public final class EnderTowers {
                 "<gray>팬텀 크기는 1.0부터 최대 체력 100당 0.2 증가하며, 최대 5.0입니다.</gray>",
                 "<green>타워는 {ability.ender_global.absorptionDurationTicks:seconds} 동안 힘을 전달하고 사망합니다.</green>",
                 "<green>엔드 수정 계열: 타워 공격력 {ability.ender_global.permanentDamageRatio:percent} 영구 누적</green>",
-                "<green>{ability.ender_global.endCrystalSplashEvery:integer}기마다 광역 공격 반경 +{ability.ender_global.splashRadiusPerStep:blocks} (최대 {ability.ender_global.splashRadiusCap:blocks})</green>",
-                "<green>{ability.ender_global.endCrystalAttackIntervalEvery:integer}기마다 공격 주기 -{ability.ender_global.attackIntervalReductionPerStep:integer}틱 (최소 {ability.ender_global.minimumAttackIntervalTicks:integer}틱)</green>",
+                "<green>엔드 수정 계열 누적 {ability.ender_global.endCrystalSplashEvery:integer}스택마다 광역 공격 반경 +{ability.ender_global.splashRadiusPerStep:blocks} (최대 {ability.ender_global.splashRadiusCap:blocks})</green>",
+                "<green>엔드 수정 계열 누적 {ability.ender_global.endCrystalAttackIntervalEvery:integer}스택마다 공격 주기 -{ability.ender_global.attackIntervalReductionPerStep:integer}틱 (최소 {ability.ender_global.minimumAttackIntervalTicks:integer}틱)</green>",
                 "<green>셜커 계열: 타워 체력 {ability.ender_global.permanentHealthRatio:percent} 영구 누적</green>",
-                "<green>{ability.ender_global.shulkerLifeStealEvery:integer}기마다 생명력 흡수 +{ability.ender_global.lifeStealPerStep:percent} (최대 {ability.ender_global.lifeStealCap:percent})</green>",
-                "<green>{ability.ender_global.shulkerReductionEvery:integer}기마다 받는 피해 -{ability.ender_global.damageReductionPerStep:percent} (최대 {ability.ender_global.damageReductionCap:percent} 감소)</green>"
+                "<green>셜커 계열 누적 {ability.ender_global.shulkerLifeStealEvery:integer}스택마다 생명력 흡수 +{ability.ender_global.lifeStealPerStep:percent} (최대 {ability.ender_global.lifeStealCap:percent})</green>",
+                "<green>셜커 계열 누적 {ability.ender_global.shulkerReductionEvery:integer}스택마다 받는 피해 -{ability.ender_global.damageReductionPerStep:percent} (최대 {ability.ender_global.damageReductionCap:percent} 감소)</green>"
         );
         TowerDescriptionRegistry.registerTemplate(BASE_ENDER_TOWER, dragonDescription);
         TowerDescriptionRegistry.registerTemplate(T1_ENDERMITE_TOWER, List.of(

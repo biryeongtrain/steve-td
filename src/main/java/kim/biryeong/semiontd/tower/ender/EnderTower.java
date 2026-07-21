@@ -146,6 +146,9 @@ public final class EnderTower extends EntityBackedTower {
 
     @Override
     public void tick(PlayerLane lane) {
+        if (isDestroyed(lane)) {
+            return;
+        }
         if (waveActive && isHatched()) {
             absorbAlliedEnderTowers(lane);
             evolveToDragonIfReady(lane);
@@ -223,7 +226,7 @@ public final class EnderTower extends EntityBackedTower {
         } else {
             lines.add("드래곤 진화 완료");
         }
-        lines.add("힘 전달 완료: 엔드 수정 " + absorbedEndCrystalCount + " / 셜커 " + absorbedShulkerCount);
+        lines.add("누적 스택: 엔드 수정 " + absorbedEndCrystalCount + " / 셜커 " + absorbedShulkerCount);
         lines.add("이번 라운드 힘 전달: " + roundCompletedTransferCount);
         lines.add("이번 라운드: 체력 +" + oneDecimal(roundHealthBonus) + ", 공격력 +" + oneDecimal(roundDamageBonus));
         lines.add("영구 누적: 체력 +" + oneDecimal(permanentHealthBonus) + ", 공격력 +" + oneDecimal(permanentDamageBonus));

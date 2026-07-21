@@ -129,11 +129,11 @@ class EnderTowerCatalogTest {
         assertTrue(description.contains("5%"));
         assertTrue(description.contains("엔드 수정 계열"));
         assertTrue(description.contains("전달하고 사망"));
-        assertTrue(description.contains("20기마다 공격 주기 -1틱"));
+        assertTrue(description.contains("엔드 수정 계열 누적 20스택마다 공격 주기 -1틱"));
         assertTrue(description.contains("최소 5틱"));
-        assertTrue(description.contains("10기마다 광역 공격 반경"));
-        assertTrue(description.contains("10기마다 생명력 흡수"));
-        assertTrue(description.contains("20기마다 받는 피해 -2.5%"));
+        assertTrue(description.contains("엔드 수정 계열 누적 10스택마다 광역 공격 반경"));
+        assertTrue(description.contains("셜커 계열 누적 10스택마다 생명력 흡수"));
+        assertTrue(description.contains("셜커 계열 누적 20스택마다 받는 피해 -2.5%"));
         assertTrue(description.contains("최대 30%"));
         assertTrue(description.contains("최대 25%"));
     }
