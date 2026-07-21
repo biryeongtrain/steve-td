@@ -191,6 +191,7 @@ class EnderTowerAbsorptionTest {
         assertEquals(0.5, dragon.splashRadius(), 0.0001);
         assertEquals(19, dragon.adjustAttackInterval(20));
         assertEquals(97.5, dragon.modifyIncomingDamage(null, null, 100.0), 0.0001);
+        assertTrue(dragon.runtimeDetailLines().stream().anyMatch(line -> line.contains("누적 스택: 엔드 수정 20 / 셜커 20")));
         assertTrue(dragon.runtimeDetailLines().stream().anyMatch(line -> line.contains("생명력 흡수 2.0%")));
 
         dragon.resetRoundTransferBonuses(null);
