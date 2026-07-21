@@ -35,7 +35,7 @@ public final class EndTower extends EntityBackedTower {
     public static final String CONFIG_ID = "ender_global";
     private static final double TRANSFER_PARTICLE_HEIGHT = 1.25;
     private static final TowerDataKey<EndTowerState> STATE = TowerDataKey.of(
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "ender_tower_state"),
+            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "end_tower_state"),
             EndTowerState.class
     );
 

@@ -39,7 +39,7 @@ class EndDragonScaleTest {
         tower.onWaveStarted(null, 1);
 
         assertEquals(EndTowerState.PHANTOM, tower.state());
-        assertEquals(EndTowers.BASE_ENDER_TOWER, tower.type());
+        assertEquals(EndTowers.BASE_END_TOWER, tower.type());
         assertEquals("minecraft:phantom", tower.visual().entityTypeId());
         assertTrue(tower.visual().blockbenchModel().isEmpty());
     }
@@ -55,7 +55,7 @@ class EndDragonScaleTest {
 
     @Test
     void phantomBecomesVanillaDragonWhenMaxHealthReachesThreshold() {
-        double baseMaxHealth = EndTowers.BASE_ENDER_TOWER.maxHealth();
+        double baseMaxHealth = EndTowers.BASE_END_TOWER.maxHealth();
         applyStateConfig(baseMaxHealth + 0.01);
 
         EndTower tower = tower();
@@ -84,8 +84,8 @@ class EndDragonScaleTest {
 
     private static EndTower tower() {
         return new EndTower(
-                EndTowers.BASE_ENDER_TOWER,
-                UUID.nameUUIDFromBytes("ender-state-owner".getBytes()),
+                EndTowers.BASE_END_TOWER,
+                UUID.nameUUIDFromBytes("end-state-owner".getBytes()),
                 TeamId.RED,
                 1,
                 new GridPosition(0, 64, 0)
@@ -95,9 +95,9 @@ class EndDragonScaleTest {
     private static void applyStateConfig(double evolutionMaxHealth) {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
         Map<String, Map<String, Double>> abilities = new LinkedHashMap<>(defaults.abilities());
-        Map<String, Double> ender = new LinkedHashMap<>(abilities.get(EndTower.CONFIG_ID));
-        ender.put("dragonEvolutionMaxHealth", evolutionMaxHealth);
-        abilities.put(EndTower.CONFIG_ID, ender);
+        Map<String, Double> end = new LinkedHashMap<>(abilities.get(EndTower.CONFIG_ID));
+        end.put("dragonEvolutionMaxHealth", evolutionMaxHealth);
+        abilities.put(EndTower.CONFIG_ID, end);
         TowerBalanceRuntime.apply(new TowerBalanceConfig(defaults.towers(), defaults.upgradeCosts(), abilities));
     }
 }

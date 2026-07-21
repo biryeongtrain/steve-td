@@ -509,7 +509,7 @@ public final class SemionWaveGameTest {
     public void destroyedEnderCoreStopsAbsorbing(GameTestHelper context) {
         PlayerLane lane = lane(context, "destroyed-ender-core");
         EndTower core = new EndTower(
-                EndTowers.BASE_ENDER_TOWER,
+                EndTowers.BASE_END_TOWER,
                 lane.ownerPlayer(),
                 TeamId.RED,
                 1,
@@ -544,7 +544,7 @@ public final class SemionWaveGameTest {
         GridPosition sourcePosition = GridPosition.from(context.absolutePos(new BlockPos(1, 1, 1)));
         GridPosition dragonPosition = GridPosition.from(context.absolutePos(new BlockPos(4, 1, 1)));
         EndTower egg = new EndTower(
-                EndTowers.BASE_ENDER_TOWER,
+                EndTowers.BASE_END_TOWER,
                 lane.ownerPlayer(),
                 TeamId.RED,
                 1,

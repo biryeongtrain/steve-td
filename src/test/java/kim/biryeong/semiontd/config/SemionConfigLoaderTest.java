@@ -236,7 +236,7 @@ final class SemionConfigLoaderTest {
                 LoggerFactory.getLogger("test")
         ).towerBalance();
 
-        assertEquals(10.0, balance.towers().get(EndTowers.BASE_ENDER_TOWER.id()).damage(), 0.0001);
+        assertEquals(10.0, balance.towers().get(EndTowers.BASE_END_TOWER.id()).damage(), 0.0001);
         assertEquals(125, balance.upgradeCost(
                 EndTowers.T1_ENDERMITE_TOWER.id(),
                 EndTowers.T2_ENDERMAN_TOWER.id(),

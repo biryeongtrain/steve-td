@@ -8501,7 +8501,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertEquals(
                 context,
                 Set.of(
-                        EndTowers.BASE_ENDER_TOWER.id(),
+                        EndTowers.BASE_END_TOWER.id(),
                         EndTowers.T1_ENDERMITE_TOWER.id(),
                         EndTowers.T1_SHULKER_TOWER.id()
                 ),
@@ -8513,7 +8513,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertEquals(
                 context,
                 TowerPlacementResult.SUCCESS,
-                ProductionTowerService.placeTower(game, playerId, corePos, EndTowers.BASE_ENDER_TOWER.id()),
+                ProductionTowerService.placeTower(game, playerId, corePos, EndTowers.BASE_END_TOWER.id()),
                 "Ender job should place its first core tower."
         )) {
             return;
@@ -8521,7 +8521,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertEquals(
                 context,
                 TowerPlacementResult.TOWER_NOT_ALLOWED,
-                ProductionTowerService.placeTower(game, playerId, secondCorePos, EndTowers.BASE_ENDER_TOWER.id()),
+                ProductionTowerService.placeTower(game, playerId, secondCorePos, EndTowers.BASE_END_TOWER.id()),
                 "Ender job should reject a second core tower."
         )) {
             return;
@@ -10147,7 +10147,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     public void enderEggPhantomAndDragonAreStatesOfOneRuntimeTower(GameTestHelper context) {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
         EndTower tower = new EndTower(
-                EndTowers.BASE_ENDER_TOWER,
+                EndTowers.BASE_END_TOWER,
                 stableUuid("ender-dragon-scale-owner"),
                 TeamId.RED,
                 1,

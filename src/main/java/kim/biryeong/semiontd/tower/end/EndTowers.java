@@ -26,7 +26,7 @@ public final class EndTowers {
     public static final EntityVisual DRAGON_VISUAL = EntityVisual.builder(byId(EntityType.ENDER_DRAGON))
             .build();
 
-    public static final TowerType BASE_ENDER_TOWER = tower(
+    public static final TowerType BASE_END_TOWER = tower(
             "base_ender_dragon",
             "엔더 드래곤",
             0,
@@ -142,8 +142,8 @@ public final class EndTowers {
 
 
 
-    private static final Set<String> ENDER_TOWER_IDS = Set.of(
-            BASE_ENDER_TOWER.id(),
+    private static final Set<String> END_TOWER_IDS = Set.of(
+            BASE_END_TOWER.id(),
             T1_ENDERMITE_TOWER.id(),
             T2_ENDERMAN_TOWER.id(),
             T3_END_CRYSTAL_TOWER.id(),
@@ -172,7 +172,7 @@ public final class EndTowers {
                 "<green>셜커 계열 누적 {ability.ender_global.shulkerLifeStealEvery:integer}스택마다 생명력 흡수 +{ability.ender_global.lifeStealPerStep:percent} (최대 {ability.ender_global.lifeStealCap:percent})</green>",
                 "<green>셜커 계열 누적 {ability.ender_global.shulkerReductionEvery:integer}스택마다 받는 피해 -{ability.ender_global.damageReductionPerStep:percent} (최대 {ability.ender_global.damageReductionCap:percent} 감소)</green>"
         );
-        TowerDescriptionRegistry.registerTemplate(BASE_ENDER_TOWER, dragonDescription);
+        TowerDescriptionRegistry.registerTemplate(BASE_END_TOWER, dragonDescription);
         TowerDescriptionRegistry.registerTemplate(T1_ENDERMITE_TOWER, List.of(
                 "<gray>공격력이 높은 엔더마이트 입니다.</gray>",
                 "<green>공격을 하지 않지만, 엔드 수정 계열의 힘 전달을 완료하면 엔더 드래곤의 공격력, 광역 공격, 공격 속도를 강화합니다.</green>"
@@ -206,11 +206,11 @@ public final class EndTowers {
     }
 
     public static boolean isEndTower(TowerType type) {
-        return type != null && ENDER_TOWER_IDS.contains(type.id());
+        return type != null && END_TOWER_IDS.contains(type.id());
     }
 
     public static boolean isBaseEndTower(TowerType type) {
-        return type != null && type.id().equals(BASE_ENDER_TOWER.id());
+        return type != null && type.id().equals(BASE_END_TOWER.id());
     }
 
     public static boolean isEndCrystalLine(TowerType type) {

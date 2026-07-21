@@ -896,7 +896,7 @@ public record TowerBalanceConfig(
     }
 
     private static void addEndTowers(Map<String, TowerStats> towers) {
-        addTower(towers, EndTowers.BASE_ENDER_TOWER);
+        addTower(towers, EndTowers.BASE_END_TOWER);
         addTower(towers, EndTowers.T1_ENDERMITE_TOWER);
         addTower(towers, EndTowers.T2_ENDERMAN_TOWER);
         addTower(towers, EndTowers.T3_END_CRYSTAL_TOWER);

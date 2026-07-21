@@ -41,7 +41,7 @@ class EndTowerCatalogTest {
     void defaultBalanceConfigIncludesEndTowersAndAbilities() {
         TowerBalanceConfig config = TowerBalanceConfig.defaultConfig();
 
-        assertTrue(config.towers().containsKey(EndTowers.BASE_ENDER_TOWER.id()));
+        assertTrue(config.towers().containsKey(EndTowers.BASE_END_TOWER.id()));
         assertTrue(config.towers().containsKey(EndTowers.T3_END_CRYSTAL_TOWER.id()));
         assertTrue(config.towers().containsKey(EndTowers.T3_SHULKER_TOWER.id()));
         assertEquals(-1.0, config.ability(EndTower.CONFIG_ID, "hatchDelayTicks", -1.0), 0.0001);
@@ -71,10 +71,10 @@ class EndTowerCatalogTest {
     }
 
     @Test
-    void enderJobAllowsEveryEndTowerOnly() {
+    void endJobAllowsEveryEndTowerOnly() {
         EndTowerJob job = new EndTowerJob();
 
-        assertTrue(job.canUseTower(null, EndTowers.BASE_ENDER_TOWER));
+        assertTrue(job.canUseTower(null, EndTowers.BASE_END_TOWER));
         assertTrue(job.canUseTower(null, EndTowers.T1_ENDERMITE_TOWER));
         assertTrue(job.canUseTower(null, EndTowers.T3_END_CRYSTAL_TOWER));
         assertTrue(job.canUseTower(null, EndTowers.T1_SHULKER_TOWER));
@@ -86,7 +86,7 @@ class EndTowerCatalogTest {
     void catalogRegistersDragonAndTwoUpgradePaths() {
         ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
 
-        assertStarter(EndTowers.BASE_ENDER_TOWER.id(), "엔더 드래곤");
+        assertStarter(EndTowers.BASE_END_TOWER.id(), "엔더 드래곤");
         assertStarter(EndTowers.T1_ENDERMITE_TOWER.id(), "엔더 마이트");
         assertStarter(EndTowers.T1_SHULKER_TOWER.id(), "셜커");
         assertUpgrade(EndTowers.T1_ENDERMITE_TOWER.id(), EndTowers.T2_ENDERMAN_TOWER.id(), "엔더맨", 125);
@@ -118,8 +118,8 @@ class EndTowerCatalogTest {
     void dragonDescriptionUsesConfiguredAbilityValues() {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
 
-        assertEquals(10.0, EndTowers.BASE_ENDER_TOWER.damage(), 0.0001);
-        String description = String.join("\n", TowerBalanceRuntime.resolve(EndTowers.BASE_ENDER_TOWER).description());
+        assertEquals(10.0, EndTowers.BASE_END_TOWER.damage(), 0.0001);
+        String description = String.join("\n", TowerBalanceRuntime.resolve(EndTowers.BASE_END_TOWER).description());
 
         assertTrue(description.contains("알로 소환되며"));
         assertTrue(description.contains("라운드 시작 시 팬텀"));
@@ -169,9 +169,9 @@ class EndTowerCatalogTest {
     void catalogCreatesEnderRuntime() {
         ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
 
-        var entry = ProductionTowerCatalog.find(EndTowers.BASE_ENDER_TOWER.id()).orElseThrow();
+        var entry = ProductionTowerCatalog.find(EndTowers.BASE_END_TOWER.id()).orElseThrow();
         var tower = entry.create(
-                UUID.nameUUIDFromBytes("ender-runtime".getBytes()),
+                UUID.nameUUIDFromBytes("end-runtime".getBytes()),
                 TeamId.RED,
                 1,
                 new GridPosition(0, 64, 0)

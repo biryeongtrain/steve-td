@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 import xyz.nucleoid.map_templates.BlockBounds;
 
 class EndTowerAbsorptionTest {
-    private static final UUID OWNER = UUID.nameUUIDFromBytes("ender-absorption-owner".getBytes());
+    private static final UUID OWNER = UUID.nameUUIDFromBytes("end-absorption-owner".getBytes());
 
     @BeforeAll
     static void bootstrapMinecraftRegistries() {
@@ -49,7 +49,7 @@ class EndTowerAbsorptionTest {
     void onlyFullyAbsorbedTowerIsCountedWhileStatsTransferGradually() {
         applyAbsorptionDuration(4);
         PlayerLane lane = lane();
-        EndTower dragon = tower(EndTowers.BASE_ENDER_TOWER, 0);
+        EndTower dragon = tower(EndTowers.BASE_END_TOWER, 0);
         EndTower enderman = tower(EndTowers.T1_ENDERMITE_TOWER, 1);
         lane.towers().add(dragon);
         dragon.onWaveStarted(lane, 1);
@@ -89,7 +89,7 @@ class EndTowerAbsorptionTest {
     void alreadyTransferredStatsRemainWhenAChannelStopsEarlyButTheTowerIsNotCounted() {
         applyAbsorptionDuration(4);
         PlayerLane lane = lane();
-        EndTower dragon = tower(EndTowers.BASE_ENDER_TOWER, 0);
+        EndTower dragon = tower(EndTowers.BASE_END_TOWER, 0);
         EndTower endCrystalLine = tower(EndTowers.T1_ENDERMITE_TOWER, 1);
         lane.towers().add(dragon);
         dragon.onWaveStarted(lane, 1);
@@ -112,7 +112,7 @@ class EndTowerAbsorptionTest {
                 "endCrystalAttackIntervalEvery", 1.0
         ));
         PlayerLane lane = lane();
-        EndTower dragon = tower(EndTowers.BASE_ENDER_TOWER, 0);
+        EndTower dragon = tower(EndTowers.BASE_END_TOWER, 0);
         EndTower shulker = tower(EndTowers.T1_SHULKER_TOWER, 1);
         lane.towers().add(dragon);
         dragon.onWaveStarted(lane, 1);
@@ -135,7 +135,7 @@ class EndTowerAbsorptionTest {
     void coreReturnsToEggEachRoundAndPermanentHealthReturnsAfterHatching() {
         applyAbsorptionDuration(1);
         PlayerLane lane = lane();
-        EndTower core = tower(EndTowers.BASE_ENDER_TOWER, 0);
+        EndTower core = tower(EndTowers.BASE_END_TOWER, 0);
         EndTower shulker = tower(EndTowers.T1_SHULKER_TOWER, 1);
         lane.towers().add(core);
         core.onWaveStarted(lane, 1);
@@ -164,7 +164,7 @@ class EndTowerAbsorptionTest {
     void completedLineCountsApplyRequestedBonusesAndStatCaps() {
         applyAbsorptionDuration(1);
         PlayerLane lane = lane();
-        EndTower dragon = tower(EndTowers.BASE_ENDER_TOWER, 0);
+        EndTower dragon = tower(EndTowers.BASE_END_TOWER, 0);
         lane.towers().add(dragon);
         dragon.onWaveStarted(lane, 1);
         dragon.tick(lane);
@@ -220,7 +220,7 @@ class EndTowerAbsorptionTest {
                 "damageReductionCap", 0.05
         ));
         PlayerLane lane = lane();
-        EndTower dragon = tower(EndTowers.BASE_ENDER_TOWER, 0);
+        EndTower dragon = tower(EndTowers.BASE_END_TOWER, 0);
         lane.towers().add(dragon);
         dragon.onWaveStarted(lane, 1);
         dragon.tick(lane);
@@ -243,7 +243,7 @@ class EndTowerAbsorptionTest {
     void completedTransfersUseRegisteredTowerTiersAsStackWeight() {
         applyAbsorptionDuration(1);
         PlayerLane lane = lane();
-        EndTower dragon = tower(EndTowers.BASE_ENDER_TOWER, 0);
+        EndTower dragon = tower(EndTowers.BASE_END_TOWER, 0);
         lane.towers().add(dragon);
         dragon.onWaveStarted(lane, 1);
         dragon.tick(lane);
@@ -262,7 +262,7 @@ class EndTowerAbsorptionTest {
     @Test
     void dragonEggAndHatchedPhantomAreStatesOfOneTowerType() {
         applyAbsorptionDuration(1);
-        EndTower tower = tower(EndTowers.BASE_ENDER_TOWER, 0);
+        EndTower tower = tower(EndTowers.BASE_END_TOWER, 0);
 
         assertEquals(EndTowerState.EGG, tower.state());
         assertTrue(BlockDisplayVisual.matches(tower.visual()));
@@ -275,7 +275,7 @@ class EndTowerAbsorptionTest {
         tower.tick(null);
 
         assertEquals(EndTowerState.PHANTOM, tower.state());
-        assertEquals(EndTowers.BASE_ENDER_TOWER, tower.type());
+        assertEquals(EndTowers.BASE_END_TOWER, tower.type());
         assertEquals("minecraft:phantom", tower.visual().entityTypeId());
         assertTrue(tower.visual().blockbenchModel().isEmpty());
 
@@ -307,9 +307,9 @@ class EndTowerAbsorptionTest {
     private static void applyEnderAbilities(Map<String, Double> overrides) {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
         Map<String, Map<String, Double>> abilities = new LinkedHashMap<>(defaults.abilities());
-        Map<String, Double> ender = new LinkedHashMap<>(abilities.get(EndTower.CONFIG_ID));
-        ender.putAll(overrides);
-        abilities.put(EndTower.CONFIG_ID, ender);
+        Map<String, Double> end = new LinkedHashMap<>(abilities.get(EndTower.CONFIG_ID));
+        end.putAll(overrides);
+        abilities.put(EndTower.CONFIG_ID, end);
         TowerBalanceRuntime.apply(new TowerBalanceConfig(defaults.towers(), defaults.upgradeCosts(), abilities));
     }
 

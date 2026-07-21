@@ -11,7 +11,7 @@ public final class EndTowerCatalogs {
     }
 
     public static void register() {
-        registerTower(EndTowers.BASE_ENDER_TOWER, 1);
+        registerTower(EndTowers.BASE_END_TOWER, 1);
         registerTower(EndTowers.T1_ENDERMITE_TOWER, 1);
         registerTower(EndTowers.T2_ENDERMAN_TOWER, 2);
         registerTower(EndTowers.T3_END_CRYSTAL_TOWER, 3);

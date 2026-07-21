@@ -517,7 +517,7 @@ public final class SemionConfigLoader {
             return json;
         }
         JsonObject towers = object.getAsJsonObject("towers");
-        String towerId = EndTowers.BASE_ENDER_TOWER.id();
+        String towerId = EndTowers.BASE_END_TOWER.id();
         if (!towers.has(towerId) || !towers.get(towerId).isJsonObject()) {
             return json;
         }
