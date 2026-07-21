@@ -5,11 +5,13 @@ import kim.biryeong.semiontd.api.area.AreaVfxOutput;
 import kim.biryeong.semiontd.api.area.AreaVfxParticle;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
 
 public final class BuiltinAreaVfxStyles {
     private static final AreaVfxParticle BUFF_PARTICLE = particle(0x66D975, 1.35F, "happy_villager");
     private static final AreaVfxParticle DEBUFF_PARTICLE = particle(0xC04478, 1.5F, "witch");
+    private static final AreaVfxParticle DRAGON_BREATH_PARTICLE = new AreaVfxParticle(ParticleTypes.DRAGON_BREATH, ResourceLocation.fromNamespaceAndPath("minecraft", "dragon_breath"));
 
     private BuiltinAreaVfxStyles() {
     }
@@ -22,6 +24,7 @@ public final class BuiltinAreaVfxStyles {
         registry.register(AreaVfxStyles.CORPSE_EXPLOSION, BuiltinAreaVfxStyles::explosion);
         registry.register(AreaVfxStyles.BUFF, BuiltinAreaVfxStyles::buff);
         registry.register(AreaVfxStyles.DEBUFF, BuiltinAreaVfxStyles::debuff);
+        registry.register(AreaVfxStyles.DRAGON_BREATH, BuiltinAreaVfxStyles::dragonBreath);
     }
 
     private static void splash(AreaVfxContext context, AreaVfxOutput output) {
@@ -74,6 +77,19 @@ public final class BuiltinAreaVfxStyles {
             output.trail(DEBUFF_PARTICLE, context.center().add(0.0, 0.3, 0.0), control, top, 12, false);
             output.line(DEBUFF_PARTICLE, top, base, 10, true);
             output.sphere(DEBUFF_PARTICLE, base.add(0.0, 0.2, 0.0), 0.24, 8, false);
+        }
+    }
+
+    private static void dragonBreath(AreaVfxContext context, AreaVfxOutput output) {
+        var source = context.source().add(0.0, 1.0, 0.0);
+        var center = context.center().add(0.0, 0.5, 0.0);
+        var control = source.lerp(center, 0.5).add(0.0, 0.3, 0.0);
+        output.trail(DRAGON_BREATH_PARTICLE, source, control, center, 32, true);
+        output.sphere(DRAGON_BREATH_PARTICLE, center, Math.max(0.35, context.radius() * 0.45), Math.max(20, outlinePoints(context.radius())), false);
+        for (var hit : context.sampledAppliedPositions()) {
+            var hitCenter = hit.add(0.0, 0.5, 0.0);
+            var hitControl = center.lerp(hitCenter, 0.5).add(0.0, 0.25, 0.0);
+            output.trail(DRAGON_BREATH_PARTICLE, center, hitControl, hitCenter, 12, false);
         }
     }
 

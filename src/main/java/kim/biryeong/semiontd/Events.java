@@ -52,9 +52,14 @@ public final class Events {
         });
         ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> cosmeticService.syncPlayer(newPlayer));
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-            skyboxService.handlePlayerDisconnect(handler.getPlayer());
-            tipService.handlePlayerDisconnect(handler.getPlayer());
-            gameManager.handlePlayerDisconnect(handler.getPlayer());
+            // The disconnect callback may run from Netty's channel thread. Entity
+            // cleanup must be deferred to the server thread (C2ME enforces this).
+            var player = handler.getPlayer();
+            server.execute(() -> {
+                skyboxService.handlePlayerDisconnect(player);
+                tipService.handlePlayerDisconnect(player);
+                gameManager.handlePlayerDisconnect(player);
+            });
         });
         ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((player, origin, destination) -> {
             skyboxService.handlePlayerWorldChanged(player);

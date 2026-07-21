@@ -24,6 +24,7 @@
     "accessor.RabbitAccessor",
     "accessor.SalmonAccessor",
     "accessor.SheepAccessor",
+    "accessor.ShulkerAccessor",
     "accessor.SlimeAccessor",
     "accessor.TamableAnimalAccessor",
     "accessor.TropicalFishAccessor",

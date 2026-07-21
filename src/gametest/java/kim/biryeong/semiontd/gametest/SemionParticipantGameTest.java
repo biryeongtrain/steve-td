@@ -106,6 +106,7 @@ import kim.biryeong.semiontd.game.TowerSellResult;
 import kim.biryeong.semiontd.game.TowerUpgradeResult;
 import kim.biryeong.semiontd.game.VanillaTeamBridge;
 import kim.biryeong.semiontd.job.AnimalTowerJob;
+import kim.biryeong.semiontd.job.EnderTowerJob;
 import kim.biryeong.semiontd.job.IllagerTowerJob;
 import kim.biryeong.semiontd.job.JobContext;
 import kim.biryeong.semiontd.job.JobRegistry;
@@ -147,6 +148,8 @@ import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.tower.ProductionTowerService;
 import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.tower.ender.EnderTower;
+import kim.biryeong.semiontd.tower.ender.EnderTowers;
 import kim.biryeong.semiontd.tower.TowerCategory;
 import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.TowerType;
@@ -8474,7 +8477,52 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertPresent(context, JobRegistry.find(NetherTowerJob.ID), "Built-in reload should register the nether tower job.")) {
             return;
         }
-        if (!assertEquals(context, 35L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose villager, villager ADV, undead, animal, warlock, legion, resonance, illager, and nether starter families.")) {
+        if (!assertPresent(context, JobRegistry.find(EnderTowerJob.ID), "Built-in reload should register the ender tower job.")) {
+            return;
+        }
+        if (!assertEquals(context, 38L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose villager, villager ADV, undead, animal, warlock, legion, resonance, illager, nether, and ender starter families.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void enderTowerJobLimitsCoreToOne(GameTestHelper context) {
+        UUID playerId = stableUuid("ender-job-tower-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, EnderTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos corePos = towerPlacementPos(lane);
+        BlockPos secondCorePos = nearbyTowerPlacementPos(lane, corePos);
+
+        Set<String> starterIds = ProductionTowerService.availableTowers(game, playerId).stream()
+                .map(entry -> entry.type().id())
+                .collect(java.util.stream.Collectors.toSet());
+        if (!assertEquals(
+                context,
+                Set.of(
+                        EnderTowers.BASE_ENDER_TOWER.id(),
+                        EnderTowers.T1_ENDERMITE_TOWER.id(),
+                        EnderTowers.T1_SHULKER_TOWER.id()
+                ),
+                starterIds,
+                "Ender job should expose its core and two feeder starters."
+        )) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                TowerPlacementResult.SUCCESS,
+                ProductionTowerService.placeTower(game, playerId, corePos, EnderTowers.BASE_ENDER_TOWER.id()),
+                "Ender job should place its first core tower."
+        )) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                TowerPlacementResult.TOWER_NOT_ALLOWED,
+                ProductionTowerService.placeTower(game, playerId, secondCorePos, EnderTowers.BASE_ENDER_TOWER.id()),
+                "Ender job should reject a second core tower."
+        )) {
             return;
         }
         context.succeed();
@@ -10089,6 +10137,79 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertClose(context, 1.5, entity.getAttributeValue(Attributes.SCALE), "Tower entity scale attribute should match EntityVisual scale.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void enderEggPhantomAndDragonAreStatesOfOneRuntimeTower(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        EnderTower tower = new EnderTower(
+                EnderTowers.BASE_ENDER_TOWER,
+                stableUuid("ender-dragon-scale-owner"),
+                TeamId.RED,
+                1,
+                new GridPosition(0, 0, 0)
+        );
+        SemionTowerEntity entity = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+        entity.configure(tower, null);
+        if (!assertEquals(context, EntityType.ARMOR_STAND, entity.getPolymerEntityType(null), "Ender Dragon EGG state should use an attribute-compatible living proxy.")) {
+            return;
+        }
+        if (!assertTrue(context, entity.isInvisible(), "The living EGG proxy should stay hidden behind its Dragon Egg block display.")) {
+            return;
+        }
+        tower.onWaveStarted(null, 1);
+        for (int tick = 0; tick < 200; tick++) {
+            tower.tick(null);
+        }
+        entity.syncTowerState(tower);
+        if (!assertEquals(context, EntityType.PHANTOM, entity.getPolymerEntityType(null), "Hatching should refresh the same tower entity to a vanilla Phantom proxy.")) {
+            return;
+        }
+        if (!assertTrue(context, !entity.isInvisible(), "The Phantom proxy should become visible after leaving the EGG state.")) {
+            return;
+        }
+        if (entity.hasBilModelHolder()) {
+            throw new AssertionError("The Ender core must not load a BIL model in PHANTOM state.");
+        }
+        if (!assertClose(context, EnderTowers.phantomScaleForMaxHealth(tower.currentMaxHealth()), entity.getScale(), "Only the Phantom state should use max-health-proportional scale.")) {
+            return;
+        }
+        if (entity.runtimeTower() != tower) {
+            throw new AssertionError("Visual state changes must retain the real Ender tower used by right-click details.");
+        }
+
+        tower.syncMaxHealth(1999.99, true);
+        tower.tick(null);
+        if (!assertEquals(context, kim.biryeong.semiontd.tower.ender.EnderTowerState.PHANTOM, tower.state(), "Exactly 2000 max health must remain PHANTOM.")) {
+            return;
+        }
+        tower.syncMaxHealth(2000.0, true);
+        tower.tick(null);
+        entity.syncTowerState(tower);
+        if (!assertEquals(context, EntityType.ENDER_DRAGON, entity.getPolymerEntityType(null), "More than 2000 max health should evolve the Phantom into a vanilla Ender Dragon proxy.")) {
+            return;
+        }
+        if (entity.hasBilModelHolder()) {
+            throw new AssertionError("The evolved vanilla Ender Dragon must not load a BIL model holder.");
+        }
+        if (!entity.hasEnderDragonInteractionHitbox()) {
+            throw new AssertionError("DRAGON state should add a redirected Interaction hitbox for reliable tower detail clicks.");
+        }
+        if (!assertClose(context, 1.0, entity.getScale(), "Max-health-proportional scale must stop after evolving into the Ender Dragon.")) {
+            return;
+        }
+        entity.playAnimation(SemionAnimationState.IDLE);
+        if (!assertEquals(context, SemionAnimationState.IDLE, entity.animationState(), "Vanilla Ender Dragon should retain the tower idle state.")) {
+            return;
+        }
+        entity.playAnimation(SemionAnimationState.WALK);
+        if (!assertEquals(context, SemionAnimationState.WALK, entity.animationState(), "Vanilla Ender Dragon should retain the tower walk state.")) {
+            return;
+        }
+        if (!assertClose(context, 5.0, tower.adjustAttackRange(tower.type().range()), "Ender Dragon base attack range should be 5 blocks.")) {
             return;
         }
         context.succeed();

@@ -6,6 +6,7 @@ import kim.biryeong.semiontd.entity.monster.KillSourceKind;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
+import kim.biryeong.semiontd.entity.visual.EntityVisual;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
@@ -67,6 +68,10 @@ public abstract class Tower {
         return type;
     }
 
+    public EntityVisual visual() {
+        return type.visual();
+    }
+
     public void refreshType(TowerType type, PlayerLane lane) {
         if (type == null || !this.type.id().equals(type.id())) {
             return;
@@ -107,6 +112,10 @@ public abstract class Tower {
 
     public double currentMaxHealth() {
         return applyTraitMaxHealth(maxHealth);
+    }
+
+    public double effectBaseMaxHealth() {
+        return type.maxHealth();
     }
 
     public void syncMaxHealth(double maxHealth, boolean healIncrease) {
@@ -373,6 +382,10 @@ public abstract class Tower {
 
     public int adjustAttackInterval(int baseIntervalTicks) {
         return baseIntervalTicks;
+    }
+
+    public double adjustAttackRange(double baseRange) {
+        return baseRange;
     }
 
     public boolean isDestroyed(PlayerLane lane) {

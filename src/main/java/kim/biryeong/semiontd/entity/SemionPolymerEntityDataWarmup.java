@@ -68,8 +68,10 @@ public final class SemionPolymerEntityDataWarmup {
 
     private static void addBaseEntityTypes(Set<EntityType<?>> entityTypes) {
         entityTypes.add(EntityType.ARMOR_STAND);
+        entityTypes.add(EntityType.ENDER_DRAGON);
         entityTypes.add(EntityType.HUSK);
         entityTypes.add(EntityType.IRON_GOLEM);
+        entityTypes.add(EntityType.PHANTOM);
         entityTypes.add(EntityType.SKELETON);
         entityTypes.add(EntityType.VILLAGER);
         entityTypes.add(EntityType.ZOMBIE);

@@ -3,6 +3,7 @@ package kim.biryeong.semiontd;
 import java.nio.file.Path;
 import eu.pb4.polymer.resourcepack.api.PolymerResourcePackUtils;
 import kim.biryeong.semiontd.api.SemionTdApi;
+import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.balance.BalancePatchNotifier;
 import kim.biryeong.semiontd.command.SemionCommands;
 import kim.biryeong.semiontd.config.SemionConfigLoader;

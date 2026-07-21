@@ -26,10 +26,15 @@ import kim.biryeong.semiontd.test.tower.TestTower;
 import kim.biryeong.semiontd.test.tower.TestTowerTypes;
 import kim.biryeong.semiontd.tower.TowerCategory;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.ender.EnderTower;
+import kim.biryeong.semiontd.tower.ender.EnderTowers;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity.RemovalReason;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 public final class SemionWaveGameTest {
@@ -358,10 +363,10 @@ public final class SemionWaveGameTest {
         Monster runtimeMonster = Monster.fromWaveEntry(artillery, TeamId.RED, 1);
         SemionMonsterEntity monsterEntity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
         monsterEntity.configureFrom(runtimeMonster, lane.laneLayout());
-        monsterEntity.setPos(lane.laneLayout().spawn());
+        Vec3 finalDefensePosition = lane.laneLayout().bossPosition();
+        monsterEntity.setPos(finalDefensePosition.add(0.0, 0.0, -3.0));
         context.getLevel().addFreshEntity(monsterEntity);
 
-        Vec3 finalDefensePosition = lane.laneLayout().bossPosition();
         GridPosition finalDefenseBlock = GridPosition.from(BlockPos.containing(finalDefensePosition.add(0.0, -1.0, 0.0)));
         TestTower finalDefenseTower = new TestTower(
                 TestTowerTypes.TEST_DIRECT,
@@ -378,19 +383,30 @@ public final class SemionWaveGameTest {
 
         AcquireLaneDefenseTargetGoal targetGoal = new AcquireLaneDefenseTargetGoal(monsterEntity);
         if (!targetGoal.canUse()) {
-            throw new AssertionError("A ranged monster should detect the final-defense tower before reaching the boss.");
+            context.fail(Component.literal("A ranged monster should detect the final-defense tower before reaching the boss."));
+            return;
         }
         targetGoal.start();
 
         if (monsterEntity.getTarget() != towerEntity || !runtimeMonster.inFinalDefenseCombat()) {
-            throw new AssertionError("Targeting a final-defense tower should immediately enter final-defense combat.");
+            context.fail(Component.literal("Targeting a final-defense tower should immediately enter final-defense combat."));
+            return;
         }
-        assertClose(Monster.FINAL_DEFENSE_ATTACK_RANGE, runtimeMonster.attackRange(), "intercepted final-defense attack range");
+        if (Math.abs(runtimeMonster.attackRange() - Monster.FINAL_DEFENSE_ATTACK_RANGE) > 0.0001) {
+            context.fail(Component.literal("Targeting final defense should cap attack range to "
+                    + Monster.FINAL_DEFENSE_ATTACK_RANGE + ", got " + runtimeMonster.attackRange() + "."));
+            return;
+        }
 
         float towerHealth = towerEntity.getHealth();
         new MonsterAttackTargetGoal(monsterEntity, 1.1).tick();
         if (towerEntity.getHealth() != towerHealth || !monsterEntity.getMoveControl().hasWanted()) {
-            throw new AssertionError("The monster should approach the tower instead of attacking beyond two blocks.");
+            context.fail(Component.literal("The monster should approach the tower instead of attacking beyond two blocks. health="
+                    + towerEntity.getHealth() + "/" + towerHealth
+                    + ", moveWanted=" + monsterEntity.getMoveControl().hasWanted()
+                    + ", distance=" + Math.sqrt(monsterEntity.distanceToSqr(towerEntity))
+                    + ", canTarget=" + monsterEntity.canTargetDefense(towerEntity)));
+            return;
         }
         context.succeed();
     }
@@ -485,6 +501,108 @@ public final class SemionWaveGameTest {
             throw new AssertionError("A pre-notified destroyed tower should still break lane defense.");
         }
         assertClose(Monster.FINAL_DEFENSE_ATTACK_RANGE, monster.attackRange(), "pre-notified final-defense attack range");
+        context.succeed();
+    }
+
+    @GameTest
+    public void destroyedEnderCoreStopsAbsorbing(GameTestHelper context) {
+        PlayerLane lane = lane(context, "destroyed-ender-core");
+        EnderTower core = new EnderTower(
+                EnderTowers.BASE_ENDER_TOWER,
+                lane.ownerPlayer(),
+                TeamId.RED,
+                1,
+                GridPosition.from(context.absolutePos(new BlockPos(4, 1, 1)))
+        );
+        EnderTower source = new EnderTower(
+                EnderTowers.T1_ENDERMITE_TOWER,
+                lane.ownerPlayer(),
+                TeamId.RED,
+                1,
+                GridPosition.from(context.absolutePos(new BlockPos(1, 1, 1)))
+        );
+        lane.addTower(core);
+        lane.addTower(source);
+        core.onWaveStarted(lane, 1);
+
+        SemionTowerEntity coreEntity = (SemionTowerEntity) context.getLevel().getEntity(core.entityId().orElseThrow());
+        coreEntity.setHealth(0.0F);
+        lane.tick(context.getLevel().getServer());
+
+        assertClose(0.0, core.roundDamageBonus(), "destroyed core round damage bonus");
+        assertClose(0.0, core.permanentDamageBonus(), "destroyed core permanent damage bonus");
+        if (source.health() <= 0.0) {
+            throw new AssertionError("A destroyed Ender core must not finish absorbing feeder towers.");
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void enderTransferDoesNotSpawnEndCrystals(GameTestHelper context) {
+        PlayerLane lane = lane(context, "ender-transfer-enchant-particles");
+        GridPosition sourcePosition = GridPosition.from(context.absolutePos(new BlockPos(1, 1, 1)));
+        GridPosition dragonPosition = GridPosition.from(context.absolutePos(new BlockPos(4, 1, 1)));
+        EnderTower egg = new EnderTower(
+                EnderTowers.BASE_ENDER_TOWER,
+                lane.ownerPlayer(),
+                TeamId.RED,
+                1,
+                dragonPosition
+        );
+        EnderTower source = new EnderTower(
+                EnderTowers.T1_ENDERMITE_TOWER,
+                lane.ownerPlayer(),
+                TeamId.RED,
+                1,
+                sourcePosition
+        );
+        lane.addTower(egg);
+        lane.addTower(source);
+        int coreEntityId = egg.entityId().orElseThrow();
+        egg.onWaveStarted(lane, 1);
+
+        for (int tick = 0; tick < 200; tick++) {
+            egg.tick(lane);
+        }
+        EnderTower dragon = egg;
+        if (!lane.towers().contains(dragon)
+                || dragon.state() != kim.biryeong.semiontd.tower.ender.EnderTowerState.PHANTOM
+                || dragon.entityId().isEmpty()
+                || dragon.entityId().getAsInt() != coreEntityId) {
+            throw new AssertionError("Hatching should switch the existing core tower and entity from EGG to PHANTOM state.");
+        }
+        dragon.tick(lane);
+
+        AABB beamArea = new AABB(
+                sourcePosition.x() - 1.0,
+                sourcePosition.y(),
+                sourcePosition.z() - 1.0,
+                dragonPosition.x() + 2.0,
+                dragonPosition.y() + 4.0,
+                dragonPosition.z() + 2.0
+        );
+        if (!context.getLevel().getEntitiesOfClass(EndCrystal.class, beamArea).isEmpty()) {
+            throw new AssertionError("An active Ender transfer must not spawn a visible End Crystal entity.");
+        }
+
+        for (int tick = 0; tick < 399; tick++) {
+            dragon.tick(lane);
+        }
+
+        if (!context.getLevel().getEntitiesOfClass(EndCrystal.class, beamArea).isEmpty()) {
+            throw new AssertionError("A completed Ender transfer must not leave an End Crystal entity behind.");
+        }
+        if (!lane.towers().contains(source) || source.health() > 0.0) {
+            throw new AssertionError("A completed transfer should kill its source without selling or removing it.");
+        }
+
+        lane.resetForRound();
+        if (!lane.towers().contains(source)
+                || source.health() <= 0.0
+                || source.entityId().isEmpty()
+                || context.getLevel().getEntity(source.entityId().getAsInt()) == null) {
+            throw new AssertionError("A source killed by completed transfer should return on the next round.");
+        }
         context.succeed();
     }
 
