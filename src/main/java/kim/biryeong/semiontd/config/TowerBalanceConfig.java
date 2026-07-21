@@ -1083,7 +1083,7 @@ public record TowerBalanceConfig(
                 Map.entry("lifeStealCap", 0.30),
                 Map.entry("endCrystalSplashEvery", 10.0),
                 Map.entry("splashRadiusPerStep", 0.25),
-                Map.entry("splashRadiusCap", 2.5),
+                Map.entry("splashRadiusCap", 5.0),
                 Map.entry("splashDamageRatio", 1.0),
                 Map.entry("shulkerReductionEvery", 20.0),
                 Map.entry("damageReductionPerStep", 0.025),

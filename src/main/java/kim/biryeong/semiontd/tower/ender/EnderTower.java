@@ -501,31 +501,15 @@ public final class EnderTower extends EntityBackedTower {
         return Math.min(Math.max(0.0, global("splashRadiusCap")), value);
     }
 
-    private void applySplashDamage(
-            SemionTowerEntity towerEntity,
-            SemionMonsterEntity target,
-            double damageAmount
-    ) {
+    private void applySplashDamage(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
         double radius = splashRadius();
         double damageRatio = Math.max(0.0, global("splashDamageRatio"));
         if (radius <= 0.0 || damageAmount <= 0.0 || damageRatio <= 0.0) {
             return;
         }
-        MonsterAreaEffectRequest request = MonsterAreaEffectRequest.aroundTarget(
-                AreaEffectIds.tower(this, "splash"),
-                towerEntity,
-                target,
-                radius,
-                AreaVfxSpec.onTrigger(AreaVfxStyles.SPLASH)
-        );
-        TowerAreaDamage.apply(
-                this,
-                towerEntity,
-                request,
-                ignored -> damageAmount * damageRatio,
-                true,
-                (ignored, splashDamage, killed) -> heal(towerEntity, splashDamage * lifeStealRatio())
-        );
+        ResourceLocation vfxStyle = isDragon() ? AreaVfxStyles.DRAGON_BREATH : AreaVfxStyles.SPLASH;
+        MonsterAreaEffectRequest request = MonsterAreaEffectRequest.aroundTarget(AreaEffectIds.tower(this, "splash"), towerEntity, target, radius, AreaVfxSpec.onTrigger(vfxStyle));
+        TowerAreaDamage.apply(this, towerEntity, request, ignored -> damageAmount * damageRatio, true, (ignored, splashDamage, killed) -> heal(towerEntity, splashDamage * lifeStealRatio()));
     }
 
     private int attackIntervalReduction() {

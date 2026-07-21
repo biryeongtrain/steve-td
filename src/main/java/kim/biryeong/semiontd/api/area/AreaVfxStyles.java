@@ -10,6 +10,7 @@ public final class AreaVfxStyles {
     public static final ResourceLocation CORPSE_EXPLOSION = id("corpse_explosion");
     public static final ResourceLocation BUFF = id("buff");
     public static final ResourceLocation DEBUFF = id("debuff");
+    public static final ResourceLocation DRAGON_BREATH = id("dragon_breath");
 
     private AreaVfxStyles() {
     }
