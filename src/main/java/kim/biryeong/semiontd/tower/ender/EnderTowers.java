@@ -163,7 +163,7 @@ public final class EnderTowers {
         List<String> dragonDescription = List.of(
                 "<gray>알로 소환되며, 라운드 시작 시 팬텀으로 변합니다.</gray>",
                 "<gray>최대 체력이 <yellow>{ability.ender_global.dragonEvolutionMaxHealth:integer}</yellow> 이상이면 엔더 드래곤으로 진화합니다.</gray>",
-                "<gray>팬텀 크기는 1.0부터 최대 체력 100당 0.2 증가하며, 최대 5.0입니다.</gray>",
+                "<gray>팬텀 크기는 1.0부터 최대 체력 100당 0.2 증가합니다.</gray>",
                 "<green>타워는 {ability.ender_global.absorptionDurationTicks:seconds} 동안 힘을 전달하고 사망합니다.</green>",
                 "<green>엔드 수정 계열: 타워 공격력 {ability.ender_global.permanentDamageRatio:percent} 영구 누적</green>",
                 "<green>{ability.ender_global.endCrystalSplashEvery:integer}기마다 광역 공격 반경 +{ability.ender_global.splashRadiusPerStep:blocks} (최대 {ability.ender_global.splashRadiusCap:blocks})</green>",
