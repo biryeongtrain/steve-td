@@ -57,7 +57,7 @@ class EnderTowerCatalogTest {
         assertEquals(10.0, config.ability(EnderTower.CONFIG_ID, "shulkerLifeStealEvery", -1.0), 0.0001);
         assertEquals(10.0, config.ability(EnderTower.CONFIG_ID, "endCrystalSplashEvery", -1.0), 0.0001);
         assertEquals(0.25, config.ability(EnderTower.CONFIG_ID, "splashRadiusPerStep", -1.0), 0.0001);
-        assertEquals(2.5, config.ability(EnderTower.CONFIG_ID, "splashRadiusCap", -1.0), 0.0001);
+        assertEquals(5.0, config.ability(EnderTower.CONFIG_ID, "splashRadiusCap", -1.0), 0.0001);
         assertEquals(1.0, config.ability(EnderTower.CONFIG_ID, "splashDamageRatio", -1.0), 0.0001);
         assertEquals(20.0, config.ability(EnderTower.CONFIG_ID, "shulkerReductionEvery", -1.0), 0.0001);
         assertEquals(0.025, config.ability(EnderTower.CONFIG_ID, "damageReductionPerStep", -1.0), 0.0001);
