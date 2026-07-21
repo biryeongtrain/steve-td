@@ -798,7 +798,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     private boolean usesEnderDragonInteractionHitbox() {
         return runtimeTower != null
-                && EndTowers.isBaseEnderTower(runtimeTower.type())
+                && EndTowers.isBaseEndTower(runtimeTower.type())
                 && blockbenchModelId == null
                 && EntityType.ENDER_DRAGON == polymerEntityType;
     }

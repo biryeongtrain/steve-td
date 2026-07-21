@@ -205,11 +205,11 @@ public final class EndTowers {
     private EndTowers() {
     }
 
-    public static boolean isEnderTower(TowerType type) {
+    public static boolean isEndTower(TowerType type) {
         return type != null && ENDER_TOWER_IDS.contains(type.id());
     }
 
-    public static boolean isBaseEnderTower(TowerType type) {
+    public static boolean isBaseEndTower(TowerType type) {
         return type != null && type.id().equals(BASE_ENDER_TOWER.id());
     }
 

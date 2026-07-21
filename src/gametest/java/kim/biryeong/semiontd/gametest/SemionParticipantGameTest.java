@@ -8301,7 +8301,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
-    public void enderTowerJobLimitsCoreToOne(GameTestHelper context) {
+    public void endTowerJobLimitsCoreToOne(GameTestHelper context) {
         UUID playerId = stableUuid("ender-job-tower-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, EndTowerJob.ID);
         PlayerLane lane = redLane(game, 1);

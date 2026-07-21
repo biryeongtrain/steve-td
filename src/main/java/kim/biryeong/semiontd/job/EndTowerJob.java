@@ -39,16 +39,16 @@ public final class EndTowerJob extends SemionJob {
 
     @Override
     public boolean canUseTower(JobContext context, TowerType towerType) {
-        if (!EndTowers.isEnderTower(towerType)) {
+        if (!EndTowers.isEndTower(towerType)) {
             return false;
         }
-        if (!EndTowers.isBaseEnderTower(towerType) || context == null) {
+        if (!EndTowers.isBaseEndTower(towerType) || context == null) {
             return true;
         }
         return context.game().playerLane(context.player().uuid())
                 .map(lane -> lane.towers().stream()
                         .map(Tower::type)
-                        .noneMatch(EndTowers::isBaseEnderTower))
+                        .noneMatch(EndTowers::isBaseEndTower))
                 .orElse(true);
     }
 }

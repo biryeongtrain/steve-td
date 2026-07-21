@@ -138,7 +138,7 @@ public record TowerBalanceConfig(
         addTower(towers, IllagerTowers.T3_ILLUSIONER_LOW);
         addTower(towers, IllagerTowers.T3_ILLUSIONER_HIGH);
         addNetherTowers(towers);
-        addEnderTowers(towers);
+        addEndTowers(towers);
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
         putUpgrade(upgradeCosts, VillagerTowers.T1_SPLASH_TOWER, "villager_splash_t2", 110);
@@ -895,7 +895,7 @@ public record TowerBalanceConfig(
         addTower(towers, NetherTowers.T3_WITHER);
     }
 
-    private static void addEnderTowers(Map<String, TowerStats> towers) {
+    private static void addEndTowers(Map<String, TowerStats> towers) {
         addTower(towers, EndTowers.BASE_ENDER_TOWER);
         addTower(towers, EndTowers.T1_ENDERMITE_TOWER);
         addTower(towers, EndTowers.T2_ENDERMAN_TOWER);

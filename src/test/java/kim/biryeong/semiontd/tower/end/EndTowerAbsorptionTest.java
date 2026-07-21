@@ -26,7 +26,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import xyz.nucleoid.map_templates.BlockBounds;
 
-class EnderTowerAbsorptionTest {
+class EndTowerAbsorptionTest {
     private static final UUID OWNER = UUID.nameUUIDFromBytes("ender-absorption-owner".getBytes());
 
     @BeforeAll

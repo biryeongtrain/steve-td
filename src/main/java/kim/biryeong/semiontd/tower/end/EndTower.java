@@ -150,7 +150,7 @@ public final class EndTower extends EntityBackedTower {
             return;
         }
         if (waveActive && isHatched()) {
-            absorbAlliedEnderTowers(lane);
+            absorbAlliedEndTowers(lane);
             evolveToDragonIfReady(lane);
         }
         super.tick(lane);
@@ -301,7 +301,7 @@ public final class EndTower extends EntityBackedTower {
         return roundDamageBonus;
     }
 
-    private void absorbAlliedEnderTowers(PlayerLane lane) {
+    private void absorbAlliedEndTowers(PlayerLane lane) {
         if (lane == null) {
             return;
         }
@@ -573,7 +573,7 @@ public final class EndTower extends EntityBackedTower {
     }
 
     private boolean isCoreTower() {
-        return EndTowers.isBaseEnderTower(type());
+        return EndTowers.isBaseEndTower(type());
     }
 
     private void initializeState() {

@@ -24,7 +24,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-class EnderTowerCatalogTest {
+class EndTowerCatalogTest {
     @BeforeAll
     static void bootstrapMinecraftRegistries() {
         SharedConstants.tryDetectVersion();
@@ -38,7 +38,7 @@ class EnderTowerCatalogTest {
     }
 
     @Test
-    void defaultBalanceConfigIncludesEnderTowersAndAbilities() {
+    void defaultBalanceConfigIncludesEndTowersAndAbilities() {
         TowerBalanceConfig config = TowerBalanceConfig.defaultConfig();
 
         assertTrue(config.towers().containsKey(EndTowers.BASE_ENDER_TOWER.id()));
@@ -71,7 +71,7 @@ class EnderTowerCatalogTest {
     }
 
     @Test
-    void enderJobAllowsEveryEnderTowerOnly() {
+    void enderJobAllowsEveryEndTowerOnly() {
         EndTowerJob job = new EndTowerJob();
 
         assertTrue(job.canUseTower(null, EndTowers.BASE_ENDER_TOWER));
