@@ -124,7 +124,7 @@ class EnderTowerCatalogTest {
         assertTrue(description.contains("알로 소환되며"));
         assertTrue(description.contains("라운드 시작 시 팬텀"));
         assertTrue(description.contains("이상이면"));
-        assertTrue(description.contains("최대 5.0"));
+        assertTrue(description.contains("팬텀 크기는 1.0부터 최대 체력 100당 0.2 증가합니다."));
         assertTrue(description.contains("20초"));
         assertTrue(description.contains("5%"));
         assertTrue(description.contains("엔드 수정 계열"));
