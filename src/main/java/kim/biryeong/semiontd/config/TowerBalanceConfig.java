@@ -923,10 +923,10 @@ public record TowerBalanceConfig(
     }
 
     private static void putEndUpgrades(Map<String, Long> upgrades) {
-        putUpgrade(upgrades, EndTowers.T1_ENDERMITE_TOWER, EndTowers.T2_ENDERMAN_TOWER.id(), 100);
-        putUpgrade(upgrades, EndTowers.T2_ENDERMAN_TOWER, EndTowers.T3_END_CRYSTAL_TOWER.id(), 150);
-        putUpgrade(upgrades, EndTowers.T1_SHULKER_TOWER, EndTowers.T2_SHULKER_TOWER.id(), 100);
-        putUpgrade(upgrades, EndTowers.T2_SHULKER_TOWER, EndTowers.T3_SHULKER_TOWER.id(), 150);
+        putUpgrade(upgrades, EndTowers.T1_ENDERMITE_TOWER, EndTowers.T2_ENDERMAN_TOWER.id(), 80);
+        putUpgrade(upgrades, EndTowers.T2_ENDERMAN_TOWER, EndTowers.T3_END_CRYSTAL_TOWER.id(), 130);
+        putUpgrade(upgrades, EndTowers.T1_SHULKER_TOWER, EndTowers.T2_SHULKER_TOWER.id(), 80);
+        putUpgrade(upgrades, EndTowers.T2_SHULKER_TOWER, EndTowers.T3_SHULKER_TOWER.id(), 130);
     }
 
     private static void putNetherAbilities(Map<String, Map<String, Double>> abilities) {
@@ -1078,36 +1078,39 @@ public record TowerBalanceConfig(
                 Map.entry("dragonEvolutionMaxHealth", 2000.0),
                 Map.entry("absorptionDurationTicks", 200.0),
                 Map.entry("absorptionHealAmount", 50.0),
+                Map.entry("transferHealingPerTower", 1.0),
+                Map.entry("transferHealingIntervalTicks", 20.0),
                 Map.entry("roundAbsorptionAttackIntervalEvery", 1.0),
                 Map.entry("roundAbsorptionAttackIntervalReductionTicks", 1.0),
-                Map.entry("roundHealthRatio", 1.0),
-                Map.entry("roundDamageRatio", 1.0),
-                Map.entry("roundStatBonusCapRatio", 0.50),
+                Map.entry("roundHealthRatio", 0.50),
+                Map.entry("roundDamageRatio", 0.50),
                 Map.entry("permanentHealthRatio", 0.05),
                 Map.entry("permanentDamageRatio", 0.05),
-                Map.entry("endCrystalAttackIntervalEvery", 15.0),
+                Map.entry("endCrystalAttackIntervalEvery", 30.0),
                 Map.entry("attackIntervalReductionPerStep", 1.0),
-                Map.entry("endCrystalAttackRangeEvery", 40.0),
-                Map.entry("attackRangePerStep", 1.0),
-                Map.entry("attackRangeCap", 5.0),
-                Map.entry("shulkerLifeStealEvery", 10.0),
+                Map.entry("endCrystalAttackRangeEvery", 50.0),
+                Map.entry("attackRangePerStep", 0.5),
+                Map.entry("attackRangeCap", 3.0),
+                Map.entry("shulkerLifeStealEvery", 15.0),
                 Map.entry("lifeStealPerStep", 0.01),
                 Map.entry("lifeStealCap", 0.20),
                 Map.entry("shulkerRegenerationEvery", 30.0),
-                Map.entry("regenerationPerStep", 5.0),
-                Map.entry("regenerationCap", 50.0),
+                Map.entry("regenerationPerStep", 1.0),
+                Map.entry("regenerationCap", 10.0),
                 Map.entry("regenerationIntervalTicks", 20.0),
-                Map.entry("endCrystalSplashEvery", 10.0),
-                Map.entry("splashRadiusPerStep", 0.5),
-                Map.entry("splashRadiusCap", 5.0),
+                Map.entry("endCrystalSplashThreshold1", 15.0),
+                Map.entry("endCrystalSplashThreshold2", 60.0),
+                Map.entry("endCrystalSplashThreshold3", 150.0),
+                Map.entry("endCrystalSplashThreshold4", 300.0),
+                Map.entry("splashRadiusCap", 4.0),
                 Map.entry("splashDamageRatio", 0.60),
-                Map.entry("shulkerReductionEvery", 15.0),
-                Map.entry("damageReductionPerStep", 0.025),
-                Map.entry("damageReductionCap", 0.25),
-                Map.entry("maxAttackIntervalReductionTicks", 15.0),
+                Map.entry("shulkerReductionEvery", 60.0),
+                Map.entry("damageReductionPerStep", 0.04),
+                Map.entry("damageReductionCap", 0.20),
+                Map.entry("maxAttackIntervalReductionTicks", 10.0),
                 Map.entry("minimumAttackIntervalTicks", 5.0),
-                Map.entry("dragonFinalDamageBonus", 0.25),
-                Map.entry("dragonIncomeDebuffResistance", 0.25)
+                Map.entry("dragonFinalDamageBonus", 0.30),
+                Map.entry("dragonIncomeDebuffResistance", 0.10)
         ));
     }
 

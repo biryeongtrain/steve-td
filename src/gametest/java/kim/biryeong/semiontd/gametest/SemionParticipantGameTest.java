@@ -215,6 +215,7 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
@@ -8529,6 +8530,43 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void hatchedEndCoreKeepsItsGridHeightDuringEntitySync(GameTestHelper context) {
+        UUID playerId = stableUuid("end-core-height-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, EndTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos corePos = towerPlacementPos(lane);
+        if (!assertEquals(
+                context,
+                TowerPlacementResult.SUCCESS,
+                ProductionTowerService.placeTower(game, playerId, corePos, EndTowers.BASE_END_TOWER.id()),
+                "End height test should place its core tower."
+        )) {
+            return;
+        }
+        EndTower core = (EndTower) lane.towerAt(GridPosition.from(corePos));
+        int originalGridY = core.position().y();
+        core.onWaveStarted(lane, 1);
+        core.tick(lane);
+        SemionTowerEntity entity = (SemionTowerEntity) lane.arenaWorld()
+                .getEntity(core.entityId().orElseThrow());
+
+        for (int index = 0; index < 5; index++) {
+            core.isDestroyed(lane);
+            core.onStateChanged(lane);
+        }
+
+        if (!assertEquals(context, originalGridY, core.position().y(),
+                "Hatched End core entity sync must not increase its grid Y coordinate.")) {
+            return;
+        }
+        if (!assertClose(context, originalGridY + 2.0, entity.getY(),
+                "Phantom should remain exactly one visual block above the normal tower anchor.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void illagerTowerJobUsesIllagerStartersAndBranchUpgrades(GameTestHelper context) {
         UUID playerId = stableUuid("illager-job-tower-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, IllagerTowerJob.ID);
@@ -10143,6 +10181,33 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void endCrystalVisualUsesSmallServerCollisionBox(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        EndTower tower = new EndTower(
+                EndTowers.T3_END_CRYSTAL_TOWER,
+                stableUuid("end-crystal-hitbox-owner"),
+                TeamId.RED,
+                1,
+                new GridPosition(0, 0, 0)
+        );
+        SemionTowerEntity entity = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+        entity.configure(tower, null);
+        if (!assertEquals(context, EntityType.END_CRYSTAL, entity.getPolymerEntityType(null), "End Crystal appearance should remain unchanged.")) {
+            return;
+        }
+        if (!assertClose(context, 0.5, entity.getScale(), "End Crystal server collision scale should be reduced.")) {
+            return;
+        }
+        if (!assertClose(context, 0.4, entity.getBbWidth(), "End Crystal server collision width should be 0.4 blocks.")) {
+            return;
+        }
+        if (!assertClose(context, 0.9, entity.getBbHeight(), "End Crystal server collision height should be 0.9 blocks.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void endEggPhantomAndDragonAreStatesOfOneRuntimeTower(GameTestHelper context) {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
         EndTower tower = new EndTower(
@@ -10174,8 +10239,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (entity.hasBilModelHolder()) {
             throw new AssertionError("The End core must not load a BIL model in PHANTOM state.");
         }
-        if (!entity.hasEndCoreInteractionHitbox()) {
-            throw new AssertionError("PHANTOM state should use the one-block redirected interaction hitbox.");
+        if (entity.hasEndCoreInteractionHitbox()) {
+            throw new AssertionError("PHANTOM state should not create a dedicated right-click interaction hitbox.");
+        }
+        if (!assertTrue(context, entity.isNoGravity(), "PHANTOM state should be gravity-free to remain stable above its tower block.")) {
+            return;
         }
         if (!assertClose(context, 1.0, entity.getBbWidth(), "PHANTOM state should have a one-block-wide server hitbox.")) {
             return;
@@ -10183,7 +10251,22 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertClose(context, 1.0, entity.getBbHeight(), "PHANTOM state should have a one-block-high server hitbox.")) {
             return;
         }
-        if (!assertClose(context, EndTowers.phantomScaleForMaxHealth(tower.currentMaxHealth()), entity.getScale(), "Only the Phantom state should use max-health-proportional scale.")) {
+        if (!assertClose(context, 1.0, entity.getScale(), "Phantom growth must not enlarge the server collision box.")) {
+            return;
+        }
+        List<ClientboundUpdateAttributesPacket.AttributeSnapshot> clientAttributes = new ArrayList<>();
+        clientAttributes.add(new ClientboundUpdateAttributesPacket.AttributeSnapshot(
+                Attributes.SCALE,
+                entity.getAttributeValue(Attributes.SCALE),
+                List.of()
+        ));
+        entity.modifyRawEntityAttributeData(clientAttributes, null, true);
+        double clientScale = clientAttributes.stream()
+                .filter(snapshot -> snapshot.attribute().equals(Attributes.SCALE))
+                .findFirst()
+                .orElseThrow()
+                .base();
+        if (!assertClose(context, EndTowers.phantomScaleForMaxHealth(tower.currentMaxHealth()), clientScale, "Phantom growth should remain visible to clients.")) {
             return;
         }
         if (entity.runtimeTower() != tower) {
@@ -10205,7 +10288,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             throw new AssertionError("The evolved vanilla Ender Dragon must not load a BIL model holder.");
         }
         if (!entity.hasEndCoreInteractionHitbox()) {
-            throw new AssertionError("DRAGON state should use the one-block redirected interaction hitbox.");
+            throw new AssertionError("DRAGON state should use the upstream 16x8 redirected interaction hitbox.");
+        }
+        if (!assertTrue(context, entity.isNoGravity(), "DRAGON state should be gravity-free to remain stable above its tower block.")) {
+            return;
         }
         if (!assertClose(context, 1.0, entity.getBbWidth(), "DRAGON state should have a one-block-wide server hitbox.")) {
             return;
@@ -10216,16 +10302,16 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertClose(context, 1.0, entity.getScale(), "Max-health-proportional scale must stop after evolving into the Ender Dragon.")) {
             return;
         }
-        if (!assertClose(context, 12.5, entity.applyTraitOutgoingDamage(null, 10.0), "DRAGON state should grant 25% final damage.")) {
+        if (!assertClose(context, 13.0, entity.applyTraitOutgoingDamage(null, 10.0), "DRAGON state should grant 30% final damage.")) {
             return;
         }
-        if (!assertClose(context, 0.25, tower.incomeDebuffResistance(), "DRAGON state should reduce income-monster debuff magnitudes by 25%.")) {
+        if (!assertClose(context, 0.10, tower.incomeDebuffResistance(), "DRAGON state should reduce income-monster debuff magnitudes by 10%.")) {
             return;
         }
         SemionMonsterEntity facingTarget = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
         facingTarget.setPos(entity.getX() + 10.0, entity.getY(), entity.getZ());
         entity.faceAttackTarget(facingTarget);
-        if (!assertClose(context, -90.0, entity.getYRot(), "DRAGON state should rotate toward its attack target.")) {
+        if (!assertClose(context, 90.0, entity.getYRot(), "DRAGON model should rotate toward its attack target instead of facing backward.")) {
             return;
         }
         if (!assertClose(context, entity.getYRot(), entity.yBodyRot, "DRAGON body rotation should match its attack direction.")) {

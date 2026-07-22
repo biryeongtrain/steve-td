@@ -38,6 +38,7 @@ import kim.biryeong.semiontd.trait.BuiltInTraits;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -66,9 +67,12 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     private static final double TARGET_SEARCH_HORIZONTAL_PADDING = 8.0;
     private static final double TARGET_SEARCH_VERTICAL_PADDING = 3.0;
     private static final double FINAL_DEFENSE_RETURN_SPEED_MULTIPLIER = 1.25;
+    private static final double END_CRYSTAL_COLLISION_SCALE = 0.5;
     private static final double MOOBLOOM_VISUAL_POSITION_EPSILON = 1.0E-4;
     private static final float END_CORE_HITBOX_WIDTH = 1.0F;
     private static final float END_CORE_HITBOX_HEIGHT = 1.0F;
+    private static final float DRAGON_INTERACTION_WIDTH = 16.0F;
+    private static final float DRAGON_INTERACTION_HEIGHT = 8.0F;
 
     private Tower runtimeTower;
     private TeamId teamId;
@@ -116,12 +120,14 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     private SemionMonsterEntity currentAttackTarget;
     private boolean forceAttackReady;
     private boolean illusionClone;
+    private float lockedDragonYaw = Float.NaN;
+    private float lockedDragonPitch = Float.NaN;
 
     public SemionTowerEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
         setSilent(true);
         setPersistenceRequired();
-        setNoGravity(false);
+        syncEndCoreFlightPhysics();
     }
 
     @Override
@@ -141,8 +147,8 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         attackIntervalTicks = tower.type().attackIntervalTicks();
         aggroPriority = tower.aggroPriority();
         finalDefense = tower.deployedAtFinalDefense();
-        finalDefenseAnchorPosition = finalDefense ? towerAnchorPosition(tower.position()) : null;
-        setNoGravity(false);
+        finalDefenseAnchorPosition = finalDefense ? towerAnchorPosition(tower) : null;
+        syncEndCoreFlightPhysics();
         visual = tower.visual();
         blockbenchModelId = visual.blockbenchModel().orElse(null);
         setPolymerEntityType(visual.entityTypeId());
@@ -209,13 +215,11 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         double zOffset = target.getZ() - getZ();
         double horizontalDistance = Math.sqrt(xOffset * xOffset + zOffset * zOffset);
         double yOffset = target.getEyeY() - getEyeY();
-        float yaw = (float) (Math.toDegrees(Math.atan2(zOffset, xOffset)) - 90.0);
+        float yaw = (float) (Math.toDegrees(Math.atan2(zOffset, xOffset)) + 90.0);
         float pitch = (float) -Math.toDegrees(Math.atan2(yOffset, horizontalDistance));
-        getLookControl().setLookAt(target, 360.0F, 360.0F);
-        setYRot(yaw);
-        setYHeadRot(yaw);
-        yBodyRot = yaw;
-        setXRot(pitch);
+        lockedDragonYaw = yaw;
+        lockedDragonPitch = pitch;
+        applyLockedDragonRotation();
     }
 
     public void forceAttackReady() {
@@ -278,6 +282,8 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         syncBlockDisplayVisual();
         syncEndCoreInteractionHitbox();
         returnToFinalDefenseAreaIfNeeded();
+        syncEndCoreFlightPhysics();
+        applyLockedDragonRotation();
     }
 
     @Override
@@ -629,7 +635,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         boolean wasFinalDefense = finalDefense;
         finalDefense = tower.deployedAtFinalDefense();
         if (finalDefense && (!wasFinalDefense || finalDefenseAnchorPosition == null)) {
-            finalDefenseAnchorPosition = towerAnchorPosition(tower.position());
+            finalDefenseAnchorPosition = towerAnchorPosition(tower);
         } else if (!finalDefense) {
             finalDefenseAnchorPosition = null;
         }
@@ -638,6 +644,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         boolean modelChanged = !java.util.Objects.equals(updatedModelId, blockbenchModelId);
         visual = updatedVisual;
         blockbenchModelId = updatedModelId;
+        syncEndCoreFlightPhysics();
         setPolymerEntityType(visual.entityTypeId());
         syncBlockDisplayProxyVisibility();
         applyVisualScale(visual);
@@ -829,7 +836,11 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     }
 
     private boolean usesEndCoreInteractionHitbox() {
-        return usesOneBlockEndCoreHitbox() && blockbenchModelId == null;
+        return runtimeTower instanceof EndTower endTower
+                && EndTowers.isBaseEndTower(runtimeTower.type())
+                && endTower.state() == EndTowerState.DRAGON
+                && blockbenchModelId == null
+                && polymerEntityType == EntityType.ENDER_DRAGON;
     }
 
     public boolean hasEndCoreInteractionHitbox() {
@@ -849,9 +860,35 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
             EntityAttachment.ofTicking(endCoreInteractionHolder, this);
         }
         endCoreInteractionElement.setSize(
-                END_CORE_HITBOX_WIDTH,
-                END_CORE_HITBOX_HEIGHT
+                DRAGON_INTERACTION_WIDTH,
+                DRAGON_INTERACTION_HEIGHT
         );
+    }
+
+    @Override
+    public void modifyRawEntityAttributeData(
+            List<ClientboundUpdateAttributesPacket.AttributeSnapshot> data,
+            ServerPlayer player,
+            boolean initial
+    ) {
+        AnimatedEntity.super.modifyRawEntityAttributeData(data, player, initial);
+        if (!(runtimeTower instanceof EndTower endTower)
+                || endTower.state() != EndTowerState.PHANTOM) {
+            return;
+        }
+        double renderScale = EndTowers.phantomScaleForMaxHealth(runtimeTower.currentMaxHealth());
+        for (int index = 0; index < data.size(); index++) {
+            ClientboundUpdateAttributesPacket.AttributeSnapshot snapshot = data.get(index);
+            if (snapshot.attribute().equals(Attributes.SCALE)) {
+                data.set(index, new ClientboundUpdateAttributesPacket.AttributeSnapshot(
+                        snapshot.attribute(),
+                        renderScale,
+                        snapshot.modifiers()
+                ));
+                return;
+            }
+        }
+        data.add(new ClientboundUpdateAttributesPacket.AttributeSnapshot(Attributes.SCALE, renderScale, List.of()));
     }
 
     private void discardEndCoreInteractionHitbox() {
@@ -1057,11 +1094,15 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     private void applyVisualScale(EntityVisual visual) {
         double scale = visual == null ? EntityVisual.DEFAULT_SCALE : visual.scale();
+        if (blockbenchModelId == null && polymerEntityType == EntityType.END_CRYSTAL) {
+            scale = END_CRYSTAL_COLLISION_SCALE;
+        }
+        var scaleAttribute = getAttribute(Attributes.SCALE);
+        scaleAttribute.setBaseValue(scale);
         if (runtimeTower instanceof EndTower endTower
                 && endTower.state() == EndTowerState.PHANTOM) {
-            scale = EndTowers.phantomScaleForMaxHealth(runtimeTower.currentMaxHealth());
+            getAttributes().getAttributesToSync().add(scaleAttribute);
         }
-        getAttribute(Attributes.SCALE).setBaseValue(scale);
         refreshDimensions();
         if (holder != null) {
             holder.setScale(1.0F);
@@ -1108,7 +1149,34 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         getNavigation().stop();
     }
 
-    private static Vec3 towerAnchorPosition(GridPosition position) {
-        return new Vec3(position.x() + 0.5, position.y() + 1.0, position.z() + 0.5);
+    private void syncEndCoreFlightPhysics() {
+        boolean airborneEndCore = usesOneBlockEndCoreHitbox();
+        setNoGravity(airborneEndCore);
+        if (airborneEndCore) {
+            Vec3 velocity = getDeltaMovement();
+            setDeltaMovement(velocity.x, 0.0, velocity.z);
+            fallDistance = 0.0F;
+        }
+    }
+
+    private void applyLockedDragonRotation() {
+        if (Float.isNaN(lockedDragonYaw)
+                || !(runtimeTower instanceof EndTower endTower)
+                || endTower.state() != EndTowerState.DRAGON) {
+            return;
+        }
+        setYRot(lockedDragonYaw);
+        setYHeadRot(lockedDragonYaw);
+        yBodyRot = lockedDragonYaw;
+        setXRot(lockedDragonPitch);
+    }
+
+    private static Vec3 towerAnchorPosition(Tower tower) {
+        GridPosition position = tower.position();
+        double airborneOffset = tower instanceof EndTower endTower
+                && (endTower.state() == EndTowerState.PHANTOM || endTower.state() == EndTowerState.DRAGON)
+                ? 1.0
+                : 0.0;
+        return new Vec3(position.x() + 0.5, position.y() + 1.0 + airborneOffset, position.z() + 0.5);
     }
 }

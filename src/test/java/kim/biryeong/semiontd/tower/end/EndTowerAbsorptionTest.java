@@ -56,27 +56,40 @@ class EndTowerAbsorptionTest {
         dragon.onWaveStarted(lane, 1);
         dragon.tick(lane);
         lane.towers().add(enderman);
+        assertTrue(plainRuntimeDetails(enderman).contains("엔더 드래곤에게 힘 전달 대기 중"));
+        assertFalse(plainRuntimeDetails(enderman).contains("힘 전달 진행률"));
+        enderman.onWaveStarted(lane, 1);
+        assertTrue(plainRuntimeDetails(enderman).contains("힘 전달 진행률 0.0%"));
+        assertFalse(plainRuntimeDetails(enderman).contains("엔더 드래곤에게 힘 전달 대기 중"));
 
         tick(dragon, lane, 3);
 
         assertEquals(0, dragon.absorbedEndCrystalCount());
         assertTrue(lane.towers().contains(enderman));
-        assertEquals(5.0, dragon.roundDamageBonus(), 0.0001);
+        assertEquals(3.75, dragon.roundDamageBonus(), 0.0001);
         assertEquals(0.375, dragon.permanentDamageBonus(), 0.0001);
-        assertEquals(5.375, dragon.absorbedDamageBonus(), 0.0001);
+        assertEquals(4.125, dragon.absorbedDamageBonus(), 0.0001);
         assertEquals(0.0, dragon.absorbedHealthBonus(), 0.0001);
+        assertEquals(0.75, enderman.transferProgress(), 0.0001);
+        assertTrue(plainRuntimeDetails(enderman).contains("힘 전달 진행률 75.0%"));
 
         tick(dragon, lane, 1);
 
         assertEquals(1, dragon.absorbedEndCrystalCount());
         assertTrue(lane.towers().contains(enderman));
         assertEquals(0.0, enderman.health(), 0.0001);
+        assertEquals(0.0, enderman.transferProgress(), 0.0001);
         assertEquals(5.0, dragon.roundDamageBonus(), 0.0001);
         assertEquals(0.5, dragon.permanentDamageBonus(), 0.0001);
         assertEquals(5.5, dragon.absorbedDamageBonus(), 0.0001);
         assertEquals(0.0, dragon.absorbedHealthBonus(), 0.0001);
         assertEquals(1, dragon.roundCompletedTransferCount());
         assertEquals(19, dragon.adjustAttackInterval(20));
+        String crystalHeavyDetails = plainRuntimeDetails(dragon);
+        assertTrue(crystalHeavyDetails.contains("엔드 수정, 셜커 스택: 1 / 0"));
+        assertTrue(crystalHeavyDetails.contains("공격 속도: -1틱 / -10틱"));
+        assertTrue(String.join("\n", dragon.runtimeDetailLines())
+                .contains("<dark_red>추가 공격력: 0.5</dark_red>"));
 
         tick(dragon, lane, 4);
 
@@ -102,8 +115,9 @@ class EndTowerAbsorptionTest {
         tick(dragon, lane, 1);
 
         assertEquals(0, dragon.absorbedEndCrystalCount());
-        assertEquals(5.0, dragon.roundDamageBonus(), 0.0001);
+        assertEquals(2.5, dragon.roundDamageBonus(), 0.0001);
         assertEquals(0.25, dragon.permanentDamageBonus(), 0.0001);
+        assertEquals(0.0, endCrystalLine.transferProgress(), 0.0001);
     }
 
     @Test
@@ -148,7 +162,7 @@ class EndTowerAbsorptionTest {
     }
 
     @Test
-    void healthTransferredPastTheRoundCapHealsTheEndCore() {
+    void shulkerTransfersHalfItsHealthForTheCurrentRound() {
         applyEndAbilities(Map.of(
                 "absorptionDurationTicks", 1.0,
                 "endCrystalAttackIntervalEvery", 1.0
@@ -164,10 +178,10 @@ class EndTowerAbsorptionTest {
 
         dragon.tick(lane);
 
-        assertEquals(100.0, dragon.roundHealthBonus(), 0.0001);
+        assertEquals(50.0, dragon.roundHealthBonus(), 0.0001);
         assertEquals(5.0, dragon.permanentHealthBonus(), 0.0001);
-        assertEquals(305.0, dragon.currentMaxHealth(), 0.0001);
-        assertEquals(165.0, dragon.health(), 0.0001);
+        assertEquals(255.0, dragon.currentMaxHealth(), 0.0001);
+        assertEquals(115.0, dragon.health(), 0.0001);
         assertEquals(0.0, shulker.health(), 0.0001);
         assertEquals(1, dragon.roundCompletedTransferCount());
         assertEquals(19, dragon.adjustAttackInterval(20));
@@ -202,7 +216,34 @@ class EndTowerAbsorptionTest {
         dragon.tick(lane);
 
         assertEquals(13.0, dragon.health(), 0.0001);
-        assertTrue(plainRuntimeDetails(dragon).contains("재생 3.0/초"));
+        assertTrue(plainRuntimeDetails(dragon).contains("재생: 3.0 / 3.0/초"));
+    }
+
+    @Test
+    void activeTransfersHealOncePerSecondForEachTransferringTower() {
+        applyEndAbilities(Map.of(
+                "absorptionDurationTicks", 40.0,
+                "absorptionHealAmount", 0.0,
+                "transferHealingPerTower", 1.0,
+                "transferHealingIntervalTicks", 20.0
+        ));
+        PlayerLane lane = lane();
+        EndTower dragon = tower(EndTowers.BASE_END_TOWER, 0);
+        lane.towers().add(dragon);
+        dragon.onWaveStarted(lane, 1);
+        dragon.tick(lane);
+        dragon.syncHealth(10.0);
+        lane.towers().add(tower(EndTowers.T1_ENDERMITE_TOWER, 1));
+        lane.towers().add(tower(EndTowers.T1_ENDERMITE_TOWER, 2));
+
+        tick(dragon, lane, 19);
+        assertEquals(10.0, dragon.health(), 0.0001);
+
+        dragon.tick(lane);
+        assertEquals(12.0, dragon.health(), 0.0001);
+
+        tick(dragon, lane, 20);
+        assertEquals(14.0, dragon.health(), 0.0001);
     }
 
     @Test
@@ -218,7 +259,7 @@ class EndTowerAbsorptionTest {
         core.tick(lane);
 
         assertEquals(5.0, core.permanentHealthBonus(), 0.0001);
-        assertEquals(305.0, core.currentMaxHealth(), 0.0001);
+        assertEquals(255.0, core.currentMaxHealth(), 0.0001);
 
         core.resetForRound(null);
 
@@ -226,14 +267,24 @@ class EndTowerAbsorptionTest {
         assertEquals(200.0, core.currentMaxHealth(), 0.0001);
         assertEquals(5.0, core.permanentHealthBonus(), 0.0001);
         String eggDetails = plainRuntimeDetails(core);
-        assertTrue(eggDetails.contains("엔더 드래곤 스탯: 체력 205.0 / 공격력 10.0"));
-        assertTrue(eggDetails.contains("공격 속도 1.0/초 (20틱)"));
-        assertTrue(eggDetails.contains("공격 범위 0.0 / 사거리 5.0"));
-        assertTrue(eggDetails.contains("받는 피해 감소 0.0%"));
-        assertTrue(eggDetails.contains("생명력 흡수 0.0% / 재생 0.0/초"));
+        assertTrue(eggDetails.contains("엔더 드래곤 능력치"));
+        assertTrue(eggDetails.contains("엔드 수정, 셜커 스택: 0 / 1"));
+        assertTrue(eggDetails.contains("추가 공격력: 0.0"));
+        assertTrue(eggDetails.contains("공격 범위: 0.0 / 4.0"));
+        assertTrue(eggDetails.contains("공격 속도: -0틱 / -10틱"));
+        assertTrue(eggDetails.contains("사거리: 5.0 / 8.0"));
+        assertTrue(eggDetails.contains("추가 체력: 5.0"));
+        assertTrue(eggDetails.contains("생명력 흡수: 0.0% / 20.0%"));
+        assertTrue(eggDetails.contains("받는 피해 감소: 0.0% / 20.0%"));
+        assertTrue(eggDetails.contains("재생: 0.0 / 10.0/초"));
         assertFalse(eggDetails.contains("최종 피해"));
         assertFalse(eggDetails.contains("저항"));
-        assertTrue(eggDetails.contains("현재 스택: 엔드 수정 0 / 셜커 1"));
+        String styledEggDetails = String.join("\n", core.runtimeDetailLines());
+        assertTrue(styledEggDetails.contains("<dark_purple>엔더 드래곤</dark_purple><white> 능력치</white>"));
+        assertTrue(styledEggDetails.contains("<yellow>공격 범위: 0.0 / 4.0</yellow>"));
+        assertTrue(styledEggDetails.contains("<red>추가 체력: 5.0</red>"));
+        assertTrue(styledEggDetails.contains("<blue>받는 피해 감소: 0.0% / 20.0%</blue>"));
+        assertTrue(styledEggDetails.contains("<green>재생: 0.0 / 10.0/초</green>"));
 
         core.onWaveStarted(null, 2);
         core.tick(null);
@@ -244,7 +295,7 @@ class EndTowerAbsorptionTest {
     }
 
     @Test
-    void completedLineCountsApplyRequestedBonusesAndStatCaps() {
+    void completedLineCountsAccumulateHalfOfEverySourceStatForTheRound() {
         applyAbsorptionDuration(1);
         PlayerLane lane = lane();
         EndTower dragon = tower(EndTowers.BASE_END_TOWER, 0);
@@ -262,20 +313,20 @@ class EndTowerAbsorptionTest {
         assertEquals(40, dragon.roundCompletedTransferCount());
         assertEquals(41, lane.towers().size());
         assertEquals(40, lane.towers().stream().filter(tower -> tower != dragon && tower.health() <= 0.0).count());
-        assertEquals(100.0, dragon.roundHealthBonus(), 0.0001);
-        assertEquals(5.0, dragon.roundDamageBonus(), 0.0001);
+        assertEquals(1000.0, dragon.roundHealthBonus(), 0.0001);
+        assertEquals(100.0, dragon.roundDamageBonus(), 0.0001);
         assertEquals(100.0, dragon.permanentHealthBonus(), 0.0001);
         assertEquals(10.0, dragon.permanentDamageBonus(), 0.0001);
-        assertEquals(200.0, dragon.absorbedHealthBonus(), 0.0001);
-        assertEquals(15.0, dragon.absorbedDamageBonus(), 0.0001);
-        assertEquals(400.0, dragon.effectBaseMaxHealth(), 0.0001);
-        assertEquals(12.5, dragon.modifyAttackDamage(null, null, 5.0), 0.0001);
+        assertEquals(1100.0, dragon.absorbedHealthBonus(), 0.0001);
+        assertEquals(110.0, dragon.absorbedDamageBonus(), 0.0001);
+        assertEquals(1300.0, dragon.effectBaseMaxHealth(), 0.0001);
+        assertEquals(60.0, dragon.modifyAttackDamage(null, null, 5.0), 0.0001);
         assertEquals(5.0, dragon.adjustAttackRange(5.0), 0.0001);
         assertEquals(1.0, dragon.splashRadius(), 0.0001);
         assertEquals(5, dragon.adjustAttackInterval(20));
-        assertEquals(97.5, dragon.modifyIncomingDamage(null, null, 100.0), 0.0001);
-        assertTrue(plainRuntimeDetails(dragon).contains("현재 스택: 엔드 수정 20 / 셜커 20"));
-        assertTrue(plainRuntimeDetails(dragon).contains("생명력 흡수 2.0%"));
+        assertEquals(100.0, dragon.modifyIncomingDamage(null, null, 100.0), 0.0001);
+        assertTrue(plainRuntimeDetails(dragon).contains("엔드 수정, 셜커 스택: 20 / 20"));
+        assertTrue(plainRuntimeDetails(dragon).contains("생명력 흡수: 1.0%"));
 
         dragon.resetRoundTransferBonuses(null);
 
@@ -287,16 +338,16 @@ class EndTowerAbsorptionTest {
         assertEquals(10.0, dragon.modifyAttackDamage(null, null, 5.0), 0.0001);
         assertEquals(300.0, dragon.previewHatchedMaxHealth(), 0.0001);
         assertEquals(20.0, dragon.previewHatchedAttackDamage(), 0.0001);
-        assertEquals(19, dragon.previewHatchedAttackIntervalTicks());
+        assertEquals(15, dragon.previewHatchedAttackIntervalTicks());
         assertEquals(0, dragon.roundCompletedTransferCount());
-        assertEquals(19, dragon.adjustAttackInterval(20));
+        assertEquals(15, dragon.adjustAttackInterval(15));
     }
 
     @Test
     void cumulativeLineBonusesUseTheirRequestedFamiliesAndRespectEveryCap() {
         applyEndAbilities(Map.ofEntries(
                 Map.entry("absorptionDurationTicks", 1.0),
-                Map.entry("endCrystalSplashEvery", 1.0),
+                Map.entry("endCrystalSplashThreshold1", 1.0),
                 Map.entry("splashRadiusCap", 0.5),
                 Map.entry("endCrystalAttackIntervalEvery", 1.0),
                 Map.entry("maxAttackIntervalReductionTicks", 2.0),
@@ -327,7 +378,85 @@ class EndTowerAbsorptionTest {
         assertEquals(10.0, dragon.adjustAttackRange(5.0), 0.0001);
         assertEquals(12, dragon.adjustAttackInterval(20));
         assertEquals(95.0, dragon.modifyIncomingDamage(null, null, 100.0), 0.0001);
-        assertTrue(plainRuntimeDetails(dragon).contains("생명력 흡수 2.0%"));
+        assertTrue(plainRuntimeDetails(dragon).contains("생명력 흡수: 2.0%"));
+    }
+
+    @Test
+    void everyStackBasedStatReachesItsCapAtThreeHundredStacks() {
+        applyEndAbilities(Map.ofEntries(
+                Map.entry("absorptionDurationTicks", 1.0),
+                Map.entry("absorptionHealAmount", 0.0),
+                Map.entry("roundHealthRatio", 0.0),
+                Map.entry("roundDamageRatio", 0.0),
+                Map.entry("permanentHealthRatio", 0.0),
+                Map.entry("permanentDamageRatio", 0.0)
+        ));
+        PlayerLane lane = lane();
+        EndTower dragon = tower(EndTowers.BASE_END_TOWER, 0);
+        lane.towers().add(dragon);
+        dragon.onWaveStarted(lane, 1);
+        dragon.tick(lane);
+
+        for (int index = 0; index < 99; index++) {
+            lane.towers().add(tower(EndTowers.T3_END_CRYSTAL_TOWER, index + 1));
+            lane.towers().add(tower(EndTowers.T3_SHULKER_TOWER, index + 101));
+        }
+        lane.towers().add(tower(EndTowers.T2_ENDERMAN_TOWER, 201));
+        lane.towers().add(tower(EndTowers.T2_SHULKER_TOWER, 202));
+        dragon.tick(lane);
+        dragon.resetRoundTransferBonuses(null);
+
+        assertEquals(299, dragon.absorbedEndCrystalCount());
+        assertEquals(299, dragon.absorbedShulkerCount());
+        assertEquals(6, dragon.adjustAttackInterval(15));
+        assertEquals(3.0, dragon.splashRadius(), 0.0001);
+        assertEquals(7.5, dragon.adjustAttackRange(5.0), 0.0001);
+        assertEquals(84.0, dragon.modifyIncomingDamage(null, null, 100.0), 0.0001);
+        assertEquals(9.0, dragon.regenerationPerSecond(), 0.0001);
+        assertTrue(plainRuntimeDetails(dragon).contains("생명력 흡수: 19.0%"));
+
+        lane.towers().add(tower(EndTowers.T1_ENDERMITE_TOWER, 203));
+        lane.towers().add(tower(EndTowers.T1_SHULKER_TOWER, 204));
+        dragon.tick(lane);
+        dragon.resetRoundTransferBonuses(null);
+
+        assertEquals(300, dragon.absorbedEndCrystalCount());
+        assertEquals(300, dragon.absorbedShulkerCount());
+        assertEquals(5, dragon.adjustAttackInterval(15));
+        assertEquals(4.0, dragon.splashRadius(), 0.0001);
+        assertEquals(8.0, dragon.adjustAttackRange(5.0), 0.0001);
+        assertEquals(80.0, dragon.modifyIncomingDamage(null, null, 100.0), 0.0001);
+        assertEquals(10.0, dragon.regenerationPerSecond(), 0.0001);
+        assertTrue(plainRuntimeDetails(dragon).contains("생명력 흡수: 20.0%"));
+    }
+
+    @Test
+    void splashRadiusUnlocksItsFirstBlockAtFifteenStacks() {
+        applyEndAbilities(Map.of(
+                "absorptionDurationTicks", 1.0,
+                "absorptionHealAmount", 0.0,
+                "roundDamageRatio", 0.0,
+                "permanentDamageRatio", 0.0
+        ));
+        PlayerLane lane = lane();
+        EndTower dragon = tower(EndTowers.BASE_END_TOWER, 0);
+        lane.towers().add(dragon);
+        dragon.onWaveStarted(lane, 1);
+        dragon.tick(lane);
+        for (int index = 0; index < 14; index++) {
+            lane.towers().add(tower(EndTowers.T1_ENDERMITE_TOWER, index + 1));
+        }
+
+        dragon.tick(lane);
+
+        assertEquals(14, dragon.absorbedEndCrystalCount());
+        assertEquals(0.0, dragon.splashRadius(), 0.0001);
+
+        lane.towers().add(tower(EndTowers.T1_ENDERMITE_TOWER, 15));
+        dragon.tick(lane);
+
+        assertEquals(15, dragon.absorbedEndCrystalCount());
+        assertEquals(1.0, dragon.splashRadius(), 0.0001);
     }
 
     @Test
@@ -358,6 +487,7 @@ class EndTowerAbsorptionTest {
         EndTower tower = tower(EndTowers.BASE_END_TOWER, 0);
 
         assertEquals(EndTowerState.EGG, tower.state());
+        assertEquals(1.0, tower.entityAnchorYOffset(), 0.0001);
         assertTrue(BlockDisplayVisual.matches(tower.visual()));
         assertEquals(
                 Blocks.DRAGON_EGG.defaultBlockState(),
@@ -368,6 +498,7 @@ class EndTowerAbsorptionTest {
         tower.tick(null);
 
         assertEquals(EndTowerState.PHANTOM, tower.state());
+        assertEquals(2.0, tower.entityAnchorYOffset(), 0.0001);
         assertEquals(EndTowers.BASE_END_TOWER, tower.type());
         assertEquals("minecraft:phantom", tower.visual().entityTypeId());
         assertTrue(tower.visual().blockbenchModel().isEmpty());
@@ -378,14 +509,16 @@ class EndTowerAbsorptionTest {
         tower.tick(null);
 
         assertEquals(EndTowerState.DRAGON, tower.state());
-        assertEquals(0.25, tower.finalDamageBonus(), 0.0001);
-        assertEquals(0.25, tower.incomeDebuffResistance(), 0.0001);
-        assertTrue(plainRuntimeDetails(tower).contains("최종 피해 +25.0%"));
-        assertTrue(plainRuntimeDetails(tower).contains("저항 25.0%"));
+        assertEquals(2.0, tower.entityAnchorYOffset(), 0.0001);
+        assertEquals(0.30, tower.finalDamageBonus(), 0.0001);
+        assertEquals(0.10, tower.incomeDebuffResistance(), 0.0001);
+        assertTrue(plainRuntimeDetails(tower).contains("최종 피해: +30.0%"));
+        assertTrue(plainRuntimeDetails(tower).contains("저항: +10.0%"));
 
         tower.resetForRound(null);
 
         assertEquals(EndTowerState.EGG, tower.state());
+        assertEquals(1.0, tower.entityAnchorYOffset(), 0.0001);
         assertTrue(BlockDisplayVisual.matches(tower.visual()));
         assertEquals(200.0, tower.currentMaxHealth(), 0.0001);
     }

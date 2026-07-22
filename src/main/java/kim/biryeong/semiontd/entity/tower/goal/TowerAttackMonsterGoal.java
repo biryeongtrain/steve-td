@@ -69,6 +69,7 @@ public final class TowerAttackMonsterGoal extends Goal {
         }
 
         tower.getLookControl().setLookAt(target);
+        tower.faceAttackTarget(target);
         double attackRangeSqr = tower.attackRange() * tower.attackRange();
         double distanceSqr = tower.distanceToSqr(target);
         if (distanceSqr > attackRangeSqr) {
@@ -87,7 +88,6 @@ public final class TowerAttackMonsterGoal extends Goal {
             return;
         }
 
-        tower.faceAttackTarget(target);
         tower.playAnimation(SemionAnimationState.ATTACK);
         double damageAmount = tower.attackDamageAmount(target);
         float healthBeforeAttack = tower.getHealth();

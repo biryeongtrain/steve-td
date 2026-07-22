@@ -26,66 +26,38 @@ public final class SemionConfigLoader {
     }
 
     public static LoadedConfigs load(Path configDir, Logger logger) {
-        EconomyConfig economyDefaults = PackagedConfigDefaults.load(
-                "economy.json", EconomyConfig.class, EconomyConfig.defaultConfig());
-        WaveConfig waveDefaults = PackagedConfigDefaults.load(
-                "wave.json", WaveConfig.class, WaveConfig.defaultConfig());
-        ProgressionConfig progressionDefaults = PackagedConfigDefaults.load(
-                "progression.json", ProgressionConfig.class, ProgressionConfig.defaultConfig());
-        RatingConfig ratingDefaults = PackagedConfigDefaults.load(
-                "rating.json", RatingConfig.class, RatingConfig.defaultConfig());
-        TowerBalanceConfig codeTowerBalanceDefaults = TowerBalanceConfig.defaultConfig();
-        TowerBalanceConfig towerBalanceDefaults = PackagedConfigDefaults.load(
-                "tower_balance.json", TowerBalanceConfig.class, codeTowerBalanceDefaults)
-                .withMissingDefaults(codeTowerBalanceDefaults);
-        SummonConfig codeSummonDefaults = SummonConfig.defaultConfig();
-        SummonConfig summonDefaults = PackagedConfigDefaults.load(
-                "summons.json", SummonConfig.class, codeSummonDefaults)
-                .withMissingDefaults(codeSummonDefaults);
-        LeaderTargetingConfig leaderTargetingDefaults = PackagedConfigDefaults.load(
-                "leader_targeting.json", LeaderTargetingConfig.class, LeaderTargetingConfig.defaultConfig());
-        IncomeLaneRoutingConfig incomeLaneRoutingDefaults = PackagedConfigDefaults.load(
-                "income_lane_routing.json", IncomeLaneRoutingConfig.class, IncomeLaneRoutingConfig.defaultConfig());
-        MonsterScalingConfig monsterScalingDefaults = PackagedConfigDefaults.load(
-                "monster_scaling.json", MonsterScalingConfig.class, MonsterScalingConfig.defaultConfig());
-        TraitSelectionConfig traitDefaults = PackagedConfigDefaults.load(
-                "traits.json", TraitSelectionConfig.class, TraitSelectionConfig.defaultConfig());
-        TraitBalanceConfig codeTraitBalanceDefaults = TraitBalanceConfig.defaultConfig();
-        TraitBalanceConfig traitBalanceDefaults = PackagedConfigDefaults.load(
-                "trait_balance.json", TraitBalanceConfig.class, codeTraitBalanceDefaults)
-                .withMissingDefaults(codeTraitBalanceDefaults);
         try {
             Files.createDirectories(configDir);
         } catch (IOException exception) {
             logger.warn("Failed to create config directory {}; using defaults.", configDir, exception);
             return new LoadedConfigs(
-                    economyDefaults,
-                    waveDefaults,
+                    EconomyConfig.defaultConfig(),
+                    WaveConfig.defaultConfig(),
                     MapConfig.defaultConfig(),
-                    progressionDefaults,
-                    ratingDefaults,
+                    ProgressionConfig.defaultConfig(),
+                    RatingConfig.defaultConfig(),
                     SemionPersistenceConfig.defaultConfig(),
-                    towerBalanceDefaults,
-                    summonDefaults,
-                    leaderTargetingDefaults,
-                    incomeLaneRoutingDefaults,
-                    monsterScalingDefaults,
+                    TowerBalanceConfig.defaultConfig(),
+                    SummonConfig.defaultConfig(),
+                    LeaderTargetingConfig.defaultConfig(),
+                    IncomeLaneRoutingConfig.defaultConfig(),
+                    MonsterScalingConfig.defaultConfig(),
                     VfxConfig.defaultConfig(),
                     TipConfig.defaultConfig(),
-                    traitDefaults,
-                    traitBalanceDefaults
+                    TraitSelectionConfig.defaultConfig(),
+                    TraitBalanceConfig.defaultConfig()
             );
         }
 
         EconomyConfig economy = loadOrCreateEconomy(
                 configDir.resolve("economy.json"),
-                economyDefaults,
+                EconomyConfig.defaultConfig(),
                 logger
         );
         WaveConfig waves = loadOrCreateWithLegacy(
                 configDir.resolve("wave.json"),
                 configDir.resolve("waves.json"),
-                waveDefaults,
+                WaveConfig.defaultConfig(),
                 WaveConfig.class,
                 logger
         );
@@ -97,13 +69,13 @@ public final class SemionConfigLoader {
         );
         ProgressionConfig progression = loadOrCreate(
                 configDir.resolve("progression.json"),
-                progressionDefaults,
+                ProgressionConfig.defaultConfig(),
                 ProgressionConfig.class,
                 logger
         );
         RatingConfig rating = loadOrCreateRating(
                 configDir.resolve("rating.json"),
-                ratingDefaults,
+                RatingConfig.defaultConfig(),
                 logger
         );
         SemionPersistenceConfig persistence = loadOrCreate(
@@ -114,28 +86,28 @@ public final class SemionConfigLoader {
         );
         TowerBalanceConfig towerBalance = loadOrCreateTowerBalance(
                 configDir.resolve("tower_balance.json"),
-                towerBalanceDefaults,
+                TowerBalanceConfig.defaultConfig(),
                 logger
         );
         SummonConfig summons = loadOrCreateSummons(
                 configDir.resolve("summons.json"),
-                summonDefaults,
+                SummonConfig.defaultConfig(),
                 logger
         );
         LeaderTargetingConfig leaderTargeting = loadOrCreate(
                 configDir.resolve("leader_targeting.json"),
-                leaderTargetingDefaults,
+                LeaderTargetingConfig.defaultConfig(),
                 LeaderTargetingConfig.class,
                 logger
         );
         IncomeLaneRoutingConfig incomeLaneRouting = loadOrCreateIncomeLaneRouting(
                 configDir.resolve("income_lane_routing.json"),
-                incomeLaneRoutingDefaults,
+                IncomeLaneRoutingConfig.defaultConfig(),
                 logger
         );
         MonsterScalingConfig monsterScaling = loadOrCreateMonsterScaling(
                 configDir.resolve("monster_scaling.json"),
-                monsterScalingDefaults,
+                MonsterScalingConfig.defaultConfig(),
                 logger
         );
         VfxConfig vfx = loadOrCreateVfx(
@@ -150,13 +122,13 @@ public final class SemionConfigLoader {
         );
         TraitSelectionConfig traits = loadOrCreate(
                 configDir.resolve("traits.json"),
-                traitDefaults,
+                TraitSelectionConfig.defaultConfig(),
                 TraitSelectionConfig.class,
                 logger
         );
         TraitBalanceConfig traitBalance = loadOrCreateTraitBalance(
                 configDir.resolve("trait_balance.json"),
-                traitBalanceDefaults,
+                TraitBalanceConfig.defaultConfig(),
                 logger
         );
         return new LoadedConfigs(economy, waves, map, progression, rating, persistence, towerBalance, summons, leaderTargeting, incomeLaneRouting, monsterScaling, vfx, tips, traits, traitBalance);
@@ -408,6 +380,7 @@ public final class SemionConfigLoader {
             migratedJson = migrateLegacyEndUpgradeCosts(migratedJson, defaults);
             migratedJson = migrateLegacyEndBalanceDefaults(migratedJson, defaults);
             migratedJson = migrateLegacyEndDragonDamage(migratedJson, defaults);
+            migratedJson = migrateLegacyEndDragonAttackInterval(migratedJson, defaults);
             migratedJson = migrateLegacyEndShulkerDamageReduction(migratedJson, defaults);
             TowerBalanceConfig value = GSON.fromJson(migratedJson, TowerBalanceConfig.class);
             TowerBalanceConfig loaded = value == null ? defaults : value;
@@ -485,6 +458,7 @@ public final class SemionConfigLoader {
                 TowerBalanceConfig.upgradeKey(EndTowers.T1_ENDERMITE_TOWER.id(), EndTowers.T2_ENDERMAN_TOWER.id()),
                 defaults,
                 75L,
+                100L,
                 125L
         );
         changed |= migrateLegacyUpgradeCost(
@@ -492,6 +466,7 @@ public final class SemionConfigLoader {
                 TowerBalanceConfig.upgradeKey(EndTowers.T2_ENDERMAN_TOWER.id(), EndTowers.T3_END_CRYSTAL_TOWER.id()),
                 defaults,
                 75L,
+                150L,
                 200L
         );
         changed |= migrateLegacyUpgradeCost(
@@ -499,6 +474,7 @@ public final class SemionConfigLoader {
                 TowerBalanceConfig.upgradeKey(EndTowers.T1_SHULKER_TOWER.id(), EndTowers.T2_SHULKER_TOWER.id()),
                 defaults,
                 75L,
+                100L,
                 125L
         );
         changed |= migrateLegacyUpgradeCost(
@@ -506,6 +482,7 @@ public final class SemionConfigLoader {
                 TowerBalanceConfig.upgradeKey(EndTowers.T2_SHULKER_TOWER.id(), EndTowers.T3_SHULKER_TOWER.id()),
                 defaults,
                 75L,
+                150L,
                 200L
         );
         String removedLegacyKey = TowerBalanceConfig.upgradeKey(
@@ -575,6 +552,36 @@ public final class SemionConfigLoader {
         return GSON.toJson(object);
     }
 
+    private static String migrateLegacyEndDragonAttackInterval(String json, TowerBalanceConfig defaults) {
+        JsonElement root = JsonParser.parseString(json);
+        if (!root.isJsonObject()) {
+            return json;
+        }
+        JsonObject object = root.getAsJsonObject();
+        if (!object.has("towers") || !object.get("towers").isJsonObject()) {
+            return json;
+        }
+        JsonObject towers = object.getAsJsonObject("towers");
+        String towerId = EndTowers.BASE_END_TOWER.id();
+        if (!towers.has(towerId) || !towers.get(towerId).isJsonObject()) {
+            return json;
+        }
+        JsonObject endDragon = towers.getAsJsonObject(towerId);
+        JsonElement configuredInterval = endDragon.get("attackIntervalTicks");
+        if (configuredInterval == null
+                || !configuredInterval.isJsonPrimitive()
+                || !configuredInterval.getAsJsonPrimitive().isNumber()
+                || configuredInterval.getAsInt() != 20) {
+            return json;
+        }
+        TowerBalanceConfig.TowerStats defaultStats = defaults.towers().get(towerId);
+        if (defaultStats == null || defaultStats.attackIntervalTicks() == null) {
+            return json;
+        }
+        endDragon.addProperty("attackIntervalTicks", defaultStats.attackIntervalTicks());
+        return GSON.toJson(object);
+    }
+
     private static String migrateLegacyEndBalanceDefaults(String json, TowerBalanceConfig defaults) {
         JsonElement root = JsonParser.parseString(json);
         if (!root.isJsonObject()) {
@@ -592,10 +599,33 @@ public final class SemionConfigLoader {
         boolean changed = migrateLegacyAbilityDefault(endAbilities, defaults, "absorptionDurationTicks", 400.0);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "roundAbsorptionAttackIntervalEvery", 2.0);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "endCrystalAttackIntervalEvery", 20.0);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "maxAttackIntervalReductionTicks", 15.0);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "shulkerReductionEvery", 20.0);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "splashRadiusPerStep", 0.25);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "splashDamageRatio", 1.0);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "lifeStealCap", 0.30);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "endCrystalAttackIntervalEvery", 15.0);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "endCrystalAttackRangeEvery", 40.0);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "attackRangePerStep", 1.0);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "attackRangeCap", 5.0);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "shulkerLifeStealEvery", 10.0);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "regenerationPerStep", 5.0);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "regenerationCap", 50.0);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "endCrystalSplashEvery", 10.0);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "splashRadiusPerStep", 0.5);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "splashRadiusCap", 5.0);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "shulkerReductionEvery", 15.0);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "damageReductionPerStep", 0.025);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "damageReductionCap", 0.25);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "dragonIncomeDebuffResistance", 0.25);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "dragonFinalDamageBonus", 0.25);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "dragonIncomeDebuffResistance", 0.05);
+        if (endAbilities.remove("endCrystalSplashEvery") != null) {
+            changed = true;
+        }
+        if (endAbilities.remove("splashRadiusPerStep") != null) {
+            changed = true;
+        }
         return changed ? GSON.toJson(object) : json;
     }
 

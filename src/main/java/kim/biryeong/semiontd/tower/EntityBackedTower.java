@@ -94,7 +94,7 @@ public abstract class EntityBackedTower extends Tower {
             syncHealth(towerEntity.getHealth());
             syncPosition(GridPosition.from(BlockPos.containing(
                     towerEntity.getX(),
-                    towerEntity.getY() - 1.0,
+                    towerEntity.getY() - entityAnchorYOffset(),
                     towerEntity.getZ()
             )));
         } else if (entity == null || entity.isRemoved()) {
@@ -130,8 +130,12 @@ public abstract class EntityBackedTower extends Tower {
         return position().x() + 0.5;
     }
 
-    private double anchorY() {
-        return position().y() + 1.0;
+    protected double anchorY() {
+        return position().y() + entityAnchorYOffset();
+    }
+
+    protected double entityAnchorYOffset() {
+        return 1.0;
     }
 
     private double anchorZ() {
