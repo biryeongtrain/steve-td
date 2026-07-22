@@ -1,5 +1,6 @@
 package kim.biryeong.semiontd.rating;
 
+
 public record RatingConfig(
         boolean enabled,
         boolean teamEloMatchmakingEnabled,

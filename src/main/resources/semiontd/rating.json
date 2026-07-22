@@ -1,0 +1,18 @@
+{
+  "enabled": false,
+  "teamEloMatchmakingEnabled": false,
+  "eloKFactor": 64.0,
+  "initialDisplayElo": 1500,
+  "initialMu": 1500.0,
+  "initialSigma": 350.0,
+  "leaderboardLimit": 15,
+  "minimumParticipants": 2,
+  "excludeSpectators": true,
+  "contributionWeightingEnabled": true,
+  "contributionMultiplierMin": 0.85,
+  "contributionMultiplierMax": 1.15,
+  "defenseContributionWeight": 0.4,
+  "pressureContributionWeight": 0.25,
+  "economyContributionWeight": 0.2,
+  "assistContributionWeight": 0.15
+}

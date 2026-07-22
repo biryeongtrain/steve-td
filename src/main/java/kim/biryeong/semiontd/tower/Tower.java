@@ -294,6 +294,14 @@ public abstract class Tower {
         return damageAmount;
     }
 
+    public double finalDamageBonus() {
+        return 0.0;
+    }
+
+    public double incomeDebuffResistance() {
+        return 0.0;
+    }
+
     public boolean damageTarget(SemionTowerEntity towerEntity, SemionMonsterEntity target, double baseDamage) {
         Monster runtimeMonster = target.runtimeMonster();
         double traitDamage = towerEntity.applyTraitOutgoingDamage(runtimeMonster, baseDamage);

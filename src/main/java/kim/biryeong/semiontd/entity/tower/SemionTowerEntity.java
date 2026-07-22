@@ -199,6 +199,25 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         currentAttackTarget = isValidAttackTarget(target) ? target : null;
     }
 
+    public void faceAttackTarget(Entity target) {
+        if (target == null
+                || !(runtimeTower instanceof EndTower endTower)
+                || endTower.state() != EndTowerState.DRAGON) {
+            return;
+        }
+        double xOffset = target.getX() - getX();
+        double zOffset = target.getZ() - getZ();
+        double horizontalDistance = Math.sqrt(xOffset * xOffset + zOffset * zOffset);
+        double yOffset = target.getEyeY() - getEyeY();
+        float yaw = (float) (Math.toDegrees(Math.atan2(zOffset, xOffset)) - 90.0);
+        float pitch = (float) -Math.toDegrees(Math.atan2(yOffset, horizontalDistance));
+        getLookControl().setLookAt(target, 360.0F, 360.0F);
+        setYRot(yaw);
+        setYHeadRot(yaw);
+        yBodyRot = yaw;
+        setXRot(pitch);
+    }
+
     public void forceAttackReady() {
         forceAttackReady = true;
     }
@@ -326,6 +345,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         }
         return Math.max(0.0, damageAmount)
                 * (1.0 + additiveBonus)
+                * (1.0 + (runtimeTower == null ? 0.0 : Math.max(0.0, runtimeTower.finalDamageBonus())))
                 * (1.0 + activeEffectMagnitude(TimedEffectType.TOWER_FINAL_DAMAGE_BONUS));
     }
 

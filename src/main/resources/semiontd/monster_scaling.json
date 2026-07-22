@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "survivalDelayTicks": 1200,
+  "laneBreachDelayTicks": 1200,
+  "intervalTicks": 40,
+  "healthGrowthPercentPerInterval": 5.0,
+  "attackDamageGrowthPercentPerInterval": 6.0,
+  "scaleWaveMonsters": true,
+  "scaleIncomeMonsters": true
+}

@@ -87,6 +87,7 @@ public final class TowerAttackMonsterGoal extends Goal {
             return;
         }
 
+        tower.faceAttackTarget(target);
         tower.playAnimation(SemionAnimationState.ATTACK);
         double damageAmount = tower.attackDamageAmount(target);
         float healthBeforeAttack = tower.getHealth();

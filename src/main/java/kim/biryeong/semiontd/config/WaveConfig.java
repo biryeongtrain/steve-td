@@ -91,7 +91,12 @@ public record WaveConfig(
                 monster("infinite_zombified_piglin_rush", 140.0, 7.0, 10.0, AttackKind.MELEE, "minecraft:zombified_piglin", 1, 25, 5, 1.3, 2.5, 10),
                 monster("infinite_blaze_ranged", 113.33, 4.0, 18.0, AttackKind.RANGED, "minecraft:blaze", 1, 15, 0, 0.95, 9.0, 16)
         );
-        return new WaveConfig(rounds, 20, animalStampede, List.of(animalStampede, overworldAssault, zombifiedLegion));
+        return new WaveConfig(
+                rounds,
+                20,
+                animalStampede,
+                List.of(animalStampede, overworldAssault, zombifiedLegion)
+        );
     }
 
     public Optional<RoundWaveConfig> configForRound(int round) {

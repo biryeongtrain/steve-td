@@ -584,9 +584,11 @@ public final class SemionDialogService {
                 : combatStatsEntity
                         .map(entity -> entity.applyTraitOutgoingDamage(null, entity.attackDamageAmount(null)))
                         .orElseGet(() -> tower.modifyAttackDamage(null, null, tower.type().damage()));
-        double currentRange = combatStatsEntity
-                .map(SemionTowerEntity::attackRange)
-                .orElse(tower.type().range());
+        double currentRange = previewEndTower != null
+                ? previewEndTower.previewHatchedAttackRange()
+                : combatStatsEntity
+                        .map(SemionTowerEntity::attackRange)
+                        .orElse(tower.type().range());
         int currentAttackIntervalTicks = previewEndTower != null
                 ? previewEndTower.previewHatchedAttackIntervalTicks()
                 : combatStatsEntity

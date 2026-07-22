@@ -39,6 +39,35 @@ final class SemionConfigLoaderTest {
     }
 
     @Test
+    void packagedEconomyAndIncomeDefaultsMatchBalanceRepository() {
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+        EconomyConfig economy = configs.economy();
+        assertEquals(150, economy.startingDiamond());
+        assertEquals(0, economy.startingEmerald());
+        assertEquals(10, economy.startingIncome());
+        assertEquals(40, economy.emeraldProduction().maxUpgradeCount());
+        assertEquals(30, economy.emeraldProduction().initialUpgradeCost());
+        assertEquals(30, economy.emeraldProduction().upgradeCostIncrease());
+
+        SummonConfig summons = configs.summons();
+        assertEquals("닭", summons.summons().get("chicken").displayName());
+        assertEquals(10.0, summons.summons().get("chicken").maxHealth(), 0.0001);
+        assertEquals("샌즈", summons.summons().get("skeleton").displayName());
+        assertEquals("늑구(적)", summons.summons().get("wolf").displayName());
+        assertEquals(800, summons.summons().get("warden").emeraldCost());
+        assertEquals(40, summons.summons().get("warden").incomeGain());
+        assertEquals(30, configs.progression().playReward());
+        assertEquals(30, configs.progression().winBonusReward());
+        assertEquals(20, configs.progression().lossReward());
+        assertEquals(1, configs.leaderTargeting().maxTargetingTeamsPerTarget());
+        assertEquals(1200, configs.monsterScaling().survivalDelayTicks());
+        assertEquals(false, configs.rating().enabled());
+        assertEquals(0.18, configs.traitBalance().value("clean_lane_bonus", "incomeRatio", -1.0), 0.0001);
+        assertEquals(45, configs.traits().selectionDurationSeconds());
+        assertEquals(19, configs.waves().rounds().size());
+    }
+
+    @Test
     void loadReadsTraitConfigOverrides() throws Exception {
         Files.createDirectories(tempDir);
         Files.writeString(tempDir.resolve("traits.json"), """
@@ -59,7 +88,7 @@ final class SemionConfigLoaderTest {
         LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
 
         assertTrue(Files.exists(tempDir.resolve("trait_balance.json")));
-        assertEquals(0.15, configs.traitBalance().value("opening_salvo", "attackSpeedBonus", -1.0));
+        assertEquals(0.25, configs.traitBalance().value("opening_salvo", "attackSpeedBonus", -1.0));
         assertEquals(15.0, configs.traitBalance().value("opening_salvo", "durationSeconds", -1.0));
     }
 
@@ -80,7 +109,7 @@ final class SemionConfigLoaderTest {
 
         assertEquals(0.12, configs.traitBalance().value("opening_salvo", "attackSpeedBonus", -1.0));
         assertEquals(15.0, configs.traitBalance().value("opening_salvo", "durationSeconds", -1.0));
-        assertEquals(150.0, configs.traitBalance().value("mobilization_grant", "startingDiamond", -1.0));
+        assertEquals(120.0, configs.traitBalance().value("mobilization_grant", "startingDiamond", -1.0));
         String written = Files.readString(tempDir.resolve("trait_balance.json"));
         assertTrue(written.contains("durationSeconds"));
         assertTrue(written.contains("mobilization_grant"));
@@ -91,7 +120,10 @@ final class SemionConfigLoaderTest {
         LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
 
         assertTrue(Files.exists(tempDir.resolve("rating.json")));
-        assertEquals(RatingConfig.defaultConfig(), configs.rating());
+        assertEquals(false, configs.rating().enabled());
+        assertEquals(false, configs.rating().teamEloMatchmakingEnabled());
+        assertEquals(64.0, configs.rating().eloKFactor(), 0.0001);
+        assertEquals(15, configs.rating().leaderboardLimit());
     }
 
     @Test
@@ -152,7 +184,7 @@ final class SemionConfigLoaderTest {
 
         LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
 
-        assertEquals(true, configs.rating().teamEloMatchmakingEnabled());
+        assertEquals(false, configs.rating().teamEloMatchmakingEnabled());
         String written = Files.readString(tempDir.resolve("rating.json"));
         assertTrue(written.contains("teamEloMatchmakingEnabled"));
     }
@@ -189,7 +221,7 @@ final class SemionConfigLoaderTest {
                 0
         ));
         assertEquals(2.0, towerBalance.abilities().get(LegionTowers.T3_EXTREME_GOAT_TOWER.id()).get("maxStacks"));
-        assertEquals(0.065, towerBalance.abilities().get(LegionTowers.T3_EXTREME_GOAT_TOWER.id()).get("cloneDamageBonus"));
+        assertEquals(0.10, towerBalance.abilities().get(LegionTowers.T3_EXTREME_GOAT_TOWER.id()).get("cloneDamageBonus"));
         String written = Files.readString(tempDir.resolve("tower_balance.json"));
         assertTrue(written.contains("t2_strong_goat_tower"));
         assertTrue(written.contains("cloneDamageBonus"));
@@ -221,6 +253,10 @@ final class SemionConfigLoaderTest {
                     },
                     "end_global": {
                       "hatchDelayTicks": 200.0,
+                      "absorptionDurationTicks": 400.0,
+                      "roundAbsorptionAttackIntervalEvery": 2.0,
+                      "endCrystalAttackIntervalEvery": 20.0,
+                      "shulkerReductionEvery": 20.0,
                       "endermanAttackIntervalEvery": 10.0,
                       "endermanLifeStealEvery": 20.0,
                       "shulkerSplashEvery": 12.0,
@@ -258,6 +294,11 @@ final class SemionConfigLoaderTest {
                 -1
         ));
         assertEquals(12.0, balance.ability("end_global", "endCrystalSplashEvery", -1.0), 0.0001);
+        assertEquals(200.0, balance.ability("end_global", "absorptionDurationTicks", -1.0), 0.0001);
+        assertEquals(1.0, balance.ability("end_global", "roundAbsorptionAttackIntervalEvery", -1.0), 0.0001);
+        assertEquals(15.0, balance.ability("end_global", "endCrystalAttackIntervalEvery", -1.0), 0.0001);
+        assertEquals(15.0, balance.ability("end_global", "shulkerReductionEvery", -1.0), 0.0001);
+        assertEquals(1.0, balance.ability("end_global", "attackRangePerStep", -1.0), 0.0001);
         assertEquals(10.0, balance.ability("end_global", "shulkerLifeStealEvery", -1.0), 0.0001);
         assertEquals(0.5, balance.ability("end_global", "splashRadiusPerStep", -1.0), 0.0001);
         assertEquals(0.30, balance.ability(EndTowers.T2_SHULKER_TOWER.id(), "damageReduction", -1.0), 0.0001);
@@ -270,7 +311,31 @@ final class SemionConfigLoaderTest {
         assertTrue(!written.contains("hatchDelayTicks"));
         assertTrue(!written.contains("shulkerSplashEvery"));
         assertTrue(!written.contains("shulkerAttackRangeEvery"));
-        assertTrue(!written.contains("attackRangePerStep"));
+        assertTrue(written.contains("attackRangePerStep"));
+    }
+
+    @Test
+    void loadMigratesPreviousEndSplashAndLifeStealDefaults() throws Exception {
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("tower_balance.json"), """
+                {
+                  "abilities": {
+                    "end_global": {
+                      "splashRadiusPerStep": 0.25,
+                      "splashDamageRatio": 1.0,
+                      "lifeStealCap": 0.30
+                    }
+                  }
+                }
+                """);
+
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+
+        TowerBalanceConfig balance = configs.towerBalance();
+        assertEquals(10.0, balance.ability("end_global", "endCrystalSplashEvery", -1.0), 0.0001);
+        assertEquals(0.5, balance.ability("end_global", "splashRadiusPerStep", -1.0), 0.0001);
+        assertEquals(0.60, balance.ability("end_global", "splashDamageRatio", -1.0), 0.0001);
+        assertEquals(0.20, balance.ability("end_global", "lifeStealCap", -1.0), 0.0001);
     }
 
     @Test
@@ -307,13 +372,13 @@ final class SemionConfigLoaderTest {
 
         TowerBalanceConfig towerBalance = configs.towerBalance();
         assertTrue(towerBalance.towers().containsKey(IllagerTowers.T1_VINDICATOR.id()));
-        assertEquals(170, towerBalance.upgradeCost(
+        assertEquals(130, towerBalance.upgradeCost(
                 IllagerTowers.T1_VINDICATOR.id(),
                 IllagerTowers.T2_VINDICATOR_CAPTAIN.id(),
                 0
         ));
         assertEquals(100.0, towerBalance.ability(IllagerRaidStates.RAID_CONFIG_ID, "gaugeMax", -1), 0.0001);
-        assertEquals(0.10, towerBalance.ability(IllagerTowers.T1_VINDICATOR.id(), "raidDamageReduction", -1), 0.0001);
+        assertEquals(0.15, towerBalance.ability(IllagerTowers.T1_VINDICATOR.id(), "raidDamageReduction", -1), 0.0001);
         String written = Files.readString(tempDir.resolve("tower_balance.json"));
         assertTrue(written.contains("illager_vindicator_t1"));
         assertTrue(written.contains("illager_vindicator_t1->illager_vindicator_captain_t2"));
@@ -531,8 +596,8 @@ final class SemionConfigLoaderTest {
         LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
 
         assertTrue(Files.exists(tempDir.resolve("leader_targeting.json")));
-        assertEquals(2, configs.leaderTargeting().maxTargetingTeamsPerTarget());
-        assertEquals(2, configs.leaderTargeting().activeTargetRounds());
+        assertEquals(1, configs.leaderTargeting().maxTargetingTeamsPerTarget());
+        assertEquals(1, configs.leaderTargeting().activeTargetRounds());
     }
 
     @Test
@@ -641,7 +706,11 @@ final class SemionConfigLoaderTest {
         LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
 
         assertTrue(Files.exists(tempDir.resolve("monster_scaling.json")));
-        assertEquals(MonsterScalingConfig.defaultConfig(), configs.monsterScaling());
+        assertEquals(1200, configs.monsterScaling().survivalDelayTicks());
+        assertEquals(1200, configs.monsterScaling().laneBreachDelayTicks());
+        assertEquals(40, configs.monsterScaling().intervalTicks());
+        assertEquals(5.0, configs.monsterScaling().healthGrowthPercentPerInterval(), 0.0001);
+        assertEquals(6.0, configs.monsterScaling().attackDamageGrowthPercentPerInterval(), 0.0001);
     }
 
     @Test
@@ -658,8 +727,8 @@ final class SemionConfigLoaderTest {
 
         assertEquals(false, configs.monsterScaling().enabled());
         assertEquals(100, configs.monsterScaling().survivalDelayTicks());
-        assertEquals(MonsterScalingConfig.defaultConfig().laneBreachDelayTicks(), configs.monsterScaling().laneBreachDelayTicks());
-        assertEquals(MonsterScalingConfig.defaultConfig().intervalTicks(), configs.monsterScaling().intervalTicks());
+        assertEquals(1200, configs.monsterScaling().laneBreachDelayTicks());
+        assertEquals(40, configs.monsterScaling().intervalTicks());
         assertEquals(true, configs.monsterScaling().scaleWaveMonsters());
         assertEquals(true, configs.monsterScaling().scaleIncomeMonsters());
         String written = Files.readString(tempDir.resolve("monster_scaling.json"));

@@ -1,0 +1,2261 @@
+{
+  "towers": {
+    "villager_splash_t1": {
+      "mineralCost": 50,
+      "maxHealth": 40,
+      "range": 5.5,
+      "damage": 5,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 0
+    },
+    "villager_splash_t2": {
+      "mineralCost": 110,
+      "maxHealth": 60,
+      "range": 7,
+      "damage": 8,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 5
+    },
+    "villager_splash_t3": {
+      "mineralCost": 180,
+      "maxHealth": 80,
+      "range": 7,
+      "damage": 15,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 10
+    },
+    "t1_golem_tower": {
+      "mineralCost": 50,
+      "maxHealth": 120,
+      "range": 2,
+      "damage": 5,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 35
+    },
+    "t2_golem_tower": {
+      "mineralCost": 180,
+      "maxHealth": 200,
+      "range": 2,
+      "damage": 8,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 50
+    },
+    "t3_golem_tower": {
+      "mineralCost": 350,
+      "maxHealth": 400,
+      "range": 3,
+      "damage": 10,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 80
+    },
+    "t1_allay_tower": {
+      "mineralCost": 80,
+      "maxHealth": 40,
+      "range": 5,
+      "damage": 2,
+      "attackIntervalTicks": 15,
+      "aggroPriority": -5
+    },
+    "t2_allay_tower": {
+      "mineralCost": 200,
+      "maxHealth": 50,
+      "range": 5,
+      "damage": 4,
+      "attackIntervalTicks": 15,
+      "aggroPriority": -5
+    },
+    "t2_weapon_smith_tower": {
+      "mineralCost": 250,
+      "maxHealth": 50,
+      "range": 12,
+      "damage": 5,
+      "attackIntervalTicks": 15,
+      "aggroPriority": -5
+    },
+    "t3_armorer_tower": {
+      "mineralCost": 300,
+      "maxHealth": 70,
+      "range": 3,
+      "damage": 10,
+      "attackIntervalTicks": 15,
+      "aggroPriority": -5
+    },
+    "t3_weapon_smith_tower": {
+      "mineralCost": 350,
+      "maxHealth": 60,
+      "range": 12,
+      "damage": 7,
+      "attackIntervalTicks": 15,
+      "aggroPriority": -5
+    },
+    "t1_cat_tower": {
+      "mineralCost": 60,
+      "maxHealth": 50,
+      "range": 10,
+      "damage": 10,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 5
+    },
+    "t2_anti_tanker_cat_tower": {
+      "mineralCost": 180,
+      "maxHealth": 50,
+      "range": 12,
+      "damage": 20,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 5
+    },
+    "t2_lane_clear_cat_tower": {
+      "mineralCost": 200,
+      "maxHealth": 50,
+      "range": 10,
+      "damage": 15,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 5
+    },
+    "t3_anti_tanker_cat_tower": {
+      "mineralCost": 250,
+      "maxHealth": 50,
+      "range": 15,
+      "damage": 25,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 5
+    },
+    "t3_lane_clear_cat_tower": {
+      "mineralCost": 275,
+      "maxHealth": 50,
+      "range": 10,
+      "damage": 20,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 5
+    },
+    "t1_zombie_tower": {
+      "mineralCost": 40,
+      "maxHealth": 100,
+      "range": 2,
+      "damage": 5,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 40
+    },
+    "t2_zombie_tower": {
+      "mineralCost": 180,
+      "maxHealth": 200,
+      "range": 3,
+      "damage": 8,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 50
+    },
+    "t3_zombie_tower": {
+      "mineralCost": 350,
+      "maxHealth": 300,
+      "range": 3,
+      "damage": 10,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 50
+    },
+    "t1_skeleton_tower": {
+      "mineralCost": 40,
+      "maxHealth": 50,
+      "range": 4,
+      "damage": 5,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 10
+    },
+    "t2_ranged_skeleton_tower": {
+      "mineralCost": 110,
+      "maxHealth": 70,
+      "range": 6,
+      "damage": 8,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 5
+    },
+    "t2_melee_tower": {
+      "mineralCost": 150,
+      "maxHealth": 100,
+      "range": 3,
+      "damage": 10,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 20
+    },
+    "t3_ranged_skeleton_tower": {
+      "mineralCost": 200,
+      "maxHealth": 120,
+      "range": 6,
+      "damage": 35,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 5
+    },
+    "t3_melee_tower": {
+      "mineralCost": 250,
+      "maxHealth": 250,
+      "range": 3,
+      "damage": 20,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 20
+    },
+    "t1_undead_animal_tower": {
+      "mineralCost": 80,
+      "maxHealth": 50,
+      "range": 2,
+      "damage": 5,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 5
+    },
+    "t2_undead_animal_tower": {
+      "mineralCost": 300,
+      "maxHealth": 50,
+      "range": 2,
+      "damage": 5,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 5
+    },
+    "t1_pig_tower": {
+      "mineralCost": 40,
+      "maxHealth": 80,
+      "range": 2,
+      "damage": 5,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 40
+    },
+    "t2_pig_tower": {
+      "mineralCost": 180,
+      "maxHealth": 150,
+      "range": 2,
+      "damage": 7,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 55
+    },
+    "t3_pig_tower": {
+      "mineralCost": 300,
+      "maxHealth": 350,
+      "range": 2,
+      "damage": 15,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 60
+    },
+    "t1_wolf_tower": {
+      "mineralCost": 50,
+      "maxHealth": 50,
+      "range": 6,
+      "damage": 5,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 5
+    },
+    "t2_wolf_dps_tower": {
+      "mineralCost": 110,
+      "maxHealth": 70,
+      "range": 6,
+      "damage": 10,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 5
+    },
+    "t3_wolf_dps_tower": {
+      "mineralCost": 110,
+      "maxHealth": 90,
+      "range": 6,
+      "damage": 20,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 0
+    },
+    "t1_rabbit_tower": {
+      "mineralCost": 50,
+      "maxHealth": 40,
+      "range": 7,
+      "damage": 5,
+      "attackIntervalTicks": 15,
+      "aggroPriority": -5
+    },
+    "t2_rabbit_tower": {
+      "mineralCost": 180,
+      "maxHealth": 55,
+      "range": 7,
+      "damage": 8,
+      "attackIntervalTicks": 15,
+      "aggroPriority": -5
+    },
+    "t3_rabbit_tower": {
+      "mineralCost": 300,
+      "maxHealth": 70,
+      "range": 7,
+      "damage": 10,
+      "attackIntervalTicks": 13,
+      "aggroPriority": -5
+    },
+    "base_warlock_tower": {
+      "mineralCost": 0,
+      "maxHealth": 80,
+      "range": 4,
+      "damage": 5,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 30
+    },
+    "ranged_warlock_tower": {
+      "mineralCost": 0,
+      "maxHealth": 100,
+      "range": 7,
+      "damage": 8,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 20
+    },
+    "melee_warlock_tower": {
+      "mineralCost": 0,
+      "maxHealth": 120,
+      "range": 3,
+      "damage": 7,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 80
+    },
+    "t1_slave": {
+      "mineralCost": 50,
+      "maxHealth": 75,
+      "range": 2,
+      "damage": 4,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 30
+    },
+    "t2_slave": {
+      "mineralCost": 130,
+      "maxHealth": 120,
+      "range": 2,
+      "damage": 8,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 50
+    },
+    "t3_slave": {
+      "mineralCost": 280,
+      "maxHealth": 185,
+      "range": 2,
+      "damage": 12,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 70
+    },
+    "t1_ranged_slave": {
+      "mineralCost": 55,
+      "maxHealth": 70,
+      "range": 7,
+      "damage": 5,
+      "attackIntervalTicks": 17,
+      "aggroPriority": 20
+    },
+    "t2_ranged_slave": {
+      "mineralCost": 100,
+      "maxHealth": 120,
+      "range": 7,
+      "damage": 8,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 15
+    },
+    "t3_ranged_slave": {
+      "mineralCost": 240,
+      "maxHealth": 185,
+      "range": 7,
+      "damage": 12,
+      "attackIntervalTicks": 13,
+      "aggroPriority": 15
+    },
+    "t1_chicken": {
+      "mineralCost": 30,
+      "maxHealth": 30,
+      "range": 6,
+      "damage": 6,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 20
+    },
+    "t2_legion_chicken_tower": {
+      "mineralCost": 100,
+      "maxHealth": 40,
+      "range": 6,
+      "damage": 9,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 15
+    },
+    "t2_dps_chicken_tower": {
+      "mineralCost": 100,
+      "maxHealth": 80,
+      "range": 12,
+      "damage": 18,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 10
+    },
+    "t1_slime_tower": {
+      "mineralCost": 40,
+      "maxHealth": 55,
+      "range": 2,
+      "damage": 3,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 30
+    },
+    "t2_slime_tower": {
+      "mineralCost": 85,
+      "maxHealth": 100,
+      "range": 2,
+      "damage": 6,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 40
+    },
+    "t1_penguin": {
+      "mineralCost": 165,
+      "maxHealth": 150,
+      "range": 4,
+      "damage": 22,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 30
+    },
+    "t2_penguin_tower": {
+      "mineralCost": 225,
+      "maxHealth": 220,
+      "range": 4,
+      "damage": 30,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 30
+    },
+    "t1_parrot_tower": {
+      "mineralCost": 120,
+      "maxHealth": 80,
+      "range": 8,
+      "damage": 18,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 15
+    },
+    "t2_parrot_tower": {
+      "mineralCost": 225,
+      "maxHealth": 100,
+      "range": 8,
+      "damage": 24,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 15
+    },
+    "illusion_tower": {
+      "mineralCost": 760,
+      "maxHealth": 500,
+      "range": 2,
+      "damage": 10,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 1557
+    },
+    "t1_fox_tower": {
+      "mineralCost": 60,
+      "maxHealth": 45,
+      "range": 7,
+      "damage": 12,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 5
+    },
+    "t2_fox_tower": {
+      "mineralCost": 170,
+      "maxHealth": 60,
+      "range": 7,
+      "damage": 20,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 5
+    },
+    "t3_fox_tower": {
+      "mineralCost": 320,
+      "maxHealth": 80,
+      "range": 8,
+      "damage": 30,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 5
+    },
+    "t1_bee_tower": {
+      "mineralCost": 80,
+      "maxHealth": 28,
+      "range": 7,
+      "damage": 4,
+      "attackIntervalTicks": 18,
+      "aggroPriority": 0
+    },
+    "t2_bee_tower": {
+      "mineralCost": 160,
+      "maxHealth": 36,
+      "range": 7,
+      "damage": 6,
+      "attackIntervalTicks": 17,
+      "aggroPriority": 0
+    },
+    "t3_bee_tower": {
+      "mineralCost": 310,
+      "maxHealth": 48,
+      "range": 8,
+      "damage": 8,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 0
+    },
+    "t1_resonance_focus_moobloom": {
+      "mineralCost": 50,
+      "maxHealth": 45,
+      "range": 8,
+      "damage": 8,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 5
+    },
+    "t2_resonance_focus_moobloom": {
+      "mineralCost": 180,
+      "maxHealth": 80,
+      "range": 6.5,
+      "damage": 15,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 8
+    },
+    "t3_resonance_focus_moobloom": {
+      "mineralCost": 320,
+      "maxHealth": 95,
+      "range": 7,
+      "damage": 28,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 12
+    },
+    "t1_resonance_wave_moobloom": {
+      "mineralCost": 45,
+      "maxHealth": 70,
+      "range": 7,
+      "damage": 8,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 10
+    },
+    "t2_resonance_wave_moobloom": {
+      "mineralCost": 50,
+      "maxHealth": 60,
+      "range": 5.5,
+      "damage": 15,
+      "attackIntervalTicks": 14,
+      "aggroPriority": 12
+    },
+    "t3_resonance_wave_moobloom": {
+      "mineralCost": 300,
+      "maxHealth": 80,
+      "range": 8,
+      "damage": 22,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 15
+    },
+    "t1_resonance_frost_moobloom": {
+      "mineralCost": 45,
+      "maxHealth": 50,
+      "range": 7,
+      "damage": 8,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 0
+    },
+    "t2_resonance_frost_moobloom": {
+      "mineralCost": 150,
+      "maxHealth": 75,
+      "range": 8,
+      "damage": 10,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 2
+    },
+    "t3_resonance_frost_moobloom": {
+      "mineralCost": 280,
+      "maxHealth": 105,
+      "range": 12,
+      "damage": 16,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 5
+    },
+    "t1_resonance_amplify_moobloom": {
+      "mineralCost": 45,
+      "maxHealth": 100,
+      "range": 5,
+      "damage": 8,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 40
+    },
+    "t2_resonance_amplify_moobloom": {
+      "mineralCost": 200,
+      "maxHealth": 200,
+      "range": 5.5,
+      "damage": 11,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 45
+    },
+    "t3_resonance_amplify_moobloom": {
+      "mineralCost": 350,
+      "maxHealth": 450,
+      "range": 6,
+      "damage": 20,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 50
+    },
+    "t1_goat_tower": {
+      "mineralCost": 70,
+      "maxHealth": 70,
+      "range": 5,
+      "damage": 0,
+      "attackIntervalTicks": 100,
+      "aggroPriority": 5
+    },
+    "t2_strong_goat_tower": {
+      "mineralCost": 150,
+      "maxHealth": 110,
+      "range": 6,
+      "damage": 0,
+      "attackIntervalTicks": 90,
+      "aggroPriority": 5
+    },
+    "t3_extreme_goat_tower": {
+      "mineralCost": 250,
+      "maxHealth": 160,
+      "range": 7,
+      "damage": 0,
+      "attackIntervalTicks": 80,
+      "aggroPriority": 5
+    },
+    "illager_vindicator_t1": {
+      "mineralCost": 35,
+      "maxHealth": 120,
+      "range": 2.8,
+      "damage": 7,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 45
+    },
+    "illager_vindicator_captain_t2": {
+      "mineralCost": 120,
+      "maxHealth": 200,
+      "range": 2.4,
+      "damage": 15,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 55
+    },
+    "illager_ravager_t3": {
+      "mineralCost": 200,
+      "maxHealth": 400,
+      "range": 2.8,
+      "damage": 25,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 100
+    },
+    "illager_pillager_t1": {
+      "mineralCost": 35,
+      "maxHealth": 55,
+      "range": 8,
+      "damage": 6,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 12
+    },
+    "illager_pillager_captain_single_t2": {
+      "mineralCost": 100,
+      "maxHealth": 75,
+      "range": 12,
+      "damage": 15,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 15
+    },
+    "illager_pillager_captain_splash_t2": {
+      "mineralCost": 100,
+      "maxHealth": 70,
+      "range": 8,
+      "damage": 10,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 12
+    },
+    "illager_evoker_single_t3": {
+      "mineralCost": 200,
+      "maxHealth": 105,
+      "range": 12,
+      "damage": 45,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 18
+    },
+    "illager_evoker_splash_t3": {
+      "mineralCost": 200,
+      "maxHealth": 100,
+      "range": 8,
+      "damage": 20,
+      "attackIntervalTicks": 14,
+      "aggroPriority": 15
+    },
+    "illager_vex_t1": {
+      "mineralCost": 50,
+      "maxHealth": 45,
+      "range": 12,
+      "damage": 4,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 8
+    },
+    "illager_witch_low_t2": {
+      "mineralCost": 160,
+      "maxHealth": 65,
+      "range": 10,
+      "damage": 5,
+      "attackIntervalTicks": 14,
+      "aggroPriority": 10
+    },
+    "illager_witch_high_t2": {
+      "mineralCost": 160,
+      "maxHealth": 65,
+      "range": 8,
+      "damage": 5,
+      "attackIntervalTicks": 14,
+      "aggroPriority": 10
+    },
+    "illager_illusioner_low_t3": {
+      "mineralCost": 220,
+      "maxHealth": 85,
+      "range": 8,
+      "damage": 9,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 12
+    },
+    "illager_illusioner_high_t3": {
+      "mineralCost": 220,
+      "maxHealth": 85,
+      "range": 12,
+      "damage": 9,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 12
+    },
+    "villager_adv_villager_splash_t1": {
+      "mineralCost": 40,
+      "maxHealth": 40,
+      "range": 5.5,
+      "damage": 5,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 0
+    },
+    "villager_adv_villager_splash_t2": {
+      "mineralCost": 110,
+      "maxHealth": 60,
+      "range": 7,
+      "damage": 12,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 5
+    },
+    "villager_adv_villager_splash_t3": {
+      "mineralCost": 180,
+      "maxHealth": 80,
+      "range": 7,
+      "damage": 18,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 10
+    },
+    "villager_adv_t1_golem_tower": {
+      "mineralCost": 40,
+      "maxHealth": 120,
+      "range": 2,
+      "damage": 5,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 35
+    },
+    "villager_adv_t2_golem_tower": {
+      "mineralCost": 180,
+      "maxHealth": 150,
+      "range": 2,
+      "damage": 8,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 50
+    },
+    "villager_adv_t3_golem_tower": {
+      "mineralCost": 350,
+      "maxHealth": 200,
+      "range": 3,
+      "damage": 10,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 80
+    },
+    "villager_adv_t1_allay_tower": {
+      "mineralCost": 80,
+      "maxHealth": 40,
+      "range": 3,
+      "damage": 2,
+      "attackIntervalTicks": 15,
+      "aggroPriority": -5
+    },
+    "villager_adv_t2_allay_tower": {
+      "mineralCost": 200,
+      "maxHealth": 50,
+      "range": 3,
+      "damage": 4,
+      "attackIntervalTicks": 15,
+      "aggroPriority": -5
+    },
+    "villager_adv_t2_weapon_smith_tower": {
+      "mineralCost": 250,
+      "maxHealth": 50,
+      "range": 8,
+      "damage": 5,
+      "attackIntervalTicks": 15,
+      "aggroPriority": -5
+    },
+    "villager_adv_t3_armorer_tower": {
+      "mineralCost": 300,
+      "maxHealth": 70,
+      "range": 3,
+      "damage": 10,
+      "attackIntervalTicks": 15,
+      "aggroPriority": -5
+    },
+    "villager_adv_t3_weapon_smith_tower": {
+      "mineralCost": 350,
+      "maxHealth": 60,
+      "range": 8,
+      "damage": 7,
+      "attackIntervalTicks": 15,
+      "aggroPriority": -5
+    },
+    "villager_adv_t1_cat_tower": {
+      "mineralCost": 55,
+      "maxHealth": 50,
+      "range": 10,
+      "damage": 10,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 5
+    },
+    "villager_adv_t2_anti_tanker_cat_tower": {
+      "mineralCost": 180,
+      "maxHealth": 50,
+      "range": 12,
+      "damage": 25,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 5
+    },
+    "villager_adv_t2_lane_clear_cat_tower": {
+      "mineralCost": 200,
+      "maxHealth": 50,
+      "range": 10,
+      "damage": 15,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 5
+    },
+    "villager_adv_t3_anti_tanker_cat_tower": {
+      "mineralCost": 250,
+      "maxHealth": 50,
+      "range": 15,
+      "damage": 20,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 5
+    },
+    "villager_adv_t3_lane_clear_cat_tower": {
+      "mineralCost": 275,
+      "maxHealth": 50,
+      "range": 10,
+      "damage": 20,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 5
+    },
+    "nether_strider_t1": {
+      "mineralCost": 35,
+      "maxHealth": 70,
+      "range": 3.5,
+      "damage": 7,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 30
+    },
+    "nether_piglin_t2": {
+      "mineralCost": 110,
+      "maxHealth": 105,
+      "range": 5.5,
+      "damage": 15,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 40
+    },
+    "nether_piglin_brute_t3": {
+      "mineralCost": 260,
+      "maxHealth": 220,
+      "range": 3.2,
+      "damage": 18,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 50
+    },
+    "nether_hoglin_t1": {
+      "mineralCost": 60,
+      "maxHealth": 150,
+      "range": 2.4,
+      "damage": 6,
+      "attackIntervalTicks": 18,
+      "aggroPriority": 45
+    },
+    "nether_zoglin_t2": {
+      "mineralCost": 125,
+      "maxHealth": 220,
+      "range": 2.6,
+      "damage": 12,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 55
+    },
+    "nether_zombified_piglin_t3": {
+      "mineralCost": 280,
+      "maxHealth": 350,
+      "range": 2.8,
+      "damage": 30,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 60
+    },
+    "nether_magma_cube_t1": {
+      "mineralCost": 80,
+      "maxHealth": 70,
+      "range": 4.5,
+      "damage": 6,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 15
+    },
+    "nether_blaze_t2": {
+      "mineralCost": 110,
+      "maxHealth": 150,
+      "range": 7,
+      "damage": 20,
+      "attackIntervalTicks": 13,
+      "aggroPriority": 8
+    },
+    "nether_ghast_t3": {
+      "mineralCost": 270,
+      "maxHealth": 275,
+      "range": 9.5,
+      "damage": 35,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 5
+    },
+    "nether_skeleton_t1": {
+      "mineralCost": 50,
+      "maxHealth": 65,
+      "range": 7,
+      "damage": 7,
+      "attackIntervalTicks": 14,
+      "aggroPriority": 15
+    },
+    "nether_wither_skeleton_t2": {
+      "mineralCost": 115,
+      "maxHealth": 135,
+      "range": 3,
+      "damage": 16,
+      "attackIntervalTicks": 14,
+      "aggroPriority": 15
+    },
+    "nether_wither_t3": {
+      "mineralCost": 280,
+      "maxHealth": 220,
+      "range": 7.5,
+      "damage": 30,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 10
+    }
+  },
+  "upgradeCosts": {
+    "villager_splash_t1->villager_splash_t2": 80,
+    "villager_splash_t2->villager_splash_t3": 150,
+    "t1_golem_tower->t2_golem_tower": 100,
+    "t2_golem_tower->t3_golem_tower": 200,
+    "t1_allay_tower->t2_allay_tower": 150,
+    "t1_allay_tower->t2_weapon_smith_tower": 180,
+    "t2_allay_tower->t3_armorer_tower": 200,
+    "t2_weapon_smith_tower->t3_weapon_smith_tower": 200,
+    "t1_cat_tower->t2_anti_tanker_cat_tower": 120,
+    "t1_cat_tower->t2_lane_clear_cat_tower": 120,
+    "t2_anti_tanker_cat_tower->t3_anti_tanker_cat_tower": 210,
+    "t2_lane_clear_cat_tower->t3_lane_clear_cat_tower": 210,
+    "t1_zombie_tower->t2_zombie_tower": 100,
+    "t2_zombie_tower->t3_zombie_tower": 200,
+    "t1_skeleton_tower->t2_ranged_skeleton_tower": 100,
+    "t1_skeleton_tower->t2_melee_tower": 110,
+    "t2_ranged_skeleton_tower->t3_ranged_skeleton_tower": 160,
+    "t2_melee_tower->t3_melee_tower": 180,
+    "t1_undead_animal_tower->t2_undead_animal_tower": 150,
+    "t1_pig_tower->t2_pig_tower": 95,
+    "t2_pig_tower->t3_pig_tower": 150,
+    "t1_wolf_tower->t2_wolf_dps_tower": 90,
+    "t2_wolf_dps_tower->t3_wolf_dps_tower": 180,
+    "t1_rabbit_tower->t2_rabbit_tower": 100,
+    "t2_rabbit_tower->t3_rabbit_tower": 200,
+    "base_warlock_tower->ranged_warlock_tower": 0,
+    "base_warlock_tower->melee_warlock_tower": 0,
+    "t1_slave->t2_slave": 70,
+    "t2_slave->t3_slave": 150,
+    "t1_ranged_slave->t2_ranged_slave": 80,
+    "t2_ranged_slave->t3_ranged_slave": 160,
+    "t1_chicken->t2_legion_chicken_tower": 50,
+    "t1_chicken->t2_dps_chicken_tower": 50,
+    "t1_slime_tower->t2_slime_tower": 55,
+    "t1_penguin->t2_penguin_tower": 225,
+    "t1_parrot_tower->t2_parrot_tower": 225,
+    "t1_fox_tower->t2_fox_tower": 150,
+    "t2_fox_tower->t3_fox_tower": 225,
+    "t1_bee_tower->t2_bee_tower": 160,
+    "t2_bee_tower->t3_bee_tower": 310,
+    "t1_resonance_focus_moobloom->t2_resonance_focus_moobloom": 60,
+    "t2_resonance_focus_moobloom->t3_resonance_focus_moobloom": 180,
+    "t1_resonance_wave_moobloom->t2_resonance_wave_moobloom": 60,
+    "t2_resonance_wave_moobloom->t3_resonance_wave_moobloom": 200,
+    "t1_resonance_frost_moobloom->t2_resonance_frost_moobloom": 60,
+    "t2_resonance_frost_moobloom->t3_resonance_frost_moobloom": 220,
+    "t1_resonance_amplify_moobloom->t2_resonance_amplify_moobloom": 60,
+    "t2_resonance_amplify_moobloom->t3_resonance_amplify_moobloom": 220,
+    "t1_goat_tower->t2_strong_goat_tower": 150,
+    "t2_strong_goat_tower->t3_extreme_goat_tower": 250,
+    "illager_vindicator_t1->illager_vindicator_captain_t2": 130,
+    "illager_vindicator_captain_t2->illager_ravager_t3": 200,
+    "illager_pillager_t1->illager_pillager_captain_single_t2": 100,
+    "illager_pillager_t1->illager_pillager_captain_splash_t2": 100,
+    "illager_pillager_captain_single_t2->illager_evoker_single_t3": 200,
+    "illager_pillager_captain_splash_t2->illager_evoker_splash_t3": 200,
+    "illager_vex_t1->illager_witch_low_t2": 150,
+    "illager_vex_t1->illager_witch_high_t2": 150,
+    "illager_witch_low_t2->illager_illusioner_low_t3": 220,
+    "illager_witch_high_t2->illager_illusioner_high_t3": 220,
+    "villager_adv_villager_splash_t1->villager_splash_t2": 100,
+    "villager_adv_villager_splash_t2->villager_splash_t3": 225,
+    "villager_adv_t1_golem_tower->t2_golem_tower": 120,
+    "villager_adv_t2_golem_tower->t3_golem_tower": 250,
+    "villager_adv_t1_allay_tower->t2_allay_tower": 150,
+    "villager_adv_t1_allay_tower->t2_weapon_smith_tower": 200,
+    "villager_adv_t2_allay_tower->t3_armorer_tower": 200,
+    "villager_adv_t2_weapon_smith_tower->t3_weapon_smith_tower": 250,
+    "villager_adv_t1_cat_tower->t2_anti_tanker_cat_tower": 125,
+    "villager_adv_t1_cat_tower->t2_lane_clear_cat_tower": 125,
+    "villager_adv_t2_anti_tanker_cat_tower->t3_anti_tanker_cat_tower": 220,
+    "villager_adv_t2_lane_clear_cat_tower->t3_lane_clear_cat_tower": 220,
+    "nether_strider_t1->nether_piglin_t2": 100,
+    "nether_piglin_t2->nether_piglin_brute_t3": 200,
+    "nether_hoglin_t1->nether_zoglin_t2": 110,
+    "nether_zoglin_t2->nether_zombified_piglin_t3": 190,
+    "nether_magma_cube_t1->nether_blaze_t2": 130,
+    "nether_blaze_t2->nether_ghast_t3": 220,
+    "nether_skeleton_t1->nether_wither_skeleton_t2": 105,
+    "nether_wither_skeleton_t2->nether_wither_t3": 200
+  },
+  "abilities": {
+    "villager_splash_t2": {
+      "splashRadius": 1.25,
+      "maxSurvivalStacks": 6,
+      "bonusPerSurvivedRound": 0.05,
+      "splashDamageRatio": 0.75
+    },
+    "villager_splash_t3": {
+      "maxSurvivalStacks": 6,
+      "splashRadius": 1.75,
+      "splashDamageRatio": 0.75,
+      "extraAttackEvery": 3,
+      "bonusPerSurvivedRound": 0.075
+    },
+    "t2_golem_tower": {
+      "maxSurvivalStacks": 5,
+      "thornCooldownTicks": 40,
+      "thornDamage": 10,
+      "healthBonusPerSurvivedRound": 0.15,
+      "thornRadius": 1.5
+    },
+    "t3_golem_tower": {
+      "maxSurvivalStacks": 6,
+      "thornCooldownTicks": 30,
+      "thornDamage": 10,
+      "healthBonusPerSurvivedRound": 0.2,
+      "thornRadius": 2
+    },
+    "t1_allay_tower": {
+      "supportBlockTicks": 100,
+      "radius": 2,
+      "healAmount": 15
+    },
+    "t2_allay_tower": {
+      "supportBlockTicks": 100,
+      "radius": 3,
+      "healAmount": 40
+    },
+    "t2_weapon_smith_tower": {
+      "weaponBuff": 0.075,
+      "radius": 2,
+      "buffDurationTicks": 60,
+      "supportBlockTicks": 100
+    },
+    "t3_armorer_tower": {
+      "supportBlockTicks": 80,
+      "radius": 3,
+      "damageReduction": 0.1,
+      "healAmount": 80,
+      "buffDurationTicks": 60
+    },
+    "t3_weapon_smith_tower": {
+      "weaponBuff": 0.15,
+      "radius": 3,
+      "buffDurationTicks": 60,
+      "supportBlockTicks": 100
+    },
+    "t2_anti_tanker_cat_tower": {
+      "nonWaveBonus": 1.5,
+      "stackDamageCap": 20,
+      "tankBonus": 1.5,
+      "stackDamage": 0.8
+    },
+    "t3_anti_tanker_cat_tower": {
+      "nonWaveBonus": 2,
+      "stackDamageCap": 40,
+      "tankBonus": 2,
+      "stackDamage": 1.6
+    },
+    "t2_lane_clear_cat_tower": {
+      "stackDamageCap": 30,
+      "waveBonus": 1,
+      "stackDamage": 0.15,
+      "explosionRadius": 1.5
+    },
+    "t3_lane_clear_cat_tower": {
+      "stackDamageCap": 60,
+      "waveBonus": 1.6,
+      "stackDamage": 0.2,
+      "explosionRadius": 2
+    },
+    "t1_zombie_tower": {
+      "killDamageBoost": 2,
+      "damageBoostTicks": 100,
+      "lifeStealRatio": 0.2
+    },
+    "t2_zombie_tower": {
+      "damageBoostTicks": 100,
+      "thornHealPerHit": 2,
+      "damageBoostOnHit": 3.5,
+      "thornRadius": 3,
+      "lifeStealRatio": 0.25,
+      "thornCooldownTicks": 80
+    },
+    "t3_zombie_tower": {
+      "lifeStealRatio": 0.4,
+      "thornRadius": 4,
+      "thornCooldownTicks": 50,
+      "thornHealPerHit": 2,
+      "damageBoostOnHit": 8,
+      "damageBoostTicks": 100,
+      "lastStandTicks": 40
+    },
+    "t2_ranged_skeleton_tower": {
+      "extraTargets": 1,
+      "stackDamageCap": 50,
+      "stackDamage": 0.1,
+      "lifeStealRatio": 0.1,
+      "extraTargetRangeBonus": 2
+    },
+    "t3_ranged_skeleton_tower": {
+      "extraTargets": 2,
+      "stackDamageCap": 80,
+      "stackDamage": 0.3,
+      "lifeStealRatio": 0.2,
+      "extraTargetRangeBonus": 2
+    },
+    "t2_melee_tower": {
+      "healthPerStack": 0.2,
+      "splashRadius": 1.25,
+      "splashDamageRatio": 0.6,
+      "damagePerStack": 0.02,
+      "stackCap": 290,
+      "lifeStealRatio": 0.07,
+      "deathStackRange": 5
+    },
+    "t3_melee_tower": {
+      "healthPerStack": 0.4,
+      "splashRadius": 1.75,
+      "splashDamageRatio": 0.85,
+      "damagePerStack": 0.1,
+      "stackCap": 550,
+      "lifeStealRatio": 0.125,
+      "deathStackRange": 5
+    },
+    "t1_undead_animal_tower": {
+      "radius": 4,
+      "debuffDurationTicks": 40,
+      "attackDamageReduction": 0.1,
+      "scanIntervalTicks": 100
+    },
+    "t2_undead_animal_tower": {
+      "debuffDurationTicks": 40,
+      "radius": 4,
+      "scanIntervalTicks": 100,
+      "attackDamageReduction": 0.2,
+      "towerDamageTakenBonus": 0.1
+    },
+    "t1_pig_tower": {
+      "damagePerStack": 2.5,
+      "maxStacks": 2,
+      "healthPerStack": 10
+    },
+    "t2_pig_tower": {
+      "damagePerStack": 5,
+      "healthPerStack": 25,
+      "maxStacks": 2,
+      "damageReduction": 0.1
+    },
+    "t3_pig_tower": {
+      "damagePerStack": 15,
+      "splashRadius": 1,
+      "healthPerStack": 90,
+      "maxStacks": 2,
+      "damageReduction": 0.3,
+      "splashDamageRatio": 0.5
+    },
+    "t1_wolf_tower": {
+      "intervalReductionPerStack": 1.25,
+      "damagePerStack": 2,
+      "maxStacks": 4
+    },
+    "t2_wolf_dps_tower": {
+      "damagePerStack": 5,
+      "splashRadius": 1.25,
+      "intervalReductionPerStack": 1.25,
+      "maxStacks": 4,
+      "maxStackExtraIntervalReduction": 3,
+      "splashDamageRatio": 0.5
+    },
+    "t3_wolf_dps_tower": {
+      "splashRadius": 2,
+      "maxStackDamageBonus": 5,
+      "maxStacks": 4,
+      "maxStackExtraIntervalReduction": 5,
+      "splashDamageRatio": 0.75,
+      "intervalReductionPerStack": 1.25,
+      "damagePerStack": 10
+    },
+    "t1_rabbit_tower": {
+      "maxStacks": 4,
+      "damagePerStack": 2.5
+    },
+    "t2_rabbit_tower": {
+      "damagePerStack": 6.25,
+      "maxStacks": 4,
+      "maxStackExtraIntervalReduction": 5
+    },
+    "t3_rabbit_tower": {
+      "maxStackExtraIntervalReduction": 5,
+      "damagePerStack": 12.5,
+      "maxStacks": 4,
+      "extraAttackDamageRatio": 2
+    },
+    "base_warlock_tower": {
+      "basePermanentHealthRatio": 0.025,
+      "baseFatalHealRatio": 0.35,
+      "basePermanentDamageRatio": 0.05,
+      "baseSacrificeRadius": 6,
+      "sacrificeHealRatio": 0
+    },
+    "ranged_warlock_tower": {
+      "healthBonusPerStack": 0.15,
+      "splashEvery": 4,
+      "maxDamageBonus": 0.75,
+      "maxHealthBonus": 0.25,
+      "roundIntervalReductionCap": 15,
+      "roundAbsorbDefenseThreshold": 5,
+      "lowHealthSacrificeThreshold": 0.4,
+      "splashDamageRatio": 0.6,
+      "damageBonusPerStack": 0.2,
+      "splashRadiusPerStep": 0.125,
+      "roundStatRatio": 0.55,
+      "lifeStealEvery": 5,
+      "lifeStealPerStep": 0.005,
+      "lifeStealCap": 0.2,
+      "roundDamageReduction": 0.1,
+      "sacrificeRadius": 25,
+      "permanentDamageRatio": 0.045,
+      "permanentHealthRatio": 0.03
+    },
+    "melee_warlock_tower": {
+      "healthBonusPerStack": 0.25,
+      "damageReductionCap": 0.3,
+      "permanentDamageRatio": 0.03,
+      "maxDamageBonus": 0.2,
+      "lowHealthSacrificeThreshold": 0.6,
+      "roundStatRatio": 0.65,
+      "lifeStealPerSacrifice": 0.03,
+      "damageReductionPerStep": 0.05,
+      "sacrificeRadius": 25,
+      "permanentHealthRatio": 0.04,
+      "maxHealthBonus": 0.65,
+      "lifeStealCap": 0.2,
+      "damageBonusPerStack": 0.0125,
+      "roundSplashRadiusPerSacrifice": 0.25,
+      "damageReductionEvery": 5,
+      "splashDamageRatio": 0.75
+    },
+    "t2_slave": {
+      "towerDamageTakenBonus": 0.05,
+      "deathEffectRadius": 20,
+      "deathEffectDurationTicks": 72000
+    },
+    "t3_slave": {
+      "towerDamageTakenBonus": 0.1,
+      "deathEffectRadius": 20,
+      "deathEffectDurationTicks": 72000
+    },
+    "t2_ranged_slave": {
+      "attackSpeedReduction": 0.05,
+      "deathEffectRadius": 20,
+      "deathEffectDurationTicks": 72000
+    },
+    "t3_ranged_slave": {
+      "attackSpeedReduction": 0.1,
+      "deathEffectRadius": 20,
+      "deathEffectDurationTicks": 72000
+    },
+    "t1_chicken": {
+      "cloneDamageRatio": 0.65,
+      "cloneRangeRatio": 1,
+      "cloneHealthRatio": 0.5,
+      "cloneAttackIntervalMultiplier": 1,
+      "cloneCount": 1,
+      "cloneSpawnRadius": 1.5,
+      "cloneAggroPriorityBonus": 5
+    },
+    "t2_legion_chicken_tower": {
+      "cloneAttackIntervalMultiplier": 1,
+      "cloneDamageRatio": 0.65,
+      "cloneRangeRatio": 1,
+      "cloneSpawnRadius": 1.5,
+      "cloneAggroPriorityBonus": 5,
+      "cloneCount": 1,
+      "splashRadius": 0.75,
+      "cloneHealthRatio": 0.5,
+      "splashDamageRatio": 0.5
+    },
+    "t2_dps_chicken_tower": {
+      "cloneAttackIntervalMultiplier": 1,
+      "cloneDamageRatio": 0.5,
+      "cloneRangeRatio": 1,
+      "cloneSpawnRadius": 1.5,
+      "cloneAggroPriorityBonus": 5,
+      "cloneCount": 0,
+      "splashRadius": 1,
+      "cloneHealthRatio": 0.5,
+      "splashDamageRatio": 1
+    },
+    "t1_slime_tower": {
+      "cloneDamageRatio": 0.7,
+      "cloneRangeRatio": 1,
+      "cloneHealthRatio": 0.7,
+      "cloneAttackIntervalMultiplier": 1,
+      "cloneCount": 1,
+      "cloneSpawnRadius": 1.5,
+      "cloneAggroPriorityBonus": 5
+    },
+    "t2_slime_tower": {
+      "cloneAttackIntervalMultiplier": 1,
+      "cloneDamageRatio": 0.7,
+      "cloneRangeRatio": 1,
+      "cloneSpawnRadius": 1.5,
+      "cloneAggroPriorityBonus": 5,
+      "regenIntervalTicks": 20,
+      "cloneCount": 2,
+      "regenAmount": 3,
+      "cloneHealthRatio": 0.7
+    },
+    "t1_penguin": {
+      "cloneDamageRatio": 1.4,
+      "cloneRangeRatio": 1,
+      "cloneHealthRatio": 1.4,
+      "cloneAttackIntervalMultiplier": 1,
+      "cloneCount": 1,
+      "cloneSpawnRadius": 1.5,
+      "cloneAggroPriorityBonus": 5
+    },
+    "t2_penguin_tower": {
+      "cloneAttackIntervalMultiplier": 1,
+      "cloneDamageRatio": 1.05,
+      "cloneRangeRatio": 1,
+      "cloneSpawnRadius": 1.5,
+      "cloneAggroPriorityBonus": 5,
+      "cloneCount": 2,
+      "splashRadius": 1.25,
+      "cloneHealthRatio": 1.05,
+      "splashDamageRatio": 0.6
+    },
+    "t1_parrot_tower": {
+      "attackStackBonus": 0.2,
+      "maxAttackStacks": 6
+    },
+    "t2_parrot_tower": {
+      "attackStackBonus": 0.3,
+      "maxAttackStacks": 9
+    },
+    "illusion_tower": {
+      "cloneDamageRatio": 0.7,
+      "cloneRangeRatio": 1,
+      "cloneHealthRatio": 0.7,
+      "cloneAttackIntervalMultiplier": 1,
+      "cloneCount": 1,
+      "cloneSpawnRadius": 1.5,
+      "cloneAggroPriorityBonus": 5
+    },
+    "t1_fox_tower": {
+      "executeDamageBonusPerStack": 0.2,
+      "executeHealthThreshold": 0.3,
+      "maxStacks": 4,
+      "executeDamageBonusRatio": 0.5,
+      "executeThresholdPerStack": 0.02,
+      "maxExecuteHealthThreshold": 0.4,
+      "killBonusDamage": 0.1,
+      "killBonusDamageCap": 10
+    },
+    "t2_fox_tower": {
+      "executeDamageBonusPerStack": 0.25,
+      "executeHealthThreshold": 0.35,
+      "maxStacks": 4,
+      "executeDamageBonusRatio": 0.5,
+      "executeThresholdPerStack": 0.025,
+      "maxExecuteHealthThreshold": 0.5,
+      "killBonusDamage": 0.2,
+      "killBonusDamageCap": 20
+    },
+    "t3_fox_tower": {
+      "executeDamageBonusPerStack": 0.3,
+      "executeHealthThreshold": 0.4,
+      "maxStacks": 4,
+      "executeDamageBonusRatio": 0.75,
+      "executeThresholdPerStack": 0.04,
+      "maxExecuteHealthThreshold": 0.6,
+      "killBonusDamage": 0.4,
+      "killBonusDamageCap": 40
+    },
+    "t1_bee_tower": {
+      "poisonDurationTicks": 80,
+      "poisonTickIntervalTicks": 20,
+      "maxSwarmStacks": 4,
+      "poisonDamagePerSwarmStack": 0.5,
+      "poisonDamagePerStack": 3,
+      "poisonStacksPerSwarmStack": 1,
+      "maxPoisonStacks": 4
+    },
+    "t2_bee_tower": {
+      "poisonDurationTicks": 100,
+      "poisonTickIntervalTicks": 20,
+      "maxSwarmStacks": 4,
+      "poisonDamagePerSwarmStack": 0.75,
+      "poisonDamagePerStack": 4.5,
+      "poisonStacksPerSwarmStack": 1,
+      "maxPoisonStacks": 5
+    },
+    "t3_bee_tower": {
+      "poisonDurationTicks": 140,
+      "poisonTickIntervalTicks": 20,
+      "maxSwarmStacks": 4,
+      "poisonDamagePerSwarmStack": 1,
+      "poisonDamagePerStack": 6,
+      "poisonStacksPerSwarmStack": 1,
+      "maxPoisonStacks": 6
+    },
+    "t1_resonance_focus_moobloom": {
+      "linkRange": 1,
+      "maxLinksPerTower": 6,
+      "maxResonanceLevel": 3,
+      "level1RequiredLinks": 1,
+      "level2RequiredLinks": 3,
+      "level3RequiredLinks": 5,
+      "focusLevel1AttackSpeedBonus": 0.2,
+      "focusLevel2AttackSpeedBonus": 0.4,
+      "focusLevel2DamageBonus": 0.4,
+      "focusLevel3AttackSpeedBonus": 0.6,
+      "focusLevel3DamageBonus": 0.8,
+      "focusStrikeEveryAttacks": 2,
+      "focusStrikeDamageRatio": 2.5
+    },
+    "t2_resonance_focus_moobloom": {
+      "linkRange": 1,
+      "maxLinksPerTower": 6,
+      "maxResonanceLevel": 3,
+      "level1RequiredLinks": 1,
+      "level2RequiredLinks": 3,
+      "level3RequiredLinks": 5,
+      "focusLevel1AttackSpeedBonus": 0.3,
+      "focusLevel2AttackSpeedBonus": 0.6,
+      "focusLevel2DamageBonus": 0.4,
+      "focusLevel3AttackSpeedBonus": 0.6,
+      "focusLevel3DamageBonus": 0.8,
+      "focusStrikeEveryAttacks": 2,
+      "focusStrikeDamageRatio": 2.5
+    },
+    "t3_resonance_focus_moobloom": {
+      "linkRange": 1,
+      "maxLinksPerTower": 6,
+      "maxResonanceLevel": 3,
+      "level1RequiredLinks": 1,
+      "level2RequiredLinks": 3,
+      "level3RequiredLinks": 5,
+      "focusLevel1AttackSpeedBonus": 0.2,
+      "focusLevel2AttackSpeedBonus": 0.4,
+      "focusLevel2DamageBonus": 0.4,
+      "focusLevel3AttackSpeedBonus": 0.8,
+      "focusLevel3DamageBonus": 0.8,
+      "focusStrikeEveryAttacks": 2,
+      "focusStrikeDamageRatio": 2.5
+    },
+    "t1_resonance_wave_moobloom": {
+      "linkRange": 1,
+      "maxLinksPerTower": 6,
+      "maxResonanceLevel": 3,
+      "level1RequiredLinks": 1,
+      "level2RequiredLinks": 3,
+      "level3RequiredLinks": 5,
+      "waveLevel1AttackSpeedBonus": 0.3,
+      "waveLevel2SplashRadius": 1.25,
+      "waveLevel2SplashDamageRatio": 0.5,
+      "waveLevel3SplashRadius": 1.5,
+      "waveLevel3SplashDamageRatio": 0.8,
+      "wavePulseEveryAttacks": 2,
+      "wavePulseRadius": 2,
+      "wavePulseDamageRatio": 2
+    },
+    "t2_resonance_wave_moobloom": {
+      "linkRange": 1,
+      "maxLinksPerTower": 6,
+      "maxResonanceLevel": 3,
+      "level1RequiredLinks": 1,
+      "level2RequiredLinks": 3,
+      "level3RequiredLinks": 5,
+      "waveLevel1AttackSpeedBonus": 0.3,
+      "waveLevel2SplashRadius": 1.25,
+      "waveLevel2SplashDamageRatio": 0.5,
+      "waveLevel3SplashRadius": 1.25,
+      "waveLevel3SplashDamageRatio": 0.8,
+      "wavePulseEveryAttacks": 2,
+      "wavePulseRadius": 1.5,
+      "wavePulseDamageRatio": 2
+    },
+    "t3_resonance_wave_moobloom": {
+      "linkRange": 1,
+      "maxLinksPerTower": 6,
+      "maxResonanceLevel": 3,
+      "level1RequiredLinks": 1,
+      "level2RequiredLinks": 3,
+      "level3RequiredLinks": 5,
+      "waveLevel1AttackSpeedBonus": 0.4,
+      "waveLevel2SplashRadius": 1.25,
+      "waveLevel2SplashDamageRatio": 0.5,
+      "waveLevel3SplashRadius": 1.25,
+      "waveLevel3SplashDamageRatio": 1,
+      "wavePulseEveryAttacks": 2,
+      "wavePulseRadius": 1.5,
+      "wavePulseDamageRatio": 1.75
+    },
+    "t1_resonance_frost_moobloom": {
+      "linkRange": 1,
+      "maxLinksPerTower": 6,
+      "maxResonanceLevel": 3,
+      "level1RequiredLinks": 1,
+      "level2RequiredLinks": 3,
+      "level3RequiredLinks": 5,
+      "frostLevel1SlowMagnitude": 0.15,
+      "frostLevel1SlowTicks": 20,
+      "frostLevel2SlowMagnitude": 0.3,
+      "frostLevel2SlowTicks": 30,
+      "frostLevel3SlowMagnitude": 0.4,
+      "frostLevel3SlowTicks": 50,
+      "frostPulseEveryAttacks": 2,
+      "frostPulseRadius": 2,
+      "frostPulseDamageRatio": 0.6,
+      "frostPulseSlowMagnitude": 0.75,
+      "frostPulseSlowTicks": 60,
+      "frostLevel1AttackSpeedReductionMagnitude": 0.15,
+      "frostLevel2AttackSpeedReductionMagnitude": 0.3,
+      "frostLevel3AttackSpeedReductionMagnitude": 0.4,
+      "frostLevel2AuraDamageVsSlowedBonus": 0.5,
+      "frostLevel3AuraDamageVsSlowedBonus": 1.5,
+      "frostAuraRange": 1,
+      "frostPulseAttackSpeedReductionMagnitude": 0.75,
+      "frostLevel2DamageVsSlowedBonus": 0.15,
+      "frostLevel3DamageVsSlowedBonus": 0.3
+    },
+    "t2_resonance_frost_moobloom": {
+      "linkRange": 1,
+      "maxLinksPerTower": 6,
+      "maxResonanceLevel": 3,
+      "level1RequiredLinks": 1,
+      "level2RequiredLinks": 3,
+      "level3RequiredLinks": 5,
+      "frostLevel1SlowMagnitude": 0.15,
+      "frostLevel1SlowTicks": 20,
+      "frostLevel2SlowMagnitude": 0.3,
+      "frostLevel2SlowTicks": 30,
+      "frostLevel3SlowMagnitude": 0.4,
+      "frostLevel3SlowTicks": 50,
+      "frostPulseEveryAttacks": 3,
+      "frostPulseRadius": 1.5,
+      "frostPulseDamageRatio": 0.6,
+      "frostPulseSlowMagnitude": 0.75,
+      "frostPulseSlowTicks": 60,
+      "frostLevel1AttackSpeedReductionMagnitude": 0.15,
+      "frostLevel2AttackSpeedReductionMagnitude": 0.3,
+      "frostLevel3AttackSpeedReductionMagnitude": 0.4,
+      "frostLevel2AuraDamageVsSlowedBonus": 0.5,
+      "frostLevel3AuraDamageVsSlowedBonus": 1.5,
+      "frostAuraRange": 1,
+      "frostPulseAttackSpeedReductionMagnitude": 0.75,
+      "frostLevel2DamageVsSlowedBonus": 0.15,
+      "frostLevel3DamageVsSlowedBonus": 0.3
+    },
+    "t3_resonance_frost_moobloom": {
+      "linkRange": 1,
+      "maxLinksPerTower": 6,
+      "maxResonanceLevel": 3,
+      "level1RequiredLinks": 1,
+      "level2RequiredLinks": 3,
+      "level3RequiredLinks": 5,
+      "frostLevel1SlowMagnitude": 0.15,
+      "frostLevel1SlowTicks": 20,
+      "frostLevel2SlowMagnitude": 0.3,
+      "frostLevel2SlowTicks": 30,
+      "frostLevel3SlowMagnitude": 0.4,
+      "frostLevel3SlowTicks": 50,
+      "frostPulseEveryAttacks": 2,
+      "frostPulseRadius": 1.75,
+      "frostPulseDamageRatio": 0.6,
+      "frostPulseSlowMagnitude": 0.75,
+      "frostPulseSlowTicks": 60,
+      "frostLevel1AttackSpeedReductionMagnitude": 0.15,
+      "frostLevel2AttackSpeedReductionMagnitude": 0.3,
+      "frostLevel3AttackSpeedReductionMagnitude": 0.4,
+      "frostLevel2AuraDamageVsSlowedBonus": 0.35,
+      "frostLevel3AuraDamageVsSlowedBonus": 1,
+      "frostAuraRange": 1,
+      "frostPulseAttackSpeedReductionMagnitude": 0.5,
+      "frostLevel2DamageVsSlowedBonus": 0.15,
+      "frostLevel3DamageVsSlowedBonus": 0.3
+    },
+    "t1_resonance_amplify_moobloom": {
+      "linkRange": 1,
+      "maxLinksPerTower": 6,
+      "maxResonanceLevel": 3,
+      "level1RequiredLinks": 1,
+      "level2RequiredLinks": 3,
+      "level3RequiredLinks": 5,
+      "bloomLevel1DamageReduction": 0.15,
+      "bloomLevel2DamageReduction": 0.3,
+      "bloomLevel2AuraAttackSpeedBonus": 0.2,
+      "bloomLevel3DamageReduction": 0.35,
+      "bloomLevel3AuraAttackSpeedBonus": 0.5,
+      "bloomAuraRange": 1,
+      "bloomProtectEveryAttacks": 3,
+      "bloomProtectRadius": 2,
+      "bloomProtectHealRatio": 0.4,
+      "bloomProtectDamageReduction": 0.15,
+      "bloomProtectTicks": 60
+    },
+    "t2_resonance_amplify_moobloom": {
+      "linkRange": 1,
+      "maxLinksPerTower": 6,
+      "maxResonanceLevel": 3,
+      "level1RequiredLinks": 1,
+      "level2RequiredLinks": 3,
+      "level3RequiredLinks": 5,
+      "bloomLevel1DamageReduction": 0.12,
+      "bloomLevel2DamageReduction": 0.2,
+      "bloomLevel2AuraAttackSpeedBonus": 0.2,
+      "bloomLevel3DamageReduction": 0.35,
+      "bloomLevel3AuraAttackSpeedBonus": 0.5,
+      "bloomAuraRange": 1,
+      "bloomProtectEveryAttacks": 3,
+      "bloomProtectRadius": 2,
+      "bloomProtectHealRatio": 0.4,
+      "bloomProtectDamageReduction": 0.15,
+      "bloomProtectTicks": 60
+    },
+    "t3_resonance_amplify_moobloom": {
+      "linkRange": 1,
+      "maxLinksPerTower": 6,
+      "maxResonanceLevel": 3,
+      "level1RequiredLinks": 1,
+      "level2RequiredLinks": 3,
+      "level3RequiredLinks": 5,
+      "bloomLevel1DamageReduction": 0.12,
+      "bloomLevel2DamageReduction": 0.2,
+      "bloomLevel2AuraAttackSpeedBonus": 0.25,
+      "bloomLevel3DamageReduction": 0.4,
+      "bloomLevel3AuraAttackSpeedBonus": 0.35,
+      "bloomAuraRange": 1,
+      "bloomProtectEveryAttacks": 3,
+      "bloomProtectRadius": 2,
+      "bloomProtectHealRatio": 0.6,
+      "bloomProtectDamageReduction": 0.15,
+      "bloomProtectTicks": 60
+    },
+    "t1_goat_tower": {
+      "cloneDamageBonus": 0.025,
+      "damageBonus": 0.025,
+      "buffDurationTicks": 120,
+      "maxStacks": 3,
+      "radius": 10,
+      "cloneDamageReduction": 0.035,
+      "damageReduction": 0.02
+    },
+    "t2_strong_goat_tower": {
+      "cloneDamageBonus": 0.05,
+      "damageBonus": 0.05,
+      "buffDurationTicks": 120,
+      "maxStacks": 3,
+      "radius": 10,
+      "cloneDamageReduction": 0.06,
+      "damageReduction": 0.04
+    },
+    "t3_extreme_goat_tower": {
+      "cloneDamageBonus": 0.1,
+      "damageBonus": 0.1,
+      "buffDurationTicks": 120,
+      "maxStacks": 3,
+      "radius": 10,
+      "cloneDamageReduction": 0.08,
+      "damageReduction": 0.065
+    },
+    "illager_raid": {
+      "timedEffectDurationTicks": 40,
+      "damagePercentPerTower": 0.08,
+      "attackSpeedPercentPerTower": 0.03,
+      "illagerTowerDeathGauge": 25,
+      "markedKillBonusGauge": 10,
+      "incomeKillGauge": 6,
+      "waveKillGauge": 3,
+      "gaugeMax": 100
+    },
+    "illager_vindicator_t1": {
+      "raidDamageReduction": 0.15
+    },
+    "illager_vindicator_captain_t2": {
+      "raidDamageReduction": 0.3
+    },
+    "illager_ravager_t3": {
+      "raidSplashRadiusBonus": 0.45,
+      "splashDamageRatio": 0.6,
+      "splashRadius": 1.25,
+      "raidDamageReduction": 0.35,
+      "raidSplashDamageRatioBonus": 0.15
+    },
+    "illager_pillager_t1": {
+      "raidMarkedDamageBonus": 0.4
+    },
+    "illager_pillager_captain_single_t2": {
+      "incomeDamageBonus": 0.35,
+      "raidMarkedDamageBonus": 0.8,
+      "raidIncomeDamageBonus": 1.25
+    },
+    "illager_evoker_single_t3": {
+      "markDurationTicks": 60,
+      "incomeDamageBonus": 1.7,
+      "raidMarkedDamageBonus": 1.25,
+      "raidMarkDurationBonusTicks": 20,
+      "raidIncomeDamageBonus": 1.25,
+      "markDamageTakenBonus": 0.08
+    },
+    "illager_pillager_captain_splash_t2": {
+      "raidSplashRadiusBonus": 0.5,
+      "splashRadius": 1.25,
+      "raidSplashDamageRatioBonus": 0.25,
+      "splashDamageRatio": 0.6
+    },
+    "illager_evoker_splash_t3": {
+      "raidSplashRadiusBonus": 0.75,
+      "splashRadius": 1.5,
+      "raidSplashDamageRatioBonus": 0.3,
+      "splashDamageRatio": 0.7
+    },
+    "illager_vex_t1": {
+      "markDamageTakenBonus": 0.2,
+      "raidMarkDurationBonusTicks": 20,
+      "raidMarkDamageTakenBonus": 0.4,
+      "markDurationTicks": 80
+    },
+    "illager_witch_low_t2": {
+      "raidLowHealthMarkDamageTakenBonus": 0.25,
+      "raidLowHealthMarkThreshold": 0.5,
+      "markDurationTicks": 100,
+      "markDamageTakenBonus": 0.4,
+      "raidMarkDurationBonusTicks": 20,
+      "forceTargetRadius": 1,
+      "raidMarkDamageTakenBonus": 0.15,
+      "raidForceTargetRadiusBonus": 0.5
+    },
+    "illager_witch_high_t2": {
+      "raidHighHealthMarkThreshold": 0.9,
+      "markDurationTicks": 100,
+      "markDamageTakenBonus": 0.5,
+      "raidMarkDurationBonusTicks": 20,
+      "forceTargetRadius": 1,
+      "raidMarkDamageTakenBonus": 0.15,
+      "raidHighHealthMarkDamageTakenBonus": 0.3,
+      "raidForceTargetRadiusBonus": 0.5
+    },
+    "illager_illusioner_low_t3": {
+      "raidLowHealthMarkDamageTakenBonus": 0.3,
+      "raidLowHealthMarkThreshold": 0.5,
+      "markDurationTicks": 120,
+      "markDamageTakenBonus": 0.5,
+      "raidMarkDurationBonusTicks": 30,
+      "forceTargetRadius": 1,
+      "raidMarkDamageTakenBonus": 0.25,
+      "raidForceTargetRadiusBonus": 1
+    },
+    "illager_illusioner_high_t3": {
+      "raidHighHealthMarkThreshold": 0.9,
+      "markDurationTicks": 120,
+      "markDamageTakenBonus": 0.6,
+      "raidMarkDurationBonusTicks": 30,
+      "forceTargetRadius": 1,
+      "raidMarkDamageTakenBonus": 0.25,
+      "raidHighHealthMarkDamageTakenBonus": 0.4,
+      "raidForceTargetRadiusBonus": 1
+    },
+    "villager_adv_villager_splash_t2": {
+      "maxSurvivalStacks": 6,
+      "bonusPerSurvivedRound": 0.05,
+      "splashDamageRatio": 1,
+      "splashRadius": 1
+    },
+    "villager_adv_villager_splash_t3": {
+      "splashRadius": 1.5,
+      "splashDamageRatio": 0.9,
+      "extraAttackEvery": 3,
+      "bonusPerSurvivedRound": 0.075,
+      "maxSurvivalStacks": 6
+    },
+    "villager_adv_t2_golem_tower": {
+      "thornCooldownTicks": 40,
+      "thornDamage": 10,
+      "healthBonusPerSurvivedRound": 0.1,
+      "thornRadius": 1.5,
+      "maxSurvivalStacks": 5
+    },
+    "villager_adv_t3_golem_tower": {
+      "thornCooldownTicks": 30,
+      "thornDamage": 10,
+      "healthBonusPerSurvivedRound": 0.2,
+      "thornRadius": 2,
+      "maxSurvivalStacks": 5
+    },
+    "villager_adv_t1_allay_tower": {
+      "supportBlockTicks": 100,
+      "radius": 2,
+      "healAmount": 10
+    },
+    "villager_adv_t2_allay_tower": {
+      "supportBlockTicks": 100,
+      "radius": 3,
+      "healAmount": 50
+    },
+    "villager_adv_t2_weapon_smith_tower": {
+      "radius": 2,
+      "buffDurationTicks": 60,
+      "supportBlockTicks": 120,
+      "weaponBuff": 0.1
+    },
+    "villager_adv_t3_armorer_tower": {
+      "supportBlockTicks": 100,
+      "radius": 3,
+      "damageReduction": 0.1,
+      "healAmount": 80,
+      "buffDurationTicks": 60
+    },
+    "villager_adv_t3_weapon_smith_tower": {
+      "radius": 3,
+      "buffDurationTicks": 60,
+      "supportBlockTicks": 100,
+      "weaponBuff": 0.15
+    },
+    "villager_adv_t2_anti_tanker_cat_tower": {
+      "stackDamageCap": 7.5,
+      "tankBonus": 1,
+      "stackDamage": 0.02,
+      "nonWaveBonus": 0.5
+    },
+    "villager_adv_t3_anti_tanker_cat_tower": {
+      "stackDamageCap": 10,
+      "tankBonus": 2,
+      "stackDamage": 0.04,
+      "nonWaveBonus": 1
+    },
+    "villager_adv_t2_lane_clear_cat_tower": {
+      "stackDamageCap": 5,
+      "waveBonus": 0.15,
+      "stackDamage": 0.01,
+      "explosionRadius": 0.75
+    },
+    "villager_adv_t3_lane_clear_cat_tower": {
+      "stackDamageCap": 10,
+      "waveBonus": 0.4,
+      "stackDamage": 0.05,
+      "explosionRadius": 1
+    },
+    "nether_global": {
+      "lifeStealBonusCap": 0.45,
+      "netherLifeStealRatio": 0.25,
+      "criticalHealthThreshold": 0.35,
+      "effectRefreshTicks": 15,
+      "zombieLifeStealRatio": 0.035,
+      "damagePerMissingHealth": 0.8,
+      "netherDecayMaxHealthRatioPerSecond": 0.0667,
+      "lowHealthThreshold": 0.7,
+      "lowHealthDamageBonusCap": 0.75,
+      "lifeStealPerMissingHealth": 0.3,
+      "zombieReviveHealthRatio": 1,
+      "zombieDecayMaxHealthRatioPerSecond": 0.2
+    },
+    "nether_strider_t1": {
+      "decayReductionRatio": 0.5,
+      "decayReductionTicks": 40,
+      "lifeStealBonus": 0.08
+    },
+    "nether_piglin_t2": {
+      "zombieAttackSpeedBonus": 0.35,
+      "killDamageBonus": 0.15,
+      "incomeDamageBonus": 0.5,
+      "decayReductionRatio": 0.6,
+      "killDamageBonusTicks": 60,
+      "decayReductionTicks": 50,
+      "lifeStealBonus": 0.12
+    },
+    "nether_piglin_brute_t3": {
+      "tankLifeStealBonus": 0.25,
+      "zombieAttackSpeedBonus": 0.35,
+      "decayReductionTicks": 60,
+      "killDamageBonusTicks": 80,
+      "tankDamageBonus": 0.75,
+      "lifeStealBonus": 0.16,
+      "killDamageBonus": 0.4,
+      "decayReductionRatio": 0.7,
+      "incomeDamageBonus": 1,
+      "zombieTransitionDamageBonus": 0.4,
+      "highHealthThreshold": 120,
+      "zombieTransitionDamageBonusTicks": 80
+    },
+    "nether_hoglin_t1": {
+      "splashDamageRatio": 0.5,
+      "splashRadius": 0.75,
+      "criticalDamageReduction": 0.2
+    },
+    "nether_zoglin_t2": {
+      "splashRadius": 1.25,
+      "missingHealthAttackSpeedBonusCap": 0.35,
+      "criticalDamageReduction": 0.25,
+      "zombieSplashRadiusBonus": 0.5,
+      "splashDamageRatio": 0.75
+    },
+    "nether_zombified_piglin_t3": {
+      "zombieMissingHealthAttackSpeedBonusCap": 0.75,
+      "zombieSplashRadiusBonus": 0.75,
+      "missingHealthAttackSpeedBonusCap": 0.5,
+      "criticalDamageReduction": 0.3,
+      "splashDamageRatio": 1,
+      "splashRadius": 1.5
+    },
+    "nether_magma_cube_t1": {
+      "pulseDamageRatio": 1.5,
+      "zombieTransitionPulseRadius": 2.5,
+      "missingHealthAttackSpeedBonusCap": 0.3,
+      "zombieTransitionPulseDamageRatio": 2.5,
+      "pulseRadius": 1.5,
+      "splashRadius": 0.75,
+      "pulseIntervalTicks": 40,
+      "splashDamageRatio": 0.2
+    },
+    "nether_blaze_t2": {
+      "extraAttackDamageRatio": 0.6,
+      "extraAttackEvery": 3,
+      "missingHealthAttackSpeedBonusCap": 0.5,
+      "pulseRadius": 1.75,
+      "splashRadius": 1.25,
+      "zombieTransitionPulseRadius": 1.25,
+      "zombieTransitionPulseDamageRatio": 3,
+      "secondaryRange": 7,
+      "pulseDamageRatio": 1.75,
+      "pulseIntervalTicks": 40,
+      "splashDamageRatio": 0.4
+    },
+    "nether_ghast_t3": {
+      "pulseDamageRatio": 2,
+      "splashRadius": 1.75,
+      "missingHealthAttackSpeedBonusCap": 0.75,
+      "zombieTransitionPulseRadius": 1.5,
+      "extraAttackEvery": 2,
+      "splashDamageRatio": 0.6,
+      "pulseRadius": 2,
+      "extraAttackDamageRatio": 1.25,
+      "criticalMarkDamageTakenBonus": 0.4,
+      "lowHealthSplashRadiusBonus": 0.75,
+      "markDurationTicks": 60,
+      "pulseIntervalTicks": 40,
+      "zombieTransitionPulseDamageRatio": 3.5,
+      "secondaryRange": 9.5
+    },
+    "nether_skeleton_t1": {
+      "lowTargetDamageBonus": 0.35,
+      "criticalKillLifeStealRatio": 0.3,
+      "lowTargetHealthThreshold": 0.4
+    },
+    "nether_wither_skeleton_t2": {
+      "markDurationTicks": 80,
+      "lowTargetHealthThreshold": 0.45,
+      "markDamageTakenBonus": 0.05,
+      "lowTargetDamageBonus": 0.5,
+      "zombieMarkDamageTakenBonus": 0.04,
+      "criticalKillLifeStealRatio": 0.35,
+      "maxMarkStacks": 3
+    },
+    "nether_wither_t3": {
+      "maxMarkStacks": 3,
+      "markDurationTicks": 80,
+      "criticalSplashDamageRatio": 0.9,
+      "zombieMarkDamageTakenBonus": 0.05,
+      "lowTargetDamageBonus": 0.75,
+      "highHealthDamageBonus": 0.6,
+      "highHealthThreshold": 500,
+      "criticalKillLifeStealRatio": 0.4,
+      "zombieExecuteThreshold": 0.4,
+      "criticalSplashRadius": 2,
+      "markDamageTakenBonus": 0.1,
+      "zombieExecuteDamageBonus": 0.9,
+      "zombieLifeStealRatio": 0,
+      "criticalMarkDamageTakenBonus": 0.75,
+      "lowTargetHealthThreshold": 0.5
+    }
+  },
+  "illusionCloneQueue": {
+    "spreadTicks": 200,
+    "maxSpawnsPerTick": 1
+  },
+  "villagerAdv": {
+    "experienceMax": 1557,
+    "experiencePerTower": 4,
+    "experiencePerTier": 1.5,
+    "reputationMax": 100,
+    "reputationGainRoundMultiplier": 0.75,
+    "reputationLossPerLeak": 0.5,
+    "effectDurationTicks": 72000,
+    "experienceBuffCap": 2.5,
+    "reputationBuffCap": 0.75,
+    "upgradeRequirements": {
+      "villager_adv_villager_splash_t1->villager_splash_t2": 15,
+      "villager_adv_villager_splash_t2->villager_splash_t3": 45,
+      "villager_adv_t1_golem_tower->t2_golem_tower": 15,
+      "villager_adv_t2_golem_tower->t3_golem_tower": 45,
+      "villager_adv_t1_allay_tower->t2_allay_tower": 15,
+      "villager_adv_t1_allay_tower->t2_weapon_smith_tower": 15,
+      "villager_adv_t2_allay_tower->t3_armorer_tower": 45,
+      "villager_adv_t2_weapon_smith_tower->t3_weapon_smith_tower": 45,
+      "villager_adv_t1_cat_tower->t2_anti_tanker_cat_tower": 15,
+      "villager_adv_t1_cat_tower->t2_lane_clear_cat_tower": 15,
+      "villager_adv_t2_anti_tanker_cat_tower->t3_anti_tanker_cat_tower": 45,
+      "villager_adv_t2_lane_clear_cat_tower->t3_lane_clear_cat_tower": 45
+    },
+    "buffs": {
+      "villager_adv_villager_splash_t1": {
+        "reputationDamagePerPoint": 0.005,
+        "reputationAttackSpeedPerPoint": 0.001,
+        "reputationHealthPerPoint": 0.0075,
+        "reputationDamageReductionPerPoint": 0.002,
+        "rangedDamagePerExperience": 0.01,
+        "rangedAttackSpeedPerExperience": 0.005,
+        "reputationDamagePerPointInterval": 1,
+        "reputationAttackSpeedPerPointInterval": 1,
+        "reputationHealthPerPointInterval": 1,
+        "reputationDamageReductionPerPointInterval": 1,
+        "rangedDamagePerExperienceInterval": 1,
+        "rangedAttackSpeedPerExperienceInterval": 1
+      },
+      "villager_adv_villager_splash_t2": {
+        "reputationDamagePerPoint": 0.005,
+        "reputationAttackSpeedPerPoint": 0.001,
+        "reputationHealthPerPoint": 0.0075,
+        "reputationDamageReductionPerPoint": 0.0005,
+        "rangedDamagePerExperience": 0.015,
+        "rangedAttackSpeedPerExperience": 0.02,
+        "reputationDamagePerPointInterval": 1,
+        "reputationAttackSpeedPerPointInterval": 1,
+        "reputationHealthPerPointInterval": 1,
+        "reputationDamageReductionPerPointInterval": 1,
+        "rangedDamagePerExperienceInterval": 1,
+        "rangedAttackSpeedPerExperienceInterval": 1
+      },
+      "villager_adv_villager_splash_t3": {
+        "reputationDamagePerPoint": 0.02,
+        "reputationAttackSpeedPerPoint": 0.0015,
+        "reputationHealthPerPoint": 0.01,
+        "reputationDamageReductionPerPoint": 0.0025,
+        "rangedDamagePerExperience": 0.02,
+        "rangedAttackSpeedPerExperience": 0.00075,
+        "reputationDamagePerPointInterval": 1,
+        "reputationAttackSpeedPerPointInterval": 1,
+        "reputationHealthPerPointInterval": 1,
+        "reputationDamageReductionPerPointInterval": 1,
+        "rangedDamagePerExperienceInterval": 1,
+        "rangedAttackSpeedPerExperienceInterval": 1
+      },
+      "villager_adv_t1_golem_tower": {
+        "reputationDamagePerPoint": 0.005,
+        "reputationAttackSpeedPerPoint": 0.001,
+        "reputationHealthPerPoint": 0.001,
+        "reputationDamageReductionPerPoint": 0.001,
+        "golemHealthPerExperience": 0.005,
+        "golemDamageReductionPerExperience": 0.001,
+        "reputationDamagePerPointInterval": 1,
+        "reputationAttackSpeedPerPointInterval": 1,
+        "reputationHealthPerPointInterval": 1,
+        "reputationDamageReductionPerPointInterval": 1,
+        "golemHealthPerExperienceInterval": 1,
+        "golemDamageReductionPerExperienceInterval": 1
+      },
+      "villager_adv_t2_golem_tower": {
+        "reputationDamagePerPoint": 0.005,
+        "reputationAttackSpeedPerPoint": 0.001,
+        "reputationHealthPerPoint": 0.0015,
+        "reputationDamageReductionPerPoint": 0.0005,
+        "golemHealthPerExperience": 0.0075,
+        "golemDamageReductionPerExperience": 0.001,
+        "reputationDamagePerPointInterval": 1,
+        "reputationAttackSpeedPerPointInterval": 1,
+        "reputationHealthPerPointInterval": 1,
+        "reputationDamageReductionPerPointInterval": 1,
+        "golemHealthPerExperienceInterval": 1,
+        "golemDamageReductionPerExperienceInterval": 1
+      },
+      "villager_adv_t3_golem_tower": {
+        "reputationDamagePerPoint": 0.005,
+        "reputationAttackSpeedPerPoint": 0.001,
+        "reputationHealthPerPoint": 0.00175,
+        "reputationDamageReductionPerPoint": 0.001,
+        "golemHealthPerExperience": 0.001,
+        "golemDamageReductionPerExperience": 0.001,
+        "reputationDamagePerPointInterval": 1,
+        "reputationAttackSpeedPerPointInterval": 1,
+        "reputationHealthPerPointInterval": 1,
+        "reputationDamageReductionPerPointInterval": 1,
+        "golemHealthPerExperienceInterval": 1,
+        "golemDamageReductionPerExperienceInterval": 1
+      },
+      "villager_adv_t1_allay_tower": {
+        "reputationDamagePerPoint": 0.005,
+        "reputationAttackSpeedPerPoint": 0.001,
+        "reputationHealthPerPoint": 0.0075,
+        "reputationDamageReductionPerPoint": 0.0025,
+        "allayHealAmountPerExperience": 0.005,
+        "allayIntervalReductionPerExperience": 0.0025,
+        "reputationDamagePerPointInterval": 1,
+        "reputationAttackSpeedPerPointInterval": 1,
+        "reputationHealthPerPointInterval": 1,
+        "reputationDamageReductionPerPointInterval": 1,
+        "allayHealAmountPerExperienceInterval": 1,
+        "allayIntervalReductionPerExperienceInterval": 1
+      },
+      "villager_adv_t2_allay_tower": {
+        "reputationDamagePerPoint": 0.005,
+        "reputationAttackSpeedPerPoint": 0.001,
+        "reputationHealthPerPoint": 0.0075,
+        "reputationDamageReductionPerPoint": 0.0025,
+        "allayHealAmountPerExperience": 0.006,
+        "allayIntervalReductionPerExperience": 0.003,
+        "reputationDamagePerPointInterval": 1,
+        "reputationAttackSpeedPerPointInterval": 1,
+        "reputationHealthPerPointInterval": 1,
+        "reputationDamageReductionPerPointInterval": 1,
+        "allayHealAmountPerExperienceInterval": 1,
+        "allayIntervalReductionPerExperienceInterval": 1
+      },
+      "villager_adv_t2_weapon_smith_tower": {
+        "reputationDamagePerPoint": 0.005,
+        "reputationAttackSpeedPerPoint": 0.001,
+        "reputationHealthPerPoint": 0.0075,
+        "reputationDamageReductionPerPoint": 0.0025,
+        "allayIntervalReductionPerExperience": 0.003,
+        "reputationDamagePerPointInterval": 1,
+        "reputationAttackSpeedPerPointInterval": 1,
+        "reputationHealthPerPointInterval": 1,
+        "reputationDamageReductionPerPointInterval": 1,
+        "allayIntervalReductionPerExperienceInterval": 1
+      },
+      "villager_adv_t3_armorer_tower": {
+        "reputationDamagePerPoint": 0.01,
+        "reputationAttackSpeedPerPoint": 0.0025,
+        "reputationHealthPerPoint": 0.01,
+        "reputationDamageReductionPerPoint": 0.0025,
+        "allayHealAmountPerExperience": 0.007,
+        "allayIntervalReductionPerExperience": 0.004,
+        "reputationDamagePerPointInterval": 1,
+        "reputationAttackSpeedPerPointInterval": 1,
+        "reputationHealthPerPointInterval": 1,
+        "reputationDamageReductionPerPointInterval": 1,
+        "allayHealAmountPerExperienceInterval": 1,
+        "allayIntervalReductionPerExperienceInterval": 1
+      },
+      "villager_adv_t3_weapon_smith_tower": {
+        "reputationDamagePerPoint": 0.01,
+        "reputationAttackSpeedPerPoint": 0.0025,
+        "reputationHealthPerPoint": 0.01,
+        "reputationDamageReductionPerPoint": 0.0025,
+        "allayIntervalReductionPerExperience": 0.004,
+        "reputationDamagePerPointInterval": 1,
+        "reputationAttackSpeedPerPointInterval": 1,
+        "reputationHealthPerPointInterval": 1,
+        "reputationDamageReductionPerPointInterval": 1,
+        "allayIntervalReductionPerExperienceInterval": 1
+      },
+      "villager_adv_t1_cat_tower": {
+        "reputationDamagePerPoint": 0.005,
+        "reputationAttackSpeedPerPoint": 0.001,
+        "reputationHealthPerPoint": 0.0075,
+        "reputationDamageReductionPerPoint": 0.0025,
+        "catDamagePerExperience": 0.01,
+        "catAttackSpeedPerExperience": 0.005,
+        "catIncomeDamagePerExperience": 0.015,
+        "catWaveDamagePerExperience": 0.01,
+        "reputationDamagePerPointInterval": 1,
+        "reputationAttackSpeedPerPointInterval": 1,
+        "reputationHealthPerPointInterval": 1,
+        "reputationDamageReductionPerPointInterval": 1,
+        "catDamagePerExperienceInterval": 1,
+        "catAttackSpeedPerExperienceInterval": 1
+      },
+      "villager_adv_t2_anti_tanker_cat_tower": {
+        "reputationDamagePerPoint": 0.005,
+        "reputationAttackSpeedPerPoint": 0.001,
+        "reputationHealthPerPoint": 0.0075,
+        "reputationDamageReductionPerPoint": 0.0025,
+        "catDamagePerExperience": 0.015,
+        "catAttackSpeedPerExperience": 0.002,
+        "catIncomeDamagePerExperience": 0.015,
+        "reputationDamagePerPointInterval": 1,
+        "reputationAttackSpeedPerPointInterval": 1,
+        "reputationHealthPerPointInterval": 1,
+        "reputationDamageReductionPerPointInterval": 1,
+        "catDamagePerExperienceInterval": 1,
+        "catAttackSpeedPerExperienceInterval": 1,
+        "catIncomeDamagePerExperienceInterval": 1
+      },
+      "villager_adv_t2_lane_clear_cat_tower": {
+        "reputationDamagePerPoint": 0.005,
+        "reputationAttackSpeedPerPoint": 0.001,
+        "reputationHealthPerPoint": 0.0075,
+        "reputationDamageReductionPerPoint": 0.0025,
+        "catDamagePerExperience": 0.015,
+        "catAttackSpeedPerExperience": 0.0025,
+        "catWaveDamagePerExperience": 0.0075,
+        "reputationDamagePerPointInterval": 1,
+        "reputationAttackSpeedPerPointInterval": 1,
+        "reputationHealthPerPointInterval": 1,
+        "reputationDamageReductionPerPointInterval": 1,
+        "catDamagePerExperienceInterval": 1,
+        "catAttackSpeedPerExperienceInterval": 1,
+        "catWaveDamagePerExperienceInterval": 1
+      },
+      "villager_adv_t3_anti_tanker_cat_tower": {
+        "reputationDamagePerPoint": 0.005,
+        "reputationAttackSpeedPerPoint": 0.001,
+        "reputationHealthPerPoint": 0.0075,
+        "reputationDamageReductionPerPoint": 0.001,
+        "catDamagePerExperience": 0.02,
+        "catAttackSpeedPerExperience": 0.00225,
+        "catIncomeDamagePerExperience": 0.0125,
+        "reputationDamagePerPointInterval": 1,
+        "reputationAttackSpeedPerPointInterval": 1,
+        "reputationHealthPerPointInterval": 1,
+        "reputationDamageReductionPerPointInterval": 1,
+        "catDamagePerExperienceInterval": 1,
+        "catAttackSpeedPerExperienceInterval": 1,
+        "catIncomeDamagePerExperienceInterval": 1
+      },
+      "villager_adv_t3_lane_clear_cat_tower": {
+        "reputationDamagePerPoint": 0.005,
+        "reputationAttackSpeedPerPoint": 0.001,
+        "reputationHealthPerPoint": 0.0075,
+        "reputationDamageReductionPerPoint": 0.0025,
+        "catDamagePerExperience": 0.015,
+        "catAttackSpeedPerExperience": 0.001,
+        "catWaveDamagePerExperience": 0.0075,
+        "reputationDamagePerPointInterval": 1,
+        "reputationAttackSpeedPerPointInterval": 1,
+        "reputationHealthPerPointInterval": 1,
+        "reputationDamageReductionPerPointInterval": 1,
+        "catDamagePerExperienceInterval": 1,
+        "catAttackSpeedPerExperienceInterval": 1,
+        "catWaveDamagePerExperienceInterval": 1
+      }
+    }
+  }
+}
+

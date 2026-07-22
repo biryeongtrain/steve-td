@@ -1,5 +1,6 @@
 package kim.biryeong.semiontd.trait;
 
+
 public record TraitSelectionConfig(boolean enabled, int selectionDurationSeconds) {
     public static final int DEFAULT_SELECTION_DURATION_SECONDS = 45;
 

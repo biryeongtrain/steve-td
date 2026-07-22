@@ -33,7 +33,8 @@ import net.minecraft.world.phys.Vec3;
 
 public final class EndTower extends EntityBackedTower {
     public static final String CONFIG_ID = "end_global";
-    private static final double TRANSFER_PARTICLE_HEIGHT = 1.25;
+    private static final double TRANSFER_PARTICLE_SOURCE_HEIGHT = 1.25;
+    private static final double TRANSFER_PARTICLE_TARGET_HEIGHT = 1.0;
     private static final TowerDataKey<EndTowerState> STATE = TowerDataKey.of(
             ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "end_tower_state"),
             EndTowerState.class
@@ -52,7 +53,10 @@ public final class EndTower extends EntityBackedTower {
     private double syncedPermanentDamageBonus;
     private int absorbedEndCrystalCount;
     private int absorbedShulkerCount;
+    private int completedEndCrystalTransferCount;
+    private int completedShulkerTransferCount;
     private int roundCompletedTransferCount;
+    private int regenerationTicks;
 
     public EndTower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
         super(type, ownerPlayer, teamId, laneId, position);
@@ -93,6 +97,7 @@ public final class EndTower extends EntityBackedTower {
             return;
         }
         waveActive = true;
+        regenerationTicks = 0;
         absorptionProgress.clear();
         completedTransferSources.clear();
         if (isEgg()) {
@@ -105,6 +110,7 @@ public final class EndTower extends EntityBackedTower {
     @Override
     public void resetForRound(PlayerLane lane) {
         waveActive = false;
+        regenerationTicks = 0;
         absorptionProgress.clear();
         resetRoundTransferBonuses(lane);
         if (isCoreTower()) {
@@ -152,6 +158,7 @@ public final class EndTower extends EntityBackedTower {
         if (waveActive && isHatched()) {
             absorbAlliedEndTowers(lane);
             evolveToDragonIfReady(lane);
+            tickRegeneration(lane);
         }
         super.tick(lane);
     }
@@ -175,12 +182,16 @@ public final class EndTower extends EntityBackedTower {
         return Math.max(minimumInterval, type().attackIntervalTicks() - totalReduction);
     }
 
+    public double previewHatchedAttackRange() {
+        return type().range() + attackRangeBonus();
+    }
+
     @Override
     public double adjustAttackRange(double baseRange) {
         if (isEgg()) {
             return 0.0;
         }
-        return baseRange;
+        return baseRange + attackRangeBonus();
     }
 
     @Override
@@ -199,6 +210,18 @@ public final class EndTower extends EntityBackedTower {
             return damageAmount;
         }
         return damageAmount * (1.0 + (permanentDamageBonus + roundDamageBonus) / type().damage());
+    }
+
+    @Override
+    public double finalDamageBonus() {
+        return isDragon() ? Math.max(0.0, global("dragonFinalDamageBonus")) : 0.0;
+    }
+
+    @Override
+    public double incomeDebuffResistance() {
+        return isDragon()
+                ? Math.clamp(global("dragonIncomeDebuffResistance"), 0.0, 1.0)
+                : 0.0;
     }
 
     @Override
@@ -223,12 +246,6 @@ public final class EndTower extends EntityBackedTower {
 
     @Override
     public List<String> runtimeDetailLines() {
-        if (isEgg()) {
-            return List.of(
-                    "준비 중: 드래곤 알",
-                    "부화 후 엔더 드래곤 스탯 표시 중"
-            );
-        }
         if (!isCoreTower()) {
             ArrayList<String> lines = new ArrayList<>();
             lines.add("엔더 드래곤에게 힘 전달 대기 중");
@@ -237,32 +254,36 @@ public final class EndTower extends EntityBackedTower {
             }
             return lines;
         }
+
         ArrayList<String> lines = new ArrayList<>();
-        if (isPhantom()) {
-            lines.add("팬텀 단계");
-            lines.add("드래곤 진화: 최대 체력 " + oneDecimal(currentMaxHealth()) + " / " + oneDecimal(dragonEvolutionMaxHealth()) + " 이상 필요");
-        } else {
-            lines.add("드래곤 진화 완료");
+        lines.add(switch (state()) {
+            case EGG -> "<white>준비 중: 드래곤 알</white>";
+            case PHANTOM -> "<white>현재 상태: 팬텀</white>";
+            case DRAGON -> "<white>현재 상태: 엔더 드래곤</white>";
+        });
+
+        double maxHealth = isEgg() ? previewHatchedMaxHealth() : currentMaxHealth();
+        double attackDamage = previewHatchedAttackDamage();
+        int attackIntervalTicks = previewHatchedAttackIntervalTicks();
+        double attacksPerSecond = 20.0 / attackIntervalTicks;
+        lines.add("<white>엔더 드래곤 스탯: 체력 <color:#ff8080>" + oneDecimal(maxHealth)
+                + "</color> / 공격력 <red>" + oneDecimal(attackDamage) + "</red></white>");
+        lines.add("<white>공격 속도 <yellow>" + oneDecimal(attacksPerSecond) + "/초 ("
+                + attackIntervalTicks + "틱)</yellow></white>");
+        lines.add("<white>공격 범위 <yellow>" + oneDecimal(splashRadius())
+                + "</yellow> / 사거리 <yellow>" + oneDecimal(previewHatchedAttackRange()) + "</yellow></white>");
+        lines.add("<white>받는 피해 감소 <blue>" + percent(damageReduction()) + "</blue></white>");
+        lines.add("<white>생명력 흡수 <red>" + percent(lifeStealRatio())
+                + "</red> / 재생 <green>" + oneDecimal(regenerationPerSecond()) + "/초</green></white>");
+
+        if ((isEgg() || isDragon()) && maxHealth >= dragonEvolutionMaxHealth()) {
+            lines.add("<white>최종 피해 <red>+" + percent(Math.max(0.0, global("dragonFinalDamageBonus")))
+                    + "</red> / 저항 <light_purple>"
+                    + percent(Math.clamp(global("dragonIncomeDebuffResistance"), 0.0, 1.0))
+                    + "</light_purple></white>");
         }
-        lines.add("누적 스택: 엔드 수정 " + absorbedEndCrystalCount + " / 셜커 " + absorbedShulkerCount);
-        lines.add("이번 라운드 힘 전달: " + roundCompletedTransferCount);
-        lines.add("이번 라운드: 체력 +" + oneDecimal(roundHealthBonus) + ", 공격력 +" + oneDecimal(roundDamageBonus));
-        lines.add("영구 누적: 체력 +" + oneDecimal(permanentHealthBonus) + ", 공격력 +" + oneDecimal(permanentDamageBonus));
-        if (splashRadius() > 0.0) {
-            lines.add("광역 공격 반경 " + oneDecimal(splashRadius()));
-        }
-        if (attackIntervalReduction() > 0) {
-            lines.add("공격 주기 -" + attackIntervalReduction() + "틱");
-        }
-        if (roundAttackIntervalReduction() > 0) {
-            lines.add("이번 라운드 흡수 공격 주기 -" + roundAttackIntervalReduction() + "틱");
-        }
-        if (lifeStealRatio() > 0.0) {
-            lines.add("생명력 흡수 " + percent(lifeStealRatio()));
-        }
-        if (damageReduction() > 0.0) {
-            lines.add("받는 피해 감소 " + percent(damageReduction()));
-        }
+        lines.add("<white>현재 스택: 엔드 수정 " + absorbedEndCrystalCount
+                + " / 셜커 " + absorbedShulkerCount + "</white>");
         return lines;
     }
 
@@ -281,7 +302,10 @@ public final class EndTower extends EntityBackedTower {
         syncedPermanentDamageBonus = endTower.syncedPermanentDamageBonus;
         absorbedEndCrystalCount = endTower.absorbedEndCrystalCount;
         absorbedShulkerCount = endTower.absorbedShulkerCount;
+        completedEndCrystalTransferCount = endTower.completedEndCrystalTransferCount;
+        completedShulkerTransferCount = endTower.completedShulkerTransferCount;
         roundCompletedTransferCount = endTower.roundCompletedTransferCount;
+        regenerationTicks = endTower.regenerationTicks;
         completedTransferSources.addAll(endTower.completedTransferSources);
         waveActive = endTower.waveActive;
     }
@@ -292,6 +316,14 @@ public final class EndTower extends EntityBackedTower {
 
     public int absorbedShulkerCount() {
         return absorbedShulkerCount;
+    }
+
+    public int completedEndCrystalTransferCount() {
+        return completedEndCrystalTransferCount;
+    }
+
+    public int completedShulkerTransferCount() {
+        return completedShulkerTransferCount;
     }
 
     public int roundCompletedTransferCount() {
@@ -361,13 +393,19 @@ public final class EndTower extends EntityBackedTower {
                 continue;
             }
             completedTransferSources.add(source);
-            roundCompletedTransferCount++;
             absorptionHealing += Math.max(0.0, global("absorptionHealAmount"));
             int tier = EndTowers.absorptionTier(source.type());
-            if (EndTowers.isEndCrystalLine(source.type())) {
+            boolean endCrystalLine = EndTowers.isEndCrystalLine(source.type());
+            boolean shulkerLine = EndTowers.isShulkerLine(source.type());
+            if (endCrystalLine || shulkerLine) {
+                roundCompletedTransferCount++;
+            }
+            if (endCrystalLine) {
                 absorbedEndCrystalCount += tier;
-            } else if (EndTowers.isShulkerLine(source.type())) {
+                completedEndCrystalTransferCount++;
+            } else if (shulkerLine) {
                 absorbedShulkerCount += tier;
+                completedShulkerTransferCount++;
             }
             countsChanged = true;
         }
@@ -498,8 +536,8 @@ public final class EndTower extends EntityBackedTower {
         if (level == null) {
             return;
         }
-        Vec3 targetPosition = transferParticlePosition(this);
-        Vec3 sourceOffset = transferParticlePosition(source).subtract(targetPosition);
+        Vec3 targetPosition = transferParticlePosition(this, TRANSFER_PARTICLE_TARGET_HEIGHT);
+        Vec3 sourceOffset = transferParticlePosition(source, TRANSFER_PARTICLE_SOURCE_HEIGHT).subtract(targetPosition);
         level.sendParticles(
                 ParticleTypes.ENCHANT,
                 targetPosition.x,
@@ -513,10 +551,10 @@ public final class EndTower extends EntityBackedTower {
         );
     }
 
-    private static Vec3 transferParticlePosition(Tower tower) {
+    private static Vec3 transferParticlePosition(Tower tower, double height) {
         return new Vec3(
                 tower.position().x() + 0.5,
-                tower.position().y() + TRANSFER_PARTICLE_HEIGHT,
+                tower.position().y() + height,
                 tower.position().z() + 0.5
         );
     }
@@ -548,6 +586,12 @@ public final class EndTower extends EntityBackedTower {
         );
     }
 
+    public double attackRangeBonus() {
+        int every = Math.max(1, globalInt("endCrystalAttackRangeEvery"));
+        double value = absorbedEndCrystalCount / every * Math.max(0.0, global("attackRangePerStep"));
+        return Math.min(Math.max(0.0, global("attackRangeCap")), value);
+    }
+
     private int roundAttackIntervalReduction() {
         int every = Math.max(1, globalInt("roundAbsorptionAttackIntervalEvery"));
         int reductionPerStep = Math.max(0, globalInt("roundAbsorptionAttackIntervalReductionTicks"));
@@ -558,6 +602,27 @@ public final class EndTower extends EntityBackedTower {
         int every = Math.max(1, globalInt("shulkerLifeStealEvery"));
         double value = absorbedShulkerCount / every * Math.max(0.0, global("lifeStealPerStep"));
         return Math.min(Math.max(0.0, global("lifeStealCap")), value);
+    }
+
+    public double regenerationPerSecond() {
+        int every = Math.max(1, globalInt("shulkerRegenerationEvery"));
+        double value = absorbedShulkerCount / every * Math.max(0.0, global("regenerationPerStep"));
+        return Math.min(Math.max(0.0, global("regenerationCap")), value);
+    }
+
+    private void tickRegeneration(PlayerLane lane) {
+        double regeneration = regenerationPerSecond();
+        if (regeneration <= 0.0) {
+            regenerationTicks = 0;
+            return;
+        }
+        int intervalTicks = Math.max(1, globalTicks("regenerationIntervalTicks"));
+        regenerationTicks++;
+        if (regenerationTicks < intervalTicks) {
+            return;
+        }
+        regenerationTicks %= intervalTicks;
+        healTransferredHealth(lane, regeneration);
     }
 
     private double damageReduction() {

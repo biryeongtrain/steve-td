@@ -755,7 +755,13 @@ public record TowerBalanceConfig(
         putNetherAbilities(abilities);
         putEndAbilities(abilities);
 
-        return new TowerBalanceConfig(towers, upgradeCosts, abilities, IllusionCloneQueueConfig.defaultConfig(), VillagerAdvConfig.defaultConfig());
+        return new TowerBalanceConfig(
+                towers,
+                upgradeCosts,
+                abilities,
+                IllusionCloneQueueConfig.defaultConfig(),
+                VillagerAdvConfig.defaultConfig()
+        );
     }
 
     public TowerStats statsFor(TowerType defaults) {
@@ -1070,7 +1076,7 @@ public record TowerBalanceConfig(
         ));
         putAbilities(abilities, EndTower.CONFIG_ID, Map.ofEntries(
                 Map.entry("dragonEvolutionMaxHealth", 2000.0),
-                Map.entry("absorptionDurationTicks", 400.0),
+                Map.entry("absorptionDurationTicks", 200.0),
                 Map.entry("absorptionHealAmount", 50.0),
                 Map.entry("roundAbsorptionAttackIntervalEvery", 1.0),
                 Map.entry("roundAbsorptionAttackIntervalReductionTicks", 1.0),
@@ -1079,20 +1085,29 @@ public record TowerBalanceConfig(
                 Map.entry("roundStatBonusCapRatio", 0.50),
                 Map.entry("permanentHealthRatio", 0.05),
                 Map.entry("permanentDamageRatio", 0.05),
-                Map.entry("endCrystalAttackIntervalEvery", 20.0),
+                Map.entry("endCrystalAttackIntervalEvery", 15.0),
                 Map.entry("attackIntervalReductionPerStep", 1.0),
+                Map.entry("endCrystalAttackRangeEvery", 40.0),
+                Map.entry("attackRangePerStep", 1.0),
+                Map.entry("attackRangeCap", 5.0),
                 Map.entry("shulkerLifeStealEvery", 10.0),
                 Map.entry("lifeStealPerStep", 0.01),
-                Map.entry("lifeStealCap", 0.30),
+                Map.entry("lifeStealCap", 0.20),
+                Map.entry("shulkerRegenerationEvery", 30.0),
+                Map.entry("regenerationPerStep", 5.0),
+                Map.entry("regenerationCap", 50.0),
+                Map.entry("regenerationIntervalTicks", 20.0),
                 Map.entry("endCrystalSplashEvery", 10.0),
-                Map.entry("splashRadiusPerStep", 0.25),
+                Map.entry("splashRadiusPerStep", 0.5),
                 Map.entry("splashRadiusCap", 5.0),
-                Map.entry("splashDamageRatio", 1.0),
-                Map.entry("shulkerReductionEvery", 20.0),
+                Map.entry("splashDamageRatio", 0.60),
+                Map.entry("shulkerReductionEvery", 15.0),
                 Map.entry("damageReductionPerStep", 0.025),
                 Map.entry("damageReductionCap", 0.25),
                 Map.entry("maxAttackIntervalReductionTicks", 15.0),
-                Map.entry("minimumAttackIntervalTicks", 5.0)
+                Map.entry("minimumAttackIntervalTicks", 5.0),
+                Map.entry("dragonFinalDamageBonus", 0.25),
+                Map.entry("dragonIncomeDebuffResistance", 0.25)
         ));
     }
 

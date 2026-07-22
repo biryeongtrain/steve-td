@@ -1,0 +1,47 @@
+{
+  "startingDiamond": 150,
+  "startingEmerald": 0,
+  "startingIncome": 10,
+  "emeraldCap": {
+    "base": 50,
+    "roundOffsetMultiplier": 2,
+    "roundOffsetStep": 30,
+    "flatBonus": 0
+  },
+  "emeraldProduction": {
+    "initialEmeraldPerSec": 1,
+    "maxUpgradeCount": 40,
+    "initialUpgradeCost": 30,
+    "upgradeCostIncrease": 30,
+    "emeraldPerSecIncrease": 1,
+    "upgradeCurrency": "DIAMOND"
+  },
+  "towerLimit": {
+    "initialLimit": 5,
+    "increaseStartRound": 5,
+    "increaseEveryRounds": 3,
+    "increaseAmount": 5,
+    "maxLimit": 10,
+    "purchaseIncreaseAmount": 1,
+    "maxPurchaseCount": 13,
+    "initialPurchaseDiamondCost": 25,
+    "purchaseDiamondCostIncrease": 10,
+    "initialPurchaseEmeraldCost": 35,
+    "purchaseEmeraldCostIncrease": 15
+  },
+  "killReward": {
+    "crossLaneWaveReductionEnabled": true,
+    "crossLaneFinalDefenseWaveMultiplier": 0.25,
+    "finalDefenseProgressThreshold": 0.9,
+    "applyToIncomeUnits": false
+  },
+  "teamTransfer": {
+    "enabled": true,
+    "receiveCooldownRounds": 3,
+    "maxDiamondPerRound": 30
+  },
+  "emeraldIncomeBoost": {
+    "enabled": true,
+    "startRound": 25
+  }
+}

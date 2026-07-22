@@ -25,7 +25,13 @@ public record IncomeLaneRoutingConfig(
     }
 
     public static IncomeLaneRoutingConfig defaultConfig() {
-        return new IncomeLaneRoutingConfig(true, Mode.LEAST_THREAT_PRESSURE, 1.0, 0.75, TieBreakMode.ROUND_ROBIN);
+        return new IncomeLaneRoutingConfig(
+                true,
+                Mode.LEAST_THREAT_PRESSURE,
+                1.0,
+                0.75,
+                TieBreakMode.ROUND_ROBIN
+        );
     }
 
     private static double sanitizeWeight(double value, double fallback) {

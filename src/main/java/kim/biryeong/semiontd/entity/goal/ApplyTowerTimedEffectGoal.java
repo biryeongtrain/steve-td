@@ -57,7 +57,10 @@ public final class ApplyTowerTimedEffectGoal extends CooldownAbilityGoal {
                 .filter(tower -> caster.distanceToSqr(tower) <= radiusSqr)
                 .sorted(Comparator.comparingDouble(caster::distanceToSqr))
                 .toList()) {
-            tower.applyTimedEffect(effectType, magnitude, durationTicks);
+            double resistance = tower.runtimeTower() == null
+                    ? 0.0
+                    : Math.clamp(tower.runtimeTower().incomeDebuffResistance(), 0.0, 1.0);
+            tower.applyTimedEffect(effectType, magnitude * (1.0 - resistance), durationTicks);
             applied++;
             if (applied >= maxTargets) {
                 break;

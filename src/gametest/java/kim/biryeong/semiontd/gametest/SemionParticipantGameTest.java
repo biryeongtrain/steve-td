@@ -10216,6 +10216,21 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertClose(context, 1.0, entity.getScale(), "Max-health-proportional scale must stop after evolving into the Ender Dragon.")) {
             return;
         }
+        if (!assertClose(context, 12.5, entity.applyTraitOutgoingDamage(null, 10.0), "DRAGON state should grant 25% final damage.")) {
+            return;
+        }
+        if (!assertClose(context, 0.25, tower.incomeDebuffResistance(), "DRAGON state should reduce income-monster debuff magnitudes by 25%.")) {
+            return;
+        }
+        SemionMonsterEntity facingTarget = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
+        facingTarget.setPos(entity.getX() + 10.0, entity.getY(), entity.getZ());
+        entity.faceAttackTarget(facingTarget);
+        if (!assertClose(context, -90.0, entity.getYRot(), "DRAGON state should rotate toward its attack target.")) {
+            return;
+        }
+        if (!assertClose(context, entity.getYRot(), entity.yBodyRot, "DRAGON body rotation should match its attack direction.")) {
+            return;
+        }
         entity.playAnimation(SemionAnimationState.IDLE);
         if (!assertEquals(context, SemionAnimationState.IDLE, entity.animationState(), "Vanilla Ender Dragon should retain the tower idle state.")) {
             return;

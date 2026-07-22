@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "mode": "LEAST_THREAT_PRESSURE",
+  "queuedThreatWeight": 1.0,
+  "nextRoundQueuedThreatWeight": 0.75,
+  "tieBreakMode": "ROUND_ROBIN"
+}
