@@ -74,6 +74,8 @@ class EnderDragonScaleTest {
         );
         assertTrue(tower.visual().blockbenchModel().isEmpty());
         assertEquals(1.0, tower.visual().scale(), 0.0001);
+        assertEquals(7.0, tower.adjustAttackRange(5.0), 0.0001);
+        assertEquals(12.5, tower.modifyAttackDamage(null, null, 10.0), 0.0001);
     }
 
     @Test

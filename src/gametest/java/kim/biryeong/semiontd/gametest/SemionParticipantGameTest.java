@@ -215,6 +215,7 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
@@ -287,6 +288,12 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 return;
             }
             MoobloomEntity visual = visuals.getFirst();
+            if (!assertClose(context, 0.75, towerEntity.getScale(), "Moobloom tower should use a shorter server collision box.")) {
+                return;
+            }
+            if (!assertClose(context, 1.35, towerEntity.getBbHeight(), "Moobloom tower collision height should match its visual height.")) {
+                return;
+            }
             if (!assertEquals(context, "dandelion", visual.getEntityData().get(MoobloomAccessor.semiontd$dataVariant()), "Moobloom visual should carry the tower variant for the Polymer patch.")) {
                 return;
             }
@@ -302,7 +309,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             if (!assertClose(context, towerEntity.getZ(), visual.getZ(), "Moobloom visual Z should stay on the tower hitbox anchor.")) {
                 return;
             }
-            if (!assertTrue(context, visual.isNoAi() && visual.isInvulnerable(), "Moobloom visual should be passive cosmetic state only.")) {
+            if (!assertTrue(context, visual.isNoAi() && visual.isInvulnerable() && visual.noPhysics, "Moobloom visual should be passive cosmetic state only.")) {
                 return;
             }
             towerEntity.discard();
@@ -8529,6 +8536,124 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void enderFeederUpgradePreservesTransferProgress(GameTestHelper context) {
+        UUID playerId = stableUuid("ender-upgrade-progress-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, EnderTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos corePos = towerPlacementPos(lane);
+        BlockPos sourcePos = nearbyTowerPlacementPos(lane, corePos);
+        if (!assertEquals(context, TowerPlacementResult.SUCCESS,
+                ProductionTowerService.placeTower(game, playerId, corePos, EnderTowers.BASE_ENDER_TOWER.id()),
+                "Ender progress test should place the core.")) {
+            return;
+        }
+        if (!assertEquals(context, TowerPlacementResult.SUCCESS,
+                ProductionTowerService.placeTower(game, playerId, sourcePos, EnderTowers.T1_ENDERMITE_TOWER.id()),
+                "Ender progress test should place the feeder.")) {
+            return;
+        }
+        EnderTower core = (EnderTower) lane.towerAt(GridPosition.from(corePos));
+        core.onWaveStarted(lane, 1);
+        for (int tick = 0; tick < 100; tick++) {
+            core.tick(lane);
+        }
+        Tower source = lane.towerAt(GridPosition.from(sourcePos));
+        if (!assertTrue(context, source.runtimeDetailLines().stream().anyMatch(line -> line.contains("50.0%")),
+                "A feeder should show 50% carried progress before upgrade.")) {
+            return;
+        }
+        if (!assertEquals(context, TowerUpgradeResult.SUCCESS,
+                ProductionTowerService.upgradeTower(game, playerId, sourcePos, EnderTowers.T2_ENDERMAN_TOWER.id()),
+                "ProductionTowerService should upgrade the feeder.")) {
+            return;
+        }
+        Tower upgraded = lane.towerAt(GridPosition.from(sourcePos));
+        if (!assertTrue(context, upgraded.runtimeDetailLines().stream().anyMatch(line -> line.contains("50.0%")),
+                "The upgraded feeder should inherit its transfer progress.")) {
+            return;
+        }
+        for (int tick = 0; tick < 100; tick++) {
+            core.tick(lane);
+        }
+        if (!assertClose(context, 0.625, core.permanentDamageBonus(), "T1 half plus T2 half should transfer 0.625 permanent damage.")) {
+            return;
+        }
+        if (!assertEquals(context, 2, core.absorbedEndCrystalCount(), "Completion after upgrade should grant the T2 stack weight once.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void evolvedEnderDragonUsesRangeAndDamageBonusesForMainAndSplash(GameTestHelper context) {
+        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        Map<String, Map<String, Double>> abilities = new java.util.LinkedHashMap<>(defaults.abilities());
+        Map<String, Double> enderAbilities = new java.util.LinkedHashMap<>(abilities.get(EnderTower.CONFIG_ID));
+        enderAbilities.put("dragonEvolutionMaxHealth", 200.0);
+        enderAbilities.put("absorptionDurationTicks", 1.0);
+        enderAbilities.put("endCrystalSplashEvery", 1.0);
+        enderAbilities.put("splashRadiusPerStep", 2.0);
+        abilities.put(EnderTower.CONFIG_ID, enderAbilities);
+        TowerBalanceRuntime.apply(new TowerBalanceConfig(defaults.towers(), defaults.upgradeCosts(), abilities));
+        try {
+            UUID playerId = stableUuid("ender-dragon-damage-owner");
+            SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, EnderTowerJob.ID);
+            PlayerLane lane = redLane(game, 1);
+            BlockPos base = towerPlacementPos(lane);
+            EnderTower core = new EnderTower(
+                    EnderTowers.BASE_ENDER_TOWER,
+                    playerId,
+                    TeamId.RED,
+                    1,
+                    GridPosition.from(base)
+            );
+            EnderTower source = new EnderTower(
+                    EnderTowers.T1_ENDERMITE_TOWER,
+                    playerId,
+                    TeamId.RED,
+                    1,
+                    GridPosition.from(base.offset(1, 0, 0))
+            );
+            lane.addTower(core);
+            lane.addTower(source);
+            core.onWaveStarted(lane, 1);
+            core.tick(lane);
+
+            SemionTowerEntity coreEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(core.entityId().orElseThrow());
+            if (!assertEquals(context, EntityType.ENDER_DRAGON, coreEntity.getPolymerEntityType(null), "The core should evolve for the damage test.")) {
+                return;
+            }
+            if (!assertClose(context, 7.0, core.adjustAttackRange(core.type().range()), "Dragon range should be 7 blocks.")) {
+                return;
+            }
+            Vec3 targetPosition = coreEntity.position().add(2.0, 0.0, 0.0);
+            SemionMonsterEntity primary = spawnRoleMonsterEntity(context, "ender-dragon-primary", Optional.empty(), TeamId.RED, 1, targetPosition, 100.0, List.of(SummonRole.RUSH));
+            SemionMonsterEntity nearby = spawnRoleMonsterEntity(context, "ender-dragon-nearby", Optional.empty(), TeamId.RED, 1, targetPosition.add(1.0, 0.0, 0.0), 100.0, List.of(SummonRole.RUSH));
+            double damage = coreEntity.attackDamageAmount(primary);
+            if (!assertClose(context, 19.375, damage, "Dragon main damage should apply +25% after base and absorbed damage.")) {
+                return;
+            }
+            boolean killed = coreEntity.damageTarget(primary, damage);
+            coreEntity.recordAttack(primary, damage, killed);
+            if (!assertClose(context, 80.625, primary.runtimeMonster().health(), "Dragon main damage should update logical health.")) {
+                return;
+            }
+            if (!assertClose(context, primary.runtimeMonster().health(), primary.getHealth(), "Dragon main damage should synchronize entity health.")) {
+                return;
+            }
+            if (!assertClose(context, 80.625, nearby.runtimeMonster().health(), "Dragon splash should use the same +25% damage.")) {
+                return;
+            }
+            if (!assertClose(context, nearby.runtimeMonster().health(), nearby.getHealth(), "Dragon splash should synchronize entity health.")) {
+                return;
+            }
+        } finally {
+            TowerBalanceRuntime.apply(defaults);
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void illagerTowerJobUsesIllagerStartersAndBranchUpgrades(GameTestHelper context) {
         UUID playerId = stableUuid("illager-job-tower-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, IllagerTowerJob.ID);
@@ -8728,11 +8853,12 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         addResonanceTower(lane, playerId, ResonanceTowers.AMPLIFY_CRYSTAL, focusPos.offset(0, 0, 1));
         addResonanceTower(lane, playerId, ResonanceTowers.WAVE_PRISM, focusPos.offset(0, 0, -1));
         addResonanceTower(lane, playerId, ResonanceTowers.FROST_PRISM, focusPos.offset(1, 0, 1));
+        lane.markWaveStarted(1);
         if (!assertTrue(context, lane.towers().get(0) instanceof ResonanceTower, "Placed focus crystal should use ResonanceTower runtime.")) {
             return;
         }
         ResonanceTower focus = (ResonanceTower) lane.towerAt(GridPosition.from(focusPos));
-        if (!assertEquals(context, 3, focus.resonanceLevel(), "T1 focus should reach resonance level 3 with five nearby different species.")) {
+        if (!assertEquals(context, 1, focus.resonanceLevel(), "T1 focus should cap at resonance level 1.")) {
             return;
         }
         if (!assertEquals(context, 5, focus.resonanceLinks(), "Focus should count five nearby different species within one tile.")) {
@@ -8742,14 +8868,26 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         focus = (ResonanceTower) lane.towerAt(GridPosition.from(focusPos));
-        if (!assertEquals(context, 3, focus.resonanceLevel(), "T2 focus should retain resonance level 3 after upgrading.")) {
+        if (!assertEquals(context, 1, focus.resonanceLevel(), "An in-wave upgrade should retain the captured resonance level.")) {
             return;
         }
         if (!assertEquals(context, TowerUpgradeResult.SUCCESS, ProductionTowerService.upgradeTower(game, playerId, focusPos, ResonanceTowers.FOCUS_CORE.id()), "Focus prism should upgrade into T3 focus core.")) {
             return;
         }
         focus = (ResonanceTower) lane.towerAt(GridPosition.from(focusPos));
-        if (!assertEquals(context, 3, focus.resonanceLevel(), "T3 focus should retain resonance level 3 after upgrading.")) {
+        if (!assertEquals(context, 1, focus.resonanceLevel(), "A second in-wave upgrade should retain the captured resonance level.")) {
+            return;
+        }
+        for (Tower tower : List.copyOf(lane.towers())) {
+            if (tower instanceof ResonanceTower && tower != focus) {
+                lane.killTower(tower);
+            }
+        }
+        if (!assertEquals(context, 5, focus.resonanceLinks(), "Links captured at wave start should survive nearby tower deaths.")) {
+            return;
+        }
+        lane.markWaveStarted(2);
+        if (!assertEquals(context, 0, focus.resonanceLinks(), "The next wave start should replace the previous link snapshot.")) {
             return;
         }
         context.succeed();
@@ -8810,7 +8948,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 100.0,
                 List.of(SummonRole.RUSH)
         );
-        if (!assertClose(context, 140.0, focus.modifyAttackDamage(null, target, 100.0), "Frost aura should require an active frost debuff.")) {
+        if (!assertClose(context, 100.0, focus.modifyAttackDamage(null, target, 100.0), "Frost aura should require an active frost debuff.")) {
             return;
         }
 
@@ -8822,7 +8960,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertClose(context, 0.40, target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION), "T3 frost should reduce attack speed.")) {
             return;
         }
-        if (!assertClose(context, 240.0, focus.modifyAttackDamage(null, target, 100.0), "Frost aura should make nearby mooblooms deal bonus damage to debuffed targets.")) {
+        if (!assertClose(context, 200.0, focus.modifyAttackDamage(null, target, 100.0), "Frost aura should make nearby mooblooms deal bonus damage to debuffed targets.")) {
             return;
         }
         context.succeed();
@@ -10143,6 +10281,33 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void endCrystalVisualUsesSmallServerCollisionBox(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        EnderTower tower = new EnderTower(
+                EnderTowers.T3_END_CRYSTAL_TOWER,
+                stableUuid("end-crystal-hitbox-owner"),
+                TeamId.RED,
+                1,
+                new GridPosition(0, 0, 0)
+        );
+        SemionTowerEntity entity = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+        entity.configure(tower, null);
+        if (!assertEquals(context, EntityType.END_CRYSTAL, entity.getPolymerEntityType(null), "End Crystal appearance should remain unchanged.")) {
+            return;
+        }
+        if (!assertClose(context, 0.5, entity.getScale(), "End Crystal server collision scale should be reduced.")) {
+            return;
+        }
+        if (!assertClose(context, 0.4, entity.getBbWidth(), "End Crystal server collision width should be 0.4 blocks.")) {
+            return;
+        }
+        if (!assertClose(context, 0.9, entity.getBbHeight(), "End Crystal server collision height should be 0.9 blocks.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void enderEggPhantomAndDragonAreStatesOfOneRuntimeTower(GameTestHelper context) {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
         EnderTower tower = new EnderTower(
@@ -10174,7 +10339,22 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (entity.hasBilModelHolder()) {
             throw new AssertionError("The Ender core must not load a BIL model in PHANTOM state.");
         }
-        if (!assertClose(context, EnderTowers.phantomScaleForMaxHealth(tower.currentMaxHealth()), entity.getScale(), "Only the Phantom state should use max-health-proportional scale.")) {
+        if (!assertClose(context, 1.0, entity.getScale(), "Phantom growth must not enlarge the server collision box.")) {
+            return;
+        }
+        List<ClientboundUpdateAttributesPacket.AttributeSnapshot> clientAttributes = new ArrayList<>();
+        clientAttributes.add(new ClientboundUpdateAttributesPacket.AttributeSnapshot(
+                Attributes.SCALE,
+                entity.getAttributeValue(Attributes.SCALE),
+                List.of()
+        ));
+        entity.modifyRawEntityAttributeData(clientAttributes, null, true);
+        double clientScale = clientAttributes.stream()
+                .filter(snapshot -> snapshot.attribute().equals(Attributes.SCALE))
+                .findFirst()
+                .orElseThrow()
+                .base();
+        if (!assertClose(context, EnderTowers.phantomScaleForMaxHealth(tower.currentMaxHealth()), clientScale, "Phantom growth should remain visible to clients.")) {
             return;
         }
         if (entity.runtimeTower() != tower) {
@@ -10209,7 +10389,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertEquals(context, SemionAnimationState.WALK, entity.animationState(), "Vanilla Ender Dragon should retain the tower walk state.")) {
             return;
         }
-        if (!assertClose(context, 5.0, tower.adjustAttackRange(tower.type().range()), "Ender Dragon base attack range should be 5 blocks.")) {
+        if (!assertClose(context, 7.0, tower.adjustAttackRange(tower.type().range()), "Ender Dragon attack range should gain 2 blocks after evolution.")) {
             return;
         }
         context.succeed();

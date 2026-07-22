@@ -60,7 +60,7 @@ class TowerRuntimeDetailsTest {
                 resonance(ResonanceTowers.AMPLIFY_CRYSTAL, new GridPosition(0, 0, 1)),
                 resonance(ResonanceTowers.WAVE_PRISM, new GridPosition(1, 0, -1)),
                 resonance(ResonanceTowers.FROST_PRISM, new GridPosition(-1, 0, -1)),
-                resonance(ResonanceTowers.AMPLIFY_PRISM, new GridPosition(0, 0, -1))
+                resonance(ResonanceTowers.AMPLIFY_CORE, new GridPosition(0, 0, -1))
         ));
 
         List<String> lines = SemionDialogService.towerRuntimeDetailLines(focus);
@@ -69,7 +69,7 @@ class TowerRuntimeDetailsTest {
         assertContains(lines, "Lv 3");
         assertContains(lines, "링크 6");
         assertContains(lines, "받는 오라");
-        assertContains(lines, "공속 +50.0%");
+        assertContains(lines, "공속 +35.0%");
     }
 
     @Test

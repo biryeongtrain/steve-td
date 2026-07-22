@@ -538,6 +538,50 @@ public final class SemionWaveGameTest {
     }
 
     @GameTest
+    public void deadEnderFeederLosesProgressBeforeRoundRespawn(GameTestHelper context) {
+        PlayerLane lane = lane(context, "dead-ender-feeder-progress");
+        EnderTower core = new EnderTower(
+                EnderTowers.BASE_ENDER_TOWER,
+                lane.ownerPlayer(),
+                TeamId.RED,
+                1,
+                GridPosition.from(context.absolutePos(new BlockPos(4, 1, 1)))
+        );
+        EnderTower source = new EnderTower(
+                EnderTowers.T1_ENDERMITE_TOWER,
+                lane.ownerPlayer(),
+                TeamId.RED,
+                1,
+                GridPosition.from(context.absolutePos(new BlockPos(1, 1, 1)))
+        );
+        lane.addTower(core);
+        lane.addTower(source);
+        core.onWaveStarted(lane, 1);
+        for (int tick = 0; tick < 50; tick++) {
+            core.tick(lane);
+        }
+        if (source.runtimeDetailLines().stream().noneMatch(line -> line.contains("25.0%"))) {
+            throw new AssertionError("The live feeder should reach 25% transfer progress.");
+        }
+        if (!lane.killTower(source)) {
+            throw new AssertionError("The test feeder should be killed.");
+        }
+        if (source.runtimeDetailLines().stream().noneMatch(line -> line.contains("0.0%"))) {
+            throw new AssertionError("Feeder death should reset transfer progress.");
+        }
+
+        lane.resetForRound();
+        core.onWaveStarted(lane, 2);
+        for (int tick = 0; tick < 50; tick++) {
+            core.tick(lane);
+        }
+        if (source.runtimeDetailLines().stream().noneMatch(line -> line.contains("25.0%"))) {
+            throw new AssertionError("The revived feeder should restart from zero instead of resuming at 50%.");
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void enderTransferDoesNotSpawnEndCrystals(GameTestHelper context) {
         PlayerLane lane = lane(context, "ender-transfer-enchant-particles");
         GridPosition sourcePosition = GridPosition.from(context.absolutePos(new BlockPos(1, 1, 1)));
@@ -561,7 +605,7 @@ public final class SemionWaveGameTest {
         int coreEntityId = egg.entityId().orElseThrow();
         egg.onWaveStarted(lane, 1);
 
-        for (int tick = 0; tick < 200; tick++) {
+        for (int tick = 0; tick < 100; tick++) {
             egg.tick(lane);
         }
         EnderTower dragon = egg;
@@ -585,7 +629,7 @@ public final class SemionWaveGameTest {
             throw new AssertionError("An active Ender transfer must not spawn a visible End Crystal entity.");
         }
 
-        for (int tick = 0; tick < 399; tick++) {
+        for (int tick = 0; tick < 99; tick++) {
             dragon.tick(lane);
         }
 

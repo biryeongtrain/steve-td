@@ -38,6 +38,7 @@ import kim.biryeong.semiontd.trait.BuiltInTraits;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -64,6 +65,8 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     private static final double TARGET_SEARCH_HORIZONTAL_PADDING = 8.0;
     private static final double TARGET_SEARCH_VERTICAL_PADDING = 3.0;
     private static final double FINAL_DEFENSE_RETURN_SPEED_MULTIPLIER = 1.25;
+    private static final double END_CRYSTAL_COLLISION_SCALE = 0.5;
+    private static final double MOOBLOOM_COLLISION_SCALE = 0.75;
     private static final double MOOBLOOM_VISUAL_POSITION_EPSILON = 1.0E-4;
 
     private Tower runtimeTower;
@@ -715,6 +718,32 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         );
     }
 
+    @Override
+    public void modifyRawEntityAttributeData(
+            List<ClientboundUpdateAttributesPacket.AttributeSnapshot> data,
+            ServerPlayer player,
+            boolean initial
+    ) {
+        AnimatedEntity.super.modifyRawEntityAttributeData(data, player, initial);
+        if (!(runtimeTower instanceof EnderTower enderTower)
+                || enderTower.state() != EnderTowerState.PHANTOM) {
+            return;
+        }
+        double renderScale = EnderTowers.phantomScaleForMaxHealth(runtimeTower.currentMaxHealth());
+        for (int index = 0; index < data.size(); index++) {
+            ClientboundUpdateAttributesPacket.AttributeSnapshot snapshot = data.get(index);
+            if (snapshot.attribute().equals(Attributes.SCALE)) {
+                data.set(index, new ClientboundUpdateAttributesPacket.AttributeSnapshot(
+                        snapshot.attribute(),
+                        renderScale,
+                        snapshot.modifiers()
+                ));
+                return;
+            }
+        }
+        data.add(new ClientboundUpdateAttributesPacket.AttributeSnapshot(Attributes.SCALE, renderScale, List.of()));
+    }
+
     private void applyInvisibleArmorStandProxyData(List<SynchedEntityData.DataValue<?>> data) {
         byte flags = (byte) (entityData.get(DATA_SHARED_FLAGS_ID) | 0x20);
         SynchedEntityData.DataValue<Byte> invisibleFlags =
@@ -881,6 +910,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
             resetMoobloomVisualSyncState();
             moobloomVisualEntity.setNoAi(true);
             moobloomVisualEntity.setNoGravity(true);
+            moobloomVisualEntity.noPhysics = true;
             moobloomVisualEntity.setSilent(true);
             moobloomVisualEntity.setInvulnerable(true);
             moobloomVisualEntity.setPersistenceRequired();
@@ -1029,11 +1059,17 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     private void applyVisualScale(EntityVisual visual) {
         double scale = visual == null ? EntityVisual.DEFAULT_SCALE : visual.scale();
+        if (blockbenchModelId == null && polymerEntityType == EntityType.END_CRYSTAL) {
+            scale = END_CRYSTAL_COLLISION_SCALE;
+        } else if (usesMoobloomOverlayVisual()) {
+            scale = MOOBLOOM_COLLISION_SCALE;
+        }
+        var scaleAttribute = getAttribute(Attributes.SCALE);
+        scaleAttribute.setBaseValue(scale);
         if (runtimeTower instanceof EnderTower enderTower
                 && enderTower.state() == EnderTowerState.PHANTOM) {
-            scale = EnderTowers.phantomScaleForMaxHealth(runtimeTower.currentMaxHealth());
+            getAttributes().getAttributesToSync().add(scaleAttribute);
         }
-        getAttribute(Attributes.SCALE).setBaseValue(scale);
         refreshDimensions();
         if (holder != null) {
             holder.setScale(1.0F);

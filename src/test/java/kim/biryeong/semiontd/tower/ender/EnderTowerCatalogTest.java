@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
@@ -46,16 +47,19 @@ class EnderTowerCatalogTest {
         assertTrue(config.towers().containsKey(EnderTowers.T3_SHULKER_TOWER.id()));
         assertEquals(-1.0, config.ability(EnderTower.CONFIG_ID, "hatchDelayTicks", -1.0), 0.0001);
         assertEquals(2000.0, config.ability(EnderTower.CONFIG_ID, "dragonEvolutionMaxHealth", -1.0), 0.0001);
-        assertEquals(400.0, config.ability(EnderTower.CONFIG_ID, "absorptionDurationTicks", -1.0), 0.0001);
+        assertEquals(200.0, config.ability(EnderTower.CONFIG_ID, "absorptionDurationTicks", -1.0), 0.0001);
         assertEquals(1.0, config.ability(EnderTower.CONFIG_ID, "roundHealthRatio", -1.0), 0.0001);
         assertEquals(1.0, config.ability(EnderTower.CONFIG_ID, "roundDamageRatio", -1.0), 0.0001);
         assertEquals(0.50, config.ability(EnderTower.CONFIG_ID, "roundStatBonusCapRatio", -1.0), 0.0001);
         assertEquals(0.05, config.ability(EnderTower.CONFIG_ID, "permanentHealthRatio", -1.0), 0.0001);
         assertEquals(0.05, config.ability(EnderTower.CONFIG_ID, "permanentDamageRatio", -1.0), 0.0001);
-        assertEquals(20.0, config.ability(EnderTower.CONFIG_ID, "endCrystalAttackIntervalEvery", -1.0), 0.0001);
+        assertEquals(60.0, config.ability(EnderTower.CONFIG_ID, "permanentDamageBonusCap", -1.0), 0.0001);
+        assertEquals(2.0, config.ability(EnderTower.CONFIG_ID, "dragonAttackRangeBonus", -1.0), 0.0001);
+        assertEquals(0.25, config.ability(EnderTower.CONFIG_ID, "dragonDamageBonus", -1.0), 0.0001);
+        assertEquals(10.0, config.ability(EnderTower.CONFIG_ID, "endCrystalAttackIntervalEvery", -1.0), 0.0001);
         assertEquals(1.0, config.ability(EnderTower.CONFIG_ID, "attackIntervalReductionPerStep", -1.0), 0.0001);
         assertEquals(10.0, config.ability(EnderTower.CONFIG_ID, "shulkerLifeStealEvery", -1.0), 0.0001);
-        assertEquals(10.0, config.ability(EnderTower.CONFIG_ID, "endCrystalSplashEvery", -1.0), 0.0001);
+        assertEquals(5.0, config.ability(EnderTower.CONFIG_ID, "endCrystalSplashEvery", -1.0), 0.0001);
         assertEquals(0.25, config.ability(EnderTower.CONFIG_ID, "splashRadiusPerStep", -1.0), 0.0001);
         assertEquals(5.0, config.ability(EnderTower.CONFIG_ID, "splashRadiusCap", -1.0), 0.0001);
         assertEquals(1.0, config.ability(EnderTower.CONFIG_ID, "splashDamageRatio", -1.0), 0.0001);
@@ -68,6 +72,17 @@ class EnderTowerCatalogTest {
         assertEquals(0.10, config.ability(EnderTowers.T1_SHULKER_TOWER.id(), "damageReduction", -1.0), 0.0001);
         assertEquals(0.30, config.ability(EnderTowers.T2_SHULKER_TOWER.id(), "damageReduction", -1.0), 0.0001);
         assertEquals(0.50, config.ability(EnderTowers.T3_SHULKER_TOWER.id(), "damageReduction", -1.0), 0.0001);
+    }
+
+    @Test
+    void enderTowerSourceDefaultsMatchTheLiveBalanceContract() {
+        assertStats(EnderTowers.BASE_ENDER_TOWER, 0, 200.0, 5.0, 10.0, 20, 100);
+        assertStats(EnderTowers.T1_ENDERMITE_TOWER, 50, 50.0, 0.0, 10.0, 20, 10);
+        assertStats(EnderTowers.T2_ENDERMAN_TOWER, 125, 50.0, 0.0, 15.0, 20, 10);
+        assertStats(EnderTowers.T3_END_CRYSTAL_TOWER, 200, 50.0, 0.0, 20.0, 20, 10);
+        assertStats(EnderTowers.T1_SHULKER_TOWER, 50, 100.0, 0.0, 5.0, 20, 10);
+        assertStats(EnderTowers.T2_SHULKER_TOWER, 125, 150.0, 0.0, 5.0, 20, 10);
+        assertStats(EnderTowers.T3_SHULKER_TOWER, 200, 200.0, 0.0, 5.0, 20, 10);
     }
 
     @Test
@@ -119,23 +134,40 @@ class EnderTowerCatalogTest {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
 
         assertEquals(10.0, EnderTowers.BASE_ENDER_TOWER.damage(), 0.0001);
-        String description = String.join("\n", TowerBalanceRuntime.resolve(EnderTowers.BASE_ENDER_TOWER).description());
+        List<String> lines = TowerBalanceRuntime.resolve(EnderTowers.BASE_ENDER_TOWER).description();
+        String description = String.join("\n", lines);
 
-        assertTrue(description.contains("알로 소환되며"));
-        assertTrue(description.contains("라운드 시작 시 팬텀"));
-        assertTrue(description.contains("이상이면"));
-        assertTrue(description.contains("팬텀 크기는 1.0부터 최대 체력 100당 0.2 증가합니다."));
-        assertTrue(description.contains("20초"));
+        assertEquals(5, lines.size());
+        assertTrue(description.contains("알 → 팬텀"));
+        assertTrue(description.contains("2000+ → 드래곤"));
+        assertTrue(description.contains("10초"));
+        assertTrue(description.contains("최대 50%"));
         assertTrue(description.contains("5%"));
-        assertTrue(description.contains("엔드 수정 계열"));
-        assertTrue(description.contains("전달하고 사망"));
-        assertTrue(description.contains("엔드 수정 계열 누적 20스택마다 공격 주기 -1틱"));
-        assertTrue(description.contains("최소 5틱"));
-        assertTrue(description.contains("엔드 수정 계열 누적 10스택마다 광역 공격 반경"));
-        assertTrue(description.contains("셜커 계열 누적 10스택마다 생명력 흡수"));
-        assertTrue(description.contains("셜커 계열 누적 20스택마다 받는 피해 -2.5%"));
+        assertTrue(description.contains("라운드·업그레이드에 유지"));
+        assertTrue(description.contains("사망·판매 시 초기화"));
+        assertTrue(description.contains("사거리 +2블록"));
+        assertTrue(description.contains("피해 +25%"));
+        assertTrue(description.contains("최대 +60"));
+        assertTrue(description.contains("엔드 수정: 5스택마다 광역 +0.25블록"));
+        assertTrue(description.contains("10스택마다 공격 주기 -1틱"));
+        assertTrue(description.contains("엔더 최소 5틱"));
+        assertTrue(description.contains("일반 공속 별도"));
+        assertTrue(description.contains("셜커: 10스택마다 흡혈 +1%"));
+        assertTrue(description.contains("20스택마다 받는 피해 -2.5%"));
         assertTrue(description.contains("최대 30%"));
         assertTrue(description.contains("최대 25%"));
+    }
+
+    @Test
+    void enderJobDescriptionStaysCompact() {
+        var lines = new EnderTowerJob().description();
+        String description = lines.stream().map(component -> component.getString()).collect(java.util.stream.Collectors.joining("\n"));
+
+        assertEquals(4, lines.size());
+        assertTrue(description.contains("10초간"));
+        assertTrue(description.contains("라운드·업그레이드에 유지"));
+        assertTrue(description.contains("영구 공격력 +60"));
+        assertTrue(description.contains("최소 5틱"));
     }
 
     @Test
@@ -203,5 +235,22 @@ class EnderTowerCatalogTest {
         String description = String.join("\n", TowerDescriptionRegistry.describe(towerType).orElseThrow());
         assertTrue(description.contains(summary));
         assertTrue(description.contains(effect));
+    }
+
+    private static void assertStats(
+            kim.biryeong.semiontd.tower.TowerType tower,
+            long mineralCost,
+            double maxHealth,
+            double range,
+            double damage,
+            int attackIntervalTicks,
+            int aggroPriority
+    ) {
+        assertEquals(mineralCost, tower.mineralCost());
+        assertEquals(maxHealth, tower.maxHealth(), 0.0001);
+        assertEquals(range, tower.range(), 0.0001);
+        assertEquals(damage, tower.damage(), 0.0001);
+        assertEquals(attackIntervalTicks, tower.attackIntervalTicks());
+        assertEquals(aggroPriority, tower.aggroPriority());
     }
 }

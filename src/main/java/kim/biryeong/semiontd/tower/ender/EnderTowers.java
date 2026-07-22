@@ -161,16 +161,11 @@ public final class EnderTowers {
 
     static {
         List<String> dragonDescription = List.of(
-                "<gray>알로 소환되며, 라운드 시작 시 팬텀으로 변합니다.</gray>",
-                "<gray>최대 체력이 <yellow>{ability.ender_global.dragonEvolutionMaxHealth:integer}</yellow> 이상이면 엔더 드래곤으로 진화합니다.</gray>",
-                "<gray>팬텀 크기는 1.0부터 최대 체력 100당 0.2 증가합니다.</gray>",
-                "<green>타워는 {ability.ender_global.absorptionDurationTicks:seconds} 동안 힘을 전달하고 사망합니다.</green>",
-                "<green>엔드 수정 계열: 타워 공격력 {ability.ender_global.permanentDamageRatio:percent} 영구 누적</green>",
-                "<green>엔드 수정 계열 누적 {ability.ender_global.endCrystalSplashEvery:integer}스택마다 광역 공격 반경 +{ability.ender_global.splashRadiusPerStep:blocks} (최대 {ability.ender_global.splashRadiusCap:blocks})</green>",
-                "<green>엔드 수정 계열 누적 {ability.ender_global.endCrystalAttackIntervalEvery:integer}스택마다 공격 주기 -{ability.ender_global.attackIntervalReductionPerStep:integer}틱 (최소 {ability.ender_global.minimumAttackIntervalTicks:integer}틱)</green>",
-                "<green>셜커 계열: 타워 체력 {ability.ender_global.permanentHealthRatio:percent} 영구 누적</green>",
-                "<green>셜커 계열 누적 {ability.ender_global.shulkerLifeStealEvery:integer}스택마다 생명력 흡수 +{ability.ender_global.lifeStealPerStep:percent} (최대 {ability.ender_global.lifeStealCap:percent})</green>",
-                "<green>셜커 계열 누적 {ability.ender_global.shulkerReductionEvery:integer}스택마다 받는 피해 -{ability.ender_global.damageReductionPerStep:percent} (최대 {ability.ender_global.damageReductionCap:percent} 감소)</green>"
+                "<gray>알 → 팬텀, 최대 체력 {ability.ender_global.dragonEvolutionMaxHealth:integer}+ → 드래곤 (사거리 +{ability.ender_global.dragonAttackRangeBonus:blocks}, 피해 +{ability.ender_global.dragonDamageBonus:percent})</gray>",
+                "<green>{ability.ender_global.absorptionDurationTicks:seconds} 전달: 라운드 체력·공격력 최대 {ability.ender_global.roundStatBonusCapRatio:percent}, 수정 공격력·셜커 체력 {ability.ender_global.permanentDamageRatio:percent} 영구 누적 (공격력 최대 +{ability.ender_global.permanentDamageBonusCap:integer})</green>",
+                "<green>진행도는 라운드·업그레이드에 유지되고 사망·판매 시 초기화됩니다. 완료된 타워는 사망합니다.</green>",
+                "<green>엔드 수정: {ability.ender_global.endCrystalSplashEvery:integer}스택마다 광역 +{ability.ender_global.splashRadiusPerStep:blocks} (최대 {ability.ender_global.splashRadiusCap:blocks}), {ability.ender_global.endCrystalAttackIntervalEvery:integer}스택마다 공격 주기 -{ability.ender_global.attackIntervalReductionPerStep:integer}틱 (엔더 최소 {ability.ender_global.minimumAttackIntervalTicks:integer}틱, 일반 공속 별도)</green>",
+                "<green>셜커: {ability.ender_global.shulkerLifeStealEvery:integer}스택마다 흡혈 +{ability.ender_global.lifeStealPerStep:percent} (최대 {ability.ender_global.lifeStealCap:percent}), {ability.ender_global.shulkerReductionEvery:integer}스택마다 받는 피해 -{ability.ender_global.damageReductionPerStep:percent} (최대 {ability.ender_global.damageReductionCap:percent})</green>"
         );
         TowerDescriptionRegistry.registerTemplate(BASE_ENDER_TOWER, dragonDescription);
         TowerDescriptionRegistry.registerTemplate(T1_ENDERMITE_TOWER, List.of(

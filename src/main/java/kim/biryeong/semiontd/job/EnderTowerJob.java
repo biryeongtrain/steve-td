@@ -17,8 +17,7 @@ public final class EnderTowerJob extends SemionJob {
                 ID,
                 Component.literal("엔드 빌더"),
                 List.of(
-                        SemionText.mini("<gray>엔더 타워의 힘을 전달받아 핵심 엔더 드래곤을 성장시킵니다.</gray>"),
-                        SemionText.mini("<red>그러나 성장 난이도가 매우 어렵습니다.</red>")
+                        SemionText.mini("<gray>엔더 타워를 흡수해 드래곤을 성장시키는 고난도 빌더입니다.</gray>")
                 )
         );
     }
@@ -26,14 +25,10 @@ public final class EnderTowerJob extends SemionJob {
     @Override
     public List<Component> description() {
         return List.of(
-                SemionText.mini("<gray>아군 타워에게서 힘을 전달받아 엔더 드래곤을 성장시키는 빌더입니다.</gray>"),
-                Component.empty(),
-                SemionText.mini("<gray>아군 엔더 타워에게서 20초에 걸쳐 힘을 전달받습니다. 체력·공격력은 이번 라운드에 각각 최대 50%까지 증가하며, 대상 스탯의 5%는 영구 누적됩니다.</gray>"),
-                SemionText.mini("<gray>전달을 마친 타워는 사망하고 다음 라운드에 부활합니다.</gray>"),
-                Component.empty(),
-                SemionText.mini("<gray>엔드 수정 계열은 엔더 드래곤의 공격력, 광역 공격, 공격 속도를 강화합니다.</gray>"),
-                SemionText.mini("<gray>셜커 계열은 엔더 드래곤의 체력, 생명력 흡수, 피해 감소를 강화합니다.</gray>"),
-                SemionText.mini("<yellow>엔더 드래곤의 공격 주기는 최소 5틱까지 감소합니다.</yellow>")
+                SemionText.mini("<gray>10초간 힘을 흡수해 라운드 체력·공격력을 최대 50% 얻고, 공급 스탯의 5%를 영구 누적합니다.</gray>"),
+                SemionText.mini("<gray>엔드 수정은 공격력·광역·공속, 셜커는 체력·흡혈·피해 감소를 강화합니다.</gray>"),
+                SemionText.mini("<gray>진행도는 라운드·업그레이드에 유지되고 사망·판매 시 초기화됩니다. 완료된 타워는 다음 라운드에 부활합니다.</gray>"),
+                SemionText.mini("<yellow>영구 공격력 +60, 드래곤 피해 +25%·사거리 +2, 엔더 스택 공격 주기 최소 5틱.</yellow>")
         );
     }
 

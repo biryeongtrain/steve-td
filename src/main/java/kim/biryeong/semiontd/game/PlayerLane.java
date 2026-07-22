@@ -26,6 +26,7 @@ import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
+import kim.biryeong.semiontd.tower.resonance.ResonanceService;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
 import kim.biryeong.semiontd.trait.TraitEffects;
@@ -315,6 +316,7 @@ public final class PlayerLane {
         }
         applyRoundTraitEffects();
         applyOpeningAttackSpeed();
+        ResonanceService.captureWaveStart(this);
     }
 
     public void addDefenderEntity(DefenderEntity defenderEntity) {

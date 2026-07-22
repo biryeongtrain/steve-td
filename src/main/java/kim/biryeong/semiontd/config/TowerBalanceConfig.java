@@ -1070,18 +1070,21 @@ public record TowerBalanceConfig(
         ));
         putAbilities(abilities, EnderTower.CONFIG_ID, Map.ofEntries(
                 Map.entry("dragonEvolutionMaxHealth", 2000.0),
-                Map.entry("absorptionDurationTicks", 400.0),
+                Map.entry("absorptionDurationTicks", 200.0),
                 Map.entry("roundHealthRatio", 1.0),
                 Map.entry("roundDamageRatio", 1.0),
                 Map.entry("roundStatBonusCapRatio", 0.50),
                 Map.entry("permanentHealthRatio", 0.05),
                 Map.entry("permanentDamageRatio", 0.05),
-                Map.entry("endCrystalAttackIntervalEvery", 20.0),
+                Map.entry("permanentDamageBonusCap", 60.0),
+                Map.entry("dragonAttackRangeBonus", 2.0),
+                Map.entry("dragonDamageBonus", 0.25),
+                Map.entry("endCrystalAttackIntervalEvery", 10.0),
                 Map.entry("attackIntervalReductionPerStep", 1.0),
                 Map.entry("shulkerLifeStealEvery", 10.0),
                 Map.entry("lifeStealPerStep", 0.01),
                 Map.entry("lifeStealCap", 0.30),
-                Map.entry("endCrystalSplashEvery", 10.0),
+                Map.entry("endCrystalSplashEvery", 5.0),
                 Map.entry("splashRadiusPerStep", 0.25),
                 Map.entry("splashRadiusCap", 5.0),
                 Map.entry("splashDamageRatio", 1.0),
@@ -1124,7 +1127,7 @@ public record TowerBalanceConfig(
         LinkedHashMap<String, Double> values = new LinkedHashMap<>();
         values.put("linkRange", 1.0);
         values.put("maxLinksPerTower", 6.0);
-        values.put("maxResonanceLevel", 3.0);
+        values.put("maxResonanceLevel", (double) tier);
         values.put("level1RequiredLinks", 1.0);
         values.put("level2RequiredLinks", 3.0);
         values.put("level3RequiredLinks", 5.0);

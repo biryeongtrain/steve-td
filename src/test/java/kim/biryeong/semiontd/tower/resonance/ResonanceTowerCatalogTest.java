@@ -75,8 +75,8 @@ class ResonanceTowerCatalogTest {
         assertEquals(1.0, config.ability(ResonanceTowers.FOCUS_CORE.id(), "level1RequiredLinks", -1.0), 0.0001);
         assertEquals(3.0, config.ability(ResonanceTowers.FOCUS_CORE.id(), "level2RequiredLinks", -1.0), 0.0001);
         assertEquals(5.0, config.ability(ResonanceTowers.FOCUS_CORE.id(), "level3RequiredLinks", -1.0), 0.0001);
-        assertEquals(3.0, config.ability(ResonanceTowers.FOCUS_CRYSTAL.id(), "maxResonanceLevel", -1.0), 0.0001);
-        assertEquals(3.0, config.ability(ResonanceTowers.FOCUS_PRISM.id(), "maxResonanceLevel", -1.0), 0.0001);
+        assertEquals(1.0, config.ability(ResonanceTowers.FOCUS_CRYSTAL.id(), "maxResonanceLevel", -1.0), 0.0001);
+        assertEquals(2.0, config.ability(ResonanceTowers.FOCUS_PRISM.id(), "maxResonanceLevel", -1.0), 0.0001);
         assertEquals(3.0, config.ability(ResonanceTowers.FOCUS_CORE.id(), "maxResonanceLevel", -1.0), 0.0001);
         assertEquals(0.20, config.ability(ResonanceTowers.FOCUS_CORE.id(), "focusLevel1AttackSpeedBonus", -1.0), 0.0001);
         assertEquals(0.40, config.ability(ResonanceTowers.FOCUS_CORE.id(), "focusLevel2AttackSpeedBonus", -1.0), 0.0001);
@@ -142,7 +142,7 @@ class ResonanceTowerCatalogTest {
         new ResonanceTowerJob().description().forEach(line -> playerFacingLines.add(line.getString()));
 
         assertTrue(focusDescription.stream().anyMatch(line -> line.contains("단일 타겟")));
-        assertTrue(focusDescription.stream().anyMatch(line -> line.contains("현재 해금") && line.contains("3단계")));
+        assertTrue(focusDescription.stream().anyMatch(line -> line.contains("현재 해금") && line.contains("1단계")));
         assertTrue(focusDescription.stream().anyMatch(line -> line.contains("공명 1단계")));
         assertTrue(focusDescription.stream().anyMatch(line -> line.contains("공명 2단계")));
         assertTrue(focusDescription.stream().anyMatch(line -> line.contains("공명 3단계")));
@@ -157,7 +157,7 @@ class ResonanceTowerCatalogTest {
     }
 
     @Test
-    void allTowerTiersUseLiveMaximumResonanceLevel() {
+    void towerTiersUseOneTwoThreeMaximumResonanceLevels() {
         UUID playerId = UUID.fromString("00000000-0000-0000-0000-000000000123");
         ResonanceTower focusT1 = resonanceTower(ResonanceTowers.FOCUS_CRYSTAL, playerId, 0);
         ResonanceTower focusT2 = resonanceTower(ResonanceTowers.FOCUS_PRISM, playerId, 0);
@@ -174,14 +174,14 @@ class ResonanceTowerCatalogTest {
         ResonanceService.refresh(withLinks(focusT2, nearbySpecies));
         ResonanceService.refresh(withLinks(focusT3, nearbySpecies));
 
-        assertEquals(3, focusT1.resonanceLevel());
-        assertEquals(3, focusT2.resonanceLevel());
+        assertEquals(1, focusT1.resonanceLevel());
+        assertEquals(2, focusT2.resonanceLevel());
         assertEquals(3, focusT3.resonanceLevel());
         assertEquals(5, focusT3.resonanceLinks());
     }
 
     @Test
-    void towerSaleRefreshCanLowerResonanceWithoutChangingNormalRetention() {
+    void deadTowersAreIgnoredByNewWaveSnapshot() {
         UUID playerId = UUID.fromString("00000000-0000-0000-0000-000000000123");
         ResonanceTower focus = resonanceTower(ResonanceTowers.FOCUS_CORE, playerId, 0);
         ResonanceTower wave = resonanceTower(ResonanceTowers.WAVE_CRYSTAL, playerId, 1, 0);
@@ -194,13 +194,8 @@ class ResonanceTowerCatalogTest {
         assertEquals(2, focus.resonanceLevel());
         assertEquals(3, focus.resonanceLinks());
 
-        towers.remove(bloom);
+        bloom.syncHealth(0.0);
         ResonanceService.refresh(towers);
-
-        assertEquals(2, focus.resonanceLevel());
-        assertEquals(3, focus.resonanceLinks());
-
-        ResonanceService.refreshAfterTowerSale(towers);
 
         assertEquals(1, focus.resonanceLevel());
         assertEquals(2, focus.resonanceLinks());

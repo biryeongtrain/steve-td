@@ -106,6 +106,134 @@ class EnderTowerAbsorptionTest {
     }
 
     @Test
+    void transferProgressCarriesAcrossRoundsAndCompletesExactlyOnce() {
+        applyAbsorptionDuration(400);
+        PlayerLane lane = lane();
+        EnderTower core = tower(EnderTowers.BASE_ENDER_TOWER, 0);
+        EnderTower source = tower(EnderTowers.T1_ENDERMITE_TOWER, 1);
+        lane.towers().add(core);
+        core.onWaveStarted(lane, 1);
+        lane.towers().add(source);
+
+        tick(core, lane, 200);
+
+        assertEquals(0.5, source.transferProgress(), 0.0001);
+        assertEquals(0.25, core.permanentDamageBonus(), 0.0001);
+        assertEquals(5.0, core.roundDamageBonus(), 0.0001);
+        assertEquals(0, core.absorbedEndCrystalCount());
+
+        lane.resetForRound();
+
+        assertEquals(0.5, source.transferProgress(), 0.0001);
+        assertEquals(0.25, core.permanentDamageBonus(), 0.0001);
+        assertEquals(0.0, core.roundDamageBonus(), 0.0001);
+        core.onWaveStarted(lane, 2);
+        tick(core, lane, 200);
+
+        assertEquals(0.5, core.permanentDamageBonus(), 0.0001);
+        assertEquals(1, core.absorbedEndCrystalCount());
+        assertEquals(1, core.roundCompletedTransferCount());
+        assertEquals(0.0, source.transferProgress(), 0.0001);
+        tick(core, lane, 400);
+        assertEquals(1, core.absorbedEndCrystalCount());
+        assertEquals(1, core.roundCompletedTransferCount());
+    }
+
+    @Test
+    void deathAndSaleResetFeederProgressAndCoreDeathResetsAllFeeders() {
+        applyAbsorptionDuration(4);
+        PlayerLane lane = lane();
+        EnderTower core = tower(EnderTowers.BASE_ENDER_TOWER, 0);
+        EnderTower killedSource = tower(EnderTowers.T1_ENDERMITE_TOWER, 1);
+        EnderTower soldSource = tower(EnderTowers.T1_SHULKER_TOWER, 2);
+        lane.towers().add(core);
+        core.onWaveStarted(lane, 1);
+        lane.towers().add(killedSource);
+        lane.towers().add(soldSource);
+        core.tick(lane);
+
+        assertEquals(0.25, killedSource.transferProgress(), 0.0001);
+        assertEquals(0.25, soldSource.transferProgress(), 0.0001);
+        assertTrue(lane.killTower(killedSource));
+        assertEquals(0.0, killedSource.transferProgress(), 0.0001);
+        assertTrue(lane.removeTower(soldSource));
+        assertEquals(0.0, soldSource.transferProgress(), 0.0001);
+
+        EnderTower activeSource = tower(EnderTowers.T1_ENDERMITE_TOWER, 3);
+        lane.towers().add(activeSource);
+        core.tick(lane);
+        assertEquals(0.25, activeSource.transferProgress(), 0.0001);
+        assertTrue(lane.killTower(core));
+        assertEquals(0.0, activeSource.transferProgress(), 0.0001);
+    }
+
+    @Test
+    void upgradeKeepsProgressAndUsesNewTierOnlyForTheRemainingShare() {
+        applyAbsorptionDuration(4);
+        PlayerLane lane = lane();
+        EnderTower core = tower(EnderTowers.BASE_ENDER_TOWER, 0);
+        EnderTower tierOne = tower(EnderTowers.T1_ENDERMITE_TOWER, 1);
+        lane.towers().add(core);
+        core.onWaveStarted(lane, 1);
+        lane.towers().add(tierOne);
+        tick(core, lane, 2);
+
+        EnderTower tierTwo = tower(EnderTowers.T2_ENDERMAN_TOWER, 1);
+        tierTwo.copyFrom(tierOne, 125);
+        tierOne.onRemoved(lane);
+        lane.towers().set(lane.towers().indexOf(tierOne), tierTwo);
+
+        assertEquals(0.5, tierTwo.transferProgress(), 0.0001);
+        assertTrue(tierTwo.runtimeDetailLines().stream().anyMatch(line -> line.contains("50.0%")));
+        tick(core, lane, 2);
+
+        assertEquals(0.625, core.permanentDamageBonus(), 0.0001);
+        assertEquals(2, core.absorbedEndCrystalCount());
+        assertEquals(1, core.roundCompletedTransferCount());
+    }
+
+    @Test
+    void permanentDamageStopsAtCapWhileCrystalStacksKeepGrowing() {
+        applyEnderAbilities(Map.of(
+                "absorptionDurationTicks", 1.0,
+                "permanentDamageRatio", 1.0,
+                "permanentDamageBonusCap", 60.0
+        ));
+        PlayerLane lane = lane();
+        EnderTower core = tower(EnderTowers.BASE_ENDER_TOWER, 0);
+        lane.towers().add(core);
+        core.onWaveStarted(lane, 1);
+        for (int index = 0; index < 4; index++) {
+            lane.towers().add(tower(EnderTowers.T3_END_CRYSTAL_TOWER, index + 1));
+        }
+
+        core.tick(lane);
+
+        assertEquals(60.0, core.permanentDamageBonus(), 0.0001);
+        assertEquals(12, core.absorbedEndCrystalCount());
+        assertEquals(4, core.roundCompletedTransferCount());
+    }
+
+    @Test
+    void shulkerTransferIgnoresFortitudeUntilFinalCoreHealth() {
+        applyAbsorptionDuration(1);
+        PlayerLane lane = lane();
+        EnderTower core = tower(EnderTowers.BASE_ENDER_TOWER, 0);
+        EnderTower shulker = tower(EnderTowers.T3_SHULKER_TOWER, 1);
+        core.syncEffectMaxHealth(core.effectBaseMaxHealth(), 0.30);
+        shulker.syncEffectMaxHealth(shulker.effectBaseMaxHealth(), 0.30);
+        lane.towers().add(core);
+        core.onWaveStarted(lane, 1);
+        lane.towers().add(shulker);
+
+        core.tick(lane);
+
+        assertEquals(10.0, core.permanentHealthBonus(), 0.0001);
+        assertEquals(310.0, core.effectBaseMaxHealth(), 0.0001);
+        assertEquals(403.0, core.currentMaxHealth(), 0.0001);
+    }
+
+    @Test
     void healthTransferredPastTheRoundCapHealsTheEnderCore() {
         applyEnderAbilities(Map.of(
                 "absorptionDurationTicks", 1.0,
@@ -188,8 +316,8 @@ class EnderTowerAbsorptionTest {
         assertEquals(400.0, dragon.effectBaseMaxHealth(), 0.0001);
         assertEquals(12.5, dragon.modifyAttackDamage(null, null, 5.0), 0.0001);
         assertEquals(5.0, dragon.adjustAttackRange(5.0), 0.0001);
-        assertEquals(0.5, dragon.splashRadius(), 0.0001);
-        assertEquals(19, dragon.adjustAttackInterval(20));
+        assertEquals(1.0, dragon.splashRadius(), 0.0001);
+        assertEquals(18, dragon.adjustAttackInterval(20));
         assertEquals(97.5, dragon.modifyIncomingDamage(null, null, 100.0), 0.0001);
         assertTrue(dragon.runtimeDetailLines().stream().anyMatch(line -> line.contains("누적 스택: 엔드 수정 20 / 셜커 20")));
         assertTrue(dragon.runtimeDetailLines().stream().anyMatch(line -> line.contains("생명력 흡수 2.0%")));
@@ -203,7 +331,7 @@ class EnderTowerAbsorptionTest {
         assertEquals(300.0, dragon.effectBaseMaxHealth(), 0.0001);
         assertEquals(10.0, dragon.modifyAttackDamage(null, null, 5.0), 0.0001);
         assertEquals(0, dragon.roundCompletedTransferCount());
-        assertEquals(19, dragon.adjustAttackInterval(20));
+        assertEquals(18, dragon.adjustAttackInterval(20));
     }
 
     @Test
@@ -284,6 +412,24 @@ class EnderTowerAbsorptionTest {
         assertEquals(EnderTowerState.EGG, tower.state());
         assertTrue(BlockDisplayVisual.matches(tower.visual()));
         assertEquals(200.0, tower.currentMaxHealth(), 0.0001);
+    }
+
+    @Test
+    void eggDetailsKeepPermanentGrowthStacksAndDamageCapVisible() {
+        applyAbsorptionDuration(1);
+        PlayerLane lane = lane();
+        EnderTower core = tower(EnderTowers.BASE_ENDER_TOWER, 0);
+        lane.towers().add(core);
+        core.onWaveStarted(lane, 1);
+        lane.towers().add(tower(EnderTowers.T1_ENDERMITE_TOWER, 1));
+        lane.towers().add(tower(EnderTowers.T1_SHULKER_TOWER, 2));
+        core.tick(lane);
+        core.resetForRound(null);
+
+        String details = String.join("\n", core.runtimeDetailLines());
+        assertTrue(details.contains("준비 중: 드래곤 알"));
+        assertTrue(details.contains("누적 스택: 엔드 수정 1 / 셜커 1"));
+        assertTrue(details.contains("영구 누적: 체력 +5.0, 공격력 +0.5 / +60.0"));
     }
 
     @Test

@@ -15,7 +15,6 @@ import kim.biryeong.semiontd.game.TowerUpgradeResult;
 import kim.biryeong.semiontd.job.JobContext;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.SemionJob;
-import kim.biryeong.semiontd.tower.resonance.ResonanceService;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import net.minecraft.core.BlockPos;
 
@@ -100,7 +99,6 @@ public final class ProductionTowerService {
         if (!laneContext.lane.removeTower(tower)) {
             return SaleResult.failure(TowerSellResult.NO_TOWER_AT_POSITION);
         }
-        ResonanceService.refreshLaneAfterTowerSale(laneContext.lane);
         laneContext.player.economy().addMineral(refund);
         return SaleResult.success(refund);
     }

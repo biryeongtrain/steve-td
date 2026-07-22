@@ -65,9 +65,11 @@ class ResonanceTowerTest {
     }
 
     @Test
-    void sameSpeciesDifferentOwnerAndOutOfRangeTowersDoNotContribute() {
+    void duplicateSpeciesDifferentOwnerAndOutOfRangeTowersDoNotAddLinks() {
         ResonanceTower focus = tower(ResonanceTowers.FOCUS_CRYSTAL, new GridPosition(0, 0, 0));
         ResonanceTower sameSpecies = tower(ResonanceTowers.FOCUS_CRYSTAL, new GridPosition(1, 0, 0));
+        ResonanceTower wave = tower(ResonanceTowers.WAVE_CRYSTAL, new GridPosition(-1, 0, 0));
+        ResonanceTower duplicateWave = tower(ResonanceTowers.WAVE_CRYSTAL, new GridPosition(0, 0, 1));
         ResonanceTower otherOwner = new ResonanceTower(
                 ResonanceTowers.WAVE_CRYSTAL,
                 UUID.fromString("00000000-0000-0000-0000-000000000002"),
@@ -78,14 +80,14 @@ class ResonanceTowerTest {
         );
         ResonanceTower outOfRange = tower(ResonanceTowers.FROST_CRYSTAL, new GridPosition(2, 0, 0));
 
-        ResonanceService.refresh(List.of(focus, sameSpecies, otherOwner, outOfRange));
+        ResonanceService.refresh(List.of(focus, sameSpecies, wave, duplicateWave, otherOwner, outOfRange));
 
-        assertEquals(0, focus.resonanceLevel());
-        assertEquals(0, focus.resonanceLinks());
+        assertEquals(1, focus.resonanceLevel());
+        assertEquals(1, focus.resonanceLinks());
     }
 
     @Test
-    void allTowerTiersCanReachLevelThree() {
+    void resonanceLevelIsCappedByTowerTier() {
         ResonanceTower focusT1 = tower(ResonanceTowers.FOCUS_CRYSTAL, new GridPosition(0, 0, 0));
         ResonanceTower focusT2 = tower(ResonanceTowers.FOCUS_PRISM, new GridPosition(0, 0, 0));
         ResonanceTower focusT3 = tower(ResonanceTowers.FOCUS_CORE, new GridPosition(0, 0, 0));
@@ -95,8 +97,8 @@ class ResonanceTowerTest {
         ResonanceService.refresh(concat(focusT2, links.subList(0, 5)));
         ResonanceService.refresh(concat(focusT3, links.subList(0, 5)));
 
-        assertEquals(3, focusT1.resonanceLevel());
-        assertEquals(3, focusT2.resonanceLevel());
+        assertEquals(1, focusT1.resonanceLevel());
+        assertEquals(2, focusT2.resonanceLevel());
         assertEquals(3, focusT3.resonanceLevel());
     }
 
@@ -106,16 +108,16 @@ class ResonanceTowerTest {
         ResonanceService.refresh(concat(focus, nearbyDifferentSpecies()));
 
         assertEquals(3, focus.resonanceLevel());
-        assertEquals(0.50, focus.auraAttackSpeedBonus(), 0.0001);
+        assertEquals(0.20, focus.auraAttackSpeedBonus(), 0.0001);
         assertEquals(180.0, focus.modifyAttackDamage(null, null, 100.0), 0.0001);
-        assertEquals(9, focus.adjustAttackInterval(20));
-        assertEquals(44, focus.adjustAttackInterval(100));
+        assertEquals(10, focus.adjustAttackInterval(20));
+        assertEquals(50, focus.adjustAttackInterval(100));
     }
 
     @Test
     void resonanceBonusesDifferByTree() {
         ResonanceTower wave = tower(ResonanceTowers.WAVE_CORE, new GridPosition(0, 0, 0));
-        ResonanceTower bloom = tower(ResonanceTowers.AMPLIFY_PRISM, new GridPosition(0, 0, 0));
+        ResonanceTower bloom = tower(ResonanceTowers.AMPLIFY_CORE, new GridPosition(0, 0, 0));
 
         ResonanceService.refresh(concat(wave, nearbyNonWaveSpecies()));
         ResonanceService.refresh(concat(bloom, nearbyDifferentSpecies()));
@@ -124,11 +126,11 @@ class ResonanceTowerTest {
         assertEquals(100.0, wave.modifyAttackDamage(null, null, 100.0), 0.0001);
         assertEquals(72, wave.adjustAttackInterval(100));
         assertEquals(3, bloom.resonanceLevel());
-        assertEquals(65.0, bloom.modifyIncomingDamage(null, null, 100.0), 0.0001);
+        assertEquals(60.0, bloom.modifyIncomingDamage(null, null, 100.0), 0.0001);
     }
 
     @Test
-    void resonanceStateDoesNotDowngradeAfterLinksDisappear() {
+    void newWaveSnapshotReplacesPreviousLinks() {
         ResonanceTower focus = tower(ResonanceTowers.FOCUS_CORE, new GridPosition(0, 0, 0));
         ResonanceService.refresh(concat(focus, nearbyDifferentSpecies()));
 
@@ -137,30 +139,32 @@ class ResonanceTowerTest {
 
         ResonanceService.refresh(List.of(focus));
 
-        assertEquals(3, focus.resonanceLevel());
-        assertEquals(6, focus.resonanceLinks());
+        assertEquals(0, focus.resonanceLevel());
+        assertEquals(0, focus.resonanceLinks());
     }
 
     @Test
-    void auraBonusDoesNotDowngradeAfterProviderDisappears() {
+    void newWaveSnapshotRemovesMissingProviderAura() {
         ResonanceTower recipient = tower(ResonanceTowers.FOCUS_CORE, new GridPosition(1, 0, 0));
         ResonanceTower bloom = tower(ResonanceTowers.AMPLIFY_CORE, new GridPosition(0, 0, 0));
-        ResonanceService.refresh(concat(bloom, nearbyDifferentSpecies()));
-        ResonanceService.refresh(List.of(recipient, bloom));
+        List<kim.biryeong.semiontd.tower.Tower> towers = concat(bloom, nearbyDifferentSpecies());
+        towers.add(recipient);
+        ResonanceService.refresh(towers);
 
         assertEquals(0.35, recipient.auraAttackSpeedBonus(), 0.0001);
 
         ResonanceService.refresh(List.of(recipient));
 
-        assertEquals(0.35, recipient.auraAttackSpeedBonus(), 0.0001);
+        assertEquals(0.0, recipient.auraAttackSpeedBonus(), 0.0001);
     }
 
     @Test
     void frostAuraGivesNearbyMoobloomsDamageBonusAgainstDebuffedTargets() {
         ResonanceTower recipient = tower(ResonanceTowers.FOCUS_CRYSTAL, new GridPosition(1, 0, 0));
         ResonanceTower frost = tower(ResonanceTowers.FROST_CORE, new GridPosition(0, 0, 0));
-        ResonanceService.refresh(concat(frost, nearbyNonFrostSpecies()));
-        ResonanceService.refresh(List.of(recipient, frost));
+        List<kim.biryeong.semiontd.tower.Tower> towers = concat(frost, nearbyNonFrostSpecies());
+        towers.add(recipient);
+        ResonanceService.refresh(towers);
 
         assertEquals(3, frost.resonanceLevel());
         assertEquals(1.00, recipient.auraDamageVsSlowedBonus(), 0.0001);
@@ -168,19 +172,18 @@ class ResonanceTowerTest {
 
         ResonanceService.refresh(List.of(recipient));
 
-        assertEquals(1.00, recipient.auraDamageVsSlowedBonus(), 0.0001);
+        assertEquals(0.0, recipient.auraDamageVsSlowedBonus(), 0.0001);
     }
 
     @Test
-    void upgradedResonanceTowerCopiesPermanentState() {
+    void upgradedResonanceTowerCopiesWaveSnapshot() {
         ResonanceTower previous = tower(ResonanceTowers.FOCUS_PRISM, new GridPosition(0, 0, 0));
         ResonanceService.refresh(concat(previous, nearbyDifferentSpecies()));
 
         ResonanceTower upgraded = tower(ResonanceTowers.FOCUS_CORE, new GridPosition(0, 0, 0));
         upgraded.copyFrom(previous, 180);
-        ResonanceService.refresh(List.of(upgraded));
 
-        assertEquals(3, upgraded.resonanceLevel());
+        assertEquals(2, upgraded.resonanceLevel());
         assertEquals(6, upgraded.resonanceLinks());
         assertEquals(previous.auraDamageVsSlowedBonus(), upgraded.auraDamageVsSlowedBonus(), 0.0001);
     }
