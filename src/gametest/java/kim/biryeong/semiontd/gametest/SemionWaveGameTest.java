@@ -561,7 +561,7 @@ public final class SemionWaveGameTest {
         int coreEntityId = egg.entityId().orElseThrow();
         egg.onWaveStarted(lane, 1);
 
-        for (int tick = 0; tick < 200; tick++) {
+        for (int tick = 0; tick < 100; tick++) {
             egg.tick(lane);
         }
         EndTower dragon = egg;
@@ -585,7 +585,7 @@ public final class SemionWaveGameTest {
             throw new AssertionError("An active End transfer must not spawn a visible End Crystal entity.");
         }
 
-        for (int tick = 0; tick < 399; tick++) {
+        for (int tick = 0; tick < 99; tick++) {
             dragon.tick(lane);
         }
 

@@ -62,21 +62,17 @@ public final class ResonanceTower extends EntityBackedTower {
         return auraDamageVsSlowedBonus;
     }
 
-    void updateResonanceState(int level, int links, boolean allowDecrease) {
-        int normalizedLevel = Math.max(0, level);
-        int normalizedLinks = Math.max(0, links);
-        resonanceLevel = allowDecrease ? normalizedLevel : Math.max(resonanceLevel, normalizedLevel);
-        resonanceLinks = allowDecrease ? normalizedLinks : Math.max(resonanceLinks, normalizedLinks);
+    void updateResonanceState(int level, int links) {
+        resonanceLevel = Math.max(0, level);
+        resonanceLinks = Math.max(0, links);
     }
 
-    void updateAuraAttackSpeedBonus(double bonus, boolean allowDecrease) {
-        double normalizedBonus = Math.max(0.0, bonus);
-        auraAttackSpeedBonus = allowDecrease ? normalizedBonus : Math.max(auraAttackSpeedBonus, normalizedBonus);
+    void updateAuraAttackSpeedBonus(double bonus) {
+        auraAttackSpeedBonus = Math.max(0.0, bonus);
     }
 
-    void updateAuraDamageVsSlowedBonus(double bonus, boolean allowDecrease) {
-        double normalizedBonus = Math.max(0.0, bonus);
-        auraDamageVsSlowedBonus = allowDecrease ? normalizedBonus : Math.max(auraDamageVsSlowedBonus, normalizedBonus);
+    void updateAuraDamageVsSlowedBonus(double bonus) {
+        auraDamageVsSlowedBonus = Math.max(0.0, bonus);
     }
 
     @Override
@@ -95,18 +91,6 @@ public final class ResonanceTower extends EntityBackedTower {
             auraAttackSpeedBonus = previousResonanceTower.auraAttackSpeedBonus;
             auraDamageVsSlowedBonus = previousResonanceTower.auraDamageVsSlowedBonus;
         }
-    }
-
-    @Override
-    public void onPlaced(PlayerLane lane) {
-        super.onPlaced(lane);
-        ResonanceService.refreshLane(lane);
-    }
-
-    @Override
-    public void onRemoved(PlayerLane lane) {
-        super.onRemoved(lane);
-        ResonanceService.refreshLane(lane);
     }
 
     @Override

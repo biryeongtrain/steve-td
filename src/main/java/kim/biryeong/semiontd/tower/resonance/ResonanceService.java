@@ -13,48 +13,34 @@ public final class ResonanceService {
     private ResonanceService() {
     }
 
-    public static void refreshLane(PlayerLane lane) {
+    public static void captureWaveStart(PlayerLane lane) {
         if (lane == null) {
             return;
         }
         refresh(lane.towers());
     }
 
-    public static void refreshLaneAfterTowerSale(PlayerLane lane) {
-        if (lane == null) {
-            return;
-        }
-        refreshAfterTowerSale(lane.towers());
-    }
-
     public static void refresh(Collection<Tower> towers) {
-        refresh(towers, false);
-    }
-
-    static void refreshAfterTowerSale(Collection<Tower> towers) {
-        refresh(towers, true);
-    }
-
-    private static void refresh(Collection<Tower> towers, boolean allowDecrease) {
         if (towers == null || towers.isEmpty()) {
             return;
         }
         List<ResonanceTower> resonanceTowers = towers.stream()
                 .filter(ResonanceTower.class::isInstance)
                 .map(ResonanceTower.class::cast)
+                .filter(tower -> tower.health() > 0.0)
                 .toList();
         for (ResonanceTower tower : resonanceTowers) {
-            applyState(tower, resonanceTowers, allowDecrease);
+            applyState(tower, resonanceTowers);
         }
         for (ResonanceTower tower : resonanceTowers) {
-            applyAura(tower, resonanceTowers, allowDecrease);
+            applyAura(tower, resonanceTowers);
         }
     }
 
-    private static void applyState(ResonanceTower tower, List<ResonanceTower> towers, boolean allowDecrease) {
+    private static void applyState(ResonanceTower tower, List<ResonanceTower> towers) {
         int maxLinks = Math.max(0, abilityInt(tower, "maxLinksPerTower"));
         if (maxLinks <= 0) {
-            tower.updateResonanceState(0, 0, allowDecrease);
+            tower.updateResonanceState(0, 0);
             return;
         }
 
@@ -66,14 +52,16 @@ public final class ResonanceService {
                 .sorted(Comparator
                         .comparingInt((ResonanceTower candidate) -> distance(tower.position(), candidate.position()))
                         .thenComparing(candidate -> candidate.type().id()))
+                .map(candidate -> candidate.type().id())
+                .distinct()
                 .limit(maxLinks)
                 .count();
 
         int maxLevel = Math.max(0, abilityInt(tower, "maxResonanceLevel"));
-        tower.updateResonanceState(resonanceLevel(tower, linkedTowers, maxLevel), linkedTowers, allowDecrease);
+        tower.updateResonanceState(resonanceLevel(tower, linkedTowers, maxLevel), linkedTowers);
     }
 
-    private static void applyAura(ResonanceTower tower, List<ResonanceTower> towers, boolean allowDecrease) {
+    private static void applyAura(ResonanceTower tower, List<ResonanceTower> towers) {
         double attackSpeedAuraBonus = towers.stream()
                 .filter(candidate -> candidate != tower)
                 .filter(candidate -> candidate.aspect() == ResonanceAspect.AMPLIFY)
@@ -92,8 +80,8 @@ public final class ResonanceService {
                 .mapToDouble(ResonanceService::frostAuraDamageVsSlowedBonus)
                 .max()
                 .orElse(0.0);
-        tower.updateAuraAttackSpeedBonus(attackSpeedAuraBonus, allowDecrease);
-        tower.updateAuraDamageVsSlowedBonus(damageVsSlowedAuraBonus, allowDecrease);
+        tower.updateAuraAttackSpeedBonus(attackSpeedAuraBonus);
+        tower.updateAuraDamageVsSlowedBonus(damageVsSlowedAuraBonus);
     }
 
     private static double bloomAuraAttackSpeedBonus(ResonanceTower tower) {

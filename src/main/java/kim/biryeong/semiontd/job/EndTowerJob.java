@@ -10,7 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 public final class EndTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "end_towers");
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "ender_towers");
 
     public EndTowerJob() {
         super(
@@ -28,7 +28,7 @@ public final class EndTowerJob extends SemionJob {
                 SemionText.mini("<gray>아군 타워에게서 힘을 전달받아 엔더 드래곤을 성장시키는 빌더입니다.</gray>"),
                 Component.empty(),
                 SemionText.mini("<gray>아군 엔더 타워에게서 10초에 걸쳐 힘을 전달받습니다.</gray>"),
-                SemionText.mini("<gray>체력·공격력은 이번 라운드에 각각 최대 50%까지 증가하며, 대상 스탯의 5%는 영구 누적됩니다.</gray>"),
+                SemionText.mini("<gray>각 공급 타워 체력·공격력의 50%를 이번 라운드에 얻으며, 대상 스탯의 5%는 영구 누적됩니다.</gray>"),
                 SemionText.mini("<gray>전달을 마친 타워는 사망하고 다음 라운드에 부활합니다.</gray>"),
                 Component.empty(),
                 SemionText.mini("<gray>엔드 수정 계열은 엔더 드래곤의 공격력, 광역 공격, 공격 속도, 사거리를 강화합니다.</gray>"),

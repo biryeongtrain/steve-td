@@ -1086,6 +1086,8 @@ public record TowerBalanceConfig(
                 Map.entry("roundDamageRatio", 0.50),
                 Map.entry("permanentHealthRatio", 0.05),
                 Map.entry("permanentDamageRatio", 0.05),
+                Map.entry("dragonAttackRangeBonus", 2.0),
+                Map.entry("dragonDamageBonus", 0.25),
                 Map.entry("endCrystalAttackIntervalEvery", 30.0),
                 Map.entry("attackIntervalReductionPerStep", 1.0),
                 Map.entry("endCrystalAttackRangeEvery", 50.0),
@@ -1145,7 +1147,7 @@ public record TowerBalanceConfig(
         LinkedHashMap<String, Double> values = new LinkedHashMap<>();
         values.put("linkRange", 1.0);
         values.put("maxLinksPerTower", 6.0);
-        values.put("maxResonanceLevel", 3.0);
+        values.put("maxResonanceLevel", (double) tier);
         values.put("level1RequiredLinks", 1.0);
         values.put("level2RequiredLinks", 3.0);
         values.put("level3RequiredLinks", 5.0);

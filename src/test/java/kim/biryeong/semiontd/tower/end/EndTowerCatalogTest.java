@@ -150,8 +150,8 @@ class EndTowerCatalogTest {
         assertTrue(plainDescription.contains("이상이면"));
         assertTrue(plainDescription.contains("아기 드래곤 크기는 최대 체력 100당 0.2씩 증가합니다."));
         assertTrue(plainDescription.contains("10초"));
-        assertTrue(plainDescription.contains("전달 중 타워 당 체력을 1 재생합니다."));
-        assertTrue(description.contains("<red>체력</red>을 <green>1 재생</green>"));
+        assertTrue(plainDescription.contains("전달 중 타워 당 체력을 초당 +1 재생합니다."));
+        assertTrue(description.contains("<red>체력</red>을 초당 <green>+1 재생</green>"));
         assertTrue(plainDescription.contains("타워 공격력의 50%를 임시 획득"));
         assertTrue(plainDescription.contains("공격 범위: 엔드 수정 15 / 60 / 150 / 300스택에서 +1"));
         assertTrue(plainDescription.contains("엔드 수정 30스택마다 -1틱"));

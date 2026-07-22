@@ -100,7 +100,7 @@ class EndTowerAbsorptionTest {
     }
 
     @Test
-    void alreadyTransferredStatsRemainWhenAChannelStopsEarlyButTheTowerIsNotCounted() {
+    void interruptedTransferRollsBackStatsAndDoesNotCountTower() {
         applyAbsorptionDuration(4);
         PlayerLane lane = lane();
         EndTower dragon = tower(EndTowers.BASE_END_TOWER, 0);
@@ -115,8 +115,8 @@ class EndTowerAbsorptionTest {
         tick(dragon, lane, 1);
 
         assertEquals(0, dragon.absorbedEndCrystalCount());
-        assertEquals(2.5, dragon.roundDamageBonus(), 0.0001);
-        assertEquals(0.25, dragon.permanentDamageBonus(), 0.0001);
+        assertEquals(0.0, dragon.roundDamageBonus(), 0.0001);
+        assertEquals(0.0, dragon.permanentDamageBonus(), 0.0001);
         assertEquals(0.0, endCrystalLine.transferProgress(), 0.0001);
     }
 

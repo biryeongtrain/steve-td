@@ -2064,7 +2064,7 @@
     "t3_shulker_tower": {
       "damageReduction": 0.5
     },
-    "end_global": {
+    "ender_global": {
       "dragonEvolutionMaxHealth": 2000.0,
       "absorptionDurationTicks": 200.0,
       "absorptionHealAmount": 50.0,

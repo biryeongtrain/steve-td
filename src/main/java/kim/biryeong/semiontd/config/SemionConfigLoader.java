@@ -494,8 +494,8 @@ public final class SemionConfigLoader {
         }
         if (object.has("abilities") && object.get("abilities").isJsonObject()) {
             JsonObject abilities = object.getAsJsonObject("abilities");
-            if (abilities.has("end_global") && abilities.get("end_global").isJsonObject()) {
-                JsonObject endAbilities = abilities.getAsJsonObject("end_global");
+            if (abilities.has(EndTower.CONFIG_ID) && abilities.get(EndTower.CONFIG_ID).isJsonObject()) {
+                JsonObject endAbilities = abilities.getAsJsonObject(EndTower.CONFIG_ID);
                 changed |= migrateLegacyAbilityKey(
                         endAbilities,
                         "shulkerSplashEvery",
@@ -661,8 +661,8 @@ public final class SemionConfigLoader {
         }
         JsonObject abilities = object.getAsJsonObject("abilities");
         boolean changed = false;
-        if (abilities.has("end_global") && abilities.get("end_global").isJsonObject()) {
-            JsonObject endAbilities = abilities.getAsJsonObject("end_global");
+        if (abilities.has(EndTower.CONFIG_ID) && abilities.get(EndTower.CONFIG_ID).isJsonObject()) {
+            JsonObject endAbilities = abilities.getAsJsonObject(EndTower.CONFIG_ID);
             if (endAbilities.remove("hatchDelayTicks") != null) {
                 changed = true;
             }

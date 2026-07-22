@@ -288,6 +288,12 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 return;
             }
             MoobloomEntity visual = visuals.getFirst();
+            if (!assertClose(context, 0.75, towerEntity.getScale(), "Moobloom tower should use a shorter server collision box.")) {
+                return;
+            }
+            if (!assertClose(context, 1.35, towerEntity.getBbHeight(), "Moobloom tower collision height should match its visual height.")) {
+                return;
+            }
             if (!assertEquals(context, "dandelion", visual.getEntityData().get(MoobloomAccessor.semiontd$dataVariant()), "Moobloom visual should carry the tower variant for the Polymer patch.")) {
                 return;
             }
@@ -303,7 +309,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             if (!assertClose(context, towerEntity.getZ(), visual.getZ(), "Moobloom visual Z should stay on the tower hitbox anchor.")) {
                 return;
             }
-            if (!assertTrue(context, visual.isNoAi() && visual.isInvulnerable(), "Moobloom visual should be passive cosmetic state only.")) {
+            if (!assertTrue(context, visual.isNoAi() && visual.isInvulnerable() && visual.noPhysics, "Moobloom visual should be passive cosmetic state only.")) {
                 return;
             }
             towerEntity.discard();
@@ -8766,11 +8772,12 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         addResonanceTower(lane, playerId, ResonanceTowers.AMPLIFY_CRYSTAL, focusPos.offset(0, 0, 1));
         addResonanceTower(lane, playerId, ResonanceTowers.WAVE_PRISM, focusPos.offset(0, 0, -1));
         addResonanceTower(lane, playerId, ResonanceTowers.FROST_PRISM, focusPos.offset(1, 0, 1));
+        lane.markWaveStarted(1);
         if (!assertTrue(context, lane.towers().get(0) instanceof ResonanceTower, "Placed focus crystal should use ResonanceTower runtime.")) {
             return;
         }
         ResonanceTower focus = (ResonanceTower) lane.towerAt(GridPosition.from(focusPos));
-        if (!assertEquals(context, 3, focus.resonanceLevel(), "T1 focus should reach resonance level 3 with five nearby different species.")) {
+        if (!assertEquals(context, 1, focus.resonanceLevel(), "T1 focus should cap at resonance level 1.")) {
             return;
         }
         if (!assertEquals(context, 5, focus.resonanceLinks(), "Focus should count five nearby different species within one tile.")) {
@@ -8780,14 +8787,26 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         focus = (ResonanceTower) lane.towerAt(GridPosition.from(focusPos));
-        if (!assertEquals(context, 3, focus.resonanceLevel(), "T2 focus should retain resonance level 3 after upgrading.")) {
+        if (!assertEquals(context, 1, focus.resonanceLevel(), "An in-wave upgrade should retain the captured resonance level.")) {
             return;
         }
         if (!assertEquals(context, TowerUpgradeResult.SUCCESS, ProductionTowerService.upgradeTower(game, playerId, focusPos, ResonanceTowers.FOCUS_CORE.id()), "Focus prism should upgrade into T3 focus core.")) {
             return;
         }
         focus = (ResonanceTower) lane.towerAt(GridPosition.from(focusPos));
-        if (!assertEquals(context, 3, focus.resonanceLevel(), "T3 focus should retain resonance level 3 after upgrading.")) {
+        if (!assertEquals(context, 1, focus.resonanceLevel(), "A second in-wave upgrade should retain the captured resonance level.")) {
+            return;
+        }
+        for (Tower tower : List.copyOf(lane.towers())) {
+            if (tower instanceof ResonanceTower && tower != focus) {
+                lane.killTower(tower);
+            }
+        }
+        if (!assertEquals(context, 5, focus.resonanceLinks(), "Links captured at wave start should survive nearby tower deaths.")) {
+            return;
+        }
+        lane.markWaveStarted(2);
+        if (!assertEquals(context, 0, focus.resonanceLinks(), "The next wave start should replace the previous link snapshot.")) {
             return;
         }
         context.succeed();
@@ -8848,7 +8867,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 100.0,
                 List.of(SummonRole.RUSH)
         );
-        if (!assertClose(context, 140.0, focus.modifyAttackDamage(null, target, 100.0), "Frost aura should require an active frost debuff.")) {
+        if (!assertClose(context, 100.0, focus.modifyAttackDamage(null, target, 100.0), "Frost aura should require an active frost debuff.")) {
             return;
         }
 
@@ -8860,7 +8879,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertClose(context, 0.40, target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION), "T3 frost should reduce attack speed.")) {
             return;
         }
-        if (!assertClose(context, 240.0, focus.modifyAttackDamage(null, target, 100.0), "Frost aura should make nearby mooblooms deal bonus damage to debuffed targets.")) {
+        if (!assertClose(context, 200.0, focus.modifyAttackDamage(null, target, 100.0), "Frost aura should make nearby mooblooms deal bonus damage to debuffed targets.")) {
             return;
         }
         context.succeed();
@@ -10325,7 +10344,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertEquals(context, SemionAnimationState.WALK, entity.animationState(), "Vanilla Ender Dragon should retain the tower walk state.")) {
             return;
         }
-        if (!assertClose(context, 5.0, tower.adjustAttackRange(tower.type().range()), "Ender Dragon base attack range should be 5 blocks.")) {
+        if (!assertClose(context, 7.0, tower.adjustAttackRange(tower.type().range()), "Ender Dragon attack range should gain 2 blocks after evolution.")) {
             return;
         }
         context.succeed();

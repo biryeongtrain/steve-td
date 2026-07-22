@@ -162,19 +162,19 @@ public final class EndTowers {
     static {
         List<String> dragonDescription = List.of(
                 "<gray>알로 소환되며, 라운드 시작 시 <dark_purple>아기 드래곤</dark_purple>으로 변합니다.</gray>",
-                "<gray><red>최대 체력 {ability.end_global.dragonEvolutionMaxHealth:integer}</red> 이상이면 <dark_purple>엔더 드래곤</dark_purple>으로 진화합니다.</gray>",
+                "<gray><red>최대 체력 {ability.ender_global.dragonEvolutionMaxHealth:integer}</red> 이상이면 <dark_purple>엔더 드래곤</dark_purple>으로 진화합니다.</gray>",
                 "<gray><dark_purple>아기 드래곤</dark_purple> 크기는 <red>최대 체력 100</red>당 0.2씩 증가합니다.</gray>",
-                "<gray>힘 전달 {ability.end_global.absorptionDurationTicks:seconds} 후 타워 <dark_red>사망</dark_red>, <red>체력 {ability.end_global.absorptionHealAmount:integer}</red> 회복합니다.</gray>",
-                "<gray>전달 중 타워 당 <red>체력</red>을 초당 <green>+{ability.end_global.transferHealingPerTower:integer} 재생</green>합니다.</gray>",
-                "<gray><dark_red>공격력</dark_red>: 타워 공격력의 <dark_red>{ability.end_global.roundDamageRatio:percent}</dark_red>를 임시 획득, <dark_red>{ability.end_global.permanentDamageRatio:percent}</dark_red> 영구 누적</gray>",
-                "<gray><red>체력</red>: 타워 체력의 <red>{ability.end_global.roundHealthRatio:percent}</red>를 임시 획득, <red>{ability.end_global.permanentHealthRatio:percent}</red> 영구 누적</gray>",
-                "<gray><yellow>공격 범위</yellow>: 엔드 수정 <yellow>{ability.end_global.endCrystalSplashThreshold1:integer} / {ability.end_global.endCrystalSplashThreshold2:integer} / {ability.end_global.endCrystalSplashThreshold3:integer} / {ability.end_global.endCrystalSplashThreshold4:integer}</yellow>스택에서 <yellow>+1</yellow></gray>",
-                "<gray><yellow>공격 속도</yellow>: 엔드 수정 <yellow>{ability.end_global.endCrystalAttackIntervalEvery:integer}</yellow>스택마다 <yellow>-{ability.end_global.attackIntervalReductionPerStep:integer}틱</yellow></gray>",
-                "<gray><yellow>사거리</yellow>: 엔드 수정 <yellow>{ability.end_global.endCrystalAttackRangeEvery:integer}</yellow>스택마다 <yellow>+{ability.end_global.attackRangePerStep:blocks}</yellow></gray>",
-                "<gray><dark_red>생명력 흡수</dark_red>: 셜커 <dark_red>{ability.end_global.shulkerLifeStealEvery:integer}</dark_red>스택마다 <dark_red>+{ability.end_global.lifeStealPerStep:percent}</dark_red></gray>",
-                "<gray><blue>받는 피해 감소</blue>: 셜커 <blue>{ability.end_global.shulkerReductionEvery:integer}</blue>스택마다 <blue>+{ability.end_global.damageReductionPerStep:percent}</blue></gray>",
-                "<gray><green>재생</green>: 셜커 <green>{ability.end_global.shulkerRegenerationEvery:integer}</green>스택마다 초당 <green>+{ability.end_global.regenerationPerStep:integer}</green></gray>",
-                "<gray><dark_purple>엔더 드래곤</dark_purple> 진화 시 <dark_red>최종 피해</dark_red>: <dark_red>+{ability.end_global.dragonFinalDamageBonus:percent}</dark_red> / <light_purple>저항</light_purple>: <light_purple>+{ability.end_global.dragonIncomeDebuffResistance:percent}</light_purple></gray>"
+                "<gray>힘 전달 {ability.ender_global.absorptionDurationTicks:seconds} 후 타워 <dark_red>사망</dark_red>, <red>체력 {ability.ender_global.absorptionHealAmount:integer}</red> 회복합니다.</gray>",
+                "<gray>전달 중 타워 당 <red>체력</red>을 초당 <green>+{ability.ender_global.transferHealingPerTower:integer} 재생</green>합니다.</gray>",
+                "<gray><dark_red>공격력</dark_red>: 타워 공격력의 <dark_red>{ability.ender_global.roundDamageRatio:percent}</dark_red>를 임시 획득, <dark_red>{ability.ender_global.permanentDamageRatio:percent}</dark_red> 영구 누적</gray>",
+                "<gray><red>체력</red>: 타워 체력의 <red>{ability.ender_global.roundHealthRatio:percent}</red>를 임시 획득, <red>{ability.ender_global.permanentHealthRatio:percent}</red> 영구 누적</gray>",
+                "<gray><yellow>공격 범위</yellow>: 엔드 수정 <yellow>{ability.ender_global.endCrystalSplashThreshold1:integer} / {ability.ender_global.endCrystalSplashThreshold2:integer} / {ability.ender_global.endCrystalSplashThreshold3:integer} / {ability.ender_global.endCrystalSplashThreshold4:integer}</yellow>스택에서 <yellow>+1</yellow></gray>",
+                "<gray><yellow>공격 속도</yellow>: 엔드 수정 <yellow>{ability.ender_global.endCrystalAttackIntervalEvery:integer}</yellow>스택마다 <yellow>-{ability.ender_global.attackIntervalReductionPerStep:integer}틱</yellow></gray>",
+                "<gray><yellow>사거리</yellow>: 엔드 수정 <yellow>{ability.ender_global.endCrystalAttackRangeEvery:integer}</yellow>스택마다 <yellow>+{ability.ender_global.attackRangePerStep:blocks}</yellow></gray>",
+                "<gray><dark_red>생명력 흡수</dark_red>: 셜커 <dark_red>{ability.ender_global.shulkerLifeStealEvery:integer}</dark_red>스택마다 <dark_red>+{ability.ender_global.lifeStealPerStep:percent}</dark_red></gray>",
+                "<gray><blue>받는 피해 감소</blue>: 셜커 <blue>{ability.ender_global.shulkerReductionEvery:integer}</blue>스택마다 <blue>+{ability.ender_global.damageReductionPerStep:percent}</blue></gray>",
+                "<gray><green>재생</green>: 셜커 <green>{ability.ender_global.shulkerRegenerationEvery:integer}</green>스택마다 초당 <green>+{ability.ender_global.regenerationPerStep:integer}</green></gray>",
+                "<gray><dark_purple>엔더 드래곤</dark_purple> 진화 시 <dark_red>최종 피해</dark_red>: <dark_red>+{ability.ender_global.dragonFinalDamageBonus:percent}</dark_red> / <light_purple>저항</light_purple>: <light_purple>+{ability.ender_global.dragonIncomeDebuffResistance:percent}</light_purple></gray>"
         );
         TowerDescriptionRegistry.registerTemplate(BASE_END_TOWER, dragonDescription);
         TowerDescriptionRegistry.registerTemplate(T1_ENDERMITE_TOWER, List.of(

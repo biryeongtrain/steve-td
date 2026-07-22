@@ -137,6 +137,9 @@ public final class SemionCosmeticItems {
             define("hats/uniques/white_duck_snaphat", "White Duck Snap Hat", ChatFormatting.AQUA),
             define("hats/uniques/winter_hat", "Winter Hat", ChatFormatting.AQUA),
             define("hats/uniques/leiheng_hat", "뇌횡 모자", ChatFormatting.AQUA),
+            define("hats/uniques/melody_hat", "마이멜로디 모자", ChatFormatting.AQUA),
+            define("hats/uniques/kuromi_hat", "쿠루미 모자", ChatFormatting.AQUA),
+            define("cosmetics/leiheng_blade", "뇌횡 칼", ChatFormatting.AQUA, EquipmentSlot.OFFHAND),
             define("cosmetics/rabbit_body", "토끼 슬링백", ChatFormatting.AQUA, EquipmentSlot.OFFHAND)
     );
 

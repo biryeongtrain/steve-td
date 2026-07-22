@@ -68,6 +68,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     private static final double TARGET_SEARCH_VERTICAL_PADDING = 3.0;
     private static final double FINAL_DEFENSE_RETURN_SPEED_MULTIPLIER = 1.25;
     private static final double END_CRYSTAL_COLLISION_SCALE = 0.5;
+    private static final double MOOBLOOM_COLLISION_SCALE = 0.75;
     private static final double MOOBLOOM_VISUAL_POSITION_EPSILON = 1.0E-4;
     private static final float END_CORE_HITBOX_WIDTH = 1.0F;
     private static final float END_CORE_HITBOX_HEIGHT = 1.0F;
@@ -946,6 +947,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
             resetMoobloomVisualSyncState();
             moobloomVisualEntity.setNoAi(true);
             moobloomVisualEntity.setNoGravity(true);
+            moobloomVisualEntity.noPhysics = true;
             moobloomVisualEntity.setSilent(true);
             moobloomVisualEntity.setInvulnerable(true);
             moobloomVisualEntity.setPersistenceRequired();
@@ -1096,6 +1098,8 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         double scale = visual == null ? EntityVisual.DEFAULT_SCALE : visual.scale();
         if (blockbenchModelId == null && polymerEntityType == EntityType.END_CRYSTAL) {
             scale = END_CRYSTAL_COLLISION_SCALE;
+        } else if (usesMoobloomOverlayVisual()) {
+            scale = MOOBLOOM_COLLISION_SCALE;
         }
         var scaleAttribute = getAttribute(Attributes.SCALE);
         scaleAttribute.setBaseValue(scale);

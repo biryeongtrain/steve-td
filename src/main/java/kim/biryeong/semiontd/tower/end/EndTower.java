@@ -32,15 +32,15 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
 
 public final class EndTower extends EntityBackedTower {
-    public static final String CONFIG_ID = "end_global";
+    public static final String CONFIG_ID = "ender_global";
     private static final double TRANSFER_PARTICLE_SOURCE_HEIGHT = 1.25;
     private static final double TRANSFER_PARTICLE_TARGET_HEIGHT = 3.0;
     private static final TowerDataKey<EndTowerState> STATE = TowerDataKey.of(
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "end_tower_state"),
+            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "ender_tower_state"),
             EndTowerState.class
     );
     private static final TowerDataKey<Double> TRANSFER_PROGRESS = TowerDataKey.of(
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "end_transfer_progress"),
+            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "ender_transfer_progress"),
             Double.class
     );
 
@@ -104,8 +104,9 @@ public final class EndTower extends EntityBackedTower {
         }
         regenerationTicks = 0;
         transferHealingTicks = 0;
-        clearTransferProgress();
-        absorptionProgress.clear();
+        if (rollbackIncompleteTransfers()) {
+            refreshAbsorbedStats(lane);
+        }
         completedTransferSources.clear();
         if (isEgg()) {
             switchToPhantom(lane);
@@ -119,8 +120,7 @@ public final class EndTower extends EntityBackedTower {
         waveActive = false;
         regenerationTicks = 0;
         transferHealingTicks = 0;
-        clearTransferProgress();
-        absorptionProgress.clear();
+        rollbackIncompleteTransfers();
         removeData(TRANSFER_PROGRESS);
         resetRoundTransferBonuses(lane);
         if (isCoreTower()) {
@@ -139,14 +139,14 @@ public final class EndTower extends EntityBackedTower {
 
     @Override
     public void onRemoved(PlayerLane lane) {
-        clearTransferProgress();
+        rollbackIncompleteTransfers();
         removeData(TRANSFER_PROGRESS);
         super.onRemoved(lane);
     }
 
     @Override
     public void onDeath(PlayerLane lane) {
-        clearTransferProgress();
+        rollbackIncompleteTransfers();
         removeData(TRANSFER_PROGRESS);
         super.onDeath(lane);
     }
@@ -203,7 +203,7 @@ public final class EndTower extends EntityBackedTower {
     }
 
     public double previewHatchedAttackRange() {
-        return type().range() + attackRangeBonus();
+        return type().range() + attackRangeBonus() + dragonAttackRangeBonus();
     }
 
     @Override
@@ -211,7 +211,7 @@ public final class EndTower extends EntityBackedTower {
         if (isEgg()) {
             return 0.0;
         }
-        return baseRange + attackRangeBonus();
+        return baseRange + attackRangeBonus() + dragonAttackRangeBonus();
     }
 
     @Override
@@ -229,7 +229,8 @@ public final class EndTower extends EntityBackedTower {
         if (!isHatched() || type().damage() <= 0.0) {
             return damageAmount;
         }
-        return damageAmount * (1.0 + (permanentDamageBonus + roundDamageBonus) / type().damage());
+        double absorbedDamage = damageAmount * (1.0 + (permanentDamageBonus + roundDamageBonus) / type().damage());
+        return isDragon() ? absorbedDamage * (1.0 + Math.max(0.0, global("dragonDamageBonus"))) : absorbedDamage;
     }
 
     @Override
@@ -294,7 +295,9 @@ public final class EndTower extends EntityBackedTower {
                 type().attackIntervalTicks() - previewHatchedAttackIntervalTicks()
         );
         int maximumAttackIntervalReductionTicks = maximumAttackIntervalReduction();
-        double maximumAttackRange = type().range() + Math.max(0.0, global("attackRangeCap"));
+        double maximumAttackRange = type().range()
+                + Math.max(0.0, global("attackRangeCap"))
+                + (isDragon() ? Math.max(0.0, global("dragonAttackRangeBonus")) : 0.0);
         double maximumSplashRadius = Math.max(0.0, global("splashRadiusCap"));
         double maximumLifeSteal = Math.max(0.0, global("lifeStealCap"));
         double maximumDamageReduction = Math.max(0.0, global("damageReductionCap"));
@@ -416,8 +419,9 @@ public final class EndTower extends EntityBackedTower {
         for (Map.Entry<Tower, AbsorptionProgress> entry : List.copyOf(absorptionProgress.entrySet())) {
             Tower source = entry.getKey();
             if (!lane.towers().contains(source) || source.health() <= 0.0) {
-                absorptionProgress.remove(source);
+                AbsorptionProgress progress = absorptionProgress.remove(source);
                 source.removeData(TRANSFER_PROGRESS);
+                rollbackTransferProgress(progress);
                 continue;
             }
             transferringTowerCount++;
@@ -436,10 +440,13 @@ public final class EndTower extends EntityBackedTower {
         for (Tower source : completed) {
             AbsorptionProgress progress = absorptionProgress.remove(source);
             source.removeData(TRANSFER_PROGRESS);
-            if (progress == null
-                    || !lane.towers().contains(source)
+            if (progress == null) {
+                continue;
+            }
+            if (!lane.towers().contains(source)
                     || source.health() <= 0.0
                     || !lane.killTower(source)) {
+                rollbackTransferProgress(progress);
                 continue;
             }
             completedTransferSources.add(source);
@@ -527,10 +534,30 @@ public final class EndTower extends EntityBackedTower {
         return Math.clamp(getDataOrDefault(TRANSFER_PROGRESS, 0.0), 0.0, 1.0);
     }
 
-    private void clearTransferProgress() {
-        for (Tower source : absorptionProgress.keySet()) {
+    private boolean rollbackIncompleteTransfers() {
+        boolean changed = false;
+        for (Map.Entry<Tower, AbsorptionProgress> entry : absorptionProgress.entrySet()) {
+            Tower source = entry.getKey();
             source.removeData(TRANSFER_PROGRESS);
+            changed |= rollbackTransferProgress(entry.getValue());
         }
+        absorptionProgress.clear();
+        return changed;
+    }
+
+    private boolean rollbackTransferProgress(AbsorptionProgress progress) {
+        if (progress == null || progress.appliedRatio <= 0.0) {
+            return false;
+        }
+        roundHealthContribution = Math.max(0.0,
+                roundHealthContribution - progress.roundHealthBonus * progress.appliedRatio);
+        roundDamageContribution = Math.max(0.0,
+                roundDamageContribution - progress.roundDamageBonus * progress.appliedRatio);
+        permanentHealthBonus = Math.max(0.0,
+                permanentHealthBonus - progress.permanentHealthBonus * progress.appliedRatio);
+        permanentDamageBonus = Math.max(0.0,
+                permanentDamageBonus - progress.permanentDamageBonus * progress.appliedRatio);
+        return true;
     }
 
     private void applyTransferProgress(AbsorptionProgress progress) {
@@ -674,6 +701,10 @@ public final class EndTower extends EntityBackedTower {
         return Math.min(Math.max(0.0, global("attackRangeCap")), value);
     }
 
+    private double dragonAttackRangeBonus() {
+        return isDragon() ? Math.max(0.0, global("dragonAttackRangeBonus")) : 0.0;
+    }
+
     private int roundAttackIntervalReduction() {
         int every = Math.max(1, globalInt("roundAbsorptionAttackIntervalEvery"));
         int reductionPerStep = Math.max(0, globalInt("roundAbsorptionAttackIntervalReductionTicks"));
@@ -802,5 +833,4 @@ public final class EndTower extends EntityBackedTower {
             this.permanentDamageBonus = permanentDamageBonus;
         }
     }
-
 }

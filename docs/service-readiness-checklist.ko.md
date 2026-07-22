@@ -7,7 +7,7 @@
 
 - 현재 기준은 Minecraft `1.21.8`, Fabric Loader `0.19.2`, Java `21` target이다.
 - 단위 테스트와 264개 Fabric GameTest를 배포 전 필수 검사로 사용한다.
-- 치장 시스템은 머리와 왼손 슬롯을 지원한다. 120개 내장 Polymer 아이템 중 119개는 머리, `rabbit_body`는 왼손 치장이다.
+- 치장 시스템은 머리와 왼손 슬롯을 지원한다. 123개 내장 Polymer 아이템 중 121개는 머리, `leiheng_blade`와 `rabbit_body`는 왼손 치장이다.
 - 구매 리소스인 `src/main/resources/assets/semion-td/`는 Git에서 제외한다. 운영 JAR을 빌드할 작업 환경에는 별도 원본이 필요하다.
 - 2026-05-11 아래 기록은 과거 QA 증거다. 현재 배포 승인에는 새 JAR로 테스트와 실클라이언트 리소스팩·치장 표시 확인을 다시 남긴다.
 
