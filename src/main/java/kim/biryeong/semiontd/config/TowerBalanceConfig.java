@@ -12,6 +12,8 @@ import kim.biryeong.semiontd.tower.illager.IllagerTowers;
 import kim.biryeong.semiontd.tower.legion.LegionTowers;
 import kim.biryeong.semiontd.tower.nether.NetherTower;
 import kim.biryeong.semiontd.tower.nether.NetherTowers;
+import kim.biryeong.semiontd.tower.ocean.OceanTower;
+import kim.biryeong.semiontd.tower.ocean.OceanTowers;
 import kim.biryeong.semiontd.tower.resonance.ResonanceAspect;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
@@ -139,6 +141,7 @@ public record TowerBalanceConfig(
         addTower(towers, IllagerTowers.T3_ILLUSIONER_HIGH);
         addNetherTowers(towers);
         addEnderTowers(towers);
+        addOceanTowers(towers);
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
         putUpgrade(upgradeCosts, VillagerTowers.T1_SPLASH_TOWER, "villager_splash_t2", 110);
@@ -204,6 +207,7 @@ public record TowerBalanceConfig(
         putUpgrade(upgradeCosts, IllagerTowers.T2_WITCH_HIGH, IllagerTowers.T3_ILLUSIONER_HIGH.id(), 280);
         putNetherUpgrades(upgradeCosts);
         putEnderUpgrades(upgradeCosts);
+        putOceanUpgrades(upgradeCosts);
 
         LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>();
         putAbilities(abilities, IllagerRaidStates.RAID_CONFIG_ID, Map.of(
@@ -754,6 +758,7 @@ public record TowerBalanceConfig(
         putAbilities(abilities, ResonanceTowers.AMPLIFY_CORE.id(), resonanceAbilities(3, ResonanceAspect.AMPLIFY));
         putNetherAbilities(abilities);
         putEnderAbilities(abilities);
+        putOceanAbilities(abilities);
 
         return new TowerBalanceConfig(towers, upgradeCosts, abilities, IllusionCloneQueueConfig.defaultConfig(), VillagerAdvConfig.defaultConfig());
     }
@@ -905,6 +910,24 @@ public record TowerBalanceConfig(
         addTower(towers, EnderTowers.T3_SHULKER_TOWER);
     }
 
+    private static void addOceanTowers(Map<String, TowerStats> towers) {
+        addTower(towers, OceanTowers.T1_WATER);
+        addTower(towers, OceanTowers.T2_SPRING_WATER);
+        addTower(towers, OceanTowers.T3_CURRENT);
+        addTower(towers, OceanTowers.T1_PUFFERFISH);
+        addTower(towers, OceanTowers.T2_GUARDIAN);
+        addTower(towers, OceanTowers.T3_ELDER_GUARDIAN);
+        addTower(towers, OceanTowers.T1_TROPICAL_FISH);
+        addTower(towers, OceanTowers.T2_LARGE_TROPICAL_FISH);
+        addTower(towers, OceanTowers.T3_GIANT_TROPICAL_FISH);
+        addTower(towers, OceanTowers.T1_SALMON);
+        addTower(towers, OceanTowers.T2_LARGE_SALMON);
+        addTower(towers, OceanTowers.T3_GIANT_SALMON);
+        addTower(towers, OceanTowers.T1_COD);
+        addTower(towers, OceanTowers.T2_LARGE_COD);
+        addTower(towers, OceanTowers.T3_GIANT_COD);
+    }
+
     private static void putNetherUpgrades(Map<String, Long> upgrades) {
         putUpgrade(upgrades, NetherTowers.T1_STRIDER, NetherTowers.T2_PIGLIN.id(), 100);
         putUpgrade(upgrades, NetherTowers.T2_PIGLIN, NetherTowers.T3_PIGLIN_BRUTE.id(), 180);
@@ -921,6 +944,19 @@ public record TowerBalanceConfig(
         putUpgrade(upgrades, EnderTowers.T2_ENDERMAN_TOWER, EnderTowers.T3_END_CRYSTAL_TOWER.id(), 200);
         putUpgrade(upgrades, EnderTowers.T1_SHULKER_TOWER, EnderTowers.T2_SHULKER_TOWER.id(), 125);
         putUpgrade(upgrades, EnderTowers.T2_SHULKER_TOWER, EnderTowers.T3_SHULKER_TOWER.id(), 200);
+    }
+
+    private static void putOceanUpgrades(Map<String, Long> upgrades) {
+        putUpgrade(upgrades, OceanTowers.T1_WATER, OceanTowers.T2_SPRING_WATER.id(), 60);
+        putUpgrade(upgrades, OceanTowers.T2_SPRING_WATER, OceanTowers.T3_CURRENT.id(), 150);
+        putUpgrade(upgrades, OceanTowers.T1_PUFFERFISH, OceanTowers.T2_GUARDIAN.id(), 130);
+        putUpgrade(upgrades, OceanTowers.T2_GUARDIAN, OceanTowers.T3_ELDER_GUARDIAN.id(), 210);
+        putUpgrade(upgrades, OceanTowers.T1_TROPICAL_FISH, OceanTowers.T2_LARGE_TROPICAL_FISH.id(), 110);
+        putUpgrade(upgrades, OceanTowers.T2_LARGE_TROPICAL_FISH, OceanTowers.T3_GIANT_TROPICAL_FISH.id(), 190);
+        putUpgrade(upgrades, OceanTowers.T1_SALMON, OceanTowers.T2_LARGE_SALMON.id(), 100);
+        putUpgrade(upgrades, OceanTowers.T2_LARGE_SALMON, OceanTowers.T3_GIANT_SALMON.id(), 200);
+        putUpgrade(upgrades, OceanTowers.T1_COD, OceanTowers.T2_LARGE_COD.id(), 100);
+        putUpgrade(upgrades, OceanTowers.T2_LARGE_COD, OceanTowers.T3_GIANT_COD.id(), 210);
     }
 
     private static void putNetherAbilities(Map<String, Map<String, Double>> abilities) {
@@ -1094,6 +1130,104 @@ public record TowerBalanceConfig(
                 Map.entry("maxAttackIntervalReductionTicks", 15.0),
                 Map.entry("minimumAttackIntervalTicks", 5.0)
         ));
+    }
+
+    private static void putOceanAbilities(Map<String, Map<String, Double>> abilities) {
+        putAbilities(abilities, OceanTower.CONFIG_ID, Map.of(
+                "initialWater", 50.0,
+                "waterScale", 100.0,
+                "incomeCoefficientMultiplier", 2.0,
+                "dehydratedDamageMultiplier", 0.30,
+                "dehydratedAttackSpeedReduction", 0.60,
+                "dehydrationMaxHealthDamagePerSecond", 0.02
+        ));
+
+        putAbilities(abilities, OceanTowers.T1_WATER.id(), oceanSupplyAbilities(20.0, 1.0));
+        putAbilities(abilities, OceanTowers.T2_SPRING_WATER.id(), oceanSupplyAbilities(30.0, 1.75));
+        putAbilities(abilities, OceanTowers.T3_CURRENT.id(), oceanSupplyAbilities(40.0, 2.5));
+
+        putAbilities(abilities, OceanTowers.T1_PUFFERFISH.id(), oceanTankAbilities(0.50, 2.0, 0.05, 1.0, 12.0));
+        putAbilities(abilities, OceanTowers.T2_GUARDIAN.id(), oceanTankAbilities(0.75, 3.0, 0.10, 1.0, 25.0));
+        putAbilities(abilities, OceanTowers.T3_ELDER_GUARDIAN.id(), oceanTankAbilities(1.00, 5.0, 0.15, 2.0, 45.0));
+
+        putAbilities(abilities, OceanTowers.T1_TROPICAL_FISH.id(), oceanSupportAbilities(8.0, 0.08, 0.10, 100.0));
+        putAbilities(abilities, OceanTowers.T2_LARGE_TROPICAL_FISH.id(), oceanSupportAbilities(14.0, 0.12, 0.15, 90.0));
+        putAbilities(abilities, OceanTowers.T3_GIANT_TROPICAL_FISH.id(), oceanSupportAbilities(20.0, 0.18, 0.22, 80.0));
+
+        putAbilities(abilities, OceanTowers.T1_SALMON.id(), oceanSplashAbilities(0.50, 1.0, 1.0, 1.0, 0.50));
+        putAbilities(abilities, OceanTowers.T2_LARGE_SALMON.id(), oceanSplashAbilities(0.75, 1.0, 2.0, 1.5, 0.65));
+        putAbilities(abilities, OceanTowers.T3_GIANT_SALMON.id(), oceanSplashAbilities(1.00, 1.0, 3.0, 2.0, 0.80));
+
+        putAbilities(abilities, OceanTowers.T1_COD.id(), oceanHunterAbilities(0.50, 2.0));
+        putAbilities(abilities, OceanTowers.T2_LARGE_COD.id(), oceanHunterAbilities(0.75, 3.0));
+        putAbilities(abilities, OceanTowers.T3_GIANT_COD.id(), oceanHunterAbilities(1.00, 3.0));
+    }
+
+    private static Map<String, Double> oceanSupplyAbilities(double waveStartWater, double waterPerSecond) {
+        return Map.of(
+                "supplyRadius", 2.0,
+                "waveStartWater", waveStartWater,
+                "waterPerSupply", waterPerSecond,
+                "supplyIntervalTicks", 20.0
+        );
+    }
+
+    private static Map<String, Double> oceanTankAbilities(
+            double coefficient,
+            double attackCost,
+            double damageReduction,
+            double transferCost,
+            double transferCap
+    ) {
+        LinkedHashMap<String, Double> values = oceanAttackAbilities(coefficient, attackCost);
+        values.put("damageReduction", damageReduction);
+        values.put("transferWaterCost", transferCost);
+        values.put("transferRadius", 2.0);
+        values.put("transferCap", transferCap);
+        return values;
+    }
+
+    private static Map<String, Double> oceanSupportAbilities(
+            double waterCost,
+            double damageBonus,
+            double attackSpeedBonus,
+            double intervalTicks
+    ) {
+        LinkedHashMap<String, Double> values = new LinkedHashMap<>();
+        values.put("abilityWaterCost", waterCost);
+        values.put("supportRadius", 2.0);
+        values.put("damageBonus", damageBonus);
+        values.put("attackSpeedBonus", attackSpeedBonus);
+        values.put("buffDurationTicks", 100.0);
+        values.put("supportIntervalTicks", intervalTicks);
+        return values;
+    }
+
+    private static Map<String, Double> oceanSplashAbilities(
+            double coefficient,
+            double attackCost,
+            double splashCost,
+            double splashRadius,
+            double splashRatio
+    ) {
+        LinkedHashMap<String, Double> values = oceanAttackAbilities(coefficient, attackCost);
+        values.put("splashWaterCost", splashCost);
+        values.put("splashRadius", splashRadius);
+        values.put("splashDamageRatio", splashRatio);
+        return values;
+    }
+
+    private static Map<String, Double> oceanHunterAbilities(double coefficient, double attackCost) {
+        LinkedHashMap<String, Double> values = oceanAttackAbilities(coefficient, attackCost);
+        values.put("incomeWaterCost", 1.0);
+        return values;
+    }
+
+    private static LinkedHashMap<String, Double> oceanAttackAbilities(double coefficient, double attackCost) {
+        LinkedHashMap<String, Double> values = new LinkedHashMap<>();
+        values.put("waterDamageCoefficient", coefficient);
+        values.put("attackWaterCost", attackCost);
+        return values;
     }
 
     private static void putAbilities(Map<String, Map<String, Double>> abilities, String towerId, Map<String, Double> values) {

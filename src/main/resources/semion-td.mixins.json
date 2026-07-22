@@ -7,6 +7,7 @@
     "AbstractContainerMenuMixin",
     "BezierInterpolatorMixin",
     "ArmorSlotMixin",
+    "FlowingFluidMixin",
     "PlayerMixin",
     "PlayerListMixin",
     "accessor.AxolotlAccessor",

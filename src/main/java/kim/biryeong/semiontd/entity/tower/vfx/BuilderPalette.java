@@ -15,6 +15,7 @@ public enum BuilderPalette {
     RESONANCE(0xEC6FA8, 0x65D6E8, "minecraft:cherry_leaves", "minecraft:electric_spark"),
     ILLAGER(0x78909C, 0xC3423F, "minecraft:ash", "minecraft:damage_indicator"),
     NETHER(0xF57C00, 0x8AAA45, "minecraft:flame", "minecraft:smoke"),
+    OCEAN(0x2196F3, 0x80DEEA, "minecraft:nautilus", "minecraft:splash"),
     DEFAULT(0xE0E0E0, 0xFFFFFF, "minecraft:end_rod", "minecraft:crit");
 
     private final DustParticleOptions rayParticle;

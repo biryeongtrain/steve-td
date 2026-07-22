@@ -112,6 +112,7 @@ import kim.biryeong.semiontd.job.JobContext;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.LegionTowerJob;
 import kim.biryeong.semiontd.job.NetherTowerJob;
+import kim.biryeong.semiontd.job.OceanTowerJob;
 import kim.biryeong.semiontd.job.ResonanceTowerJob;
 import kim.biryeong.semiontd.job.SemionJob;
 import kim.biryeong.semiontd.job.UndeadTowerJob;
@@ -187,6 +188,9 @@ import kim.biryeong.semiontd.tower.legion.LegionTowerCatalogs;
 import kim.biryeong.semiontd.tower.legion.LegionTowers;
 import kim.biryeong.semiontd.tower.nether.NetherTower;
 import kim.biryeong.semiontd.tower.nether.NetherTowers;
+import kim.biryeong.semiontd.tower.ocean.OceanTower;
+import kim.biryeong.semiontd.tower.ocean.OceanTowers;
+import kim.biryeong.semiontd.tower.ocean.OceanWaterTower;
 import kim.biryeong.semiontd.tower.resonance.ResonanceService;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTower;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
@@ -226,6 +230,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
@@ -2584,6 +2589,154 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         boolean includesFoxStarter = ProductionTowerService.availableTowers(game, playerId).stream()
                 .anyMatch(entry -> AnimalTowers.T1_FOX_TOWER.id().equals(entry.type().id()));
         if (!assertTrue(context, includesFoxStarter, "Animal tower build UI should include the T1 fox tower starter.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void oceanWaterTowerPlacesSuppliesAndRestoresWaterloggedLight(GameTestHelper context) {
+        UUID playerId = stableUuid("ocean-water-runtime-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, OceanTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        List<ProductionTowerCatalog.CatalogEntry> starters = ProductionTowerService.availableTowers(game, playerId);
+        long oceanStarterCount = starters.stream().filter(entry -> OceanTowers.isOceanTower(entry.type())).count();
+        if (!assertEquals(context, 5L, oceanStarterCount, "Ocean job should expose all five tier-one paths.")) {
+            return;
+        }
+
+        BlockPos towerPos = towerPlacementPos(lane);
+        if (!assertEquals(
+                context,
+                TowerPlacementResult.SUCCESS,
+                ProductionTowerService.placeTower(game, playerId, towerPos, OceanTowers.T1_WATER.id()),
+                "Ocean water tower should place on an open lane floor."
+        )) {
+            return;
+        }
+        if (!(lane.towers().getFirst() instanceof OceanWaterTower waterTower)) {
+            context.fail(Component.literal("Placed ocean supply tower should use the water runtime."));
+            return;
+        }
+
+        BlockPos waterPos = OceanWaterTower.waterBlockPos(waterTower.position());
+        if (!assertEquals(
+                context,
+                OceanWaterTower.waterMarker(),
+                lane.arenaWorld().getBlockState(waterPos),
+                "Water tower should occupy its tower cell with a waterlogged light block."
+        )) {
+            return;
+        }
+        if (!assertTrue(
+                context,
+                lane.arenaWorld().getFluidState(waterPos).isSource(),
+                "Water tower marker should expose a real source-water fluid state."
+        )) {
+            return;
+        }
+
+        GridPosition combatPosition = new GridPosition(
+                waterTower.position().x() + 1,
+                waterTower.position().y(),
+                waterTower.position().z()
+        );
+        OceanTower codTower = new OceanTower(
+                TowerBalanceRuntime.resolve(OceanTowers.T1_COD),
+                playerId,
+                TeamId.RED,
+                1,
+                combatPosition
+        );
+        lane.addTower(codTower);
+        lane.markWaveStarted(1);
+        if (!assertEquals(context, 70.0, codTower.water(), "Wave start should add twenty stored water within two blocks.")) {
+            return;
+        }
+
+        codTower.syncPosition(new GridPosition(
+                waterTower.position().x() + 20,
+                waterTower.position().y(),
+                waterTower.position().z()
+        ));
+        OceanTower lateNearbyTower = new OceanTower(
+                TowerBalanceRuntime.resolve(OceanTowers.T1_SALMON),
+                playerId,
+                TeamId.RED,
+                1,
+                combatPosition
+        );
+        lane.addTower(lateNearbyTower);
+        lane.tick(context.getLevel().getServer());
+        if (!assertEquals(context, 71.0, codTower.water(), "Captured towers should keep receiving water after moving out of range.")) {
+            return;
+        }
+        if (!assertEquals(context, 50.0, lateNearbyTower.water(), "Towers entering range after the first wave starts must not receive water.")) {
+            return;
+        }
+
+        BlockPos freeWaterPos = waterPos.offset(4, 0, 0);
+        lane.arenaWorld().setBlock(freeWaterPos.below(), Blocks.STONE.defaultBlockState(), 3);
+        lane.arenaWorld().setBlock(freeWaterPos.east().below(), Blocks.STONE.defaultBlockState(), 3);
+        lane.arenaWorld().setBlock(freeWaterPos, Blocks.WATER.defaultBlockState(), 3);
+        lane.arenaWorld().setBlock(freeWaterPos.east(), Blocks.AIR.defaultBlockState(), 3);
+        lane.arenaWorld().scheduleTick(freeWaterPos, Fluids.WATER, 1);
+
+        context.runAfterDelay(10, () -> {
+            boolean contained = List.of(waterPos.north(), waterPos.south(), waterPos.east(), waterPos.west()).stream()
+                    .allMatch(neighbor -> lane.arenaWorld().getBlockState(neighbor).isAir());
+            if (!assertTrue(context, contained, "Water tower should remain contained to one block after fluid ticks.")) {
+                return;
+            }
+            if (!assertTrue(
+                    context,
+                    lane.arenaWorld().getBlockState(freeWaterPos.east()).isAir(),
+                    "Water fluid ticks should not spread inside Fantasy runtime worlds."
+            )) {
+                return;
+            }
+            if (!assertEquals(
+                    context,
+                    TowerSellResult.SUCCESS,
+                    ProductionTowerService.sellTower(game, playerId, waterTower.position()).result(),
+                    "Water tower should remain a normal sellable tower."
+            )) {
+                return;
+            }
+            if (!assertTrue(context, lane.arenaWorld().getBlockState(waterPos).isAir(), "Selling should restore the original air block.")) {
+                return;
+            }
+            context.succeed();
+        });
+    }
+
+    @GameTest
+    public void oceanWaterTowerRejectsBlockedCellBeforeChargingDiamond(GameTestHelper context) {
+        UUID playerId = stableUuid("ocean-water-blocked-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, OceanTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
+        BlockPos occupiedWaterCell = towerPos.above();
+        lane.arenaWorld().setBlock(occupiedWaterCell, Blocks.STONE.defaultBlockState(), 3);
+        long diamondBefore = game.players().get(playerId).economy().diamond();
+
+        if (!assertEquals(
+                context,
+                TowerPlacementResult.OCCUPIED,
+                ProductionTowerService.placeTower(game, playerId, towerPos, OceanTowers.T1_WATER.id()),
+                "Water tower should reject a non-air tower cell."
+        )) {
+            return;
+        }
+        if (!assertEquals(
+                context,
+                diamondBefore,
+                game.players().get(playerId).economy().diamond(),
+                "Rejected water placement must not spend diamonds."
+        )) {
+            return;
+        }
+        if (!assertTrue(context, lane.towers().isEmpty(), "Rejected water placement should not add a runtime tower.")) {
             return;
         }
         context.succeed();
@@ -8487,7 +8640,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertPresent(context, JobRegistry.find(EnderTowerJob.ID), "Built-in reload should register the ender tower job.")) {
             return;
         }
-        if (!assertEquals(context, 38L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose villager, villager ADV, undead, animal, warlock, legion, resonance, illager, nether, and ender starter families.")) {
+        if (!assertPresent(context, JobRegistry.find(OceanTowerJob.ID), "Built-in reload should register the ocean tower job.")) {
+            return;
+        }
+        if (!assertEquals(context, 43L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose every production starter family including the five ocean paths.")) {
             return;
         }
         context.succeed();
