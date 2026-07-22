@@ -38,6 +38,8 @@ import kim.biryeong.semiontd.tower.ProductionTowerService;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerPlacementPositions;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
+import kim.biryeong.semiontd.tower.end.EndTower;
+import kim.biryeong.semiontd.tower.end.EndTowerState;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import kim.biryeong.semiontd.trait.SemionTrait;
 import kim.biryeong.semiontd.trait.TraitLoadout;
@@ -570,16 +572,29 @@ public final class SemionDialogService {
         Optional<SemionTowerEntity> towerEntity = knownTowerEntity == null
                 ? towerEntity(game, tower)
                 : Optional.of(knownTowerEntity);
-        double currentDamage = towerEntity
-                .map(entity -> entity.applyTraitOutgoingDamage(null, entity.attackDamageAmount(null)))
-                .orElseGet(() -> tower.modifyAttackDamage(null, null, tower.type().damage()));
-        double currentRange = towerEntity
+        EndTower previewEndTower = tower instanceof EndTower endTower
+                && endTower.state() == EndTowerState.EGG
+                ? endTower
+                : null;
+        Optional<SemionTowerEntity> combatStatsEntity = previewEndTower != null
+                ? Optional.empty()
+                : towerEntity;
+        double currentDamage = previewEndTower != null
+                ? previewEndTower.previewHatchedAttackDamage()
+                : combatStatsEntity
+                        .map(entity -> entity.applyTraitOutgoingDamage(null, entity.attackDamageAmount(null)))
+                        .orElseGet(() -> tower.modifyAttackDamage(null, null, tower.type().damage()));
+        double currentRange = combatStatsEntity
                 .map(SemionTowerEntity::attackRange)
                 .orElse(tower.type().range());
-        int currentAttackIntervalTicks = towerEntity
-                .map(SemionTowerEntity::attackIntervalTicks)
-                .orElseGet(() -> tower.adjustAttackInterval(tower.type().attackIntervalTicks()));
-        double currentMaxHealth = tower.currentMaxHealth();
+        int currentAttackIntervalTicks = previewEndTower != null
+                ? previewEndTower.previewHatchedAttackIntervalTicks()
+                : combatStatsEntity
+                        .map(SemionTowerEntity::attackIntervalTicks)
+                        .orElseGet(() -> tower.adjustAttackInterval(tower.type().attackIntervalTicks()));
+        double currentMaxHealth = previewEndTower != null
+                ? previewEndTower.previewHatchedMaxHealth()
+                : tower.currentMaxHealth();
 
         StringBuilder body = new StringBuilder();
         body.append("<gradient:#facc15:#22d3ee><bold>타워 상세 정보</bold></gradient>\n");

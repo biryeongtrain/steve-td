@@ -1,4 +1,4 @@
-package kim.biryeong.semiontd.tower.ender;
+package kim.biryeong.semiontd.tower.end;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,43 +31,43 @@ class EnderDragonScaleTest {
 
     @Test
     void oneTowerIsAnEggDuringPreparationAndSwitchesToPhantomAtWaveStart() {
-        EnderTower tower = tower();
+        EndTower tower = tower();
 
-        assertEquals(EnderTowerState.EGG, tower.state());
+        assertEquals(EndTowerState.EGG, tower.state());
         assertTrue(BlockDisplayVisual.matches(tower.visual()));
 
         tower.onWaveStarted(null, 1);
 
-        assertEquals(EnderTowerState.PHANTOM, tower.state());
-        assertEquals(EnderTowers.BASE_ENDER_TOWER, tower.type());
+        assertEquals(EndTowerState.PHANTOM, tower.state());
+        assertEquals(EndTowers.BASE_END_TOWER, tower.type());
         assertEquals("minecraft:phantom", tower.visual().entityTypeId());
         assertTrue(tower.visual().blockbenchModel().isEmpty());
     }
 
     @Test
     void phantomScaleStartsAtOneAndGrowsByPointTwoPerHundredMaxHealth() {
-        assertEquals(1.2, EnderTowers.phantomScaleForMaxHealth(100.0), 0.0001);
-        assertEquals(1.3, EnderTowers.phantomScaleForMaxHealth(150.0), 0.0001);
-        assertEquals(1.4, EnderTowers.phantomScaleForMaxHealth(200.0), 0.0001);
-        assertEquals(1.6, EnderTowers.phantomScaleForMaxHealth(300.0), 0.0001);
-        assertEquals(5.0, EnderTowers.phantomScaleForMaxHealth(5000.0), 0.0001);
+        assertEquals(1.2, EndTowers.phantomScaleForMaxHealth(100.0), 0.0001);
+        assertEquals(1.3, EndTowers.phantomScaleForMaxHealth(150.0), 0.0001);
+        assertEquals(1.4, EndTowers.phantomScaleForMaxHealth(200.0), 0.0001);
+        assertEquals(1.6, EndTowers.phantomScaleForMaxHealth(300.0), 0.0001);
+        assertEquals(5.0, EndTowers.phantomScaleForMaxHealth(5000.0), 0.0001);
     }
 
     @Test
     void phantomBecomesVanillaDragonWhenMaxHealthReachesThreshold() {
-        double baseMaxHealth = EnderTowers.BASE_ENDER_TOWER.maxHealth();
+        double baseMaxHealth = EndTowers.BASE_END_TOWER.maxHealth();
         applyStateConfig(baseMaxHealth + 0.01);
 
-        EnderTower tower = tower();
+        EndTower tower = tower();
         tower.onWaveStarted(null, 1);
         tower.tick(null);
 
-        assertEquals(EnderTowerState.PHANTOM, tower.state());
+        assertEquals(EndTowerState.PHANTOM, tower.state());
 
         applyStateConfig(baseMaxHealth);
         tower.tick(null);
 
-        assertEquals(EnderTowerState.DRAGON, tower.state());
+        assertEquals(EndTowerState.DRAGON, tower.state());
         assertEquals(
                 "minecraft:ender_dragon",
                 tower.visual().entityTypeId()
@@ -78,14 +78,14 @@ class EnderDragonScaleTest {
 
     @Test
     void finalAttackLineTowerUsesEndCrystalVisual() {
-        assertEquals("minecraft:enderman", EnderTowers.T2_ENDERMAN_TOWER.visual().entityTypeId());
-        assertEquals("minecraft:end_crystal", EnderTowers.T3_END_CRYSTAL_TOWER.visual().entityTypeId());
+        assertEquals("minecraft:enderman", EndTowers.T2_ENDERMAN_TOWER.visual().entityTypeId());
+        assertEquals("minecraft:end_crystal", EndTowers.T3_END_CRYSTAL_TOWER.visual().entityTypeId());
     }
 
-    private static EnderTower tower() {
-        return new EnderTower(
-                EnderTowers.BASE_ENDER_TOWER,
-                UUID.nameUUIDFromBytes("ender-state-owner".getBytes()),
+    private static EndTower tower() {
+        return new EndTower(
+                EndTowers.BASE_END_TOWER,
+                UUID.nameUUIDFromBytes("end-state-owner".getBytes()),
                 TeamId.RED,
                 1,
                 new GridPosition(0, 64, 0)
@@ -95,9 +95,9 @@ class EnderDragonScaleTest {
     private static void applyStateConfig(double evolutionMaxHealth) {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
         Map<String, Map<String, Double>> abilities = new LinkedHashMap<>(defaults.abilities());
-        Map<String, Double> ender = new LinkedHashMap<>(abilities.get(EnderTower.CONFIG_ID));
-        ender.put("dragonEvolutionMaxHealth", evolutionMaxHealth);
-        abilities.put(EnderTower.CONFIG_ID, ender);
+        Map<String, Double> end = new LinkedHashMap<>(abilities.get(EndTower.CONFIG_ID));
+        end.put("dragonEvolutionMaxHealth", evolutionMaxHealth);
+        abilities.put(EndTower.CONFIG_ID, end);
         TowerBalanceRuntime.apply(new TowerBalanceConfig(defaults.towers(), defaults.upgradeCosts(), abilities));
     }
 }

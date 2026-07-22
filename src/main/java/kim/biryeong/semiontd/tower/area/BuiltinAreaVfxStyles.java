@@ -5,13 +5,15 @@ import kim.biryeong.semiontd.api.area.AreaVfxOutput;
 import kim.biryeong.semiontd.api.area.AreaVfxParticle;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import net.minecraft.core.particles.DustParticleOptions;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
 
 public final class BuiltinAreaVfxStyles {
     private static final AreaVfxParticle BUFF_PARTICLE = particle(0x66D975, 1.35F, "happy_villager");
     private static final AreaVfxParticle DEBUFF_PARTICLE = particle(0xC04478, 1.5F, "witch");
-    private static final AreaVfxParticle DRAGON_BREATH_PARTICLE = new AreaVfxParticle(ParticleTypes.DRAGON_BREATH, ResourceLocation.fromNamespaceAndPath("minecraft", "dragon_breath"));
+    private static final AreaVfxParticle DRAGON_MAGENTA_PARTICLE = particle(0xFF2BD6, 1.4F, "witch");
+    private static final AreaVfxParticle DRAGON_VIOLET_PARTICLE = particle(0xB52CFF, 1.2F, "dragon_breath");
+    private static final AreaVfxParticle DRAGON_PURPLE_PARTICLE = particle(0x6F2DBD, 1.0F, "dragon_breath");
+    private static final int DRAGON_WAVE_RAYS = 12;
 
     private BuiltinAreaVfxStyles() {
     }
@@ -24,7 +26,7 @@ public final class BuiltinAreaVfxStyles {
         registry.register(AreaVfxStyles.CORPSE_EXPLOSION, BuiltinAreaVfxStyles::explosion);
         registry.register(AreaVfxStyles.BUFF, BuiltinAreaVfxStyles::buff);
         registry.register(AreaVfxStyles.DEBUFF, BuiltinAreaVfxStyles::debuff);
-        registry.register(AreaVfxStyles.DRAGON_BREATH, BuiltinAreaVfxStyles::dragonBreath);
+        registry.register(AreaVfxStyles.DRAGON_BREATH, BuiltinAreaVfxStyles::dragonSplash);
     }
 
     private static void splash(AreaVfxContext context, AreaVfxOutput output) {
@@ -80,16 +82,45 @@ public final class BuiltinAreaVfxStyles {
         }
     }
 
-    private static void dragonBreath(AreaVfxContext context, AreaVfxOutput output) {
-        var source = context.source().add(0.0, 1.0, 0.0);
-        var center = context.center().add(0.0, 0.5, 0.0);
-        var control = source.lerp(center, 0.5).add(0.0, 0.3, 0.0);
-        output.trail(DRAGON_BREATH_PARTICLE, source, control, center, 32, true);
-        output.sphere(DRAGON_BREATH_PARTICLE, center, Math.max(0.35, context.radius() * 0.45), Math.max(20, outlinePoints(context.radius())), false);
-        for (var hit : context.sampledAppliedPositions()) {
-            var hitCenter = hit.add(0.0, 0.5, 0.0);
-            var hitControl = center.lerp(hitCenter, 0.5).add(0.0, 0.25, 0.0);
-            output.trail(DRAGON_BREATH_PARTICLE, center, hitControl, hitCenter, 12, false);
+    private static void dragonSplash(AreaVfxContext context, AreaVfxOutput output) {
+        var center = context.center().add(0.0, 0.08, 0.0);
+        int outline = outlinePoints(context.radius());
+
+        output.sphere(
+                DRAGON_MAGENTA_PARTICLE,
+                center.add(0.0, 0.22, 0.0),
+                Math.max(0.22, Math.min(0.5, context.radius() * 0.16)),
+                16,
+                true
+        );
+        output.circle(
+                DRAGON_MAGENTA_PARTICLE,
+                center.add(0.0, 0.16, 0.0),
+                context.radius() * 0.28,
+                Math.max(14, outline / 3),
+                false
+        );
+        output.circle(
+                DRAGON_VIOLET_PARTICLE,
+                center.add(0.0, 0.1, 0.0),
+                context.radius() * 0.62,
+                Math.max(18, outline * 2 / 3),
+                false
+        );
+        output.circle(DRAGON_PURPLE_PARTICLE, center, context.radius(), outline, true);
+
+        for (int ray = 0; ray < DRAGON_WAVE_RAYS; ray++) {
+            double angle = Math.PI * 2.0 * ray / DRAGON_WAVE_RAYS;
+            var edge = center.add(
+                    Math.cos(angle) * context.radius(),
+                    -0.02,
+                    Math.sin(angle) * context.radius()
+            );
+            var transition = center.lerp(edge, 0.48).add(0.0, 0.08, 0.0);
+            var innerControl = center.lerp(transition, 0.5).add(0.0, 0.38, 0.0);
+            var outerControl = transition.lerp(edge, 0.5).add(0.0, 0.24, 0.0);
+            output.trail(DRAGON_MAGENTA_PARTICLE, center.add(0.0, 0.18, 0.0), innerControl, transition, 7, false);
+            output.trail(DRAGON_PURPLE_PARTICLE, transition, outerControl, edge, 9, false);
         }
     }
 

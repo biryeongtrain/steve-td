@@ -1,4 +1,4 @@
-package kim.biryeong.semiontd.tower.ender;
+package kim.biryeong.semiontd.tower.end;
 
 import static kim.biryeong.semiontd.tower.catalog.ProductionTowerDefinitions.tower;
 import static kim.biryeong.semiontd.util.EntityTypeUtil.byId;
@@ -15,7 +15,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.Blocks;
 
-public final class EnderTowers {
+public final class EndTowers {
     public static final double PHANTOM_BASE_SCALE = 1.0;
     public static final double PHANTOM_SCALE_PER_100_MAX_HEALTH = 0.2;
     public static final EntityVisual DRAGON_EGG_VISUAL = BlockDisplayVisual.builder(Blocks.DRAGON_EGG.defaultBlockState())
@@ -26,7 +26,7 @@ public final class EnderTowers {
     public static final EntityVisual DRAGON_VISUAL = EntityVisual.builder(byId(EntityType.ENDER_DRAGON))
             .build();
 
-    public static final TowerType BASE_ENDER_TOWER = tower(
+    public static final TowerType BASE_END_TOWER = tower(
             "base_ender_dragon",
             "엔더 드래곤",
             0,
@@ -60,7 +60,7 @@ public final class EnderTowers {
     public static final TowerType T2_ENDERMAN_TOWER = tower(
             "t2_enderman_tower",
             "엔더맨",
-            125,
+            100,
             50,
             0,
             15,
@@ -76,7 +76,7 @@ public final class EnderTowers {
     public static final TowerType T3_END_CRYSTAL_TOWER = tower(
             "t3_end_crystal_tower",
             "엔드 수정",
-            200,
+            150,
             50,
             0,
             20,
@@ -109,7 +109,7 @@ public final class EnderTowers {
     public static final TowerType T2_SHULKER_TOWER = tower(
             "t2_shulker_tower",
             "견고한 셜커",
-            125,
+            100,
             150,
             0,
             5,
@@ -126,7 +126,7 @@ public final class EnderTowers {
     public static final TowerType T3_SHULKER_TOWER = tower(
             "t3_shulker_tower",
             "완강한 셜커",
-            200,
+            150,
             200,
             0,
             5,
@@ -143,7 +143,7 @@ public final class EnderTowers {
 
 
     private static final Set<String> ENDER_TOWER_IDS = Set.of(
-            BASE_ENDER_TOWER.id(),
+            BASE_END_TOWER.id(),
             T1_ENDERMITE_TOWER.id(),
             T2_ENDERMAN_TOWER.id(),
             T3_END_CRYSTAL_TOWER.id(),
@@ -162,17 +162,18 @@ public final class EnderTowers {
     static {
         List<String> dragonDescription = List.of(
                 "<gray>알로 소환되며, 라운드 시작 시 팬텀으로 변합니다.</gray>",
-                "<gray>최대 체력이 <yellow>{ability.ender_global.dragonEvolutionMaxHealth:integer}</yellow> 이상이면 엔더 드래곤으로 진화합니다.</gray>",
+                "<gray>최대 체력이 <yellow>{ability.end_global.dragonEvolutionMaxHealth:integer}</yellow> 이상이면 엔더 드래곤으로 진화합니다.</gray>",
                 "<gray>팬텀 크기는 1.0부터 최대 체력 100당 0.2 증가합니다.</gray>",
-                "<green>타워는 {ability.ender_global.absorptionDurationTicks:seconds} 동안 힘을 전달하고 사망합니다.</green>",
-                "<green>엔드 수정 계열: 타워 공격력 {ability.ender_global.permanentDamageRatio:percent} 영구 누적</green>",
-                "<green>엔드 수정 계열 누적 {ability.ender_global.endCrystalSplashEvery:integer}스택마다 광역 공격 반경 +{ability.ender_global.splashRadiusPerStep:blocks} (최대 {ability.ender_global.splashRadiusCap:blocks})</green>",
-                "<green>엔드 수정 계열 누적 {ability.ender_global.endCrystalAttackIntervalEvery:integer}스택마다 공격 주기 -{ability.ender_global.attackIntervalReductionPerStep:integer}틱 (최소 {ability.ender_global.minimumAttackIntervalTicks:integer}틱)</green>",
-                "<green>셜커 계열: 타워 체력 {ability.ender_global.permanentHealthRatio:percent} 영구 누적</green>",
-                "<green>셜커 계열 누적 {ability.ender_global.shulkerLifeStealEvery:integer}스택마다 생명력 흡수 +{ability.ender_global.lifeStealPerStep:percent} (최대 {ability.ender_global.lifeStealCap:percent})</green>",
-                "<green>셜커 계열 누적 {ability.ender_global.shulkerReductionEvery:integer}스택마다 받는 피해 -{ability.ender_global.damageReductionPerStep:percent} (최대 {ability.ender_global.damageReductionCap:percent} 감소)</green>"
+                "<green>타워는 {ability.end_global.absorptionDurationTicks:seconds} 동안 힘을 전달하고 사망합니다.</green>",
+                "<green>타워 흡수 완료 시 체력을 {ability.end_global.absorptionHealAmount:integer} 회복하고, 이번 라운드에 흡수한 타워 {ability.end_global.roundAbsorptionAttackIntervalEvery:integer}개마다 공격 주기가 {ability.end_global.roundAbsorptionAttackIntervalReductionTicks:integer}틱 감소합니다.</green>",
+                "<green>엔드 수정 계열: 타워 공격력 {ability.end_global.permanentDamageRatio:percent} 영구 누적</green>",
+                "<green>엔드 수정 계열 누적 {ability.end_global.endCrystalSplashEvery:integer}스택마다 광역 공격 반경 +{ability.end_global.splashRadiusPerStep:blocks} (최대 {ability.end_global.splashRadiusCap:blocks})</green>",
+                "<green>엔드 수정 계열 누적 {ability.end_global.endCrystalAttackIntervalEvery:integer}스택마다 공격 주기 -{ability.end_global.attackIntervalReductionPerStep:integer}틱 (최소 {ability.end_global.minimumAttackIntervalTicks:integer}틱)</green>",
+                "<green>셜커 계열: 타워 체력 {ability.end_global.permanentHealthRatio:percent} 영구 누적</green>",
+                "<green>셜커 계열 누적 {ability.end_global.shulkerLifeStealEvery:integer}스택마다 생명력 흡수 +{ability.end_global.lifeStealPerStep:percent} (최대 {ability.end_global.lifeStealCap:percent})</green>",
+                "<green>셜커 계열 누적 {ability.end_global.shulkerReductionEvery:integer}스택마다 받는 피해 -{ability.end_global.damageReductionPerStep:percent} (최대 {ability.end_global.damageReductionCap:percent} 감소)</green>"
         );
-        TowerDescriptionRegistry.registerTemplate(BASE_ENDER_TOWER, dragonDescription);
+        TowerDescriptionRegistry.registerTemplate(BASE_END_TOWER, dragonDescription);
         TowerDescriptionRegistry.registerTemplate(T1_ENDERMITE_TOWER, List.of(
                 "<gray>공격력이 높은 엔더마이트 입니다.</gray>",
                 "<green>공격을 하지 않지만, 엔드 수정 계열의 힘 전달을 완료하면 엔더 드래곤의 공격력, 광역 공격, 공격 속도를 강화합니다.</green>"
@@ -202,15 +203,15 @@ public final class EnderTowers {
         ));
     }
 
-    private EnderTowers() {
+    private EndTowers() {
     }
 
-    public static boolean isEnderTower(TowerType type) {
+    public static boolean isEndTower(TowerType type) {
         return type != null && ENDER_TOWER_IDS.contains(type.id());
     }
 
-    public static boolean isBaseEnderTower(TowerType type) {
-        return type != null && type.id().equals(BASE_ENDER_TOWER.id());
+    public static boolean isBaseEndTower(TowerType type) {
+        return type != null && type.id().equals(BASE_END_TOWER.id());
     }
 
     public static boolean isEndCrystalLine(TowerType type) {

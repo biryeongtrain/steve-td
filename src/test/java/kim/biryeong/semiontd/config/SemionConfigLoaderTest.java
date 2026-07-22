@@ -8,7 +8,7 @@ import java.nio.file.Path;
 import java.util.List;
 import kim.biryeong.semiontd.config.SemionConfigLoader.LoadedConfigs;
 import kim.biryeong.semiontd.rating.RatingConfig;
-import kim.biryeong.semiontd.tower.ender.EnderTowers;
+import kim.biryeong.semiontd.tower.end.EndTowers;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
 import kim.biryeong.semiontd.tower.illager.IllagerTowers;
 import kim.biryeong.semiontd.tower.legion.LegionTowers;
@@ -196,7 +196,7 @@ final class SemionConfigLoaderTest {
     }
 
     @Test
-    void loadMigratesLegacyEnderUpgradePricesToTargetTowerMineralCosts() throws Exception {
+    void loadMigratesLegacyEndUpgradePricesToTargetTowerMineralCosts() throws Exception {
         Files.createDirectories(tempDir);
         Files.writeString(tempDir.resolve("tower_balance.json"), """
                 {
@@ -206,10 +206,10 @@ final class SemionConfigLoaderTest {
                     }
                   },
                   "upgradeCosts": {
-                    "t1_endermite_tower->t2_enderman_tower": 75,
-                    "t2_enderman_tower->t3_end_crystal_tower": 75,
-                    "t1_shulker_tower->t2_shulker_tower": 75,
-                    "t2_shulker_tower->t3_shulker_tower": 75,
+                    "t1_endermite_tower->t2_enderman_tower": 125,
+                    "t2_enderman_tower->t3_end_crystal_tower": 200,
+                    "t1_shulker_tower->t2_shulker_tower": 125,
+                    "t2_shulker_tower->t3_shulker_tower": 200,
                     "t2_enderman_tower->t3_enderman_tower": 75
                   },
                   "abilities": {
@@ -219,7 +219,7 @@ final class SemionConfigLoaderTest {
                     "t3_shulker_tower": {
                       "damageReduction": 0.20
                     },
-                    "ender_global": {
+                    "end_global": {
                       "hatchDelayTicks": 200.0,
                       "endermanAttackIntervalEvery": 10.0,
                       "endermanLifeStealEvery": 20.0,
@@ -236,32 +236,32 @@ final class SemionConfigLoaderTest {
                 LoggerFactory.getLogger("test")
         ).towerBalance();
 
-        assertEquals(10.0, balance.towers().get(EnderTowers.BASE_ENDER_TOWER.id()).damage(), 0.0001);
-        assertEquals(125, balance.upgradeCost(
-                EnderTowers.T1_ENDERMITE_TOWER.id(),
-                EnderTowers.T2_ENDERMAN_TOWER.id(),
+        assertEquals(10.0, balance.towers().get(EndTowers.BASE_END_TOWER.id()).damage(), 0.0001);
+        assertEquals(100, balance.upgradeCost(
+                EndTowers.T1_ENDERMITE_TOWER.id(),
+                EndTowers.T2_ENDERMAN_TOWER.id(),
                 -1
         ));
-        assertEquals(200, balance.upgradeCost(
-                EnderTowers.T2_ENDERMAN_TOWER.id(),
-                EnderTowers.T3_END_CRYSTAL_TOWER.id(),
+        assertEquals(150, balance.upgradeCost(
+                EndTowers.T2_ENDERMAN_TOWER.id(),
+                EndTowers.T3_END_CRYSTAL_TOWER.id(),
                 -1
         ));
-        assertEquals(125, balance.upgradeCost(
-                EnderTowers.T1_SHULKER_TOWER.id(),
-                EnderTowers.T2_SHULKER_TOWER.id(),
+        assertEquals(100, balance.upgradeCost(
+                EndTowers.T1_SHULKER_TOWER.id(),
+                EndTowers.T2_SHULKER_TOWER.id(),
                 -1
         ));
-        assertEquals(200, balance.upgradeCost(
-                EnderTowers.T2_SHULKER_TOWER.id(),
-                EnderTowers.T3_SHULKER_TOWER.id(),
+        assertEquals(150, balance.upgradeCost(
+                EndTowers.T2_SHULKER_TOWER.id(),
+                EndTowers.T3_SHULKER_TOWER.id(),
                 -1
         ));
-        assertEquals(12.0, balance.ability("ender_global", "endCrystalSplashEvery", -1.0), 0.0001);
-        assertEquals(10.0, balance.ability("ender_global", "shulkerLifeStealEvery", -1.0), 0.0001);
-        assertEquals(0.5, balance.ability("ender_global", "splashRadiusPerStep", -1.0), 0.0001);
-        assertEquals(0.30, balance.ability(EnderTowers.T2_SHULKER_TOWER.id(), "damageReduction", -1.0), 0.0001);
-        assertEquals(0.50, balance.ability(EnderTowers.T3_SHULKER_TOWER.id(), "damageReduction", -1.0), 0.0001);
+        assertEquals(12.0, balance.ability("end_global", "endCrystalSplashEvery", -1.0), 0.0001);
+        assertEquals(10.0, balance.ability("end_global", "shulkerLifeStealEvery", -1.0), 0.0001);
+        assertEquals(0.5, balance.ability("end_global", "splashRadiusPerStep", -1.0), 0.0001);
+        assertEquals(0.30, balance.ability(EndTowers.T2_SHULKER_TOWER.id(), "damageReduction", -1.0), 0.0001);
+        assertEquals(0.50, balance.ability(EndTowers.T3_SHULKER_TOWER.id(), "damageReduction", -1.0), 0.0001);
         String written = Files.readString(tempDir.resolve("tower_balance.json"));
         assertTrue(written.contains("\"damage\": 10.0"));
         assertTrue(!written.contains("t2_enderman_tower->t3_enderman_tower"));

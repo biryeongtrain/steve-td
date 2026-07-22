@@ -31,9 +31,9 @@ import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.entity.tower.goal.TowerAttackMonsterGoal;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerDataKey;
-import kim.biryeong.semiontd.tower.ender.EnderTower;
-import kim.biryeong.semiontd.tower.ender.EnderTowerState;
-import kim.biryeong.semiontd.tower.ender.EnderTowers;
+import kim.biryeong.semiontd.tower.end.EndTower;
+import kim.biryeong.semiontd.tower.end.EndTowerState;
+import kim.biryeong.semiontd.tower.end.EndTowers;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -44,10 +44,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.Pose;
 import com.faboslav.friendsandfoes.common.entity.MoobloomEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -65,6 +67,8 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     private static final double TARGET_SEARCH_VERTICAL_PADDING = 3.0;
     private static final double FINAL_DEFENSE_RETURN_SPEED_MULTIPLIER = 1.25;
     private static final double MOOBLOOM_VISUAL_POSITION_EPSILON = 1.0E-4;
+    private static final float END_CORE_HITBOX_WIDTH = 1.0F;
+    private static final float END_CORE_HITBOX_HEIGHT = 1.0F;
 
     private Tower runtimeTower;
     private TeamId teamId;
@@ -94,8 +98,8 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     private EntityAttachment holderAttachment;
     private ElementHolder blockDisplayHolder;
     private BlockDisplayElement blockDisplayElement;
-    private ElementHolder enderDragonInteractionHolder;
-    private InteractionElement enderDragonInteractionElement;
+    private ElementHolder endCoreInteractionHolder;
+    private InteractionElement endCoreInteractionElement;
     private MoobloomEntity moobloomVisualEntity;
     private String syncedMoobloomVisualVariant;
     private Component syncedMoobloomVisualName;
@@ -253,7 +257,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         }
         syncMoobloomVisualEntity();
         syncBlockDisplayVisual();
-        syncEnderDragonInteractionHitbox();
+        syncEndCoreInteractionHitbox();
         returnToFinalDefenseAreaIfNeeded();
     }
 
@@ -637,7 +641,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
             markMoobloomVisualSyncDirty();
         }
         syncBlockDisplayVisual();
-        syncEnderDragonInteractionHitbox();
+        syncEndCoreInteractionHitbox();
         if (previousPolymerEntityType != getPolymerEntityType(null)) {
             PolymerEntityUtils.refreshEntity(this);
         }
@@ -749,7 +753,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     public void remove(RemovalReason reason) {
         discardMoobloomVisualEntity();
         discardBlockDisplayVisual();
-        discardEnderDragonInteractionHitbox();
+        discardEndCoreInteractionHitbox();
         if (!isRemoved() && level() instanceof ServerLevel serverLevel) {
             // Lane ticks may discard this entity before vanilla tracking sends Polymer proxy removal.
             ClientboundRemoveEntitiesPacket packet = new ClientboundRemoveEntitiesPacket(getId());
@@ -797,41 +801,45 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         setInvisible(usesBlockDisplayOverlayVisual());
     }
 
-    private boolean usesEnderDragonInteractionHitbox() {
-        return runtimeTower != null
-                && EnderTowers.isBaseEnderTower(runtimeTower.type())
-                && blockbenchModelId == null
-                && EntityType.ENDER_DRAGON == polymerEntityType;
+    private boolean usesOneBlockEndCoreHitbox() {
+        return runtimeTower instanceof EndTower endTower
+                && EndTowers.isBaseEndTower(runtimeTower.type())
+                && (endTower.state() == EndTowerState.PHANTOM
+                || endTower.state() == EndTowerState.DRAGON);
     }
 
-    public boolean hasEnderDragonInteractionHitbox() {
-        return enderDragonInteractionHolder != null && enderDragonInteractionElement != null;
+    private boolean usesEndCoreInteractionHitbox() {
+        return usesOneBlockEndCoreHitbox() && blockbenchModelId == null;
     }
 
-    private void syncEnderDragonInteractionHitbox() {
-        if (!usesEnderDragonInteractionHitbox()) {
-            discardEnderDragonInteractionHitbox();
+    public boolean hasEndCoreInteractionHitbox() {
+        return endCoreInteractionHolder != null && endCoreInteractionElement != null;
+    }
+
+    private void syncEndCoreInteractionHitbox() {
+        if (!usesEndCoreInteractionHitbox()) {
+            discardEndCoreInteractionHitbox();
             return;
         }
-        if (enderDragonInteractionHolder == null || enderDragonInteractionElement == null) {
-            enderDragonInteractionElement = InteractionElement.redirect(this);
-            enderDragonInteractionElement.setResponse(true);
-            enderDragonInteractionHolder = new ElementHolder();
-            enderDragonInteractionHolder.addElement(enderDragonInteractionElement);
-            EntityAttachment.ofTicking(enderDragonInteractionHolder, this);
+        if (endCoreInteractionHolder == null || endCoreInteractionElement == null) {
+            endCoreInteractionElement = InteractionElement.redirect(this);
+            endCoreInteractionElement.setResponse(true);
+            endCoreInteractionHolder = new ElementHolder();
+            endCoreInteractionHolder.addElement(endCoreInteractionElement);
+            EntityAttachment.ofTicking(endCoreInteractionHolder, this);
         }
-        enderDragonInteractionElement.setSize(
-                16.0F,
-                8.0F
+        endCoreInteractionElement.setSize(
+                END_CORE_HITBOX_WIDTH,
+                END_CORE_HITBOX_HEIGHT
         );
     }
 
-    private void discardEnderDragonInteractionHitbox() {
-        if (enderDragonInteractionHolder != null) {
-            enderDragonInteractionHolder.destroy();
+    private void discardEndCoreInteractionHitbox() {
+        if (endCoreInteractionHolder != null) {
+            endCoreInteractionHolder.destroy();
         }
-        enderDragonInteractionHolder = null;
-        enderDragonInteractionElement = null;
+        endCoreInteractionHolder = null;
+        endCoreInteractionElement = null;
     }
 
     private void syncBlockDisplayVisual() {
@@ -1029,15 +1037,23 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     private void applyVisualScale(EntityVisual visual) {
         double scale = visual == null ? EntityVisual.DEFAULT_SCALE : visual.scale();
-        if (runtimeTower instanceof EnderTower enderTower
-                && enderTower.state() == EnderTowerState.PHANTOM) {
-            scale = EnderTowers.phantomScaleForMaxHealth(runtimeTower.currentMaxHealth());
+        if (runtimeTower instanceof EndTower endTower
+                && endTower.state() == EndTowerState.PHANTOM) {
+            scale = EndTowers.phantomScaleForMaxHealth(runtimeTower.currentMaxHealth());
         }
         getAttribute(Attributes.SCALE).setBaseValue(scale);
         refreshDimensions();
         if (holder != null) {
             holder.setScale(1.0F);
         }
+    }
+
+    @Override
+    protected EntityDimensions getDefaultDimensions(Pose pose) {
+        if (usesOneBlockEndCoreHitbox()) {
+            return EntityDimensions.fixed(END_CORE_HITBOX_WIDTH, END_CORE_HITBOX_HEIGHT);
+        }
+        return super.getDefaultDimensions(pose);
     }
 
     private void moveToward(Vec3 targetPosition, double speedModifier) {
