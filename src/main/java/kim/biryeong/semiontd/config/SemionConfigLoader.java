@@ -614,10 +614,14 @@ public final class SemionConfigLoader {
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "damageReductionCap", 0.25);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "dragonIncomeDebuffResistance", 0.25);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "dragonFinalDamageBonus", 0.25);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "dragonFinalDamageBonus", 0.30);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "dragonDamageBonus", 0.20);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "dragonDamageBonus", 0.25);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "dragonIncomeDebuffResistance", 0.05);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "roundHealthRatio", 1.0);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "roundDamageRatio", 1.0);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "roundHealthRatio", 0.50);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "roundDamageRatio", 0.50);
         if (endAbilities.remove("endCrystalSplashEvery") != null) {
             changed = true;
         }

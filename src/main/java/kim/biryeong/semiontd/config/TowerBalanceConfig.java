@@ -1123,12 +1123,12 @@ public record TowerBalanceConfig(
                 Map.entry("transferHealingIntervalTicks", 20.0),
                 Map.entry("roundAbsorptionAttackIntervalEvery", 1.0),
                 Map.entry("roundAbsorptionAttackIntervalReductionTicks", 1.0),
-                Map.entry("roundHealthRatio", 0.50),
-                Map.entry("roundDamageRatio", 0.50),
+                Map.entry("roundHealthRatio", 0.40),
+                Map.entry("roundDamageRatio", 0.40),
                 Map.entry("permanentHealthRatio", 0.05),
                 Map.entry("permanentDamageRatio", 0.05),
                 Map.entry("dragonAttackRangeBonus", 2.0),
-                Map.entry("dragonDamageBonus", 0.25),
+                Map.entry("dragonDamageBonus", 0.15),
                 Map.entry("endCrystalAttackIntervalEvery", 30.0),
                 Map.entry("attackIntervalReductionPerStep", 1.0),
                 Map.entry("endCrystalAttackRangeEvery", 60.0),
@@ -1152,7 +1152,7 @@ public record TowerBalanceConfig(
                 Map.entry("damageReductionCap", 0.20),
                 Map.entry("maxAttackIntervalReductionTicks", 10.0),
                 Map.entry("minimumAttackIntervalTicks", 5.0),
-                Map.entry("dragonFinalDamageBonus", 0.30),
+                Map.entry("dragonFinalDamageBonus", 0.15),
                 Map.entry("dragonIncomeDebuffResistance", 0.10)
         ));
     }
