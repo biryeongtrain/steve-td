@@ -38,6 +38,7 @@ import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerPlacementPositions;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
+import kim.biryeong.semiontd.tower.ocean.OceanVfx;
 import kim.biryeong.semiontd.trait.SemionTrait;
 import kim.biryeong.semiontd.trait.TraitLoadout;
 import kim.biryeong.semiontd.trait.TraitRegistry;
@@ -431,7 +432,11 @@ public final class SemionCommands {
                         .then(literal("warlock_sacrifice")
                                 .executes(context -> debugWarlockSacrificeVfx(context.getSource())))
                         .then(literal("transcendence")
-                                .executes(context -> debugTranscendenceVfx(context.getSource()))))
+                                .executes(context -> debugTranscendenceVfx(context.getSource())))
+                        .then(literal("ocean_supply")
+                                .executes(context -> debugOceanSupplyVfx(context.getSource())))
+                        .then(literal("ocean_dehydrated")
+                                .executes(context -> debugOceanDehydratedVfx(context.getSource()))))
                 .then(literal("summonui")
                         .executes(context -> debugSummonDialog(context.getSource(), gameManager, 1))
                         .then(argument("page", IntegerArgumentType.integer(1))
@@ -508,6 +513,18 @@ public final class SemionCommands {
     private static int debugTranscendenceVfx(CommandSourceStack source) throws CommandSyntaxException {
         TowerVfxService.showTranscendenceDebug(source.getPlayerOrException());
         success(source, "초월 VFX를 재생했습니다.");
+        return 1;
+    }
+
+    private static int debugOceanSupplyVfx(CommandSourceStack source) throws CommandSyntaxException {
+        OceanVfx.showWaterSupplyDebug(source.getPlayerOrException());
+        success(source, "물 공급 VFX를 재생했습니다.");
+        return 1;
+    }
+
+    private static int debugOceanDehydratedVfx(CommandSourceStack source) throws CommandSyntaxException {
+        OceanVfx.showDehydratedDebug(source.getPlayerOrException());
+        success(source, "물 고갈 VFX를 재생했습니다.");
         return 1;
     }
 

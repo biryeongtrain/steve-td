@@ -2601,7 +2601,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         PlayerLane lane = redLane(game, 1);
         List<ProductionTowerCatalog.CatalogEntry> starters = ProductionTowerService.availableTowers(game, playerId);
         long oceanStarterCount = starters.stream().filter(entry -> OceanTowers.isOceanTower(entry.type())).count();
-        if (!assertEquals(context, 5L, oceanStarterCount, "Ocean job should expose all five tier-one paths.")) {
+        if (!assertEquals(context, 6L, oceanStarterCount, "Ocean job should expose all six tier-one paths.")) {
             return;
         }
 
@@ -2618,6 +2618,14 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             context.fail(Component.literal("Placed ocean supply tower should use the water runtime."));
             return;
         }
+        if (!(lane.arenaWorld().getEntity(waterTower.entityId().orElseThrow()) instanceof SemionTowerEntity waterTowerEntity)) {
+            context.fail(Component.literal("Ocean water tower should spawn a clickable tower entity."));
+            return;
+        }
+        if (!assertTrue(context, waterTowerEntity.isNoAi(), "Water tower entity should disable floating AI.")) {
+            return;
+        }
+        Vec3 entityPosition = waterTowerEntity.position();
 
         BlockPos waterPos = OceanWaterTower.waterBlockPos(waterTower.position());
         if (!assertEquals(
@@ -2649,10 +2657,21 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 combatPosition
         );
         lane.addTower(codTower);
+        waterTower.syncPosition(new GridPosition(
+                waterTower.originalPosition().x(),
+                waterTower.originalPosition().y() + 3,
+                waterTower.originalPosition().z()
+        ));
         lane.markWaveStarted(1);
-        if (!assertEquals(context, 70.0, codTower.water(), "Wave start should add twenty stored water within two blocks.")) {
+        if (!assertEquals(
+                context,
+                70.0,
+                codTower.water(),
+                "Water supply should use the fixed water block even if its proxy entity position drifted."
+        )) {
             return;
         }
+        waterTower.syncPosition(waterTower.originalPosition());
 
         codTower.syncPosition(new GridPosition(
                 waterTower.position().x() + 20,
@@ -2689,6 +2708,9 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         lane.arenaWorld().scheduleTick(freeWaterPos, Fluids.WATER, 1);
 
         context.runAfterDelay(10, () -> {
+            if (!assertEquals(context, entityPosition, waterTowerEntity.position(), "Water tower hitbox should stay fixed inside water.")) {
+                return;
+            }
             boolean contained = List.of(waterPos.north(), waterPos.south(), waterPos.east(), waterPos.west()).stream()
                     .allMatch(neighbor -> lane.arenaWorld().getBlockState(neighbor).isAir());
             if (!assertTrue(context, contained, "Water tower should remain contained to one block after fluid ticks.")) {
@@ -2717,6 +2739,64 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void oceanWaterTowerKeepsSupplyingAcrossGameRounds(GameTestHelper context) {
+        UUID playerId = stableUuid("ocean-water-round-transition-owner");
+        SemionGame game = startedTwoPlayerGame(
+                context,
+                playerId,
+                stableUuid("ocean-water-round-transition-opponent")
+        );
+        game.disableWaveSpawnsForTeam(TeamId.RED);
+        game.disableWaveSpawnsForTeam(TeamId.BLUE);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos towerPos = towerPlacementPos(lane);
+        OceanWaterTower waterTower = new OceanWaterTower(
+                TowerBalanceRuntime.resolve(OceanTowers.T1_WATER),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(towerPos)
+        );
+        OceanTower codTower = new OceanTower(
+                TowerBalanceRuntime.resolve(OceanTowers.T1_COD),
+                playerId,
+                TeamId.RED,
+                1,
+                new GridPosition(
+                        waterTower.originalPosition().x() + 1,
+                        waterTower.originalPosition().y(),
+                        waterTower.originalPosition().z()
+                )
+        );
+        lane.addTower(waterTower);
+        lane.addTower(codTower);
+
+        tickGame(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS);
+        if (!assertEquals(context, 70.0, codTower.water(), "Round one should capture and supply the nearby cod tower.")) {
+            return;
+        }
+        tickGame(game, context.getLevel().getServer(), 3);
+        if (!assertEquals(context, 2, game.currentRound(), "The empty first wave should advance to round two.")) {
+            return;
+        }
+        double beforeRoundTwoWave = codTower.water();
+        tickGame(
+                game,
+                context.getLevel().getServer(),
+                SemionGame.DEFAULT_PREPARE_TICKS - game.phaseTicks()
+        );
+        if (!assertEquals(
+                context,
+                beforeRoundTwoWave + 20.0,
+                codTower.water(),
+                "The same water tower should recapture and supply the same cod tower in round two."
+        )) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void oceanTankWaterTransferRespectsCooldown(GameTestHelper context) {
         UUID playerId = stableUuid("ocean-tank-transfer-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, OceanTowerJob.ID);
@@ -2738,8 +2818,24 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 1,
                 targetPosition
         );
+        OceanTower guardian = new OceanTower(
+                TowerBalanceRuntime.resolve(OceanTowers.T2_GUARDIAN),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(base.west())
+        );
+        OceanTower elderGuardian = new OceanTower(
+                TowerBalanceRuntime.resolve(OceanTowers.T3_ELDER_GUARDIAN),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(base.north())
+        );
         lane.addTower(tank);
         lane.addTower(target);
+        lane.addTower(guardian);
+        lane.addTower(elderGuardian);
         if (!(lane.arenaWorld().getEntity(tank.entityId().orElseThrow()) instanceof SemionTowerEntity tankEntity)) {
             context.fail(Component.literal("Ocean tank should spawn a tower entity."));
             return;
@@ -2750,6 +2846,12 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertEquals(context, 49.0, tank.water(), "A successful transfer should spend water once.")) {
+            return;
+        }
+        if (!assertEquals(context, 50.0, guardian.water(), "Pufferfish water transfer should exclude guardian tanks.")) {
+            return;
+        }
+        if (!assertEquals(context, 50.0, elderGuardian.water(), "Pufferfish water transfer should exclude elder guardian tanks.")) {
             return;
         }
 
@@ -2796,6 +2898,156 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
         if (!assertEquals(context, 48.0, tank.water(), "No water should be spent when every nearby target is dead.")) {
             return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void oceanSupportSpendsStoredWaterForEmpoweredBuff(GameTestHelper context) {
+        UUID playerId = stableUuid("ocean-support-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, OceanTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos base = towerPlacementPos(lane);
+        OceanTower support = new OceanTower(
+                TowerBalanceRuntime.resolve(OceanTowers.T1_TROPICAL_FISH),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(base)
+        );
+        OceanTower target = new OceanTower(
+                TowerBalanceRuntime.resolve(OceanTowers.T1_COD),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(base.east())
+        );
+        lane.addTower(support);
+        lane.addTower(target);
+        if (!(lane.arenaWorld().getEntity(target.entityId().orElseThrow()) instanceof SemionTowerEntity targetEntity)) {
+            context.fail(Component.literal("Ocean support target should spawn a tower entity."));
+            return;
+        }
+
+        support.addWater(50.0);
+        lane.markWaveStarted(1);
+        support.tick(lane);
+        if (!assertEquals(context, 84.0, support.water(), "Empowered support should spend twice its normal water cost.")) {
+            return;
+        }
+        if (!assertClose(context, 0.12, targetEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_BONUS),
+                "Empowered support should multiply its damage buff by one and a half.")) {
+            return;
+        }
+        if (!assertClose(context, 0.15, targetEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_ATTACK_SPEED_BONUS),
+                "Empowered support should multiply its attack-speed buff by one and a half.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void oceanHealerConsumesWaterAndHealsNearbyLivingTowers(GameTestHelper context) {
+        UUID playerId = stableUuid("ocean-healer-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, OceanTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos base = towerPlacementPos(lane);
+        OceanTower healer = new OceanTower(
+                TowerBalanceRuntime.resolve(OceanTowers.T1_SQUID),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(base)
+        );
+        OceanTower target = new OceanTower(
+                TowerBalanceRuntime.resolve(OceanTowers.T1_COD),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(base.east())
+        );
+        lane.addTower(healer);
+        lane.addTower(target);
+        if (!(lane.arenaWorld().getEntity(target.entityId().orElseThrow()) instanceof SemionTowerEntity targetEntity)) {
+            context.fail(Component.literal("Ocean heal target should spawn a tower entity."));
+            return;
+        }
+
+        target.syncHealth(10.0);
+        targetEntity.setHealth(10.0F);
+        lane.markWaveStarted(1);
+        healer.tick(lane);
+        if (!assertEquals(context, 25.0, target.health(), "Squid should heal a nearby damaged tower by fifteen.")) {
+            return;
+        }
+        if (!assertEquals(context, 44.0, healer.water(), "A successful squid heal should spend six water.")) {
+            return;
+        }
+
+        healer.resetForRound(lane);
+        healer.addWater(56.0);
+        healer.onWaveStarted(lane, 2);
+        target.syncHealth(target.currentMaxHealth());
+        targetEntity.setHealth((float) target.currentMaxHealth());
+        healer.tick(lane);
+        if (!assertEquals(context, 100.0, healer.water(), "No stored water should be spent when no nearby tower needs healing.")) {
+            return;
+        }
+
+        target.syncHealth(10.0);
+        targetEntity.setHealth(10.0F);
+        healer.tick(lane);
+        if (!assertEquals(context, 32.5, target.health(), "Empowered squid should heal by one and a half times its normal amount.")) {
+            return;
+        }
+        if (!assertEquals(context, 88.0, healer.water(), "Empowered squid should spend twice its normal water cost.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void oceanTierThreeTowerHitboxesDoNotOverlapAdjacentCells(GameTestHelper context) {
+        UUID playerId = stableUuid("ocean-tier-three-hitbox-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, OceanTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos base = towerPlacementPos(lane);
+        List<TowerType> tierThreeTypes = List.of(
+                OceanTowers.T3_CURRENT,
+                OceanTowers.T3_ELDER_GUARDIAN,
+                OceanTowers.T3_GIANT_TROPICAL_FISH,
+                OceanTowers.T3_DOLPHIN,
+                OceanTowers.T3_GIANT_SALMON,
+                OceanTowers.T3_GIANT_COD
+        );
+        SemionTowerEntity previousEntity = null;
+
+        for (int index = 0; index < tierThreeTypes.size(); index++) {
+            TowerType type = tierThreeTypes.get(index);
+            Tower tower = ProductionTowerCatalog.find(type.id()).orElseThrow().create(
+                    playerId,
+                    TeamId.RED,
+                    1,
+                    GridPosition.from(base.offset(index, 0, 0))
+            );
+            lane.addTower(tower);
+            if (!(tower instanceof EntityBackedTower entityBackedTower)
+                    || !(lane.arenaWorld().getEntity(entityBackedTower.entityId().orElseThrow())
+                    instanceof SemionTowerEntity towerEntity)) {
+                context.fail(Component.literal(type.id() + " should spawn a clickable tower entity."));
+                return;
+            }
+            if (!assertTrue(context, towerEntity.getBbWidth() <= 1.0F, type.id() + " hitbox should fit one cell.")) {
+                return;
+            }
+            if (previousEntity != null && !assertTrue(
+                    context,
+                    !previousEntity.getBoundingBox().intersects(towerEntity.getBoundingBox()),
+                    type.id() + " hitbox should not cover the adjacent tower."
+            )) {
+                return;
+            }
+            previousEntity = towerEntity;
         }
         context.succeed();
     }
@@ -8733,7 +8985,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertPresent(context, JobRegistry.find(OceanTowerJob.ID), "Built-in reload should register the ocean tower job.")) {
             return;
         }
-        if (!assertEquals(context, 43L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose every production starter family including end and the five ocean paths.")) {
+        if (!assertEquals(context, 44L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose every production starter family including end and the six ocean paths.")) {
             return;
         }
         context.succeed();

@@ -926,6 +926,9 @@ public record TowerBalanceConfig(
         addTower(towers, OceanTowers.T1_TROPICAL_FISH);
         addTower(towers, OceanTowers.T2_LARGE_TROPICAL_FISH);
         addTower(towers, OceanTowers.T3_GIANT_TROPICAL_FISH);
+        addTower(towers, OceanTowers.T1_SQUID);
+        addTower(towers, OceanTowers.T2_GLOW_SQUID);
+        addTower(towers, OceanTowers.T3_DOLPHIN);
         addTower(towers, OceanTowers.T1_SALMON);
         addTower(towers, OceanTowers.T2_LARGE_SALMON);
         addTower(towers, OceanTowers.T3_GIANT_SALMON);
@@ -959,6 +962,8 @@ public record TowerBalanceConfig(
         putUpgrade(upgrades, OceanTowers.T2_GUARDIAN, OceanTowers.T3_ELDER_GUARDIAN.id(), 210);
         putUpgrade(upgrades, OceanTowers.T1_TROPICAL_FISH, OceanTowers.T2_LARGE_TROPICAL_FISH.id(), 110);
         putUpgrade(upgrades, OceanTowers.T2_LARGE_TROPICAL_FISH, OceanTowers.T3_GIANT_TROPICAL_FISH.id(), 190);
+        putUpgrade(upgrades, OceanTowers.T1_SQUID, OceanTowers.T2_GLOW_SQUID.id(), 120);
+        putUpgrade(upgrades, OceanTowers.T2_GLOW_SQUID, OceanTowers.T3_DOLPHIN.id(), 210);
         putUpgrade(upgrades, OceanTowers.T1_SALMON, OceanTowers.T2_LARGE_SALMON.id(), 100);
         putUpgrade(upgrades, OceanTowers.T2_LARGE_SALMON, OceanTowers.T3_GIANT_SALMON.id(), 200);
         putUpgrade(upgrades, OceanTowers.T1_COD, OceanTowers.T2_LARGE_COD.id(), 100);
@@ -1158,6 +1163,9 @@ public record TowerBalanceConfig(
                 "initialWater", 50.0,
                 "waterScale", 100.0,
                 "incomeCoefficientMultiplier", 2.0,
+                "empoweredAbilityWaterThreshold", 100.0,
+                "empoweredAbilityWaterCostMultiplier", 2.0,
+                "empoweredAbilityEffectMultiplier", 1.5,
                 "dehydratedDamageMultiplier", 0.30,
                 "dehydratedAttackSpeedReduction", 0.60,
                 "dehydrationMaxHealthDamagePerSecond", 0.02
@@ -1174,6 +1182,10 @@ public record TowerBalanceConfig(
         putAbilities(abilities, OceanTowers.T1_TROPICAL_FISH.id(), oceanSupportAbilities(8.0, 0.08, 0.10, 100.0));
         putAbilities(abilities, OceanTowers.T2_LARGE_TROPICAL_FISH.id(), oceanSupportAbilities(14.0, 0.12, 0.15, 90.0));
         putAbilities(abilities, OceanTowers.T3_GIANT_TROPICAL_FISH.id(), oceanSupportAbilities(20.0, 0.18, 0.22, 80.0));
+
+        putAbilities(abilities, OceanTowers.T1_SQUID.id(), oceanHealAbilities(6.0, 2.0, 15.0, 100.0));
+        putAbilities(abilities, OceanTowers.T2_GLOW_SQUID.id(), oceanHealAbilities(10.0, 2.5, 40.0, 90.0));
+        putAbilities(abilities, OceanTowers.T3_DOLPHIN.id(), oceanHealAbilities(16.0, 3.0, 80.0, 80.0));
 
         putAbilities(abilities, OceanTowers.T1_SALMON.id(), oceanSplashAbilities(0.50, 1.0, 1.0, 1.0, 0.50));
         putAbilities(abilities, OceanTowers.T2_LARGE_SALMON.id(), oceanSplashAbilities(0.75, 1.0, 2.0, 1.5, 0.65));
@@ -1237,6 +1249,20 @@ public record TowerBalanceConfig(
         values.put("splashRadius", splashRadius);
         values.put("splashDamageRatio", splashRatio);
         return values;
+    }
+
+    private static Map<String, Double> oceanHealAbilities(
+            double waterCost,
+            double radius,
+            double healAmount,
+            double intervalTicks
+    ) {
+        return Map.of(
+                "abilityWaterCost", waterCost,
+                "healRadius", radius,
+                "healAmount", healAmount,
+                "healIntervalTicks", intervalTicks
+        );
     }
 
     private static Map<String, Double> oceanHunterAbilities(double coefficient, double attackCost) {

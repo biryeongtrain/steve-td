@@ -20,6 +20,9 @@ public final class OceanTowerCatalogs {
         registerCombat(OceanTowers.T1_TROPICAL_FISH, 1);
         registerCombat(OceanTowers.T2_LARGE_TROPICAL_FISH, 2);
         registerCombat(OceanTowers.T3_GIANT_TROPICAL_FISH, 3);
+        registerCombat(OceanTowers.T1_SQUID, 1);
+        registerCombat(OceanTowers.T2_GLOW_SQUID, 2);
+        registerCombat(OceanTowers.T3_DOLPHIN, 3);
         registerCombat(OceanTowers.T1_SALMON, 1);
         registerCombat(OceanTowers.T2_LARGE_SALMON, 2);
         registerCombat(OceanTowers.T3_GIANT_SALMON, 3);
@@ -33,6 +36,8 @@ public final class OceanTowerCatalogs {
         link(OceanTowers.T2_GUARDIAN, OceanTowers.T3_ELDER_GUARDIAN);
         link(OceanTowers.T1_TROPICAL_FISH, OceanTowers.T2_LARGE_TROPICAL_FISH);
         link(OceanTowers.T2_LARGE_TROPICAL_FISH, OceanTowers.T3_GIANT_TROPICAL_FISH);
+        link(OceanTowers.T1_SQUID, OceanTowers.T2_GLOW_SQUID);
+        link(OceanTowers.T2_GLOW_SQUID, OceanTowers.T3_DOLPHIN);
         link(OceanTowers.T1_SALMON, OceanTowers.T2_LARGE_SALMON);
         link(OceanTowers.T2_LARGE_SALMON, OceanTowers.T3_GIANT_SALMON);
         link(OceanTowers.T1_COD, OceanTowers.T2_LARGE_COD);

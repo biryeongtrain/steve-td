@@ -181,6 +181,21 @@ public final class TowerVfxGameTest {
     }
 
     @GameTest
+    public void oceanDebugCommandsParse(GameTestHelper context) {
+        var dispatcher = context.getLevel().getServer().getCommands().getDispatcher();
+        for (String command : List.of(
+                "semiontd-debug vfx ocean_supply",
+                "semiontd-debug vfx ocean_dehydrated"
+        )) {
+            var parsed = dispatcher.parse(command, context.getLevel().getServer().createCommandSourceStack());
+            if (parsed.getContext().getNodes().isEmpty() || parsed.getReader().canRead()) {
+                throw new AssertionError("Expected /" + command + " to parse completely");
+            }
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void rayDensityKeepsEveryAttackVisibleAfterSoftBudgetIsExhausted(GameTestHelper context) {
         if (TowerVfxService.preferredRayPointCount(100.0) != 64
                 || TowerVfxService.adaptiveRayPointCount(100.0, 0) != 12) {

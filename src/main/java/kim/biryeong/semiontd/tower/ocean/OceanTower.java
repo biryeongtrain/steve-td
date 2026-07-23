@@ -110,10 +110,16 @@ public final class OceanTower extends EntityBackedTower {
 
     @Override
     protected boolean execute(PlayerLane lane) {
-        if (!waveActive || !OceanTowers.isSupport(type())) {
+        if (!waveActive || (!OceanTowers.isSupport(type()) && !OceanTowers.isHealer(type()))) {
             return false;
         }
-        double cost = value("abilityWaterCost");
+        if (OceanTowers.isHealer(type())) {
+            return healNearbyTowers(lane);
+        }
+        boolean empowered = empoweredAbility();
+        double effectMultiplier = empowered ? global("empoweredAbilityEffectMultiplier") : 1.0;
+        double cost = value("abilityWaterCost")
+                * (empowered ? global("empoweredAbilityWaterCostMultiplier") : 1.0);
         if (water + EPSILON < cost) {
             return false;
         }
@@ -129,14 +135,21 @@ public final class OceanTower extends EntityBackedTower {
 
         int duration = ticks("buffDurationTicks");
         for (SemionTowerEntity target : targets) {
-            target.applyTimedEffect(TimedEffectType.TOWER_DAMAGE_BONUS, value("damageBonus"), duration);
-            target.applyTimedEffect(TimedEffectType.TOWER_ATTACK_SPEED_BONUS, value("attackSpeedBonus"), duration);
+            target.applyTimedEffect(TimedEffectType.TOWER_DAMAGE_BONUS, value("damageBonus") * effectMultiplier, duration);
+            target.applyTimedEffect(
+                    TimedEffectType.TOWER_ATTACK_SPEED_BONUS,
+                    value("attackSpeedBonus") * effectMultiplier,
+                    duration
+            );
         }
         return true;
     }
 
     @Override
     protected int cooldownTicksAfterExecute(PlayerLane lane) {
+        if (OceanTowers.isHealer(type())) {
+            return Math.max(1, ticks("healIntervalTicks"));
+        }
         return OceanTowers.isSupport(type()) ? Math.max(1, ticks("supportIntervalTicks")) : super.cooldownTicksAfterExecute(lane);
     }
 
@@ -200,6 +213,7 @@ public final class OceanTower extends EntityBackedTower {
         }
         List<OceanTower> recipients = nearbyOceanCombatTowers(currentLane, value("transferRadius")).stream()
                 .filter(target -> target != this)
+                .filter(target -> !OceanTowers.isTank(target.type()))
                 .toList();
         if (recipients.isEmpty() || !spendWater(value("transferWaterCost"))) {
             return;
@@ -207,7 +221,7 @@ public final class OceanTower extends EntityBackedTower {
         double share = pool / recipients.size();
         recipients.forEach(target -> target.addWater(share));
         transferCooldownTicks = Math.max(1, ticks("transferCooldownTicks"));
-        OceanVfx.showWaterTransfer(
+        OceanVfx.showWaterSupply(
                 currentLane.arenaWorld(),
                 new net.minecraft.world.phys.Vec3(
                         towerEntity.getX(),
@@ -246,8 +260,11 @@ public final class OceanTower extends EntityBackedTower {
             lines.add("물 공격력 " + percent(waterDamageMultiplier() - 1.0));
             lines.add("공격당 물 -" + oneDecimal(value("attackWaterCost")));
         }
-        if (OceanTowers.isSupport(type())) {
+        if (OceanTowers.isSupport(type()) || OceanTowers.isHealer(type())) {
             lines.add("능력당 물 -" + oneDecimal(value("abilityWaterCost")));
+            lines.add("물 " + oneDecimal(global("empoweredAbilityWaterThreshold"))
+                    + " 이상: 소모 " + oneDecimal(global("empoweredAbilityWaterCostMultiplier"))
+                    + "배, 효과 " + oneDecimal(global("empoweredAbilityEffectMultiplier")) + "배");
         }
         if (OceanTowers.isTank(type())) {
             lines.add("물 분배 최대 " + oneDecimal(value("transferCap"))
@@ -284,6 +301,35 @@ public final class OceanTower extends EntityBackedTower {
         TowerAreaDamage.apply(this, towerEntity, request, ignored -> damageAmount * value("splashDamageRatio"), true);
     }
 
+    private boolean healNearbyTowers(PlayerLane lane) {
+        boolean empowered = empoweredAbility();
+        double healAmount = value("healAmount")
+                * (empowered ? global("empoweredAbilityEffectMultiplier") : 1.0);
+        double cost = value("abilityWaterCost")
+                * (empowered ? global("empoweredAbilityWaterCostMultiplier") : 1.0);
+        if (water + EPSILON < cost) {
+            return false;
+        }
+        List<SemionTowerEntity> targets = nearbyOceanCombatTowers(lane, value("healRadius")).stream()
+                .filter(target -> target != this && target.health() < target.currentMaxHealth())
+                .map(target -> towerEntity(target, lane).orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        if (targets.isEmpty() || !spendWater(cost)) {
+            return false;
+        }
+        targets.forEach(target -> {
+            if (target.receiveHealing(healAmount)) {
+                target.playHealingAnimation();
+            }
+        });
+        return true;
+    }
+
+    private boolean empoweredAbility() {
+        return water + EPSILON >= global("empoweredAbilityWaterThreshold");
+    }
+
     private void tickDehydration(PlayerLane lane) {
         if (!waveActive || water > 0.0 || health() <= 0.0) {
             dehydrationTicks = 0;
@@ -295,7 +341,13 @@ public final class OceanTower extends EntityBackedTower {
         }
         dehydrationTicks = 0;
         syncHealth(health() - currentMaxHealth() * global("dehydrationMaxHealthDamagePerSecond"));
-        towerEntity(this, lane).ifPresent(entity -> entity.setHealth((float) health()));
+        towerEntity(this, lane).ifPresent(entity -> {
+            OceanVfx.showDehydrated(
+                    lane.arenaWorld(),
+                    new net.minecraft.world.phys.Vec3(entity.getX(), entity.getY() + 0.12, entity.getZ())
+            );
+            entity.setHealth((float) health());
+        });
     }
 
     private List<OceanTower> nearbyOceanCombatTowers(PlayerLane lane, double radius) {

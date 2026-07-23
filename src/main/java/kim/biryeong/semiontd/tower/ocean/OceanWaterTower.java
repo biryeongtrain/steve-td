@@ -7,6 +7,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
+import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
@@ -70,6 +71,11 @@ public final class OceanWaterTower extends EntityBackedTower {
     }
 
     @Override
+    protected void configureEntityAfterSpawn(SemionTowerEntity entity, PlayerLane lane) {
+        entity.setNoAi(true);
+    }
+
+    @Override
     public void onRemoved(PlayerLane lane) {
         restoreWater(lane);
         super.onRemoved(lane);
@@ -83,7 +89,7 @@ public final class OceanWaterTower extends EntityBackedTower {
     @Override
     public void onStateChanged(PlayerLane lane) {
         super.onStateChanged(lane);
-        BlockPos desired = waterBlockPos(position());
+        BlockPos desired = waterBlockPos(originalPosition());
         if (entityId().isPresent() && !desired.equals(placedWaterPos)) {
             restoreWater(lane);
             placeWater(lane);
@@ -182,9 +188,9 @@ public final class OceanWaterTower extends EntityBackedTower {
     }
 
     private double distanceSqr(Tower target) {
-        double x = target.position().x() - position().x();
-        double y = target.position().y() - position().y();
-        double z = target.position().z() - position().z();
+        double x = target.position().x() - originalPosition().x();
+        double y = target.position().y() - originalPosition().y();
+        double z = target.position().z() - originalPosition().z();
         return x * x + y * y + z * z;
     }
 
@@ -192,7 +198,7 @@ public final class OceanWaterTower extends EntityBackedTower {
         if (lane == null || placedWaterPos != null) {
             return;
         }
-        BlockPos target = waterBlockPos(position());
+        BlockPos target = waterBlockPos(originalPosition());
         BlockState current = lane.arenaWorld().getBlockState(target);
         if (!current.isAir()) {
             return;
@@ -217,11 +223,11 @@ public final class OceanWaterTower extends EntityBackedTower {
     }
 
     private void showSupplyVfx(PlayerLane lane, List<OceanTower> targets, boolean burst) {
-        BlockPos center = waterBlockPos(position());
+        BlockPos center = waterBlockPos(originalPosition());
         int tier = OceanTowers.tier(type());
         Vec3 source = new Vec3(center.getX() + 0.5, center.getY() + 1.03, center.getZ() + 0.5);
         OceanVfx.showWaterSourcePulse(lane.arenaWorld(), source, tier, burst);
-        OceanVfx.showWaterTransfer(
+        OceanVfx.showWaterSupply(
                 lane.arenaWorld(),
                 source,
                 targets,
