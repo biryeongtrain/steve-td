@@ -616,10 +616,15 @@ public final class SemionConfigLoader {
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "dragonFinalDamageBonus", 0.25);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "dragonDamageBonus", 0.20);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "dragonIncomeDebuffResistance", 0.05);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "roundHealthRatio", 1.0);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "roundDamageRatio", 1.0);
         if (endAbilities.remove("endCrystalSplashEvery") != null) {
             changed = true;
         }
         if (endAbilities.remove("splashRadiusPerStep") != null) {
+            changed = true;
+        }
+        if (endAbilities.remove("roundStatBonusCapRatio") != null) {
             changed = true;
         }
         return changed ? GSON.toJson(object) : json;

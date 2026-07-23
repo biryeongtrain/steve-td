@@ -85,37 +85,13 @@ public final class BuiltinAreaVfxStyles {
     private static void dragonSplash(AreaVfxContext context, AreaVfxOutput output) {
         var center = context.center().add(0.0, 0.08, 0.0);
         int outline = outlinePoints(context.radius());
-
-        output.sphere(
-                DRAGON_MAGENTA_PARTICLE,
-                center.add(0.0, 0.22, 0.0),
-                Math.max(0.22, Math.min(0.5, context.radius() * 0.16)),
-                16,
-                true
-        );
-        output.circle(
-                DRAGON_MAGENTA_PARTICLE,
-                center.add(0.0, 0.16, 0.0),
-                context.radius() * 0.28,
-                Math.max(14, outline / 3),
-                false
-        );
-        output.circle(
-                DRAGON_VIOLET_PARTICLE,
-                center.add(0.0, 0.1, 0.0),
-                context.radius() * 0.62,
-                Math.max(18, outline * 2 / 3),
-                false
-        );
+        output.sphere(DRAGON_MAGENTA_PARTICLE, center.add(0.0, 0.22, 0.0), Math.max(0.22, Math.min(0.5, context.radius() * 0.16)), 16, true);
+        output.circle(DRAGON_MAGENTA_PARTICLE, center.add(0.0, 0.16, 0.0), context.radius() * 0.28, Math.max(14, outline / 3), false);
+        output.circle(DRAGON_VIOLET_PARTICLE, center.add(0.0, 0.1, 0.0), context.radius() * 0.62, Math.max(18, outline * 2 / 3), false);
         output.circle(DRAGON_PURPLE_PARTICLE, center, context.radius(), outline, true);
-
         for (int ray = 0; ray < DRAGON_WAVE_RAYS; ray++) {
             double angle = Math.PI * 2.0 * ray / DRAGON_WAVE_RAYS;
-            var edge = center.add(
-                    Math.cos(angle) * context.radius(),
-                    -0.02,
-                    Math.sin(angle) * context.radius()
-            );
+            var edge = center.add(Math.cos(angle) * context.radius(), -0.02, Math.sin(angle) * context.radius());
             var transition = center.lerp(edge, 0.48).add(0.0, 0.08, 0.0);
             var innerControl = center.lerp(transition, 0.5).add(0.0, 0.38, 0.0);
             var outerControl = transition.lerp(edge, 0.5).add(0.0, 0.24, 0.0);

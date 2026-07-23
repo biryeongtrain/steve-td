@@ -52,9 +52,9 @@ class EndTowerCatalogTest {
         assertEquals(20.0, config.ability(EndTower.CONFIG_ID, "transferHealingIntervalTicks", -1.0), 0.0001);
         assertEquals(1.0, config.ability(EndTower.CONFIG_ID, "roundAbsorptionAttackIntervalEvery", -1.0), 0.0001);
         assertEquals(1.0, config.ability(EndTower.CONFIG_ID, "roundAbsorptionAttackIntervalReductionTicks", -1.0), 0.0001);
-        assertEquals(1.0, config.ability(EndTower.CONFIG_ID, "roundHealthRatio", -1.0), 0.0001);
-        assertEquals(1.0, config.ability(EndTower.CONFIG_ID, "roundDamageRatio", -1.0), 0.0001);
-        assertEquals(0.50, config.ability(EndTower.CONFIG_ID, "roundStatBonusCapRatio", -1.0), 0.0001);
+        assertEquals(0.50, config.ability(EndTower.CONFIG_ID, "roundHealthRatio", -1.0), 0.0001);
+        assertEquals(0.50, config.ability(EndTower.CONFIG_ID, "roundDamageRatio", -1.0), 0.0001);
+        assertEquals(-1.0, config.ability(EndTower.CONFIG_ID, "roundStatBonusCapRatio", -1.0), 0.0001);
         assertEquals(0.05, config.ability(EndTower.CONFIG_ID, "permanentHealthRatio", -1.0), 0.0001);
         assertEquals(0.05, config.ability(EndTower.CONFIG_ID, "permanentDamageRatio", -1.0), 0.0001);
         assertEquals(2.0, config.ability(EndTower.CONFIG_ID, "dragonAttackRangeBonus", -1.0), 0.0001);
@@ -154,11 +154,11 @@ class EndTowerCatalogTest {
         assertTrue(plainDescription.contains("10초"));
         assertTrue(plainDescription.contains("전달 중 타워 당 체력을 초당 +1 재생합니다."));
         assertTrue(description.contains("<#E66F6F>체력</#E66F6F>을 초당 <#79C97B>+1 재생</#79C97B>"));
-        assertTrue(plainDescription.contains("타워 공격력의 100%를 임시 획득"));
+        assertTrue(plainDescription.contains("타워 공격력의 50%를 임시 획득"));
         assertTrue(plainDescription.contains("공격 범위: 엔드 수정 15, 60, 150, 300스택마다 +1블록"));
         assertTrue(plainDescription.contains("엔드 수정 30스택마다 -1틱"));
         assertTrue(plainDescription.contains("사거리: 엔드 수정 60스택마다 +0.5블록"));
-        assertTrue(plainDescription.contains("타워 체력의 100%를 임시 획득"));
+        assertTrue(plainDescription.contains("타워 체력의 50%를 임시 획득"));
         assertTrue(plainDescription.contains("셜커 15스택마다 +1%"));
         assertTrue(plainDescription.contains("피해 감소: 셜커 60스택마다 +4%"));
         assertTrue(plainDescription.contains("셜커 20스택마다 초당 +1"));

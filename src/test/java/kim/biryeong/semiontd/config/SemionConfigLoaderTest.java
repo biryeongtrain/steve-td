@@ -223,6 +223,9 @@ final class SemionConfigLoaderTest {
                       "hatchDelayTicks": 200.0,
                       "absorptionDurationTicks": 400.0,
                       "roundAbsorptionAttackIntervalEvery": 2.0,
+                      "roundHealthRatio": 1.0,
+                      "roundDamageRatio": 1.0,
+                      "roundStatBonusCapRatio": 0.5,
                       "endCrystalAttackIntervalEvery": 20.0,
                       "shulkerReductionEvery": 20.0,
                       "dragonFinalDamageBonus": 0.25,
@@ -271,6 +274,9 @@ final class SemionConfigLoaderTest {
         assertEquals(300.0, balance.ability("end_global", "endCrystalSplashThreshold4", -1.0), 0.0001);
         assertEquals(200.0, balance.ability("end_global", "absorptionDurationTicks", -1.0), 0.0001);
         assertEquals(1.0, balance.ability("end_global", "roundAbsorptionAttackIntervalEvery", -1.0), 0.0001);
+        assertEquals(0.5, balance.ability("end_global", "roundHealthRatio", -1.0), 0.0001);
+        assertEquals(0.5, balance.ability("end_global", "roundDamageRatio", -1.0), 0.0001);
+        assertEquals(-1.0, balance.ability("end_global", "roundStatBonusCapRatio", -1.0), 0.0001);
         assertEquals(30.0, balance.ability("end_global", "endCrystalAttackIntervalEvery", -1.0), 0.0001);
         assertEquals(0.30, balance.ability("end_global", "dragonFinalDamageBonus", -1.0), 0.0001);
         assertEquals(0.10, balance.ability("end_global", "dragonIncomeDebuffResistance", -1.0), 0.0001);
@@ -288,6 +294,7 @@ final class SemionConfigLoaderTest {
         assertTrue(!written.contains("shulkerSplashEvery"));
         assertTrue(!written.contains("shulkerAttackRangeEvery"));
         assertTrue(!written.contains("endCrystalSplashEvery"));
+        assertTrue(!written.contains("roundStatBonusCapRatio"));
         assertTrue(written.contains("attackRangePerStep"));
     }
 

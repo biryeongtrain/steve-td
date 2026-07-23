@@ -36,11 +36,11 @@ public final class EndTower extends EntityBackedTower {
     private static final double TRANSFER_PARTICLE_SOURCE_HEIGHT = 1.25;
     private static final double TRANSFER_PARTICLE_TARGET_HEIGHT = 3.0;
     private static final TowerDataKey<EndTowerState> STATE = TowerDataKey.of(
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "ender_tower_state"),
+            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "end_tower_state"),
             EndTowerState.class
     );
     private static final TowerDataKey<Double> TRANSFER_PROGRESS = TowerDataKey.of(
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "ender_transfer_progress"),
+            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "end_transfer_progress"),
             Double.class
     );
 
@@ -444,15 +444,8 @@ public final class EndTower extends EntityBackedTower {
     }
 
     private boolean refreshAbsorbedStats(PlayerLane lane) {
-        double capRatio = Math.max(0.0, global("roundStatBonusCapRatio"));
-        double nextRoundHealthBonus = Math.min(
-                type().maxHealth() * capRatio,
-                Math.max(0.0, roundHealthContribution)
-        );
-        double nextRoundDamageBonus = Math.min(
-                type().damage() * capRatio,
-                Math.max(0.0, roundDamageContribution)
-        );
+        double nextRoundHealthBonus = Math.max(0.0, roundHealthContribution);
+        double nextRoundDamageBonus = Math.max(0.0, roundDamageContribution);
         if (Math.abs(nextRoundHealthBonus - roundHealthBonus) < 1.0E-9
                 && Math.abs(nextRoundDamageBonus - roundDamageBonus) < 1.0E-9
                 && Math.abs(permanentHealthBonus - syncedPermanentHealthBonus) < 1.0E-9
