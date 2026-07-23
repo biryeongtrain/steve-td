@@ -274,11 +274,11 @@ final class SemionConfigLoaderTest {
         assertEquals(300.0, balance.ability("end_global", "endCrystalSplashThreshold4", -1.0), 0.0001);
         assertEquals(200.0, balance.ability("end_global", "absorptionDurationTicks", -1.0), 0.0001);
         assertEquals(1.0, balance.ability("end_global", "roundAbsorptionAttackIntervalEvery", -1.0), 0.0001);
-        assertEquals(0.4, balance.ability("end_global", "roundHealthRatio", -1.0), 0.0001);
-        assertEquals(0.4, balance.ability("end_global", "roundDamageRatio", -1.0), 0.0001);
+        assertEquals(0.3, balance.ability("end_global", "roundHealthRatio", -1.0), 0.0001);
+        assertEquals(0.3, balance.ability("end_global", "roundDamageRatio", -1.0), 0.0001);
         assertEquals(-1.0, balance.ability("end_global", "roundStatBonusCapRatio", -1.0), 0.0001);
         assertEquals(30.0, balance.ability("end_global", "endCrystalAttackIntervalEvery", -1.0), 0.0001);
-        assertEquals(0.15, balance.ability("end_global", "dragonFinalDamageBonus", -1.0), 0.0001);
+        assertEquals(0.10, balance.ability("end_global", "dragonFinalDamageBonus", -1.0), 0.0001);
         assertEquals(0.10, balance.ability("end_global", "dragonIncomeDebuffResistance", -1.0), 0.0001);
         assertEquals(60.0, balance.ability("end_global", "shulkerReductionEvery", -1.0), 0.0001);
         assertEquals(0.5, balance.ability("end_global", "attackRangePerStep", -1.0), 0.0001);

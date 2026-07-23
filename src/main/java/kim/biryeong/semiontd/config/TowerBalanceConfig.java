@@ -1118,17 +1118,17 @@ public record TowerBalanceConfig(
         putAbilities(abilities, EndTower.CONFIG_ID, Map.ofEntries(
                 Map.entry("dragonEvolutionMaxHealth", 2000.0),
                 Map.entry("absorptionDurationTicks", 200.0),
-                Map.entry("absorptionHealAmount", 50.0),
+                Map.entry("absorptionHealAmount", 25.0),
                 Map.entry("transferHealingPerTower", 1.0),
                 Map.entry("transferHealingIntervalTicks", 20.0),
                 Map.entry("roundAbsorptionAttackIntervalEvery", 1.0),
                 Map.entry("roundAbsorptionAttackIntervalReductionTicks", 1.0),
-                Map.entry("roundHealthRatio", 0.40),
-                Map.entry("roundDamageRatio", 0.40),
+                Map.entry("roundHealthRatio", 0.30),
+                Map.entry("roundDamageRatio", 0.30),
                 Map.entry("permanentHealthRatio", 0.05),
                 Map.entry("permanentDamageRatio", 0.05),
                 Map.entry("dragonAttackRangeBonus", 2.0),
-                Map.entry("dragonDamageBonus", 0.15),
+                Map.entry("dragonDamageBonus", 0.10),
                 Map.entry("endCrystalAttackIntervalEvery", 30.0),
                 Map.entry("attackIntervalReductionPerStep", 1.0),
                 Map.entry("endCrystalAttackRangeEvery", 60.0),
@@ -1152,7 +1152,7 @@ public record TowerBalanceConfig(
                 Map.entry("damageReductionCap", 0.20),
                 Map.entry("maxAttackIntervalReductionTicks", 10.0),
                 Map.entry("minimumAttackIntervalTicks", 5.0),
-                Map.entry("dragonFinalDamageBonus", 0.15),
+                Map.entry("dragonFinalDamageBonus", 0.10),
                 Map.entry("dragonIncomeDebuffResistance", 0.10)
         ));
     }
