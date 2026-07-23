@@ -597,6 +597,7 @@ public final class SemionConfigLoader {
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "splashRadiusPerStep", 0.25);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "splashDamageRatio", 1.0);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "lifeStealCap", 0.30);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "lifeStealCap", 0.20);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "endCrystalAttackIntervalEvery", 15.0);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "endCrystalAttackRangeEvery", 40.0);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "endCrystalAttackRangeEvery", 20.0);

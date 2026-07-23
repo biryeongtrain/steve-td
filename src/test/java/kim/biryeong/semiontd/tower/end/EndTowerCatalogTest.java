@@ -73,7 +73,7 @@ class EndTowerCatalogTest {
         assertEquals(0.60, config.ability(EndTower.CONFIG_ID, "splashDamageRatio", -1.0), 0.0001);
         assertEquals(60.0, config.ability(EndTower.CONFIG_ID, "shulkerReductionEvery", -1.0), 0.0001);
         assertEquals(0.04, config.ability(EndTower.CONFIG_ID, "damageReductionPerStep", -1.0), 0.0001);
-        assertEquals(0.20, config.ability(EndTower.CONFIG_ID, "lifeStealCap", -1.0), 0.0001);
+        assertEquals(0.15, config.ability(EndTower.CONFIG_ID, "lifeStealCap", -1.0), 0.0001);
         assertEquals(20.0, config.ability(EndTower.CONFIG_ID, "shulkerRegenerationEvery", -1.0), 0.0001);
         assertEquals(1.0, config.ability(EndTower.CONFIG_ID, "regenerationPerStep", -1.0), 0.0001);
         assertEquals(10.0, config.ability(EndTower.CONFIG_ID, "regenerationCap", -1.0), 0.0001);

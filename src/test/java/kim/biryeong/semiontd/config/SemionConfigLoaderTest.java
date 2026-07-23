@@ -322,7 +322,7 @@ final class SemionConfigLoaderTest {
         assertEquals(300.0, balance.ability("end_global", "endCrystalSplashThreshold4", -1.0), 0.0001);
         assertEquals(-1.0, balance.ability("end_global", "splashRadiusPerStep", -1.0), 0.0001);
         assertEquals(0.60, balance.ability("end_global", "splashDamageRatio", -1.0), 0.0001);
-        assertEquals(0.20, balance.ability("end_global", "lifeStealCap", -1.0), 0.0001);
+        assertEquals(0.15, balance.ability("end_global", "lifeStealCap", -1.0), 0.0001);
     }
 
     @Test

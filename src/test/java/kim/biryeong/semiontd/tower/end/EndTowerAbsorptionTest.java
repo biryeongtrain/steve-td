@@ -275,7 +275,7 @@ class EndTowerAbsorptionTest {
         assertTrue(eggDetails.contains("공격 범위: 0블록 / 4블록"));
         assertTrue(eggDetails.contains("추가 체력: 5.0"));
         assertTrue(eggDetails.contains("재생: 0 / 10/초"));
-        assertTrue(eggDetails.contains("생명력 흡수: 0% / 20%"));
+        assertTrue(eggDetails.contains("생명력 흡수: 0% / 15%"));
         assertTrue(eggDetails.contains("피해 감소: 0% / 20%"));
         assertFalse(eggDetails.contains("최종 피해"));
         assertFalse(eggDetails.contains("저항"));
@@ -413,7 +413,7 @@ class EndTowerAbsorptionTest {
         assertEquals(7.0, dragon.adjustAttackRange(5.0), 0.0001);
         assertEquals(84.0, dragon.modifyIncomingDamage(null, null, 100.0), 0.0001);
         assertEquals(10.0, dragon.regenerationPerSecond(), 0.0001);
-        assertTrue(plainRuntimeDetails(dragon).contains("생명력 흡수: 19%"));
+        assertTrue(plainRuntimeDetails(dragon).contains("생명력 흡수: 15%"));
 
         lane.towers().add(tower(EndTowers.T1_ENDERMITE_TOWER, 203));
         lane.towers().add(tower(EndTowers.T1_SHULKER_TOWER, 204));
@@ -427,7 +427,7 @@ class EndTowerAbsorptionTest {
         assertEquals(7.5, dragon.adjustAttackRange(5.0), 0.0001);
         assertEquals(80.0, dragon.modifyIncomingDamage(null, null, 100.0), 0.0001);
         assertEquals(10.0, dragon.regenerationPerSecond(), 0.0001);
-        assertTrue(plainRuntimeDetails(dragon).contains("생명력 흡수: 20%"));
+        assertTrue(plainRuntimeDetails(dragon).contains("생명력 흡수: 15%"));
     }
 
     @Test
