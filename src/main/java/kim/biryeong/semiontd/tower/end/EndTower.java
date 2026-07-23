@@ -444,15 +444,8 @@ public final class EndTower extends EntityBackedTower {
     }
 
     private boolean refreshAbsorbedStats(PlayerLane lane) {
-        double capRatio = Math.max(0.0, global("roundStatBonusCapRatio"));
-        double nextRoundHealthBonus = Math.min(
-                type().maxHealth() * capRatio,
-                Math.max(0.0, roundHealthContribution)
-        );
-        double nextRoundDamageBonus = Math.min(
-                type().damage() * capRatio,
-                Math.max(0.0, roundDamageContribution)
-        );
+        double nextRoundHealthBonus = Math.max(0.0, roundHealthContribution);
+        double nextRoundDamageBonus = Math.max(0.0, roundDamageContribution);
         if (Math.abs(nextRoundHealthBonus - roundHealthBonus) < 1.0E-9
                 && Math.abs(nextRoundDamageBonus - roundDamageBonus) < 1.0E-9
                 && Math.abs(permanentHealthBonus - syncedPermanentHealthBonus) < 1.0E-9
