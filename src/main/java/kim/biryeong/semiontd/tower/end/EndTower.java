@@ -479,22 +479,22 @@ public final class EndTower extends EntityBackedTower {
         int durationTicks = Math.max(1, globalTicks("absorptionDurationTicks"));
         boolean endCrystalLine = EndTowers.isEndCrystalLine(tower.type());
         boolean shulkerLine = EndTowers.isShulkerLine(tower.type());
-        double sourceHealth = tower.currentMaxHealth();
-        double sourceDamage = tower.modifyAttackDamage(null, null, tower.type().damage());
+        double sourceMaxHealth = tower.type().maxHealth();
+        double sourceAttackDamage = tower.type().damage();
         tower.setData(TRANSFER_PROGRESS, 0.0);
         return new AbsorptionProgress(
                 durationTicks,
                 shulkerLine
-                        ? sourceHealth * Math.max(0.0, global("roundHealthRatio"))
+                        ? sourceMaxHealth * Math.max(0.0, global("roundHealthRatio"))
                         : 0.0,
                 endCrystalLine
-                        ? sourceDamage * Math.max(0.0, global("roundDamageRatio"))
+                        ? sourceAttackDamage * Math.max(0.0, global("roundDamageRatio"))
                         : 0.0,
                 shulkerLine
-                        ? sourceHealth * Math.max(0.0, global("permanentHealthRatio"))
+                        ? sourceMaxHealth * Math.max(0.0, global("permanentHealthRatio"))
                         : 0.0,
                 endCrystalLine
-                        ? sourceDamage * Math.max(0.0, global("permanentDamageRatio"))
+                        ? sourceAttackDamage * Math.max(0.0, global("permanentDamageRatio"))
                         : 0.0
         );
     }
