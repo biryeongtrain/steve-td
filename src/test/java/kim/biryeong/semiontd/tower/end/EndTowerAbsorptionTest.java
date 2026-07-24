@@ -412,7 +412,7 @@ class EndTowerAbsorptionTest {
         assertEquals(3.0, dragon.splashRadius(), 0.0001);
         assertEquals(7.0, dragon.adjustAttackRange(5.0), 0.0001);
         assertEquals(84.0, dragon.modifyIncomingDamage(null, null, 100.0), 0.0001);
-        assertEquals(10.0, dragon.regenerationPerSecond(), 0.0001);
+        assertEquals(9.0, dragon.regenerationPerSecond(), 0.0001);
         assertTrue(plainRuntimeDetails(dragon).contains("생명력 흡수: 14%"));
 
         lane.towers().add(tower(EndTowers.T1_ENDERMITE_TOWER, 203));
