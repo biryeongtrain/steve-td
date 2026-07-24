@@ -74,7 +74,7 @@ class EndTowerCatalogTest {
         assertEquals(60.0, config.ability(EndTower.CONFIG_ID, "shulkerReductionEvery", -1.0), 0.0001);
         assertEquals(0.04, config.ability(EndTower.CONFIG_ID, "damageReductionPerStep", -1.0), 0.0001);
         assertEquals(0.15, config.ability(EndTower.CONFIG_ID, "lifeStealCap", -1.0), 0.0001);
-        assertEquals(20.0, config.ability(EndTower.CONFIG_ID, "shulkerRegenerationEvery", -1.0), 0.0001);
+        assertEquals(30.0, config.ability(EndTower.CONFIG_ID, "shulkerRegenerationEvery", -1.0), 0.0001);
         assertEquals(1.0, config.ability(EndTower.CONFIG_ID, "regenerationPerStep", -1.0), 0.0001);
         assertEquals(10.0, config.ability(EndTower.CONFIG_ID, "regenerationCap", -1.0), 0.0001);
         assertEquals(20.0, config.ability(EndTower.CONFIG_ID, "regenerationIntervalTicks", -1.0), 0.0001);
@@ -161,7 +161,7 @@ class EndTowerCatalogTest {
         assertTrue(plainDescription.contains("타워 체력의 30%를 임시 획득"));
         assertTrue(plainDescription.contains("셜커 20스택마다 +1%"));
         assertTrue(plainDescription.contains("피해 감소: 셜커 60스택마다 +4%"));
-        assertTrue(plainDescription.contains("셜커 20스택마다 초당 +1"));
+        assertTrue(plainDescription.contains("셜커 30스택마다 초당 +1"));
         assertFalse(plainDescription.contains("(최대"));
         assertTrue(plainDescription.contains("엔더 드래곤 진화 시 최종 피해: +10% / 저항: +10%"));
         assertTrue(plainDescription.contains("추가 사거리:"));
