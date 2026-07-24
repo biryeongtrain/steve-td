@@ -14,7 +14,8 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.phys.AABB;
 
 public final class TowerAttackMonsterGoal extends Goal {
-    private static final int EMPTY_TARGET_RECHECK_INTERVAL_TICKS = 5;
+    private static final int TARGET_RECHECK_INTERVAL_TICKS = 5;
+    private static final double ENCOUNTER_RANGE_BONUS = 1.0;
 
     private final SemionTowerEntity tower;
     private int cooldownTicks;
@@ -123,18 +124,25 @@ public final class TowerAttackMonsterGoal extends Goal {
             return null;
         }
 
-        if (isUsableCachedTarget()) {
+        boolean usableCachedTarget = isUsableCachedTarget();
+        if (usableCachedTarget && targetSearchCooldownTicks > 0) {
+            targetSearchCooldownTicks--;
             cachedTarget = preferAttackableFinalDefenseTarget(cachedTarget);
             return cachedTarget;
         }
-        SemionMonsterEntity currentTarget = tower.currentAttackTarget();
-        if (cachedTarget == null && isUsableTarget(currentTarget)) {
-            cachedTarget = preferAttackableFinalDefenseTarget(currentTarget);
-            targetSearchCooldownTicks = 0;
-            return cachedTarget;
-        }
-        if (cachedTarget != null) {
+        if (usableCachedTarget) {
             cachedTarget = null;
+        } else {
+            SemionMonsterEntity currentTarget = tower.currentAttackTarget();
+            if (cachedTarget == null && isUsableTarget(currentTarget)) {
+                cachedTarget = preferAttackableFinalDefenseTarget(currentTarget);
+                targetSearchCooldownTicks = TARGET_RECHECK_INTERVAL_TICKS;
+                return cachedTarget;
+            }
+            if (cachedTarget != null) {
+                cachedTarget = null;
+                targetSearchCooldownTicks = 0;
+            }
         }
 
         if (targetSearchCooldownTicks > 0) {
@@ -143,7 +151,7 @@ public final class TowerAttackMonsterGoal extends Goal {
         }
 
         cachedTarget = selectTarget();
-        targetSearchCooldownTicks = cachedTarget == null ? EMPTY_TARGET_RECHECK_INTERVAL_TICKS : 0;
+        targetSearchCooldownTicks = TARGET_RECHECK_INTERVAL_TICKS;
         return cachedTarget;
     }
 
@@ -169,7 +177,16 @@ public final class TowerAttackMonsterGoal extends Goal {
             return null;
         }
 
-        SemionMonsterEntity towerSelectedTarget = tower.selectAttackTarget(targets);
+        List<SemionMonsterEntity> encounteredTargets = targets.stream()
+                .filter(this::isInEncounterRange)
+                .toList();
+        if (encounteredTargets.isEmpty()) {
+            return targets.stream()
+                    .min(Comparator.comparingDouble(tower::distanceToSqr))
+                    .orElse(null);
+        }
+
+        SemionMonsterEntity towerSelectedTarget = tower.selectAttackTarget(encounteredTargets);
         if (towerSelectedTarget != null) {
             return towerSelectedTarget;
         }
@@ -178,12 +195,7 @@ public final class TowerAttackMonsterGoal extends Goal {
                 .comparingDouble((SemionMonsterEntity monster) -> monster.runtimeMonster().targetPriorityScore())
                 .thenComparingLong(this::stableTargetOffset)
                 .thenComparingDouble(monster -> -tower.distanceToSqr(monster));
-        return targets.stream()
-                .filter(this::isInAttackRange)
-                .max(targetPriority)
-                .orElseGet(() -> targets.stream()
-                        .min(Comparator.comparingDouble(tower::distanceToSqr))
-                        .orElse(null));
+        return encounteredTargets.stream().max(targetPriority).orElse(null);
     }
 
     private SemionMonsterEntity selectAttackableTarget() {
@@ -239,6 +251,11 @@ public final class TowerAttackMonsterGoal extends Goal {
     private boolean isInAttackRange(SemionMonsterEntity monster) {
         double attackRangeSqr = tower.attackRange() * tower.attackRange();
         return tower.distanceToSqr(monster) <= attackRangeSqr;
+    }
+
+    private boolean isInEncounterRange(SemionMonsterEntity monster) {
+        double encounterRange = tower.attackRange() + ENCOUNTER_RANGE_BONUS;
+        return tower.distanceToSqr(monster) <= encounterRange * encounterRange;
     }
 
     private long stableTargetOffset(SemionMonsterEntity monster) {

@@ -4578,7 +4578,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest(maxTicks = 60)
-    public void towerEntityPrioritizesInRangeMonsterBeforeFarProgressTarget(GameTestHelper context) {
+    public void towerEntityRetargetsNearbyMonsterBeforeFarProgressTarget(GameTestHelper context) {
         UUID playerId = stableUuid("red-tower-range-priority-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
         PlayerLane lane = redLane(game, 1);
@@ -4593,16 +4593,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
         SemionTowerEntity towerEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(tower.entityId().getAsInt());
         Vec3 towerPosition = towerEntity.position();
-        SemionMonsterEntity nearTarget = spawnRoleMonsterEntity(
-                context,
-                "near-range-target",
-                Optional.empty(),
-                TeamId.RED,
-                1,
-                towerPosition.add(2.0, 0.0, 0.0),
-                40.0,
-                List.of(SummonRole.RUSH)
-        );
         SemionMonsterEntity farProgressTarget = spawnRoleMonsterEntity(
                 context,
                 "far-progress-target",
@@ -4613,27 +4603,44 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 40.0,
                 List.of(SummonRole.SIEGE)
         );
-        nearTarget.runtimeMonster().syncLaneProgress(0.1);
         farProgressTarget.runtimeMonster().syncLaneProgress(0.95);
-        nearTarget.setNoAi(true);
         farProgressTarget.setNoAi(true);
 
-        context.runAfterDelay(20, () -> {
+        context.runAfterDelay(5, () -> {
             if (!assertTrue(
                     context,
-                    nearTarget.getHealth() < 40.0F,
-                    "Tower should attack an in-range monster before chasing a farther high-progress target."
+                    towerEntity.currentAttackTarget() == farProgressTarget,
+                    "Tower should initially advance toward the only available monster."
             )) {
                 return;
             }
-            if (!assertTrue(
+
+            SemionMonsterEntity nearTarget = spawnRoleMonsterEntity(
                     context,
-                    nearTarget.getHealth() < farProgressTarget.getHealth(),
-                    "In-range target should take priority over a farther high-progress target."
-            )) {
-                return;
-            }
-            context.succeed();
+                    "near-range-target",
+                    Optional.empty(),
+                    TeamId.RED,
+                    1,
+                    towerEntity.position().add(2.0, 0.0, 0.0),
+                    40.0,
+                    List.of(SummonRole.RUSH)
+            );
+            nearTarget.runtimeMonster().syncLaneProgress(0.1);
+            nearTarget.setNoAi(true);
+
+            context.runAfterDelay(10, () -> {
+                if (!assertTrue(
+                        context,
+                        towerEntity.currentAttackTarget() == nearTarget,
+                        "Tower should leave a farther high-priority target for a monster inside encounter range."
+                )) {
+                    return;
+                }
+                if (!assertTrue(context, nearTarget.getHealth() < 40.0F, "Tower should attack the nearby monster after retargeting.")) {
+                    return;
+                }
+                context.succeed();
+            });
         });
     }
 
@@ -4686,61 +4693,58 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         });
     }
 
-    @GameTest(maxTicks = 120)
-    public void defaultTowerKeepsTargetUntilItLeavesSearchRange(GameTestHelper context) {
+    @GameTest
+    public void defaultTowerPrioritizesHigherThreatInsideEncounterRange(GameTestHelper context) {
         UUID playerId = stableUuid("red-target-lock-owner");
-        Vec3 origin = Vec3.atCenterOf(context.absolutePos(BlockPos.ZERO));
-        TowerType towerType = new TowerType("target_lock_test", "Target Lock Test", TowerCategory.DIRECT, 0, 50.0, 8.0, 0.0, 20, 0);
-        SemionMonsterEntity firstTarget = spawnRoleMonsterEntity(
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);
+        PlayerLane lane = redLane(game, 1);
+        TowerType towerType = new TowerType("target_lock_test", "Target Lock Test", TowerCategory.DIRECT, 0, 50.0, 3.5, 0.0, 100, 0);
+        lane.addTower(new TestTower(towerType, playerId, TeamId.RED, 1, GridPosition.from(towerPlacementPos(lane))));
+        TestTower tower = (TestTower) lane.towers().getFirst();
+        SemionTowerEntity towerEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(tower.entityId().orElseThrow());
+        Vec3 towerPosition = towerEntity.position();
+        SemionMonsterEntity farPriorityTarget = spawnRoleMonsterEntity(
                 context,
-                "target-lock-first",
+                "target-lock-far-priority",
                 Optional.empty(),
                 TeamId.RED,
                 1,
-                origin.add(0.0, 0.0, 4.0),
+                towerPosition.add(8.0, 0.0, 0.0),
+                100.0,
+                List.of(SummonRole.SIEGE)
+        );
+        farPriorityTarget.setNoAi(true);
+        farPriorityTarget.runtimeMonster().syncLaneProgress(0.95);
+        SemionMonsterEntity lowerPriorityTarget = spawnRoleMonsterEntity(
+                context,
+                "target-lock-lower-priority",
+                Optional.empty(),
+                TeamId.RED,
+                1,
+                towerPosition.add(2.0, 0.0, 0.0),
                 100.0,
                 List.of(SummonRole.RUSH)
         );
-        firstTarget.setNoAi(true);
-        firstTarget.runtimeMonster().syncLaneProgress(0.1);
-
-        SemionTowerEntity tower = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
-        tower.configure(new TestTower(towerType, playerId, TeamId.RED, 1, GridPosition.from(BlockPos.containing(origin))), null);
-        tower.setUUID(stableUuid("target-lock-tower"));
-        tower.setPos(origin);
-        context.getLevel().addFreshEntity(tower);
+        lowerPriorityTarget.setNoAi(true);
+        lowerPriorityTarget.runtimeMonster().syncLaneProgress(0.1);
+        SemionMonsterEntity higherPriorityTarget = spawnRoleMonsterEntity(
+                context,
+                "target-lock-higher-priority",
+                Optional.empty(),
+                TeamId.RED,
+                1,
+                towerPosition.add(3.0, 0.0, 0.0),
+                100.0,
+                List.of(SummonRole.SIEGE)
+        );
+        higherPriorityTarget.setNoAi(true);
+        higherPriorityTarget.runtimeMonster().syncLaneProgress(0.95);
 
         context.runAfterDelay(10, () -> {
-            if (!assertTrue(context, tower.currentAttackTarget() == firstTarget, "Tower should acquire the first target.")) {
+            if (!assertTrue(context, towerEntity.currentAttackTarget() == higherPriorityTarget, "Tower should select the higher-priority target among enemies inside encounter range.")) {
                 return;
             }
-
-            SemionMonsterEntity higherPriorityTarget = spawnRoleMonsterEntity(
-                    context,
-                    "target-lock-higher-priority",
-                    Optional.empty(),
-                    TeamId.RED,
-                    1,
-                    origin.add(1.0, 0.0, 4.0),
-                    100.0,
-                    List.of(SummonRole.SIEGE)
-            );
-            higherPriorityTarget.setNoAi(true);
-            higherPriorityTarget.runtimeMonster().syncLaneProgress(0.95);
-
-            context.runAfterDelay(20, () -> {
-                if (!assertTrue(context, tower.currentAttackTarget() == firstTarget, "Tower should keep a valid cached target instead of reselecting by priority.")) {
-                    return;
-                }
-
-                firstTarget.setPos(origin.add(128.0, 0.0, 128.0));
-                context.runAfterDelay(5, () -> {
-                    if (!assertTrue(context, tower.currentAttackTarget() == higherPriorityTarget, "Tower should reselect after the cached target leaves search range.")) {
-                        return;
-                    }
-                    context.succeed();
-                });
-            });
+            context.succeed();
         });
     }
 
