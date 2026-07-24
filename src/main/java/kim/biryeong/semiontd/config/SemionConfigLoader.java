@@ -605,6 +605,7 @@ public final class SemionConfigLoader {
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "attackRangeCap", 5.0);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "shulkerLifeStealEvery", 10.0);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "shulkerLifeStealEvery", 15.0);
+        changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "shulkerRegenerationEvery", 20.0);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "regenerationPerStep", 5.0);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "regenerationCap", 50.0);
         changed |= migrateLegacyAbilityDefault(endAbilities, defaults, "regenerationCap", 15.0);
