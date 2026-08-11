@@ -146,7 +146,9 @@ public final class AdversaryTeamEffects {
             }
             for (Monster monster : List.copyOf(lane.activeMonsters())) {
                 SemionMonsterEntity entity = monsterEntity(monster, level);
-                if (entity != null && monster.targetTeam() == teamId) {
+                if (entity != null
+                        && monster.targetTeam() == teamId
+                        && AdversaryRivalTower.kindOf(monster).isEmpty()) {
                     monsters.add(entity);
                 }
             }

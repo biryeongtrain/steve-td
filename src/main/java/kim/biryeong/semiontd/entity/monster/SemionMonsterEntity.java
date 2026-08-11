@@ -517,11 +517,14 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
             return;
         }
         double previousHealth = runtimeMonster.health();
-        applyRuntimeDamage(damageSources().onFire(), damageAmount, DamageType.MAGIC);
+        boolean killed = applyRuntimeDamage(damageSources().onFire(), damageAmount, DamageType.MAGIC);
         double dealtDamage = Math.max(0.0, previousHealth - runtimeMonster.health());
         if (dealtDamage > 0.0) {
             if (state.sourceTower() != null) {
-                state.sourceTower().recordDamageDealt(dealtDamage, DamageType.MAGIC);
+                state.sourceTower().recordDamageDealt(this, dealtDamage, DamageType.MAGIC);
+                if (killed) {
+                    state.sourceTower().onIgniteKill(this);
+                }
             }
             runtimeMonster.recordLastHit(state.sourcePlayer(), KillSourceKind.TOWER);
         }
@@ -570,7 +573,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         applyRuntimeDamage(damageSources().onFire(), damageAmount, DamageType.MAGIC);
         double dealtDamage = Math.max(0.0, previousHealth - runtimeMonster.health());
         if (dealtDamage > 0.0) {
-            poison.sourceTower().recordDamageDealt(dealtDamage, DamageType.MAGIC);
+            poison.sourceTower().recordDamageDealt(this, dealtDamage, DamageType.MAGIC);
             runtimeMonster.recordLastHit(poison.sourcePlayer(), KillSourceKind.TOWER);
         }
     }

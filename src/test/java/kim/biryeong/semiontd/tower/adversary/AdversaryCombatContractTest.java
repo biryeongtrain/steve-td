@@ -277,10 +277,11 @@ class AdversaryCombatContractTest {
                         AdversaryBalance.SCULK_DETONATION_DAMAGE,
                         AdversaryBalance.SCULK_ATTACK_INTERVAL_TICKS
                 ), 0.0001),
-                () -> assertEquals(1_600.0, dps(
+                () -> assertEquals(1_000.0, dps(
                         AdversaryBalance.SCULK_DETONATION_DAMAGE,
                         AdversaryBalance.SCULK_ATTACK_INTERVAL_TICKS
                 ) * AdversaryBalance.SCULK_MAX_TARGETS, 0.0001),
+                () -> assertEquals(0.20, AdversaryBalance.MACE_FOCUS_BREAK_MAX_HEALTH_RATIO, 0.0001),
                 () -> assertEquals(1.5, AdversaryBalance.MACE_SWEEP_RADIUS, 0.0001),
                 () -> assertEquals(2, AdversaryBalance.MACE_SWEEP_EXTRA_TARGETS),
                 () -> assertEquals(0.25, AdversaryBalance.MACE_SWEEP_DAMAGE_RATIO, 0.0001),
@@ -325,13 +326,15 @@ class AdversaryCombatContractTest {
         assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
                 line.contains("40tick")
                         && line.contains("마법 피해 1000")
-                        && line.contains("최대 8기")));
+                        && line.contains("최대 5기")));
         assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
                 line.contains("10% 방어 무시 자해") && line.contains("체력 20% 아래")));
 
         fox.setForm(FoxForm.MACE_EXECUTIONER, null);
         assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
                 line.contains("주변 2기") && line.contains("25% 휩쓸기")));
+        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
+                line.contains("최대 체력 20%") && line.contains("피해 시 취소")));
     }
 
     @Test

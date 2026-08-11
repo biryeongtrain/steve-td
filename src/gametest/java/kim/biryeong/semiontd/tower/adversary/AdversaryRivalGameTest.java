@@ -2,15 +2,20 @@ package kim.biryeong.semiontd.tower.adversary;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import kim.biryeong.semiontd.config.AttackKind;
+import kim.biryeong.semiontd.entity.SemionEntityTypes;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
+import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.trait.TraitLoadout;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -66,6 +71,15 @@ public final class AdversaryRivalGameTest {
             require(context.getLevel().getEntity(proxy.minecraftEntityId()).position().distanceToSqr(expected) < 0.01,
                     "Rival proxy should spawn at its installed slot.");
 
+            lane.forceFinalDefense();
+            require(proxy.inFinalDefenseCombat(),
+                    "A converted rival must enter final-defense combat.");
+            require(context.getLevel().getEntity(proxy.minecraftEntityId()).position()
+                            .distanceToSqr(expected) > 1.0,
+                    "The live rival proxy must leave its installed slot for final defense.");
+            require(fox.deployedAtFinalDefense(),
+                    "The fox must move to final defense with its rival proxy.");
+
             lane.tick(context.getLevel().getServer());
             require(fox.nearbyTowerDeaths == 0,
                     "Wave conversion must not fan out a fake nearby tower-death event.");
@@ -85,6 +99,84 @@ public final class AdversaryRivalGameTest {
                                     .isPresent()),
                     "No rival proxy may survive the preparation reset.");
             require(!lane.laneDefenseBroken(), "Round reset should restore lane defense state.");
+
+            lane.markWaveStarted(2);
+            Monster nextProxy = lane.activeMonsters().getFirst();
+            lane.forceFinalDefense();
+            require(nextProxy.inFinalDefenseCombat(),
+                    "A restored rival must enter final-defense combat again next round.");
+            require(context.getLevel().getEntity(nextProxy.minecraftEntityId()).position()
+                            .distanceToSqr(expected) > 1.0,
+                    "The restored rival proxy must move again instead of remaining in the lane.");
+            context.succeed();
+        } finally {
+            lane.clearTowers();
+            AdversaryProgressStates.clear(owner);
+        }
+    }
+
+    @GameTest
+    public void igniteKillCreditsRivalScoreWithoutInflatingDamageStatistics(GameTestHelper context) {
+        UUID owner = stableUuid("adversary-rival-ignite");
+        PlayerLane lane = testLane(context, owner);
+        GridPosition foxPosition = GridPosition.from(context.absolutePos(new BlockPos(2, 2, 3)));
+        GridPosition rivalPosition = GridPosition.from(context.absolutePos(new BlockPos(3, 2, 3)));
+        AdversaryFoxTower fox = new AdversaryFoxTower(
+                AdversaryTowers.FOX,
+                owner,
+                TeamId.RED,
+                1,
+                foxPosition
+        );
+        AdversaryRivalTower rival = new AdversaryRivalTower(
+                AdversaryTowers.BREEZE_RIVAL,
+                owner,
+                TeamId.RED,
+                1,
+                rivalPosition
+        );
+
+        try {
+            lane.addTower(fox);
+            lane.addTower(rival);
+            lane.markWaveStarted(1);
+
+            SemionTowerEntity foxEntity = (SemionTowerEntity) context.getLevel()
+                    .getEntity(fox.entityId().orElseThrow());
+            Monster proxy = lane.activeMonsters().getFirst();
+            SemionMonsterEntity proxyEntity = (SemionMonsterEntity) context.getLevel()
+                    .getEntity(proxy.minecraftEntityId());
+            proxyEntity.setNoAi(true);
+
+            fox.damageTargetResult(foxEntity, proxyEntity, 1.0);
+            requireClose(0.0, fox.roundPhysicalDamageDealt(),
+                    "Damage dealt to an owned rival must not inflate physical damage statistics.");
+
+            proxyEntity.applyIgnite(
+                    owner,
+                    fox,
+                    TraitLoadout.none(),
+                    100.0,
+                    0.0,
+                    1.0,
+                    1,
+                    1
+            );
+            proxyEntity.aiStep();
+
+            require(rival.contributedScore() == 1,
+                    "An ignite last hit from the fox must credit the rival's evolution score.");
+            requireClose(0.0, fox.roundMagicDamageDealt(),
+                    "Ignite damage to an owned rival must not inflate magic damage statistics.");
+
+            SemionMonsterEntity ordinary = spawnOrdinaryMonster(
+                    context,
+                    lane,
+                    new Vec3(foxPosition.x() + 4.5, foxPosition.y() + 1.0, foxPosition.z() + 0.5)
+            );
+            fox.damageTargetResult(foxEntity, ordinary, 10.0);
+            requireClose(10.0, fox.roundPhysicalDamageDealt(),
+                    "Damage dealt to an ordinary monster must remain in round statistics.");
             context.succeed();
         } finally {
             lane.clearTowers();
@@ -107,6 +199,44 @@ public final class AdversaryRivalGameTest {
                 List.of(GridPosition.from(context.absolutePos(new BlockPos(7, 2, 11))))
         );
         return new PlayerLane(TeamId.RED, 1, owner, context.getLevel(), layout);
+    }
+
+    private static SemionMonsterEntity spawnOrdinaryMonster(
+            GameTestHelper context,
+            PlayerLane lane,
+            Vec3 position
+    ) {
+        Monster monster = new Monster(
+                "adversary-statistics-control",
+                lane.teamId(),
+                lane.laneId(),
+                Optional.empty(),
+                Optional.empty(),
+                100.0,
+                0.0,
+                1.0,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                0L
+        );
+        SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
+        entity.configureFrom(monster, lane.laneLayout());
+        entity.setPos(position);
+        context.getLevel().addFreshEntity(entity);
+        monster.markMinecraftEntitySpawned(entity.getId(), position.x, position.y, position.z);
+        lane.activeMonsters().add(monster);
+        entity.setNoAi(true);
+        return entity;
+    }
+
+    private static UUID stableUuid(String seed) {
+        return UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static void requireClose(double expected, double actual, String message) {
+        if (Math.abs(expected - actual) > 0.0001) {
+            throw new AssertionError(message + " Expected " + expected + ", got " + actual + '.');
+        }
     }
 
     private static void require(boolean condition, String message) {

@@ -355,6 +355,20 @@ public final class AdversaryFoxTower extends EntityBackedTower {
     }
 
     @Override
+    public void onIgniteKill(SemionMonsterEntity target) {
+        if (target != null && target.runtimeMonster() != null) {
+            AdversaryProgressStates.recordFoxKill(ownerPlayer(), target.runtimeMonster(), currentLane);
+        }
+    }
+
+    @Override
+    protected boolean countsDamageInRoundStatistics(SemionMonsterEntity target) {
+        return target == null
+                || target.runtimeMonster() == null
+                || !AdversaryRivalTower.isOwnedRival(target.runtimeMonster(), ownerPlayer());
+    }
+
+    @Override
     public double modifyIncomingDamage(
             SemionTowerEntity towerEntity,
             DamageSource damageSource,

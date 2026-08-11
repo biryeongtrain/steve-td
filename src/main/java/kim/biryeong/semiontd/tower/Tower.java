@@ -308,6 +308,16 @@ public abstract class Tower {
         }
     }
 
+    public void recordDamageDealt(SemionMonsterEntity target, double amount, DamageType damageType) {
+        if (countsDamageInRoundStatistics(target)) {
+            recordDamageDealt(amount, damageType);
+        }
+    }
+
+    protected boolean countsDamageInRoundStatistics(SemionMonsterEntity target) {
+        return true;
+    }
+
     public void recordDamageTaken(double amount) {
         if (Double.isFinite(amount) && amount > 0.0) {
             roundDamageTaken += amount;
@@ -488,7 +498,7 @@ public abstract class Tower {
         );
         double currentHealth = runtimeMonster == null ? target.getHealth() : runtimeMonster.health();
         double dealtDamage = Math.max(0.0, previousHealth - currentHealth);
-        recordDamageDealt(dealtDamage, resolvedDamageType);
+        recordDamageDealt(target, dealtDamage, resolvedDamageType);
         if (dealtDamage > 0.0 && resolvedDamageType == DamageType.MAGIC) {
             TowerVfxService.showMagicHit(towerEntity, target);
         }
@@ -513,6 +523,9 @@ public abstract class Tower {
     }
 
     public void onKill(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
+    }
+
+    public void onIgniteKill(SemionMonsterEntity target) {
     }
 
     public void onNearbyMonsterDeath(PlayerLane lane, Monster monster, Vec3 deathPosition) {

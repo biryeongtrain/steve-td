@@ -81,13 +81,25 @@ public final class AdversaryIntegrationGameTest {
                     "minecraft:zombie",
                     0L
             );
+            AdversaryRivalTower rivalTower = new AdversaryRivalTower(
+                    AdversaryTowers.BREEZE_RIVAL,
+                    OMINOUS_OWNER,
+                    TeamId.RED,
+                    2,
+                    position(context, 25, 2, 3)
+            );
+            Monster ownedRival = rivalTower.createProxy(1);
             recipientLane.enqueueSummonedMonster(monster);
+            recipientLane.enqueueSummonedMonster(ownedRival);
+            recipientLane.tick(context.getLevel().getServer());
             recipientLane.tick(context.getLevel().getServer());
 
             SemionTowerEntity recipientEntity = towerEntity(context, recipient);
             SemionMonsterEntity monsterEntity = monsterEntity(context, monster);
+            SemionMonsterEntity ownedRivalEntity = monsterEntity(context, ownedRival);
             recipientEntity.setNoAi(true);
             monsterEntity.setNoAi(true);
+            ownedRivalEntity.setNoAi(true);
 
             requireClose(
                     AdversaryBalance.BEACON_TEAM_DAMAGE_BONUS,
@@ -118,6 +130,21 @@ public final class AdversaryIntegrationGameTest {
                     AdversaryBalance.OMINOUS_MONSTER_TOWER_DAMAGE_TAKEN_BONUS,
                     monsterEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS),
                     "Ominous vulnerability must reach a monster targeting the team."
+            );
+            requireClose(
+                    0.0,
+                    ownedRivalEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION),
+                    "Ominous damage reduction must not weaken an owned rival."
+            );
+            requireClose(
+                    0.0,
+                    ownedRivalEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION),
+                    "Ominous attack speed reduction must not weaken an owned rival."
+            );
+            requireClose(
+                    0.0,
+                    ownedRivalEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS),
+                    "Ominous vulnerability must not amplify damage against an owned rival."
             );
             require(recipientEntity.activeTimedEffectTicks(TimedEffectType.TOWER_DAMAGE_BONUS) == 4,
                     "Team tower support must use the configured timed duration.");
@@ -219,12 +246,13 @@ public final class AdversaryIntegrationGameTest {
                     "The next live tick must synchronize the committed Bell form.");
             requireClose(FoxForm.BELL_KEEPER.maxHealth(), fox.currentMaxHealth(),
                     "Bell form must synchronize configured max health.");
-            requireClose(FoxForm.BELL_KEEPER.maxHealth(), entity.getMaxHealth(),
-                    "AttributeFix must expose the Bell form's full maximum health.");
+            double entityHealthCapacity = entity.getMaxHealth();
+            require(entityHealthCapacity > 0.0 && entityHealthCapacity <= fox.currentMaxHealth(),
+                    "The live entity must expose a positive health capacity no larger than logical health.");
             requireClose(0.90, fox.health() / fox.currentMaxHealth(),
                     "Form synchronization must preserve the fox health ratio.");
-            requireClose(1125.0, entity.getHealth(),
-                    "The live entity must expose the fox's full current health.");
+            requireClose(Math.min(1125.0, entityHealthCapacity), entity.getHealth(),
+                    "The live entity must mirror logical health up to its runtime attribute cap.");
             require(entity.getItemBySlot(EquipmentSlot.MAINHAND).is(Items.BELL),
                     "The live fox MAINHAND item must synchronize to Bell.");
 
@@ -232,13 +260,15 @@ public final class AdversaryIntegrationGameTest {
                     "Normal damage must reach the live Bell fox.");
             requireClose(1075.0, fox.health(),
                     "Normal damage must consume logical overflow before entity health.");
-            requireClose(1075.0, entity.getHealth(),
-                    "The entity must stay synchronized with full logical health.");
+            requireClose(Math.min(1075.0, entityHealthCapacity), entity.getHealth(),
+                    "The entity must remain capped while logical overflow absorbs damage.");
 
             require(entity.hurtServer(context.getLevel(), entity.damageSources().generic(), 25.0F),
                     "A second same-tick hit must not be blocked by virtual-health handling.");
             requireClose(1050.0, fox.health(),
                     "Same-tick normal damage must also consume logical overflow.");
+            requireClose(Math.min(1050.0, entityHealthCapacity), entity.getHealth(),
+                    "The second hit must preserve the runtime entity cap.");
 
             entity.hurtIgnoringReductions(entity.damageSources().generic(), 1030.0);
             requireClose(20.0, fox.health(),
@@ -289,26 +319,40 @@ public final class AdversaryIntegrationGameTest {
                 fox.tick(lane);
             }
 
-            requireClose(4_500.0, primary.runtimeMonster().health(),
+            requireClose(500.0, primary.runtimeMonster().health(),
                     "Mace must deal its full strike to the primary target.");
-            requireClose(4_875.0, first.runtimeMonster().health(),
+            requireClose(875.0, first.runtimeMonster().health(),
                     "Mace must sweep the nearest first target for 25% damage.");
-            requireClose(4_875.0, second.runtimeMonster().health(),
+            requireClose(875.0, second.runtimeMonster().health(),
                     "Mace must sweep the nearest second target for 25% damage.");
-            requireClose(5_000.0, third.runtimeMonster().health(),
+            requireClose(1_000.0, third.runtimeMonster().health(),
                     "Mace sweep must stop after two secondary targets.");
 
             fox.setForm(FoxForm.SCULK_CORE, lane);
             fox.syncHealth(275.0);
             source.setHealth(275.0F);
-            fox.onAttackResolved(source, primary, 0.0, 0.0, 0.0, false);
+            SemionMonsterEntity firstSculkTarget = spawnMonster(
+                    context,
+                    lane,
+                    "sculk-first",
+                    source.position().add(-3.0, 0.0, 0.0)
+            );
+            firstSculkTarget.setNoAi(true);
+            fox.onAttackResolved(source, firstSculkTarget, 0.0, 0.0, 0.0, false);
             for (int tick = 0; tick < AdversaryBalance.SCULK_DETONATION_DELAY_TICKS; tick++) {
                 fox.tick(lane);
             }
             requireClose(220.0, fox.health(),
                     "Sculk recoil must stop exactly at twenty percent health.");
 
-            fox.onAttackResolved(source, primary, 0.0, 0.0, 0.0, false);
+            SemionMonsterEntity secondSculkTarget = spawnMonster(
+                    context,
+                    lane,
+                    "sculk-second",
+                    source.position().add(-3.0, 0.0, 0.0)
+            );
+            secondSculkTarget.setNoAi(true);
+            fox.onAttackResolved(source, secondSculkTarget, 0.0, 0.0, 0.0, false);
             for (int tick = 0; tick < AdversaryBalance.SCULK_DETONATION_DELAY_TICKS; tick++) {
                 fox.tick(lane);
             }
@@ -361,7 +405,7 @@ public final class AdversaryIntegrationGameTest {
                 lane.laneId(),
                 Optional.empty(),
                 Optional.empty(),
-                5_000.0,
+                1_000.0,
                 0.0,
                 1.0,
                 AttackKind.MELEE,

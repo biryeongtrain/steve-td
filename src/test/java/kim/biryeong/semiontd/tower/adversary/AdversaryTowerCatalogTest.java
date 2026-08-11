@@ -214,12 +214,12 @@ class AdversaryTowerCatalogTest {
     @Test
     void rivalRoundAndEnhancementScalingMatchesTheApprovedFormula() {
         assertEquals(2.62, AdversaryBalance.rivalRoundHealthMultiplier(10), 0.0001);
-        assertEquals(1.63, AdversaryBalance.rivalRoundDamageMultiplier(10), 0.0001);
+        assertEquals(1.45, AdversaryBalance.rivalRoundDamageMultiplier(10), 0.0001);
         assertEquals(1, AdversaryBalance.rivalRoundArmorBonus(10));
 
         RivalKind kind = RivalKind.POLAR_BEAR;
         assertEquals(180.0 * 2.62 * 2.25, kind.maxHealth(10, true), 0.0001);
-        assertEquals(11.0 * 1.63 * 1.70, kind.damage(10, true), 0.0001);
+        assertEquals(11.0 * 1.45 * 1.70, kind.damage(10, true), 0.0001);
         assertEquals(8.0, kind.armor(10, true), 0.0001);
         assertEquals(13, kind.attackIntervalTicks(true));
         assertEquals(3.0, kind.range(true), 0.0001);
@@ -247,13 +247,13 @@ class AdversaryTowerCatalogTest {
         assertEquals(13, FoxForm.values().length);
         assertForm(FoxForm.BASE, 350, 3, 18, 10);
         assertForm(FoxForm.BREEZE, 800, 7, 30, 4);
-        assertForm(FoxForm.GOLDEN_FANG, 900, 5, 36, 3);
+        assertForm(FoxForm.GOLDEN_FANG, 1100, 5, 36, 3);
         assertForm(FoxForm.SHIELD_BEARER, 1400, 3.5, 75, 7);
         assertForm(FoxForm.BELL_KEEPER, 1250, 5, 70, 7);
         assertForm(FoxForm.BEACON_KEEPER, 1600, 4, 90, 6);
         assertForm(FoxForm.OMINOUS_HEXER, 1100, 8, 90, 6);
         assertForm(FoxForm.TRACKER, 900, 8, 60, 7);
-        assertForm(FoxForm.FIREWORK_PIERCER, 950, 10, 60, 8);
+        assertForm(FoxForm.FIREWORK_PIERCER, 1100, 10, 60, 8);
         assertForm(FoxForm.BIG_GAME_TRACKER, 1250, 11, 120, 16);
         assertForm(FoxForm.ECHO_FOX, 1200, 7, 90, 8);
         assertForm(FoxForm.MACE_EXECUTIONER, 1400, 4.5, 500, 50);
@@ -304,11 +304,14 @@ class AdversaryTowerCatalogTest {
 
         Map<String, Double> global = defaults.abilities().get(AdversaryBalance.GLOBAL_CONFIG_ID);
         assertEquals(1.25, global.get("baseSplashRadius"), 0.0001);
+        assertEquals(0.05, global.get("rivalRoundDamageGrowth"), 0.0001);
         assertEquals(20.0, global.get("teamEffectScanIntervalTicks"), 0.0001);
         assertEquals(0.10, global.get("beaconTeamAttackSpeedBonus"), 0.0001);
+        assertEquals(0.20, global.get("maceBreakHealthRatio"), 0.0001);
         assertEquals(1.50, global.get("maceSweepRadius"), 0.0001);
         assertEquals(2.0, global.get("maceSweepExtraTargets"), 0.0001);
         assertEquals(0.25, global.get("maceSweepDamageRatio"), 0.0001);
+        assertEquals(5.0, global.get("sculkMaxTargets"), 0.0001);
         assertEquals(0.20, global.get("sculkSelfDamageFloorRatio"), 0.0001);
         assertFalse(global.containsKey("maceStrikeDamage"));
         assertFalse(global.containsKey("maceStrikeIntervalTicks"));

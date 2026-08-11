@@ -19,7 +19,7 @@ public final class AdversaryBalance {
     public static final long FOX_COST = 100L;
 
     public static final double RIVAL_ROUND_HEALTH_GROWTH = 0.18;
-    public static final double RIVAL_ROUND_DAMAGE_GROWTH = 0.07;
+    public static final double RIVAL_ROUND_DAMAGE_GROWTH = 0.05;
     public static final int RIVAL_ARMOR_ROUND_INTERVAL = 5;
     public static final double ENHANCED_RIVAL_HEALTH_MULTIPLIER = 2.25;
     public static final double ENHANCED_RIVAL_DAMAGE_MULTIPLIER = 1.70;
@@ -67,7 +67,7 @@ public final class AdversaryBalance {
     public static final int MACE_FOCUS_TICKS = 30;
     public static final int MACE_STRIKE_INTERVAL_TICKS = 50;
     public static final double MACE_STRIKE_DAMAGE = 500.0;
-    public static final double MACE_FOCUS_BREAK_MAX_HEALTH_RATIO = 0.10;
+    public static final double MACE_FOCUS_BREAK_MAX_HEALTH_RATIO = 0.20;
     public static final double[] MACE_STREAK_MULTIPLIERS = {1.00, 1.50, 2.00, 2.50, 3.00};
     public static final double MACE_SWEEP_RADIUS = 1.50;
     public static final int MACE_SWEEP_EXTRA_TARGETS = 2;
@@ -77,7 +77,7 @@ public final class AdversaryBalance {
     public static final int SCULK_ATTACK_INTERVAL_TICKS = 100;
     public static final double SCULK_DETONATION_DAMAGE = 1_000.0;
     public static final double SCULK_DETONATION_RADIUS = 4.0;
-    public static final int SCULK_MAX_TARGETS = 8;
+    public static final int SCULK_MAX_TARGETS = 5;
     public static final double SCULK_SELF_DAMAGE_MAX_HEALTH_RATIO = 0.10;
     public static final double SCULK_SELF_DAMAGE_HEALTH_FLOOR_RATIO = 0.20;
 
@@ -336,13 +336,13 @@ public final class AdversaryBalance {
         return switch (form) {
             case BASE -> new FormDefaults(350.0, 3.0, 18.0, 10, 0.0);
             case BREEZE -> new FormDefaults(800.0, 7.0, 30.0, 4, 0.0);
-            case GOLDEN_FANG -> new FormDefaults(900.0, 5.0, 36.0, 3, 0.0);
+            case GOLDEN_FANG -> new FormDefaults(1_100.0, 5.0, 36.0, 3, 0.0);
             case SHIELD_BEARER -> new FormDefaults(1_400.0, 3.5, 75.0, 7, 0.20);
             case BELL_KEEPER -> new FormDefaults(1_250.0, 5.0, 70.0, 7, 0.0);
             case BEACON_KEEPER -> new FormDefaults(1_600.0, 4.0, 90.0, 6, 0.30);
             case OMINOUS_HEXER -> new FormDefaults(1_100.0, 8.0, 90.0, 6, 0.12);
             case TRACKER -> new FormDefaults(900.0, 8.0, 60.0, 7, 0.0);
-            case FIREWORK_PIERCER -> new FormDefaults(950.0, 10.0, 60.0, 8, 0.0);
+            case FIREWORK_PIERCER -> new FormDefaults(1_100.0, 10.0, 60.0, 8, 0.0);
             case BIG_GAME_TRACKER -> new FormDefaults(1_250.0, 11.0, 120.0, 16, 0.0);
             case ECHO_FOX -> new FormDefaults(1_200.0, 7.0, 90.0, 8, 0.0);
             case MACE_EXECUTIONER -> new FormDefaults(1_400.0, 4.5, MACE_STRIKE_DAMAGE, MACE_STRIKE_INTERVAL_TICKS, 0.0);
