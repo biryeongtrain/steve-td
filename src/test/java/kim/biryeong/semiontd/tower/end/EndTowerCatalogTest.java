@@ -5,7 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
@@ -18,6 +20,7 @@ import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
 import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
 import net.minecraft.SharedConstants;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.item.DyeColor;
@@ -41,63 +44,64 @@ class EndTowerCatalogTest {
     @Test
     void defaultBalanceConfigIncludesEndTowersAndAbilities() {
         TowerBalanceConfig config = TowerBalanceConfig.defaultConfig();
-
         assertTrue(config.towers().containsKey(EndTowers.BASE_END_TOWER.id()));
         assertTrue(config.towers().containsKey(EndTowers.T3_END_CRYSTAL_TOWER.id()));
         assertTrue(config.towers().containsKey(EndTowers.T3_SHULKER_TOWER.id()));
+        assertTrue(config.abilities().containsKey(EndTower.CONFIG_ID));
+        List<String> expectedAbilityKeys = Arrays.stream(EndConfig.Ability.values())
+                .map(EndConfig.Ability::key)
+                .toList();
+        List<String> actualAbilityKeys = List.copyOf(
+                config.abilities().get(EndTower.CONFIG_ID).keySet()
+        );
+        assertEquals(expectedAbilityKeys, actualAbilityKeys);
         assertEquals(-1.0, config.ability(EndTower.CONFIG_ID, "hatchDelayTicks", -1.0), 0.0001);
+        assertEquals(-1.0, config.ability(EndTower.CONFIG_ID, "regenerationTicks", -1.0), 0.0001);
+        assertEquals(-1.0, config.ability(EndTower.CONFIG_ID, "attackDamageCap", -1.0), 0.0001);
         assertEquals(2000.0, config.ability(EndTower.CONFIG_ID, "dragonEvolution", -1.0), 0.0001);
-        assertEquals(120.0, config.ability(EndTower.CONFIG_ID, "damageSoftCap", -1.0), 0.0001);
-        assertEquals(-1.0, config.ability(EndTower.CONFIG_ID, "damageCap", -1.0), 0.0001);
+        assertEquals(100.0, config.ability(EndTower.CONFIG_ID, "phantomScaleHealth", -1.0), 0.0001);
+        assertEquals(0.2, config.ability(EndTower.CONFIG_ID, "phantomScaleStep", -1.0), 0.0001);
+        assertEquals(1.0, config.ability(EndTower.CONFIG_ID, "phantomScaleBase", -1.0), 0.0001);
+        assertEquals(5.0, config.ability(EndTower.CONFIG_ID, "phantomScaleCap", -1.0), 0.0001);
         assertEquals(200.0, config.ability(EndTower.CONFIG_ID, "transferTicks", -1.0), 0.0001);
         assertEquals(30.0, config.ability(EndTower.CONFIG_ID, "transferHeal", -1.0), 0.0001);
         assertEquals(0.05, config.ability(EndTower.CONFIG_ID, "transferHealRatio", -1.0), 0.0001);
         assertEquals(0.50, config.ability(EndTower.CONFIG_ID, "roundHealthRatio", -1.0), 0.0001);
-        assertEquals(0.75, config.ability(EndTower.CONFIG_ID, "roundDamageRatio", -1.0), 0.0001);
         assertEquals(0.04, config.ability(EndTower.CONFIG_ID, "permanentHealthRatio", -1.0), 0.0001);
-        assertEquals(0.06, config.ability(EndTower.CONFIG_ID, "permanentDamageRatio", -1.0), 0.0001);
-        assertEquals(1.0, config.ability(EndTower.CONFIG_ID, "transferAttackSpeedStacks", -1.0), 0.0001);
-        assertEquals(1.0, config.ability(EndTower.CONFIG_ID, "transferAttackSpeedStep", -1.0), 0.0001);
-        assertEquals(2.0, config.ability(EndTower.CONFIG_ID, "dragonRangeBonus", -1.0), 0.0001);
-        assertEquals(0.20, config.ability(EndTower.CONFIG_ID, "dragonFinalDamage", -1.0), 0.0001);
+        assertEquals(3000.0, config.ability(EndTower.CONFIG_ID, "healthThreshold", -1.0), 0.0001);
+        assertEquals(500.0, config.ability(EndTower.CONFIG_ID, "healthScale", -1.0), 0.0001);
+        assertEquals(0.66, config.ability(EndTower.CONFIG_ID, "roundDamageRatio", -1.0), 0.0001);
+        assertEquals(0.04, config.ability(EndTower.CONFIG_ID, "permanentDamageRatio", -1.0), 0.0001);
+        assertEquals(150.0, config.ability(EndTower.CONFIG_ID, "damageThreshold", -1.0), 0.0001);
+        assertEquals(25.0, config.ability(EndTower.CONFIG_ID, "damageScale", -1.0), 0.0001);
+        assertEquals(30.0, config.ability(EndTower.CONFIG_ID, "lifeStealStacks", -1.0), 0.0001);
+        assertEquals(0.01, config.ability(EndTower.CONFIG_ID, "lifeStealStep", -1.0), 0.0001);
+        assertEquals(0.10, config.ability(EndTower.CONFIG_ID, "lifeStealCap", -1.0), 0.0001);
+        assertEquals(15.0, config.ability(EndTower.CONFIG_ID, "damageReductionStacks", -1.0), 0.0001);
+        assertEquals(0.01, config.ability(EndTower.CONFIG_ID, "damageReductionStep", -1.0), 0.0001);
+        assertEquals(0.20, config.ability(EndTower.CONFIG_ID, "damageReductionCap", -1.0), 0.0001);
+        assertEquals(10.0, config.ability(EndTower.CONFIG_ID, "regenerationStacks", -1.0), 0.0001);
+        assertEquals(1.0, config.ability(EndTower.CONFIG_ID, "regenerationStep", -1.0), 0.0001);
+        assertEquals(30.0, config.ability(EndTower.CONFIG_ID, "regenerationCap", -1.0), 0.0001);
+        assertEquals(10.0, config.ability(EndTower.CONFIG_ID, "splash1", -1.0), 0.0001);
+        assertEquals(35.0, config.ability(EndTower.CONFIG_ID, "splash2", -1.0), 0.0001);
+        assertEquals(75.0, config.ability(EndTower.CONFIG_ID, "splash3", -1.0), 0.0001);
+        assertEquals(150.0, config.ability(EndTower.CONFIG_ID, "splash4", -1.0), 0.0001);
+        assertEquals(300.0, config.ability(EndTower.CONFIG_ID, "splash5", -1.0), 0.0001);
+        assertEquals(1.0, config.ability(EndTower.CONFIG_ID, "splashStep", -1.0), 0.0001);
+        assertEquals(5.0, config.ability(EndTower.CONFIG_ID, "splashCap", -1.0), 0.0001);
+        assertEquals(0.66, config.ability(EndTower.CONFIG_ID, "splashDamageRatio", -1.0), 0.0001);
         assertEquals(30.0, config.ability(EndTower.CONFIG_ID, "attackSpeedStacks", -1.0), 0.0001);
         assertEquals(1.0, config.ability(EndTower.CONFIG_ID, "attackSpeedStep", -1.0), 0.0001);
         assertEquals(10.0, config.ability(EndTower.CONFIG_ID, "attackSpeedCap", -1.0), 0.0001);
         assertEquals(5.0, config.ability(EndTower.CONFIG_ID, "attackSpeedMinimumTicks", -1.0), 0.0001);
+        assertEquals(1.0, config.ability(EndTower.CONFIG_ID, "transferAttackSpeedStacks", -1.0), 0.0001);
+        assertEquals(1.0, config.ability(EndTower.CONFIG_ID, "transferAttackSpeedStep", -1.0), 0.0001);
         assertEquals(50.0, config.ability(EndTower.CONFIG_ID, "attackRangeStacks", -1.0), 0.0001);
         assertEquals(0.5, config.ability(EndTower.CONFIG_ID, "attackRangeStep", -1.0), 0.0001);
         assertEquals(3.0, config.ability(EndTower.CONFIG_ID, "attackRangeCap", -1.0), 0.0001);
-        assertEquals(15.0, config.ability(EndTower.CONFIG_ID, "splash1", -1.0), 0.0001);
-        assertEquals(60.0, config.ability(EndTower.CONFIG_ID, "splash2", -1.0), 0.0001);
-        assertEquals(150.0, config.ability(EndTower.CONFIG_ID, "splash3", -1.0), 0.0001);
-        assertEquals(300.0, config.ability(EndTower.CONFIG_ID, "splash4", -1.0), 0.0001);
-        assertEquals(1.0, config.ability(EndTower.CONFIG_ID, "splashStep", -1.0), 0.0001);
-        assertEquals(5.0, config.ability(EndTower.CONFIG_ID, "splashCap", -1.0), 0.0001);
-        assertEquals(0.66, config.ability(EndTower.CONFIG_ID, "splashDamageRatio", -1.0), 0.0001);
-        assertEquals(30.0, config.ability(EndTower.CONFIG_ID, "lifeStealStacks", -1.0), 0.0001);
-        assertEquals(0.01, config.ability(EndTower.CONFIG_ID, "lifeStealStep", -1.0), 0.0001);
-        assertEquals(0.10, config.ability(EndTower.CONFIG_ID, "lifeStealCap", -1.0), 0.0001);
-        assertEquals(
-                300.0,
-                config.ability(EndTower.CONFIG_ID, "lifeStealStacks", -1.0) * 10.0,
-                0.0001
-        );
-        assertEquals(
-                config.ability(EndTower.CONFIG_ID, "lifeStealCap", -1.0),
-                config.ability(EndTower.CONFIG_ID, "lifeStealStep", -1.0) * 10.0,
-                0.0001
-        );
-        assertEquals(10.0, config.ability(EndTower.CONFIG_ID, "regenerationStacks", -1.0), 0.0001);
-        assertEquals(1.0, config.ability(EndTower.CONFIG_ID, "regenerationStep", -1.0), 0.0001);
-        assertEquals(30.0, config.ability(EndTower.CONFIG_ID, "regenerationCap", -1.0), 0.0001);
-        assertEquals(20.0, config.ability(EndTower.CONFIG_ID, "regenerationTicks", -1.0), 0.0001);
-        assertEquals(15.0, config.ability(EndTower.CONFIG_ID, "damageReductionStacks", -1.0), 0.0001);
-        assertEquals(0.01, config.ability(EndTower.CONFIG_ID, "damageReductionStep", -1.0), 0.0001);
-        assertEquals(0.20, config.ability(EndTower.CONFIG_ID, "damageReductionCap", -1.0), 0.0001);
-        assertEquals(1.0, config.ability(EndTower.CONFIG_ID, "phantomScaleBase", -1.0), 0.0001);
-        assertEquals(100.0, config.ability(EndTower.CONFIG_ID, "phantomScaleHealth", -1.0), 0.0001);
-        assertEquals(0.2, config.ability(EndTower.CONFIG_ID, "phantomScaleStep", -1.0), 0.0001);
-        assertEquals(5.0, config.ability(EndTower.CONFIG_ID, "phantomScaleCap", -1.0), 0.0001);
+        assertEquals(0.10, config.ability(EndTower.CONFIG_ID, "dragonFinalDamage", -1.0), 0.0001);
+        assertEquals(2.0, config.ability(EndTower.CONFIG_ID, "dragonRangeBonus", -1.0), 0.0001);
         assertEquals(0.10, config.ability(EndTowers.T1_SHULKER_TOWER.id(), "damageReduction", -1.0), 0.0001);
         assertEquals(0.30, config.ability(EndTowers.T2_SHULKER_TOWER.id(), "damageReduction", -1.0), 0.0001);
         assertEquals(0.50, config.ability(EndTowers.T3_SHULKER_TOWER.id(), "damageReduction", -1.0), 0.0001);
@@ -106,7 +110,6 @@ class EndTowerCatalogTest {
     @Test
     void endJobAllowsEveryEndTowerOnly() {
         EndTowerJob job = new EndTowerJob();
-
         assertTrue(job.canUseTower(null, EndTowers.BASE_END_TOWER));
         assertTrue(job.canUseTower(null, EndTowers.T1_ENDERMITE_TOWER));
         assertTrue(job.canUseTower(null, EndTowers.T3_END_CRYSTAL_TOWER));
@@ -118,21 +121,19 @@ class EndTowerCatalogTest {
     @Test
     void catalogRegistersDragonAndTwoUpgradePaths() {
         ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
-
         assertEquals(50L, EndTowers.T1_ENDERMITE_TOWER.mineralCost());
         assertEquals(100L, EndTowers.T2_ENDERMAN_TOWER.mineralCost());
         assertEquals(150L, EndTowers.T3_END_CRYSTAL_TOWER.mineralCost());
         assertEquals(50L, EndTowers.T1_SHULKER_TOWER.mineralCost());
         assertEquals(100L, EndTowers.T2_SHULKER_TOWER.mineralCost());
         assertEquals(150L, EndTowers.T3_SHULKER_TOWER.mineralCost());
-
         assertStarter(EndTowers.BASE_END_TOWER.id(), "엔더 드래곤");
-        assertStarter(EndTowers.T1_ENDERMITE_TOWER.id(), "엔더 마이트");
         assertStarter(EndTowers.T1_SHULKER_TOWER.id(), "셜커");
-        assertUpgrade(EndTowers.T1_ENDERMITE_TOWER.id(), EndTowers.T2_ENDERMAN_TOWER.id(), "엔더맨", 100);
-        assertUpgrade(EndTowers.T2_ENDERMAN_TOWER.id(), EndTowers.T3_END_CRYSTAL_TOWER.id(), "엔드 수정", 150);
         assertUpgrade(EndTowers.T1_SHULKER_TOWER.id(), EndTowers.T2_SHULKER_TOWER.id(), "견고한 셜커", 100);
         assertUpgrade(EndTowers.T2_SHULKER_TOWER.id(), EndTowers.T3_SHULKER_TOWER.id(), "완강한 셜커", 150);
+        assertStarter(EndTowers.T1_ENDERMITE_TOWER.id(), "엔더마이트");
+        assertUpgrade(EndTowers.T1_ENDERMITE_TOWER.id(), EndTowers.T2_ENDERMAN_TOWER.id(), "엔더맨", 100);
+        assertUpgrade(EndTowers.T2_ENDERMAN_TOWER.id(), EndTowers.T3_END_CRYSTAL_TOWER.id(), "엔드 수정", 150);
     }
 
     @Test
@@ -148,55 +149,52 @@ class EndTowerCatalogTest {
     @Test
     void shulkerDescriptionsShowTierDamageReduction() {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
-
         assertTrue(String.join("\n", TowerBalanceRuntime.resolve(EndTowers.T1_SHULKER_TOWER).description()).contains("10%"));
         assertTrue(String.join("\n", TowerBalanceRuntime.resolve(EndTowers.T2_SHULKER_TOWER).description()).contains("30%"));
         assertTrue(String.join("\n", TowerBalanceRuntime.resolve(EndTowers.T3_SHULKER_TOWER).description()).contains("50%"));
     }
 
     @Test
-    void dragonDescriptionUsesConfiguredAbilityValues() {
+    void dragonDescriptionUsesCurrentCompactEndDescription() {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
-
         assertEquals(10.0, EndTowers.BASE_END_TOWER.damage(), 0.0001);
-
         String description = String.join(
                 "\n",
                 TowerBalanceRuntime.resolve(EndTowers.BASE_END_TOWER).description()
         );
         String plainDescription = description.replaceAll("<[^>]+>", "");
-        assertTrue(plainDescription.contains("알로 소환되며"));
-        assertTrue(plainDescription.contains("라운드 시작 시 아기 드래곤으로 변합니다."));
+        assertTrue(plainDescription.contains("알로 소환되며, 라운드 시작 시 아기 드래곤으로 변합니다."));
         assertTrue(plainDescription.contains("아기 드래곤 크기는 최대 체력 100당 0.2씩 증가합니다."));
         assertTrue(plainDescription.contains("최대 체력 2000 이상이면 엔더 드래곤으로 진화합니다."));
         assertTrue(plainDescription.contains("엔더 드래곤으로 진화하면 추가 능력을 획득합니다."));
         assertTrue(plainDescription.contains("힘 전달 10초 후 타워 사망, 체력 30을 회복합니다."));
-        assertTrue(plainDescription.contains("전달 중인 셜커 타워의 최대 체력 5%만큼 회복합니다."));
-        assertTrue(plainDescription.contains("타워 피해의 75%를 임시 획득, 6% 영구 누적"));
-        assertTrue(plainDescription.contains("추가 피해는 120까지 그대로 적용"));
-        assertFalse(plainDescription.contains("추가 피해는 최대"));
+        assertTrue(plainDescription.contains("전달 중인 셜커 타워의 최대 체력의 5%를 초당 회복합니다."));
         assertTrue(plainDescription.contains("타워 체력의 50%를 임시 획득, 4% 영구 누적"));
+        assertTrue(plainDescription.contains("타워 피해의 66%를 임시 획득, 4% 영구 누적"));
         assertFalse(description.contains("{ability."));
         assertTrue(description.contains("<#cc00fa>아기 드래곤</#cc00fa>"));
         assertTrue(description.contains("<#cc00fa>엔더 드래곤</#cc00fa>"));
-        assertTrue(description.contains("<#ec8d34>피해</#ec8d34>"));
-        assertTrue(description.contains("<#fc5454>체력</#fc5454>"));
-        assertTrue(description.contains("<#fc5454>최대 체력 5%</#fc5454>"));
+        assertTrue(description.contains("전달 중인 셜커 타워의 <#fc5454>최대 체력</#fc5454>의 <#fc5454>5%</#fc5454>를 초당 회복합니다."));
+        assertTrue(description.contains("<#fc5454>체력"));
+        assertTrue(description.contains("<#ec8d34>피해"));
     }
 
     @Test
-    void endJobDescriptionUsesConfiguredAbilityValues() {
+    void endJobDescriptionUsesCurrentEndDescription() {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
-
-        String description = new EndTowerJob().description().stream()
+        List<Component> lines = new EndTowerJob().description();
+        String description = lines.stream()
                 .map(Component::getString)
                 .reduce("", (left, right) -> left + "\n" + right);
-
-        assertTrue(description.contains("10초에 걸쳐"));
-        assertTrue(description.contains("체력 50%, 피해 75%"));
-        assertTrue(description.contains("체력 4%, 피해 6%"));
-        assertTrue(description.contains("추가 피해는 120까지 그대로 적용"));
-        assertFalse(description.contains("추가 피해는 최대"));
+        assertTrue(description.contains("아군 타워의 체력과 피해를"));
+        assertTrue(description.contains("체력 50%, 피해 66%를"));
+        assertTrue(description.contains("체력 4%, 피해 4%를 영구 누적합니다."));
+        assertTrue(description.contains("엔더 드래곤으로 진화하면"));
+        assertTrue(description.contains("추가 고유 능력을 획득합니다."));
+        assertEquals(
+                Component.literal("").withStyle(ChatFormatting.DARK_RED).getStyle().getColor(),
+                lines.getLast().getStyle().getColor()
+        );
     }
 
     @Test
@@ -214,23 +212,30 @@ class EndTowerCatalogTest {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
         Map<String, Long> upgradeCosts = new LinkedHashMap<>(defaults.upgradeCosts());
         upgradeCosts.put(
-                TowerBalanceConfig.upgradeKey(EndTowers.T1_ENDERMITE_TOWER.id(), EndTowers.T2_ENDERMAN_TOWER.id()),
+                TowerBalanceConfig.upgradeKey(
+                        EndTowers.T1_ENDERMITE_TOWER.id(),
+                        EndTowers.T2_ENDERMAN_TOWER.id()
+                ),
                 1L
         );
-        TowerBalanceConfig custom = new TowerBalanceConfig(defaults.towers(), upgradeCosts, defaults.abilities());
-
+        TowerBalanceConfig custom = new TowerBalanceConfig(
+                defaults.towers(),
+                upgradeCosts,
+                defaults.abilities()
+        );
         ProductionTowerCatalogs.reloadBuiltIns(custom);
-
-        assertEquals(1L, ProductionTowerCatalog.upgrade(
-                EndTowers.T1_ENDERMITE_TOWER,
-                EndTowers.T2_ENDERMAN_TOWER.id()
-        ).orElseThrow().mineralCost());
+        assertEquals(
+                1L,
+                ProductionTowerCatalog.upgrade(
+                        EndTowers.T1_ENDERMITE_TOWER,
+                        EndTowers.T2_ENDERMAN_TOWER.id()
+                ).orElseThrow().mineralCost()
+        );
     }
 
     @Test
     void catalogCreatesEndRuntime() {
         ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
-
         var entry = ProductionTowerCatalog.find(EndTowers.BASE_END_TOWER.id()).orElseThrow();
         var tower = entry.create(
                 UUID.nameUUIDFromBytes("end-runtime".getBytes()),
@@ -238,7 +243,6 @@ class EndTowerCatalogTest {
                 1,
                 new GridPosition(0, 64, 0)
         );
-
         assertInstanceOf(EndTower.class, tower);
         assertEquals(0.0, tower.adjustAttackRange(tower.type().range()), 0.0001);
     }
@@ -249,7 +253,12 @@ class EndTowerCatalogTest {
         assertEquals(displayName, entry.type().displayName());
     }
 
-    private static void assertUpgrade(String fromTowerId, String upgradeId, String displayName, long cost) {
+    private static void assertUpgrade(
+            String fromTowerId,
+            String upgradeId,
+            String displayName,
+            long cost
+    ) {
         var from = ProductionTowerCatalog.find(fromTowerId).orElseThrow().type();
         var upgrade = ProductionTowerCatalog.upgrade(from, upgradeId).orElseThrow();
         assertEquals(displayName, upgrade.displayName());
@@ -261,7 +270,10 @@ class EndTowerCatalogTest {
             String summary,
             String effect
     ) {
-        String description = String.join("\n", TowerDescriptionRegistry.describe(towerType).orElseThrow()).replaceAll("<[^>]+>", "");
+        String description = String.join(
+                "\n",
+                TowerDescriptionRegistry.describe(towerType).orElseThrow()
+        ).replaceAll("<[^>]+>", "");
         assertTrue(description.contains(summary));
         assertTrue(description.contains(effect));
     }

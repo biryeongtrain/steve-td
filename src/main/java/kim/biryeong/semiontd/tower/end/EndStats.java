@@ -9,10 +9,10 @@ final class EndStats {
         this.combat = combat;
     }
 
-    List<String> create(EndTower tower) {
+    List<String> create(EndTower tower, boolean waveActive) {
         if (!tower.isCoreTower()) {
             double reduction = EndTowers.isShulkerLine(tower.type()) ? combat.shulkerDamageReduction(tower.type()) : 0.0;
-            return EndStatsView.feeder(reduction);
+            return EndStatsView.feeder(waveActive, tower.transferProgress(), reduction);
         }
         double maxHealth = tower.isEgg() ? tower.previewHatchedMaxHealth() : tower.currentMaxHealth();
         int intervalReduction = Math.max(0, tower.type().attackIntervalTicks() - tower.previewHatchedAttackIntervalTicks());
@@ -22,22 +22,21 @@ final class EndStats {
                 tower.endCrystalCount(),
                 new EndStatsView.DefenseStats(
                         tower.permanentHealthBonus(),
-                        combat.regenerationPerSecond(),
-                        combat.maximumRegeneration(),
                         combat.lifeStealRatio(),
                         combat.maximumLifeSteal(),
                         combat.damageReduction(),
-                        combat.maximumDamageReduction()
+                        combat.maximumDamageReduction(),
+                        combat.regenerationPerSecond(),
+                        combat.maximumRegeneration()
                 ),
                 new EndStatsView.CombatStats(
-                        tower.damageBonus(),
-                        tower.effectiveDamageBonus(),
-                        tower.previewHatchedAttackRange(),
-                        combat.maximumAttackRange(tower.type(), tower.isDragon()),
+                        tower.permanentDamageBonus(),
+                        combat.splashRadius(true),
+                        combat.maximumSplashRadius(),
                         intervalReduction,
                         combat.maximumAttackIntervalReduction(tower.type()),
-                        combat.splashRadius(true),
-                        combat.maximumSplashRadius()
+                        tower.previewHatchedAttackRange(),
+                        combat.maximumAttackRange(tower.type(), tower.isDragon())
                 ),
                 new EndStatsView.EvolutionStats(
                         (tower.isEgg() || tower.isDragon()) && maxHealth >= combat.dragonEvolutionHealth(),

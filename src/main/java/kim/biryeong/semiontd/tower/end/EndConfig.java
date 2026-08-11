@@ -11,7 +11,7 @@ public final class EndConfig {
 
     double value(Ability ability) {return TowerBalanceRuntime.ability(EndTowers.CONFIG_ID, ability.key());}
     int integer(Ability ability) {return TowerBalanceRuntime.abilityInt(EndTowers.CONFIG_ID, ability.key());}
-    int ticks(Ability ability) {return TowerBalanceRuntime.abilityTicks(EndTowers.CONFIG_ID, ability.key());}
+    int transferTicks() {return TowerBalanceRuntime.abilityTicks(EndTowers.CONFIG_ID, Ability.TRANSFER_TICKS.key());}
     double towerDamageReduction(TowerType type) {return TowerBalanceRuntime.ability(type.id(), "damageReduction");}
 
     public enum Ability {
@@ -23,15 +23,28 @@ public final class EndConfig {
         TRANSFER_TICKS("transferTicks"),
         TRANSFER_HEAL("transferHeal"),
         TRANSFER_HEAL_RATIO("transferHealRatio"),
-        DAMAGE_SOFT_CAP("damageSoftCap"),
-        ROUND_DAMAGE_RATIO("roundDamageRatio"),
-        PERMANENT_DAMAGE_RATIO("permanentDamageRatio"),
         ROUND_HEALTH_RATIO("roundHealthRatio"),
         PERMANENT_HEALTH_RATIO("permanentHealthRatio"),
+        HEALTH_THRESHOLD("healthThreshold"),
+        HEALTH_SCALE("healthScale"),
+        ROUND_DAMAGE_RATIO("roundDamageRatio"),
+        PERMANENT_DAMAGE_RATIO("permanentDamageRatio"),
+        DAMAGE_THRESHOLD("damageThreshold"),
+        DAMAGE_SCALE("damageScale"),
+        LIFE_STEAL_STACKS("lifeStealStacks"),
+        LIFE_STEAL_STEP("lifeStealStep"),
+        LIFE_STEAL_CAP("lifeStealCap"),
+        DAMAGE_REDUCTION_STACKS("damageReductionStacks"),
+        DAMAGE_REDUCTION_STEP("damageReductionStep"),
+        DAMAGE_REDUCTION_CAP("damageReductionCap"),
+        REGENERATION_STACKS("regenerationStacks"),
+        REGENERATION_STEP("regenerationStep"),
+        REGENERATION_CAP("regenerationCap"),
         SPLASH_1("splash1"),
         SPLASH_2("splash2"),
         SPLASH_3("splash3"),
         SPLASH_4("splash4"),
+        SPLASH_5("splash5"),
         SPLASH_STEP("splashStep"),
         SPLASH_CAP("splashCap"),
         SPLASH_DAMAGE_RATIO("splashDamageRatio"),
@@ -44,25 +57,13 @@ public final class EndConfig {
         ATTACK_RANGE_STACKS("attackRangeStacks"),
         ATTACK_RANGE_STEP("attackRangeStep"),
         ATTACK_RANGE_CAP("attackRangeCap"),
-        LIFE_STEAL_STACKS("lifeStealStacks"),
-        LIFE_STEAL_STEP("lifeStealStep"),
-        LIFE_STEAL_CAP("lifeStealCap"),
-        DAMAGE_REDUCTION_STACKS("damageReductionStacks"),
-        DAMAGE_REDUCTION_STEP("damageReductionStep"),
-        DAMAGE_REDUCTION_CAP("damageReductionCap"),
-        REGENERATION_STACKS("regenerationStacks"),
-        REGENERATION_STEP("regenerationStep"),
-        REGENERATION_CAP("regenerationCap"),
-        REGENERATION_TICKS("regenerationTicks"),
         DRAGON_FINAL_DAMAGE("dragonFinalDamage"),
         DRAGON_RANGE_BONUS("dragonRangeBonus");
 
         private final String key;
-
         Ability(String key) {
             this.key = key;
         }
-
         public String key() {return key;}
     }
 }

@@ -1,5 +1,7 @@
 package kim.biryeong.semiontd.tower.end;
 
+import static kim.biryeong.semiontd.tower.end.EndConfig.Ability.DRAGON_FINAL_DAMAGE;
+import static kim.biryeong.semiontd.tower.end.EndConfig.Ability.DRAGON_RANGE_BONUS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -32,12 +34,9 @@ class EnderDragonScaleTest {
     @Test
     void oneTowerIsAnEggDuringPreparationAndSwitchesToPhantomAtWaveStart() {
         EndTower tower = tower();
-
         assertEquals(EndTowerState.EGG, tower.state());
         assertTrue(BlockDisplayVisual.matches(tower.visual()));
-
         tower.onWaveStarted(null, 1);
-
         assertEquals(EndTowerState.PHANTOM, tower.state());
         assertEquals(EndTowers.BASE_END_TOWER, tower.type());
         assertEquals("minecraft:phantom", tower.visual().entityTypeId());
@@ -47,7 +46,6 @@ class EnderDragonScaleTest {
     @Test
     void phantomScaleStartsAtOneAndGrowsByPointTwoPerHundredMaxHealth() {
         EndTower tower = tower();
-
         assertEquals(1.2, tower.phantomScaleForMaxHealth(100.0), 0.0001);
         assertEquals(1.3, tower.phantomScaleForMaxHealth(150.0), 0.0001);
         assertEquals(1.4, tower.phantomScaleForMaxHealth(200.0), 0.0001);
@@ -59,12 +57,11 @@ class EnderDragonScaleTest {
     @Test
     void phantomScaleFormulaComesFromEndGlobalConfig() {
         applyEndAbilities(Map.of(
-                "phantomScaleBase", 0.5,
                 "phantomScaleHealth", 50.0,
                 "phantomScaleStep", 0.25,
+                "phantomScaleBase", 0.5,
                 "phantomScaleCap", 1.25
         ));
-
         EndTower tower = tower();
         assertEquals(1.0, tower.phantomScaleForMaxHealth(100.0), 0.0001);
         assertEquals(1.25, tower.phantomScaleForMaxHealth(1000.0), 0.0001);
@@ -74,26 +71,19 @@ class EnderDragonScaleTest {
     void phantomBecomesVanillaDragonWhenMaxHealthReachesThreshold() {
         double baseMaxHealth = EndTowers.BASE_END_TOWER.maxHealth();
         applyStateConfig(baseMaxHealth + 0.01);
-
         EndTower tower = tower();
         tower.onWaveStarted(null, 1);
         tower.tick(null);
-
         assertEquals(EndTowerState.PHANTOM, tower.state());
-
         applyStateConfig(baseMaxHealth);
         tower.tick(null);
-
         assertEquals(EndTowerState.DRAGON, tower.state());
-        assertEquals(
-                "minecraft:ender_dragon",
-                tower.visual().entityTypeId()
-        );
+        assertEquals("minecraft:ender_dragon", tower.visual().entityTypeId());
         assertTrue(tower.visual().blockbenchModel().isEmpty());
         assertEquals(1.0, tower.visual().scale(), 0.0001);
-        assertEquals(7.0, tower.adjustAttackRange(5.0), 0.0001);
-        assertEquals(10.0, tower.modifyAttackDamage(null, null, 10.0), 0.0001);
-        assertEquals(0.20, tower.finalDamageBonus(), 0.0001);
+        assertEquals(EndTowers.BASE_END_TOWER.range() + EndConfig.RUNTIME.value(DRAGON_RANGE_BONUS), tower.adjustAttackRange(EndTowers.BASE_END_TOWER.range()), 0.0001);
+        assertEquals(EndTowers.BASE_END_TOWER.damage(), tower.modifyAttackDamage(null, null, EndTowers.BASE_END_TOWER.damage()), 0.0001);
+        assertEquals(EndConfig.RUNTIME.value(DRAGON_FINAL_DAMAGE), tower.finalDamageBonus(), 0.0001);
     }
 
     @Test

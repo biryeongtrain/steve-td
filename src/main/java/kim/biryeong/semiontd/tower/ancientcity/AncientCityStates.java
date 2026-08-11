@@ -1,12 +1,11 @@
 package kim.biryeong.semiontd.tower.ancientcity;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
@@ -97,10 +96,7 @@ public final class AncientCityStates {
             return;
         }
         boolean added = state.territory.contains(deathFloor)
-                ? frontier(lane, state.territory, deathFloor).stream()
-                        .findFirst()
-                        .filter(next -> addSculk(lane, state.territory, next, true))
-                        .isPresent()
+                ? spread(lane, state.territory, deathFloor, 1, true) == 1
                 : addSculk(lane, state.territory, deathFloor, true);
         if (added) {
             state.deathSpreadsThisRound++;
@@ -151,8 +147,9 @@ public final class AncientCityStates {
 
     public static double resonanceBonusForCount(int territoryCount) {
         int maxSculk = Math.max(1, abilityInt("maxSculk"));
+        int fullAt = Math.min(maxSculk, Math.max(1, abilityInt("resonanceFullAt")));
         double cap = Math.max(0.0, ability("resonanceDamageCap"));
-        return Math.min(cap, Math.max(0, territoryCount) / (double) maxSculk * cap);
+        return Math.min(cap, Math.max(0, territoryCount) / (double) fullAt * cap);
     }
 
     public static int territoryCount(UUID playerId) {
@@ -194,33 +191,44 @@ public final class AncientCityStates {
         if (territory.isEmpty() && addSculk(lane, territory, origin, mainTerritory)) {
             added++;
         }
-        while (added < amount) {
-            BlockPos next = frontier(lane, territory, origin).stream().findFirst().orElse(null);
-            if (next == null || !addSculk(lane, territory, next, mainTerritory)) {
-                break;
+        PriorityQueue<BlockPos> frontier = new PriorityQueue<>(frontierOrder(origin));
+        Set<BlockPos> queued = new HashSet<>();
+        for (BlockPos current : territory) {
+            enqueueNeighbors(lane, territory, current, frontier, queued);
+        }
+        while (added < amount && !frontier.isEmpty()) {
+            BlockPos next = frontier.remove();
+            if (!addSculk(lane, territory, next, mainTerritory)) {
+                continue;
             }
             added++;
+            enqueueNeighbors(lane, territory, next, frontier, queued);
         }
         return added;
     }
 
-    private static List<BlockPos> frontier(PlayerLane lane, Set<BlockPos> territory, BlockPos origin) {
-        Set<BlockPos> candidates = new HashSet<>();
-        for (BlockPos current : territory) {
-            for (Direction direction : HORIZONTAL) {
-                BlockPos adjacent = current.relative(direction);
-                floorAt(lane, new GridPosition(adjacent.getX(), current.getY(), adjacent.getZ()))
-                        .filter(candidate -> !territory.contains(candidate))
-                        .ifPresent(candidates::add);
-            }
+    private static void enqueueNeighbors(
+            PlayerLane lane,
+            Set<BlockPos> territory,
+            BlockPos current,
+            PriorityQueue<BlockPos> frontier,
+            Set<BlockPos> queued
+    ) {
+        for (Direction direction : HORIZONTAL) {
+            BlockPos adjacent = current.relative(direction);
+            floorAt(lane, new GridPosition(adjacent.getX(), current.getY(), adjacent.getZ()))
+                    .filter(candidate -> !territory.contains(candidate))
+                    .filter(queued::add)
+                    .ifPresent(frontier::add);
         }
-        ArrayList<BlockPos> ordered = new ArrayList<>(candidates);
-        ordered.sort(Comparator
+    }
+
+    private static Comparator<BlockPos> frontierOrder(BlockPos origin) {
+        return Comparator
                 .comparingInt((BlockPos pos) -> manhattanXZ(pos, origin))
                 .thenComparingInt(BlockPos::getX)
                 .thenComparingInt(BlockPos::getZ)
-                .thenComparingInt(BlockPos::getY));
-        return ordered;
+                .thenComparingInt(BlockPos::getY);
     }
 
     private static boolean addSculk(PlayerLane lane, Set<BlockPos> territory, BlockPos position, boolean mainTerritory) {

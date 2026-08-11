@@ -1,5 +1,10 @@
 package kim.biryeong.semiontd.ui;
 
+import static kim.biryeong.semiontd.tower.description.TowerDescriptionTemplate.attackDamageText;
+import static kim.biryeong.semiontd.tower.description.TowerDescriptionTemplate.attackRangeText;
+import static kim.biryeong.semiontd.tower.description.TowerDescriptionTemplate.attackSpeedText;
+import static kim.biryeong.semiontd.tower.description.TowerDescriptionTemplate.damageReductionText;
+
 import eu.pb4.placeholders.api.PlaceholderContext;
 import eu.pb4.placeholders.api.PlaceholderResult;
 import eu.pb4.placeholders.api.Placeholders;
@@ -448,15 +453,15 @@ public final class SemionHudTextService {
 
     private static String definingStatMarkup(WaveMonsterEntry entry) {
         if (entry.attackKind() == AttackKind.RANGED) {
-            return "<gold>사거리 " + formatStat(entry.attackRange()) + "</gold>";
+            return attackRangeText("사거리 " + formatStat(entry.attackRange()));
         }
         if (entry.movementSpeedMultiplier() >= 1.15) {
-            return "<yellow>속도 ×" + formatStat(entry.movementSpeedMultiplier()) + "</yellow>";
+            return attackSpeedText("속도 ×" + formatStat(entry.movementSpeedMultiplier()));
         }
         if (entry.armor() > 0.0) {
-            return "<aqua>🛡" + formatStat(entry.armor()) + "</aqua>";
+            return damageReductionText("🛡" + formatStat(entry.armor()));
         }
-        return "<red>⚔" + formatStat(entry.attackDamage()) + "</red>";
+        return attackDamageText("⚔" + formatStat(entry.attackDamage()));
     }
 
     private static String formatStat(double value) {

@@ -237,6 +237,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.portal.TeleportTransition;
@@ -6531,6 +6532,15 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, AncientCityTowerJob.ID);
         PlayerLane lane = redLane(game, 1);
         BlockPos origin = towerPlacementPos(lane);
+        BlockBounds laneArea = lane.laneLayout().laneArea();
+        BlockPos blockedColumn = List.of(origin.north(), origin.south(), origin.west(), origin.east()).stream()
+                .filter(position -> position.getX() >= laneArea.min().getX() && position.getX() <= laneArea.max().getX())
+                .filter(position -> position.getZ() >= laneArea.min().getZ() && position.getZ() <= laneArea.max().getZ())
+                .map(position -> new BlockPos(position.getX(), laneArea.max().getY(), position.getZ()))
+                .findFirst()
+                .orElseThrow();
+        lane.arenaWorld().setBlock(blockedColumn, Blocks.BARRIER.defaultBlockState(), Block.UPDATE_CLIENTS);
+        lane.arenaWorld().setBlock(blockedColumn.above(), Blocks.BARRIER.defaultBlockState(), Block.UPDATE_CLIENTS);
         AncientCityTower catalyst = new AncientCityTower(
                 TowerBalanceRuntime.resolve(AncientCityTowers.CATALYST_T1),
                 playerId,
@@ -6556,8 +6566,14 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
 
-        if (!assertEquals(context, 5, AncientCityStates.territoryCount(playerId),
-                "The first ancient-city tower should seed five sculk cells.")) {
+        if (!assertEquals(context, 9, AncientCityStates.territoryCount(playerId),
+                "The first ancient-city tower should seed nine sculk cells by routing around a blocked direction.")) {
+            return;
+        }
+        if (!assertTrue(context, AncientCityStates.territoryPositions(playerId).stream()
+                        .noneMatch(position -> position.getX() == blockedColumn.getX()
+                                && position.getZ() == blockedColumn.getZ()),
+                "Sculk spread should skip the blocked column and continue through another frontier.")) {
             return;
         }
         if (!assertTrue(context, AncientCityStates.territoryPositions(playerId).stream()
@@ -6582,8 +6598,8 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         catalyst.syncPosition(GridPosition.from(origin));
 
         lane.markWaveStarted(1);
-        if (!assertEquals(context, 7, AncientCityStates.territoryCount(playerId),
-                "Wave start should spread two connected sculk cells.")) {
+        if (!assertEquals(context, 13, AncientCityStates.territoryCount(playerId),
+                "Wave start should spread four connected sculk cells.")) {
             return;
         }
         Vec3 deathPosition = lane.laneLayout().positionAt(0.75);
@@ -6594,11 +6610,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 "A death outside the connected territory should create a new sculk seed.")) {
             return;
         }
-        for (int death = 1; death < 5; death++) {
+        for (int death = 1; death < 7; death++) {
             AncientCityStates.recordAttributedDeath(playerId, lane, 1, deathPosition);
         }
-        if (!assertEquals(context, 11, AncientCityStates.territoryCount(playerId),
-                "Attributed deaths should spread at most four successful cells per round.")) {
+        if (!assertEquals(context, 19, AncientCityStates.territoryCount(playerId),
+                "Attributed deaths should spread at most six successful cells per round.")) {
             return;
         }
 
@@ -6611,7 +6627,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 GridPosition.from(secondPosition)
         );
         lane.addTower(sensor);
-        if (!assertEquals(context, 11, AncientCityStates.territoryCount(playerId),
+        if (!assertEquals(context, 19, AncientCityStates.territoryCount(playerId),
                 "Additional tier-one towers must not create another seed.")) {
             return;
         }
@@ -6626,7 +6642,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         );
         upgraded.copyFrom(catalyst, 110);
         lane.replaceTower(catalyst, upgraded);
-        if (!assertEquals(context, 11, AncientCityStates.territoryCount(playerId),
+        if (!assertEquals(context, 19, AncientCityStates.territoryCount(playerId),
                 "Upgrading should preserve the existing territory.")) {
             return;
         }
@@ -6648,7 +6664,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         lane.removeTower(upgraded);
         lane.removeTower(sensor);
         AncientCityStates.recordAttributedDeath(playerId, lane, 2, deathPosition);
-        if (!assertEquals(context, 11, AncientCityStates.territoryCount(playerId),
+        if (!assertEquals(context, 19, AncientCityStates.territoryCount(playerId),
                 "Selling every ancient-city tower should keep territory but stop growth.")) {
             return;
         }
@@ -6691,7 +6707,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         lane.activeMonsters().add(target.runtimeMonster());
 
         sensor.tick(lane);
-        double expectedMagicDamage = 5.0 * (1.0 + 7.0 / 96.0 * 2.00) * 1.75;
+        double expectedMagicDamage = 5.0 * (1.0 + 13.0 / 224.0 * 2.25) * 1.75;
         if (!assertClose(context, 1_000.0 - expectedMagicDamage, target.getHealth(),
                 "Sensor ability should use magic resistance and the income-target multiplier.")) {
             return;
@@ -12347,7 +12363,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertClose(context, 1.0, entity.getScale(), "Max-health-proportional scale must stop after evolving into the Ender Dragon.")) {
             return;
         }
-        if (!assertClose(context, 12.0, entity.applyTraitOutgoingDamage(null, 10.0), "DRAGON state should grant the configured 20% final damage.")) {
+        if (!assertClose(context, 11.0, entity.applyTraitOutgoingDamage(null, 10.0), "DRAGON state should grant the configured 10% final damage.")) {
             return;
         }
         SemionMonsterEntity facingTarget = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());

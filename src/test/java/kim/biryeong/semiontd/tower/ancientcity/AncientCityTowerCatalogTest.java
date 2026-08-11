@@ -83,13 +83,13 @@ final class AncientCityTowerCatalogTest {
     @Test
     void resonanceAndCombinedBonusRespectTheirCaps() {
         assertEquals(0.0, AncientCityStates.resonanceBonusForCount(0), EPSILON);
-        assertEquals(0.50, AncientCityStates.resonanceBonusForCount(24), EPSILON);
-        assertEquals(1.00, AncientCityStates.resonanceBonusForCount(48), EPSILON);
-        assertEquals(1.50, AncientCityStates.resonanceBonusForCount(72), EPSILON);
-        assertEquals(2.00, AncientCityStates.resonanceBonusForCount(96), EPSILON);
-        assertEquals(2.00, AncientCityStates.resonanceBonusForCount(100), EPSILON);
-        assertEquals(2.30, AncientCityTower.combinedMagicBonus(2.00 + 0.30), EPSILON);
-        assertEquals(2.30, AncientCityTower.combinedMagicBonus(9.0), EPSILON);
+        assertEquals(0.5625, AncientCityStates.resonanceBonusForCount(56), EPSILON);
+        assertEquals(1.125, AncientCityStates.resonanceBonusForCount(112), EPSILON);
+        assertEquals(1.6875, AncientCityStates.resonanceBonusForCount(168), EPSILON);
+        assertEquals(2.25, AncientCityStates.resonanceBonusForCount(224), EPSILON);
+        assertEquals(2.25, AncientCityStates.resonanceBonusForCount(256), EPSILON);
+        assertEquals(2.55, AncientCityTower.combinedMagicBonus(2.25 + 0.30), EPSILON);
+        assertEquals(2.55, AncientCityTower.combinedMagicBonus(9.0), EPSILON);
         assertEquals(10.0, AncientCityTower.incomeAdjustedMagicDamage(10.0, false), EPSILON);
         assertEquals(17.5, AncientCityTower.incomeAdjustedMagicDamage(10.0, true), EPSILON);
     }
@@ -97,8 +97,13 @@ final class AncientCityTowerCatalogTest {
     @Test
     void defaultAndMissingConfigContainEveryAncientCityValue() {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
-        assertEquals(96.0, defaults.ability(AncientCityStates.CONFIG_ID, "maxSculk", -1), EPSILON);
-        assertEquals(4.0, defaults.ability(AncientCityStates.CONFIG_ID, "deathSpreadCapPerRound", -1), EPSILON);
+        assertEquals(256.0, defaults.ability(AncientCityStates.CONFIG_ID, "maxSculk", -1), EPSILON);
+        assertEquals(224.0, defaults.ability(AncientCityStates.CONFIG_ID, "resonanceFullAt", -1), EPSILON);
+        assertEquals(9.0, defaults.ability(AncientCityStates.CONFIG_ID, "initialSculk", -1), EPSILON);
+        assertEquals(4.0, defaults.ability(AncientCityStates.CONFIG_ID, "waveStartSpread", -1), EPSILON);
+        assertEquals(6.0, defaults.ability(AncientCityStates.CONFIG_ID, "deathSpreadCapPerRound", -1), EPSILON);
+        assertEquals(2.25, defaults.ability(AncientCityStates.CONFIG_ID, "resonanceDamageCap", -1), EPSILON);
+        assertEquals(2.55, defaults.ability(AncientCityStates.CONFIG_ID, "maxCombinedDamageBonus", -1), EPSILON);
         assertEquals(1.75, defaults.ability(AncientCityStates.CONFIG_ID, "incomeMagicDamageMultiplier", -1), EPSILON);
         assertEquals(30.0, defaults.ability(AncientCityTowers.CATALYST_T3.id(), "magicDamage", -1), EPSILON);
         assertEquals(0.30, defaults.ability(AncientCityTowers.SENSOR_T3.id(), "markDamageBonus", -1), EPSILON);
@@ -109,7 +114,8 @@ final class AncientCityTowerCatalogTest {
                 Map.of(), Map.of(), Map.of(AncientCityStates.CONFIG_ID, Map.of("maxSculk", 40.0))
         ).withMissingDefaults(defaults);
         assertEquals(40.0, merged.ability(AncientCityStates.CONFIG_ID, "maxSculk", -1), EPSILON);
-        assertEquals(2.00, merged.ability(AncientCityStates.CONFIG_ID, "resonanceDamageCap", -1), EPSILON);
+        assertEquals(224.0, merged.ability(AncientCityStates.CONFIG_ID, "resonanceFullAt", -1), EPSILON);
+        assertEquals(2.25, merged.ability(AncientCityStates.CONFIG_ID, "resonanceDamageCap", -1), EPSILON);
         assertEquals(1.75, merged.ability(AncientCityStates.CONFIG_ID, "incomeMagicDamageMultiplier", -1), EPSILON);
         assertTrue(merged.towers().containsKey(AncientCityTowers.WARDEN_T3.id()));
     }
@@ -131,6 +137,18 @@ final class AncientCityTowerCatalogTest {
         assertTrue(builderDescription.contains("공명"));
         assertTrue(builderDescription.contains("감지체"));
         assertFalse(builderDescription.matches(".*\\d.*"));
+
+        AncientCityTower tower = new AncientCityTower(
+                TowerBalanceRuntime.resolve(AncientCityTowers.CATALYST_T1),
+                uuid("runtime-details"),
+                TeamId.RED,
+                1,
+                new GridPosition(0, 64, 0)
+        );
+        assertEquals(List.of(
+                "스컬크 영토 0/256",
+                "스컬크 공명 0/224 · +0.0% (비활성)"
+        ), tower.runtimeDetailLines());
     }
 
     @Test

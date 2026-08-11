@@ -11,8 +11,8 @@ import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
-import kim.biryeong.semiontd.tower.DamageScaling;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
+import kim.biryeong.semiontd.tower.LogarithmicScaling;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 import net.minecraft.world.damagesource.DamageSource;
@@ -449,7 +449,7 @@ public class WarlockTower extends EntityBackedTower {
     }
 
     static double scaledDamageBonus(double rawDamageBonus) {
-        return DamageScaling.logarithmicBonus(
+        return LogarithmicScaling.logarithmicBonus(
                 rawDamageBonus,
                 WarlockConfig.RUNTIME.value(DAMAGE_SOFT_CAP)
         );

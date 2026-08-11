@@ -147,10 +147,13 @@ public final class AncientCityTower extends EntityBackedTower {
     @Override
     public List<String> runtimeDetailLines() {
         int count = AncientCityStates.territoryCount(ownerPlayer());
+        int maxSculk = Math.max(1, globalInt("maxSculk"));
+        int fullAt = Math.min(maxSculk, Math.max(1, globalInt("resonanceFullAt")));
         double bonus = AncientCityStates.resonanceBonus(this);
         return List.of(
-                "스컬크 영토 " + count + "/" + globalInt("maxSculk"),
-                "스컬크 공명 +" + percent(bonus) + " (" + (AncientCityStates.resonanceActive(this) ? "활성" : "비활성") + ")"
+                "스컬크 영토 " + count + "/" + maxSculk,
+                "스컬크 공명 " + Math.min(count, fullAt) + "/" + fullAt + " · +" + percent(bonus)
+                        + " (" + (AncientCityStates.resonanceActive(this) ? "활성" : "비활성") + ")"
         );
     }
 
