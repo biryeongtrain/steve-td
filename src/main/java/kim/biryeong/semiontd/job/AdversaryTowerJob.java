@@ -20,8 +20,8 @@ public final class AdversaryTowerJob extends SemionJob {
                 ID,
                 Component.literal("대적자 빌더"),
                 List.of(
-                        SemionText.mini("<gray><gold>여우 한 마리</gold>와 웨이브마다 적이 되는 <red>숙적</red>을 운용합니다.</gray>"),
-                        SemionText.mini("<gray>여우로 숙적을 처치해 <aqua>네 갈래 진화 루트</aqua>를 완성합니다.</gray>")
+                        SemionText.mini("<gray><gold>여우 한 마리</gold>와 <red>숙적</red>을 함께 운용합니다.</gray>"),
+                        SemionText.mini("<gray>웨이브마다 적으로 변한 숙적을 여우가 처치하면 <aqua>새로운 형태</aqua>로 전직합니다.</gray>")
                 )
         );
     }
@@ -29,13 +29,13 @@ public final class AdversaryTowerJob extends SemionJob {
     @Override
     public List<Component> description() {
         return List.of(
-                SemionText.mini("<gold><bold>전직</bold></gold><gray> — 여우가 설치된 </gray><red>숙적</red><gray>을 막타하면 점수를 얻고, </gray><green>다음 준비 단계</green><gray>에 자동 전직합니다.</gray>"),
-                SemionText.mini("<aqua>처치한 숙적의 종류와 누적 점수</aqua><gray>에 따라 네 전직 루트 중 하나로 갈립니다. 준비 단계당 최대 1단계입니다.</gray>"),
-                SemionText.mini("<yellow>루트</yellow><gray> — 빠른 저비용 / 팀 지원 / 대상 특화 / 느린 초고점</gray>"),
-                SemionText.mini("<dark_gray>인컴 몬스터 처치는 전직에 영향을 주지 않습니다.</dark_gray>"),
-                SemionText.mini("<red><bold>위험</bold></red><gray> — 숙적은 슬롯을 차지하고 웨이브 시작 시 적으로 변합니다. 강화 숙적 처치는 2점을 줍니다.</gray>"),
-                SemionText.mini("<red><bold>강등</bold></red><gray> — 숙적 판매 시 그 개체의 누적 점수가 빠집니다. 요구량 미달이면 여우는 강등되지만 선택한 루트는 유지됩니다.</gray>"),
-                SemionText.mini("<yellow>여우는 한 마리만 설치할 수 있으며 판매 후 다시 설치해도 진행도를 유지합니다.</yellow>")
+                SemionText.mini("<gold>여우는 한 마리만 설치할 수 있습니다.</gold>"),
+                SemionText.mini("<gray>숙적은 타워 슬롯을 차지하며, 웨이브가 시작되면 설치한 자리에서 적으로 변합니다.</gray>"),
+                SemionText.mini("<gray>숙적을 여우가 직접 처치하면 종류에 맞는 <yellow>전직 점수</yellow>를 얻습니다. 강화 숙적은 2점을 줍니다.</gray>"),
+                SemionText.mini("<gray>점수를 채우면 <green>다음 준비 단계</green>에 한 단계 전직합니다. 인컴 적은 점수를 주지 않습니다.</gray>"),
+                SemionText.mini("<aqua>첫 전직은 질풍 여우, 종지기 여우, 추적자 여우, 메아리 여우 중 하나이며 각 계열에서 최종 형태 2종으로 갈립니다.</aqua>"),
+                SemionText.mini("<red>숙적을 판매하면 그 숙적에게서 얻은 점수가 사라집니다. 점수가 부족하면 여우는 강등되지만 전직 계열은 유지됩니다.</red>"),
+                SemionText.mini("<yellow>여우를 판매해도 전직 상태와 점수는 유지됩니다.</yellow>")
         );
     }
 

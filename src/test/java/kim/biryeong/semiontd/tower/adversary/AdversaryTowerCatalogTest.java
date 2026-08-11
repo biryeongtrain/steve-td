@@ -123,7 +123,7 @@ class AdversaryTowerCatalogTest {
         assertTrue(AdversaryProgressStates.recordFoxKill(OWNER, enhanced.createProxy(1), lane));
         assertEquals(4, enhanced.contributedScore());
         assertTrue(enhanced.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("처치당 2점") && line.contains("누적 기여 4점")));
+                line.contains("처치 점수") && line.contains("2점") && line.contains("누적 기여 4점")));
     }
 
     @Test
@@ -139,19 +139,21 @@ class AdversaryTowerCatalogTest {
     }
 
     @Test
-    void jobDescriptionExplainsConciseAutomaticEvolutionAndIncomeIsolation() {
+    void jobDescriptionExplainsAutomaticEvolutionWithoutAbstractRouteLabels() {
         String guide = new AdversaryTowerJob().description().stream()
                 .map(component -> component.getString())
                 .collect(java.util.stream.Collectors.joining("\n"));
 
-        assertTrue(guide.contains("여우가 설치된 숙적을 막타"));
-        assertTrue(guide.contains("처치한 숙적의 종류와 누적 점수"));
-        assertTrue(guide.contains("네 전직 루트 중 하나"));
-        assertTrue(guide.contains("빠른 저비용 / 팀 지원 / 대상 특화 / 느린 초고점"));
+        assertTrue(guide.contains("숙적을 여우가 직접 처치"));
+        assertTrue(guide.contains("전직 점수"));
+        assertTrue(guide.contains("질풍 여우, 종지기 여우, 추적자 여우, 메아리 여우"));
+        assertFalse(guide.contains("빠른 저비용"));
+        assertFalse(guide.contains("진화 루트"));
         assertTrue(guide.contains("다음 준비 단계"));
-        assertTrue(guide.contains("준비 단계당 최대 1단계"));
-        assertTrue(guide.contains("인컴 몬스터 처치는 전직에 영향을 주지 않습니다"));
+        assertTrue(guide.contains("인컴 적은 점수를 주지 않습니다"));
         assertTrue(guide.contains("강등"));
+        assertTrue(guide.contains("전직 계열은 유지"));
+        assertTrue(guide.contains("여우를 판매해도 전직 상태와 점수는 유지"));
     }
 
     @Test
@@ -411,13 +413,16 @@ class AdversaryTowerCatalogTest {
                 .orElseThrow().type().description());
         assertTrue(foxDescription.contains("1.25블록"));
         assertTrue(foxDescription.contains("2기"));
+        assertTrue(foxDescription.contains("전직 점수"));
+        assertFalse(foxDescription.contains("진화"));
 
         String enhancedDescription = String.join(" ", ProductionTowerCatalog
                 .find(AdversaryTowers.ENHANCED_POLAR_BEAR_RIVAL.id())
                 .orElseThrow().type().description());
         assertTrue(enhancedDescription.contains("405"));
         assertTrue(enhancedDescription.contains("7"));
-        assertTrue(enhancedDescription.contains("2점"));
+        assertTrue(enhancedDescription.contains("전직 점수 2점"));
+        assertTrue(enhancedDescription.contains("라운드가 오를수록 증가"));
     }
 
     private static void assertRival(

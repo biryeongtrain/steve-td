@@ -23,10 +23,10 @@ public final class AdversaryTowers {
             .aggroPriority(50)
             .visual(FoxVisual.builder().variant(Fox.Variant.DEFAULT).build())
             .description(List.of(
-                    "<gray>한 마리만 설치할 수 있는 대적자 빌더의 핵심 타워입니다.</gray>",
-                    "<green>기본 공격은 반경 {ability.adversary_global.baseSplashRadius:blocks}의 추가 적 최대 {ability.adversary_global.baseSplashExtraTargets:integer}기에게 {ability.adversary_global.baseSplashDamageRatio:percent} 피해를 줍니다.</green>",
-                    "<green>숙적 막타 점수에 따라 네 갈래 중 하나로 진화하며 강화 숙적은 더 많은 점수를 줍니다.</green>",
-                    "<yellow>형태는 같은 여우에 유지되고 입에 든 아이템으로 표시됩니다.</yellow>"
+                    "<gray>한 마리만 설치할 수 있습니다.</gray>",
+                    "<green>기본 공격이 반경 {ability.adversary_global.baseSplashRadius:blocks} 안의 다른 적 최대 {ability.adversary_global.baseSplashExtraTargets:integer}기에게 공격력의 {ability.adversary_global.baseSplashDamageRatio:percent}만큼 피해를 줍니다.</green>",
+                    "<green>숙적을 직접 처치해 전직 점수를 모으면 다음 준비 단계에 전직합니다.</green>",
+                    "<yellow>입에 든 아이템으로 현재 형태를 확인할 수 있습니다.</yellow>"
             ))
             .build();
 
@@ -153,10 +153,11 @@ public final class AdversaryTowers {
                 .aggroPriority(0)
                 .visual(EntityVisual.vanilla(kind.entityTypeId()))
                 .description(List.of(
-                        "<red>웨이브가 시작되면 설치 위치에서 적으로 변합니다.</red>",
-                        "<gray>기본 체력 {stat.maxHealth:number}, 방어 {ability.baseArmor:number}, 공격력 {stat.damage:number}</gray>",
-                        "<yellow>여우가 막타를 내면 {ability.scorePerKill:integer}점을 제공합니다.</yellow>",
-                        "<dark_red>판매 환불과 처치 보상은 0입니다.</dark_red>"
+                        "<red>웨이브가 시작되면 설치한 자리에서 적으로 변합니다.</red>",
+                        "<gray>기본 능력치: 체력 {stat.maxHealth:number} / 방어력 {ability.baseArmor:number} / 공격력 {stat.damage:number}</gray>",
+                        "<gray>능력치는 라운드가 오를수록 증가합니다.</gray>",
+                        "<yellow>여우가 처치하면 전직 점수 {ability.scorePerKill:integer}점을 얻습니다.</yellow>",
+                        "<dark_red>판매 환불과 처치 보상은 없습니다.</dark_red>"
                 ))
                 .build();
     }

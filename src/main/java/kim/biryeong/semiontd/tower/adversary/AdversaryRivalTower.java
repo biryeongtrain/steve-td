@@ -113,10 +113,10 @@ public final class AdversaryRivalTower extends EntityBackedTower implements Riva
     @Override
     public List<String> runtimeDetailLines() {
         return List.of(
-                "<red>숙적</red> " + kind.displayName() + (enhanced() ? " <gold>(강화)</gold>" : ""),
-                "<yellow>진화 점수</yellow>: 처치당 " + kind.scorePerKill(enhanced())
-                        + "점 / 이 개체의 누적 기여 " + contributedScore() + "점",
-                "<red>판매 시 누적 기여가 사라지며 환불은 0입니다.</red>"
+                "<red>" + kind.displayName() + " 숙적</red>" + (enhanced() ? " <gold>(강화)</gold>" : ""),
+                "<yellow>처치 점수</yellow> " + kind.scorePerKill(enhanced())
+                        + "점 / 누적 기여 " + contributedScore() + "점",
+                "<red>판매하면 이 숙적이 쌓은 점수가 사라지며 환불은 없습니다.</red>"
         );
     }
 

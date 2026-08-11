@@ -304,37 +304,41 @@ class AdversaryCombatContractTest {
     void runtimeDetailsExposeTheCurrentFormsConfiguredMechanic() {
         AdversaryFoxTower fox = fox();
 
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("다음 준비 단계") && line.contains("최대 1단계")));
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("인컴 처치") && line.contains("영향 없음")));
+        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line -> line.contains("현재 형태</gold>:")));
+        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line -> line.contains("전직 점수")));
+        assertTrue(fox.runtimeDetailLines().stream().noneMatch(line -> line.contains("인컴 처치")));
 
         fox.setForm(FoxForm.BEACON_KEEPER, null);
         assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("팀 전체")
+                line.contains("모든 아군 타워")
                         && line.contains("피해 +4%")
-                        && line.contains("공속 +10%")
+                        && line.contains("공격 속도 +10%")
                         && line.contains("최대 체력 +5%")));
+
+        fox.setForm(FoxForm.OMINOUS_HEXER, null);
+        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
+                line.contains("숙적에게는 적용되지 않습니다")));
 
         fox.setForm(FoxForm.FIREWORK_PIERCER, null);
         assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("웨이브 피해 ×1.8")
-                        && line.contains("인컴 피해 ×0.6")
-                        && line.contains("100%/55%/40%/25%/15%")));
+                line.contains("웨이브 적에게 1.8배") && line.contains("인컴 적에게 0.6배")));
+        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
+                line.contains("직선상의 적 최대 5기")
+                        && line.contains("100% / 55% / 40% / 25% / 15%")));
 
         fox.setForm(FoxForm.SCULK_CORE, null);
         assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("40tick")
-                        && line.contains("마법 피해 1000")
-                        && line.contains("최대 5기")));
+                line.contains("40틱 뒤 폭발")));
         assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("10% 방어 무시 자해") && line.contains("체력 20% 아래")));
+                line.contains("최대 5기") && line.contains("1000의 마법 피해")));
+        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
+                line.contains("방어를 무시") && line.contains("체력은 20% 아래")));
 
         fox.setForm(FoxForm.MACE_EXECUTIONER, null);
         assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("주변 2기") && line.contains("25% 휩쓸기")));
+                line.contains("주변 적 최대 2기") && line.contains("25%만큼 피해")));
         assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("최대 체력 20%") && line.contains("피해 시 취소")));
+                line.contains("최대 체력의 20%") && line.contains("공격이 취소")));
     }
 
     @Test
