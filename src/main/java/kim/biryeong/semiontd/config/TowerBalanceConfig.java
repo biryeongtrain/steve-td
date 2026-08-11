@@ -8,6 +8,10 @@ import java.util.Map;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityStates;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityTowers;
+import kim.biryeong.semiontd.tower.adversary.AdversaryBalance;
+import kim.biryeong.semiontd.tower.adversary.AdversaryTowers;
+import kim.biryeong.semiontd.tower.adversary.FoxForm;
+import kim.biryeong.semiontd.tower.adversary.RivalKind;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
 import kim.biryeong.semiontd.tower.end.EndTowers;
 import kim.biryeong.semiontd.tower.end.EndConfig.Ability;
@@ -179,6 +183,7 @@ public record TowerBalanceConfig(
         addEndTowers(towers);
         addOceanTowers(towers);
         addAncientCityTowers(towers);
+        addAdversaryTowers(towers);
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
         putUpgrade(upgradeCosts, VillagerTowers.T1_SPLASH_TOWER, "villager_splash_t2", 110);
@@ -250,6 +255,7 @@ public record TowerBalanceConfig(
         putEndUpgrades(upgradeCosts);
         putOceanUpgrades(upgradeCosts);
         putAncientCityUpgrades(upgradeCosts);
+        putAdversaryUpgrades(upgradeCosts);
 
         LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>();
         putAbilities(abilities, IllagerRaidStates.RAID_CONFIG_ID, Map.of(
@@ -859,6 +865,7 @@ public record TowerBalanceConfig(
         putEndAbilities(abilities);
         putOceanAbilities(abilities);
         putAncientCityAbilities(abilities);
+        putAdversaryAbilities(abilities);
 
         return new TowerBalanceConfig(
                 towers,
@@ -916,6 +923,7 @@ public record TowerBalanceConfig(
         });
 
         validateDamageScaling(WarlockTowers.CONFIG_ID);
+        validateAdversaryBalance();
 
         Map<String, Double> end = abilities.get(EndTowers.CONFIG_ID);
         if (end == null) {
@@ -988,6 +996,176 @@ public record TowerBalanceConfig(
         validateTowerRatio(EndTowers.T1_SHULKER_TOWER.id(), "damageReduction");
         validateTowerRatio(EndTowers.T2_SHULKER_TOWER.id(), "damageReduction");
         validateTowerRatio(EndTowers.T3_SHULKER_TOWER.id(), "damageReduction");
+    }
+
+    private void validateAdversaryBalance() {
+        Map<String, Double> global = abilities.get(AdversaryBalance.GLOBAL_CONFIG_ID);
+        if (global != null) {
+            validateAdversaryValues(AdversaryBalance.GLOBAL_CONFIG_ID, global);
+            requireAdversaryPositive(global,
+                    "rivalArmorRoundInterval",
+                    "baseSplashRadius",
+                    "goldenExtraAttackEvery",
+                    "shieldCounterDamage",
+                    "shieldCounterCooldownTicks",
+                    "teamEffectScanIntervalTicks",
+                    "teamEffectDurationTicks",
+                    "fireworkWaveDamageMultiplier",
+                    "fireworkIncomeDamageMultiplier",
+                    "fireworkMaxTargets",
+                    "bigGameWaveDamageMultiplier",
+                    "bigGameIncomeDamageMultiplier",
+                    "maceFocusTicks",
+                    "maceSweepRadius",
+                    "sculkDelayTicks",
+                    "sculkRadius",
+                    "sculkMaxTargets"
+            );
+            requireAdversaryRatio(global,
+                    "rivalRoundHealthGrowth",
+                    "rivalRoundDamageGrowth",
+                    "baseSplashDamageRatio",
+                    "breezeExtraTargetDamageRatio",
+                    "goldenExtraDamageRatio",
+                    "bellTeamDamageBonus",
+                    "beaconTeamDamageBonus",
+                    "beaconTeamAttackSpeedBonus",
+                    "beaconTeamMaxHealthBonus",
+                    "ominousMonsterDamageReduction",
+                    "ominousMonsterAttackSpeedReduction",
+                    "ominousMonsterTowerDamageTakenBonus",
+                    "fireworkSecondary2Ratio",
+                    "fireworkSecondary3Ratio",
+                    "fireworkSecondary4Ratio",
+                    "fireworkSecondary5Ratio",
+                    "echoBonusPerHit",
+                    "maceBreakHealthRatio",
+                    "maceSweepDamageRatio",
+                    "sculkSelfDamageRatio",
+                    "sculkSelfDamageFloorRatio"
+            );
+            requireAdversaryIntegral(global,
+                    "rivalArmorRoundInterval",
+                    "baseSplashExtraTargets",
+                    "breezeExtraTargets",
+                    "goldenExtraAttackEvery",
+                    "shieldCounterCooldownTicks",
+                    "teamEffectScanIntervalTicks",
+                    "teamEffectDurationTicks",
+                    "fireworkMaxTargets",
+                    "echoMaxBonusStacks",
+                    "maceFocusTicks",
+                    "maceSweepExtraTargets",
+                    "sculkDelayTicks",
+                    "sculkMaxTargets"
+            );
+            validateAdversaryNonIncreasing(global,
+                    "fireworkSecondary2Ratio",
+                    "fireworkSecondary3Ratio",
+                    "fireworkSecondary4Ratio",
+                    "fireworkSecondary5Ratio"
+            );
+            validateAdversaryNonDecreasing(global, "bigGameStreak2", "bigGameStreak3");
+            validateAdversaryNonDecreasing(global, "maceStreak2", "maceStreak3", "maceStreak4", "maceStreak5");
+        }
+
+        for (FoxForm form : FoxForm.values()) {
+            String configId = AdversaryBalance.formConfigId(form);
+            Map<String, Double> values = abilities.get(configId);
+            if (values == null) {
+                continue;
+            }
+            validateAdversaryValues(configId, values);
+            requireAdversaryPositive(values, "maxHealth", "range", "damage", "attackIntervalTicks");
+            requireAdversaryRatio(values, "damageReduction");
+            requireAdversaryIntegral(values, "attackIntervalTicks");
+            for (RivalKind kind : RivalKind.values()) {
+                String requirementKey = AdversaryBalance.requirementKey(kind);
+                requireAdversaryPositive(values, requirementKey);
+                requireAdversaryIntegral(values, requirementKey);
+            }
+        }
+
+        for (RivalKind kind : RivalKind.values()) {
+            validateAdversaryRivalAbilities(kind, false);
+            validateAdversaryRivalAbilities(kind, true);
+        }
+    }
+
+    private void validateAdversaryRivalAbilities(RivalKind kind, boolean enhanced) {
+        String configId = AdversaryBalance.rivalTowerId(kind, enhanced);
+        Map<String, Double> values = abilities.get(configId);
+        if (values == null) {
+            return;
+        }
+        validateAdversaryValues(configId, values);
+        requireAdversaryPositive(values, "scorePerKill");
+        requireAdversaryIntegral(values, "scorePerKill");
+    }
+
+    private static void validateAdversaryValues(String configId, Map<String, Double> values) {
+        values.forEach((key, value) -> {
+            if (value == null || !Double.isFinite(value) || value < 0.0) {
+                throw new IllegalArgumentException(
+                        "Adversary balance value must be finite and non-negative: " + configId + "." + key
+                );
+            }
+        });
+    }
+
+    private static void requireAdversaryPositive(Map<String, Double> values, String... keys) {
+        for (String key : keys) {
+            Double value = values.get(key);
+            if (value != null && value <= 0.0) {
+                throw new IllegalArgumentException("Adversary balance value must be positive: " + key);
+            }
+        }
+    }
+
+    private static void requireAdversaryRatio(Map<String, Double> values, String... keys) {
+        for (String key : keys) {
+            Double value = values.get(key);
+            if (value != null && value > 1.0) {
+                throw new IllegalArgumentException("Adversary balance ratio must be between 0 and 1: " + key);
+            }
+        }
+    }
+
+    private static void requireAdversaryIntegral(Map<String, Double> values, String... keys) {
+        for (String key : keys) {
+            Double value = values.get(key);
+            if (value != null && (value > Integer.MAX_VALUE || value != Math.rint(value))) {
+                throw new IllegalArgumentException("Adversary balance integer must not be fractional or oversized: " + key);
+            }
+        }
+    }
+
+    private static void validateAdversaryNonDecreasing(Map<String, Double> values, String... keys) {
+        Double previous = 1.0;
+        for (String key : keys) {
+            Double value = values.get(key);
+            if (value == null) {
+                return;
+            }
+            if (value < previous) {
+                throw new IllegalArgumentException("Adversary balance streak multipliers must be non-decreasing.");
+            }
+            previous = value;
+        }
+    }
+
+    private static void validateAdversaryNonIncreasing(Map<String, Double> values, String... keys) {
+        Double previous = 1.0;
+        for (String key : keys) {
+            Double value = values.get(key);
+            if (value == null) {
+                return;
+            }
+            if (value > previous) {
+                throw new IllegalArgumentException("Adversary secondary damage ratios must be non-increasing.");
+            }
+            previous = value;
+        }
     }
 
     private static void requirePositive(Map<String, Double> values, String... keys) {
@@ -1299,6 +1477,10 @@ public record TowerBalanceConfig(
         AncientCityTowers.all().forEach(type -> addTower(towers, type));
     }
 
+    private static void addAdversaryTowers(Map<String, TowerStats> towers) {
+        AdversaryTowers.all().forEach(type -> addTower(towers, type));
+    }
+
     private static void putNetherUpgrades(Map<String, Long> upgrades) {
         putUpgrade(upgrades, NetherTowers.T1_STRIDER, NetherTowers.T2_PIGLIN.id(), 100);
         putUpgrade(upgrades, NetherTowers.T2_PIGLIN, NetherTowers.T3_PIGLIN_BRUTE.id(), 180);
@@ -1341,6 +1523,128 @@ public record TowerBalanceConfig(
         putUpgrade(upgrades, AncientCityTowers.SHRIEKER_T2, AncientCityTowers.SHRIEKER_T3.id(), 220);
         putUpgrade(upgrades, AncientCityTowers.WARDEN_T1, AncientCityTowers.WARDEN_T2.id(), 160);
         putUpgrade(upgrades, AncientCityTowers.WARDEN_T2, AncientCityTowers.WARDEN_T3.id(), 300);
+    }
+
+    private static void putAdversaryUpgrades(Map<String, Long> upgrades) {
+        for (RivalKind kind : RivalKind.values()) {
+            TowerType base = AdversaryTowers.baseRival(kind);
+            TowerType enhanced = AdversaryTowers.enhancedRival(kind);
+            putUpgrade(upgrades, base, enhanced.id(), AdversaryBalance.defaultRivalBaseCost(kind));
+        }
+    }
+
+    private static void putAdversaryAbilities(Map<String, Map<String, Double>> abilities) {
+        putAbilities(abilities, AdversaryBalance.GLOBAL_CONFIG_ID, Map.ofEntries(
+                Map.entry("rivalRoundHealthGrowth", AdversaryBalance.RIVAL_ROUND_HEALTH_GROWTH),
+                Map.entry("rivalRoundDamageGrowth", AdversaryBalance.RIVAL_ROUND_DAMAGE_GROWTH),
+                Map.entry("rivalArmorRoundInterval", (double) AdversaryBalance.RIVAL_ARMOR_ROUND_INTERVAL),
+                Map.entry("baseSplashRadius", AdversaryBalance.BASE_SPLASH_RADIUS),
+                Map.entry("baseSplashExtraTargets", (double) AdversaryBalance.BASE_SPLASH_EXTRA_TARGETS),
+                Map.entry("baseSplashDamageRatio", AdversaryBalance.BASE_SPLASH_DAMAGE_RATIO),
+                Map.entry("breezeExtraTargets", (double) AdversaryBalance.BREEZE_EXTRA_TARGETS),
+                Map.entry("breezeExtraTargetDamageRatio", AdversaryBalance.BREEZE_EXTRA_TARGET_DAMAGE_RATIO),
+                Map.entry("goldenExtraAttackEvery", (double) AdversaryBalance.GOLDEN_FANG_EXTRA_ATTACK_EVERY),
+                Map.entry("goldenExtraDamageRatio", AdversaryBalance.GOLDEN_FANG_EXTRA_DAMAGE_RATIO),
+                Map.entry("shieldCounterDamage", AdversaryBalance.SHIELD_COUNTER_DAMAGE),
+                Map.entry("shieldCounterCooldownTicks", (double) AdversaryBalance.SHIELD_COUNTER_COOLDOWN_TICKS),
+                Map.entry("bellTeamDamageBonus", AdversaryBalance.BELL_TEAM_DAMAGE_BONUS),
+                Map.entry("beaconTeamDamageBonus", AdversaryBalance.BEACON_TEAM_DAMAGE_BONUS),
+                Map.entry("beaconTeamAttackSpeedBonus", AdversaryBalance.BEACON_TEAM_ATTACK_SPEED_BONUS),
+                Map.entry("beaconTeamMaxHealthBonus", AdversaryBalance.BEACON_TEAM_MAX_HEALTH_BONUS),
+                Map.entry("ominousMonsterDamageReduction", AdversaryBalance.OMINOUS_MONSTER_DAMAGE_REDUCTION),
+                Map.entry("ominousMonsterAttackSpeedReduction", AdversaryBalance.OMINOUS_MONSTER_ATTACK_SPEED_REDUCTION),
+                Map.entry("ominousMonsterTowerDamageTakenBonus", AdversaryBalance.OMINOUS_MONSTER_TOWER_DAMAGE_TAKEN_BONUS),
+                Map.entry("teamEffectScanIntervalTicks", (double) AdversaryBalance.TEAM_EFFECT_SCAN_INTERVAL_TICKS),
+                Map.entry("teamEffectDurationTicks", (double) AdversaryBalance.TEAM_EFFECT_DURATION_TICKS),
+                Map.entry("fireworkWaveDamageMultiplier", AdversaryBalance.FIREWORK_WAVE_DAMAGE_MULTIPLIER),
+                Map.entry("fireworkIncomeDamageMultiplier", AdversaryBalance.FIREWORK_INCOME_DAMAGE_MULTIPLIER),
+                Map.entry("fireworkMaxTargets", (double) AdversaryBalance.FIREWORK_MAX_TARGETS),
+                Map.entry("fireworkSecondary2Ratio", AdversaryBalance.FIREWORK_TARGET_DAMAGE_RATIOS[1]),
+                Map.entry("fireworkSecondary3Ratio", AdversaryBalance.FIREWORK_TARGET_DAMAGE_RATIOS[2]),
+                Map.entry("fireworkSecondary4Ratio", AdversaryBalance.FIREWORK_TARGET_DAMAGE_RATIOS[3]),
+                Map.entry("fireworkSecondary5Ratio", AdversaryBalance.FIREWORK_TARGET_DAMAGE_RATIOS[4]),
+                Map.entry("bigGameWaveDamageMultiplier", AdversaryBalance.BIG_GAME_WAVE_DAMAGE_MULTIPLIER),
+                Map.entry("bigGameIncomeDamageMultiplier", AdversaryBalance.BIG_GAME_INCOME_DAMAGE_MULTIPLIER),
+                Map.entry("bigGameStreak2", AdversaryBalance.BIG_GAME_STREAK_MULTIPLIERS[1]),
+                Map.entry("bigGameStreak3", AdversaryBalance.BIG_GAME_STREAK_MULTIPLIERS[2]),
+                Map.entry("echoBonusPerHit", AdversaryBalance.ECHO_STREAK_DAMAGE_BONUS_PER_HIT),
+                Map.entry("echoMaxBonusStacks", (double) AdversaryBalance.ECHO_MAX_STREAK_BONUS_STACKS),
+                Map.entry("maceFocusTicks", (double) AdversaryBalance.MACE_FOCUS_TICKS),
+                Map.entry("maceBreakHealthRatio", AdversaryBalance.MACE_FOCUS_BREAK_MAX_HEALTH_RATIO),
+                Map.entry("maceStreak2", AdversaryBalance.MACE_STREAK_MULTIPLIERS[1]),
+                Map.entry("maceStreak3", AdversaryBalance.MACE_STREAK_MULTIPLIERS[2]),
+                Map.entry("maceStreak4", AdversaryBalance.MACE_STREAK_MULTIPLIERS[3]),
+                Map.entry("maceStreak5", AdversaryBalance.MACE_STREAK_MULTIPLIERS[4]),
+                Map.entry("maceSweepRadius", AdversaryBalance.MACE_SWEEP_RADIUS),
+                Map.entry("maceSweepExtraTargets", (double) AdversaryBalance.MACE_SWEEP_EXTRA_TARGETS),
+                Map.entry("maceSweepDamageRatio", AdversaryBalance.MACE_SWEEP_DAMAGE_RATIO),
+                Map.entry("sculkDelayTicks", (double) AdversaryBalance.SCULK_DETONATION_DELAY_TICKS),
+                Map.entry("sculkRadius", AdversaryBalance.SCULK_DETONATION_RADIUS),
+                Map.entry("sculkMaxTargets", (double) AdversaryBalance.SCULK_MAX_TARGETS),
+                Map.entry("sculkSelfDamageRatio", AdversaryBalance.SCULK_SELF_DAMAGE_MAX_HEALTH_RATIO),
+                Map.entry("sculkSelfDamageFloorRatio", AdversaryBalance.SCULK_SELF_DAMAGE_HEALTH_FLOOR_RATIO)
+        ));
+
+        putAdversaryFormAbilities(abilities, FoxForm.BASE);
+        putAdversaryFormAbilities(abilities, FoxForm.BREEZE, RivalKind.BREEZE, 12);
+        putAdversaryFormAbilities(abilities, FoxForm.GOLDEN_FANG, RivalKind.BREEZE, 50);
+        putAdversaryFormAbilities(abilities, FoxForm.SHIELD_BEARER, RivalKind.BREEZE, 30, RivalKind.POLAR_BEAR, 20);
+        putAdversaryFormAbilities(abilities, FoxForm.BELL_KEEPER, RivalKind.PHANTOM, 14);
+        putAdversaryFormAbilities(abilities, FoxForm.BEACON_KEEPER, RivalKind.PHANTOM, 50, RivalKind.POLAR_BEAR, 25);
+        putAdversaryFormAbilities(abilities, FoxForm.OMINOUS_HEXER, RivalKind.PHANTOM, 50, RivalKind.CREEPER, 30);
+        putAdversaryFormAbilities(abilities, FoxForm.TRACKER, RivalKind.CREEPER, 16);
+        putAdversaryFormAbilities(abilities, FoxForm.FIREWORK_PIERCER, RivalKind.CREEPER, 60, RivalKind.BREEZE, 30);
+        putAdversaryFormAbilities(abilities, FoxForm.BIG_GAME_TRACKER, RivalKind.CREEPER, 60, RivalKind.POLAR_BEAR, 30);
+        putAdversaryFormAbilities(abilities, FoxForm.ECHO_FOX, RivalKind.POLAR_BEAR, 18);
+        putAdversaryFormAbilities(abilities, FoxForm.MACE_EXECUTIONER, RivalKind.POLAR_BEAR, 80, RivalKind.BREEZE, 40);
+        putAdversaryFormAbilities(
+                abilities,
+                FoxForm.SCULK_CORE,
+                RivalKind.POLAR_BEAR,
+                100,
+                RivalKind.PHANTOM,
+                50,
+                RivalKind.CREEPER,
+                40
+        );
+
+        for (RivalKind kind : RivalKind.values()) {
+            putAdversaryRivalAbilities(abilities, kind, false);
+            putAdversaryRivalAbilities(abilities, kind, true);
+        }
+    }
+
+    private static void putAdversaryFormAbilities(
+            Map<String, Map<String, Double>> abilities,
+            FoxForm form,
+            Object... requirements
+    ) {
+        LinkedHashMap<String, Double> values = new LinkedHashMap<>();
+        values.put("maxHealth", AdversaryBalance.defaultFormValue(form, "maxHealth"));
+        values.put("range", AdversaryBalance.defaultFormValue(form, "range"));
+        values.put("damage", AdversaryBalance.defaultFormValue(form, "damage"));
+        values.put("attackIntervalTicks", AdversaryBalance.defaultFormValue(form, "attackIntervalTicks"));
+        values.put("damageReduction", AdversaryBalance.defaultFormValue(form, "damageReduction"));
+        for (int index = 0; index + 1 < requirements.length; index += 2) {
+            RivalKind kind = (RivalKind) requirements[index];
+            Number score = (Number) requirements[index + 1];
+            values.put(AdversaryBalance.requirementKey(kind), score.doubleValue());
+        }
+        putAbilities(abilities, AdversaryBalance.formConfigId(form), values);
+    }
+
+    private static void putAdversaryRivalAbilities(
+            Map<String, Map<String, Double>> abilities,
+            RivalKind kind,
+            boolean enhanced
+    ) {
+        putAbilities(abilities, AdversaryBalance.rivalTowerId(kind, enhanced), Map.of(
+                "baseArmor", AdversaryBalance.defaultRivalBaseArmor(kind)
+                        + (enhanced ? AdversaryBalance.ENHANCED_RIVAL_ARMOR_BONUS : 0.0),
+                "scorePerKill", (double) (enhanced
+                        ? AdversaryBalance.ENHANCED_RIVAL_SCORE_PER_KILL
+                        : AdversaryBalance.BASE_RIVAL_SCORE_PER_KILL)
+        ));
     }
 
     private static void putAncientCityAbilities(Map<String, Map<String, Double>> abilities) {

@@ -1,0 +1,1385 @@
+package kim.biryeong.semiontd.tower.adversary;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import kim.biryeong.semiontd.api.area.AreaVfxSpec;
+import kim.biryeong.semiontd.api.area.AreaVfxStyles;
+import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
+import kim.biryeong.semiontd.entity.monster.DamageType;
+import kim.biryeong.semiontd.entity.monster.Monster;
+import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
+import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
+import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
+import kim.biryeong.semiontd.effect.TimedEffectType;
+import kim.biryeong.semiontd.game.GridPosition;
+import kim.biryeong.semiontd.game.PlayerLane;
+import kim.biryeong.semiontd.game.TeamId;
+import kim.biryeong.semiontd.tower.EntityBackedTower;
+import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.area.AreaEffectIds;
+import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
+
+/** Runtime combat implementation for the single Adversary fox. */
+public final class AdversaryFoxTower extends EntityBackedTower {
+    private static final double LINE_HALF_WIDTH = 0.75;
+
+    private FoxForm form;
+    private PlayerLane currentLane;
+    private boolean normalEntityHealthSyncPending;
+    private boolean unscaledEntityDamagePending;
+    private double unscaledEntityDamageLogicalHealth;
+
+    private UUID goldenTargetId;
+    private int goldenTargetHits;
+    private int shieldCounterCooldownTicks;
+
+    private UUID spyglassTargetId;
+    private int spyglassTargetHits;
+    private UUID echoTargetId;
+    private int echoTargetHits;
+
+    private UUID maceTargetId;
+    private int maceTicksUntilStrike = -1;
+    private int maceSuccessfulStrikes;
+    private double maceFocusDamageTaken;
+
+    private final List<PendingSculkBlast> pendingSculkBlasts = new ArrayList<>();
+
+    public AdversaryFoxTower(
+            TowerType type,
+            UUID ownerPlayer,
+            TeamId teamId,
+            int laneId,
+            GridPosition position
+    ) {
+        super(type, ownerPlayer, teamId, laneId, position);
+        initializeForm(ownerPlayer);
+    }
+
+    public AdversaryFoxTower(
+            TowerType type,
+            UUID ownerPlayer,
+            TeamId teamId,
+            int laneId,
+            GridPosition originalPosition,
+            GridPosition currentPosition
+    ) {
+        super(type, ownerPlayer, teamId, laneId, originalPosition, currentPosition);
+        initializeForm(ownerPlayer);
+    }
+
+    public FoxForm form() {
+        return form;
+    }
+
+    /**
+     * Applies a progression-selected form without replacing the logical tower entity.
+     * Health ratio is kept across promotion and demotion, while all per-attack state is reset.
+     */
+    public void setForm(FoxForm nextForm, PlayerLane lane) {
+        FoxForm resolved = nextForm == null ? FoxForm.BASE : nextForm;
+        if (resolved == form) {
+            return;
+        }
+        double previousMaximum = Math.max(1.0, currentMaxHealth());
+        double healthRatio = Math.max(0.0, Math.min(1.0, health() / previousMaximum));
+        form = resolved;
+        AdversaryProgressStates.state(ownerPlayer()).setCurrentForm(resolved);
+        resetTransientCombatState();
+
+        syncMaxHealth(resolved.maxHealth(), false);
+        SemionTowerEntity entity = towerEntity(lane);
+        if (entity != null) {
+            entity.refreshMaxHealthEffects(false);
+        }
+        super.syncHealth(currentMaxHealth() * healthRatio);
+        super.onStateChanged(lane);
+        equipHeldItem(towerEntity(lane));
+    }
+
+    @Override
+    public double effectBaseMaxHealth() {
+        return form.maxHealth();
+    }
+
+    @Override
+    protected void refreshMaxHealthAfterTypeChange(PlayerLane lane) {
+        SemionTowerEntity entity = towerEntity(lane);
+        if (entity != null) {
+            entity.refreshMaxHealthEffects(false);
+        } else {
+            syncMaxHealth(effectBaseMaxHealth(), false);
+        }
+    }
+
+    @Override
+    public void onPlaced(PlayerLane lane) {
+        currentLane = lane;
+        syncFormFromProgress(lane);
+        super.onPlaced(lane);
+    }
+
+    @Override
+    protected void configureEntityAfterSpawn(SemionTowerEntity entity, PlayerLane lane) {
+        equipHeldItem(entity);
+    }
+
+    @Override
+    public void onStateChanged(PlayerLane lane) {
+        currentLane = lane;
+        super.onStateChanged(lane);
+        equipHeldItem(towerEntity(lane));
+    }
+
+    @Override
+    public void onWaveStarted(PlayerLane lane, int currentRound) {
+        currentLane = lane;
+        resetTransientCombatState();
+    }
+
+    @Override
+    public void resetForRound(PlayerLane lane) {
+        currentLane = lane;
+        resetTransientCombatState();
+        syncFormFromProgress(lane);
+        super.resetForRound(lane);
+    }
+
+    @Override
+    public void tick(PlayerLane lane) {
+        currentLane = lane;
+        syncFormFromProgress(lane);
+        super.tick(lane);
+        if (shieldCounterCooldownTicks > 0) {
+            shieldCounterCooldownTicks--;
+        }
+
+        SemionTowerEntity entity = towerEntity(lane);
+        if (entity == null || !entity.isAlive() || entity.isRemoved()) {
+            return;
+        }
+        if (form == FoxForm.MACE_EXECUTIONER) {
+            tickMace(entity);
+        } else {
+            resetMace();
+        }
+        tickSculkBlasts(entity);
+        AdversaryTeamEffects.tick(this, entity);
+    }
+
+    @Override
+    public Optional<SemionMonsterEntity> selectAttackTarget(
+            SemionTowerEntity towerEntity,
+            List<SemionMonsterEntity> candidates
+    ) {
+        if (towerEntity == null || candidates == null || candidates.isEmpty()) {
+            return Optional.empty();
+        }
+        List<SemionMonsterEntity> eligible = finalDefenseAttackableCandidates(
+                towerEntity,
+                candidates
+        );
+        List<SemionMonsterEntity> rivals = ownedRivals(eligible);
+        if (!rivals.isEmpty()) {
+            return selectHighestProgress(rivals);
+        }
+        return switch (form) {
+            case TRACKER, FIREWORK_PIERCER -> selectHighestProgress(eligible);
+            case BIG_GAME_TRACKER -> selectBigGameTarget(eligible)
+                    .or(() -> selectHighestProgress(eligible));
+            default -> Optional.empty();
+        };
+    }
+
+    @Override
+    public boolean supportsForcedAttackTargeting() {
+        // This is deliberately always enabled so the fox can abandon a cached normal target
+        // the moment one of its own rival proxies becomes attackable.
+        return true;
+    }
+
+    @Override
+    public Optional<SemionMonsterEntity> selectForcedAttackTarget(
+            SemionTowerEntity towerEntity,
+            List<SemionMonsterEntity> candidates
+    ) {
+        if (towerEntity == null || candidates == null || candidates.isEmpty()) {
+            return Optional.empty();
+        }
+        List<SemionMonsterEntity> eligible = finalDefenseAttackableCandidates(
+                towerEntity,
+                candidates
+        );
+        List<SemionMonsterEntity> rivals = ownedRivals(eligible);
+        if (!rivals.isEmpty()) {
+            return selectHighestProgress(rivals);
+        }
+        return form == FoxForm.BIG_GAME_TRACKER
+                ? selectBigGameTarget(eligible)
+                : Optional.empty();
+    }
+
+    @Override
+    public double adjustAttackRange(double ignoredBaseRange) {
+        return form.range();
+    }
+
+    @Override
+    public int adjustAttackInterval(int ignoredBaseIntervalTicks) {
+        return Math.max(1, form.attackIntervalTicks());
+    }
+
+    @Override
+    public double modifyAttackDamage(
+            SemionTowerEntity towerEntity,
+            SemionMonsterEntity target,
+            double damageAmount
+    ) {
+        if (form == FoxForm.MACE_EXECUTIONER || form == FoxForm.SCULK_CORE) {
+            return 0.0;
+        }
+        double baseTypeDamage = Math.max(0.000_001, type().damage());
+        double adjusted = damageAmount * form.damage() / baseTypeDamage;
+        if (form == FoxForm.FIREWORK_PIERCER) {
+            adjusted *= isIncome(target)
+                    ? global("fireworkIncomeDamageMultiplier", AdversaryBalance.FIREWORK_INCOME_DAMAGE_MULTIPLIER)
+                    : global("fireworkWaveDamageMultiplier", AdversaryBalance.FIREWORK_WAVE_DAMAGE_MULTIPLIER);
+        } else if (form == FoxForm.BIG_GAME_TRACKER) {
+            boolean income = isIncome(target);
+            adjusted *= income
+                    ? global("bigGameIncomeDamageMultiplier", AdversaryBalance.BIG_GAME_INCOME_DAMAGE_MULTIPLIER)
+                    : global("bigGameWaveDamageMultiplier", AdversaryBalance.BIG_GAME_WAVE_DAMAGE_MULTIPLIER);
+            if (income) {
+                adjusted *= spyglassMultiplier(target);
+            }
+        } else if (form == FoxForm.ECHO_FOX) {
+            adjusted *= echoMultiplier(target);
+        }
+        return adjusted;
+    }
+
+    @Override
+    public void onAttackResolved(
+            SemionTowerEntity towerEntity,
+            SemionMonsterEntity target,
+            double attemptedDamage,
+            double resolvedOutgoingDamage,
+            double dealtDamage,
+            boolean killedTarget
+    ) {
+        if (towerEntity == null || target == null) {
+            return;
+        }
+        if (form == FoxForm.MACE_EXECUTIONER) {
+            beginOrMaintainMaceChannel(target);
+            return;
+        }
+        if (form == FoxForm.SCULK_CORE) {
+            scheduleSculkBlast(target.position());
+            return;
+        }
+        // Chained hits and streaks represent successful attacks, not blocked or invalid rays.
+        if (dealtDamage <= 0.0) {
+            return;
+        }
+        switch (form) {
+            case BASE -> applyNearbySecondaries(
+                    towerEntity,
+                    target,
+                    attemptedDamage,
+                    global("baseSplashRadius", AdversaryBalance.BASE_SPLASH_RADIUS),
+                    globalInt("baseSplashExtraTargets", AdversaryBalance.BASE_SPLASH_EXTRA_TARGETS),
+                    global("baseSplashDamageRatio", AdversaryBalance.BASE_SPLASH_DAMAGE_RATIO)
+            );
+            case BREEZE -> applyAdditionalTargets(
+                    towerEntity,
+                    target,
+                    attemptedDamage,
+                    globalInt("breezeExtraTargets", AdversaryBalance.BREEZE_EXTRA_TARGETS),
+                    global(
+                            "breezeExtraTargetDamageRatio",
+                            AdversaryBalance.BREEZE_EXTRA_TARGET_DAMAGE_RATIO
+                    )
+            );
+            case GOLDEN_FANG -> handleGoldenAttack(
+                    towerEntity,
+                    target,
+                    resolvedOutgoingDamage,
+                    killedTarget
+            );
+            case FIREWORK_PIERCER -> handleFireworkAttack(
+                    towerEntity,
+                    target,
+                    attemptedDamage
+            );
+            case BIG_GAME_TRACKER -> {
+                if (isIncome(target)) {
+                    updateSpyglassChain(target, killedTarget);
+                } else {
+                    resetSpyglassChain();
+                }
+            }
+            case ECHO_FOX -> updateEchoChain(target, killedTarget);
+            default -> {
+            }
+        }
+    }
+
+    @Override
+    public void onKill(
+            SemionTowerEntity towerEntity,
+            SemionMonsterEntity target,
+            double damageAmount
+    ) {
+        if (target == null || target.runtimeMonster() == null) {
+            return;
+        }
+        AdversaryProgressStates.recordFoxKill(
+                ownerPlayer(),
+                target.runtimeMonster(),
+                currentLane
+        );
+    }
+
+    @Override
+    public double modifyIncomingDamage(
+            SemionTowerEntity towerEntity,
+            DamageSource damageSource,
+            double damageAmount
+    ) {
+        double remainingDamage = damageAmount * Math.max(0.0, 1.0 - form.damageReduction());
+        if (remainingDamage <= 0.0) {
+            normalEntityHealthSyncPending = false;
+            return 0.0;
+        }
+        if (towerEntity == null || towerEntity.runtimeTower() != this) {
+            normalEntityHealthSyncPending = false;
+            return remainingDamage;
+        }
+
+        double entityHealthCapacity = Math.max(1.0, towerEntity.getMaxHealth());
+        double virtualHealth = Math.max(0.0, health() - entityHealthCapacity);
+        double absorbedByVirtualHealth = Math.min(remainingDamage, virtualHealth);
+        if (absorbedByVirtualHealth > 0.0) {
+            double previousLogicalHealth = health();
+            super.syncHealth(previousLogicalHealth - absorbedByVirtualHealth);
+            recordDamageTaken(absorbedByVirtualHealth);
+            handleReceivedDamage(
+                    towerEntity,
+                    damageSource,
+                    absorbedByVirtualHealth,
+                    previousLogicalHealth,
+                    health()
+            );
+            remainingDamage -= absorbedByVirtualHealth;
+            towerEntity.setHealth((float) Math.min(health(), entityHealthCapacity));
+        }
+
+        normalEntityHealthSyncPending = remainingDamage > 0.0;
+        if (!normalEntityHealthSyncPending) {
+            // SemionTowerEntity normally clears vanilla's hurt cooldown after applying
+            // damage. A hit fully consumed by logical overflow never reaches that path.
+            towerEntity.invulnerableTime = 0;
+        }
+        return remainingDamage;
+    }
+
+    @Override
+    public void syncHealth(double nextHealth) {
+        if (normalEntityHealthSyncPending) {
+            normalEntityHealthSyncPending = false;
+            super.syncHealth(nextHealth);
+            return;
+        }
+
+        SemionTowerEntity entity = towerEntity(currentLane);
+        double entityHealthCapacity = entity == null
+                ? currentMaxHealth()
+                : Math.max(1.0, entity.getMaxHealth());
+        boolean mirrorsLiveEntity = entity != null
+                && Math.abs(entity.getHealth() - nextHealth) <= 0.01;
+        if (mirrorsLiveEntity
+                && health() > entityHealthCapacity + 1.0E-9
+                && nextHealth + 1.0E-9 < health()) {
+            // hurtIgnoringReductions bypasses modifyIncomingDamage. Keep the logical
+            // overflow alive until onDamaged can subtract the true damage exactly.
+            unscaledEntityDamagePending = true;
+            unscaledEntityDamageLogicalHealth = health();
+            return;
+        }
+        super.syncHealth(nextHealth);
+    }
+
+    @Override
+    public void onDamaged(
+            SemionTowerEntity towerEntity,
+            DamageSource damageSource,
+            double damageAmount,
+            double previousHealth,
+            double currentHealth
+    ) {
+        double received = Math.max(0.0, previousHealth - currentHealth);
+        if (unscaledEntityDamagePending) {
+            double previousLogicalHealth = unscaledEntityDamageLogicalHealth;
+            unscaledEntityDamagePending = false;
+            unscaledEntityDamageLogicalHealth = 0.0;
+            double logicalReceived = Math.min(
+                    previousLogicalHealth,
+                    Math.max(0.0, damageAmount)
+            );
+            if (logicalReceived > received) {
+                recordDamageTaken(logicalReceived - received);
+            }
+            super.syncHealth(previousLogicalHealth - logicalReceived);
+            towerEntity.setHealth((float) Math.min(health(), towerEntity.getMaxHealth()));
+            previousHealth = previousLogicalHealth;
+            currentHealth = health();
+            received = logicalReceived;
+        }
+        handleReceivedDamage(towerEntity, damageSource, received, previousHealth, currentHealth);
+    }
+
+    private void handleReceivedDamage(
+            SemionTowerEntity towerEntity,
+            DamageSource damageSource,
+            double received,
+            double previousHealth,
+            double currentHealth
+    ) {
+        if (received <= 0.0) {
+            return;
+        }
+        resetEchoChain();
+        if (form == FoxForm.MACE_EXECUTIONER && maceTicksUntilStrike >= 0) {
+            maceFocusDamageTaken += received;
+            if (maceFocusDamageTaken + 1.0E-9
+                    >= currentMaxHealth() * global(
+                            "maceBreakHealthRatio",
+                            AdversaryBalance.MACE_FOCUS_BREAK_MAX_HEALTH_RATIO
+                    )) {
+                resetMace();
+            }
+        }
+        if (form != FoxForm.SHIELD_BEARER
+                || shieldCounterCooldownTicks > 0
+                || !(damageSource.getEntity() instanceof SemionMonsterEntity attacker)
+                || !towerEntity.isValidAttackTarget(attacker)) {
+            return;
+        }
+        damageSecondary(
+                towerEntity,
+                attacker,
+                specialAttackDamage(
+                        towerEntity,
+                        attacker,
+                        global("shieldCounterDamage", AdversaryBalance.SHIELD_COUNTER_DAMAGE)
+                ),
+                DamageType.PHYSICAL,
+                false,
+                false
+        );
+        shieldCounterCooldownTicks = globalInt(
+                "shieldCounterCooldownTicks",
+                AdversaryBalance.SHIELD_COUNTER_COOLDOWN_TICKS
+        );
+    }
+
+    @Override
+    public boolean isDestroyed(PlayerLane lane) {
+        SemionTowerEntity entity = towerEntity(lane);
+        if (entity != null) {
+            syncPosition(GridPosition.from(BlockPos.containing(
+                    entity.getX(),
+                    entity.getY() - entityAnchorYOffset(),
+                    entity.getZ()
+            )));
+            if (!entity.isAlive()) {
+                super.syncHealth(0.0);
+                return true;
+            }
+            return health() <= 0.0;
+        }
+        if (entityWasUnloaded()) {
+            return health() <= 0.0;
+        }
+        super.syncHealth(0.0);
+        return true;
+    }
+
+    @Override
+    public List<String> runtimeDetailLines() {
+        List<String> lines = new ArrayList<>();
+        AdversaryProgressState progress = AdversaryProgressStates.state(ownerPlayer());
+        lines.add("<gold>현재 형태</gold> " + form.displayName());
+        lines.add("<aqua>전직</aqua>: 요구 점수 달성 시 <green>다음 준비 단계</green> 자동 적용 (준비당 최대 1단계)");
+        lines.add("<yellow>숙적 점수</yellow> 브리즈 " + progress.score(RivalKind.BREEZE)
+                + " / 크리퍼 " + progress.score(RivalKind.CREEPER)
+                + " / 팬텀 " + progress.score(RivalKind.PHANTOM)
+                + " / 북극곰 " + progress.score(RivalKind.POLAR_BEAR));
+        for (FoxForm candidate : nextEvolutionCandidates(progress)) {
+            lines.add("<light_purple>다음 " + candidate.displayName() + "</light_purple>: "
+                    + evolutionRequirementText(candidate, progress));
+        }
+        lines.add("<dark_gray>인컴 처치는 전직 점수·루트에 영향 없음</dark_gray>");
+        switch (form) {
+            case BASE -> lines.add("추가 타격: 반경 "
+                    + number(global("baseSplashRadius", AdversaryBalance.BASE_SPLASH_RADIUS))
+                    + "블록, 최대 "
+                    + globalInt("baseSplashExtraTargets", AdversaryBalance.BASE_SPLASH_EXTRA_TARGETS)
+                    + "기, "
+                    + percent(global("baseSplashDamageRatio", AdversaryBalance.BASE_SPLASH_DAMAGE_RATIO)));
+            case BREEZE -> lines.add("질풍 연쇄: 추가 "
+                    + globalInt("breezeExtraTargets", AdversaryBalance.BREEZE_EXTRA_TARGETS)
+                    + "기에게 "
+                    + percent(global(
+                    "breezeExtraTargetDamageRatio",
+                    AdversaryBalance.BREEZE_EXTRA_TARGET_DAMAGE_RATIO
+            )));
+            case GOLDEN_FANG -> {
+                int every = globalInt(
+                        "goldenExtraAttackEvery",
+                        AdversaryBalance.GOLDEN_FANG_EXTRA_ATTACK_EVERY
+                );
+                lines.add(every + "타마다 동일 대상 추가 피해 "
+                        + percent(global(
+                        "goldenExtraDamageRatio",
+                        AdversaryBalance.GOLDEN_FANG_EXTRA_DAMAGE_RATIO
+                )));
+                lines.add("동일 대상 연타 " + goldenTargetHits + "/" + every);
+            }
+            case SHIELD_BEARER -> lines.add("받는 피해 감소 " + percent(form.damageReduction())
+                    + " / 반격 "
+                    + number(global("shieldCounterDamage", AdversaryBalance.SHIELD_COUNTER_DAMAGE))
+                    + " / 재사용 "
+                    + globalInt(
+                    "shieldCounterCooldownTicks",
+                    AdversaryBalance.SHIELD_COUNTER_COOLDOWN_TICKS
+            ) + "tick");
+            case BELL_KEEPER -> lines.add("팀 전체 타워 피해 +"
+                    + percent(global("bellTeamDamageBonus", AdversaryBalance.BELL_TEAM_DAMAGE_BONUS)));
+            case BEACON_KEEPER -> {
+                lines.add("자체 받는 피해 감소 " + percent(form.damageReduction()));
+                lines.add("팀 전체: 피해 +"
+                        + percent(global("beaconTeamDamageBonus", AdversaryBalance.BEACON_TEAM_DAMAGE_BONUS))
+                        + " / 공속 +"
+                        + percent(global(
+                        "beaconTeamAttackSpeedBonus",
+                        AdversaryBalance.BEACON_TEAM_ATTACK_SPEED_BONUS
+                )) + " / 최대 체력 +"
+                        + percent(global(
+                        "beaconTeamMaxHealthBonus",
+                        AdversaryBalance.BEACON_TEAM_MAX_HEALTH_BONUS
+                )));
+            }
+            case OMINOUS_HEXER -> {
+                lines.add("자체 받는 피해 감소 " + percent(form.damageReduction()));
+                lines.add("팀을 노리는 몬스터: 공격력 -"
+                        + percent(global(
+                        "ominousMonsterDamageReduction",
+                        AdversaryBalance.OMINOUS_MONSTER_DAMAGE_REDUCTION
+                )) + " / 공속 -"
+                        + percent(global(
+                        "ominousMonsterAttackSpeedReduction",
+                        AdversaryBalance.OMINOUS_MONSTER_ATTACK_SPEED_REDUCTION
+                )) + " / 받는 타워 피해 +"
+                        + percent(global(
+                        "ominousMonsterTowerDamageTakenBonus",
+                        AdversaryBalance.OMINOUS_MONSTER_TOWER_DAMAGE_TAKEN_BONUS
+                )));
+            }
+            case TRACKER -> lines.add("표적 우선순위: 라인 진행도가 가장 높은 적");
+            case FIREWORK_PIERCER -> lines.add("웨이브 피해 ×"
+                    + number(global(
+                    "fireworkWaveDamageMultiplier",
+                    AdversaryBalance.FIREWORK_WAVE_DAMAGE_MULTIPLIER
+            )) + " / 인컴 피해 ×"
+                    + number(global(
+                    "fireworkIncomeDamageMultiplier",
+                    AdversaryBalance.FIREWORK_INCOME_DAMAGE_MULTIPLIER
+            )) + " / 직선 최대 "
+                    + globalInt("fireworkMaxTargets", AdversaryBalance.FIREWORK_MAX_TARGETS)
+                    + "대상 " + percentList(AdversaryBalance.fireworkTargetDamageRatios()));
+            case BIG_GAME_TRACKER -> {
+                int stages = AdversaryBalance.bigGameStreakMultipliers().length;
+                lines.add("인컴 피해 ×"
+                        + number(global(
+                        "bigGameIncomeDamageMultiplier",
+                        AdversaryBalance.BIG_GAME_INCOME_DAMAGE_MULTIPLIER
+                )) + " (연속 "
+                        + multiplierList(AdversaryBalance.bigGameStreakMultipliers())
+                        + ") / 웨이브 ×"
+                        + number(global(
+                        "bigGameWaveDamageMultiplier",
+                        AdversaryBalance.BIG_GAME_WAVE_DAMAGE_MULTIPLIER
+                )));
+                lines.add("거물 조준 단계 " + Math.min(stages, spyglassTargetHits + 1) + "/" + stages);
+            }
+            case ECHO_FOX -> {
+                lines.add("동일 대상마다 +"
+                        + percent(global(
+                        "echoBonusPerHit",
+                        AdversaryBalance.ECHO_STREAK_DAMAGE_BONUS_PER_HIT
+                )) + ", 최대 "
+                        + globalInt("echoMaxBonusStacks", AdversaryBalance.ECHO_MAX_STREAK_BONUS_STACKS)
+                        + "중첩; 피격·표적 변경 시 초기화");
+                lines.add("메아리 중첩 " + echoTargetHits + "/"
+                        + globalInt("echoMaxBonusStacks", AdversaryBalance.ECHO_MAX_STREAK_BONUS_STACKS));
+            }
+            case MACE_EXECUTIONER -> {
+                lines.add("집중 "
+                        + globalInt("maceFocusTicks", AdversaryBalance.MACE_FOCUS_TICKS)
+                        + "tick 후 " + number(form.damage())
+                        + " 피해; 연속 배율 "
+                        + multiplierList(AdversaryBalance.maceStreakMultipliers()));
+                lines.add("집중 중 최대 체력 "
+                        + percent(global(
+                        "maceBreakHealthRatio",
+                        AdversaryBalance.MACE_FOCUS_BREAK_MAX_HEALTH_RATIO
+                )) + " 피해 시 취소");
+                lines.add("적중 시 주변 "
+                        + globalInt("maceSweepExtraTargets", AdversaryBalance.MACE_SWEEP_EXTRA_TARGETS)
+                        + "기에게 "
+                        + percent(global("maceSweepDamageRatio", AdversaryBalance.MACE_SWEEP_DAMAGE_RATIO))
+                        + " 휩쓸기 피해");
+                lines.add("집중 " + Math.max(0, maceTicksUntilStrike)
+                        + "tick / 연속 성공 " + maceSuccessfulStrikes + "/"
+                        + (AdversaryBalance.maceStreakMultipliers().length - 1));
+            }
+            case SCULK_CORE -> {
+                lines.add("조준 위치에 "
+                        + globalInt("sculkDelayTicks", AdversaryBalance.SCULK_DETONATION_DELAY_TICKS)
+                        + "tick 후 반경 "
+                        + number(global("sculkRadius", AdversaryBalance.SCULK_DETONATION_RADIUS))
+                        + "블록 마법 피해 " + number(form.damage())
+                        + ", 최대 "
+                        + globalInt("sculkMaxTargets", AdversaryBalance.SCULK_MAX_TARGETS)
+                        + "기");
+                lines.add("폭발 후 최대 체력 "
+                        + percent(global(
+                        "sculkSelfDamageRatio",
+                        AdversaryBalance.SCULK_SELF_DAMAGE_MAX_HEALTH_RATIO
+                )) + " 방어 무시 자해, 체력 "
+                        + percent(global(
+                        "sculkSelfDamageFloorRatio",
+                        AdversaryBalance.SCULK_SELF_DAMAGE_HEALTH_FLOOR_RATIO
+                )) + " 아래로는 감소하지 않음 / 예약 폭발 " + pendingSculkBlasts.size());
+            }
+        }
+        return List.copyOf(lines);
+    }
+
+    private List<FoxForm> nextEvolutionCandidates(AdversaryProgressState progress) {
+        Optional<FoxForm> pending = progress.pendingForm();
+        if (pending.isPresent()) {
+            return List.of(pending.get());
+        }
+        if (form == FoxForm.BASE) {
+            return progress.lockedRoute()
+                    .map(route -> List.of(FoxForm.intermediateFor(route)))
+                    .orElseGet(() -> List.of(
+                            FoxForm.BREEZE,
+                            FoxForm.BELL_KEEPER,
+                            FoxForm.TRACKER,
+                            FoxForm.ECHO_FOX
+                    ));
+        }
+        if (form.isIntermediate()) {
+            return progress.lockedFinalForm()
+                    .map(List::of)
+                    .orElseGet(() -> FoxForm.finalsFor(form.route().orElseThrow()));
+        }
+        return List.of();
+    }
+
+    private String evolutionRequirementText(
+            FoxForm candidate,
+            AdversaryProgressState progress
+    ) {
+        EvolutionRecipe recipe = candidate.recipe().orElse(null);
+        if (recipe == null) {
+            return "없음";
+        }
+        List<String> requirements = new ArrayList<>();
+        for (RivalKind kind : RivalKind.values()) {
+            int required = recipe.required(kind);
+            if (required > 0) {
+                requirements.add(kind.displayName() + " " + progress.score(kind) + "/" + required);
+            }
+        }
+        return String.join(" + ", requirements);
+    }
+
+    @Override
+    protected void copyRuntimeStateFrom(Tower previousTower) {
+        if (previousTower instanceof AdversaryFoxTower previousFox) {
+            form = previousFox.form;
+            syncMaxHealth(form.maxHealth(), false);
+        }
+        resetTransientCombatState();
+    }
+
+    private void initializeForm(UUID ownerPlayer) {
+        form = AdversaryProgressStates.state(ownerPlayer).currentForm();
+        if (form == null) {
+            form = FoxForm.BASE;
+        }
+        syncMaxHealth(form.maxHealth(), false);
+        syncHealth(currentMaxHealth());
+    }
+
+    private void syncFormFromProgress(PlayerLane lane) {
+        FoxForm progressForm = AdversaryProgressStates.state(ownerPlayer()).currentForm();
+        if (progressForm != null && progressForm != form) {
+            setForm(progressForm, lane);
+        }
+    }
+
+    private void equipHeldItem(SemionTowerEntity entity) {
+        if (entity != null) {
+            entity.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(form.heldItem()));
+        }
+    }
+
+    private SemionTowerEntity towerEntity(PlayerLane lane) {
+        PlayerLane resolvedLane = lane == null ? currentLane : lane;
+        if (resolvedLane == null || resolvedLane.arenaWorld() == null || entityId().isEmpty()) {
+            return null;
+        }
+        return Optional.ofNullable(resolvedLane.arenaWorld().getEntity(entityId().getAsInt()))
+                .filter(SemionTowerEntity.class::isInstance)
+                .map(SemionTowerEntity.class::cast)
+                .orElse(null);
+    }
+
+    private List<SemionMonsterEntity> ownedRivals(List<SemionMonsterEntity> candidates) {
+        return candidates.stream()
+                .filter(candidate -> candidate != null && candidate.runtimeMonster() != null)
+                .filter(candidate -> AdversaryRivalTower.isOwnedRival(
+                        candidate.runtimeMonster(),
+                        ownerPlayer()
+                ))
+                .toList();
+    }
+
+    private static List<SemionMonsterEntity> finalDefenseAttackableCandidates(
+            SemionTowerEntity source,
+            List<SemionMonsterEntity> candidates
+    ) {
+        if (!source.deployedAtFinalDefense()) {
+            return candidates;
+        }
+        double rangeSqr = source.attackRange() * source.attackRange();
+        return candidates.stream()
+                .filter(candidate -> source.distanceToSqr(candidate) <= rangeSqr)
+                .toList();
+    }
+
+    private static Optional<SemionMonsterEntity> selectHighestProgress(
+            List<SemionMonsterEntity> candidates
+    ) {
+        return candidates.stream()
+                .filter(candidate -> candidate != null && candidate.runtimeMonster() != null)
+                .max(Comparator
+                        .comparingDouble((SemionMonsterEntity candidate) ->
+                                candidate.runtimeMonster().laneProgress())
+                        .thenComparingDouble(candidate -> candidate.runtimeMonster().targetPriorityScore()));
+    }
+
+    private static Optional<SemionMonsterEntity> selectBigGameTarget(
+            List<SemionMonsterEntity> candidates
+    ) {
+        return candidates.stream()
+                .filter(AdversaryFoxTower::isIncome)
+                .max(Comparator
+                        .comparingDouble((SemionMonsterEntity candidate) ->
+                                candidate.runtimeMonster().maxHealth())
+                        .thenComparingDouble(candidate -> candidate.runtimeMonster().targetPriorityScore()));
+    }
+
+    private static boolean isIncome(SemionMonsterEntity target) {
+        return target != null
+                && target.runtimeMonster() != null
+                && (target.runtimeMonster().ownerPlayer().isPresent()
+                || target.runtimeMonster().senderTeam().isPresent());
+    }
+
+    private double spyglassMultiplier(SemionMonsterEntity target) {
+        UUID targetId = target == null ? null : target.getUUID();
+        double[] multipliers = AdversaryBalance.bigGameStreakMultipliers();
+        if (targetId == null || !targetId.equals(spyglassTargetId)) {
+            return multipliers[0];
+        }
+        return multipliers[Math.min(spyglassTargetHits, multipliers.length - 1)];
+    }
+
+    private void updateSpyglassChain(SemionMonsterEntity target, boolean killedTarget) {
+        if (killedTarget || target == null) {
+            resetSpyglassChain();
+            return;
+        }
+        if (!target.getUUID().equals(spyglassTargetId)) {
+            spyglassTargetId = target.getUUID();
+            spyglassTargetHits = 0;
+        }
+        spyglassTargetHits = Math.min(
+                AdversaryBalance.bigGameStreakMultipliers().length - 1,
+                spyglassTargetHits + 1
+        );
+    }
+
+    private void resetSpyglassChain() {
+        spyglassTargetId = null;
+        spyglassTargetHits = 0;
+    }
+
+    private double echoMultiplier(SemionMonsterEntity target) {
+        UUID targetId = target == null ? null : target.getUUID();
+        if (targetId == null || !targetId.equals(echoTargetId)) {
+            return 1.0;
+        }
+        return 1.0 + Math.min(
+                globalInt("echoMaxBonusStacks", AdversaryBalance.ECHO_MAX_STREAK_BONUS_STACKS),
+                echoTargetHits
+        ) * global("echoBonusPerHit", AdversaryBalance.ECHO_STREAK_DAMAGE_BONUS_PER_HIT);
+    }
+
+    private void updateEchoChain(SemionMonsterEntity target, boolean killedTarget) {
+        if (killedTarget || target == null) {
+            resetEchoChain();
+            return;
+        }
+        if (!target.getUUID().equals(echoTargetId)) {
+            echoTargetId = target.getUUID();
+            echoTargetHits = 0;
+        }
+        echoTargetHits = Math.min(
+                globalInt("echoMaxBonusStacks", AdversaryBalance.ECHO_MAX_STREAK_BONUS_STACKS),
+                echoTargetHits + 1
+        );
+    }
+
+    private void resetEchoChain() {
+        echoTargetId = null;
+        echoTargetHits = 0;
+    }
+
+    private void handleGoldenAttack(
+            SemionTowerEntity source,
+            SemionMonsterEntity target,
+            double resolvedOutgoingDamage,
+            boolean killedPrimary
+    ) {
+        if (!target.getUUID().equals(goldenTargetId)) {
+            goldenTargetId = target.getUUID();
+            goldenTargetHits = 0;
+        }
+        goldenTargetHits++;
+        if (killedPrimary) {
+            goldenTargetId = null;
+            goldenTargetHits = 0;
+            return;
+        }
+        int extraAttackEvery = Math.max(1, globalInt(
+                "goldenExtraAttackEvery",
+                AdversaryBalance.GOLDEN_FANG_EXTRA_ATTACK_EVERY
+        ));
+        if (goldenTargetHits < extraAttackEvery) {
+            return;
+        }
+        goldenTargetHits = 0;
+        damageSecondary(
+                source,
+                target,
+                resolvedOutgoingDamage * global(
+                        "goldenExtraDamageRatio",
+                        AdversaryBalance.GOLDEN_FANG_EXTRA_DAMAGE_RATIO
+                ),
+                DamageType.PHYSICAL,
+                true,
+                false
+        );
+    }
+
+    private void applyAdditionalTargets(
+            SemionTowerEntity source,
+            SemionMonsterEntity primary,
+            double attemptedDamage,
+            int cap,
+            double ratio
+    ) {
+        attackableMonsters(source, source.position(), source.attackRange(), Set.of(primary.getUUID()))
+                .stream()
+                .sorted(Comparator.comparingDouble(source::distanceToSqr))
+                .limit(Math.max(0, cap))
+                .forEach(target -> damageSecondary(
+                        source,
+                        target,
+                        attemptedDamage * ratio,
+                        DamageType.PHYSICAL,
+                        false,
+                        true
+                ));
+    }
+
+    private void applyNearbySecondaries(
+            SemionTowerEntity source,
+            SemionMonsterEntity primary,
+            double attemptedDamage,
+            double radius,
+            int cap,
+            double ratio
+    ) {
+        if (radius <= 0.0 || cap <= 0 || ratio <= 0.0) {
+            return;
+        }
+        Set<UUID> selected = attackableMonsters(
+                source,
+                primary.position(),
+                radius,
+                Set.of(primary.getUUID())
+        )
+                .stream()
+                .sorted(Comparator.comparingDouble(candidate ->
+                        candidate.position().distanceToSqr(primary.position())))
+                .limit(Math.max(0, cap))
+                .map(SemionMonsterEntity::getUUID)
+                .collect(java.util.stream.Collectors.toCollection(HashSet::new));
+        if (selected.isEmpty()) {
+            return;
+        }
+        MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
+                AreaEffectIds.tower(this, "base_splash"),
+                source,
+                primary.position(),
+                radius,
+                Set.of(primary.getUUID()),
+                target -> selected.contains(target.getUUID()),
+                AreaVfxSpec.onTrigger(AreaVfxStyles.SPLASH)
+        );
+        TowerAreaDamage.applyBasicAttackSplash(
+                this,
+                source,
+                request,
+                target -> attemptedDamage * ratio,
+                true
+        );
+    }
+
+    private void handleFireworkAttack(
+            SemionTowerEntity source,
+            SemionMonsterEntity primary,
+            double attemptedDamage
+    ) {
+        if (isIncome(primary)) {
+            return;
+        }
+        Vec3 origin = source.position();
+        Vec3 direction = primary.position().subtract(origin);
+        double lineLength = source.attackRange();
+        if (direction.lengthSqr() <= 1.0E-9 || lineLength <= 0.0) {
+            return;
+        }
+        Vec3 unit = direction.normalize();
+        double[] ratios = AdversaryBalance.fireworkTargetDamageRatios();
+        int maxTargets = Math.max(1, globalInt(
+                "fireworkMaxTargets",
+                AdversaryBalance.FIREWORK_MAX_TARGETS
+        ));
+        int secondaryCap = Math.min(ratios.length - 1, maxTargets - 1);
+        List<LineCandidate> lineTargets = attackableMonsters(
+                source,
+                origin,
+                lineLength + LINE_HALF_WIDTH,
+                Set.of(primary.getUUID())
+        ).stream()
+                .filter(candidate -> !isIncome(candidate))
+                .map(candidate -> lineCandidate(origin, unit, lineLength, candidate))
+                .filter(java.util.Objects::nonNull)
+                .sorted(Comparator.comparingDouble(LineCandidate::projection))
+                .limit(Math.max(0, secondaryCap))
+                .toList();
+
+        for (int index = 0; index < lineTargets.size(); index++) {
+            double ratio = ratios[index + 1];
+            damageSecondary(
+                    source,
+                    lineTargets.get(index).monster(),
+                    attemptedDamage * ratio,
+                    DamageType.PHYSICAL,
+                    false,
+                    true
+            );
+        }
+    }
+
+    private static LineCandidate lineCandidate(
+            Vec3 origin,
+            Vec3 unit,
+            double length,
+            SemionMonsterEntity monster
+    ) {
+        Vec3 offset = monster.position().subtract(origin);
+        double projection = offset.dot(unit);
+        if (projection < 0.0 || projection > length) {
+            return null;
+        }
+        double perpendicularSqr = Math.max(0.0, offset.lengthSqr() - projection * projection);
+        if (perpendicularSqr > LINE_HALF_WIDTH * LINE_HALF_WIDTH) {
+            return null;
+        }
+        return new LineCandidate(monster, projection);
+    }
+
+    private List<SemionMonsterEntity> attackableMonsters(
+            SemionTowerEntity source,
+            Vec3 center,
+            double radius,
+            Set<UUID> excluded
+    ) {
+        if (source == null || center == null || radius <= 0.0) {
+            return List.of();
+        }
+        PlayerLane lane = currentLane;
+        if (lane == null || lane.arenaWorld() != source.level()) {
+            return List.of();
+        }
+        double radiusSqr = radius * radius;
+        return List.copyOf(lane.activeMonsters()).stream()
+                .filter(Monster::hasMinecraftEntity)
+                .map(monster -> lane.arenaWorld().getEntity(monster.minecraftEntityId()))
+                .filter(SemionMonsterEntity.class::isInstance)
+                .map(SemionMonsterEntity.class::cast)
+                .filter(monster -> source.isValidAttackTarget(monster)
+                        && monster.runtimeMonster() != null
+                        && !excluded.contains(monster.getUUID())
+                        && monster.position().distanceToSqr(center) <= radiusSqr)
+                .toList();
+    }
+
+    private void beginOrMaintainMaceChannel(SemionMonsterEntity target) {
+        if (target == null) {
+            return;
+        }
+        if (maceTargetId == null) {
+            maceTargetId = target.getUUID();
+            maceTicksUntilStrike = globalInt("maceFocusTicks", AdversaryBalance.MACE_FOCUS_TICKS);
+            maceSuccessfulStrikes = 0;
+            maceFocusDamageTaken = 0.0;
+            return;
+        }
+        if (!maceTargetId.equals(target.getUUID())) {
+            resetMace();
+            maceTargetId = target.getUUID();
+            maceTicksUntilStrike = globalInt("maceFocusTicks", AdversaryBalance.MACE_FOCUS_TICKS);
+            maceFocusDamageTaken = 0.0;
+        } else if (maceTicksUntilStrike < 0) {
+            // The ordinary zero-damage attack ray is the clock for every focus.
+            maceTicksUntilStrike = globalInt("maceFocusTicks", AdversaryBalance.MACE_FOCUS_TICKS);
+            maceFocusDamageTaken = 0.0;
+        }
+    }
+
+    private void tickMace(SemionTowerEntity source) {
+        if (maceTargetId == null || !(source.level() instanceof ServerLevel level)) {
+            return;
+        }
+        if (!(level.getEntity(maceTargetId) instanceof SemionMonsterEntity target)
+                || !source.isValidAttackTarget(target)
+                || source.distanceToSqr(target) > source.attackRange() * source.attackRange()
+                || (source.currentAttackTarget() != null
+                && !maceTargetId.equals(source.currentAttackTarget().getUUID()))) {
+            resetMace();
+            return;
+        }
+        if (maceTicksUntilStrike < 0) {
+            return;
+        }
+        if (maceTicksUntilStrike > 1) {
+            maceTicksUntilStrike--;
+            return;
+        }
+
+        double[] multipliers = AdversaryBalance.maceStreakMultipliers();
+        double multiplier = multipliers[Math.min(maceSuccessfulStrikes, multipliers.length - 1)];
+        DamageResult result = damageSecondary(
+                source,
+                target,
+                specialAttackDamage(
+                        source,
+                        target,
+                        form.damage() * multiplier
+                ),
+                DamageType.PHYSICAL,
+                false,
+                false
+        );
+        if (result.dealtDamage() > 0.0) {
+            applyMaceSweep(source, target, form.damage() * multiplier);
+        }
+        if (result.dealtDamage() <= 0.0 || result.killed()) {
+            resetMace();
+            return;
+        }
+        maceSuccessfulStrikes = Math.min(
+                multipliers.length - 1,
+                maceSuccessfulStrikes + 1
+        );
+        // Wait for the next ordinary attack ray before beginning a new focus.
+        maceTicksUntilStrike = -1;
+        maceFocusDamageTaken = 0.0;
+    }
+
+    private void applyMaceSweep(
+            SemionTowerEntity source,
+            SemionMonsterEntity primary,
+            double strikeDamage
+    ) {
+        double radius = global("maceSweepRadius", AdversaryBalance.MACE_SWEEP_RADIUS);
+        int cap = globalInt("maceSweepExtraTargets", AdversaryBalance.MACE_SWEEP_EXTRA_TARGETS);
+        double ratio = global("maceSweepDamageRatio", AdversaryBalance.MACE_SWEEP_DAMAGE_RATIO);
+        if (radius <= 0.0 || cap <= 0 || ratio <= 0.0) {
+            return;
+        }
+        Set<UUID> selected = attackableMonsters(
+                source,
+                primary.position(),
+                radius,
+                Set.of(primary.getUUID())
+        ).stream()
+                .sorted(Comparator.comparingDouble(candidate ->
+                        candidate.position().distanceToSqr(primary.position())))
+                .limit(cap)
+                .map(SemionMonsterEntity::getUUID)
+                .collect(java.util.stream.Collectors.toCollection(HashSet::new));
+        if (selected.isEmpty()) {
+            return;
+        }
+        MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
+                AreaEffectIds.tower(this, "mace_sweep"),
+                source,
+                primary.position(),
+                radius,
+                Set.of(primary.getUUID()),
+                target -> selected.contains(target.getUUID()),
+                AreaVfxSpec.onTrigger(AreaVfxStyles.SPLASH)
+        );
+        TowerAreaDamage.apply(
+                this,
+                source,
+                request,
+                target -> specialAttackDamage(source, target, strikeDamage * ratio),
+                true
+        );
+    }
+
+    private void resetMace() {
+        maceTargetId = null;
+        maceTicksUntilStrike = -1;
+        maceSuccessfulStrikes = 0;
+        maceFocusDamageTaken = 0.0;
+    }
+
+    private void scheduleSculkBlast(Vec3 center) {
+        if (center == null || !pendingSculkBlasts.isEmpty()) {
+            return;
+        }
+        pendingSculkBlasts.add(new PendingSculkBlast(
+                center,
+                globalInt("sculkDelayTicks", AdversaryBalance.SCULK_DETONATION_DELAY_TICKS)
+        ));
+    }
+
+    private void tickSculkBlasts(SemionTowerEntity source) {
+        if (pendingSculkBlasts.isEmpty()) {
+            return;
+        }
+        if (form != FoxForm.SCULK_CORE) {
+            pendingSculkBlasts.clear();
+            return;
+        }
+        for (int index = pendingSculkBlasts.size() - 1; index >= 0; index--) {
+            PendingSculkBlast blast = pendingSculkBlasts.get(index);
+            if (blast.remainingTicks() > 1) {
+                pendingSculkBlasts.set(index, blast.tick());
+                continue;
+            }
+            detonateSculk(source, blast.center());
+            pendingSculkBlasts.remove(index);
+        }
+    }
+
+    private void detonateSculk(SemionTowerEntity source, Vec3 center) {
+        double radius = global("sculkRadius", AdversaryBalance.SCULK_DETONATION_RADIUS);
+        int maxTargets = globalInt("sculkMaxTargets", AdversaryBalance.SCULK_MAX_TARGETS);
+        if (radius > 0.0 && maxTargets > 0) {
+            Set<UUID> selected = attackableMonsters(
+                    source,
+                    center,
+                    radius,
+                    Set.of()
+            ).stream()
+                    .sorted(Comparator.comparingDouble(candidate ->
+                            candidate.position().distanceToSqr(center)))
+                    .limit(maxTargets)
+                    .map(SemionMonsterEntity::getUUID)
+                    .collect(java.util.stream.Collectors.toCollection(HashSet::new));
+
+            MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
+                    AreaEffectIds.tower(this, "sculk_blast"),
+                    source,
+                    center,
+                    radius,
+                    Set.of(),
+                    target -> selected.contains(target.getUUID()),
+                    AreaVfxSpec.onTrigger(AreaVfxStyles.PULSE)
+            );
+            TowerAreaDamage.apply(
+                    this,
+                    source,
+                    request,
+                    target -> specialAttackDamage(
+                            source,
+                            target,
+                            form.damage()
+                    ),
+                    true,
+                    (target, damage, killed) -> {
+                    },
+                    DamageType.MAGIC
+            );
+        }
+        // The core is dangerous even when the snapshot catches targets; "miss" explicitly
+        // does not waive its normal recoil.
+        double recoilDamage = sculkRecoilDamage(health(), currentMaxHealth());
+        if (recoilDamage > 0.0) {
+            source.hurtIgnoringReductions(source.damageSources().magic(), recoilDamage);
+        }
+    }
+
+    static double sculkRecoilDamage(double currentHealth, double maximumHealth) {
+        double safeMaximum = Math.max(0.0, maximumHealth);
+        double floorHealth = safeMaximum * global(
+                "sculkSelfDamageFloorRatio",
+                AdversaryBalance.SCULK_SELF_DAMAGE_HEALTH_FLOOR_RATIO
+        );
+        double normalRecoil = safeMaximum * global(
+                "sculkSelfDamageRatio",
+                AdversaryBalance.SCULK_SELF_DAMAGE_MAX_HEALTH_RATIO
+        );
+        return Math.max(0.0, Math.min(normalRecoil, currentHealth - floorHealth));
+    }
+
+    /**
+     * Reproduces the generic pre-trait damage bonuses for attacks whose ordinary
+     * basic hit is intentionally zero.  The returned value still goes through
+     * {@link #damageTargetResult}, so traits, final multipliers and monster
+     * defenses are each applied exactly once.
+     */
+    private double specialAttackDamage(
+            SemionTowerEntity source,
+            SemionMonsterEntity target,
+            double baseDamage
+    ) {
+        double damage = baseDamage * (1.0
+                + source.activeEffectMagnitude(TimedEffectType.TOWER_DAMAGE_BONUS));
+        if (target != null && target.runtimeMonster() != null) {
+            TimedEffectType specialization = target.runtimeMonster().senderTeam().isPresent()
+                    ? TimedEffectType.TOWER_INCOME_DAMAGE_BONUS
+                    : TimedEffectType.TOWER_WAVE_DAMAGE_BONUS;
+            damage *= 1.0 + source.activeEffectMagnitude(specialization);
+        }
+        return modifyResolvedAttackDamage(source, target, damage);
+    }
+
+    /** Routes every non-primary attack through the same kill callback used by basic attacks. */
+    private DamageResult damageSecondary(
+            SemionTowerEntity source,
+            SemionMonsterEntity target,
+            double damage,
+            DamageType damageType,
+            boolean alreadyResolvedOutgoing,
+            boolean basicAttackSecondary
+    ) {
+        if (source == null || target == null || !source.isValidAttackTarget(target) || damage <= 0.0) {
+            return DamageResult.NONE;
+        }
+        DamageResult result;
+        if (alreadyResolvedOutgoing) {
+            result = damageResolvedTargetResult(source, target, damage, damageType);
+        } else if (basicAttackSecondary && damageType == DamageType.PHYSICAL) {
+            result = source.damageBasicAttackSecondaryTargetResult(target, damage);
+        } else {
+            result = damageTargetResult(source, target, damage, damageType);
+        }
+        if (result.dealtDamage() > 0.0) {
+            TowerVfxService.showSecondaryAttack(source, target);
+        }
+        if (result.killed()) {
+            onKill(source, target, damage);
+        }
+        return result;
+    }
+
+    private void resetTransientCombatState() {
+        normalEntityHealthSyncPending = false;
+        unscaledEntityDamagePending = false;
+        unscaledEntityDamageLogicalHealth = 0.0;
+        goldenTargetId = null;
+        goldenTargetHits = 0;
+        shieldCounterCooldownTicks = 0;
+        resetSpyglassChain();
+        resetEchoChain();
+        resetMace();
+        pendingSculkBlasts.clear();
+    }
+
+    private static double global(String key, double fallback) {
+        return AdversaryBalance.globalValue(key, fallback);
+    }
+
+    private static int globalInt(String key, int fallback) {
+        return AdversaryBalance.globalInt(key, fallback);
+    }
+
+    private static String number(double value) {
+        return String.format(Locale.ROOT, "%.2f", value).replaceFirst("\\.?0+$", "");
+    }
+
+    protected static String percent(double ratio) {
+        return number(ratio * 100.0) + "%";
+    }
+
+    private static String multiplierList(double[] values) {
+        return java.util.Arrays.stream(values)
+                .mapToObj(value -> "×" + number(value))
+                .collect(java.util.stream.Collectors.joining("/"));
+    }
+
+    private static String percentList(double[] values) {
+        return java.util.Arrays.stream(values)
+                .mapToObj(AdversaryFoxTower::percent)
+                .collect(java.util.stream.Collectors.joining("/"));
+    }
+
+    private record LineCandidate(SemionMonsterEntity monster, double projection) {
+    }
+
+    private record PendingSculkBlast(Vec3 center, int remainingTicks) {
+        PendingSculkBlast tick() {
+            return new PendingSculkBlast(center, Math.max(0, remainingTicks - 1));
+        }
+    }
+}

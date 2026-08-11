@@ -290,6 +290,45 @@
 | 마녀/환술사 | `forceTargetRadius`, `raidForceTargetRadiusBonus` | 표식 대상 강제 타겟 범위입니다. |
 | 약자/강자 표식 | `raidLowHealthMarkDamageTakenBonus`, `raidHighHealthMarkDamageTakenBonus` | 낮은 체력 또는 높은 체력 대상 표식 보너스입니다. |
 
+## 대적자 계열 능력값
+
+대적자 빌더는 값을 세 위치에서 읽습니다.
+
+- `towers`: `adversary_fox`의 기본 배치 수치와 `adversary_<종류>_rival`, `adversary_<종류>_rival_enhanced` 숙적의 절대 수치입니다. `<종류>`는 `breeze`, `creeper`, `phantom`, `polar_bear`입니다.
+- `upgradeCosts`: 일반 숙적에서 같은 종류의 강화 숙적으로 가는 네 방향성 업그레이드 가격입니다.
+- `abilities`: 전역 전투 규칙, 여우 형태별 수치와 진화 요구량, 숙적의 방어·점수입니다.
+
+여우 형태 설정 ID는 기본형만 `adversary_fox`이고, 나머지는 `adversary_fox_form_<형태>`입니다. 예: `adversary_fox_form_golden_fang`, `adversary_fox_form_sculk_core`.
+
+| 형태별 키 | 의미 |
+|---|---|
+| `maxHealth`, `range`, `damage`, `attackIntervalTicks`, `damageReduction` | 해당 형태의 체력, 사거리, 피해, 공격 간격, 받는 피해 감소율입니다. Mace와 Sculk 특수 공격도 여기의 `damage`와 `attackIntervalTicks`를 사용합니다. |
+| `requiredBreezeScore`, `requiredCreeperScore`, `requiredPhantomScore`, `requiredPolarBearScore` | 값이 있는 숙적 종류의 진화 요구 점수입니다. |
+
+숙적 ID의 `abilities`에는 다음 두 키가 있습니다.
+
+| 숙적별 키 | 의미 |
+|---|---|
+| `baseArmor` | 라운드 보정 전 방어입니다. 강화 숙적은 강화값이 이미 포함된 절대값입니다. |
+| `scorePerKill` | 여우가 해당 숙적에 막타를 냈을 때 얻는 점수입니다. |
+
+강화 숙적의 체력·사거리·공격력·공격 간격·방어는 강화 숙적 ID의 절대값이 기준입니다. 전역 강화 배수를 따로 설정하지 않습니다.
+
+전역 설정 ID는 `adversary_global`입니다.
+
+| 기능 | 주요 키 |
+|---|---|
+| 숙적 라운드 보정 | `rivalRoundHealthGrowth`, `rivalRoundDamageGrowth`, `rivalArmorRoundInterval` |
+| 기본/질풍 공격 | `baseSplashRadius`, `baseSplashExtraTargets`, `baseSplashDamageRatio`, `breezeExtraTargets`, `breezeExtraTargetDamageRatio` |
+| 황금/방패 공격 | `goldenExtraAttackEvery`, `goldenExtraDamageRatio`, `shieldCounterDamage`, `shieldCounterCooldownTicks` |
+| 팀 지원 | `bellTeamDamageBonus`, `beaconTeamDamageBonus`, `beaconTeamAttackSpeedBonus`, `beaconTeamMaxHealthBonus`, `ominousMonsterDamageReduction`, `ominousMonsterAttackSpeedReduction`, `ominousMonsterTowerDamageTakenBonus`, `teamEffectScanIntervalTicks`, `teamEffectDurationTicks` |
+| 폭죽 관통 | `fireworkWaveDamageMultiplier`, `fireworkIncomeDamageMultiplier`, `fireworkMaxTargets`, `fireworkSecondary2Ratio` ~ `fireworkSecondary5Ratio` |
+| 거물/메아리 | `bigGameWaveDamageMultiplier`, `bigGameIncomeDamageMultiplier`, `bigGameStreak2`, `bigGameStreak3`, `echoBonusPerHit`, `echoMaxBonusStacks` |
+| 메이스 | `maceFocusTicks`, `maceBreakHealthRatio`, `maceStreak2` ~ `maceStreak5`, `maceSweepRadius`, `maceSweepExtraTargets`, `maceSweepDamageRatio` |
+| 스컬크 | `sculkDelayTicks`, `sculkRadius`, `sculkMaxTargets`, `sculkSelfDamageRatio`, `sculkSelfDamageFloorRatio` |
+
+비율은 `0.0`~`1.0`, tick과 개수는 정수로 둡니다. 형태의 체력·사거리·피해·공격 간격과 핵심 쿨다운/반경은 양수여야 하며, 잘못된 값은 reload 검증에서 거부됩니다.
+
 ## 수정 절차
 
 1. 서버의 `config/semion-td/tower_balance.json`을 백업합니다.

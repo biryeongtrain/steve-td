@@ -7,13 +7,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.Set;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.config.SummonConfig;
+import kim.biryeong.semiontd.job.AdversaryTowerJob;
 import kim.biryeong.semiontd.summon.IncomeSummons;
 import kim.biryeong.semiontd.summon.SummonRegistry;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
+import kim.biryeong.semiontd.tower.adversary.AdversaryBalance;
+import kim.biryeong.semiontd.tower.adversary.AdversaryTowers;
 import kim.biryeong.semiontd.trait.TraitRegistry;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
@@ -88,5 +92,30 @@ final class WebCatalogExporterTest {
                 defaults.schemaVersion()
         ));
         assertNotEquals(first.versionHash(), WebCatalogExporter.snapshot(3L).versionHash());
+    }
+
+    @Test
+    void adversaryFamilyExportsWithOneBuilderAndResolvedDescriptions() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        IncomeSummons.reloadBuiltIns(SummonConfig.defaultConfig());
+
+        WebCatalogExporter.CatalogDocument document = WebCatalogExporter.snapshot(1L);
+        Set<String> expectedIds = AdversaryTowers.all().stream()
+                .map(type -> type.id())
+                .collect(java.util.stream.Collectors.toSet());
+        var builder = document.builders().stream()
+                .filter(entry -> entry.id().equals(AdversaryTowerJob.ID.toString()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(expectedIds, Set.copyOf(builder.towerIds()));
+
+        var towers = document.towers().stream()
+                .filter(entry -> entry.builderId().equals(AdversaryTowerJob.ID.toString()))
+                .toList();
+        assertEquals(expectedIds, towers.stream().map(WebCatalogExporter.TowerEntry::id)
+                .collect(java.util.stream.Collectors.toSet()));
+        assertTrue(towers.stream().flatMap(entry -> entry.description().stream())
+                .noneMatch(line -> line.contains("{ability.") || line.contains("{stat.")));
+        assertTrue(document.abilities().containsKey(AdversaryBalance.GLOBAL_CONFIG_ID));
     }
 }

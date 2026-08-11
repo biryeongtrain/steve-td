@@ -34,6 +34,8 @@ import kim.biryeong.semiontd.summon.SummonResultType;
 import kim.biryeong.semiontd.summon.SummonShop;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.tower.adversary.AdversaryProgressStates;
+import kim.biryeong.semiontd.tower.adversary.AdversaryTeamEffects;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityStates;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
@@ -737,6 +739,12 @@ public final class SemionGame {
         }
         for (SemionTeam team : teams.values()) {
             team.closeRuntime();
+        }
+        // Rival tower removal reconciles its installed-score ledger while lanes close,
+        // so clear Adversary state after every tower has been detached.
+        for (UUID playerId : players.keySet()) {
+            AdversaryProgressStates.clear(playerId);
+            AdversaryTeamEffects.unregisterPlayer(playerId);
         }
         players.clear();
         selectedJobs.clear();
