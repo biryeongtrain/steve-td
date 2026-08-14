@@ -1327,6 +1327,102 @@
       "damage": 18.7,
       "attackIntervalTicks": 13,
       "aggroPriority": 0
+    },
+    "atlantis_turtle_t1": {
+      "mineralCost": 55,
+      "maxHealth": 190.0,
+      "range": 2.6,
+      "damage": 5.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 55
+    },
+    "atlantis_turtle_t2": {
+      "mineralCost": 115,
+      "maxHealth": 320.0,
+      "range": 2.8,
+      "damage": 9.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": 85
+    },
+    "atlantis_turtle_t3": {
+      "mineralCost": 240,
+      "maxHealth": 620.0,
+      "range": 3.0,
+      "damage": 14.0,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 115
+    },
+    "atlantis_dolphin_t1": {
+      "mineralCost": 55,
+      "maxHealth": 80.0,
+      "range": 6.5,
+      "damage": 14.0,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 0
+    },
+    "atlantis_dolphin_t2": {
+      "mineralCost": 120,
+      "maxHealth": 130.0,
+      "range": 7.5,
+      "damage": 25.0,
+      "attackIntervalTicks": 13,
+      "aggroPriority": 0
+    },
+    "atlantis_dolphin_t3": {
+      "mineralCost": 250,
+      "maxHealth": 190.0,
+      "range": 8.5,
+      "damage": 44.0,
+      "attackIntervalTicks": 11,
+      "aggroPriority": 0
+    },
+    "atlantis_axolotl_t1": {
+      "mineralCost": 45,
+      "maxHealth": 70.0,
+      "range": 7.0,
+      "damage": 6.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -10
+    },
+    "atlantis_axolotl_t2": {
+      "mineralCost": 95,
+      "maxHealth": 110.0,
+      "range": 8.0,
+      "damage": 10.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": -10
+    },
+    "atlantis_axolotl_t3": {
+      "mineralCost": 200,
+      "maxHealth": 150.0,
+      "range": 9.0,
+      "damage": 16.0,
+      "attackIntervalTicks": 16,
+      "aggroPriority": -10
+    },
+    "atlantis_conduit_t1": {
+      "mineralCost": 50,
+      "maxHealth": 90.0,
+      "range": 5.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -5
+    },
+    "atlantis_conduit_t2": {
+      "mineralCost": 105,
+      "maxHealth": 130.0,
+      "range": 5.5,
+      "damage": 0.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": -5
+    },
+    "atlantis_conduit_t3": {
+      "mineralCost": 215,
+      "maxHealth": 200.0,
+      "range": 6.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 16,
+      "aggroPriority": -5
     }
   },
   "upgradeCosts": {
@@ -1453,7 +1549,15 @@
     "adversary_breeze_rival->adversary_breeze_rival_enhanced": 45,
     "adversary_creeper_rival->adversary_creeper_rival_enhanced": 60,
     "adversary_phantom_rival->adversary_phantom_rival_enhanced": 75,
-    "adversary_polar_bear_rival->adversary_polar_bear_rival_enhanced": 100
+    "adversary_polar_bear_rival->adversary_polar_bear_rival_enhanced": 100,
+    "atlantis_turtle_t1->atlantis_turtle_t2": 115,
+    "atlantis_turtle_t2->atlantis_turtle_t3": 240,
+    "atlantis_dolphin_t1->atlantis_dolphin_t2": 120,
+    "atlantis_dolphin_t2->atlantis_dolphin_t3": 250,
+    "atlantis_axolotl_t1->atlantis_axolotl_t2": 95,
+    "atlantis_axolotl_t2->atlantis_axolotl_t3": 200,
+    "atlantis_conduit_t1->atlantis_conduit_t2": 105,
+    "atlantis_conduit_t2->atlantis_conduit_t3": 215
   },
   "abilities": {
     "villager_splash_t2": {
@@ -2781,8 +2885,8 @@
       "evolvedSplashDamageRatio": 0.5,
       "postEvolutionDamageBonusPerScore": 0.005,
       "postEvolutionDamageBonusCap": 2.0,
-      "baseRivalKillHealRatio": 0.20,
-      "enhancedRivalKillHealRatio": 0.30,
+      "baseRivalKillHealRatio": 0.2,
+      "enhancedRivalKillHealRatio": 0.3,
       "rivalKillHealCapRatioPerWave": 1.0,
       "focusFireDamageReductionPerExtraAttacker": 0.04,
       "focusFireDamageReductionCap": 0.4,
@@ -2981,6 +3085,82 @@
     "adversary_polar_bear_rival_enhanced": {
       "scorePerKill": 3.0,
       "baseArmor": 7.0
+    },
+    "atlantis_global": {
+      "maxPressureStacks": 10.0,
+      "stackDurationTicks": 100.0,
+      "slowPerStack": 0.07,
+      "maxSlow": 0.6,
+      "maxZoneAllyDamageReduction": 0.5,
+      "waterPressureDamageRatio": 0.45,
+      "waterPressureDamageCap": 4.5,
+      "waterPressureRadius": 3.5,
+      "zoneStackMultiplier": 2.5,
+      "maxZoneCount": 6.0,
+      "zoneSpacingBlocks": 4.0,
+      "zoneScanIntervalTicks": 10.0,
+      "maxChainDepth": 4.0
+    },
+    "atlantis_turtle_t1": {
+      "zoneCapacity": 1.0,
+      "zoneRadius": 3.0,
+      "zoneAllyDamageReduction": 0.12
+    },
+    "atlantis_turtle_t2": {
+      "zoneCapacity": 2.0,
+      "zoneRadius": 3.5,
+      "zoneAllyDamageReduction": 0.22
+    },
+    "atlantis_turtle_t3": {
+      "zoneCapacity": 3.0,
+      "zoneRadius": 4.0,
+      "zoneAllyDamageReduction": 0.32
+    },
+    "atlantis_dolphin_t1": {
+      "stackPerHit": 1.0,
+      "waterPressureRatioBonus": 0.02
+    },
+    "atlantis_dolphin_t2": {
+      "stackPerHit": 2.0,
+      "waterPressureRatioBonus": 0.05
+    },
+    "atlantis_dolphin_t3": {
+      "stackPerHit": 3.0,
+      "waterPressureRatioBonus": 0.09
+    },
+    "atlantis_axolotl_t1": {
+      "regenAmount": 7.0,
+      "supportRadius": 4.5,
+      "supportIntervalTicks": 40.0
+    },
+    "atlantis_axolotl_t2": {
+      "regenAmount": 20.0,
+      "attackSpeedBonus": 0.18,
+      "supportRadius": 5.5,
+      "supportIntervalTicks": 40.0
+    },
+    "atlantis_axolotl_t3": {
+      "regenAmount": 46.0,
+      "attackSpeedBonus": 0.28,
+      "stackBonus": 3.0,
+      "waterPressureRatioBonus": 0.10,
+      "supportRadius": 6.5,
+      "supportIntervalTicks": 35.0
+    },
+    "atlantis_conduit_t1": {
+      "amplifyRadius": 6.0,
+      "maxStackBonus": 3.0,
+      "waterPressureRatioBonus": 0.05
+    },
+    "atlantis_conduit_t2": {
+      "amplifyRadius": 7.0,
+      "maxStackBonus": 5.0,
+      "waterPressureRatioBonus": 0.08
+    },
+    "atlantis_conduit_t3": {
+      "amplifyRadius": 8.0,
+      "maxStackBonus": 8.0,
+      "waterPressureRatioBonus": 0.12
     }
   },
   "illusionCloneQueue": {
@@ -3030,7 +3210,7 @@
         "reputationDamagePerPoint": 0.005,
         "reputationAttackSpeedPerPoint": 0.001,
         "reputationHealthPerPoint": 0.0075,
-        "reputationDamageReductionPerPoint": 5.0E-4,
+        "reputationDamageReductionPerPoint": 0.0005,
         "rangedDamagePerExperience": 0.015,
         "rangedAttackSpeedPerExperience": 0.02,
         "reputationDamagePerPointInterval": 1.0,
@@ -3046,7 +3226,7 @@
         "reputationHealthPerPoint": 0.01,
         "reputationDamageReductionPerPoint": 0.0025,
         "rangedDamagePerExperience": 0.02,
-        "rangedAttackSpeedPerExperience": 7.5E-4,
+        "rangedAttackSpeedPerExperience": 0.00075,
         "reputationDamagePerPointInterval": 1.0,
         "reputationAttackSpeedPerPointInterval": 1.0,
         "reputationHealthPerPointInterval": 1.0,
@@ -3072,7 +3252,7 @@
         "reputationDamagePerPoint": 0.005,
         "reputationAttackSpeedPerPoint": 0.001,
         "reputationHealthPerPoint": 0.0015,
-        "reputationDamageReductionPerPoint": 5.0E-4,
+        "reputationDamageReductionPerPoint": 0.0005,
         "golemHealthPerExperience": 0.0075,
         "golemDamageReductionPerExperience": 0.001,
         "reputationDamagePerPointInterval": 1.0,
@@ -3086,8 +3266,8 @@
         "reputationDamagePerPoint": 0.005,
         "reputationAttackSpeedPerPoint": 0.001,
         "reputationHealthPerPoint": 0.00175,
-        "reputationDamageReductionPerPoint": 7.5E-4,
-        "golemHealthPerExperience": 7.5E-4,
+        "reputationDamageReductionPerPoint": 0.00075,
+        "golemHealthPerExperience": 0.00075,
         "golemDamageReductionPerExperience": 0.001,
         "reputationDamagePerPointInterval": 1.0,
         "reputationAttackSpeedPerPointInterval": 1.0,

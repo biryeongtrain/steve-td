@@ -14,6 +14,8 @@ import kim.biryeong.semiontd.tower.adversary.FoxForm;
 import kim.biryeong.semiontd.tower.adversary.FoxRoute;
 import kim.biryeong.semiontd.tower.adversary.RivalKind;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
+import kim.biryeong.semiontd.tower.atlantis.AtlantisBalance;
+import kim.biryeong.semiontd.tower.atlantis.AtlantisTowers;
 import kim.biryeong.semiontd.tower.end.EndTowers;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
 import kim.biryeong.semiontd.tower.illager.IllagerTowers;
@@ -184,6 +186,7 @@ public record TowerBalanceConfig(
         addOceanTowers(towers);
         addAncientCityTowers(towers);
         addAdversaryTowers(towers);
+        addAtlantisTowers(towers);
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
         putUpgrade(upgradeCosts, VillagerTowers.T1_SPLASH_TOWER, "villager_splash_t2", 110);
@@ -256,6 +259,7 @@ public record TowerBalanceConfig(
         putOceanUpgrades(upgradeCosts);
         putAncientCityUpgrades(upgradeCosts);
         putAdversaryUpgrades(upgradeCosts);
+        putAtlantisUpgrades(upgradeCosts);
 
         LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>();
         putAbilities(abilities, IllagerRaidStates.RAID_CONFIG_ID, Map.of(
@@ -814,6 +818,7 @@ public record TowerBalanceConfig(
         putOceanAbilities(abilities);
         putAncientCityAbilities(abilities);
         putAdversaryAbilities(abilities);
+        putAtlantisAbilities(abilities);
 
         TowerBalanceConfig fallback = new TowerBalanceConfig(
                 towers,
@@ -1116,6 +1121,111 @@ public record TowerBalanceConfig(
 
     private static void addAdversaryTowers(Map<String, TowerStats> towers) {
         AdversaryTowers.configurableTowers().forEach(type -> addTower(towers, type));
+    }
+
+    private static void addAtlantisTowers(Map<String, TowerStats> towers) {
+        AtlantisTowers.all().forEach(type -> addTower(towers, type));
+    }
+
+    private static void putAtlantisUpgrades(Map<String, Long> upgrades) {
+        putUpgrade(upgrades, AtlantisTowers.TURTLE_T1, AtlantisTowers.TURTLE_T2.id(), 115);
+        putUpgrade(upgrades, AtlantisTowers.TURTLE_T2, AtlantisTowers.TURTLE_T3.id(), 240);
+        putUpgrade(upgrades, AtlantisTowers.DOLPHIN_T1, AtlantisTowers.DOLPHIN_T2.id(), 120);
+        putUpgrade(upgrades, AtlantisTowers.DOLPHIN_T2, AtlantisTowers.DOLPHIN_T3.id(), 250);
+        putUpgrade(upgrades, AtlantisTowers.AXOLOTL_T1, AtlantisTowers.AXOLOTL_T2.id(), 95);
+        putUpgrade(upgrades, AtlantisTowers.AXOLOTL_T2, AtlantisTowers.AXOLOTL_T3.id(), 200);
+        putUpgrade(upgrades, AtlantisTowers.CONDUIT_T1, AtlantisTowers.CONDUIT_T2.id(), 105);
+        putUpgrade(upgrades, AtlantisTowers.CONDUIT_T2, AtlantisTowers.CONDUIT_T3.id(), 215);
+    }
+
+    private static void putAtlantisAbilities(Map<String, Map<String, Double>> abilities) {
+        LinkedHashMap<String, Double> global = new LinkedHashMap<>();
+        global.put("maxPressureStacks", (double) AtlantisBalance.MAX_PRESSURE_STACKS);
+        global.put("stackDurationTicks", (double) AtlantisBalance.STACK_DURATION_TICKS);
+        global.put("slowPerStack", AtlantisBalance.SLOW_PER_STACK);
+        global.put("maxSlow", AtlantisBalance.MAX_SLOW);
+        global.put("maxZoneAllyDamageReduction", AtlantisBalance.MAX_ZONE_ALLY_DAMAGE_REDUCTION);
+        global.put("waterPressureDamageRatio", AtlantisBalance.WATER_PRESSURE_DAMAGE_RATIO);
+        global.put("waterPressureDamageCap", AtlantisBalance.WATER_PRESSURE_DAMAGE_CAP);
+        global.put("waterPressureRadius", AtlantisBalance.WATER_PRESSURE_RADIUS);
+        global.put("zoneStackMultiplier", AtlantisBalance.ZONE_STACK_MULTIPLIER);
+        global.put("maxZoneCount", (double) AtlantisBalance.MAX_ZONE_COUNT);
+        global.put("zoneSpacingBlocks", AtlantisBalance.ZONE_SPACING_BLOCKS);
+        global.put("zoneScanIntervalTicks", (double) AtlantisBalance.ZONE_SCAN_INTERVAL_TICKS);
+        global.put("maxChainDepth", (double) AtlantisBalance.MAX_CHAIN_DEPTH);
+        putAbilities(abilities, AtlantisBalance.CONFIG_ID, global);
+
+        putAtlantisTurtle(abilities, AtlantisTowers.TURTLE_T1, 1.0, 3.0, 0.12);
+        putAtlantisTurtle(abilities, AtlantisTowers.TURTLE_T2, 2.0, 3.5, 0.22);
+        putAtlantisTurtle(abilities, AtlantisTowers.TURTLE_T3, 3.0, 4.0, 0.32);
+
+        putAtlantisDolphin(abilities, AtlantisTowers.DOLPHIN_T1, 1.0, 0.02);
+        putAtlantisDolphin(abilities, AtlantisTowers.DOLPHIN_T2, 2.0, 0.05);
+        putAtlantisDolphin(abilities, AtlantisTowers.DOLPHIN_T3, 3.0, 0.09);
+
+        putAbilities(abilities, AtlantisTowers.AXOLOTL_T1.id(), Map.of(
+                "regenAmount", 7.0,
+                "supportRadius", 4.5,
+                "supportIntervalTicks", 40.0
+        ));
+        putAbilities(abilities, AtlantisTowers.AXOLOTL_T2.id(), Map.of(
+                "regenAmount", 20.0,
+                "attackSpeedBonus", 0.18,
+                "supportRadius", 5.5,
+                "supportIntervalTicks", 40.0
+        ));
+        putAbilities(abilities, AtlantisTowers.AXOLOTL_T3.id(), Map.of(
+                "regenAmount", 46.0,
+                "attackSpeedBonus", 0.28,
+                "stackBonus", 3.0,
+                "waterPressureRatioBonus", 0.10,
+                "supportRadius", 6.5,
+                "supportIntervalTicks", 35.0
+        ));
+
+        putAtlantisConduit(abilities, AtlantisTowers.CONDUIT_T1, 6.0, 3.0, 0.05);
+        putAtlantisConduit(abilities, AtlantisTowers.CONDUIT_T2, 7.0, 5.0, 0.08);
+        putAtlantisConduit(abilities, AtlantisTowers.CONDUIT_T3, 8.0, 8.0, 0.12);
+    }
+
+    private static void putAtlantisTurtle(
+            Map<String, Map<String, Double>> abilities,
+            TowerType type,
+            double zoneCapacity,
+            double zoneRadius,
+            double allyDamageReduction
+    ) {
+        putAbilities(abilities, type.id(), Map.of(
+                "zoneCapacity", zoneCapacity,
+                "zoneRadius", zoneRadius,
+                "zoneAllyDamageReduction", allyDamageReduction
+        ));
+    }
+
+    private static void putAtlantisDolphin(
+            Map<String, Map<String, Double>> abilities,
+            TowerType type,
+            double stackPerHit,
+            double waterPressureRatioBonus
+    ) {
+        putAbilities(abilities, type.id(), Map.of(
+                "stackPerHit", stackPerHit,
+                "waterPressureRatioBonus", waterPressureRatioBonus
+        ));
+    }
+
+    private static void putAtlantisConduit(
+            Map<String, Map<String, Double>> abilities,
+            TowerType type,
+            double amplifyRadius,
+            double maxStackBonus,
+            double waterPressureRatioBonus
+    ) {
+        putAbilities(abilities, type.id(), Map.of(
+                "amplifyRadius", amplifyRadius,
+                "maxStackBonus", maxStackBonus,
+                "waterPressureRatioBonus", waterPressureRatioBonus
+        ));
     }
 
     private static void putNetherUpgrades(Map<String, Long> upgrades) {
