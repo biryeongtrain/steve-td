@@ -34,6 +34,11 @@
 | `/semiontd trait current` | 현재 특성을 봅니다. |
 | `/semiontd trait list` | 선택 가능한 특성을 봅니다. |
 | `/semiontd trait select <slot> <id>` | 특성을 선택합니다. |
+| `/semiontd hero shop` | 용사 장비 상점을 엽니다. 웨이브 중에는 조회만 가능합니다. |
+| `/semiontd hero quest` | 현재 용사 퀘스트와 진행도를 봅니다. |
+| `/semiontd hero party` | 확정 동료와 모험 점수 보너스를 봅니다. |
+| `/semiontd hero skin` | 여섯 동료의 계정 저장 스킨을 설정합니다. 로비에서도 사용할 수 있습니다. |
+| `/semiontd hero companion <role>` | 처음 설치할 동료 종류를 확인합니다. |
 | `/semiontd tower list` | 현재 빌더가 설치할 수 있는 starter 타워를 봅니다. |
 | `/semiontd tower ui` | 타워 UI를 엽니다. |
 | `/semiontd tower limitup` | 타워 제한을 구매로 올립니다. |

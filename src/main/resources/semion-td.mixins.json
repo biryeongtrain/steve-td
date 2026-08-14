@@ -23,6 +23,7 @@
     "accessor.MushroomCowAccessor",
     "accessor.ParrotAccessor",
     "accessor.PigAccessor",
+    "accessor.PlayerInfoUpdatePacketAccessor",
     "accessor.RabbitAccessor",
     "accessor.RangedAttributeAccessor",
     "accessor.SalmonAccessor",

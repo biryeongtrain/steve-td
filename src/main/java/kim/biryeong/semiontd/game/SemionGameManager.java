@@ -64,6 +64,7 @@ import kim.biryeong.semiontd.persistence.SQLiteMatchResultRepository;
 import kim.biryeong.semiontd.persistence.SQLiteRatingEventRepository;
 import kim.biryeong.semiontd.persistence.SQLiteRatingRepository;
 import kim.biryeong.semiontd.progression.MatchProgressionReward;
+import kim.biryeong.semiontd.progression.HeroCompanionSkinPreference;
 import kim.biryeong.semiontd.progression.ProgressionService;
 import kim.biryeong.semiontd.progression.SemionPlayerProfile;
 import kim.biryeong.semiontd.rating.PlayerRatingProfile;
@@ -76,6 +77,9 @@ import kim.biryeong.semiontd.statistics.JobStatisticsSnapshot;
 import kim.biryeong.semiontd.statistics.JobStatisticsState;
 import kim.biryeong.semiontd.summon.IncomeSummons;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
+import kim.biryeong.semiontd.tower.hero.HeroCompanionRole;
+import kim.biryeong.semiontd.tower.hero.HeroCompanionSkins;
+import kim.biryeong.semiontd.tower.hero.HeroPlayerVisuals;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidBossBarService;
 import kim.biryeong.semiontd.tower.legion.IllusionCloneSpawnQueue;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvReputationBossBarService;
@@ -740,7 +744,9 @@ public final class SemionGameManager {
     }
 
     public SemionPlayerProfile profile(MinecraftServer server, UUID playerId, String playerName) {
-        return progressionService.profile(server, playerId, playerName);
+        SemionPlayerProfile profile = progressionService.profile(server, playerId, playerName);
+        HeroCompanionSkins.load(playerId, profile.heroCompanionSkins());
+        return profile;
     }
 
     public Optional<SemionPlayerProfile> grantCosmeticCurrency(UUID playerId, String playerName, long amount) {
@@ -799,6 +805,21 @@ public final class SemionGameManager {
 
     public boolean clearSelectedCosmetic(String cosmeticId) {
         return progressionService.clearSelectedCosmetic(cosmeticId);
+    }
+
+    public boolean saveHeroCompanionSkin(
+            MinecraftServer server,
+            UUID playerId,
+            String playerName,
+            HeroCompanionRole role,
+            HeroCompanionSkinPreference skin
+    ) {
+        if (role == null || !progressionService.saveHeroCompanionSkin(playerId, playerName, role.id(), skin)) {
+            return false;
+        }
+        HeroCompanionSkins.set(playerId, role, skin);
+        HeroPlayerVisuals.refreshSkin(playerId, role);
+        return true;
     }
 
     public Optional<MatchResult> lastMatchResult() {
@@ -1554,6 +1575,7 @@ public final class SemionGameManager {
         if (server == null) {
             return;
         }
+        profile(server, player.getUUID(), player.getGameProfile().getName());
         VanillaTeamBridge.ensureTeams(server);
 
         Scheduler.INSTANCE.submit((s) -> {
@@ -1618,6 +1640,7 @@ public final class SemionGameManager {
             activeGame.close();
             activeGame = null;
         }
+        HeroCompanionSkins.clearAll();
         clearRatingProfileCache();
         clearStartCountdown();
         clearTraitSelection();
@@ -1790,7 +1813,7 @@ public final class SemionGameManager {
     }
 
     private boolean applyPersistedJobSelection(MinecraftServer server, SemionGame game, UUID playerId, String playerName) {
-        SemionPlayerProfile profile = progressionService.profile(
+        SemionPlayerProfile profile = profile(
                 server,
                 playerId,
                 playerName

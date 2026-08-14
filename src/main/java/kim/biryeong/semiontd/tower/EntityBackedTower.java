@@ -121,6 +121,13 @@ public abstract class EntityBackedTower extends Tower {
         }
 
         var currentEntity = lane.arenaWorld().getEntity(entityId);
+        if (!(currentEntity instanceof SemionTowerEntity)
+                && entity != null
+                && entity.getId() == entityId
+                && entity.level() == lane.arenaWorld()
+                && !entity.isRemoved()) {
+            currentEntity = entity;
+        }
         if (currentEntity instanceof SemionTowerEntity towerEntity) {
             syncHealth(towerEntity.getHealth());
             syncPosition(GridPosition.from(BlockPos.containing(

@@ -10236,7 +10236,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertPresent(context, JobRegistry.find(AdversaryTowerJob.ID), "Built-in reload should register the adversary tower job.")) {
             return;
         }
-        if (!assertEquals(context, 53L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose every production starter family including adversary.")) {
+        if (!assertEquals(context, 60L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose every production starter family including Hero Party.")) {
             return;
         }
         context.succeed();

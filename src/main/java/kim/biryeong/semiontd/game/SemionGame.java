@@ -34,8 +34,11 @@ import kim.biryeong.semiontd.summon.SummonResultType;
 import kim.biryeong.semiontd.summon.SummonShop;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.tower.TowerCapacity;
+import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.adversary.AdversaryProgressStates;
 import kim.biryeong.semiontd.tower.adversary.AdversaryTeamEffects;
+import kim.biryeong.semiontd.tower.hero.HeroPartyStates;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityStates;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
@@ -497,8 +500,27 @@ public final class SemionGame {
                 .orElse(0);
     }
 
+    public int towerCapacityUsed(UUID playerId) {
+        return playerLane(playerId)
+                .map(lane -> lane.towers().stream()
+                        .filter(tower -> tower.ownerPlayer().equals(playerId))
+                        .mapToInt(tower -> TowerCapacity.slotCost(tower.type()))
+                        .sum())
+                .orElse(0);
+    }
+
     public boolean canPlaceMoreTowers(UUID playerId) {
-        return towerCount(playerId) < towerLimitForPlayer(playerId);
+        return towerCapacityUsed(playerId) < towerLimitForPlayer(playerId);
+    }
+
+    public boolean canFitTower(UUID playerId, TowerType towerType) {
+        return towerCapacityUsed(playerId) + TowerCapacity.slotCost(towerType) <= towerLimitForPlayer(playerId);
+    }
+
+    public boolean canFitUpgrade(UUID playerId, TowerType currentType, TowerType targetType) {
+        int capacityIncrease = TowerCapacity.slotCost(targetType) - TowerCapacity.slotCost(currentType);
+        return capacityIncrease <= 0
+                || towerCapacityUsed(playerId) + capacityIncrease <= towerLimitForPlayer(playerId);
     }
 
     public boolean rosterLocked() {
@@ -763,6 +785,7 @@ public final class SemionGame {
         for (UUID playerId : players.keySet()) {
             AdversaryProgressStates.clear(playerId);
             AdversaryTeamEffects.unregisterPlayer(playerId);
+            HeroPartyStates.clear(playerId);
         }
         players.clear();
         selectedJobs.clear();

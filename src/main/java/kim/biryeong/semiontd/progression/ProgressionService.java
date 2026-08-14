@@ -132,6 +132,20 @@ public final class ProgressionService {
         return store.clearSelectedCosmetic(cosmeticId);
     }
 
+    public synchronized boolean saveHeroCompanionSkin(
+            UUID playerId,
+            String playerName,
+            String roleId,
+            HeroCompanionSkinPreference skin
+    ) {
+        if (playerId == null || roleId == null || roleId.isBlank() || skin != null && !skin.valid()) {
+            return false;
+        }
+        SemionPlayerProfile current = store.getOrCreateProfile(playerId, playerName);
+        SemionPlayerProfile updated = current.updateHeroCompanionSkin(playerName, roleId, skin);
+        return updated.equals(current) || store.putProfilePersisted(playerId, updated);
+    }
+
     public synchronized Map<UUID, MatchProgressionReward> applyMatchResult(MinecraftServer server, MatchResult matchResult) {
         if (appliedMatchRepository.hasApplied(matchResult.matchId(), PROGRESSION_SUBSYSTEM)) {
             return Map.of();

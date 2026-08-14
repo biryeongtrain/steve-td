@@ -116,12 +116,12 @@ public final class AdversaryIntegrationGameTest {
             ominous.tick(recipientLane);
 
             requireClose(
-                    48.0,
+                    72.0,
                     lowest.health(),
-                    "Beacon must heal the lowest-health-ratio owned fox for six percent max health."
+                    "Beacon must heal the lowest-health-ratio owned fox for fourteen percent max health."
             );
             requireClose(
-                    138.0,
+                    162.0,
                     second.health(),
                     "Beacon must heal up to two owned foxes."
             );
@@ -440,7 +440,7 @@ public final class AdversaryIntegrationGameTest {
             requireClose(900.0, second.runtimeMonster().health(),
                     "Mace must sweep the nearest second target for 25% damage.");
             requireClose(900.0, third.runtimeMonster().health(),
-                    "Mace sweep must include nearby targets below the five-target cap.");
+                    "Mace sweep must include nearby targets below the eight-target cap.");
 
             fox.setForm(FoxForm.SCULK_CORE, lane);
             fox.syncHealth(396.0);

@@ -15,6 +15,10 @@ import kim.biryeong.semiontd.tower.adversary.FoxRoute;
 import kim.biryeong.semiontd.tower.adversary.RivalKind;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
 import kim.biryeong.semiontd.tower.end.EndTowers;
+import kim.biryeong.semiontd.tower.hero.HeroCompanionRole;
+import kim.biryeong.semiontd.tower.hero.HeroPartyBalance;
+import kim.biryeong.semiontd.tower.hero.HeroPartyTowers;
+import kim.biryeong.semiontd.tower.hero.HeroWeapon;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
 import kim.biryeong.semiontd.tower.illager.IllagerTowers;
 import kim.biryeong.semiontd.tower.legion.LegionTowers;
@@ -184,6 +188,7 @@ public record TowerBalanceConfig(
         addOceanTowers(towers);
         addAncientCityTowers(towers);
         addAdversaryTowers(towers);
+        addHeroPartyTowers(towers);
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
         putUpgrade(upgradeCosts, VillagerTowers.T1_SPLASH_TOWER, "villager_splash_t2", 110);
@@ -256,6 +261,7 @@ public record TowerBalanceConfig(
         putOceanUpgrades(upgradeCosts);
         putAncientCityUpgrades(upgradeCosts);
         putAdversaryUpgrades(upgradeCosts);
+        putHeroPartyUpgrades(upgradeCosts);
 
         LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>();
         putAbilities(abilities, IllagerRaidStates.RAID_CONFIG_ID, Map.of(
@@ -814,6 +820,7 @@ public record TowerBalanceConfig(
         putOceanAbilities(abilities);
         putAncientCityAbilities(abilities);
         putAdversaryAbilities(abilities);
+        putHeroPartyAbilities(abilities);
 
         TowerBalanceConfig fallback = new TowerBalanceConfig(
                 towers,
@@ -1187,6 +1194,123 @@ public record TowerBalanceConfig(
         }
     }
 
+    private static void addHeroPartyTowers(Map<String, TowerStats> towers) {
+        for (TowerType type : HeroPartyTowers.all()) {
+            addTower(towers, type);
+        }
+    }
+
+    private static void putHeroPartyUpgrades(Map<String, Long> upgrades) {
+        for (HeroCompanionRole role : HeroCompanionRole.values()) {
+            for (int tier = 1; tier < 4; tier++) {
+                TowerType from = HeroPartyTowers.companion(role, tier);
+                TowerType to = HeroPartyTowers.companion(role, tier + 1);
+                putUpgrade(upgrades, from, to.id(), to.mineralCost());
+            }
+        }
+    }
+
+    private static void putHeroPartyAbilities(Map<String, Map<String, Double>> abilities) {
+        putAbilities(abilities, HeroPartyBalance.GLOBAL_CONFIG_ID, Map.ofEntries(
+                Map.entry("weaponUpgradeCost1", 80.0),
+                Map.entry("weaponUpgradeCost2", 140.0),
+                Map.entry("weaponUpgradeCost3", 220.0),
+                Map.entry("weaponUpgradeCost4", 320.0),
+                Map.entry("weaponUpgradeCost5", 450.0),
+                Map.entry("weaponMultiplier1", 1.15),
+                Map.entry("weaponMultiplier2", 1.32),
+                Map.entry("weaponMultiplier3", 1.50),
+                Map.entry("weaponMultiplier4", 1.72),
+                Map.entry("weaponMultiplier5", 2.00),
+                Map.entry("armorUpgradeCost1", 90.0),
+                Map.entry("armorUpgradeCost2", 150.0),
+                Map.entry("armorUpgradeCost3", 230.0),
+                Map.entry("armorUpgradeCost4", 340.0),
+                Map.entry("armorUpgradeCost5", 480.0),
+                Map.entry("armorHealth1", 60.0),
+                Map.entry("armorHealth2", 140.0),
+                Map.entry("armorHealth3", 240.0),
+                Map.entry("armorHealth4", 380.0),
+                Map.entry("armorHealth5", 560.0),
+                Map.entry("armorReduction1", 0.04),
+                Map.entry("armorReduction2", 0.08),
+                Map.entry("armorReduction3", 0.12),
+                Map.entry("armorReduction4", 0.16),
+                Map.entry("armorReduction5", 0.20),
+                Map.entry("adventureDamagePerPoint", 0.0025),
+                Map.entry("adventureHealingPerPoint", 0.0025),
+                Map.entry("adventureHealthPerPoint", 0.0035)
+        ));
+        for (HeroWeapon weapon : HeroWeapon.values()) {
+            putAbilities(abilities, weapon.configId(), Map.of(
+                    "purchaseCost", (double) weapon.defaultPurchaseCost(),
+                    "damage", weapon.defaultDamage(),
+                    "range", weapon.defaultRange(),
+                    "attackIntervalTicks", (double) weapon.defaultAttackIntervalTicks()
+            ));
+        }
+        putAbilities(abilities, HeroPartyTowers.HERO.id(), Map.of("towerSlotCost", 3.0));
+        for (HeroCompanionRole role : HeroCompanionRole.values()) {
+            for (int tier = 1; tier <= 4; tier++) {
+                putAbilities(abilities, HeroPartyTowers.companion(role, tier).id(), Map.of(
+                        "towerSlotCost", (double) (tier + 1)
+                ));
+            }
+        }
+        putHeroCompanionAbilities(abilities);
+    }
+
+    private static void putHeroCompanionAbilities(Map<String, Map<String, Double>> abilities) {
+        double[] knightReduction = {0.0, 0.07, 0.13, 0.20};
+        double[] archerBoss = {0.0, 0.12, 0.23, 0.35};
+        double[] mageRatio = {0.30, 0.40, 0.50, 0.60};
+        double[] mageRadius = {2.0, 2.3, 2.6, 3.0};
+        double[] priestHeal = {14.0, 21.0, 31.0, 45.0};
+        double[] priestInterval = {40.0, 38.0, 34.0, 30.0};
+        double[] priestSecond = {0.0, 0.0, 0.50, 1.0};
+        double[] rogueExecute = {0.25, 0.35, 0.47, 0.60};
+        double[] bardSpeed = {0.08, 0.11, 0.14, 0.18};
+        double[] bardDamage = {0.0, 0.03, 0.06, 0.10};
+        double[] bardRadius = {8.0, 9.0, 10.0, 12.0};
+        for (int index = 0; index < 4; index++) {
+            int tier = index + 1;
+            mergeAbilities(abilities, HeroPartyTowers.companion(HeroCompanionRole.KNIGHT, tier).id(), Map.of(
+                    "damageReduction", knightReduction[index]
+            ));
+            mergeAbilities(abilities, HeroPartyTowers.companion(HeroCompanionRole.ARCHER, tier).id(), Map.of(
+                    "bossDamageBonus", archerBoss[index]
+            ));
+            mergeAbilities(abilities, HeroPartyTowers.companion(HeroCompanionRole.MAGE, tier).id(), Map.of(
+                    "splashDamageRatio", mageRatio[index],
+                    "splashRadius", mageRadius[index]
+            ));
+            mergeAbilities(abilities, HeroPartyTowers.companion(HeroCompanionRole.PRIEST, tier).id(), Map.of(
+                    "healAmount", priestHeal[index],
+                    "healIntervalTicks", priestInterval[index],
+                    "secondTargetRatio", priestSecond[index]
+            ));
+            mergeAbilities(abilities, HeroPartyTowers.companion(HeroCompanionRole.ROGUE, tier).id(), Map.of(
+                    "executeThreshold", 0.30,
+                    "executeDamageBonus", rogueExecute[index]
+            ));
+            mergeAbilities(abilities, HeroPartyTowers.companion(HeroCompanionRole.BARD, tier).id(), Map.of(
+                    "attackSpeedBonus", bardSpeed[index],
+                    "damageBonus", bardDamage[index],
+                    "auraRadius", bardRadius[index]
+            ));
+        }
+    }
+
+    private static void mergeAbilities(
+            Map<String, Map<String, Double>> abilities,
+            String configId,
+            Map<String, Double> values
+    ) {
+        LinkedHashMap<String, Double> merged = new LinkedHashMap<>(abilities.getOrDefault(configId, Map.of()));
+        merged.putAll(values);
+        abilities.put(configId, Collections.unmodifiableMap(merged));
+    }
+
     private static void putAdversaryAbilities(Map<String, Map<String, Double>> abilities) {
         putAbilities(abilities, AdversaryBalance.GLOBAL_CONFIG_ID, Map.ofEntries(
                 Map.entry("maxFoxTowers", (double) AdversaryBalance.MAX_FOX_TOWERS),
@@ -1230,6 +1354,9 @@ public record TowerBalanceConfig(
                 Map.entry("fireworkSecondary3Ratio", AdversaryBalance.FIREWORK_TARGET_DAMAGE_RATIOS[2]),
                 Map.entry("fireworkSecondary4Ratio", AdversaryBalance.FIREWORK_TARGET_DAMAGE_RATIOS[3]),
                 Map.entry("fireworkSecondary5Ratio", AdversaryBalance.FIREWORK_TARGET_DAMAGE_RATIOS[4]),
+                Map.entry("fireworkSecondary6Ratio", AdversaryBalance.FIREWORK_TARGET_DAMAGE_RATIOS[5]),
+                Map.entry("fireworkSecondary7Ratio", AdversaryBalance.FIREWORK_TARGET_DAMAGE_RATIOS[6]),
+                Map.entry("fireworkSecondary8Ratio", AdversaryBalance.FIREWORK_TARGET_DAMAGE_RATIOS[7]),
                 Map.entry("bigGameWaveDamageMultiplier", AdversaryBalance.BIG_GAME_WAVE_DAMAGE_MULTIPLIER),
                 Map.entry("bigGameIncomeDamageMultiplier", AdversaryBalance.BIG_GAME_INCOME_DAMAGE_MULTIPLIER),
                 Map.entry("bigGameStreak2", AdversaryBalance.BIG_GAME_STREAK_MULTIPLIERS[1]),

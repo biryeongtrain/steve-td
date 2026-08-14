@@ -140,7 +140,7 @@ public final class SemionHudTextService {
 
     public static String actionbarMarkupFor(SemionPlayer player, SemionGame game) {
         PlayerEconomy economy = player.economy();
-        int currentTowers = game.towerCount(player.uuid());
+        int currentTowers = game.towerCapacityUsed(player.uuid());
         int maxTowers = game.towerLimitForPlayer(player.uuid());
         return "<aqua>◆ 다이아 " + economy.diamond() + "</aqua>"
                 + " <dark_gray>|</dark_gray> <green>⬢ 에메랄드 " + economy.emerald() + "</green>"

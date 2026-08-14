@@ -97,6 +97,7 @@
 - `*Ticks`는 Minecraft tick입니다. `20 tick = 1초`입니다.
 - `radius`, `range`는 블록 단위입니다.
 - 코드가 읽지 않는 키는 효과가 없습니다.
+- `towerSlotCost`는 타워 제한에서 차지하는 가중치입니다. 없으면 `1`입니다.
 
 ## 주민 계열 능력값
 
@@ -292,7 +293,7 @@
 
 ## 대적자 계열 능력값
 
-대적자 빌더는 값을 세 위치에서 읽습니다.
+히어로 빌더는 값을 세 위치에서 읽습니다.
 
 - `towers`: `adversary_fox`의 기본 배치 수치와 `adversary_<종류>_rival`, `adversary_<종류>_rival_enhanced` 숙적의 절대 수치입니다. `<종류>`는 `breeze`, `creeper`, `phantom`, `polar_bear`입니다.
 - `upgradeCosts`: 일반 숙적에서 같은 종류의 강화 숙적으로 가는 네 방향성 업그레이드 가격입니다.
@@ -322,7 +323,7 @@
 | 기본/질풍 공격 | `baseSplashRadius`, `baseSplashExtraTargets`, `baseSplashDamageRatio`, `breezeExtraTargets`, `breezeExtraTargetDamageRatio` |
 | 황금/방패 공격 | `goldenExtraAttackEvery`, `goldenExtraDamageRatio`, `shieldCounterDamage`, `shieldCounterCooldownTicks` |
 | 여우 회복·팀 지원 | `bellHealIntervalTicks`, `bellHealRadius`, `bellHealTargetCount`, `bellHealMaxHealthRatio`, `beaconHealIntervalTicks`, `beaconHealRadius`, `beaconHealTargetCount`, `beaconHealMaxHealthRatio`, `ominousMonsterDamageReduction`, `ominousMonsterAttackSpeedReduction`, `ominousMonsterTowerDamageTakenBonus`, `teamEffectScanIntervalTicks`, `teamEffectDurationTicks` |
-| 폭죽 관통 | `fireworkWaveDamageMultiplier`, `fireworkIncomeDamageMultiplier`, `fireworkMaxTargets`, `fireworkSecondary2Ratio` ~ `fireworkSecondary5Ratio` |
+| 폭죽 관통 | `fireworkWaveDamageMultiplier`, `fireworkIncomeDamageMultiplier`, `fireworkMaxTargets`, `fireworkSecondary2Ratio` ~ `fireworkSecondary8Ratio` |
 | 거물/메아리 | `bigGameWaveDamageMultiplier`, `bigGameIncomeDamageMultiplier`, `bigGameStreak2`, `bigGameStreak3`, `echoBonusPerHit`, `echoMaxBonusStacks` |
 | 메이스 | `maceFocusTicks`, `maceBreakHealthRatio`, `maceStreak2` ~ `maceStreak5`, `maceSweepRadius`, `maceSweepExtraTargets`, `maceSweepDamageRatio` |
 | 스컬크 | `sculkDelayTicks`, `sculkRadius`, `sculkMaxTargets`, `sculkSelfDamageRatio`, `sculkSelfDamageFloorRatio` |

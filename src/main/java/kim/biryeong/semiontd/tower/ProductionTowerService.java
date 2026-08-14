@@ -52,7 +52,7 @@ public final class ProductionTowerService {
         if (!canUseTower(game, laneContext.player, towerType)) {
             return TowerPlacementResult.TOWER_NOT_ALLOWED;
         }
-        if (!game.canPlaceMoreTowers(playerId)) {
+        if (!game.canFitTower(playerId, towerType)) {
             return TowerPlacementResult.TOWER_LIMIT_REACHED;
         }
 
@@ -196,6 +196,9 @@ public final class ProductionTowerService {
         }
         if (!tower.meetsUpgradeRequirements(laneContext.lane, upgrade)) {
             return TowerUpgradeResult.UPGRADE_REQUIREMENTS_NOT_MET;
+        }
+        if (!game.canFitUpgrade(playerId, tower.type(), targetType)) {
+            return TowerUpgradeResult.TOWER_LIMIT_REACHED;
         }
         if (!VillagerAdvStates.canUpgrade(laneContext.player, tower, upgrade)) {
             return TowerUpgradeResult.NOT_ENOUGH_ADV_EXPERIENCE;

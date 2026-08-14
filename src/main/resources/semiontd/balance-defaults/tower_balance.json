@@ -1327,6 +1327,206 @@
       "damage": 18.7,
       "attackIntervalTicks": 13,
       "aggroPriority": 0
+    },
+    "hero_party_hero": {
+      "mineralCost": 80,
+      "maxHealth": 160.0,
+      "range": 3.5,
+      "damage": 12.0,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 30
+    },
+    "hero_party_knight_1": {
+      "mineralCost": 60,
+      "maxHealth": 260.0,
+      "range": 3.0,
+      "damage": 6.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 80
+    },
+    "hero_party_knight_2": {
+      "mineralCost": 90,
+      "maxHealth": 430.0,
+      "range": 3.0,
+      "damage": 9.0,
+      "attackIntervalTicks": 19,
+      "aggroPriority": 80
+    },
+    "hero_party_knight_3": {
+      "mineralCost": 140,
+      "maxHealth": 650.0,
+      "range": 3.0,
+      "damage": 13.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": 80
+    },
+    "hero_party_knight_4": {
+      "mineralCost": 220,
+      "maxHealth": 900.0,
+      "range": 3.0,
+      "damage": 18.0,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 80
+    },
+    "hero_party_archer_1": {
+      "mineralCost": 55,
+      "maxHealth": 70.0,
+      "range": 10.0,
+      "damage": 12.0,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 0
+    },
+    "hero_party_archer_2": {
+      "mineralCost": 85,
+      "maxHealth": 105.0,
+      "range": 10.0,
+      "damage": 17.0,
+      "attackIntervalTicks": 14,
+      "aggroPriority": 0
+    },
+    "hero_party_archer_3": {
+      "mineralCost": 130,
+      "maxHealth": 150.0,
+      "range": 10.0,
+      "damage": 24.0,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 0
+    },
+    "hero_party_archer_4": {
+      "mineralCost": 200,
+      "maxHealth": 200.0,
+      "range": 10.0,
+      "damage": 32.0,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 0
+    },
+    "hero_party_mage_1": {
+      "mineralCost": 70,
+      "maxHealth": 80.0,
+      "range": 8.0,
+      "damage": 16.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 0
+    },
+    "hero_party_mage_2": {
+      "mineralCost": 105,
+      "maxHealth": 120.0,
+      "range": 8.0,
+      "damage": 22.0,
+      "attackIntervalTicks": 19,
+      "aggroPriority": 0
+    },
+    "hero_party_mage_3": {
+      "mineralCost": 165,
+      "maxHealth": 165.0,
+      "range": 8.0,
+      "damage": 31.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": 0
+    },
+    "hero_party_mage_4": {
+      "mineralCost": 260,
+      "maxHealth": 220.0,
+      "range": 8.0,
+      "damage": 42.0,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 0
+    },
+    "hero_party_priest_1": {
+      "mineralCost": 65,
+      "maxHealth": 100.0,
+      "range": 7.0,
+      "damage": 4.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -5
+    },
+    "hero_party_priest_2": {
+      "mineralCost": 100,
+      "maxHealth": 145.0,
+      "range": 7.0,
+      "damage": 6.0,
+      "attackIntervalTicks": 19,
+      "aggroPriority": -5
+    },
+    "hero_party_priest_3": {
+      "mineralCost": 155,
+      "maxHealth": 205.0,
+      "range": 7.0,
+      "damage": 10.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": -5
+    },
+    "hero_party_priest_4": {
+      "mineralCost": 240,
+      "maxHealth": 280.0,
+      "range": 7.0,
+      "damage": 14.0,
+      "attackIntervalTicks": 16,
+      "aggroPriority": -5
+    },
+    "hero_party_rogue_1": {
+      "mineralCost": 50,
+      "maxHealth": 65.0,
+      "range": 3.5,
+      "damage": 10.0,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 10
+    },
+    "hero_party_rogue_2": {
+      "mineralCost": 75,
+      "maxHealth": 95.0,
+      "range": 3.5,
+      "damage": 14.0,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 10
+    },
+    "hero_party_rogue_3": {
+      "mineralCost": 120,
+      "maxHealth": 135.0,
+      "range": 3.5,
+      "damage": 19.0,
+      "attackIntervalTicks": 9,
+      "aggroPriority": 10
+    },
+    "hero_party_rogue_4": {
+      "mineralCost": 185,
+      "maxHealth": 180.0,
+      "range": 3.5,
+      "damage": 26.0,
+      "attackIntervalTicks": 8,
+      "aggroPriority": 10
+    },
+    "hero_party_bard_1": {
+      "mineralCost": 60,
+      "maxHealth": 90.0,
+      "range": 7.0,
+      "damage": 4.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -5
+    },
+    "hero_party_bard_2": {
+      "mineralCost": 90,
+      "maxHealth": 130.0,
+      "range": 7.0,
+      "damage": 7.0,
+      "attackIntervalTicks": 19,
+      "aggroPriority": -5
+    },
+    "hero_party_bard_3": {
+      "mineralCost": 140,
+      "maxHealth": 180.0,
+      "range": 7.0,
+      "damage": 10.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": -5
+    },
+    "hero_party_bard_4": {
+      "mineralCost": 220,
+      "maxHealth": 240.0,
+      "range": 7.0,
+      "damage": 14.0,
+      "attackIntervalTicks": 16,
+      "aggroPriority": -5
     }
   },
   "upgradeCosts": {
@@ -1453,7 +1653,25 @@
     "adversary_breeze_rival->adversary_breeze_rival_enhanced": 45,
     "adversary_creeper_rival->adversary_creeper_rival_enhanced": 60,
     "adversary_phantom_rival->adversary_phantom_rival_enhanced": 75,
-    "adversary_polar_bear_rival->adversary_polar_bear_rival_enhanced": 100
+    "adversary_polar_bear_rival->adversary_polar_bear_rival_enhanced": 100,
+    "hero_party_knight_1->hero_party_knight_2": 90,
+    "hero_party_knight_2->hero_party_knight_3": 140,
+    "hero_party_knight_3->hero_party_knight_4": 220,
+    "hero_party_archer_1->hero_party_archer_2": 85,
+    "hero_party_archer_2->hero_party_archer_3": 130,
+    "hero_party_archer_3->hero_party_archer_4": 200,
+    "hero_party_mage_1->hero_party_mage_2": 105,
+    "hero_party_mage_2->hero_party_mage_3": 165,
+    "hero_party_mage_3->hero_party_mage_4": 260,
+    "hero_party_priest_1->hero_party_priest_2": 100,
+    "hero_party_priest_2->hero_party_priest_3": 155,
+    "hero_party_priest_3->hero_party_priest_4": 240,
+    "hero_party_rogue_1->hero_party_rogue_2": 75,
+    "hero_party_rogue_2->hero_party_rogue_3": 120,
+    "hero_party_rogue_3->hero_party_rogue_4": 185,
+    "hero_party_bard_1->hero_party_bard_2": 90,
+    "hero_party_bard_2->hero_party_bard_3": 140,
+    "hero_party_bard_3->hero_party_bard_4": 220
   },
   "abilities": {
     "villager_splash_t2": {
@@ -2781,48 +2999,51 @@
       "evolvedSplashDamageRatio": 0.5,
       "postEvolutionDamageBonusPerScore": 0.005,
       "postEvolutionDamageBonusCap": 2.0,
-      "baseRivalKillHealRatio": 0.20,
-      "enhancedRivalKillHealRatio": 0.30,
-      "rivalKillHealCapRatioPerWave": 1.0,
+      "baseRivalKillHealRatio": 0.2,
+      "enhancedRivalKillHealRatio": 0.3,
+      "rivalKillHealCapRatioPerWave": 2.0,
       "focusFireDamageReductionPerExtraAttacker": 0.04,
-      "focusFireDamageReductionCap": 0.4,
+      "focusFireDamageReductionCap": 0.45,
       "sculkSelfDamageFloorRatio": 0.4,
       "baseSplashDamageRatio": 0.5,
-      "bellHealIntervalTicks": 80.0,
+      "bellHealIntervalTicks": 60.0,
       "bellHealRadius": 8.0,
       "bellHealTargetCount": 1.0,
-      "bellHealMaxHealthRatio": 0.05,
-      "beaconHealIntervalTicks": 60.0,
+      "bellHealMaxHealthRatio": 0.08,
+      "beaconHealIntervalTicks": 40.0,
       "beaconHealRadius": 10.0,
       "beaconHealTargetCount": 2.0,
-      "beaconHealMaxHealthRatio": 0.06,
-      "echoMaxBonusStacks": 3.0,
+      "beaconHealMaxHealthRatio": 0.14,
+      "echoMaxBonusStacks": 4.0,
       "shieldCounterDamage": 75.0,
       "maceSweepDamageRatio": 0.25,
-      "sculkMaxTargets": 7.0,
-      "ominousMonsterAttackSpeedReduction": 0.05,
+      "sculkMaxTargets": 15.0,
+      "ominousMonsterAttackSpeedReduction": 0.3,
       "fireworkSecondary2Ratio": 0.55,
       "maceSweepRadius": 1.5,
       "maceBreakHealthRatio": 0.2,
       "goldenExtraAttackEvery": 7.0,
-      "sculkSelfDamageRatio": 0.1,
+      "sculkSelfDamageRatio": 0.15,
       "echoBonusPerHit": 0.25,
       "teamEffectScanIntervalTicks": 20.0,
       "ominousMonsterDamageReduction": 0.08,
       "breezeExtraTargets": 4.0,
       "fireworkSecondary5Ratio": 0.15,
+      "fireworkSecondary6Ratio": 0.1,
+      "fireworkSecondary7Ratio": 0.08,
+      "fireworkSecondary8Ratio": 0.05,
       "teamEffectDurationTicks": 40.0,
       "shieldCounterCooldownTicks": 40.0,
       "fireworkMaxTargets": 8.0,
-      "maceSweepExtraTargets": 5.0,
-      "goldenExtraDamageRatio": 0.5,
-      "baseSplashRadius": 4,
+      "maceSweepExtraTargets": 8.0,
+      "goldenExtraDamageRatio": 0.7,
+      "baseSplashRadius": 4.0,
       "fireworkWaveDamageMultiplier": 1.8,
-      "bigGameStreak2": 1.35,
+      "bigGameStreak2": 1.75,
       "rivalRoundHealthGrowth": 0.07,
-      "fireworkIncomeDamageMultiplier": 0.6,
+      "fireworkIncomeDamageMultiplier": 0.7,
       "fireworkSecondary4Ratio": 0.25,
-      "bigGameStreak3": 1.7,
+      "bigGameStreak3": 2.5,
       "maceStreak2": 1.5,
       "maceStreak3": 2.0,
       "rivalRoundDamageGrowth": 0.03,
@@ -2830,13 +3051,13 @@
       "ominousMonsterTowerDamageTakenBonus": 0.04,
       "maceStreak4": 2.5,
       "maceStreak5": 3.0,
-      "sculkDelayTicks": 40.0,
-      "sculkRadius": 4.0,
+      "sculkDelayTicks": 20.0,
+      "sculkRadius": 5.0,
       "bigGameWaveDamageMultiplier": 0.8,
       "fireworkSecondary3Ratio": 0.4,
       "bigGameIncomeDamageMultiplier": 1.5,
       "baseSplashExtraTargets": 3.0,
-      "maceFocusTicks": 30.0,
+      "maceFocusTicks": 15.0,
       "breezeExtraTargetDamageRatio": 0.6
     },
     "adversary_fox": {
@@ -2859,11 +3080,11 @@
       "range": 5.0,
       "damage": 30.0,
       "attackIntervalTicks": 3.0,
-      "damageReduction": 0.0,
+      "damageReduction": 0.1,
       "requiredBreezeScore": 50.0
     },
     "adversary_fox_form_shield_bearer": {
-      "maxHealth": 950.0,
+      "maxHealth": 1050.0,
       "range": 3.5,
       "damage": 60.0,
       "attackIntervalTicks": 7.0,
@@ -2908,8 +3129,8 @@
     "adversary_fox_form_firework_piercer": {
       "maxHealth": 650.0,
       "range": 10.0,
-      "damage": 48.0,
-      "attackIntervalTicks": 8.0,
+      "damage": 56.0,
+      "attackIntervalTicks": 5.0,
       "damageReduction": 0.0,
       "requiredCreeperScore": 60.0,
       "requiredBreezeScore": 30.0
@@ -2918,7 +3139,7 @@
       "maxHealth": 750.0,
       "range": 11.0,
       "damage": 96.0,
-      "attackIntervalTicks": 16.0,
+      "attackIntervalTicks": 8.0,
       "damageReduction": 0.0,
       "requiredCreeperScore": 60.0,
       "requiredPolarBearScore": 30.0
@@ -2935,16 +3156,16 @@
       "maxHealth": 900.0,
       "range": 4.5,
       "damage": 400.0,
-      "attackIntervalTicks": 50.0,
+      "attackIntervalTicks": 20.0,
       "damageReduction": 0.0,
       "requiredPolarBearScore": 80.0,
       "requiredBreezeScore": 40.0
     },
     "adversary_fox_form_sculk_core": {
       "maxHealth": 800.0,
-      "range": 8.0,
+      "range": 13.0,
       "damage": 800.0,
-      "attackIntervalTicks": 100.0,
+      "attackIntervalTicks": 50.0,
       "damageReduction": 0.0,
       "requiredPolarBearScore": 100.0,
       "requiredPhantomScore": 50.0,
@@ -2981,6 +3202,189 @@
     "adversary_polar_bear_rival_enhanced": {
       "scorePerKill": 3.0,
       "baseArmor": 7.0
+    },
+    "hero_party_global": {
+      "weaponUpgradeCost1": 80.0,
+      "weaponUpgradeCost2": 140.0,
+      "weaponUpgradeCost3": 220.0,
+      "weaponUpgradeCost4": 320.0,
+      "weaponUpgradeCost5": 450.0,
+      "weaponMultiplier1": 1.15,
+      "weaponMultiplier2": 1.32,
+      "weaponMultiplier3": 1.5,
+      "weaponMultiplier4": 1.72,
+      "weaponMultiplier5": 2.0,
+      "armorUpgradeCost1": 90.0,
+      "armorUpgradeCost2": 150.0,
+      "armorUpgradeCost3": 230.0,
+      "armorUpgradeCost4": 340.0,
+      "armorUpgradeCost5": 480.0,
+      "armorHealth1": 60.0,
+      "armorHealth2": 140.0,
+      "armorHealth3": 240.0,
+      "armorHealth4": 380.0,
+      "armorHealth5": 560.0,
+      "armorReduction1": 0.04,
+      "armorReduction2": 0.08,
+      "armorReduction3": 0.12,
+      "armorReduction4": 0.16,
+      "armorReduction5": 0.2,
+      "adventureDamagePerPoint": 0.0025,
+      "adventureHealingPerPoint": 0.0025,
+      "adventureHealthPerPoint": 0.0035
+    },
+    "hero_party_weapon_sword": {
+      "purchaseCost": 0.0,
+      "damage": 12.0,
+      "range": 3.5,
+      "attackIntervalTicks": 12.0
+    },
+    "hero_party_weapon_greatsword": {
+      "purchaseCost": 100.0,
+      "damage": 20.0,
+      "range": 3.5,
+      "attackIntervalTicks": 20.0
+    },
+    "hero_party_weapon_longbow": {
+      "purchaseCost": 110.0,
+      "damage": 11.0,
+      "range": 10.0,
+      "attackIntervalTicks": 11.0
+    },
+    "hero_party_weapon_staff": {
+      "purchaseCost": 120.0,
+      "damage": 16.0,
+      "range": 8.0,
+      "attackIntervalTicks": 16.0
+    },
+    "hero_party_weapon_tome": {
+      "purchaseCost": 100.0,
+      "damage": 8.0,
+      "range": 7.0,
+      "attackIntervalTicks": 16.0
+    },
+    "hero_party_hero": {
+      "towerSlotCost": 3.0
+    },
+    "hero_party_knight_1": {
+      "towerSlotCost": 2.0,
+      "damageReduction": 0.0
+    },
+    "hero_party_knight_2": {
+      "towerSlotCost": 3.0,
+      "damageReduction": 0.07
+    },
+    "hero_party_knight_3": {
+      "towerSlotCost": 4.0,
+      "damageReduction": 0.13
+    },
+    "hero_party_knight_4": {
+      "towerSlotCost": 5.0,
+      "damageReduction": 0.2
+    },
+    "hero_party_archer_1": {
+      "towerSlotCost": 2.0,
+      "bossDamageBonus": 0.0
+    },
+    "hero_party_archer_2": {
+      "towerSlotCost": 3.0,
+      "bossDamageBonus": 0.12
+    },
+    "hero_party_archer_3": {
+      "towerSlotCost": 4.0,
+      "bossDamageBonus": 0.23
+    },
+    "hero_party_archer_4": {
+      "towerSlotCost": 5.0,
+      "bossDamageBonus": 0.35
+    },
+    "hero_party_mage_1": {
+      "towerSlotCost": 2.0,
+      "splashDamageRatio": 0.3,
+      "splashRadius": 2.0
+    },
+    "hero_party_mage_2": {
+      "towerSlotCost": 3.0,
+      "splashDamageRatio": 0.4,
+      "splashRadius": 2.3
+    },
+    "hero_party_mage_3": {
+      "towerSlotCost": 4.0,
+      "splashDamageRatio": 0.5,
+      "splashRadius": 2.6
+    },
+    "hero_party_mage_4": {
+      "towerSlotCost": 5.0,
+      "splashDamageRatio": 0.6,
+      "splashRadius": 3.0
+    },
+    "hero_party_priest_1": {
+      "towerSlotCost": 2.0,
+      "healAmount": 14.0,
+      "healIntervalTicks": 40.0,
+      "secondTargetRatio": 0.0
+    },
+    "hero_party_priest_2": {
+      "towerSlotCost": 3.0,
+      "healAmount": 21.0,
+      "healIntervalTicks": 38.0,
+      "secondTargetRatio": 0.0
+    },
+    "hero_party_priest_3": {
+      "towerSlotCost": 4.0,
+      "healAmount": 31.0,
+      "healIntervalTicks": 34.0,
+      "secondTargetRatio": 0.5
+    },
+    "hero_party_priest_4": {
+      "towerSlotCost": 5.0,
+      "healAmount": 45.0,
+      "healIntervalTicks": 30.0,
+      "secondTargetRatio": 1.0
+    },
+    "hero_party_rogue_1": {
+      "towerSlotCost": 2.0,
+      "executeThreshold": 0.3,
+      "executeDamageBonus": 0.25
+    },
+    "hero_party_rogue_2": {
+      "towerSlotCost": 3.0,
+      "executeThreshold": 0.3,
+      "executeDamageBonus": 0.35
+    },
+    "hero_party_rogue_3": {
+      "towerSlotCost": 4.0,
+      "executeThreshold": 0.3,
+      "executeDamageBonus": 0.47
+    },
+    "hero_party_rogue_4": {
+      "towerSlotCost": 5.0,
+      "executeThreshold": 0.3,
+      "executeDamageBonus": 0.6
+    },
+    "hero_party_bard_1": {
+      "towerSlotCost": 2.0,
+      "attackSpeedBonus": 0.08,
+      "damageBonus": 0.0,
+      "auraRadius": 8.0
+    },
+    "hero_party_bard_2": {
+      "towerSlotCost": 3.0,
+      "attackSpeedBonus": 0.11,
+      "damageBonus": 0.03,
+      "auraRadius": 9.0
+    },
+    "hero_party_bard_3": {
+      "towerSlotCost": 4.0,
+      "attackSpeedBonus": 0.14,
+      "damageBonus": 0.06,
+      "auraRadius": 10.0
+    },
+    "hero_party_bard_4": {
+      "towerSlotCost": 5.0,
+      "attackSpeedBonus": 0.18,
+      "damageBonus": 0.1,
+      "auraRadius": 12.0
     }
   },
   "illusionCloneQueue": {
