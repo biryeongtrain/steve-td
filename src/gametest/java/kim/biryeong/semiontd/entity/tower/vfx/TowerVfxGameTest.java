@@ -262,6 +262,19 @@ public final class TowerVfxGameTest {
     }
 
     @GameTest
+    public void atlantisDebugCommandsParse(GameTestHelper context) {
+        var dispatcher = context.getLevel().getServer().getCommands().getDispatcher();
+        for (String effect : List.of("zone", "burst")) {
+            String command = "semiontd-debug vfx atlantis " + effect;
+            var parsed = dispatcher.parse(command, context.getLevel().getServer().createCommandSourceStack());
+            if (parsed.getContext().getNodes().isEmpty() || parsed.getReader().canRead()) {
+                throw new AssertionError("Expected /" + command + " to parse completely");
+            }
+        }
+        context.succeed();
+    }
+
+    @GameTest
     public void rayDensityKeepsEveryAttackVisibleAfterSoftBudgetIsExhausted(GameTestHelper context) {
         if (TowerVfxService.preferredRayPointCount(100.0) != 64
                 || TowerVfxService.adaptiveRayPointCount(100.0, 0) != 12) {

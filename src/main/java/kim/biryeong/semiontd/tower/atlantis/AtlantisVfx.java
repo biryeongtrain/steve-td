@@ -1,12 +1,17 @@
 package kim.biryeong.semiontd.tower.atlantis;
 
+import java.util.List;
+
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.api.area.AreaVfxContext;
 import kim.biryeong.semiontd.api.area.AreaVfxOutput;
 import kim.biryeong.semiontd.api.area.AreaVfxParticle;
 import kim.biryeong.semiontd.api.area.AreaVfxStyleRegistry;
+import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
+import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -41,6 +46,37 @@ public final class AtlantisVfx {
     public static void register(AreaVfxStyleRegistry registry) {
         registry.register(PRESSURE_ZONE, AtlantisVfx::pressureZone);
         registry.register(WATER_PRESSURE, AtlantisVfx::waterPressure);
+    }
+
+    public static void showDebug(SemionTowerEntity tower, ServerPlayer player, DebugKind kind) {
+        if (tower == null || player == null || kind == null) {
+            return;
+        }
+        Vec3 look = player.getLookAngle();
+        Vec3 horizontal = new Vec3(look.x, 0.0, look.z);
+        if (horizontal.lengthSqr() < 1.0E-6) {
+            horizontal = new Vec3(0.0, 0.0, 1.0);
+        } else {
+            horizontal = horizontal.normalize();
+        }
+        Vec3 ahead = player.position().add(horizontal.scale(5.0));
+        Vec3 center = new Vec3(ahead.x, tower.getY(), ahead.z);
+        ResourceLocation style = kind == DebugKind.ZONE ? PRESSURE_ZONE : WATER_PRESSURE;
+        double radius = kind == DebugKind.ZONE ? 4.0 : 3.5;
+        List<Vec3> samples = kind == DebugKind.ZONE
+                ? List.of(center)
+                : List.of(center.add(1.5, 0.0, 0.0), center.add(-1.5, 0.0, 0.0));
+        TowerVfxService.showAreaEffect(
+                tower,
+                id("debug/" + kind.name().toLowerCase(java.util.Locale.ROOT)),
+                style,
+                center,
+                radius,
+                samples,
+                samples.size(),
+                samples.size(),
+                0
+        );
     }
 
     /**
@@ -106,5 +142,10 @@ public final class AtlantisVfx {
 
     private static ResourceLocation id(String path) {
         return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, path);
+    }
+
+    public enum DebugKind {
+        ZONE,
+        BURST
     }
 }

@@ -34,12 +34,15 @@ import kim.biryeong.semiontd.test.TestTowerService;
 import kim.biryeong.semiontd.tip.SemionTipService;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerService;
+import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerPlacementPositions;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.tower.adversary.AdversaryVfx;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityVfx;
+import kim.biryeong.semiontd.tower.atlantis.AtlantisTowers;
+import kim.biryeong.semiontd.tower.atlantis.AtlantisVfx;
 import kim.biryeong.semiontd.tower.ocean.OceanVfx;
 import kim.biryeong.semiontd.trait.SemionTrait;
 import kim.biryeong.semiontd.trait.TraitLoadout;
@@ -473,7 +476,14 @@ public final class SemionCommands {
                                 .then(literal("mace")
                                         .executes(context -> debugAdversaryVfx(context.getSource(), AdversaryVfx.DebugKind.MACE)))
                                 .then(literal("sculk")
-                                        .executes(context -> debugAdversaryVfx(context.getSource(), AdversaryVfx.DebugKind.SCULK)))))
+                                        .executes(context -> debugAdversaryVfx(context.getSource(), AdversaryVfx.DebugKind.SCULK))))
+                        .then(literal("atlantis")
+                                .then(literal("zone")
+                                        .executes(context -> debugAtlantisVfx(
+                                                context.getSource(), gameManager, AtlantisVfx.DebugKind.ZONE)))
+                                .then(literal("burst")
+                                        .executes(context -> debugAtlantisVfx(
+                                                context.getSource(), gameManager, AtlantisVfx.DebugKind.BURST)))))
                 .then(literal("summonui")
                         .executes(context -> debugSummonDialog(context.getSource(), gameManager, 1))
                         .then(argument("page", IntegerArgumentType.integer(1))
@@ -572,6 +582,34 @@ public final class SemionCommands {
         AdversaryVfx.showDebug(source.getPlayerOrException(), kind);
         success(source, "대적자 " + kind.name().toLowerCase(java.util.Locale.ROOT) + " VFX를 재생했습니다.");
         return 1;
+    }
+
+    private static int debugAtlantisVfx(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            AtlantisVfx.DebugKind kind
+    ) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGame game = playableGame(source, gameManager);
+        PlayerLane lane = game == null ? null : game.playerLane(player.getUUID()).orElse(null);
+        if (lane == null) {
+            failure(source, "아틀란티스 VFX를 재생할 샌드박스 또는 경기 라인이 없습니다.");
+            return 0;
+        }
+        for (Tower tower : lane.towers()) {
+            if (!AtlantisTowers.isAtlantisTower(tower.type()) || !(tower instanceof EntityBackedTower backed)) {
+                continue;
+            }
+            var entity = backed.entityId().isPresent() ? lane.arenaWorld().getEntity(backed.entityId().getAsInt()) : null;
+            if (entity instanceof kim.biryeong.semiontd.entity.tower.SemionTowerEntity towerEntity
+                    && towerEntity.isAlive()) {
+                AtlantisVfx.showDebug(towerEntity, player, kind);
+                success(source, "아틀란티스 " + kind.name().toLowerCase(java.util.Locale.ROOT) + " VFX를 재생했습니다.");
+                return 1;
+            }
+        }
+        failure(source, "살아 있는 아틀란티스 타워가 필요합니다.");
+        return 0;
     }
 
     private static int debugOceanSupplyVfx(CommandSourceStack source) throws CommandSyntaxException {
