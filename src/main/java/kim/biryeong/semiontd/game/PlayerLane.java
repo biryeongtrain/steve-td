@@ -376,7 +376,7 @@ public final class PlayerLane {
 
         applyTranscendenceIfReady(roundElapsedTicks);
         tickTowers();
-        PlantSoilEnvironment.tick(this, players);
+        PlantSoilEnvironment.tick(this);
 
         Iterator<Monster> iterator = activeMonsters.iterator();
         while (iterator.hasNext()) {

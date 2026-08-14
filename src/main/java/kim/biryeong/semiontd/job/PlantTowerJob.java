@@ -2,8 +2,6 @@ package kim.biryeong.semiontd.job;
 
 import java.util.List;
 import kim.biryeong.semiontd.SemionTd;
-import kim.biryeong.semiontd.config.TowerBalanceRuntime;
-import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.plant.PlantCombatTower;
 import kim.biryeong.semiontd.tower.plant.PlantSoil;
@@ -30,7 +28,7 @@ public final class PlantTowerJob extends SemionJob {
                 SemionText.mini("<gray><green>테라포밍 타워</green>로 라인 바닥을 자기 지형으로 바꾸는 빌더입니다.</gray>"),
                 SemionText.mini("<gray>전투 타워는 <green>자기 계열 지형 위에만</green> 심고, 그 지형의 효과를 받습니다.</gray>"),
                 SemionText.mini("<gray>한 칸에는 한 계열만 깔리므로 라인 자리를 나눠 써야 합니다.</gray>"),
-                SemionText.mini("<yellow>잔디 재생·성장 / 균사 취약·중독 / 모래 둔화·가시 / 회백토 사거리·공속</yellow>"),
+                SemionText.mini("<yellow>잔디 회복·성장·정산 / 균사 취약·지뢰 / 사암 공속 약화·가시 / 회백토 사거리·치명타</yellow>"),
                 SemionText.mini("<red>모든 식물은 뿌리를 내려 사거리 밖 적을 쫓아가지 않습니다.</red>")
         );
     }
@@ -52,6 +50,22 @@ public final class PlantTowerJob extends SemionJob {
     @Override
     public void onMatchStarted(JobContext context) {
         PlantSoilStates.clear(context.player().uuid());
+    }
+
+    @Override
+    public void onRoundEnded(JobContext context, int round) {
+        context.game().playerLane(context.player().uuid()).ifPresent(lane -> {
+            long payout = lane.towers().stream()
+                    .filter(tower -> tower.health() > 0.0)
+                    .filter(PlantCombatTower.class::isInstance)
+                    .map(PlantCombatTower.class::cast)
+                    .filter(tower -> context.player().uuid().equals(tower.ownerPlayer()))
+                    .mapToLong(PlantCombatTower::diamondPerWave)
+                    .sum();
+            if (payout > 0L) {
+                context.player().economy().addMineral(payout);
+            }
+        });
     }
 
     @Override

@@ -39,12 +39,11 @@ public final class PlantSoilStates {
             return 0;
         }
         Map<Long, SoilTile> tiles = SOILS.computeIfAbsent(owner, ignored -> new HashMap<>());
-        long sourceKey = columnKey(center.x(), center.z());
         int converted = 0;
         for (int offsetX = -radius; offsetX <= radius; offsetX++) {
             for (int offsetZ = -radius; offsetZ <= radius; offsetZ++) {
                 GridPosition target = new GridPosition(center.x() + offsetX, center.y(), center.z() + offsetZ);
-                if (convert(lane, tiles, target, soil, sourceKey)) {
+                if (convert(lane, tiles, target, soil, center)) {
                     converted++;
                 }
             }
@@ -65,12 +64,11 @@ public final class PlantSoilStates {
         if (tiles == null || source == null) {
             return 0;
         }
-        long sourceKey = columnKey(source.x(), source.z());
         int released = 0;
         Iterator<Map.Entry<Long, SoilTile>> iterator = tiles.entrySet().iterator();
         while (iterator.hasNext()) {
             SoilTile tile = iterator.next().getValue();
-            if (tile.sourceKey() != sourceKey) {
+            if (!source.equals(tile.source())) {
                 continue;
             }
             restore(lane, tile);
@@ -103,6 +101,15 @@ public final class PlantSoilStates {
         }
         SoilTile tile = tiles.get(columnKey(x, z));
         return tile == null ? null : tile.soil();
+    }
+
+    public static GridPosition sourceAtColumn(UUID owner, int x, int z) {
+        Map<Long, SoilTile> tiles = SOILS.get(owner);
+        if (tiles == null) {
+            return null;
+        }
+        SoilTile tile = tiles.get(columnKey(x, z));
+        return tile == null ? null : tile.source();
     }
 
     /**
@@ -158,7 +165,7 @@ public final class PlantSoilStates {
             Map<Long, SoilTile> tiles,
             GridPosition position,
             PlantSoil soil,
-            long sourceKey
+            GridPosition source
     ) {
         BlockPos floor = floorAt(lane, position).orElse(null);
         if (floor == null) {
@@ -174,7 +181,7 @@ public final class PlantSoilStates {
                 && !lane.arenaWorld().setBlock(floor, soil.block().defaultBlockState(), Block.UPDATE_CLIENTS)) {
             return false;
         }
-        tiles.put(key, new SoilTile(floor.immutable(), soil, sourceKey, current));
+        tiles.put(key, new SoilTile(floor.immutable(), soil, source, current));
         return true;
     }
 
@@ -216,6 +223,6 @@ public final class PlantSoilStates {
         return ((long) x << 32) ^ (z & 0xFFFFFFFFL);
     }
 
-    private record SoilTile(BlockPos position, PlantSoil soil, long sourceKey, BlockState previousState) {
+    private record SoilTile(BlockPos position, PlantSoil soil, GridPosition source, BlockState previousState) {
     }
 }

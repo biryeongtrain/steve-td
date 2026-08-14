@@ -10,6 +10,7 @@ import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.entity.visual.BlockDisplayVisual;
 import kim.biryeong.semiontd.entity.visual.EntityVisual;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 
@@ -68,30 +69,30 @@ public final class PlantTowers {
     // ------------------------------------------------------------------
 
     // 잔디 - 후방 지원. 두 갈래로 나뉩니다.
-    // 민들레 계열: 초당 다이아를 만드는 경제 라인. 어그로가 낮아 뒤에 섭니다.
+    // 민들레 계열: 웨이브 정산 다이아를 만드는 경제 라인. 어그로가 낮아 뒤에 섭니다.
     public static final TowerType T1_MEADOW_TOWER = combatTower(
             "t1_meadow_tower", "민들레", 50, 200, 8.0, 4, 28, 30,
             plantVisual(Blocks.DANDELION, 1.0), PlantSoil.MEADOW, 1,
             List.of(
                     "<gray>잔디 위에만 심는 후방 지원 타워입니다.</gray>",
-                    "<green>초당 다이아를 1개씩 만들어 냅니다.</green>",
-                    "<green>주변 아군 식물의 체력을 회복시킵니다.</green>",
-                    "<green>성장한 체력의 절반은 라인 전체에 합산되어 들어갑니다.</green>"
+                    "<green>웨이브 정산 시 다이아를 {ability.diamondPerWave:integer}개 얻습니다.</green>",
+                    "<green>주변 아군 타워의 체력을 회복시킵니다.</green>",
+                    "<green>성장 체력의 {ability.plant_soil_meadow.growthShareRatio:percent}가 라인 전체 최대 체력 보너스로 합산됩니다.</green>"
             ));
     public static final TowerType T2_MEADOW_TOWER = combatTower(
             "t2_meadow_tower", "데이지", 150, 380, 10.0, 8, 28, 35,
             plantVisual(Blocks.OXEYE_DAISY, 1.15), PlantSoil.MEADOW, 2,
             List.of(
                     "<gray>잔디 위에만 심는 후방 지원 타워입니다.</gray>",
-                    "<green>초당 다이아를 2개씩 만들어 냅니다.</green>",
-                    "<green>성장한 체력의 절반을 라인 전체 아군에게 나눠 줍니다.</green>"
+                    "<green>웨이브 정산 시 다이아를 {ability.diamondPerWave:integer}개 얻습니다.</green>",
+                    "<green>성장 체력의 {ability.plant_soil_meadow.growthShareRatio:percent}가 라인 전체 최대 체력 보너스로 합산됩니다.</green>"
             ));
     public static final TowerType T3_MEADOW_TOWER = combatTower(
             "t3_meadow_tower", "해바라기", 240, 700, 12.0, 14, 28, 40,
             plantVisual(Blocks.SUNFLOWER, 1.35), PlantSoil.MEADOW, 3,
             List.of(
                     "<gray>식물 빌더의 최종 경제 타워입니다.</gray>",
-                    "<green>초당 다이아를 3개씩 만들어 냅니다.</green>",
+                    "<green>웨이브 정산 시 다이아를 {ability.diamondPerWave:integer}개 얻습니다.</green>",
                     "<green>회복량과 체력 분배도 가장 큽니다.</green>"
             ));
 
@@ -115,7 +116,7 @@ public final class PlantTowers {
             plantVisual(Blocks.TORCHFLOWER, 1.35), PlantSoil.MEADOW, 3,
             List.of(
                     "<gray>식물 빌더의 최종 광역 타워입니다.</gray>",
-                    "<green>주변 적에게 자기 공격력만큼 그대로 터집니다.</green>"
+                    "<green>주변 적에게 주 대상 피해의 {ability.novaDamageRatio:percent}를 줍니다.</green>"
             ));
 
     // 균사 - 소모성 지뢰. 공격하지 않고 밟히면 한 번 터집니다.
@@ -202,8 +203,8 @@ public final class PlantTowers {
             plantVisual(Blocks.ROSE_BUSH, 1.35), PlantSoil.PODZOL, 3,
             List.of(
                     "<gray>회백토 최종 형태 중 단일 극딜형입니다.</gray>",
-                    "<green>치명타 확률 <yellow>50%</yellow>로 피해가 2배가 됩니다.</green>",
-                    "<green>그 위에 <yellow>10%</yellow> 확률로 초치명타가 터져 4배가 됩니다.</green>",
+                    "<green>치명타 확률 <yellow>{ability.critChance:percent}</yellow>로 피해가 {ability.critMultiplier:number}배가 됩니다.</green>",
+                    "<green>그 위에 <yellow>{ability.superCritChance:percent}</yellow> 확률로 초치명타가 터져 {ability.superCritMultiplier:number}배가 됩니다.</green>",
                     "<gray>한 번에 한 대상만 때립니다.</gray>"
             ));
     public static final TowerType T3_PODZOL_PITCHER_TOWER = combatTower(
@@ -211,7 +212,7 @@ public final class PlantTowers {
             plantVisual(Blocks.PITCHER_PLANT, 1.35), PlantSoil.PODZOL, 3,
             List.of(
                     "<gray>회백토 최종 형태 중 곡사 포대입니다.</gray>",
-                    "<green>사거리 30으로 라인 전체를 덮습니다.</green>",
+                    "<green>사거리 {stat.range:number}으로 라인 전체를 덮습니다.</green>",
                     "<green>떨어진 자리 주변까지 포격 피해가 퍼집니다.</green>",
                     "<green>포격에 맞은 적은 <yellow>포충낭</yellow>에 걸려 발이 묶입니다.</green>",
                     "<gray>공격 속도는 가장 느립니다.</gray>"
@@ -232,6 +233,11 @@ public final class PlantTowers {
             T1_PODZOL_TOWER, T2_PODZOL_TOWER,
             T3_PODZOL_LILAC_TOWER, T3_PODZOL_ROSE_TOWER, T3_PODZOL_PITCHER_TOWER
     );
+
+    static {
+        TERRAFORM_TOWERS.forEach(type -> TowerDescriptionRegistry.registerTemplate(type, type.description()));
+        COMBAT_TOWERS.forEach(type -> TowerDescriptionRegistry.registerTemplate(type, type.description()));
+    }
 
     private PlantTowers() {
     }
@@ -307,7 +313,8 @@ public final class PlantTowers {
                 plantVisual(block, scale),
                 List.of(
                         "<gray>공격하지 않는 지형 전용 타워입니다.</gray>",
-                        "<green><aqua>" + radiusLabel(tier) + "</aqua>을 " + soil.displayName() + "로 바꿉니다.</green>",
+                        "<green>주변 반경 <aqua>{ability.terraformRadius:blocks}</aqua>을 "
+                                + soil.displayName() + "로 바꿉니다.</green>",
                         "<green>" + soil.displayName() + " 위에만 같은 계열 전투 타워를 심습니다.</green>",
                         ROOTED_LINE
                 )
@@ -346,14 +353,6 @@ public final class PlantTowers {
         );
         DEFINITIONS.put(id, new Definition(soil, tier, false));
         return type;
-    }
-
-    private static String radiusLabel(int tier) {
-        return switch (tier) {
-            case 1 -> "주변 3×3 칸";
-            case 2 -> "주변 5×5 칸";
-            default -> "주변 7×7 칸";
-        };
     }
 
     private static EntityVisual plantVisual(Block block, double scale) {

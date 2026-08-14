@@ -1,35 +1,30 @@
 package kim.biryeong.semiontd.tower.plant;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.monster.DamageType;
-import kim.biryeong.semiontd.entity.monster.KillSourceKind;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
+import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
-import kim.biryeong.semiontd.game.SemionPlayer;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.Tower;
 import net.minecraft.util.Mth;
 
 /**
- * Terrain that hurts whatever walks on it, with no tower involved.
+ * Terrain effects applied to monsters standing on claimed soil.
  *
- * <p>Tower auras need a living combat tower nearby; this runs off the soil itself, so simply owning
- * the ground is worth something. 균사 weakens what stands on it, 사암 slows attacks and bleeds health.
- * 잔디 and 회백토 are friendly terrain and do nothing here.
+ * <p>균사 weakens what stands on it. 사암 slows attacks and attributes its periodic magic damage to
+ * the living terraformer that created the tile. 잔디 and 회백토 are friendly terrain and do nothing here.
  */
 public final class PlantSoilEnvironment {
-    private static final int TICKS_PER_SECOND = 20;
-
     private PlantSoilEnvironment() {
     }
 
-    public static void tick(PlayerLane lane, Map<UUID, SemionPlayer> players) {
+    public static void tick(PlayerLane lane) {
         if (lane == null || lane.arenaWorld() == null) {
             return;
         }
@@ -38,10 +33,6 @@ public final class PlantSoilEnvironment {
             return;
         }
         long gameTime = lane.arenaWorld().getGameTime();
-        // 다이아 지급은 초당 값이라 환경 틱 주기와 무관하게 정확히 1초마다 돕니다.
-        if (gameTime % TICKS_PER_SECOND == 0 && players != null) {
-            payMeadowIncome(lane, players.get(owner));
-        }
         if (PlantSoilStates.totalCount(owner) == 0) {
             return;
         }
@@ -63,25 +54,7 @@ public final class PlantSoilEnvironment {
             if (soil == null) {
                 continue;
             }
-            applyEnvironment(owner, monster, entity, soil, interval);
-        }
-    }
-
-    /**
-     * 민들레 계열이 초당 만들어 내는 다이아를 합산해 라인 주인에게 지급합니다.
-     */
-    private static void payMeadowIncome(PlayerLane lane, SemionPlayer player) {
-        if (player == null) {
-            return;
-        }
-        long total = 0L;
-        for (Tower tower : List.copyOf(lane.towers())) {
-            if (tower instanceof PlantCombatTower plant && tower.health() > 0.0) {
-                total += plant.diamondPerSecond();
-            }
-        }
-        if (total > 0L) {
-            player.economy().addMineral(total);
+            applyEnvironment(lane, owner, monster, entity, soil, interval);
         }
     }
 
@@ -121,6 +94,7 @@ public final class PlantSoilEnvironment {
     }
 
     private static void applyEnvironment(
+            PlayerLane lane,
             UUID owner,
             Monster monster,
             SemionMonsterEntity entity,
@@ -155,14 +129,48 @@ public final class PlantSoilEnvironment {
         double ratioPerSecond = soilValue(soil, "environmentMaxHealthDamagePerSecond");
         if (ratioPerSecond > 0.0) {
             double damage = monster.maxHealth() * ratioPerSecond * (intervalTicks / 20.0);
-            if (damage > 0.0) {
-                double previousHealth = monster.health();
-                entity.applyRuntimeDamage(entity.damageSources().cactus(), damage, DamageType.MAGIC);
-                if (monster.health() < previousHealth) {
-                    monster.recordLastHit(owner, KillSourceKind.TOWER);
+            PlantTerraformTower source = terrainSource(lane, owner, entity);
+            SemionTowerEntity sourceEntity = sourceEntity(lane, source);
+            if (damage > 0.0 && sourceEntity != null) {
+                Tower.DamageResult result = source.damageResolvedTargetResult(
+                        sourceEntity,
+                        entity,
+                        damage,
+                        DamageType.MAGIC
+                );
+                if (result.killed()) {
+                    source.onKill(sourceEntity, entity, damage);
                 }
             }
         }
+    }
+
+    private static PlantTerraformTower terrainSource(PlayerLane lane, UUID owner, SemionMonsterEntity monster) {
+        int x = Mth.floor(monster.getX());
+        int z = Mth.floor(monster.getZ());
+        GridPosition sourcePosition = PlantSoilStates.sourceAtColumn(owner, x, z);
+        if (sourcePosition == null) {
+            return null;
+        }
+        for (Tower tower : lane.towers()) {
+            if (tower instanceof PlantTerraformTower terraformer
+                    && tower.health() > 0.0
+                    && owner.equals(tower.ownerPlayer())
+                    && sourcePosition.equals(tower.originalPosition())) {
+                return terraformer;
+            }
+        }
+        return null;
+    }
+
+    private static SemionTowerEntity sourceEntity(PlayerLane lane, PlantTerraformTower source) {
+        if (source == null || source.entityId().isEmpty()) {
+            return null;
+        }
+        return lane.arenaWorld().getEntity(source.entityId().getAsInt()) instanceof SemionTowerEntity entity
+                && !entity.isRemoved()
+                ? entity
+                : null;
     }
 
     private static double soilValue(PlantSoil soil, String key) {

@@ -40,8 +40,8 @@ import net.minecraft.world.phys.Vec3;
  *
  * <ul>
  *   <li>잔디 - regenerates during combat and grows max health every round.</li>
- *   <li>균사 - makes monsters standing on it take more tower damage, and applies spore poison.</li>
- *   <li>모래 - slows monsters standing on it and reflects melee damage as thorns.</li>
+ *   <li>균사 - makes monsters standing on it weaker and plants consumable mines.</li>
+ *   <li>사암 - slows monster attacks and reflects melee damage as thorns.</li>
  *   <li>회백토 - grants attack range and attack speed.</li>
  * </ul>
  *
@@ -178,7 +178,7 @@ public class PlantCombatTower extends ProductionTower {
     }
 
     // ------------------------------------------------------------------
-    // 균사 - 포자 중독
+    // 균사 - 취약 지형과 소모성 지뢰
     // ------------------------------------------------------------------
 
     /**
@@ -339,7 +339,7 @@ public class PlantCombatTower extends ProductionTower {
     }
 
     // ------------------------------------------------------------------
-    // 지형 펄스 - 잔디 재생 / 균사 취약 / 모래 둔화
+    // 지형 펄스 - 잔디 재생 / 균사 취약 / 사암 공속 약화
     // ------------------------------------------------------------------
 
     @Override
@@ -365,7 +365,7 @@ public class PlantCombatTower extends ProductionTower {
     }
 
     /**
-     * 잔디는 후방 지원 지형입니다. 자기만 회복하지 않고 주변 아군 식물을 함께 회복시키고,
+     * 잔디는 후방 지원 지형입니다. 자기만 회복하지 않고 주변 아군 타워를 함께 회복시키고,
      * 그동안 쌓은 성장 체력의 일부를 최대 체력 버프로 나눠 줍니다.
      */
     private void applyMeadowSupport(PlayerLane lane, SemionTowerEntity source) {
@@ -415,14 +415,14 @@ public class PlantCombatTower extends ProductionTower {
     }
 
     /**
-     * 민들레 계열이 초당 만들어 내는 다이아입니다. {@link PlantSoilEnvironment} 가 1초마다 합산해
-     * 라인 주인에게 지급합니다.
+     * 민들레 계열이 생존한 웨이브를 마칠 때 만드는 다이아입니다.
      */
-    public long diamondPerSecond() {
-        if (standingSoil() != PlantSoil.MEADOW) {
+    public long diamondPerWave() {
+        // 정산 시점에는 클리어한 라인의 타워가 이미 최종 방어 위치로 이동해 있습니다.
+        if (PlantSoilStates.soilAt(ownerPlayer(), originalPosition()) != PlantSoil.MEADOW) {
             return 0L;
         }
-        return Math.max(0L, Math.round(TowerBalanceRuntime.ability(type().id(), "diamondPerSecond", 0.0)));
+        return Math.max(0L, Math.round(TowerBalanceRuntime.ability(type().id(), "diamondPerWave", 0.0)));
     }
 
     /**
@@ -491,9 +491,9 @@ public class PlantCombatTower extends ProductionTower {
             case MEADOW -> {
                 lines.add("성장 최대 체력 +" + percentInteger(growthBonus())
                         + " · " + growthRounds() + "라운드째");
-                long diamondPerSecond = diamondPerSecond();
-                if (diamondPerSecond > 0L) {
-                    lines.add("초당 다이아 +" + diamondPerSecond);
+                long diamondPerWave = diamondPerWave();
+                if (diamondPerWave > 0L) {
+                    lines.add("웨이브 정산 다이아 +" + diamondPerWave);
                 }
                 double novaRadius = TowerBalanceRuntime.ability(type().id(), "novaRadius", 0.0);
                 if (novaRadius > 0.0) {
@@ -501,7 +501,8 @@ public class PlantCombatTower extends ProductionTower {
                             + " · 피해 " + percentInteger(TowerBalanceRuntime.ability(type().id(), "novaDamageRatio", 0.0)));
                 }
             }
-            case MYCELIUM -> lines.add("균사 취약 +" + percentInteger(scaled(soil, "damageTakenBonus")));
+            case MYCELIUM -> lines.add("균사 취약 +"
+                    + percentInteger(soilValue(soil, "environmentDamageTakenBonus")));
             case DESERT -> lines.add("공속 감소 -" + percentInteger(scaled(soil, "attackSpeedReduction"))
                     + ", 가시 반사 " + percentInteger(scaled(soil, "thornReflectRatio"))
                     + " +" + oneDecimal(type().damage()));

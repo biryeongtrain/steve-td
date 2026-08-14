@@ -31,6 +31,7 @@ import kim.biryeong.semiontd.tower.nether.NetherTower;
 import kim.biryeong.semiontd.tower.nether.NetherTowerState;
 import kim.biryeong.semiontd.tower.nether.NetherTowers;
 import kim.biryeong.semiontd.tower.ocean.OceanTowers;
+import kim.biryeong.semiontd.tower.plant.PlantTowers;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
 import kim.biryeong.semiontd.tower.villager.VillagerTowers;
@@ -64,6 +65,7 @@ public final class TowerVfxGameTest {
         assertPalette(OceanTowers.T1_WATER, BuilderPalette.OCEAN);
         assertPalette(AncientCityTowers.CATALYST_T1, BuilderPalette.ANCIENT_CITY);
         assertPalette(AdversaryTowers.FOX, BuilderPalette.ADVERSARY);
+        assertPalette(PlantTowers.T1_MEADOW_TOWER, BuilderPalette.PLANT);
         context.succeed();
     }
 

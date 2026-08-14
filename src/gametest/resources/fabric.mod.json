@@ -12,6 +12,7 @@
       "kim.biryeong.semiontd.gametest.SemionSandboxGameTest",
       "kim.biryeong.semiontd.gametest.SemionTraitSelectionGameTest",
       "kim.biryeong.semiontd.gametest.SemionWaveGameTest",
+      "kim.biryeong.semiontd.gametest.PlantIntegrationGameTest",
       "kim.biryeong.semiontd.tower.adversary.AdversaryIntegrationGameTest",
       "kim.biryeong.semiontd.tower.adversary.AdversaryRivalGameTest",
       "kim.biryeong.semiontd.entity.tower.vfx.TowerVfxGameTest",
