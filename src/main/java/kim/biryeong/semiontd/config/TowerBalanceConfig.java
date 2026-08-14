@@ -22,6 +22,8 @@ import kim.biryeong.semiontd.tower.nether.NetherTower;
 import kim.biryeong.semiontd.tower.nether.NetherTowers;
 import kim.biryeong.semiontd.tower.ocean.OceanTower;
 import kim.biryeong.semiontd.tower.ocean.OceanTowers;
+import kim.biryeong.semiontd.tower.plant.PlantSoil;
+import kim.biryeong.semiontd.tower.plant.PlantTowers;
 import kim.biryeong.semiontd.tower.resonance.ResonanceAspect;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
@@ -184,6 +186,7 @@ public record TowerBalanceConfig(
         addOceanTowers(towers);
         addAncientCityTowers(towers);
         addAdversaryTowers(towers);
+        addPlantTowers(towers);
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
         putUpgrade(upgradeCosts, VillagerTowers.T1_SPLASH_TOWER, "villager_splash_t2", 110);
@@ -256,6 +259,7 @@ public record TowerBalanceConfig(
         putOceanUpgrades(upgradeCosts);
         putAncientCityUpgrades(upgradeCosts);
         putAdversaryUpgrades(upgradeCosts);
+        putPlantUpgrades(upgradeCosts);
 
         LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>();
         putAbilities(abilities, IllagerRaidStates.RAID_CONFIG_ID, Map.of(
@@ -866,6 +870,7 @@ public record TowerBalanceConfig(
         putOceanAbilities(abilities);
         putAncientCityAbilities(abilities);
         putAdversaryAbilities(abilities);
+        putPlantAbilities(abilities);
 
         return new TowerBalanceConfig(
                 towers,
@@ -874,6 +879,202 @@ public record TowerBalanceConfig(
                 IllusionCloneQueueConfig.defaultConfig(),
                 VillagerAdvConfig.defaultConfig()
         );
+    }
+
+    private static void addPlantTowers(LinkedHashMap<String, TowerStats> towers) {
+        PlantTowers.TERRAFORM_TOWERS.forEach(type -> addTower(towers, type));
+        PlantTowers.COMBAT_TOWERS.forEach(type -> addTower(towers, type));
+    }
+
+    private static void putPlantUpgrades(LinkedHashMap<String, Long> upgradeCosts) {
+        // 실서버 기준(시작 다이아 150, 탱커 업그레이드 160/250)에 맞춘 비용입니다.
+        putUpgrade(upgradeCosts, PlantTowers.T1_OAK_SEED_TOWER, PlantTowers.T2_OAK_SEED_TOWER.id(), 85);
+        putUpgrade(upgradeCosts, PlantTowers.T2_OAK_SEED_TOWER, PlantTowers.T3_OAK_SEED_TOWER.id(), 180);
+        putUpgrade(upgradeCosts, PlantTowers.T1_MUSHROOM_SPORE_TOWER, PlantTowers.T2_MUSHROOM_SPORE_TOWER.id(), 85);
+        putUpgrade(upgradeCosts, PlantTowers.T2_MUSHROOM_SPORE_TOWER, PlantTowers.T3_MUSHROOM_SPORE_TOWER.id(), 180);
+        putUpgrade(upgradeCosts, PlantTowers.T1_DRY_GRASS_SEED_TOWER, PlantTowers.T2_DRY_GRASS_SEED_TOWER.id(), 85);
+        putUpgrade(upgradeCosts, PlantTowers.T2_DRY_GRASS_SEED_TOWER, PlantTowers.T3_DRY_GRASS_SEED_TOWER.id(), 180);
+        putUpgrade(upgradeCosts, PlantTowers.T1_SPRUCE_SEED_TOWER, PlantTowers.T2_SPRUCE_SEED_TOWER.id(), 85);
+        putUpgrade(upgradeCosts, PlantTowers.T2_SPRUCE_SEED_TOWER, PlantTowers.T3_SPRUCE_SEED_TOWER.id(), 180);
+
+        putUpgrade(upgradeCosts, PlantTowers.T1_MEADOW_TOWER, PlantTowers.T2_MEADOW_TOWER.id(), 150);
+        putUpgrade(upgradeCosts, PlantTowers.T2_MEADOW_TOWER, PlantTowers.T3_MEADOW_TOWER.id(), 240);
+        putUpgrade(upgradeCosts, PlantTowers.T1_MEADOW_NOVA_TOWER, PlantTowers.T2_MEADOW_NOVA_TOWER.id(), 175);
+        putUpgrade(upgradeCosts, PlantTowers.T2_MEADOW_NOVA_TOWER, PlantTowers.T3_MEADOW_NOVA_TOWER.id(), 275);
+        putUpgrade(upgradeCosts, PlantTowers.T1_MYCELIUM_TOWER, PlantTowers.T2_MYCELIUM_TOWER.id(), 110);
+        putUpgrade(upgradeCosts, PlantTowers.T2_MYCELIUM_TOWER, PlantTowers.T3_MYCELIUM_TOWER.id(), 180);
+        putUpgrade(upgradeCosts, PlantTowers.T1_DESERT_TOWER, PlantTowers.T2_DESERT_TOWER.id(), 160);
+        putUpgrade(upgradeCosts, PlantTowers.T2_DESERT_TOWER, PlantTowers.T3_DESERT_TOWER.id(), 250);
+        putUpgrade(upgradeCosts, PlantTowers.T1_PODZOL_TOWER, PlantTowers.T2_PODZOL_TOWER.id(), 170);
+        putUpgrade(upgradeCosts, PlantTowers.T2_PODZOL_TOWER, PlantTowers.T3_PODZOL_LILAC_TOWER.id(), 285);
+        putUpgrade(upgradeCosts, PlantTowers.T2_PODZOL_TOWER, PlantTowers.T3_PODZOL_ROSE_TOWER.id(), 285);
+        putUpgrade(upgradeCosts, PlantTowers.T2_PODZOL_TOWER, PlantTowers.T3_PODZOL_PITCHER_TOWER.id(), 285);
+    }
+
+    private static void putPlantAbilities(LinkedHashMap<String, Map<String, Double>> abilities) {
+        // 테라포밍 반경. 타워가 자기 칸을 차지하므로 T1 도 최소 3x3 은 열어야 전투 타워를 놓을 수 있습니다.
+        for (TowerType type : PlantTowers.TERRAFORM_TOWERS) {
+            putAbilities(abilities, type.id(), Map.of("terraformRadius", (double) PlantTowers.tierOf(type)));
+        }
+        // 개화: 계열 지형 칸 수에 비례한 피해 증가. 50칸에서 상한(+100%)에 도달합니다.
+        putAbilities(abilities, PlantTowers.GLOBAL_CONFIG_ID, Map.of(
+                // T3 테라포머 하나(7x7=49칸)만으로 상한을 채우지 않도록 칸당 증가폭을 낮춰 뒀습니다.
+                "bloomDamagePerTile", 0.015,
+                "bloomDamageCap", 1.0,
+                "soilPulseIntervalTicks", 20.0,
+                // 지형 효과 범위는 사거리를 따라가되, 사거리를 2배로 늘린 뒤에도 장판이 과해지지 않게 상한을 둡니다.
+                "soilAuraMinRadius", 3.0,
+                "soilAuraMaxRadius", 6.0,
+                "environmentTickIntervalTicks", 20.0
+        ));
+        // 잔디는 후방 지원 지형입니다. 자기 회복이 아니라 주변 아군을 회복시키고 성장 체력을 나눠 줍니다.
+        putAbilities(abilities, PlantSoil.MEADOW.configId(), Map.of(
+                "supportRadius", 6.0,
+                "healPercentPerPulse", 0.02,
+                // 40라운드까지 계속 자라도록 상한을 열어 뒀습니다. T3 기준 42라운드에 상한(+350%).
+                "maxHealthGrowthPerRound", 0.06,
+                "maxHealthGrowthCap", 2.5,
+                // 라인 전체 분배는 잔디 타워 수만큼 합산되므로 비율을 낮추고 합계 상한을 둡니다.
+                "growthShareRatio", 0.3,
+                "growthShareCap", 1.5,
+                "supportDurationTicks", 60.0
+        ));
+        // environment* 값은 타워 없이 지형만으로 걸리는 효과입니다.
+        // 균사 전투 타워는 지뢰라 상주하지 않으므로 딜증(취약)도 지형이 직접 담당합니다.
+        putAbilities(abilities, PlantSoil.MYCELIUM.configId(), Map.of(
+                "environmentWeakness", 0.25,
+                "environmentDamageTakenBonus", 0.6,
+                "environmentMoveSpeedReduction", 0.35,
+                "environmentDurationTicks", 60.0
+        ));
+        putAbilities(abilities, PlantSoil.DESERT.configId(), Map.of(
+                "environmentAttackSpeedReduction", 0.25,
+                "environmentMaxHealthDamagePerSecond", 0.025,
+                "environmentDurationTicks", 60.0,
+                // 타워 오라는 지형 자체 값보다 세게 잡아, 겹치면 타워 쪽이 적용됩니다.
+                "attackSpeedReduction", 0.35,
+                "debuffDurationTicks", 60.0,
+                // 사암 계열은 공격을 안 해 사거리가 0 이라 장판 크기를 지형에서 직접 정합니다.
+                "auraRadius", 5.0,
+                "thornReflectRatio", 0.35
+        ));
+        putAbilities(abilities, PlantSoil.PODZOL.configId(), Map.of(
+                "rangeBonus", 4.0,
+                "attackSpeedBonus", 0.5,
+                // 잔디가 체력을 키우듯 회백토는 피해를 키웁니다. 40라운드까지 계속 오릅니다.
+                "damageGrowthPerRound", 0.05,
+                "damageGrowthCap", 2.0
+        ));
+
+        // 지형 효과는 계열 공용이고, soilPower 가 티어별 배율을 담당합니다.
+        // 민들레 계열은 지원 배율에 더해 초당 다이아를 만들어 냅니다.
+        putAbilities(abilities, PlantTowers.T1_MEADOW_TOWER.id(), Map.of(
+                "soilPower", 0.6,
+                "diamondPerSecond", 1.0
+        ));
+        putAbilities(abilities, PlantTowers.T2_MEADOW_TOWER.id(), Map.of(
+                "soilPower", 1.0,
+                "diamondPerSecond", 2.0
+        ));
+        putAbilities(abilities, PlantTowers.T3_MEADOW_TOWER.id(), Map.of(
+                "soilPower", 1.4,
+                "diamondPerSecond", 3.0
+        ));
+
+        // 튤립 계열은 자기 중심 광역이라 novaRadius/novaDamageRatio 를 씁니다.
+        putAbilities(abilities, PlantTowers.T1_MEADOW_NOVA_TOWER.id(), Map.of(
+                "soilPower", 0.6,
+                "novaRadius", 4.0,
+                "novaDamageRatio", 0.8
+        ));
+        putAbilities(abilities, PlantTowers.T2_MEADOW_NOVA_TOWER.id(), Map.of(
+                "soilPower", 1.0,
+                "novaRadius", 4.5,
+                "novaDamageRatio", 0.9
+        ));
+        putAbilities(abilities, PlantTowers.T3_MEADOW_NOVA_TOWER.id(), Map.of(
+                "soilPower", 1.4,
+                "novaRadius", 5.5,
+                "novaDamageRatio", 1.0
+        ));
+        // 균사 계열은 소모성 지뢰입니다.
+        putPlantMine(abilities, PlantTowers.T1_MYCELIUM_TOWER, 1.5, 3.0, 0.5, 60.0);
+        putPlantMine(abilities, PlantTowers.T2_MYCELIUM_TOWER, 1.8, 3.5, 0.6, 80.0);
+        putPlantMine(abilities, PlantTowers.T3_MYCELIUM_TOWER, 2.0, 4.0, 0.7, 100.0);
+        plantSoilPower(abilities, PlantTowers.T1_DESERT_TOWER, 0.6);
+        plantSoilPower(abilities, PlantTowers.T2_DESERT_TOWER, 1.0);
+        plantSoilPower(abilities, PlantTowers.T3_DESERT_TOWER, 1.4);
+        // 회백토 계열은 치명타를 가집니다. 티어가 오를수록 확률이 높아집니다.
+        putAbilities(abilities, PlantTowers.T1_PODZOL_TOWER.id(), Map.of(
+                "soilPower", 0.6,
+                "critChance", 0.10,
+                "critMultiplier", 2.0
+        ));
+        putAbilities(abilities, PlantTowers.T2_PODZOL_TOWER.id(), Map.of(
+                "soilPower", 1.0,
+                "critChance", 0.25,
+                "critMultiplier", 2.0
+        ));
+
+        // 라일락: 대상 지점에서 130도 부채꼴로 꽃가루를 뿌리고, 잃은 체력에 비례해 더 아픕니다.
+        putAbilities(abilities, PlantTowers.T3_PODZOL_LILAC_TOWER.id(), Map.of(
+                "soilPower", 1.2,
+                "critChance", 0.25,
+                "critMultiplier", 2.0,
+                "splashRadius", 5.0,
+                "splashDamageRatio", 0.45,
+                "splashConeDegrees", 130.0,
+                "splashMissingHealthRatio", 0.06
+        ));
+
+        // 장미 덤불: 치명타 특화. 초치명타는 4배입니다.
+        putAbilities(abilities, PlantTowers.T3_PODZOL_ROSE_TOWER.id(), Map.of(
+                "soilPower", 1.4,
+                "critChance", 0.50,
+                "critMultiplier", 2.0,
+                "superCritChance", 0.10,
+                "superCritMultiplier", 4.0
+        ));
+
+        // 물병 식물: 곡사 포대. 착탄 지점의 적을 강하게 속박합니다.
+        putAbilities(abilities, PlantTowers.T3_PODZOL_PITCHER_TOWER.id(), Map.of(
+                "soilPower", 1.2,
+                "critChance", 0.25,
+                "critMultiplier", 2.0,
+                "splashRadius", 4.0,
+                "splashDamageRatio", 0.7,
+                "snareMoveSpeedReduction", 0.9,
+                // 실효 공격 간격(29틱)보다 짧아야 재장전 사이에 적이 움직일 틈이 생깁니다.
+                "snareDurationTicks", 20.0
+        ));
+    }
+
+    private static void putPlantMine(
+            LinkedHashMap<String, Map<String, Double>> abilities,
+            TowerType type,
+            double triggerRadius,
+            double explosionRadius,
+            double moveSpeedReduction,
+            double disableTicks
+    ) {
+        putAbilities(abilities, type.id(), Map.of(
+                "triggerRadius", triggerRadius,
+                "triggerIntervalTicks", 5.0,
+                "explosionRadius", explosionRadius,
+                "explosionDamageMultiplier", 3.0,
+                // 남은 체력도 함께 터집니다. 온전할수록 세게 터집니다.
+                "explosionHealthRatio", 0.5,
+                "explosionMoveSpeedReduction", moveSpeedReduction,
+                "explosionDisableTicks", disableTicks
+        ));
+    }
+
+    private static void plantSoilPower(
+            LinkedHashMap<String, Map<String, Double>> abilities,
+            TowerType type,
+            double power
+    ) {
+        putAbilities(abilities, type.id(), Map.of("soilPower", power));
     }
 
     public TowerStats statsFor(TowerType defaults) {
