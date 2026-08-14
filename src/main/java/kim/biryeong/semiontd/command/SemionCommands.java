@@ -232,7 +232,13 @@ public final class SemionCommands {
                         .then(literal("list")
                                 .executes(context -> listProductionTowers(context.getSource(), gameManager)))
                         .then(literal("ui")
-                                .executes(context -> towerDialog(context.getSource(), gameManager)))
+                                .executes(context -> towerDialog(context.getSource(), gameManager))
+                                .then(argument("group", StringArgumentType.greedyString())
+                                        .executes(context -> towerDialog(
+                                                context.getSource(),
+                                                gameManager,
+                                                StringArgumentType.getString(context, "group")
+                                        ))))
                         .then(literal("limitup")
                                 .executes(context -> towerLimitUp(context.getSource(), gameManager)))
                         .then(literal("build")
@@ -2357,13 +2363,23 @@ public final class SemionCommands {
 
     private static int towerDialog(CommandSourceStack source, SemionGameManager gameManager)
             throws CommandSyntaxException {
+        return towerDialog(source, gameManager, null);
+    }
+
+    private static int towerDialog(CommandSourceStack source, SemionGameManager gameManager, String group)
+            throws CommandSyntaxException {
         SemionGame game = playableGame(source, gameManager);
         if (game == null) {
             failure(source, "진행 중인 게임 또는 샌드박스가 없습니다. /semiontd sandbox start를 사용하세요.");
             return 0;
         }
-        gameManager.dialogService().showTowerControl(source.getPlayerOrException(), game, gameManager.buildGuideService());
-        success(source, "타워 관리 창을 열었습니다.");
+        gameManager.dialogService().showTowerControl(
+                source.getPlayerOrException(),
+                game,
+                gameManager.buildGuideService(),
+                group
+        );
+        success(source, group == null ? "타워 관리 창을 열었습니다." : group + " 계열 타워를 열었습니다.");
         return 1;
     }
 
