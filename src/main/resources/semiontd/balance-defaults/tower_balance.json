@@ -1559,6 +1559,110 @@
       "damage": 38.0,
       "attackIntervalTicks": 45,
       "aggroPriority": 35
+    },
+    "thunder_rod_t1": {
+      "mineralCost": 30,
+      "maxHealth": 70.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -5
+    },
+    "thunder_rod_copper": {
+      "mineralCost": 75,
+      "maxHealth": 130.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -5
+    },
+    "thunder_rod_storm": {
+      "mineralCost": 75,
+      "maxHealth": 100.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -5
+    },
+    "thunder_armadillo_t1": {
+      "mineralCost": 50,
+      "maxHealth": 250.0,
+      "range": 2.4,
+      "damage": 8.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 55
+    },
+    "thunder_armadillo_insulated": {
+      "mineralCost": 105,
+      "maxHealth": 440.0,
+      "range": 2.6,
+      "damage": 15.0,
+      "attackIntervalTicks": 19,
+      "aggroPriority": 85
+    },
+    "thunder_armadillo_rubber": {
+      "mineralCost": 220,
+      "maxHealth": 900.0,
+      "range": 2.8,
+      "damage": 26.0,
+      "attackIntervalTicks": 17,
+      "aggroPriority": 110
+    },
+    "thunder_armadillo_grounded": {
+      "mineralCost": 100,
+      "maxHealth": 300.0,
+      "range": 2.6,
+      "damage": 15.0,
+      "attackIntervalTicks": 19,
+      "aggroPriority": 85
+    },
+    "thunder_armadillo_earth": {
+      "mineralCost": 215,
+      "maxHealth": 560.0,
+      "range": 2.8,
+      "damage": 26.0,
+      "attackIntervalTicks": 17,
+      "aggroPriority": 110
+    },
+    "thunder_squirrel_t1": {
+      "mineralCost": 50,
+      "maxHealth": 90.0,
+      "range": 6.0,
+      "damage": 15.0,
+      "attackIntervalTicks": 13,
+      "aggroPriority": 0
+    },
+    "thunder_squirrel_t2": {
+      "mineralCost": 130,
+      "maxHealth": 140.0,
+      "range": 6.5,
+      "damage": 33.0,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 0
+    },
+    "thunder_squirrel_t3": {
+      "mineralCost": 280,
+      "maxHealth": 190.0,
+      "range": 7.0,
+      "damage": 58.0,
+      "attackIntervalTicks": 11,
+      "aggroPriority": 0
+    },
+    "thunder_surge_t2": {
+      "mineralCost": 130,
+      "maxHealth": 110.0,
+      "range": 6.0,
+      "damage": 28.0,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 0
+    },
+    "thunder_surge_t3": {
+      "mineralCost": 280,
+      "maxHealth": 150.0,
+      "range": 6.5,
+      "damage": 52.0,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 0
     }
   },
   "upgradeCosts": {
@@ -1705,7 +1809,17 @@
     "t1_podzol_tower->t2_podzol_tower": 170,
     "t2_podzol_tower->t3_podzol_lilac_tower": 285,
     "t2_podzol_tower->t3_podzol_rose_tower": 285,
-    "t2_podzol_tower->t3_podzol_pitcher_tower": 285
+    "t2_podzol_tower->t3_podzol_pitcher_tower": 285,
+    "thunder_rod_t1->thunder_rod_copper": 75,
+    "thunder_rod_t1->thunder_rod_storm": 75,
+    "thunder_armadillo_t1->thunder_armadillo_insulated": 105,
+    "thunder_armadillo_t1->thunder_armadillo_grounded": 100,
+    "thunder_armadillo_insulated->thunder_armadillo_rubber": 220,
+    "thunder_armadillo_grounded->thunder_armadillo_earth": 215,
+    "thunder_squirrel_t1->thunder_squirrel_t2": 130,
+    "thunder_squirrel_t1->thunder_surge_t2": 130,
+    "thunder_squirrel_t2->thunder_squirrel_t3": 280,
+    "thunder_surge_t2->thunder_surge_t3": 280
   },
   "abilities": {
     "villager_splash_t2": {
@@ -3405,6 +3519,68 @@
       "critMultiplier": 2.0,
       "soilPower": 1.2,
       "splashDamageRatio": 0.45
+    },
+    "thunder_global": {
+      "basePower": 80.0,
+      "surplusFloor": 0.5,
+      "surplusDamageBonus": 0.25,
+      "shortageCeiling": 1.3,
+      "shortageDamagePenalty": 0.4,
+      "shortageAttackSpeedPenalty": 0.3,
+      "stunTicks": 30.0,
+      "stunCooldownTicks": 40.0,
+      "markDurationTicks": 100.0,
+      "stormWaveInterval": 3.0
+    },
+    "thunder_rod_t1": {
+      "powerOutput": 26.0
+    },
+    "thunder_rod_copper": {
+      "powerOutput": 75.0
+    },
+    "thunder_rod_storm": {
+      "stormMinOutput": 18.0,
+      "stormMaxOutput": 135.0
+    },
+    "thunder_armadillo_insulated": {
+      "healthToPower": 55.0
+    },
+    "thunder_armadillo_rubber": {
+      "healthToPower": 120.0
+    },
+    "thunder_armadillo_grounded": {
+      "powerDraw": 7.0,
+      "markDamageBonus": 0.35,
+      "markAttackReduction": 0.22,
+      "damageAbsorb": 0.25
+    },
+    "thunder_armadillo_earth": {
+      "powerDraw": 10.0,
+      "markDamageBonus": 0.55,
+      "dischargeDamage": 240.0,
+      "dischargeRadius": 4.5,
+      "markAttackReduction": 0.35,
+      "damageAbsorb": 0.4
+    },
+    "thunder_squirrel_t1": {
+      "powerDraw": 6.0
+    },
+    "thunder_squirrel_t2": {
+      "powerDraw": 14.0
+    },
+    "thunder_squirrel_t3": {
+      "powerDraw": 24.0,
+      "chainTargets": 3.0,
+      "chainRadius": 3.5,
+      "chainDamageRatio": 0.55
+    },
+    "thunder_surge_t2": {
+      "powerDraw": 18.0,
+      "surgeMaxMultiplier": 2.0
+    },
+    "thunder_surge_t3": {
+      "powerDraw": 30.0,
+      "surgeMaxMultiplier": 1.6
     }
   },
   "illusionCloneQueue": {

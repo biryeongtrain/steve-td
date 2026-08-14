@@ -29,3 +29,6 @@ logs/
 
 # Privately licensed resource-pack assets
 /src/main/resources/assets/semion-td/
+
+# Offline fallback jars for the de.tomalbrc artifacts, see the repositories block in build.gradle
+/local-libs/

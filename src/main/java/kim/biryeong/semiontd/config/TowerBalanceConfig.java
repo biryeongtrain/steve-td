@@ -26,6 +26,8 @@ import kim.biryeong.semiontd.tower.plant.PlantSoil;
 import kim.biryeong.semiontd.tower.plant.PlantTowers;
 import kim.biryeong.semiontd.tower.resonance.ResonanceAspect;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
+import kim.biryeong.semiontd.tower.thunder.ThunderBalance;
+import kim.biryeong.semiontd.tower.thunder.ThunderTowers;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
 import kim.biryeong.semiontd.tower.villager.VillagerTowers;
 import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
@@ -187,6 +189,7 @@ public record TowerBalanceConfig(
         addAncientCityTowers(towers);
         addAdversaryTowers(towers);
         addPlantTowers(towers);
+        addThunderTowers(towers);
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
         putUpgrade(upgradeCosts, VillagerTowers.T1_SPLASH_TOWER, "villager_splash_t2", 110);
@@ -260,6 +263,7 @@ public record TowerBalanceConfig(
         putAncientCityUpgrades(upgradeCosts);
         putAdversaryUpgrades(upgradeCosts);
         putPlantUpgrades(upgradeCosts);
+        putThunderUpgrades(upgradeCosts);
 
         LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>();
         putAbilities(abilities, IllagerRaidStates.RAID_CONFIG_ID, Map.of(
@@ -819,6 +823,7 @@ public record TowerBalanceConfig(
         putAncientCityAbilities(abilities);
         putAdversaryAbilities(abilities);
         putPlantAbilities(abilities);
+        putThunderAbilities(abilities);
 
         TowerBalanceConfig fallback = new TowerBalanceConfig(
                 towers,
@@ -1423,6 +1428,86 @@ public record TowerBalanceConfig(
 
     private static void addAdversaryTowers(Map<String, TowerStats> towers) {
         AdversaryTowers.configurableTowers().forEach(type -> addTower(towers, type));
+    }
+
+    private static void addThunderTowers(Map<String, TowerStats> towers) {
+        ThunderTowers.all().forEach(type -> addTower(towers, type));
+    }
+
+    private static void putThunderUpgrades(Map<String, Long> upgrades) {
+        putUpgrade(upgrades, ThunderTowers.ROD_T1, ThunderTowers.ROD_COPPER.id(), 75);
+        putUpgrade(upgrades, ThunderTowers.ROD_T1, ThunderTowers.ROD_STORM.id(), 75);
+        putUpgrade(upgrades, ThunderTowers.ARMADILLO_T1, ThunderTowers.ARMADILLO_INSULATED.id(), 105);
+        putUpgrade(upgrades, ThunderTowers.ARMADILLO_T1, ThunderTowers.ARMADILLO_GROUNDED.id(), 100);
+        putUpgrade(upgrades, ThunderTowers.ARMADILLO_INSULATED, ThunderTowers.ARMADILLO_RUBBER.id(), 220);
+        putUpgrade(upgrades, ThunderTowers.ARMADILLO_GROUNDED, ThunderTowers.ARMADILLO_EARTH.id(), 215);
+        putUpgrade(upgrades, ThunderTowers.SQUIRREL_T1, ThunderTowers.SQUIRREL_T2.id(), 130);
+        putUpgrade(upgrades, ThunderTowers.SQUIRREL_T1, ThunderTowers.SURGE_T2.id(), 130);
+        putUpgrade(upgrades, ThunderTowers.SQUIRREL_T2, ThunderTowers.SQUIRREL_T3.id(), 280);
+        putUpgrade(upgrades, ThunderTowers.SURGE_T2, ThunderTowers.SURGE_T3.id(), 280);
+    }
+
+    private static void putThunderAbilities(Map<String, Map<String, Double>> abilities) {
+        LinkedHashMap<String, Double> global = new LinkedHashMap<>();
+        global.put("basePower", ThunderBalance.BASE_POWER);
+        global.put("surplusFloor", ThunderBalance.SURPLUS_FLOOR);
+        global.put("surplusDamageBonus", ThunderBalance.SURPLUS_DAMAGE_BONUS);
+        global.put("shortageCeiling", ThunderBalance.SHORTAGE_CEILING);
+        global.put("shortageDamagePenalty", ThunderBalance.SHORTAGE_DAMAGE_PENALTY);
+        global.put("shortageAttackSpeedPenalty", ThunderBalance.SHORTAGE_ATTACK_SPEED_PENALTY);
+        global.put("stunTicks", (double) ThunderBalance.STUN_TICKS);
+        global.put("stunCooldownTicks", (double) ThunderBalance.STUN_COOLDOWN_TICKS);
+        global.put("markDurationTicks", (double) ThunderBalance.MARK_DURATION_TICKS);
+        global.put("stormWaveInterval", (double) ThunderBalance.STORM_WAVE_INTERVAL);
+        putAbilities(abilities, ThunderBalance.CONFIG_ID, global);
+
+
+        // 발전: 고정 출력 두 종과, 저점과 고점이 크게 벌어진 변동 출력 한 종.
+        putAbilities(abilities, ThunderTowers.ROD_T1.id(), Map.of("powerOutput", 26.0));
+        putAbilities(abilities, ThunderTowers.ROD_COPPER.id(), Map.of("powerOutput", 75.0));
+        putAbilities(abilities, ThunderTowers.ROD_STORM.id(), Map.of(
+                "stormMinOutput", 18.0,
+                "stormMaxOutput", 135.0
+        ));
+
+        // 절연 루트: 전력을 쓰지 않고, 잃은 체력만큼을 발전으로 돌려준다.
+        putAbilities(abilities, ThunderTowers.ARMADILLO_INSULATED.id(), Map.of("healthToPower", 55.0));
+        putAbilities(abilities, ThunderTowers.ARMADILLO_RUBBER.id(), Map.of("healthToPower", 120.0));
+
+        // 접지 루트: 전력을 쓰는 대신 표식으로 아군 전체의 피해를 키운다.
+        putAbilities(abilities, ThunderTowers.ARMADILLO_GROUNDED.id(), Map.of(
+                "powerDraw", 7.0,
+                "markDamageBonus", 0.35,
+                "markAttackReduction", 0.22,
+                "damageAbsorb", 0.25
+        ));
+        putAbilities(abilities, ThunderTowers.ARMADILLO_EARTH.id(), Map.of(
+                "powerDraw", 10.0,
+                "markDamageBonus", 0.55,
+                "markAttackReduction", 0.35,
+                "damageAbsorb", 0.40,
+                "dischargeDamage", 240.0,
+                "dischargeRadius", 4.5
+        ));
+
+        putAbilities(abilities, ThunderTowers.SQUIRREL_T1.id(), Map.of("powerDraw", 6.0));
+        putAbilities(abilities, ThunderTowers.SQUIRREL_T2.id(), Map.of("powerDraw", 14.0));
+        // 뇌신: 광역 담당. 직선 관통은 실전에서 거의 발동하지 않아 인접 전이로 대체했다.
+        putAbilities(abilities, ThunderTowers.SQUIRREL_T3.id(), Map.of(
+                "powerDraw", 24.0,
+                "chainTargets", 3.0,
+                "chainRadius", 3.5,
+                "chainDamageRatio", 0.55
+        ));
+        // 폭주: 단일 대상 담당. 여유 전력을 그대로 화력으로 환산한다.
+        putAbilities(abilities, ThunderTowers.SURGE_T2.id(), Map.of(
+                "powerDraw", 18.0,
+                "surgeMaxMultiplier", 2.0
+        ));
+        putAbilities(abilities, ThunderTowers.SURGE_T3.id(), Map.of(
+                "powerDraw", 30.0,
+                "surgeMaxMultiplier", 1.6
+        ));
     }
 
     private static void putNetherUpgrades(Map<String, Long> upgrades) {
