@@ -34,12 +34,15 @@ import kim.biryeong.semiontd.test.TestTowerService;
 import kim.biryeong.semiontd.tip.SemionTipService;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerService;
+import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerPlacementPositions;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.tower.adversary.AdversaryVfx;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityVfx;
+import kim.biryeong.semiontd.tower.atlantis.AtlantisTowers;
+import kim.biryeong.semiontd.tower.atlantis.AtlantisVfx;
 import kim.biryeong.semiontd.tower.ocean.OceanVfx;
 import kim.biryeong.semiontd.tower.hero.HeroCompanionRole;
 import kim.biryeong.semiontd.tower.hero.HeroCompanionSkinGui;
@@ -256,7 +259,13 @@ public final class SemionCommands {
                         .then(literal("list")
                                 .executes(context -> listProductionTowers(context.getSource(), gameManager)))
                         .then(literal("ui")
-                                .executes(context -> towerDialog(context.getSource(), gameManager)))
+                                .executes(context -> towerDialog(context.getSource(), gameManager))
+                                .then(argument("group", StringArgumentType.greedyString())
+                                        .executes(context -> towerDialog(
+                                                context.getSource(),
+                                                gameManager,
+                                                StringArgumentType.getString(context, "group")
+                                        ))))
                         .then(literal("limitup")
                                 .executes(context -> towerLimitUp(context.getSource(), gameManager)))
                         .then(literal("build")
@@ -497,7 +506,14 @@ public final class SemionCommands {
                                 .then(literal("mace")
                                         .executes(context -> debugAdversaryVfx(context.getSource(), AdversaryVfx.DebugKind.MACE)))
                                 .then(literal("sculk")
-                                        .executes(context -> debugAdversaryVfx(context.getSource(), AdversaryVfx.DebugKind.SCULK)))))
+                                        .executes(context -> debugAdversaryVfx(context.getSource(), AdversaryVfx.DebugKind.SCULK))))
+                        .then(literal("atlantis")
+                                .then(literal("zone")
+                                        .executes(context -> debugAtlantisVfx(
+                                                context.getSource(), gameManager, AtlantisVfx.DebugKind.ZONE)))
+                                .then(literal("burst")
+                                        .executes(context -> debugAtlantisVfx(
+                                                context.getSource(), gameManager, AtlantisVfx.DebugKind.BURST)))))
                 .then(literal("summonui")
                         .executes(context -> debugSummonDialog(context.getSource(), gameManager, 1))
                         .then(argument("page", IntegerArgumentType.integer(1))
@@ -596,6 +612,34 @@ public final class SemionCommands {
         AdversaryVfx.showDebug(source.getPlayerOrException(), kind);
         success(source, "대적자 " + kind.name().toLowerCase(java.util.Locale.ROOT) + " VFX를 재생했습니다.");
         return 1;
+    }
+
+    private static int debugAtlantisVfx(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            AtlantisVfx.DebugKind kind
+    ) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGame game = playableGame(source, gameManager);
+        PlayerLane lane = game == null ? null : game.playerLane(player.getUUID()).orElse(null);
+        if (lane == null) {
+            failure(source, "아틀란티스 VFX를 재생할 샌드박스 또는 경기 라인이 없습니다.");
+            return 0;
+        }
+        for (Tower tower : lane.towers()) {
+            if (!AtlantisTowers.isAtlantisTower(tower.type()) || !(tower instanceof EntityBackedTower backed)) {
+                continue;
+            }
+            var entity = backed.entityId().isPresent() ? lane.arenaWorld().getEntity(backed.entityId().getAsInt()) : null;
+            if (entity instanceof kim.biryeong.semiontd.entity.tower.SemionTowerEntity towerEntity
+                    && towerEntity.isAlive()) {
+                AtlantisVfx.showDebug(towerEntity, player, kind);
+                success(source, "아틀란티스 " + kind.name().toLowerCase(java.util.Locale.ROOT) + " VFX를 재생했습니다.");
+                return 1;
+            }
+        }
+        failure(source, "살아 있는 아틀란티스 타워가 필요합니다.");
+        return 0;
     }
 
     private static int debugOceanSupplyVfx(CommandSourceStack source) throws CommandSyntaxException {
@@ -2381,13 +2425,23 @@ public final class SemionCommands {
 
     private static int towerDialog(CommandSourceStack source, SemionGameManager gameManager)
             throws CommandSyntaxException {
+        return towerDialog(source, gameManager, null);
+    }
+
+    private static int towerDialog(CommandSourceStack source, SemionGameManager gameManager, String group)
+            throws CommandSyntaxException {
         SemionGame game = playableGame(source, gameManager);
         if (game == null) {
             failure(source, "진행 중인 게임 또는 샌드박스가 없습니다. /semiontd sandbox start를 사용하세요.");
             return 0;
         }
-        gameManager.dialogService().showTowerControl(source.getPlayerOrException(), game, gameManager.buildGuideService());
-        success(source, "타워 관리 창을 열었습니다.");
+        gameManager.dialogService().showTowerControl(
+                source.getPlayerOrException(),
+                game,
+                gameManager.buildGuideService(),
+                group
+        );
+        success(source, group == null ? "타워 관리 창을 열었습니다." : group + " 계열 타워를 열었습니다.");
         return 1;
     }
 

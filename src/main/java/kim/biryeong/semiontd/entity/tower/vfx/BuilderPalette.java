@@ -18,6 +18,7 @@ public enum BuilderPalette {
     OCEAN(0x2196F3, 0x80DEEA, "minecraft:nautilus", "minecraft:splash"),
     ANCIENT_CITY(0x0B4F57, 0x63E6E2, "minecraft:sculk_soul", "minecraft:electric_spark"),
     ADVERSARY(0xF28C28, 0xFFD166, "minecraft:crit", "minecraft:wax_on"),
+    PLANT(0x43A047, 0xF48FB1, "minecraft:spore_blossom_air", "minecraft:cherry_leaves"),
     DEFAULT(0xE0E0E0, 0xFFFFFF, "minecraft:end_rod", "minecraft:crit");
 
     private final DustParticleOptions rayParticle;

@@ -4,6 +4,7 @@ import static kim.biryeong.semiontd.tower.end.EndConfig.Ability.*;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityStates;
@@ -14,6 +15,8 @@ import kim.biryeong.semiontd.tower.adversary.FoxForm;
 import kim.biryeong.semiontd.tower.adversary.FoxRoute;
 import kim.biryeong.semiontd.tower.adversary.RivalKind;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
+import kim.biryeong.semiontd.tower.atlantis.AtlantisBalance;
+import kim.biryeong.semiontd.tower.atlantis.AtlantisTowers;
 import kim.biryeong.semiontd.tower.end.EndTowers;
 import kim.biryeong.semiontd.tower.hero.HeroCompanionRole;
 import kim.biryeong.semiontd.tower.hero.HeroPartyBalance;
@@ -26,6 +29,8 @@ import kim.biryeong.semiontd.tower.nether.NetherTower;
 import kim.biryeong.semiontd.tower.nether.NetherTowers;
 import kim.biryeong.semiontd.tower.ocean.OceanTower;
 import kim.biryeong.semiontd.tower.ocean.OceanTowers;
+import kim.biryeong.semiontd.tower.plant.PlantSoil;
+import kim.biryeong.semiontd.tower.plant.PlantTowers;
 import kim.biryeong.semiontd.tower.resonance.ResonanceAspect;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
@@ -189,6 +194,8 @@ public record TowerBalanceConfig(
         addAncientCityTowers(towers);
         addAdversaryTowers(towers);
         addHeroPartyTowers(towers);
+        addAtlantisTowers(towers);
+        addPlantTowers(towers);
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
         putUpgrade(upgradeCosts, VillagerTowers.T1_SPLASH_TOWER, "villager_splash_t2", 110);
@@ -262,6 +269,8 @@ public record TowerBalanceConfig(
         putAncientCityUpgrades(upgradeCosts);
         putAdversaryUpgrades(upgradeCosts);
         putHeroPartyUpgrades(upgradeCosts);
+        putAtlantisUpgrades(upgradeCosts);
+        putPlantUpgrades(upgradeCosts);
 
         LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>();
         putAbilities(abilities, IllagerRaidStates.RAID_CONFIG_ID, Map.of(
@@ -821,6 +830,8 @@ public record TowerBalanceConfig(
         putAncientCityAbilities(abilities);
         putAdversaryAbilities(abilities);
         putHeroPartyAbilities(abilities);
+        putAtlantisAbilities(abilities);
+        putPlantAbilities(abilities);
 
         TowerBalanceConfig fallback = new TowerBalanceConfig(
                 towers,
@@ -830,6 +841,201 @@ public record TowerBalanceConfig(
                 VillagerAdvConfig.defaultConfig()
         );
         return BundledBalanceDefaults.load("tower_balance.json", TowerBalanceConfig.class, fallback);
+    }
+
+    private static void addPlantTowers(LinkedHashMap<String, TowerStats> towers) {
+        PlantTowers.TERRAFORM_TOWERS.forEach(type -> addTower(towers, type));
+        PlantTowers.COMBAT_TOWERS.forEach(type -> addTower(towers, type));
+    }
+
+    private static void putPlantUpgrades(LinkedHashMap<String, Long> upgradeCosts) {
+        // 실서버 기준(시작 다이아 150, 탱커 업그레이드 160/250)에 맞춘 비용입니다.
+        putUpgrade(upgradeCosts, PlantTowers.T1_OAK_SEED_TOWER, PlantTowers.T2_OAK_SEED_TOWER.id(), 85);
+        putUpgrade(upgradeCosts, PlantTowers.T2_OAK_SEED_TOWER, PlantTowers.T3_OAK_SEED_TOWER.id(), 180);
+        putUpgrade(upgradeCosts, PlantTowers.T1_MUSHROOM_SPORE_TOWER, PlantTowers.T2_MUSHROOM_SPORE_TOWER.id(), 85);
+        putUpgrade(upgradeCosts, PlantTowers.T2_MUSHROOM_SPORE_TOWER, PlantTowers.T3_MUSHROOM_SPORE_TOWER.id(), 180);
+        putUpgrade(upgradeCosts, PlantTowers.T1_DRY_GRASS_SEED_TOWER, PlantTowers.T2_DRY_GRASS_SEED_TOWER.id(), 85);
+        putUpgrade(upgradeCosts, PlantTowers.T2_DRY_GRASS_SEED_TOWER, PlantTowers.T3_DRY_GRASS_SEED_TOWER.id(), 180);
+        putUpgrade(upgradeCosts, PlantTowers.T1_SPRUCE_SEED_TOWER, PlantTowers.T2_SPRUCE_SEED_TOWER.id(), 85);
+        putUpgrade(upgradeCosts, PlantTowers.T2_SPRUCE_SEED_TOWER, PlantTowers.T3_SPRUCE_SEED_TOWER.id(), 180);
+
+        putUpgrade(upgradeCosts, PlantTowers.T1_MEADOW_TOWER, PlantTowers.T2_MEADOW_TOWER.id(), 150);
+        putUpgrade(upgradeCosts, PlantTowers.T2_MEADOW_TOWER, PlantTowers.T3_MEADOW_TOWER.id(), 240);
+        putUpgrade(upgradeCosts, PlantTowers.T1_MEADOW_NOVA_TOWER, PlantTowers.T2_MEADOW_NOVA_TOWER.id(), 175);
+        putUpgrade(upgradeCosts, PlantTowers.T2_MEADOW_NOVA_TOWER, PlantTowers.T3_MEADOW_NOVA_TOWER.id(), 275);
+        putUpgrade(upgradeCosts, PlantTowers.T1_MYCELIUM_TOWER, PlantTowers.T2_MYCELIUM_TOWER.id(), 110);
+        putUpgrade(upgradeCosts, PlantTowers.T2_MYCELIUM_TOWER, PlantTowers.T3_MYCELIUM_TOWER.id(), 180);
+        putUpgrade(upgradeCosts, PlantTowers.T1_DESERT_TOWER, PlantTowers.T2_DESERT_TOWER.id(), 160);
+        putUpgrade(upgradeCosts, PlantTowers.T2_DESERT_TOWER, PlantTowers.T3_DESERT_TOWER.id(), 250);
+        putUpgrade(upgradeCosts, PlantTowers.T1_PODZOL_TOWER, PlantTowers.T2_PODZOL_TOWER.id(), 170);
+        putUpgrade(upgradeCosts, PlantTowers.T2_PODZOL_TOWER, PlantTowers.T3_PODZOL_LILAC_TOWER.id(), 285);
+        putUpgrade(upgradeCosts, PlantTowers.T2_PODZOL_TOWER, PlantTowers.T3_PODZOL_ROSE_TOWER.id(), 285);
+        putUpgrade(upgradeCosts, PlantTowers.T2_PODZOL_TOWER, PlantTowers.T3_PODZOL_PITCHER_TOWER.id(), 285);
+    }
+
+    private static void putPlantAbilities(LinkedHashMap<String, Map<String, Double>> abilities) {
+        // 테라포밍 반경. 타워가 자기 칸을 차지하므로 T1 도 최소 3x3 은 열어야 전투 타워를 놓을 수 있습니다.
+        for (TowerType type : PlantTowers.TERRAFORM_TOWERS) {
+            putAbilities(abilities, type.id(), Map.of("terraformRadius", (double) PlantTowers.tierOf(type)));
+        }
+        // 개화: 계열 지형 칸 수에 비례한 피해 증가. 40칸에서 상한(+40%)에 도달합니다.
+        putAbilities(abilities, PlantTowers.GLOBAL_CONFIG_ID, Map.of(
+                "bloomDamagePerTile", 0.01,
+                "bloomDamageCap", 0.4,
+                "soilPulseIntervalTicks", 20.0,
+                // 지형 효과 범위는 사거리를 따라가되, 사거리를 2배로 늘린 뒤에도 장판이 과해지지 않게 상한을 둡니다.
+                "soilAuraMinRadius", 3.0,
+                "soilAuraMaxRadius", 6.0,
+                "environmentTickIntervalTicks", 20.0
+        ));
+        // 잔디는 후방 지원 지형입니다. 자기 회복이 아니라 주변 아군을 회복시키고 성장 체력을 나눠 줍니다.
+        putAbilities(abilities, PlantSoil.MEADOW.configId(), Map.of(
+                "supportRadius", 6.0,
+                "healPercentPerPulse", 0.015,
+                // T3 기준 40라운드에 자기 최대 체력 +112% 상한에 도달합니다.
+                "maxHealthGrowthPerRound", 0.02,
+                "maxHealthGrowthCap", 0.8,
+                // 라인 전체 분배는 잔디 타워 수만큼 합산되므로 비율을 낮추고 합계 상한을 둡니다.
+                "growthShareRatio", 0.2,
+                "growthShareCap", 0.5,
+                "supportDurationTicks", 60.0
+        ));
+        // environment* 값은 타워 없이 지형만으로 걸리는 효과입니다.
+        // 균사 전투 타워는 지뢰라 상주하지 않으므로 딜증(취약)도 지형이 직접 담당합니다.
+        putAbilities(abilities, PlantSoil.MYCELIUM.configId(), Map.of(
+                "environmentWeakness", 0.15,
+                "environmentDamageTakenBonus", 0.25,
+                "environmentMoveSpeedReduction", 0.25,
+                "environmentDurationTicks", 60.0
+        ));
+        putAbilities(abilities, PlantSoil.DESERT.configId(), Map.of(
+                "environmentAttackSpeedReduction", 0.15,
+                "environmentMaxHealthDamagePerSecond", 0.005,
+                "environmentDurationTicks", 60.0,
+                // 타워 오라는 지형 자체 값보다 세게 잡아, 겹치면 타워 쪽이 적용됩니다.
+                "attackSpeedReduction", 0.25,
+                "debuffDurationTicks", 60.0,
+                // 사암 계열은 공격을 안 해 사거리가 0 이라 장판 크기를 지형에서 직접 정합니다.
+                "auraRadius", 5.0,
+                "thornReflectRatio", 0.25
+        ));
+        putAbilities(abilities, PlantSoil.PODZOL.configId(), Map.of(
+                "rangeBonus", 4.0,
+                "attackSpeedBonus", 0.25,
+                // 잔디가 체력을 키우듯 회백토는 피해를 키웁니다. 40라운드까지 계속 오릅니다.
+                "damageGrowthPerRound", 0.015,
+                "damageGrowthCap", 0.6
+        ));
+
+        // 지형 효과는 계열 공용이고, soilPower 가 티어별 배율을 담당합니다.
+        // 민들레 계열은 지원 배율에 더해 생존한 웨이브 정산 다이아를 만들어 냅니다.
+        putAbilities(abilities, PlantTowers.T1_MEADOW_TOWER.id(), Map.of(
+                "soilPower", 0.6,
+                "diamondPerWave", 3.0
+        ));
+        putAbilities(abilities, PlantTowers.T2_MEADOW_TOWER.id(), Map.of(
+                "soilPower", 1.0,
+                "diamondPerWave", 9.0
+        ));
+        putAbilities(abilities, PlantTowers.T3_MEADOW_TOWER.id(), Map.of(
+                "soilPower", 1.4,
+                "diamondPerWave", 24.0
+        ));
+
+        // 튤립 계열은 자기 중심 광역이라 novaRadius/novaDamageRatio 를 씁니다.
+        putAbilities(abilities, PlantTowers.T1_MEADOW_NOVA_TOWER.id(), Map.of(
+                "soilPower", 0.6,
+                "novaRadius", 4.0,
+                "novaDamageRatio", 0.4
+        ));
+        putAbilities(abilities, PlantTowers.T2_MEADOW_NOVA_TOWER.id(), Map.of(
+                "soilPower", 1.0,
+                "novaRadius", 4.5,
+                "novaDamageRatio", 0.5
+        ));
+        putAbilities(abilities, PlantTowers.T3_MEADOW_NOVA_TOWER.id(), Map.of(
+                "soilPower", 1.4,
+                "novaRadius", 5.5,
+                "novaDamageRatio", 0.6
+        ));
+        // 균사 계열은 소모성 지뢰입니다.
+        putPlantMine(abilities, PlantTowers.T1_MYCELIUM_TOWER, 1.5, 3.0, 0.35, 40.0);
+        putPlantMine(abilities, PlantTowers.T2_MYCELIUM_TOWER, 1.8, 3.5, 0.45, 60.0);
+        putPlantMine(abilities, PlantTowers.T3_MYCELIUM_TOWER, 2.0, 4.0, 0.55, 80.0);
+        plantSoilPower(abilities, PlantTowers.T1_DESERT_TOWER, 0.6);
+        plantSoilPower(abilities, PlantTowers.T2_DESERT_TOWER, 1.0);
+        plantSoilPower(abilities, PlantTowers.T3_DESERT_TOWER, 1.4);
+        // 회백토 계열은 치명타를 가집니다. 티어가 오를수록 확률이 높아집니다.
+        putAbilities(abilities, PlantTowers.T1_PODZOL_TOWER.id(), Map.of(
+                "soilPower", 0.6,
+                "critChance", 0.08,
+                "critMultiplier", 2.0
+        ));
+        putAbilities(abilities, PlantTowers.T2_PODZOL_TOWER.id(), Map.of(
+                "soilPower", 1.0,
+                "critChance", 0.18,
+                "critMultiplier", 2.0
+        ));
+
+        // 라일락: 대상 지점에서 130도 부채꼴로 꽃가루를 뿌리고, 잃은 체력에 비례해 더 아픕니다.
+        putAbilities(abilities, PlantTowers.T3_PODZOL_LILAC_TOWER.id(), Map.of(
+                "soilPower", 1.2,
+                "critChance", 0.20,
+                "critMultiplier", 2.0,
+                "splashRadius", 5.0,
+                "splashDamageRatio", 0.35,
+                "splashConeDegrees", 130.0,
+                "splashMissingHealthRatio", 0.02
+        ));
+
+        // 장미 덤불: 치명타 특화. 초치명타는 3배입니다.
+        putAbilities(abilities, PlantTowers.T3_PODZOL_ROSE_TOWER.id(), Map.of(
+                "soilPower", 1.4,
+                "critChance", 0.35,
+                "critMultiplier", 2.0,
+                "superCritChance", 0.05,
+                "superCritMultiplier", 3.0
+        ));
+
+        // 물병 식물: 곡사 포대. 착탄 지점의 적을 강하게 속박합니다.
+        putAbilities(abilities, PlantTowers.T3_PODZOL_PITCHER_TOWER.id(), Map.of(
+                "soilPower", 1.2,
+                "critChance", 0.20,
+                "critMultiplier", 2.0,
+                "splashRadius", 4.0,
+                "splashDamageRatio", 0.45,
+                "snareMoveSpeedReduction", 0.7,
+                // 실효 공격 간격(35틱)보다 짧아야 재장전 사이에 적이 움직일 틈이 생깁니다.
+                "snareDurationTicks", 20.0
+        ));
+    }
+
+    private static void putPlantMine(
+            LinkedHashMap<String, Map<String, Double>> abilities,
+            TowerType type,
+            double triggerRadius,
+            double explosionRadius,
+            double moveSpeedReduction,
+            double disableTicks
+    ) {
+        putAbilities(abilities, type.id(), Map.of(
+                "triggerRadius", triggerRadius,
+                "triggerIntervalTicks", 5.0,
+                "explosionRadius", explosionRadius,
+                "explosionDamageMultiplier", 2.0,
+                // 남은 체력도 함께 터집니다. 온전할수록 세게 터집니다.
+                "explosionHealthRatio", 0.25,
+                "explosionMoveSpeedReduction", moveSpeedReduction,
+                "explosionDisableTicks", disableTicks
+        ));
+    }
+
+    private static void plantSoilPower(
+            LinkedHashMap<String, Map<String, Double>> abilities,
+            TowerType type,
+            double power
+    ) {
+        putAbilities(abilities, type.id(), Map.of("soilPower", power));
     }
 
     public TowerStats statsFor(TowerType defaults) {
@@ -884,6 +1090,173 @@ public record TowerBalanceConfig(
                 );
             }
         }));
+        validateAtlantisAbilities();
+        validatePlantAbilities();
+    }
+
+    private void validateAtlantisAbilities() {
+        String global = AtlantisBalance.CONFIG_ID;
+        validateRatios(global,
+                "slowPerStack", "maxSlow", "maxZoneAllyDamageReduction", "waterPressureDamageRatio");
+        validatePositive(global,
+                "maxPressureStacks", "stackDurationTicks", "waterPressureDamageCap", "waterPressureRadius",
+                "zoneStackMultiplier", "maxZoneCount", "zoneSpacingBlocks", "zoneScanIntervalTicks",
+                "zoneVfxIntervalTicks");
+        validateIntegral(global, false,
+                "maxPressureStacks", "stackDurationTicks", "maxZoneCount", "zoneScanIntervalTicks",
+                "zoneVfxIntervalTicks");
+        validateIntegral(global, true, "maxChainDepth");
+        validateAtLeast(global, 1.0, "waterPressureDamageCap", "zoneStackMultiplier");
+
+        Double slowPerStack = configuredAbility(global, "slowPerStack");
+        Double maxSlow = configuredAbility(global, "maxSlow");
+        if (slowPerStack != null && maxSlow != null && slowPerStack > maxSlow) {
+            throw new IllegalArgumentException("Atlantis slow per stack must not exceed the maximum slow.");
+        }
+        Double scanTicks = configuredAbility(global, "zoneScanIntervalTicks");
+        Double vfxTicks = configuredAbility(global, "zoneVfxIntervalTicks");
+        if (scanTicks != null && vfxTicks != null && vfxTicks < scanTicks) {
+            throw new IllegalArgumentException("Atlantis zone VFX interval must not be shorter than the scan interval.");
+        }
+
+        Double maxReduction = configuredAbility(global, "maxZoneAllyDamageReduction");
+        for (TowerType type : List.of(
+                AtlantisTowers.TURTLE_T1, AtlantisTowers.TURTLE_T2, AtlantisTowers.TURTLE_T3)) {
+            String id = type.id();
+            validatePositive(id, "zoneCapacity", "zoneRadius");
+            validateIntegral(id, false, "zoneCapacity");
+            validateRatios(id, "zoneAllyDamageReduction");
+            Double reduction = configuredAbility(id, "zoneAllyDamageReduction");
+            if (reduction != null && maxReduction != null && reduction > maxReduction) {
+                throw new IllegalArgumentException("Atlantis turtle reduction exceeds the global cap: " + id);
+            }
+        }
+        for (TowerType type : List.of(
+                AtlantisTowers.DOLPHIN_T1, AtlantisTowers.DOLPHIN_T2, AtlantisTowers.DOLPHIN_T3)) {
+            validatePositive(type.id(), "stackPerHit");
+            validateIntegral(type.id(), false, "stackPerHit");
+            validateRatios(type.id(), "waterPressureRatioBonus");
+        }
+        for (TowerType type : List.of(
+                AtlantisTowers.AXOLOTL_T1, AtlantisTowers.AXOLOTL_T2, AtlantisTowers.AXOLOTL_T3)) {
+            validatePositive(type.id(), "regenAmount", "supportRadius", "supportIntervalTicks");
+            validateIntegral(type.id(), false, "supportIntervalTicks");
+            validateRatios(type.id(), "attackSpeedBonus", "waterPressureRatioBonus");
+        }
+        validatePositive(AtlantisTowers.AXOLOTL_T3.id(), "stackBonus");
+        validateIntegral(AtlantisTowers.AXOLOTL_T3.id(), false, "stackBonus");
+        for (TowerType type : List.of(
+                AtlantisTowers.CONDUIT_T1, AtlantisTowers.CONDUIT_T2, AtlantisTowers.CONDUIT_T3)) {
+            validatePositive(type.id(), "amplifyRadius", "maxStackBonus");
+            validateIntegral(type.id(), false, "maxStackBonus");
+            validateRatios(type.id(), "waterPressureRatioBonus");
+        }
+    }
+
+    private void validatePlantAbilities() {
+        validateRatios(PlantTowers.GLOBAL_CONFIG_ID, "bloomDamagePerTile", "bloomDamageCap");
+        validateRatios(PlantSoil.MEADOW.configId(),
+                "healPercentPerPulse", "growthShareRatio");
+        validateRatios(PlantSoil.MYCELIUM.configId(),
+                "environmentWeakness", "environmentDamageTakenBonus", "environmentMoveSpeedReduction");
+        validateRatios(PlantSoil.DESERT.configId(),
+                "environmentAttackSpeedReduction", "environmentMaxHealthDamagePerSecond",
+                "attackSpeedReduction", "thornReflectRatio");
+        validateRatios(PlantSoil.PODZOL.configId(),
+                "attackSpeedBonus");
+        validateAtLeast(PlantSoil.MEADOW.configId(), 0.0,
+                "maxHealthGrowthPerRound", "maxHealthGrowthCap", "growthShareCap");
+        validateAtLeast(PlantSoil.PODZOL.configId(), 0.0,
+                "damageGrowthPerRound", "damageGrowthCap");
+
+        validatePositive(PlantTowers.GLOBAL_CONFIG_ID,
+                "soilAuraMinRadius", "soilAuraMaxRadius", "soilPulseIntervalTicks", "environmentTickIntervalTicks");
+        validatePositive(PlantSoil.MEADOW.configId(), "supportRadius", "supportDurationTicks");
+        validatePositive(PlantSoil.MYCELIUM.configId(), "environmentDurationTicks");
+        validatePositive(PlantSoil.DESERT.configId(), "environmentDurationTicks", "debuffDurationTicks", "auraRadius");
+        validateIntegral(PlantTowers.GLOBAL_CONFIG_ID, false, "soilPulseIntervalTicks", "environmentTickIntervalTicks");
+        validateIntegral(PlantSoil.MEADOW.configId(), false, "supportDurationTicks");
+        validateIntegral(PlantSoil.MYCELIUM.configId(), false, "environmentDurationTicks");
+        validateIntegral(PlantSoil.DESERT.configId(), false, "environmentDurationTicks", "debuffDurationTicks");
+
+        Double minRadius = configuredAbility(PlantTowers.GLOBAL_CONFIG_ID, "soilAuraMinRadius");
+        Double maxRadius = configuredAbility(PlantTowers.GLOBAL_CONFIG_ID, "soilAuraMaxRadius");
+        if (minRadius != null && maxRadius != null && minRadius > maxRadius) {
+            throw new IllegalArgumentException("Plant soil aura minimum radius must not exceed its maximum radius.");
+        }
+
+        for (TowerType type : PlantTowers.TERRAFORM_TOWERS) {
+            validateIntegral(type.id(), false, "terraformRadius");
+        }
+        for (TowerType type : PlantTowers.COMBAT_TOWERS) {
+            String id = type.id();
+            validateRatios(id,
+                    "novaDamageRatio", "explosionHealthRatio", "explosionMoveSpeedReduction",
+                    "critChance", "superCritChance", "splashDamageRatio",
+                    "splashMissingHealthRatio", "snareMoveSpeedReduction");
+            validatePositive(id,
+                    "soilPower", "novaRadius", "triggerRadius", "explosionRadius",
+                    "explosionDamageMultiplier", "critMultiplier", "superCritMultiplier", "splashRadius");
+            validateIntegral(id, true, "diamondPerWave");
+            validateIntegral(id, false, "triggerIntervalTicks", "explosionDisableTicks", "snareDurationTicks");
+            validateAtLeast(id, 1.0, "explosionDamageMultiplier", "critMultiplier", "superCritMultiplier");
+            validateRange(id, "splashConeDegrees", 0.0, 360.0);
+        }
+    }
+
+    private void validateRatios(String configId, String... keys) {
+        for (String key : keys) {
+            validateRange(configId, key, 0.0, 1.0);
+        }
+    }
+
+    private void validateRange(String configId, String key, double minimum, double maximum) {
+        Double value = configuredAbility(configId, key);
+        if (value != null && (value < minimum || value > maximum)) {
+            throw new IllegalArgumentException(
+                    "Tower balance ability must be between " + minimum + " and " + maximum
+                            + ": " + configId + "." + key
+            );
+        }
+    }
+
+    private void validatePositive(String configId, String... keys) {
+        for (String key : keys) {
+            Double value = configuredAbility(configId, key);
+            if (value != null && value <= 0.0) {
+                throw new IllegalArgumentException(
+                        "Tower balance ability must be positive: " + configId + "." + key
+                );
+            }
+        }
+    }
+
+    private void validateAtLeast(String configId, double minimum, String... keys) {
+        for (String key : keys) {
+            Double value = configuredAbility(configId, key);
+            if (value != null && value < minimum) {
+                throw new IllegalArgumentException(
+                        "Tower balance ability must be at least " + minimum + ": " + configId + "." + key
+                );
+            }
+        }
+    }
+
+    private void validateIntegral(String configId, boolean allowZero, String... keys) {
+        for (String key : keys) {
+            Double value = configuredAbility(configId, key);
+            if (value != null && (value != Math.rint(value) || value < (allowZero ? 0.0 : 1.0))) {
+                throw new IllegalArgumentException(
+                        "Tower balance ability must be " + (allowZero ? "a non-negative" : "a positive")
+                                + " integer: " + configId + "." + key
+                );
+            }
+        }
+    }
+
+    private Double configuredAbility(String configId, String key) {
+        Map<String, Double> values = abilities.get(configId);
+        return values == null ? null : values.get(key);
     }
 
     private static void validateTowerStats(String towerId, TowerStats stats) {
@@ -1123,6 +1496,112 @@ public record TowerBalanceConfig(
 
     private static void addAdversaryTowers(Map<String, TowerStats> towers) {
         AdversaryTowers.configurableTowers().forEach(type -> addTower(towers, type));
+    }
+
+    private static void addAtlantisTowers(Map<String, TowerStats> towers) {
+        AtlantisTowers.all().forEach(type -> addTower(towers, type));
+    }
+
+    private static void putAtlantisUpgrades(Map<String, Long> upgrades) {
+        putUpgrade(upgrades, AtlantisTowers.TURTLE_T1, AtlantisTowers.TURTLE_T2.id(), 115);
+        putUpgrade(upgrades, AtlantisTowers.TURTLE_T2, AtlantisTowers.TURTLE_T3.id(), 240);
+        putUpgrade(upgrades, AtlantisTowers.DOLPHIN_T1, AtlantisTowers.DOLPHIN_T2.id(), 120);
+        putUpgrade(upgrades, AtlantisTowers.DOLPHIN_T2, AtlantisTowers.DOLPHIN_T3.id(), 250);
+        putUpgrade(upgrades, AtlantisTowers.AXOLOTL_T1, AtlantisTowers.AXOLOTL_T2.id(), 95);
+        putUpgrade(upgrades, AtlantisTowers.AXOLOTL_T2, AtlantisTowers.AXOLOTL_T3.id(), 200);
+        putUpgrade(upgrades, AtlantisTowers.CONDUIT_T1, AtlantisTowers.CONDUIT_T2.id(), 105);
+        putUpgrade(upgrades, AtlantisTowers.CONDUIT_T2, AtlantisTowers.CONDUIT_T3.id(), 215);
+    }
+
+    private static void putAtlantisAbilities(Map<String, Map<String, Double>> abilities) {
+        LinkedHashMap<String, Double> global = new LinkedHashMap<>();
+        global.put("maxPressureStacks", (double) AtlantisBalance.MAX_PRESSURE_STACKS);
+        global.put("stackDurationTicks", (double) AtlantisBalance.STACK_DURATION_TICKS);
+        global.put("slowPerStack", AtlantisBalance.SLOW_PER_STACK);
+        global.put("maxSlow", AtlantisBalance.MAX_SLOW);
+        global.put("maxZoneAllyDamageReduction", AtlantisBalance.MAX_ZONE_ALLY_DAMAGE_REDUCTION);
+        global.put("waterPressureDamageRatio", AtlantisBalance.WATER_PRESSURE_DAMAGE_RATIO);
+        global.put("waterPressureDamageCap", AtlantisBalance.WATER_PRESSURE_DAMAGE_CAP);
+        global.put("waterPressureRadius", AtlantisBalance.WATER_PRESSURE_RADIUS);
+        global.put("zoneStackMultiplier", AtlantisBalance.ZONE_STACK_MULTIPLIER);
+        global.put("maxZoneCount", (double) AtlantisBalance.MAX_ZONE_COUNT);
+        global.put("zoneSpacingBlocks", AtlantisBalance.ZONE_SPACING_BLOCKS);
+        global.put("zoneScanIntervalTicks", (double) AtlantisBalance.ZONE_SCAN_INTERVAL_TICKS);
+        global.put("zoneVfxIntervalTicks", (double) AtlantisBalance.ZONE_VFX_INTERVAL_TICKS);
+        global.put("maxChainDepth", (double) AtlantisBalance.MAX_CHAIN_DEPTH);
+        putAbilities(abilities, AtlantisBalance.CONFIG_ID, global);
+
+        putAtlantisTurtle(abilities, AtlantisTowers.TURTLE_T1, 1.0, 3.0, 0.10);
+        putAtlantisTurtle(abilities, AtlantisTowers.TURTLE_T2, 2.0, 3.5, 0.18);
+        putAtlantisTurtle(abilities, AtlantisTowers.TURTLE_T3, 3.0, 4.0, 0.25);
+
+        putAtlantisDolphin(abilities, AtlantisTowers.DOLPHIN_T1, 1.0, 0.03);
+        putAtlantisDolphin(abilities, AtlantisTowers.DOLPHIN_T2, 2.0, 0.05);
+        putAtlantisDolphin(abilities, AtlantisTowers.DOLPHIN_T3, 3.0, 0.08);
+
+        putAbilities(abilities, AtlantisTowers.AXOLOTL_T1.id(), Map.of(
+                "regenAmount", 6.0,
+                "supportRadius", 4.5,
+                "supportIntervalTicks", 40.0
+        ));
+        putAbilities(abilities, AtlantisTowers.AXOLOTL_T2.id(), Map.of(
+                "regenAmount", 16.0,
+                "attackSpeedBonus", 0.08,
+                "supportRadius", 5.5,
+                "supportIntervalTicks", 40.0
+        ));
+        putAbilities(abilities, AtlantisTowers.AXOLOTL_T3.id(), Map.of(
+                "regenAmount", 32.0,
+                "attackSpeedBonus", 0.15,
+                "stackBonus", 1.0,
+                "waterPressureRatioBonus", 0.04,
+                "supportRadius", 6.5,
+                "supportIntervalTicks", 40.0
+        ));
+
+        putAtlantisConduit(abilities, AtlantisTowers.CONDUIT_T1, 6.0, 2.0, 0.02);
+        putAtlantisConduit(abilities, AtlantisTowers.CONDUIT_T2, 7.0, 3.0, 0.04);
+        putAtlantisConduit(abilities, AtlantisTowers.CONDUIT_T3, 8.0, 4.0, 0.06);
+    }
+
+    private static void putAtlantisTurtle(
+            Map<String, Map<String, Double>> abilities,
+            TowerType type,
+            double zoneCapacity,
+            double zoneRadius,
+            double allyDamageReduction
+    ) {
+        putAbilities(abilities, type.id(), Map.of(
+                "zoneCapacity", zoneCapacity,
+                "zoneRadius", zoneRadius,
+                "zoneAllyDamageReduction", allyDamageReduction
+        ));
+    }
+
+    private static void putAtlantisDolphin(
+            Map<String, Map<String, Double>> abilities,
+            TowerType type,
+            double stackPerHit,
+            double waterPressureRatioBonus
+    ) {
+        putAbilities(abilities, type.id(), Map.of(
+                "stackPerHit", stackPerHit,
+                "waterPressureRatioBonus", waterPressureRatioBonus
+        ));
+    }
+
+    private static void putAtlantisConduit(
+            Map<String, Map<String, Double>> abilities,
+            TowerType type,
+            double amplifyRadius,
+            double maxStackBonus,
+            double waterPressureRatioBonus
+    ) {
+        putAbilities(abilities, type.id(), Map.of(
+                "amplifyRadius", amplifyRadius,
+                "maxStackBonus", maxStackBonus,
+                "waterPressureRatioBonus", waterPressureRatioBonus
+        ));
     }
 
     private static void putNetherUpgrades(Map<String, Long> upgrades) {

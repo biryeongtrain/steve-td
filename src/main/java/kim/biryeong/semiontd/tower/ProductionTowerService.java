@@ -18,6 +18,8 @@ import kim.biryeong.semiontd.job.SemionJob;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import kim.biryeong.semiontd.tower.ocean.OceanTowers;
 import kim.biryeong.semiontd.tower.ocean.OceanWaterTower;
+import kim.biryeong.semiontd.tower.plant.PlantSoilStates;
+import kim.biryeong.semiontd.tower.plant.PlantTowers;
 import net.minecraft.core.BlockPos;
 
 public final class ProductionTowerService {
@@ -47,6 +49,10 @@ public final class ProductionTowerService {
 
         TowerType towerType = entry.get().type();
         if (OceanTowers.isWaterTower(towerType) && !OceanWaterTower.canPlaceAt(laneContext.lane, position)) {
+            return TowerPlacementResult.OCCUPIED;
+        }
+        if (PlantTowers.isPlantTower(towerType)
+                && !PlantSoilStates.canPlantAt(laneContext.player.uuid(), position, towerType)) {
             return TowerPlacementResult.OCCUPIED;
         }
         if (!canUseTower(game, laneContext.player, towerType)) {

@@ -1527,6 +1527,334 @@
       "damage": 14.0,
       "attackIntervalTicks": 16,
       "aggroPriority": -5
+    },
+    "atlantis_turtle_t1": {
+      "mineralCost": 55,
+      "maxHealth": 190.0,
+      "range": 2.6,
+      "damage": 5.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 55
+    },
+    "atlantis_turtle_t2": {
+      "mineralCost": 115,
+      "maxHealth": 320.0,
+      "range": 2.8,
+      "damage": 9.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": 85
+    },
+    "atlantis_turtle_t3": {
+      "mineralCost": 240,
+      "maxHealth": 620.0,
+      "range": 3.0,
+      "damage": 14.0,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 115
+    },
+    "atlantis_dolphin_t1": {
+      "mineralCost": 55,
+      "maxHealth": 80.0,
+      "range": 6.5,
+      "damage": 13.0,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 0
+    },
+    "atlantis_dolphin_t2": {
+      "mineralCost": 120,
+      "maxHealth": 130.0,
+      "range": 7.5,
+      "damage": 24.0,
+      "attackIntervalTicks": 14,
+      "aggroPriority": 0
+    },
+    "atlantis_dolphin_t3": {
+      "mineralCost": 250,
+      "maxHealth": 190.0,
+      "range": 8.5,
+      "damage": 40.0,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 0
+    },
+    "atlantis_axolotl_t1": {
+      "mineralCost": 45,
+      "maxHealth": 70.0,
+      "range": 7.0,
+      "damage": 6.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -10
+    },
+    "atlantis_axolotl_t2": {
+      "mineralCost": 95,
+      "maxHealth": 110.0,
+      "range": 8.0,
+      "damage": 10.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": -10
+    },
+    "atlantis_axolotl_t3": {
+      "mineralCost": 200,
+      "maxHealth": 150.0,
+      "range": 9.0,
+      "damage": 16.0,
+      "attackIntervalTicks": 16,
+      "aggroPriority": -10
+    },
+    "atlantis_conduit_t1": {
+      "mineralCost": 50,
+      "maxHealth": 90.0,
+      "range": 5.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -5
+    },
+    "atlantis_conduit_t2": {
+      "mineralCost": 105,
+      "maxHealth": 130.0,
+      "range": 5.5,
+      "damage": 0.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": -5
+    },
+    "atlantis_conduit_t3": {
+      "mineralCost": 215,
+      "maxHealth": 200.0,
+      "range": 6.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 16,
+      "aggroPriority": -5
+    },
+    "t1_oak_seed_tower": {
+      "mineralCost": 25,
+      "maxHealth": 120.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 12
+    },
+    "t2_oak_seed_tower": {
+      "mineralCost": 85,
+      "maxHealth": 260.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 12
+    },
+    "t3_oak_seed_tower": {
+      "mineralCost": 180,
+      "maxHealth": 480.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 12
+    },
+    "t1_mushroom_spore_tower": {
+      "mineralCost": 25,
+      "maxHealth": 120.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 12
+    },
+    "t2_mushroom_spore_tower": {
+      "mineralCost": 85,
+      "maxHealth": 260.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 12
+    },
+    "t3_mushroom_spore_tower": {
+      "mineralCost": 180,
+      "maxHealth": 480.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 12
+    },
+    "t1_dry_grass_seed_tower": {
+      "mineralCost": 25,
+      "maxHealth": 120.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 12
+    },
+    "t2_dry_grass_seed_tower": {
+      "mineralCost": 85,
+      "maxHealth": 260.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 12
+    },
+    "t3_dry_grass_seed_tower": {
+      "mineralCost": 180,
+      "maxHealth": 480.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 12
+    },
+    "t1_spruce_seed_tower": {
+      "mineralCost": 25,
+      "maxHealth": 120.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 12
+    },
+    "t2_spruce_seed_tower": {
+      "mineralCost": 85,
+      "maxHealth": 260.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 12
+    },
+    "t3_spruce_seed_tower": {
+      "mineralCost": 180,
+      "maxHealth": 480.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 12
+    },
+    "t1_meadow_tower": {
+      "mineralCost": 50,
+      "maxHealth": 200.0,
+      "range": 8.0,
+      "damage": 4.0,
+      "attackIntervalTicks": 28,
+      "aggroPriority": 30
+    },
+    "t2_meadow_tower": {
+      "mineralCost": 150,
+      "maxHealth": 380.0,
+      "range": 10.0,
+      "damage": 8.0,
+      "attackIntervalTicks": 28,
+      "aggroPriority": 35
+    },
+    "t3_meadow_tower": {
+      "mineralCost": 240,
+      "maxHealth": 700.0,
+      "range": 12.0,
+      "damage": 14.0,
+      "attackIntervalTicks": 28,
+      "aggroPriority": 40
+    },
+    "t1_meadow_nova_tower": {
+      "mineralCost": 65,
+      "maxHealth": 220.0,
+      "range": 5.0,
+      "damage": 7.0,
+      "attackIntervalTicks": 26,
+      "aggroPriority": 45
+    },
+    "t2_meadow_nova_tower": {
+      "mineralCost": 175,
+      "maxHealth": 440.0,
+      "range": 5.0,
+      "damage": 14.0,
+      "attackIntervalTicks": 24,
+      "aggroPriority": 52
+    },
+    "t3_meadow_nova_tower": {
+      "mineralCost": 275,
+      "maxHealth": 780.0,
+      "range": 6.0,
+      "damage": 24.0,
+      "attackIntervalTicks": 22,
+      "aggroPriority": 60
+    },
+    "t1_mycelium_tower": {
+      "mineralCost": 40,
+      "maxHealth": 110.0,
+      "range": 0.0,
+      "damage": 30.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 35
+    },
+    "t2_mycelium_tower": {
+      "mineralCost": 110,
+      "maxHealth": 200.0,
+      "range": 0.0,
+      "damage": 40.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 40
+    },
+    "t3_mycelium_tower": {
+      "mineralCost": 180,
+      "maxHealth": 340.0,
+      "range": 0.0,
+      "damage": 50.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 45
+    },
+    "t1_desert_tower": {
+      "mineralCost": 50,
+      "maxHealth": 190.0,
+      "range": 0.0,
+      "damage": 8.0,
+      "attackIntervalTicks": 22,
+      "aggroPriority": 58
+    },
+    "t2_desert_tower": {
+      "mineralCost": 160,
+      "maxHealth": 400.0,
+      "range": 0.0,
+      "damage": 15.0,
+      "attackIntervalTicks": 22,
+      "aggroPriority": 66
+    },
+    "t3_desert_tower": {
+      "mineralCost": 250,
+      "maxHealth": 700.0,
+      "range": 0.0,
+      "damage": 24.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 74
+    },
+    "t1_podzol_tower": {
+      "mineralCost": 60,
+      "maxHealth": 80.0,
+      "range": 12.0,
+      "damage": 9.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 25
+    },
+    "t2_podzol_tower": {
+      "mineralCost": 170,
+      "maxHealth": 130.0,
+      "range": 14.0,
+      "damage": 22.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": 30
+    },
+    "t3_podzol_lilac_tower": {
+      "mineralCost": 285,
+      "maxHealth": 210.0,
+      "range": 14.0,
+      "damage": 26.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 35
+    },
+    "t3_podzol_rose_tower": {
+      "mineralCost": 285,
+      "maxHealth": 210.0,
+      "range": 16.0,
+      "damage": 46.0,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 35
+    },
+    "t3_podzol_pitcher_tower": {
+      "mineralCost": 285,
+      "maxHealth": 210.0,
+      "range": 30.0,
+      "damage": 38.0,
+      "attackIntervalTicks": 45,
+      "aggroPriority": 35
     }
   },
   "upgradeCosts": {
@@ -1671,7 +1999,35 @@
     "hero_party_rogue_3->hero_party_rogue_4": 185,
     "hero_party_bard_1->hero_party_bard_2": 90,
     "hero_party_bard_2->hero_party_bard_3": 140,
-    "hero_party_bard_3->hero_party_bard_4": 220
+    "hero_party_bard_3->hero_party_bard_4": 220,
+    "atlantis_turtle_t1->atlantis_turtle_t2": 115,
+    "atlantis_turtle_t2->atlantis_turtle_t3": 240,
+    "atlantis_dolphin_t1->atlantis_dolphin_t2": 120,
+    "atlantis_dolphin_t2->atlantis_dolphin_t3": 250,
+    "atlantis_axolotl_t1->atlantis_axolotl_t2": 95,
+    "atlantis_axolotl_t2->atlantis_axolotl_t3": 200,
+    "atlantis_conduit_t1->atlantis_conduit_t2": 105,
+    "atlantis_conduit_t2->atlantis_conduit_t3": 215,
+    "t1_oak_seed_tower->t2_oak_seed_tower": 85,
+    "t2_oak_seed_tower->t3_oak_seed_tower": 180,
+    "t1_mushroom_spore_tower->t2_mushroom_spore_tower": 85,
+    "t2_mushroom_spore_tower->t3_mushroom_spore_tower": 180,
+    "t1_dry_grass_seed_tower->t2_dry_grass_seed_tower": 85,
+    "t2_dry_grass_seed_tower->t3_dry_grass_seed_tower": 180,
+    "t1_spruce_seed_tower->t2_spruce_seed_tower": 85,
+    "t2_spruce_seed_tower->t3_spruce_seed_tower": 180,
+    "t1_meadow_tower->t2_meadow_tower": 150,
+    "t2_meadow_tower->t3_meadow_tower": 240,
+    "t1_meadow_nova_tower->t2_meadow_nova_tower": 175,
+    "t2_meadow_nova_tower->t3_meadow_nova_tower": 275,
+    "t1_mycelium_tower->t2_mycelium_tower": 110,
+    "t2_mycelium_tower->t3_mycelium_tower": 180,
+    "t1_desert_tower->t2_desert_tower": 160,
+    "t2_desert_tower->t3_desert_tower": 250,
+    "t1_podzol_tower->t2_podzol_tower": 170,
+    "t2_podzol_tower->t3_podzol_lilac_tower": 285,
+    "t2_podzol_tower->t3_podzol_rose_tower": 285,
+    "t2_podzol_tower->t3_podzol_pitcher_tower": 285
   },
   "abilities": {
     "villager_splash_t2": {
@@ -3385,6 +3741,255 @@
       "attackSpeedBonus": 0.18,
       "damageBonus": 0.1,
       "auraRadius": 12.0
+    },
+    "atlantis_global": {
+      "maxPressureStacks": 10.0,
+      "stackDurationTicks": 100.0,
+      "slowPerStack": 0.05,
+      "maxSlow": 0.45,
+      "maxZoneAllyDamageReduction": 0.35,
+      "waterPressureDamageRatio": 0.16,
+      "waterPressureDamageCap": 2.5,
+      "waterPressureRadius": 3.0,
+      "zoneStackMultiplier": 2.0,
+      "maxZoneCount": 6.0,
+      "zoneSpacingBlocks": 4.0,
+      "zoneScanIntervalTicks": 10.0,
+      "zoneVfxIntervalTicks": 40.0,
+      "maxChainDepth": 3.0
+    },
+    "atlantis_turtle_t1": {
+      "zoneCapacity": 1.0,
+      "zoneRadius": 3.0,
+      "zoneAllyDamageReduction": 0.1
+    },
+    "atlantis_turtle_t2": {
+      "zoneCapacity": 2.0,
+      "zoneRadius": 3.5,
+      "zoneAllyDamageReduction": 0.18
+    },
+    "atlantis_turtle_t3": {
+      "zoneCapacity": 3.0,
+      "zoneRadius": 4.0,
+      "zoneAllyDamageReduction": 0.25
+    },
+    "atlantis_dolphin_t1": {
+      "stackPerHit": 1.0,
+      "waterPressureRatioBonus": 0.03
+    },
+    "atlantis_dolphin_t2": {
+      "stackPerHit": 2.0,
+      "waterPressureRatioBonus": 0.05
+    },
+    "atlantis_dolphin_t3": {
+      "stackPerHit": 3.0,
+      "waterPressureRatioBonus": 0.08
+    },
+    "atlantis_axolotl_t1": {
+      "regenAmount": 6.0,
+      "supportRadius": 4.5,
+      "supportIntervalTicks": 40.0
+    },
+    "atlantis_axolotl_t2": {
+      "regenAmount": 16.0,
+      "attackSpeedBonus": 0.08,
+      "supportRadius": 5.5,
+      "supportIntervalTicks": 40.0
+    },
+    "atlantis_axolotl_t3": {
+      "regenAmount": 32.0,
+      "attackSpeedBonus": 0.15,
+      "stackBonus": 1.0,
+      "waterPressureRatioBonus": 0.04,
+      "supportRadius": 6.5,
+      "supportIntervalTicks": 40.0
+    },
+    "atlantis_conduit_t1": {
+      "amplifyRadius": 6.0,
+      "maxStackBonus": 2.0,
+      "waterPressureRatioBonus": 0.02
+    },
+    "atlantis_conduit_t2": {
+      "amplifyRadius": 7.0,
+      "maxStackBonus": 3.0,
+      "waterPressureRatioBonus": 0.04
+    },
+    "atlantis_conduit_t3": {
+      "amplifyRadius": 8.0,
+      "maxStackBonus": 4.0,
+      "waterPressureRatioBonus": 0.06
+    },
+    "t1_oak_seed_tower": {
+      "terraformRadius": 1.0
+    },
+    "t2_oak_seed_tower": {
+      "terraformRadius": 2.0
+    },
+    "t3_oak_seed_tower": {
+      "terraformRadius": 3.0
+    },
+    "t1_mushroom_spore_tower": {
+      "terraformRadius": 1.0
+    },
+    "t2_mushroom_spore_tower": {
+      "terraformRadius": 2.0
+    },
+    "t3_mushroom_spore_tower": {
+      "terraformRadius": 3.0
+    },
+    "t1_dry_grass_seed_tower": {
+      "terraformRadius": 1.0
+    },
+    "t2_dry_grass_seed_tower": {
+      "terraformRadius": 2.0
+    },
+    "t3_dry_grass_seed_tower": {
+      "terraformRadius": 3.0
+    },
+    "t1_spruce_seed_tower": {
+      "terraformRadius": 1.0
+    },
+    "t2_spruce_seed_tower": {
+      "terraformRadius": 2.0
+    },
+    "t3_spruce_seed_tower": {
+      "terraformRadius": 3.0
+    },
+    "plant_global": {
+      "bloomDamageCap": 0.4,
+      "soilAuraMaxRadius": 6.0,
+      "soilAuraMinRadius": 3.0,
+      "environmentTickIntervalTicks": 20.0,
+      "bloomDamagePerTile": 0.01,
+      "soilPulseIntervalTicks": 20.0
+    },
+    "plant_soil_meadow": {
+      "healPercentPerPulse": 0.015,
+      "maxHealthGrowthCap": 0.8,
+      "growthShareRatio": 0.2,
+      "growthShareCap": 0.5,
+      "supportDurationTicks": 60.0,
+      "maxHealthGrowthPerRound": 0.02,
+      "supportRadius": 6.0
+    },
+    "plant_soil_mycelium": {
+      "environmentMoveSpeedReduction": 0.25,
+      "environmentWeakness": 0.15,
+      "environmentDamageTakenBonus": 0.25,
+      "environmentDurationTicks": 60.0
+    },
+    "plant_soil_desert": {
+      "environmentMaxHealthDamagePerSecond": 0.005,
+      "environmentAttackSpeedReduction": 0.15,
+      "auraRadius": 5.0,
+      "environmentDurationTicks": 60.0,
+      "debuffDurationTicks": 60.0,
+      "attackSpeedReduction": 0.25,
+      "thornReflectRatio": 0.25
+    },
+    "plant_soil_podzol": {
+      "attackSpeedBonus": 0.25,
+      "rangeBonus": 4.0,
+      "damageGrowthCap": 0.6,
+      "damageGrowthPerRound": 0.015
+    },
+    "t1_meadow_tower": {
+      "diamondPerWave": 3.0,
+      "soilPower": 0.6
+    },
+    "t2_meadow_tower": {
+      "diamondPerWave": 9.0,
+      "soilPower": 1.0
+    },
+    "t3_meadow_tower": {
+      "diamondPerWave": 24.0,
+      "soilPower": 1.4
+    },
+    "t1_meadow_nova_tower": {
+      "novaRadius": 4.0,
+      "soilPower": 0.6,
+      "novaDamageRatio": 0.4
+    },
+    "t2_meadow_nova_tower": {
+      "novaRadius": 4.5,
+      "soilPower": 1.0,
+      "novaDamageRatio": 0.5
+    },
+    "t3_meadow_nova_tower": {
+      "novaRadius": 5.5,
+      "soilPower": 1.4,
+      "novaDamageRatio": 0.6
+    },
+    "t1_mycelium_tower": {
+      "explosionHealthRatio": 0.25,
+      "explosionDamageMultiplier": 2.0,
+      "triggerRadius": 1.5,
+      "explosionRadius": 3.0,
+      "explosionMoveSpeedReduction": 0.35,
+      "triggerIntervalTicks": 5.0,
+      "explosionDisableTicks": 40.0
+    },
+    "t2_mycelium_tower": {
+      "explosionHealthRatio": 0.25,
+      "explosionDamageMultiplier": 2.0,
+      "triggerRadius": 1.8,
+      "explosionRadius": 3.5,
+      "explosionMoveSpeedReduction": 0.45,
+      "triggerIntervalTicks": 5.0,
+      "explosionDisableTicks": 60.0
+    },
+    "t3_mycelium_tower": {
+      "explosionHealthRatio": 0.25,
+      "explosionDamageMultiplier": 2.0,
+      "triggerRadius": 2.0,
+      "explosionRadius": 4.0,
+      "explosionMoveSpeedReduction": 0.55,
+      "triggerIntervalTicks": 5.0,
+      "explosionDisableTicks": 80.0
+    },
+    "t1_desert_tower": {
+      "soilPower": 0.6
+    },
+    "t2_desert_tower": {
+      "soilPower": 1.0
+    },
+    "t3_desert_tower": {
+      "soilPower": 1.4
+    },
+    "t1_podzol_tower": {
+      "soilPower": 0.6,
+      "critMultiplier": 2.0,
+      "critChance": 0.08
+    },
+    "t2_podzol_tower": {
+      "soilPower": 1.0,
+      "critMultiplier": 2.0,
+      "critChance": 0.18
+    },
+    "t3_podzol_lilac_tower": {
+      "critChance": 0.2,
+      "splashRadius": 5.0,
+      "splashConeDegrees": 130.0,
+      "critMultiplier": 2.0,
+      "soilPower": 1.2,
+      "splashDamageRatio": 0.35,
+      "splashMissingHealthRatio": 0.02
+    },
+    "t3_podzol_rose_tower": {
+      "superCritChance": 0.05,
+      "critChance": 0.35,
+      "superCritMultiplier": 3.0,
+      "soilPower": 1.4,
+      "critMultiplier": 2.0
+    },
+    "t3_podzol_pitcher_tower": {
+      "critChance": 0.2,
+      "snareMoveSpeedReduction": 0.7,
+      "splashRadius": 4.0,
+      "snareDurationTicks": 20.0,
+      "critMultiplier": 2.0,
+      "soilPower": 1.2,
+      "splashDamageRatio": 0.45
     }
   },
   "illusionCloneQueue": {
@@ -3434,7 +4039,7 @@
         "reputationDamagePerPoint": 0.005,
         "reputationAttackSpeedPerPoint": 0.001,
         "reputationHealthPerPoint": 0.0075,
-        "reputationDamageReductionPerPoint": 5.0E-4,
+        "reputationDamageReductionPerPoint": 0.0005,
         "rangedDamagePerExperience": 0.015,
         "rangedAttackSpeedPerExperience": 0.02,
         "reputationDamagePerPointInterval": 1.0,
@@ -3450,7 +4055,7 @@
         "reputationHealthPerPoint": 0.01,
         "reputationDamageReductionPerPoint": 0.0025,
         "rangedDamagePerExperience": 0.02,
-        "rangedAttackSpeedPerExperience": 7.5E-4,
+        "rangedAttackSpeedPerExperience": 0.00075,
         "reputationDamagePerPointInterval": 1.0,
         "reputationAttackSpeedPerPointInterval": 1.0,
         "reputationHealthPerPointInterval": 1.0,
@@ -3476,7 +4081,7 @@
         "reputationDamagePerPoint": 0.005,
         "reputationAttackSpeedPerPoint": 0.001,
         "reputationHealthPerPoint": 0.0015,
-        "reputationDamageReductionPerPoint": 5.0E-4,
+        "reputationDamageReductionPerPoint": 0.0005,
         "golemHealthPerExperience": 0.0075,
         "golemDamageReductionPerExperience": 0.001,
         "reputationDamagePerPointInterval": 1.0,
@@ -3490,8 +4095,8 @@
         "reputationDamagePerPoint": 0.005,
         "reputationAttackSpeedPerPoint": 0.001,
         "reputationHealthPerPoint": 0.00175,
-        "reputationDamageReductionPerPoint": 7.5E-4,
-        "golemHealthPerExperience": 7.5E-4,
+        "reputationDamageReductionPerPoint": 0.00075,
+        "golemHealthPerExperience": 0.00075,
         "golemDamageReductionPerExperience": 0.001,
         "reputationDamagePerPointInterval": 1.0,
         "reputationAttackSpeedPerPointInterval": 1.0,
