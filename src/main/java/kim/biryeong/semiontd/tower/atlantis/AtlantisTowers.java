@@ -34,17 +34,17 @@ public final class AtlantisTowers {
     );
 
     public static final TowerType DOLPHIN_T1 = tower(
-            "atlantis_dolphin_t1", "돌고래 타워", 55, 80.0, 6.5, 14.0, 15, 0,
+            "atlantis_dolphin_t1", "돌고래 타워", 55, 80.0, 6.5, 13.0, 16, 0,
             EntityVisual.builder(byId(EntityType.DOLPHIN)).scale(0.7).build(),
             dolphinDescription("기본")
     );
     public static final TowerType DOLPHIN_T2 = tower(
-            "atlantis_dolphin_t2", "심해 돌고래 타워", 120, 130.0, 7.5, 25.0, 13, 0,
+            "atlantis_dolphin_t2", "심해 돌고래 타워", 120, 130.0, 7.5, 24.0, 14, 0,
             EntityVisual.builder(byId(EntityType.DOLPHIN)).scale(0.85).build(),
             dolphinDescription("중급")
     );
     public static final TowerType DOLPHIN_T3 = tower(
-            "atlantis_dolphin_t3", "해저 돌고래 타워", 250, 190.0, 8.5, 44.0, 11, 0,
+            "atlantis_dolphin_t3", "해저 돌고래 타워", 250, 190.0, 8.5, 40.0, 12, 0,
             EntityVisual.builder(byId(EntityType.DOLPHIN)).scale(1.0).build(),
             dolphinDescription("최종")
     );

@@ -12,31 +12,32 @@ import kim.biryeong.semiontd.game.GridPosition;
 /**
  * Tracks pressure stacks carried by individual monsters.
  *
- * <p>Stacks are keyed by monster UUID rather than stored on the monster so that the owning tower
- * can be replaced by an upgrade without losing accumulated pressure, and so that a monster leaving
- * the lane cannot strand state on an entity the family no longer sees.
+ * <p>Stacks are keyed by owner and monster UUID rather than stored on the monster so that the
+ * owning tower can be replaced by an upgrade without losing accumulated pressure, while different
+ * players can build pressure on the same final-defense target independently.
  *
  * <p>Each entry remembers which dolphin owns it, by the tower's original grid position rather than
  * a tower instance: upgrades replace the runtime object but keep that position, and the owning
  * dolphin is the one that releases the pressure when it lapses.
  */
 public final class AtlantisPressure {
-    private static final Map<UUID, Entry> ENTRIES = new HashMap<>();
+    private static final Map<Key, Entry> ENTRIES = new HashMap<>();
 
     private AtlantisPressure() {
     }
 
-    /** Pressure carried by one monster, attributed to the player whose dolphins applied it. */
+    private record Key(UUID ownerPlayer, UUID monsterId) {
+    }
+
+    /** Pressure carried by one monster for one player. */
     private static final class Entry {
-        private final UUID ownerPlayer;
         private GridPosition sourceTower;
         private int stacks;
         private int remainingTicks;
         private double sourceDamage;
         private boolean insideZone;
 
-        private Entry(UUID ownerPlayer, GridPosition sourceTower) {
-            this.ownerPlayer = ownerPlayer;
+        private Entry(GridPosition sourceTower) {
             this.sourceTower = sourceTower;
         }
     }
@@ -47,23 +48,23 @@ public final class AtlantisPressure {
 
     public static void clearPlayer(UUID playerId) {
         if (playerId != null) {
-            ENTRIES.values().removeIf(entry -> playerId.equals(entry.ownerPlayer));
+            ENTRIES.keySet().removeIf(key -> playerId.equals(key.ownerPlayer()));
         }
     }
 
-    public static int stacks(UUID monsterId) {
-        Entry entry = ENTRIES.get(monsterId);
+    public static int stacks(UUID ownerPlayer, UUID monsterId) {
+        Entry entry = entry(ownerPlayer, monsterId);
         return entry == null ? 0 : entry.stacks;
     }
 
-    public static boolean insideZone(UUID monsterId) {
-        Entry entry = ENTRIES.get(monsterId);
+    public static boolean insideZone(UUID ownerPlayer, UUID monsterId) {
+        Entry entry = entry(ownerPlayer, monsterId);
         return entry != null && entry.insideZone;
     }
 
-    public static UUID ownerOf(UUID monsterId) {
-        Entry entry = ENTRIES.get(monsterId);
-        return entry == null ? null : entry.ownerPlayer;
+    public static GridPosition sourceTower(UUID ownerPlayer, UUID monsterId) {
+        Entry entry = entry(ownerPlayer, monsterId);
+        return entry == null ? null : entry.sourceTower;
     }
 
     /**
@@ -71,14 +72,15 @@ public final class AtlantisPressure {
      *
      * <p>Returned as a copy so the caller can detonate while iterating, which removes entries.
      */
-    public static List<UUID> monstersFrom(GridPosition sourceTower) {
-        if (sourceTower == null) {
+    public static List<UUID> monstersFrom(UUID ownerPlayer, GridPosition sourceTower) {
+        if (ownerPlayer == null || sourceTower == null) {
             return List.of();
         }
         List<UUID> carried = new ArrayList<>();
-        for (Map.Entry<UUID, Entry> entry : ENTRIES.entrySet()) {
-            if (sourceTower.equals(entry.getValue().sourceTower)) {
-                carried.add(entry.getKey());
+        for (Map.Entry<Key, Entry> entry : ENTRIES.entrySet()) {
+            if (ownerPlayer.equals(entry.getKey().ownerPlayer())
+                    && sourceTower.equals(entry.getValue().sourceTower)) {
+                carried.add(entry.getKey().monsterId());
             }
         }
         return carried;
@@ -103,9 +105,9 @@ public final class AtlantisPressure {
             int durationTicks
     ) {
         if (monsterId == null || ownerPlayer == null || amount <= 0) {
-            return stacks(monsterId);
+            return stacks(ownerPlayer, monsterId);
         }
-        Entry entry = ENTRIES.computeIfAbsent(monsterId, ignored -> new Entry(ownerPlayer, sourceTower));
+        Entry entry = ENTRIES.computeIfAbsent(new Key(ownerPlayer, monsterId), ignored -> new Entry(sourceTower));
         entry.stacks = Math.min(Math.max(1, maxStacks), entry.stacks + amount);
         entry.remainingTicks = Math.max(entry.remainingTicks, durationTicks);
         // The hardest hitter owns the pressure: the burst is sized from its damage, so the tower
@@ -117,16 +119,16 @@ public final class AtlantisPressure {
         return entry.stacks;
     }
 
-    public static void markZoneState(UUID monsterId, boolean insideZone) {
-        Entry entry = ENTRIES.get(monsterId);
+    public static void markZoneState(UUID ownerPlayer, UUID monsterId, boolean insideZone) {
+        Entry entry = entry(ownerPlayer, monsterId);
         if (entry != null) {
             entry.insideZone = insideZone;
         }
     }
 
     /** Decrements the duration and reports whether the pressure expired this tick. */
-    public static boolean tickExpired(UUID monsterId, int elapsedTicks) {
-        Entry entry = ENTRIES.get(monsterId);
+    public static boolean tickExpired(UUID ownerPlayer, UUID monsterId, int elapsedTicks) {
+        Entry entry = entry(ownerPlayer, monsterId);
         if (entry == null) {
             return false;
         }
@@ -139,16 +141,26 @@ public final class AtlantisPressure {
      * carries no pressure. The caller is responsible for routing the damage through the shared
      * pipeline.
      */
-    public static double consumeForBurst(UUID monsterId, double ratioBonus) {
-        Entry entry = ENTRIES.remove(monsterId);
+    public static double consumeForBurst(UUID ownerPlayer, UUID monsterId, double ratioBonus) {
+        Entry entry = ownerPlayer == null || monsterId == null
+                ? null
+                : ENTRIES.remove(new Key(ownerPlayer, monsterId));
         if (entry == null || entry.stacks <= 0) {
             return 0.0;
         }
         return burstDamage(entry.sourceDamage, entry.stacks, ratioBonus);
     }
 
-    public static void remove(UUID monsterId) {
-        ENTRIES.remove(monsterId);
+    public static void remove(UUID ownerPlayer, UUID monsterId) {
+        if (ownerPlayer != null && monsterId != null) {
+            ENTRIES.remove(new Key(ownerPlayer, monsterId));
+        }
+    }
+
+    private static Entry entry(UUID ownerPlayer, UUID monsterId) {
+        return ownerPlayer == null || monsterId == null
+                ? null
+                : ENTRIES.get(new Key(ownerPlayer, monsterId));
     }
 
     /**

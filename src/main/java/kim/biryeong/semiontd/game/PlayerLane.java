@@ -836,9 +836,6 @@ public final class PlayerLane {
 
         var entity = arenaWorld.getEntity(monster.minecraftEntityId());
         if (monster.state() == MonsterState.DEAD) {
-            if (entity instanceof SemionMonsterEntity monsterEntity && !entity.isRemoved()) {
-                monsterEntity.discard();
-            }
             return;
         }
 

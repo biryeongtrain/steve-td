@@ -3,6 +3,7 @@ package kim.biryeong.semiontd.job;
 import java.util.List;
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.atlantis.AtlantisPressure;
 import kim.biryeong.semiontd.tower.atlantis.AtlantisStates;
 import kim.biryeong.semiontd.tower.atlantis.AtlantisTowers;
 import kim.biryeong.semiontd.ui.SemionText;
@@ -42,11 +43,16 @@ public final class AtlantisTowerJob extends SemionJob {
 
     @Override
     public void onMatchStarted(JobContext context) {
-        AtlantisStates.clear(context.player().uuid());
+        clearState(context);
     }
 
     @Override
     public void onEliminated(JobContext context) {
+        clearState(context);
+    }
+
+    private static void clearState(JobContext context) {
         AtlantisStates.clear(context.player().uuid());
+        AtlantisPressure.clearPlayer(context.player().uuid());
     }
 }

@@ -1,6 +1,6 @@
-# 아틀란티스 빌더 (설계 제안)
+# 아틀란티스 빌더
 
-심해 수압을 자원으로 쓰는 4계열 빌더입니다. 이 문서는 구현 전 설계 제안이며, 수치는 `config/semion-td/tower_balance.json`의 실측 라이브 값을 기준으로 잡았습니다.
+심해 수압을 자원으로 쓰는 4계열 빌더입니다. 이 문서는 현재 구현과 번들 기본값을 설명합니다.
 
 - 직업 ID: `semion-td:atlantis`
 - 표시명: 아틀란티스 빌더
@@ -37,7 +37,7 @@
 
 고대도시의 스컬크 영토는 "내 땅 위에 있으면 버프"라는 정적 소유 개념이고, 본 빌더의 고압 구역은 몬스터 상태를 바꾸는 동적 필드라 성격이 다릅니다.
 
-`MonsterAreaEffectRequest`에는 duration 필드가 없어 모든 광역이 순간 발동이므로, 구역 유지는 매 틱 재발동으로 구현하거나 `AreaEffectService`에 지속 개념을 추가해야 합니다(7절 참조).
+고압 구역은 10틱마다 기존 광역 효과 경로를 재사용해 판정합니다. 별도 지속 효과 서비스는 추가하지 않습니다.
 
 ## 2. 계열 구성
 
@@ -72,9 +72,9 @@
 
 | ID | 티어 | 원 | 최대체력 | 공격력 | 사거리 | 간격 | 어그로 |
 |---|---|---|---|---|---|---|---|
-| `atlantis_dolphin_t1` | 1 | 55 | 80 | 14 | 6.5 | 15 | 0 |
-| `atlantis_dolphin_t2` | 2 | 120 | 130 | 25 | 7.5 | 13 | 0 |
-| `atlantis_dolphin_t3` | 3 | 250 | 190 | 44 | 8.5 | 11 | 0 |
+| `atlantis_dolphin_t1` | 1 | 55 | 80 | 13 | 6.5 | 16 | 0 |
+| `atlantis_dolphin_t2` | 2 | 120 | 130 | 24 | 7.5 | 14 | 0 |
+| `atlantis_dolphin_t3` | 3 | 250 | 190 | 40 | 8.5 | 12 | 0 |
 
 **기준선 산출.** 라이브 159개 공격 타워에서 순수 딜러(비용 150 이상, 어그로 20 이하)만 추려 기본 DPS로 정렬한 값입니다.
 
@@ -82,13 +82,11 @@
 |---|---|---|---|---|---|
 | `illager_evoker_single_t3` | 200 | 45 | 12 | 75.0 | 37.5 |
 | `ocean_cod_t3` | 210 | 40 | 12 | 66.7 | 31.7 |
-| **`atlantis_dolphin_t3`** | **250** | **44** | **11** | **80.0** | **32.0** |
+| **`atlantis_dolphin_t3`** | **250** | **40** | **12** | **66.7** | **26.7** |
 | `t3_ranged_skeleton_tower` | 200 | 35 | 12 | 58.3 | 29.2 |
 | `t3_resonance_wave_moobloom` | 300 | 35 | 12 | 58.3 | 19.4 |
 
-**`nether_ghast_t3`(70 DPS / 25.9)는 기준선에서 제외합니다.** 네더 계열은 초당 최대체력을 잃는 대신 흡혈로 버티는 구조라 화력이 낮게 책정돼 있습니다. 생존 메커니즘 없이 순수하게 때리는 돌고래와 같은 선에 놓으면 기준이 낮아집니다. 초기 설계가 ghast를 기준선에 넣어 공격력 26(DPS 43.3, /100원 17.3)으로 잡았는데, 순수 딜러 분포에서는 하위권이었습니다.
-
-공격력 44는 `illager_evoker_single_t3`(45)와 거의 같고 하우스 룰 상한 50 아래입니다. raw DPS는 80으로 최상위지만 비용이 250이라 /100원은 32.0으로 evoker(37.5) 아래입니다. 여기에 수압 폭발이 얹히는 대신, 그 화력을 내려면 거북이 구역과 전달체·우파루파 보조가 함께 서 있어야 합니다.
+T3의 기본 DPS는 66.7입니다. 수압 폭발을 포함한 1/3/5대상 실효 DPS는 지원 없음·구역 밖 106.7/186.7/266.7, 지원 없음·구역 안 146.7/306.7/466.7, T3 지원 완성·구역 안 163.6/345.5/527.3으로 제한합니다.
 
 ### 우파루파 — 유틸 (고대도시 센서 계보)
 
@@ -161,17 +159,18 @@ Java의 `putAtlantisTowers` / `putAtlantisUpgrades` / `putAtlantisAbilities`는 
 {
   "maxPressureStacks": 10.0,
   "stackDurationTicks": 100.0,
-  "slowPerStack": 0.07,
-  "maxSlow": 0.6,
-  "maxZoneAllyDamageReduction": 0.5,
-  "waterPressureDamageRatio": 0.45,
-  "waterPressureDamageCap": 4.5,
-  "waterPressureRadius": 3.5,
-  "zoneStackMultiplier": 2.5,
+  "slowPerStack": 0.05,
+  "maxSlow": 0.45,
+  "maxZoneAllyDamageReduction": 0.35,
+  "waterPressureDamageRatio": 0.16,
+  "waterPressureDamageCap": 2.5,
+  "waterPressureRadius": 3.0,
+  "zoneStackMultiplier": 2.0,
   "maxZoneCount": 6.0,
   "zoneSpacingBlocks": 4.0,
   "zoneScanIntervalTicks": 10.0,
-  "maxChainDepth": 4.0
+  "zoneVfxIntervalTicks": 40.0,
+  "maxChainDepth": 3.0
 }
 ```
 
@@ -193,14 +192,14 @@ Java의 `putAtlantisTowers` / `putAtlantisUpgrades` / `putAtlantisAbilities`는 
 
 | 상황 | 계산 | 실효 배율 |
 |---|---|---|
-| 돌고래 T3, 10스택 | 26 × (10 × 0.35) | ×3.5 (**+250%**) |
-| 전달체 T3 보정, 상한 도달 | 26 × 4.0 | ×4.0 (**+300%**) |
+| 돌고래 T3, 10스택 | 40 × (10 × 0.24) | ×2.4 (**+140%**) |
+| T3 지원 완성, 상한 도달 | 40 × 2.5 | ×2.5 (**+150%**) |
 
-상한 `waterPressureDamageCap: 4.0`은 고대도시 `maxCombinedDamageBonus`(2.55), 무블룸 `resonanceDamageCap`(2.25)보다 높습니다. 그 둘은 상시 유지되는 배율인 반면 수압은 1회 폭발이며, 같은 성격인 `nether_ghast_t3.zombieTransitionPulseDamageRatio`(3.5)와 같은 급입니다.
+상한 `waterPressureDamageCap: 2.5`는 모든 지원을 완성해도 폭발 한 번이 공격력의 2.5배를 넘지 않게 합니다.
 
 ### 스택 둔화
 
-스택당 이동속도 -7%, 최대 -60%(`maxSlow`)입니다. 딜과 CC가 같은 자원을 공유하므로 "더 묶어둘 것인가, 지금 터뜨릴 것인가"가 매 순간의 판단이 됩니다.
+스택당 이동속도 -5%, 최대 -45%(`maxSlow`)입니다. 딜과 CC가 같은 자원을 공유하므로 "더 묶어둘 것인가, 지금 터뜨릴 것인가"가 매 순간의 판단이 됩니다.
 
 ### 고압 구역 생성 규칙
 
@@ -242,8 +241,9 @@ Java의 `putAtlantisTowers` / `putAtlantisUpgrades` / `putAtlantisAbilities`는 
 | `maxZoneCount` | 6 |
 | `zoneRadius` | 3.0 ~ 4.0 (거북이 티어) |
 | `zoneSpacingBlocks` | 4.0 (경로 위 블록 거리) |
-| `zoneStackMultiplier` | 2.5 |
+| `zoneStackMultiplier` | 2.0 |
 | `zoneScanIntervalTicks` | 10 |
+| `zoneVfxIntervalTicks` | 40 |
 
 ### 구역 중첩과 지속 구현
 
@@ -258,13 +258,13 @@ int overlap = AtlantisStates.overlapCount(owner, position);
 double share = Math.min(value, cap / overlap);   // 총합 = min(value x overlap, cap)
 ```
 
-겹칠수록 총량이 커지되 `cap`에서 멈춥니다. 둔화는 `maxSlow`(0.6), 아군 피해감소는 `maxZoneAllyDamageReduction`(0.5)이 상한입니다.
+겹칠수록 총량이 커지되 `cap`에서 멈춥니다. 둔화는 `maxSlow`(0.45), 아군 피해감소는 `maxZoneAllyDamageReduction`(0.35)이 상한입니다.
 
-| 겹침 | 구역당 둔화(3스택 기준 0.21) | 총 둔화 |
+| 겹침 | 구역당 둔화(3스택 기준 0.15) | 총 둔화 |
 |---|---|---|
-| 1개 | 0.21 | 0.21 |
-| 2개 | 0.21 | 0.42 |
-| 3개 | 0.20 (상한 분배) | 0.60 |
+| 1개 | 0.15 | 0.15 |
+| 2개 | 0.15 | 0.30 |
+| 3개 | 0.15 | 0.45 |
 
 소스드를 쓰는 두 번째 이유는 추적입니다. 언소스드는 최댓값 하나만 남기므로 강한 구역이 사라져도 값이 남고, 약한 구역은 자기 몫을 갱신하지 못합니다. 소스드는 구역이 사라질 때 정확히 자기 기여분만 회수됩니다.
 
@@ -278,16 +278,16 @@ double share = Math.min(value, cap / overlap);   // 총합 = min(value x overlap
 |---|---|---|---|---|
 | `atlantis_turtle_*` | `zoneCapacity` | 1 | 2 | 3 |
 | | `zoneRadius` | 3.0 | 3.5 | 4.0 |
-| | `zoneAllyDamageReduction` | 0.12 | 0.22 | 0.32 |
+| | `zoneAllyDamageReduction` | 0.10 | 0.18 | 0.25 |
 | `atlantis_dolphin_*` | `stackPerHit` | 1 | 2 | 3 |
-| | `waterPressureRatioBonus` | 0.02 | 0.05 | 0.09 |
-| `atlantis_axolotl_*` | `regenAmount` | 7 | 20 | 46 |
-| | `attackSpeedBonus` | — | 0.18 | 0.28 |
-| | `stackBonus` | — | — | 3 |
-| | `waterPressureRatioBonus` | — | — | 0.10 |
+| | `waterPressureRatioBonus` | 0.03 | 0.05 | 0.08 |
+| `atlantis_axolotl_*` | `regenAmount` | 6 | 16 | 32 |
+| | `attackSpeedBonus` | — | 0.08 | 0.15 |
+| | `stackBonus` | — | — | 1 |
+| | `waterPressureRatioBonus` | — | — | 0.04 |
 | `atlantis_conduit_*` | `amplifyRadius` | 6.0 | 7.0 | 8.0 |
-| | `maxStackBonus` | 3 | 5 | 8 |
-| | `waterPressureRatioBonus` | 0.05 | 0.08 | 0.12 |
+| | `maxStackBonus` | 2 | 3 | 4 |
+| | `waterPressureRatioBonus` | 0.02 | 0.04 | 0.06 |
 
 ### 우파루파 변종
 
@@ -318,8 +318,8 @@ AxolotlVisual.builder().variant(Axolotl.Variant.BLUE).build()   // T3 블루
 | 조건 | 충족 여부 |
 |---|---|
 | 탱·딜·버프가 조화롭게 존재 | 거북이(탱)가 구역을 안 만들면 스택이 안 쌓이고, 전달체(버프)가 없으면 상한에 못 닿음. 역할 분담이 아니라 **기계적 전제조건** |
-| 기본 공격 외 능력 + 최대 200% 이상 딜증 | 수압 폭발 **+250%**, 전달체 보정 시 **+300%** |
-| 기본 데미지 50 이하 | 최고값이 돌고래 T3의 **26**. 라이브 전체 최댓값 45보다 낮음 |
+| 기본 공격 외 능력 + 최대 100% 이상 딜증 | 수압 폭발 상한 **+150%** |
+| 기본 데미지 50 이하 | 최고값이 돌고래 T3의 **40** |
 
 ## 6. 구현 범위
 
@@ -353,21 +353,21 @@ config/TowerBalanceConfig.java                   기본값 + 머지 + 검증
 | `atlantis_pressure_zone` | **`ON_TRIGGER`** | 바닥 테두리 링 + 상단 링 + 가장자리 물기둥 8개. 구역 안 몬스터는 바닥으로 눌리는 선 |
 | `atlantis_water_pressure` | `ON_TRIGGER` | 코어 구체 + 확산 링 + 바깥으로 뻗는 궤적 10줄 + 피격 대상 연결선 |
 
-구역 스타일이 `ON_TRIGGER`인 것이 핵심입니다. `ON_CHANGE`는 효과가 적용된 대상이 있을 때만 렌더링되므로(`AreaEffectService.shouldRender`), 빈 구역이 보이지 않습니다. `ON_TRIGGER`는 대상 수와 무관하게 그리므로 몬스터가 없어도 `zoneScanIntervalTicks`(10틱)마다 구역 경계가 유지됩니다.
+구역 스타일이 `ON_TRIGGER`인 것이 핵심입니다. `ON_CHANGE`는 효과가 적용된 대상이 있을 때만 렌더링되므로(`AreaEffectService.shouldRender`), 빈 구역이 보이지 않습니다. 판정은 10틱마다 유지하되 경계 VFX는 `zoneVfxIntervalTicks`(40틱)마다 그려 과밀을 막습니다.
 
 ### 검증
 
 | 대상 | 테스트 |
 |---|---|
 | 카탈로그 등록·업그레이드 그래프·비용 | `AtlantisTowerCatalogTest` (JUnit) |
-| 수압 피해 공식·상한 | `AtlantisPressureTest` (JUnit) |
+| 수압 피해 공식·상한·소유자 격리 | `AtlantisPressureTest` (JUnit) |
 | 빌더 소유권 단일성 | `WebCatalogExporterTest` 갱신 |
 | 내장 빌더 수·starter 수 | `SemionParticipantGameTest` 갱신 |
-| 구역 전개·스택 축적·수압 발동 | `AtlantisIntegrationGameTest` (GameTest) |
-| 거북이 설치/업그레이드/판매/파괴 시 구역 정원 증감 | `AtlantisZoneCapacityTest` (JUnit) + GameTest |
+| 구역 전개·스택 축적·운반 대상 포함 폭발·사망 연쇄 | `AtlantisIntegrationGameTest` (GameTest) |
+| 거북이 설치/업그레이드/판매/파괴·라운드 복원 시 구역 정원 증감 | `AtlantisZoneCapacityTest` (JUnit) + GameTest |
 | 티어별 변종이 카탈로그 재로드 후에도 유지 | `AtlantisTowerCatalogTest` |
 | 구역 안 아군만 피해감소를 받음 | `AtlantisIntegrationGameTest` (GameTest) |
-| VFX 스타일 등록과 지오메트리 | `AtlantisVfxTest` (JUnit) |
+| VFX 스타일 등록·지오메트리·운영 렌더러 디버그 명령 | `AtlantisVfxTest` (JUnit) + GameTest |
 
 ```text
 ./gradlew test runGameTest remapJar --console=plain --no-daemon
@@ -377,7 +377,7 @@ git diff --check
 ## 7. 미해결 사항
 
 - `maxChainDepth` 3이 실제 웨이브 밀집도에서 과한지 부족한지는 플레이 검증이 필요합니다.
-- **수압 배율이 티어와 무관합니다.** 저티어 돌고래에 고티어 전달체·우파루파를 붙이는 조합이 비용 대비 과할 수 있습니다. 폭발 피해는 부여 타워의 공격력에 비례하므로 T1 돌고래(14)는 T3(44)의 3분의 1에 그치지만, 배율 자체는 같습니다. 스택 상한 도달 즉시 폭발이 붙으면서 T1도 상한에 닿을 수 있게 됐으니, 실플레이에서 저티어 난사가 성립하는지 확인이 필요합니다.
+- 저티어 돌고래에 고티어 지원을 붙이는 조합은 공격력 13과 40의 차이 및 티어별 배율 보너스로 억제했지만, 비용 대비 효율은 실플레이에서 계속 확인합니다.
 - `zoneSpacingBlocks` 4.0은 구역 반경 3~4와 맞물려 벽이 살짝 겹치도록 잡은 값입니다. 겹침이 과하면 간격을, 벽이 성기면 반경을 조정합니다.
 
 ### 해결된 사항

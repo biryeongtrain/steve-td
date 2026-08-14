@@ -4,6 +4,7 @@ import static kim.biryeong.semiontd.tower.end.EndConfig.Ability.*;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityStates;
@@ -1082,7 +1083,67 @@ public record TowerBalanceConfig(
                 );
             }
         }));
+        validateAtlantisAbilities();
         validatePlantAbilities();
+    }
+
+    private void validateAtlantisAbilities() {
+        String global = AtlantisBalance.CONFIG_ID;
+        validateRatios(global,
+                "slowPerStack", "maxSlow", "maxZoneAllyDamageReduction", "waterPressureDamageRatio");
+        validatePositive(global,
+                "maxPressureStacks", "stackDurationTicks", "waterPressureDamageCap", "waterPressureRadius",
+                "zoneStackMultiplier", "maxZoneCount", "zoneSpacingBlocks", "zoneScanIntervalTicks",
+                "zoneVfxIntervalTicks");
+        validateIntegral(global, false,
+                "maxPressureStacks", "stackDurationTicks", "maxZoneCount", "zoneScanIntervalTicks",
+                "zoneVfxIntervalTicks");
+        validateIntegral(global, true, "maxChainDepth");
+        validateAtLeast(global, 1.0, "waterPressureDamageCap", "zoneStackMultiplier");
+
+        Double slowPerStack = configuredAbility(global, "slowPerStack");
+        Double maxSlow = configuredAbility(global, "maxSlow");
+        if (slowPerStack != null && maxSlow != null && slowPerStack > maxSlow) {
+            throw new IllegalArgumentException("Atlantis slow per stack must not exceed the maximum slow.");
+        }
+        Double scanTicks = configuredAbility(global, "zoneScanIntervalTicks");
+        Double vfxTicks = configuredAbility(global, "zoneVfxIntervalTicks");
+        if (scanTicks != null && vfxTicks != null && vfxTicks < scanTicks) {
+            throw new IllegalArgumentException("Atlantis zone VFX interval must not be shorter than the scan interval.");
+        }
+
+        Double maxReduction = configuredAbility(global, "maxZoneAllyDamageReduction");
+        for (TowerType type : List.of(
+                AtlantisTowers.TURTLE_T1, AtlantisTowers.TURTLE_T2, AtlantisTowers.TURTLE_T3)) {
+            String id = type.id();
+            validatePositive(id, "zoneCapacity", "zoneRadius");
+            validateIntegral(id, false, "zoneCapacity");
+            validateRatios(id, "zoneAllyDamageReduction");
+            Double reduction = configuredAbility(id, "zoneAllyDamageReduction");
+            if (reduction != null && maxReduction != null && reduction > maxReduction) {
+                throw new IllegalArgumentException("Atlantis turtle reduction exceeds the global cap: " + id);
+            }
+        }
+        for (TowerType type : List.of(
+                AtlantisTowers.DOLPHIN_T1, AtlantisTowers.DOLPHIN_T2, AtlantisTowers.DOLPHIN_T3)) {
+            validatePositive(type.id(), "stackPerHit");
+            validateIntegral(type.id(), false, "stackPerHit");
+            validateRatios(type.id(), "waterPressureRatioBonus");
+        }
+        for (TowerType type : List.of(
+                AtlantisTowers.AXOLOTL_T1, AtlantisTowers.AXOLOTL_T2, AtlantisTowers.AXOLOTL_T3)) {
+            validatePositive(type.id(), "regenAmount", "supportRadius", "supportIntervalTicks");
+            validateIntegral(type.id(), false, "supportIntervalTicks");
+            validateRatios(type.id(), "attackSpeedBonus", "waterPressureRatioBonus");
+        }
+        validatePositive(AtlantisTowers.AXOLOTL_T3.id(), "stackBonus");
+        validateIntegral(AtlantisTowers.AXOLOTL_T3.id(), false, "stackBonus");
+        for (TowerType type : List.of(
+                AtlantisTowers.CONDUIT_T1, AtlantisTowers.CONDUIT_T2, AtlantisTowers.CONDUIT_T3)) {
+            validatePositive(type.id(), "amplifyRadius", "maxStackBonus");
+            validateIntegral(type.id(), false, "maxStackBonus");
+            validateRatios(type.id(), "waterPressureRatioBonus");
+        }
     }
 
     private void validatePlantAbilities() {
@@ -1459,40 +1520,41 @@ public record TowerBalanceConfig(
         global.put("maxZoneCount", (double) AtlantisBalance.MAX_ZONE_COUNT);
         global.put("zoneSpacingBlocks", AtlantisBalance.ZONE_SPACING_BLOCKS);
         global.put("zoneScanIntervalTicks", (double) AtlantisBalance.ZONE_SCAN_INTERVAL_TICKS);
+        global.put("zoneVfxIntervalTicks", (double) AtlantisBalance.ZONE_VFX_INTERVAL_TICKS);
         global.put("maxChainDepth", (double) AtlantisBalance.MAX_CHAIN_DEPTH);
         putAbilities(abilities, AtlantisBalance.CONFIG_ID, global);
 
-        putAtlantisTurtle(abilities, AtlantisTowers.TURTLE_T1, 1.0, 3.0, 0.12);
-        putAtlantisTurtle(abilities, AtlantisTowers.TURTLE_T2, 2.0, 3.5, 0.22);
-        putAtlantisTurtle(abilities, AtlantisTowers.TURTLE_T3, 3.0, 4.0, 0.32);
+        putAtlantisTurtle(abilities, AtlantisTowers.TURTLE_T1, 1.0, 3.0, 0.10);
+        putAtlantisTurtle(abilities, AtlantisTowers.TURTLE_T2, 2.0, 3.5, 0.18);
+        putAtlantisTurtle(abilities, AtlantisTowers.TURTLE_T3, 3.0, 4.0, 0.25);
 
-        putAtlantisDolphin(abilities, AtlantisTowers.DOLPHIN_T1, 1.0, 0.02);
+        putAtlantisDolphin(abilities, AtlantisTowers.DOLPHIN_T1, 1.0, 0.03);
         putAtlantisDolphin(abilities, AtlantisTowers.DOLPHIN_T2, 2.0, 0.05);
-        putAtlantisDolphin(abilities, AtlantisTowers.DOLPHIN_T3, 3.0, 0.09);
+        putAtlantisDolphin(abilities, AtlantisTowers.DOLPHIN_T3, 3.0, 0.08);
 
         putAbilities(abilities, AtlantisTowers.AXOLOTL_T1.id(), Map.of(
-                "regenAmount", 7.0,
+                "regenAmount", 6.0,
                 "supportRadius", 4.5,
                 "supportIntervalTicks", 40.0
         ));
         putAbilities(abilities, AtlantisTowers.AXOLOTL_T2.id(), Map.of(
-                "regenAmount", 20.0,
-                "attackSpeedBonus", 0.18,
+                "regenAmount", 16.0,
+                "attackSpeedBonus", 0.08,
                 "supportRadius", 5.5,
                 "supportIntervalTicks", 40.0
         ));
         putAbilities(abilities, AtlantisTowers.AXOLOTL_T3.id(), Map.of(
-                "regenAmount", 46.0,
-                "attackSpeedBonus", 0.28,
-                "stackBonus", 3.0,
-                "waterPressureRatioBonus", 0.10,
+                "regenAmount", 32.0,
+                "attackSpeedBonus", 0.15,
+                "stackBonus", 1.0,
+                "waterPressureRatioBonus", 0.04,
                 "supportRadius", 6.5,
-                "supportIntervalTicks", 35.0
+                "supportIntervalTicks", 40.0
         ));
 
-        putAtlantisConduit(abilities, AtlantisTowers.CONDUIT_T1, 6.0, 3.0, 0.05);
-        putAtlantisConduit(abilities, AtlantisTowers.CONDUIT_T2, 7.0, 5.0, 0.08);
-        putAtlantisConduit(abilities, AtlantisTowers.CONDUIT_T3, 8.0, 8.0, 0.12);
+        putAtlantisConduit(abilities, AtlantisTowers.CONDUIT_T1, 6.0, 2.0, 0.02);
+        putAtlantisConduit(abilities, AtlantisTowers.CONDUIT_T2, 7.0, 3.0, 0.04);
+        putAtlantisConduit(abilities, AtlantisTowers.CONDUIT_T3, 8.0, 4.0, 0.06);
     }
 
     private static void putAtlantisTurtle(

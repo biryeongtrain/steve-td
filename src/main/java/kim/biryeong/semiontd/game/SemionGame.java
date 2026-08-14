@@ -38,6 +38,8 @@ import kim.biryeong.semiontd.tower.adversary.AdversaryProgressStates;
 import kim.biryeong.semiontd.tower.adversary.AdversaryTeamEffects;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityStates;
+import kim.biryeong.semiontd.tower.atlantis.AtlantisPressure;
+import kim.biryeong.semiontd.tower.atlantis.AtlantisStates;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
 import kim.biryeong.semiontd.trait.SemionTrait;
 import kim.biryeong.semiontd.trait.TraitContext;
@@ -757,6 +759,10 @@ public final class SemionGame {
         }
         for (SemionTeam team : teams.values()) {
             team.closeRuntime();
+        }
+        for (UUID playerId : players.keySet()) {
+            AtlantisStates.clear(playerId);
+            AtlantisPressure.clearPlayer(playerId);
         }
         // Rival tower removal reconciles its installed-score ledger while lanes close,
         // so clear Adversary state after every tower has been detached.

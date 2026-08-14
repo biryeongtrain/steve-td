@@ -12,17 +12,18 @@ public final class AtlantisBalance {
 
     public static final int MAX_PRESSURE_STACKS = 10;
     public static final int STACK_DURATION_TICKS = 100;
-    public static final double SLOW_PER_STACK = 0.07;
-    public static final double MAX_SLOW = 0.6;
-    public static final double MAX_ZONE_ALLY_DAMAGE_REDUCTION = 0.5;
-    public static final double WATER_PRESSURE_DAMAGE_RATIO = 0.45;
-    public static final double WATER_PRESSURE_DAMAGE_CAP = 4.5;
-    public static final double WATER_PRESSURE_RADIUS = 3.5;
-    public static final double ZONE_STACK_MULTIPLIER = 2.5;
+    public static final double SLOW_PER_STACK = 0.05;
+    public static final double MAX_SLOW = 0.45;
+    public static final double MAX_ZONE_ALLY_DAMAGE_REDUCTION = 0.35;
+    public static final double WATER_PRESSURE_DAMAGE_RATIO = 0.16;
+    public static final double WATER_PRESSURE_DAMAGE_CAP = 2.5;
+    public static final double WATER_PRESSURE_RADIUS = 3.0;
+    public static final double ZONE_STACK_MULTIPLIER = 2.0;
     public static final int MAX_ZONE_COUNT = 6;
     public static final double ZONE_SPACING_BLOCKS = 4.0;
     public static final int ZONE_SCAN_INTERVAL_TICKS = 10;
-    public static final int MAX_CHAIN_DEPTH = 4;
+    public static final int ZONE_VFX_INTERVAL_TICKS = 40;
+    public static final int MAX_CHAIN_DEPTH = 3;
 
     private AtlantisBalance() {
     }
@@ -87,6 +88,10 @@ public final class AtlantisBalance {
 
     public static int zoneScanIntervalTicks() {
         return Math.max(1, globalInt("zoneScanIntervalTicks", ZONE_SCAN_INTERVAL_TICKS));
+    }
+
+    public static int zoneVfxIntervalTicks() {
+        return Math.max(1, globalInt("zoneVfxIntervalTicks", ZONE_VFX_INTERVAL_TICKS));
     }
 
     public static int maxChainDepth() {

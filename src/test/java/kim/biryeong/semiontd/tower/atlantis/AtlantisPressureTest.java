@@ -47,10 +47,8 @@ class AtlantisPressureTest {
 
         assertTrue(ten > three, "more stacks must mean a bigger burst");
         assertEquals(20.0 * 3 * AtlantisBalance.waterPressureDamageRatio(), three, EPSILON);
-        // The family's headline promise is a burst worth at least +200% of a basic hit, so the
-        // configured ratio and cap must never fall below that between them.
-        assertTrue(ten >= 20.0 * 3.0,
-                "a full stack bar must be worth at least x3 the tower's damage, was x" + ten / 20.0);
+        assertEquals(20.0 * 10 * AtlantisBalance.waterPressureDamageRatio(), ten, EPSILON,
+                "the unsupported full stack burst must use the tuned base ratio");
     }
 
     @Test
@@ -88,22 +86,22 @@ class AtlantisPressureTest {
     @Test
     void stacksAccumulateAndRespectTheCeiling() {
         AtlantisPressure.addStacks(MONSTER, OWNER, TOWER, 3, 20.0, 10, 100);
-        assertEquals(3, AtlantisPressure.stacks(MONSTER));
+        assertEquals(3, AtlantisPressure.stacks(OWNER, MONSTER));
 
         AtlantisPressure.addStacks(MONSTER, OWNER, TOWER, 4, 20.0, 10, 100);
-        assertEquals(7, AtlantisPressure.stacks(MONSTER));
+        assertEquals(7, AtlantisPressure.stacks(OWNER, MONSTER));
 
         AtlantisPressure.addStacks(MONSTER, OWNER, TOWER, 99, 20.0, 10, 100);
-        assertEquals(10, AtlantisPressure.stacks(MONSTER), "stack ceiling must bind");
+        assertEquals(10, AtlantisPressure.stacks(OWNER, MONSTER), "stack ceiling must bind");
     }
 
     @Test
     void consumingWaterPressureRemovesTheEntry() {
         AtlantisPressure.addStacks(MONSTER, OWNER, TOWER, 10, 20.0, 10, 100);
         assertEquals(AtlantisPressure.burstDamage(20.0, 10, 0.0),
-                AtlantisPressure.consumeForBurst(MONSTER, 0.0), EPSILON);
-        assertEquals(0, AtlantisPressure.stacks(MONSTER), "pressure must not survive its own burst");
-        assertEquals(0.0, AtlantisPressure.consumeForBurst(MONSTER, 0.0), EPSILON,
+                AtlantisPressure.consumeForBurst(OWNER, MONSTER, 0.0), EPSILON);
+        assertEquals(0, AtlantisPressure.stacks(OWNER, MONSTER), "pressure must not survive its own burst");
+        assertEquals(0.0, AtlantisPressure.consumeForBurst(OWNER, MONSTER, 0.0), EPSILON,
                 "a second detonation on the same monster yields nothing");
     }
 
@@ -136,8 +134,8 @@ class AtlantisPressureTest {
 
         AtlantisPressure.clearPlayer(OWNER);
 
-        assertEquals(0, AtlantisPressure.stacks(MONSTER));
-        assertEquals(5, AtlantisPressure.stacks(otherMonster), "another player's pressure must survive");
+        assertEquals(0, AtlantisPressure.stacks(OWNER, MONSTER));
+        assertEquals(5, AtlantisPressure.stacks(other, otherMonster), "another player's pressure must survive");
     }
 
     @Test
@@ -146,25 +144,25 @@ class AtlantisPressureTest {
         AtlantisPressure.addStacks(MONSTER, OWNER, TOWER, 2, 20.0, 10, 100);
         AtlantisPressure.addStacks(second, OWNER, OTHER_TOWER, 2, 20.0, 10, 100);
 
-        assertEquals(List.of(MONSTER), AtlantisPressure.monstersFrom(TOWER));
-        assertEquals(List.of(second), AtlantisPressure.monstersFrom(OTHER_TOWER));
-        assertTrue(AtlantisPressure.monstersFrom(new GridPosition(99, 80, 99)).isEmpty(),
+        assertEquals(List.of(MONSTER), AtlantisPressure.monstersFrom(OWNER, TOWER));
+        assertEquals(List.of(second), AtlantisPressure.monstersFrom(OWNER, OTHER_TOWER));
+        assertTrue(AtlantisPressure.monstersFrom(OWNER, new GridPosition(99, 80, 99)).isEmpty(),
                 "a dolphin that applied nothing owns nothing");
     }
 
     @Test
     void theHardestHitterTakesOverThePressureItSized() {
         AtlantisPressure.addStacks(MONSTER, OWNER, TOWER, 1, 9.0, 10, 100);
-        assertEquals(List.of(MONSTER), AtlantisPressure.monstersFrom(TOWER));
+        assertEquals(List.of(MONSTER), AtlantisPressure.monstersFrom(OWNER, TOWER));
 
         // A stronger dolphin joins in: the burst is sized from its damage, so it must also be the
         // tower that releases it, otherwise the damage is attributed to the wrong tower.
         AtlantisPressure.addStacks(MONSTER, OWNER, OTHER_TOWER, 1, 26.0, 10, 100);
 
-        assertTrue(AtlantisPressure.monstersFrom(TOWER).isEmpty(), "the weaker dolphin hands over ownership");
-        assertEquals(List.of(MONSTER), AtlantisPressure.monstersFrom(OTHER_TOWER));
+        assertTrue(AtlantisPressure.monstersFrom(OWNER, TOWER).isEmpty(), "the weaker dolphin hands over ownership");
+        assertEquals(List.of(MONSTER), AtlantisPressure.monstersFrom(OWNER, OTHER_TOWER));
         assertEquals(AtlantisPressure.burstDamage(26.0, 2, 0.0),
-                AtlantisPressure.consumeForBurst(MONSTER, 0.0), EPSILON,
+                AtlantisPressure.consumeForBurst(OWNER, MONSTER, 0.0), EPSILON,
                 "the burst uses the strongest applier's damage");
     }
 
@@ -172,9 +170,26 @@ class AtlantisPressureTest {
     void pressureExpiresOnceItsDurationRunsOut() {
         AtlantisPressure.addStacks(MONSTER, OWNER, TOWER, 4, 20.0, 10, 40);
 
-        assertFalse(AtlantisPressure.tickExpired(MONSTER, 20), "half the duration must not expire it");
-        assertTrue(AtlantisPressure.tickExpired(MONSTER, 20), "the duration is spent, the pressure lapses");
-        assertFalse(AtlantisPressure.tickExpired(UUID.randomUUID(), 20),
+        assertFalse(AtlantisPressure.tickExpired(OWNER, MONSTER, 20), "half the duration must not expire it");
+        assertTrue(AtlantisPressure.tickExpired(OWNER, MONSTER, 20), "the duration is spent, the pressure lapses");
+        assertFalse(AtlantisPressure.tickExpired(OWNER, UUID.randomUUID(), 20),
                 "a monster carrying nothing never reports an expiry");
+    }
+
+    @Test
+    void twoPlayersTrackTheSameMonsterIndependently() {
+        UUID other = UUID.nameUUIDFromBytes("same-monster-other-owner".getBytes());
+        AtlantisPressure.addStacks(MONSTER, OWNER, TOWER, 3, 20.0, 10, 100);
+        AtlantisPressure.addStacks(MONSTER, other, TOWER, 7, 30.0, 10, 100);
+
+        assertEquals(3, AtlantisPressure.stacks(OWNER, MONSTER));
+        assertEquals(7, AtlantisPressure.stacks(other, MONSTER));
+        assertEquals(List.of(MONSTER), AtlantisPressure.monstersFrom(OWNER, TOWER));
+        assertEquals(List.of(MONSTER), AtlantisPressure.monstersFrom(other, TOWER));
+
+        AtlantisPressure.consumeForBurst(OWNER, MONSTER, 0.0);
+        assertEquals(0, AtlantisPressure.stacks(OWNER, MONSTER));
+        assertEquals(7, AtlantisPressure.stacks(other, MONSTER),
+                "one sandbox or final-defense owner must not consume another owner's pressure");
     }
 }

@@ -1356,24 +1356,24 @@
       "mineralCost": 55,
       "maxHealth": 80.0,
       "range": 6.5,
-      "damage": 14.0,
-      "attackIntervalTicks": 15,
+      "damage": 13.0,
+      "attackIntervalTicks": 16,
       "aggroPriority": 0
     },
     "atlantis_dolphin_t2": {
       "mineralCost": 120,
       "maxHealth": 130.0,
       "range": 7.5,
-      "damage": 25.0,
-      "attackIntervalTicks": 13,
+      "damage": 24.0,
+      "attackIntervalTicks": 14,
       "aggroPriority": 0
     },
     "atlantis_dolphin_t3": {
       "mineralCost": 250,
       "maxHealth": 190.0,
       "range": 8.5,
-      "damage": 44.0,
-      "attackIntervalTicks": 11,
+      "damage": 40.0,
+      "attackIntervalTicks": 12,
       "aggroPriority": 0
     },
     "atlantis_axolotl_t1": {
@@ -3341,36 +3341,37 @@
     "atlantis_global": {
       "maxPressureStacks": 10.0,
       "stackDurationTicks": 100.0,
-      "slowPerStack": 0.07,
-      "maxSlow": 0.6,
-      "maxZoneAllyDamageReduction": 0.5,
-      "waterPressureDamageRatio": 0.45,
-      "waterPressureDamageCap": 4.5,
-      "waterPressureRadius": 3.5,
-      "zoneStackMultiplier": 2.5,
+      "slowPerStack": 0.05,
+      "maxSlow": 0.45,
+      "maxZoneAllyDamageReduction": 0.35,
+      "waterPressureDamageRatio": 0.16,
+      "waterPressureDamageCap": 2.5,
+      "waterPressureRadius": 3.0,
+      "zoneStackMultiplier": 2.0,
       "maxZoneCount": 6.0,
       "zoneSpacingBlocks": 4.0,
       "zoneScanIntervalTicks": 10.0,
-      "maxChainDepth": 4.0
+      "zoneVfxIntervalTicks": 40.0,
+      "maxChainDepth": 3.0
     },
     "atlantis_turtle_t1": {
       "zoneCapacity": 1.0,
       "zoneRadius": 3.0,
-      "zoneAllyDamageReduction": 0.12
+      "zoneAllyDamageReduction": 0.1
     },
     "atlantis_turtle_t2": {
       "zoneCapacity": 2.0,
       "zoneRadius": 3.5,
-      "zoneAllyDamageReduction": 0.22
+      "zoneAllyDamageReduction": 0.18
     },
     "atlantis_turtle_t3": {
       "zoneCapacity": 3.0,
       "zoneRadius": 4.0,
-      "zoneAllyDamageReduction": 0.32
+      "zoneAllyDamageReduction": 0.25
     },
     "atlantis_dolphin_t1": {
       "stackPerHit": 1.0,
-      "waterPressureRatioBonus": 0.02
+      "waterPressureRatioBonus": 0.03
     },
     "atlantis_dolphin_t2": {
       "stackPerHit": 2.0,
@@ -3378,41 +3379,41 @@
     },
     "atlantis_dolphin_t3": {
       "stackPerHit": 3.0,
-      "waterPressureRatioBonus": 0.09
+      "waterPressureRatioBonus": 0.08
     },
     "atlantis_axolotl_t1": {
-      "regenAmount": 7.0,
+      "regenAmount": 6.0,
       "supportRadius": 4.5,
       "supportIntervalTicks": 40.0
     },
     "atlantis_axolotl_t2": {
-      "regenAmount": 20.0,
-      "attackSpeedBonus": 0.18,
+      "regenAmount": 16.0,
+      "attackSpeedBonus": 0.08,
       "supportRadius": 5.5,
       "supportIntervalTicks": 40.0
     },
     "atlantis_axolotl_t3": {
-      "regenAmount": 46.0,
-      "attackSpeedBonus": 0.28,
-      "stackBonus": 3.0,
-      "waterPressureRatioBonus": 0.10,
+      "regenAmount": 32.0,
+      "attackSpeedBonus": 0.15,
+      "stackBonus": 1.0,
+      "waterPressureRatioBonus": 0.04,
       "supportRadius": 6.5,
-      "supportIntervalTicks": 35.0
+      "supportIntervalTicks": 40.0
     },
     "atlantis_conduit_t1": {
       "amplifyRadius": 6.0,
-      "maxStackBonus": 3.0,
-      "waterPressureRatioBonus": 0.05
+      "maxStackBonus": 2.0,
+      "waterPressureRatioBonus": 0.02
     },
     "atlantis_conduit_t2": {
       "amplifyRadius": 7.0,
-      "maxStackBonus": 5.0,
-      "waterPressureRatioBonus": 0.08
+      "maxStackBonus": 3.0,
+      "waterPressureRatioBonus": 0.04
     },
     "atlantis_conduit_t3": {
       "amplifyRadius": 8.0,
-      "maxStackBonus": 8.0,
-      "waterPressureRatioBonus": 0.12
+      "maxStackBonus": 4.0,
+      "waterPressureRatioBonus": 0.06
     },
     "t1_oak_seed_tower": {
       "terraformRadius": 1.0

@@ -91,6 +91,7 @@ public final class AtlantisStates {
         List<Tower> turtles = lane.towers().stream()
                 .filter(tower -> playerId.equals(tower.ownerPlayer()))
                 .filter(tower -> AtlantisTowers.isTurtle(tower.type()))
+                .filter(tower -> !tower.isDestroyed(lane))
                 .toList();
         if (turtles.isEmpty()) {
             ZONES.remove(playerId);
