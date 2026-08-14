@@ -30,6 +30,7 @@ final class EntityVisualProperties {
     static final String SHEARED = "sheared";
     static final String SHULKER_COLOR = "shulker_color";
     static final String BLOCK_STATE = "block_state";
+    static final String BLOCK_STATE_TOP = "block_state_top";
     static final String COLLAR_COLOR = "collar_color";
     static final String TAME = "tame";
     static final String SITTING = "sitting";

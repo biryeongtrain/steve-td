@@ -29,6 +29,7 @@ import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.tower.plant.PlantSoilEnvironment;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
 import kim.biryeong.semiontd.tower.resonance.ResonanceService;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
@@ -375,6 +376,7 @@ public final class PlayerLane {
 
         applyTranscendenceIfReady(roundElapsedTicks);
         tickTowers();
+        PlantSoilEnvironment.tick(this);
 
         Iterator<Monster> iterator = activeMonsters.iterator();
         while (iterator.hasNext()) {

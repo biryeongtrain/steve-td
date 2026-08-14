@@ -462,6 +462,13 @@ public final class SemionDialogService {
     }
 
     public void showTowerControl(ServerPlayer player, SemionGame game, BuildGuideService buildGuideService) {
+        showTowerControl(player, game, buildGuideService, null);
+    }
+
+    /**
+     * @param group 직업이 타워를 분류하는 경우 그 분류 이름. null 이면 분류 선택 화면부터 보여줍니다.
+     */
+    public void showTowerControl(ServerPlayer player, SemionGame game, BuildGuideService buildGuideService, String group) {
         var semionPlayer = game.players().get(player.getUUID());
         if (semionPlayer == null) {
             show(player, "세미온 TD 타워", "<red>현재 게임 참가자가 아닙니다.</red>");
@@ -508,6 +515,12 @@ public final class SemionDialogService {
         }
 
         List<ProductionTowerCatalog.CatalogEntry> entries = ProductionTowerService.availableTowers(game, player.getUUID());
+        SemionJob job = semionPlayer.job().orElse(JobRegistry.defaultJob());
+        LinkedHashMap<String, List<ProductionTowerCatalog.CatalogEntry>> groups = towerGroups(job, entries);
+        boolean showGroupPicker = selectedTower == null && group == null && groups.size() >= 2;
+        if (selectedTower == null && group != null && !groups.isEmpty()) {
+            entries = groups.getOrDefault(group, List.of());
+        }
         List<TowerUpgradeOption> upgrades = selectedTower == null
                 ? List.of()
                 : ProductionTowerService.availableUpgrades(game, player.getUUID(), player.blockPosition());
@@ -515,21 +528,43 @@ public final class SemionDialogService {
             body.append("<gray>아래 버튼에서 업그레이드를 선택하세요.</gray>\n");
         } else if (selectedTower != null) {
             body.append("<gray>현재 위치 타워는 더 이상 업그레이드할 수 없습니다.</gray>\n");
+        } else if (showGroupPicker) {
+            body.append("<gray>먼저 분류를 고르세요.</gray> <yellow>").append(groups.size()).append("</yellow><gray>개 계열</gray>\n");
         } else if (entries.isEmpty()) {
             body.append("<red>사용할 수 있는 타워가 없습니다.</red>\n");
         } else {
+            if (group != null) {
+                body.append("<yellow>").append(group).append("</yellow> <gray>계열</gray> <dark_gray>|</dark_gray> ");
+            }
             body.append("<gray>건설 후보</gray> <yellow>").append(entries.size()).append("</yellow>");
             body.append(" <dark_gray>|</dark_gray> <gray>상세 스탯은 버튼에 마우스를 올려 확인하세요.</gray>\n");
         }
 
         ArrayList<ActionButton> actions = new ArrayList<>();
-        if (selectedTower == null) {
+        if (showGroupPicker) {
+            for (Map.Entry<String, List<ProductionTowerCatalog.CatalogEntry>> groupEntry : groups.entrySet()) {
+                actions.add(actionButton(
+                        Component.literal(groupEntry.getKey() + " (" + groupEntry.getValue().size() + ")"),
+                        "/semiontd tower ui " + groupEntry.getKey(),
+                        Component.literal(groupEntry.getKey() + " 계열 타워 " + groupEntry.getValue().size() + "종을 봅니다."),
+                        COMPACT_BUTTON_WIDTH
+                ));
+            }
+        } else if (selectedTower == null) {
             for (ProductionTowerCatalog.CatalogEntry entry : entries) {
                 long mineralCost = Math.max(0, entry.type().mineralCost());
                 boolean recommended = buildGuideService != null && TowerPlacementPositions.resolveGrid(game.playerLane(player.getUUID()).orElse(null), player.blockPosition())
                         .map(position -> buildGuideService.isRecommendedTower(game, player.getUUID(), game.currentRound(), position, entry.type().id()))
                         .orElse(false);
                 actions.add(towerButton(entry, mineralCost, economy.diamond() >= mineralCost, recommended));
+            }
+            if (group != null && groups.size() >= 2) {
+                actions.add(actionButton(
+                        Component.literal("← 분류 선택"),
+                        "/semiontd tower ui",
+                        Component.literal("계열 선택 화면으로 돌아갑니다."),
+                        COMPACT_BUTTON_WIDTH
+                ));
             }
         } else {
             for (TowerUpgradeOption option : upgrades) {
@@ -1295,6 +1330,25 @@ public final class SemionDialogService {
 
     private static String commandLink(String label, String command, String color) {
         return "<click:run_command:'" + command + "'><hover:show_text:'" + label + "'><" + color + ">[" + label + "]</" + color + "></hover></click>";
+    }
+
+    /**
+     * 직업이 모든 건설 후보에 분류를 붙였을 때만 분류 맵을 돌려줍니다. 하나라도 빠지면 기존 평면 목록을
+     * 유지하도록 빈 맵을 돌려줍니다.
+     */
+    private static LinkedHashMap<String, List<ProductionTowerCatalog.CatalogEntry>> towerGroups(
+            SemionJob job,
+            List<ProductionTowerCatalog.CatalogEntry> entries
+    ) {
+        LinkedHashMap<String, List<ProductionTowerCatalog.CatalogEntry>> groups = new LinkedHashMap<>();
+        for (ProductionTowerCatalog.CatalogEntry entry : entries) {
+            String group = job.towerGroup(entry.type());
+            if (group == null || group.isBlank()) {
+                return new LinkedHashMap<>();
+            }
+            groups.computeIfAbsent(group, ignored -> new ArrayList<>()).add(entry);
+        }
+        return groups;
     }
 
     private static ActionButton towerButton(ProductionTowerCatalog.CatalogEntry entry, long mineralCost, boolean affordable, boolean recommended) {

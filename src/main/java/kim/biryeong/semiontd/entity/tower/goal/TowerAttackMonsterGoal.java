@@ -74,7 +74,7 @@ public final class TowerAttackMonsterGoal extends Goal {
         double attackRangeSqr = tower.attackRange() * tower.attackRange();
         double distanceSqr = tower.distanceToSqr(target);
         if (distanceSqr > attackRangeSqr) {
-            if (tower.deployedAtFinalDefense()) {
+            if (tower.deployedAtFinalDefense() || !tower.canChaseTargets()) {
                 tower.getNavigation().stop();
                 tower.playAnimation(SemionAnimationState.IDLE);
                 return;

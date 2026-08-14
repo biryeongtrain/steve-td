@@ -329,6 +329,38 @@
 
 비율은 `0.0`~`1.0`, tick과 개수는 정수로 둡니다. 형태의 체력·사거리·피해·공격 간격과 핵심 쿨다운/반경은 양수여야 하며, 잘못된 값은 reload 검증에서 거부됩니다.
 
+## 식물 계열 능력값
+
+식물 빌더는 다른 빌더와 달리 능력값이 **타워 단위가 아니라 지형 단위**로 들어갑니다. 지형 키 4개와 공통 키
+1개가 있고, 각 전투 타워의 `soilPower`가 티어별 배율을 담당합니다.
+
+| config id | 주요 키 | 의미 |
+|---|---|---|
+| `plant_global` | `bloomDamagePerTile`, `bloomDamageCap` | 개화. 자기 계열 지형 1칸당 피해 증가와 그 상한입니다. |
+| `plant_global` | `soilPulseIntervalTicks`, `soilAuraMinRadius` | 지형 효과 갱신 주기와 최소 적용 반경입니다. |
+| 민들레 계열 id | `diamondPerWave` | 팀이 웨이브를 마칠 때 살아 있고 잔디 위에 있는 타워가 지급하는 다이아입니다. 샌드박스 라운드 이동은 정산하지 않습니다. |
+| `plant_global` | `environmentTickIntervalTicks` | 환경 효과 적용 주기입니다. 타워와 무관하게 돕니다. |
+| `plant_soil_mycelium` | `environmentWeakness`, `environmentDamageTakenBonus`, `environmentDurationTicks` | 균사 위 적의 공격력 감소, 받는 타워 피해 증가, 지속 시간입니다. 균사 전투 타워는 지뢰라 상주하지 않으므로 딜증도 지형이 담당합니다. |
+| 균사 계열 id | `triggerRadius`, `triggerIntervalTicks` | 지뢰 발동 반경과 확인 주기입니다. |
+| 균사 계열 id | `explosionRadius`, `explosionDamageMultiplier`, `explosionHealthRatio` | 폭발 반경, 공격력 배율, 남은 체력 반영 비율입니다. 실제 피해는 `(damage × 배율 + 현재 체력 × 체력 비율) × (1+개화)`입니다. |
+| 균사 계열 id | `explosionMoveSpeedReduction`, `explosionDisableTicks` | 폭발 둔화율과 무력화 시간입니다. 무력화 동안 공격 속도·공격력이 100% 깎입니다. |
+| `plant_soil_desert` | `environmentAttackSpeedReduction` | 사암 위 적의 공격 속도 감소입니다. |
+| `plant_soil_desert` | `environmentMaxHealthDamagePerSecond` | 사암 위 적이 초당 잃는 **최대 체력 비율**입니다. 펄스 간격을 바꿔도 초당 피해량은 유지됩니다. |
+| `plant_soil_meadow` | `supportRadius`, `healPercentPerPulse` | 잔디 지원 범위와 펄스마다 주변 아군을 회복시키는 최대 체력 비율입니다. |
+| `plant_soil_meadow` | `maxHealthGrowthPerRound`, `maxHealthGrowthCap` | 잔디 성장. 라운드당 최대 체력 증가와 누적 상한입니다. |
+| `plant_soil_meadow` | `growthShareRatio`, `supportDurationTicks` | 성장 체력 중 라인 전체에 나눠 주는 비율과 버프 지속 시간입니다. 잔디 타워별 몫을 **합산**해 라인 안 모든 타워에게 같은 값으로 겁니다. |
+| 튤립 계열 id | `novaRadius`, `novaDamageRatio` | 타워 자신을 중심으로 터지는 광역 반경과 피해 비율입니다. |
+| `plant_soil_desert` | `attackSpeedReduction`, `debuffDurationTicks`, `auraRadius` | 사암 전투 타워가 주변 사암 위 적에게 거는 공격 속도 감소, 지속 시간, 반경입니다. |
+| `plant_soil_desert` | `thornReflectRatio` | 받은 피해를 가시로 반사하는 비율입니다. |
+| `plant_soil_podzol` | `rangeBonus`, `attackSpeedBonus`, `damageGrowthPerRound`, `damageGrowthCap` | 회백토 위 전투 타워의 사거리·공격 속도와 웨이브별 피해 성장입니다. |
+| 전투 타워 id | `soilPower` | 위 지형 값에 곱해지는 티어 배율입니다. 기본값은 T1 `0.6`, T2 `1.0`, T3 `1.4`입니다. |
+| `t3_podzol_lilac_tower` | `splashRadius`, `splashDamageRatio` | 라일락 전용 꽃잎 스플래시입니다. 광역을 얻는 대신 `soilPower`가 `1.2`로 낮습니다. |
+
+기본값 기준 최대 딜증은 개화 `+40%`와 균사 취약 `+25%`가 곱연산으로 붙어 `+75%`입니다.
+기본 피해는 모든 티어에서 50 이하로 두고, 화력은 이 배율로 만듭니다. 이 규칙을 바꿀 때는
+`PlantTowerCatalogTest`의 `baseDamageStaysAtOrBelowFiftyOnEveryTier`와
+`soilAmplificationStaysWithinTheConservativeCap`도 함께 갱신합니다.
+
 ## 수정 절차
 
 1. 서버의 `config/semion-td/tower_balance.json`을 백업합니다.

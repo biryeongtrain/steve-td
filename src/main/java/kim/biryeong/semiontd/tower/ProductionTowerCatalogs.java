@@ -12,6 +12,7 @@ import kim.biryeong.semiontd.tower.illager.IllagerTowerCatalogs;
 import kim.biryeong.semiontd.tower.legion.LegionTowerCatalogs;
 import kim.biryeong.semiontd.tower.nether.NetherTowerCatalogs;
 import kim.biryeong.semiontd.tower.ocean.OceanTowerCatalogs;
+import kim.biryeong.semiontd.tower.plant.PlantTowerCatalogs;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowerCatalogs;
 import kim.biryeong.semiontd.tower.undead.UndeadTowerCatalogs;
 import kim.biryeong.semiontd.tower.villager.VillagerTowerCatalogs;
@@ -39,6 +40,7 @@ public final class ProductionTowerCatalogs {
             AncientCityTowerCatalogs.register();
             AdversaryTowerCatalogs.register();
             AtlantisTowerCatalogs.register();
+            PlantTowerCatalogs.register();
         }
     }
 }

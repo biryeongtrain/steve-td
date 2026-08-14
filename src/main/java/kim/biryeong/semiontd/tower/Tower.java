@@ -639,6 +639,27 @@ public abstract class Tower {
 
     public double adjustMovementSpeed(double baseSpeed) {return baseSpeed;}
 
+    /**
+     * Rooted towers hold their tile instead of walking toward an out-of-range target inside the lane.
+     */
+    public boolean canChaseTargets() {
+        return true;
+    }
+
+    /**
+     * Fixture towers take no damage at all, including from effects that ignore damage reduction.
+     */
+    public boolean invulnerable() {
+        return false;
+    }
+
+    /**
+     * Towers that do not draw aggro are skipped entirely when monsters look for something to attack.
+     */
+    public boolean drawsAggro() {
+        return true;
+    }
+
     public boolean isDestroyed(PlayerLane lane) {
         return health <= 0.0;
     }

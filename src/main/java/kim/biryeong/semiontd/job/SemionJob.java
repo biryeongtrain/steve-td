@@ -74,6 +74,17 @@ public abstract class SemionJob {
         return false;
     }
 
+    /**
+     * Optional shop category for a tower.
+     *
+     * <p>When every buildable tower of a job returns a group, the tower dialog shows those groups as
+     * a first step instead of one long button grid. Returning {@code null} (the default) keeps the
+     * flat list, so other builders are unaffected.
+     */
+    public String towerGroup(TowerType towerType) {
+        return null;
+    }
+
     public boolean includesTowerInCatalog(TowerType towerType) {
         return canUseTower(null, towerType);
     }

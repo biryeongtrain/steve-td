@@ -18,10 +18,22 @@ public final class BlockDisplayVisual {
     }
 
     public static BlockState blockState(EntityVisual visual) {
+        return blockState(visual, EntityVisualProperties.BLOCK_STATE);
+    }
+
+    /**
+     * Optional second block rendered one block above the main one, for plants that sit on top of
+     * another block (a cactus flower crowning a cactus, for example).
+     */
+    public static BlockState topBlockState(EntityVisual visual) {
+        return blockState(visual, EntityVisualProperties.BLOCK_STATE_TOP);
+    }
+
+    private static BlockState blockState(EntityVisual visual, String property) {
         if (visual == null) {
             return null;
         }
-        Object blockState = visual.properties().get(EntityVisualProperties.BLOCK_STATE);
+        Object blockState = visual.properties().get(property);
         return blockState instanceof BlockState state ? state : null;
     }
 
@@ -37,6 +49,14 @@ public final class BlockDisplayVisual {
 
         public Builder scale(double scale) {
             visual.scale(scale);
+            return this;
+        }
+
+        public Builder topBlockState(BlockState topBlockState) {
+            visual.propertyValue(
+                    EntityVisualProperties.BLOCK_STATE_TOP,
+                    Objects.requireNonNull(topBlockState, "topBlockState")
+            );
             return this;
         }
 
