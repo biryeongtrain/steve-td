@@ -1,6 +1,5 @@
 package kim.biryeong.semiontd.tower.thunder;
 
-import java.util.List;
 import java.util.UUID;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.tower.Tower;
@@ -97,11 +96,10 @@ public final class ThunderPower {
         double generation = ThunderBalance.basePower();
         double consumption = 0.0;
 
-        List<Tower> owned = lane.towers().stream()
-                .filter(tower -> playerId.equals(tower.ownerPlayer()))
-                .toList();
-
-        for (Tower tower : owned) {
+        for (Tower tower : lane.towers()) {
+            if (!playerId.equals(tower.ownerPlayer()) || tower.isDestroyed(lane)) {
+                continue;
+            }
             TowerType type = tower.type();
             if (!ThunderTowers.isThunderTower(type)) {
                 continue;

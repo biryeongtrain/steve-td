@@ -1,10 +1,13 @@
 package kim.biryeong.semiontd.tower.thunder;
 
+import java.util.List;
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.api.area.AreaVfxContext;
 import kim.biryeong.semiontd.api.area.AreaVfxOutput;
 import kim.biryeong.semiontd.api.area.AreaVfxParticle;
 import kim.biryeong.semiontd.api.area.AreaVfxStyleRegistry;
+import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
+import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
@@ -26,6 +29,11 @@ import net.minecraft.world.phys.Vec3;
  * </ul>
  */
 public final class ThunderVfx {
+    public enum DebugKind {
+        ARC,
+        DISCHARGE
+    }
+
     public static final ResourceLocation ARC = id("thunder_arc");
     public static final ResourceLocation DISCHARGE = id("thunder_discharge");
 
@@ -47,6 +55,26 @@ public final class ThunderVfx {
     public static void register(AreaVfxStyleRegistry registry) {
         registry.register(ARC, ThunderVfx::arc);
         registry.register(DISCHARGE, ThunderVfx::discharge);
+    }
+
+    public static void showDebug(SemionTowerEntity source, DebugKind kind) {
+        Vec3 center = source.position().add(0.0, 0.08, 0.0);
+        ResourceLocation style = kind == DebugKind.ARC ? ARC : DISCHARGE;
+        double radius = kind == DebugKind.ARC ? 3.5 : 4.0;
+        List<Vec3> hits = kind == DebugKind.ARC
+                ? List.of(center.add(2.4, 0.0, 0.7), center.add(-1.6, 0.0, 2.2), center.add(0.4, 0.0, -2.5))
+                : List.of(center.add(2.0, 0.0, 1.0), center.add(-2.2, 0.0, -0.8));
+        TowerVfxService.showAreaEffect(
+                source,
+                id("debug_" + kind.name().toLowerCase(java.util.Locale.ROOT)),
+                style,
+                center,
+                radius,
+                hits,
+                hits.size(),
+                hits.size(),
+                0
+        );
     }
 
     /**

@@ -24,6 +24,7 @@ public enum BuilderPalette {
     MAGE(0x5E35B1, 0x4DD0E1, "minecraft:witch", "minecraft:electric_spark"),
     INSECT(0xAEEA00, 0x7E57C2, "minecraft:infested", "minecraft:witch"),
     PLANT(0x43A047, 0xF48FB1, "minecraft:spore_blossom_air", "minecraft:cherry_leaves"),
+    THUNDER(0x38BDF8, 0xFACC15, "minecraft:electric_spark", "minecraft:end_rod"),
     DEFAULT(0xE0E0E0, 0xFFFFFF, "minecraft:end_rod", "minecraft:crit");
 
     private final DustParticleOptions rayParticle;

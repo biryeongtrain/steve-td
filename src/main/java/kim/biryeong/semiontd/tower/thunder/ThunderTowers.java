@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import kim.biryeong.semiontd.entity.visual.BlockDisplayVisual;
 import kim.biryeong.semiontd.entity.visual.EntityVisual;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.block.Blocks;
 
@@ -19,11 +20,6 @@ import net.minecraft.world.level.block.Blocks;
  * <p>The family is built around one number: the power load factor (consumption / generation).
  * Generation towers carry no attack at all, tanks either refuse to draw power or spend it to mark
  * targets, and the squirrel damage line scales directly with how much headroom the grid has.
- *
- * <p>Stats are benchmarked against the illager evoker (200 mineral, 75 DPS, efficiency 37.5),
- * the strongest damage tower in a comparable family. This family sits at or above that curve on
- * purpose: the illager gauge only ever buffs, while this builder's own resource can weaken every
- * tower at once, so matching the baseline exactly would leave it strictly worse.
  *
  * <p>Three visual groups keep the roles readable at a glance: lightning rods are block displays,
  * tanks are armadillos, and only the damage line uses the squirrel Blockbench model.
@@ -47,7 +43,7 @@ public final class ThunderTowers {
             BlockDisplayVisual.builder(Blocks.LIGHTNING_ROD.defaultBlockState()).scale(0.8).build(),
             List.of(
                     "<gray> 공격하지 않고 전력만 생산하는 설비입니다. </gray>",
-                    "<aqua> 전력 <yellow>26</yellow>을 꾸준히 공급합니다. </aqua>",
+                    "<aqua> 전력 <yellow>{ability.powerOutput:integer}</yellow>을 꾸준히 공급합니다. </aqua>",
                     "<gray> 전력이 남으면 모든 타워의 공격력이 오르고, 모자라면 함께 떨어집니다. </gray>"
             )
     );
@@ -57,7 +53,7 @@ public final class ThunderTowers {
             BlockDisplayVisual.builder(Blocks.LIGHTNING_ROD.defaultBlockState()).scale(1.15).build(),
             List.of(
                     "<gray> 출력이 흔들리지 않는 안정형 발전 설비입니다. </gray>",
-                    "<aqua> 전력 <yellow>75</yellow>를 고정으로 공급합니다. </aqua>",
+                    "<aqua> 전력 <yellow>{ability.powerOutput:integer}</yellow>를 고정으로 공급합니다. </aqua>",
                     "<green> 계산이 되는 전력이라 소비가 큰 타워를 안심하고 굴릴 수 있습니다. </green>"
             )
     );
@@ -67,8 +63,8 @@ public final class ThunderTowers {
             BlockDisplayVisual.builder(Blocks.LIGHTNING_ROD.defaultBlockState()).scale(1.15).build(),
             List.of(
                     "<gray> 낙뢰를 끌어오는 도박형 발전 설비입니다. </gray>",
-                    "<aqua> 웨이브마다 전력 <yellow>18~135</yellow> 사이를 뽑습니다. 평균은 구리 피뢰탑보다 높습니다. </aqua>",
-                    "<light_purple> 3웨이브마다 <yellow>뇌우</yellow>가 와서 최대 출력이 확정됩니다. 미리 예보됩니다. </light_purple>",
+                    "<aqua> 웨이브마다 전력 <yellow>{ability.stormMinOutput:integer}~{ability.stormMaxOutput:integer}</yellow> 사이를 뽑습니다. </aqua>",
+                    "<light_purple> {ability.thunder_global.stormWaveInterval:integer}웨이브마다 <yellow>뇌우</yellow>가 와서 최대 출력이 확정됩니다. </light_purple>",
                     "<red> 운이 나쁜 웨이브에는 출력이 바닥나 라인 전체가 약해집니다. </red>"
             )
     );
@@ -92,7 +88,7 @@ public final class ThunderTowers {
             List.of(
                     "<gray> 전기를 통과시키지 않는 껍질로 전력망에서 분리된 타워입니다. </gray>",
                     "<green> 전력을 <yellow>전혀 소비하지 않습니다</yellow>. 전력이 부족해도 항상 100% 성능입니다. </green>",
-                    "<aqua> 체력이 깎일수록 그만큼을 <yellow>전력으로 바꿔 공급</yellow>합니다. 최대 <yellow>55</yellow>. </aqua>",
+                    "<aqua> 체력이 깎일수록 전력으로 바꿔 공급합니다. 최대 <yellow>{ability.healthToPower:integer}</yellow>. </aqua>",
                     "<gray> 맞아주는 것 자체가 발전이 되는 앞라인입니다. </gray>"
             )
     );
@@ -103,7 +99,7 @@ public final class ThunderTowers {
             List.of(
                     "<gray> 절연 계열의 최종 형태입니다. 전기를 막아내는 두꺼운 껍질로 버팁니다. </gray>",
                     "<green> 전력을 <yellow>전혀 소비하지 않습니다</yellow>. </green>",
-                    "<aqua> 잃은 체력을 최대 <yellow>120</yellow>의 전력으로 바꿉니다. </aqua>",
+                    "<aqua> 잃은 체력을 최대 <yellow>{ability.healthToPower:integer}</yellow>의 전력으로 바꿉니다. </aqua>",
                     "<gray> 발전 설비 없이도 라인을 굴릴 수 있는 최후의 보루입니다. </gray>"
             )
     );
@@ -114,9 +110,9 @@ public final class ThunderTowers {
             List.of(
                     "<gray> 전기를 땅으로 흘려 적을 취약하게 만드는 앞라인 타워입니다. </gray>",
                     "<aqua> 공격한 대상에게 <yellow>접지 표식</yellow>을 남깁니다. </aqua>",
-                    "<green> 표식이 붙은 적은 아군 모두에게 받는 피해가 <yellow>35%</yellow> 증가합니다. </green>",
-                    "<green> 표식이 붙은 적의 공격력이 <yellow>22%</yellow> 감소해 라인 전체가 덜 맞습니다. </green>",
-                    "<aqua> 받는 피해의 <yellow>25%</yellow>를 땅으로 흘려보냅니다. </aqua>",
+                    "<green> 표식이 붙은 적은 받는 피해가 <yellow>{ability.markDamageBonus:percent}</yellow> 증가합니다. </green>",
+                    "<green> 표식이 붙은 적의 공격력이 <yellow>{ability.markAttackReduction:percent}</yellow> 감소합니다. </green>",
+                    "<aqua> 받는 피해의 <yellow>{ability.damageAbsorb:percent}</yellow>를 땅으로 흘려보냅니다. </aqua>",
                     "<red> 전력을 소비하므로 전력이 부족하면 함께 약해집니다. </red>"
             )
     );
@@ -126,9 +122,9 @@ public final class ThunderTowers {
             EntityVisual.builder(byId(EntityType.ARMADILLO)).scale(1.2).build(),
             List.of(
                     "<gray> 접지 계열의 최종 형태입니다. </gray>",
-                    "<aqua> 아군 피해를 <yellow>55%</yellow> 올리고 적 공격력을 <yellow>35%</yellow> 깎는 강한 표식을 남깁니다. </aqua>",
-                    "<aqua> 받는 피해의 <yellow>40%</yellow>를 땅으로 흘려보냅니다. 체력은 낮아도 훨씬 오래 버팁니다. </aqua>",
-                    "<light_purple> 파괴될 때 <yellow>방전</yellow>해 주위 4.5 범위 적에게 <yellow>240</yellow> 피해를 줍니다. </light_purple>",
+                    "<aqua> 받는 피해를 <yellow>{ability.markDamageBonus:percent}</yellow> 올리고 적 공격력을 <yellow>{ability.markAttackReduction:percent}</yellow> 낮춥니다. </aqua>",
+                    "<aqua> 받는 피해의 <yellow>{ability.damageAbsorb:percent}</yellow>를 땅으로 흘려보냅니다. </aqua>",
+                    "<light_purple> 파괴될 때 반경 {ability.dischargeRadius:blocks}에 <yellow>{ability.dischargeDamage:attack_damage}</yellow> 방전 피해를 줍니다. </light_purple>",
                     "<red> 전력을 소비합니다. </red>"
             )
     );
@@ -140,7 +136,7 @@ public final class ThunderTowers {
             squirrel(0.9),
             List.of(
                     "<gray> 도토리를 던지는 평범한 다람쥐입니다. </gray>",
-                    "<aqua> 전력 <yellow>6</yellow>만 소비합니다. </aqua>",
+                    "<aqua> 전력 <yellow>{ability.powerDraw:integer}</yellow>만 소비합니다. </aqua>",
                     "<gray> 소비가 적어 발전 설비 없이도 여러 기를 굴릴 수 있습니다. </gray>"
             )
     );
@@ -150,7 +146,7 @@ public final class ThunderTowers {
             squirrel(1.1),
             List.of(
                     "<gray> 전기를 다루기 시작한 주력 딜러입니다. </gray>",
-                    "<aqua> 전력 <yellow>14</yellow>를 소비합니다. </aqua>",
+                    "<aqua> 전력 <yellow>{ability.powerDraw:integer}</yellow>를 소비합니다. </aqua>",
                     "<green> 전력이 남을수록 공격력이 오릅니다. </green>"
             )
     );
@@ -160,8 +156,8 @@ public final class ThunderTowers {
             squirrel(1.35),
             List.of(
                     "<gray> 계열 최종 딜러입니다. 단일 화력과 광역을 함께 냅니다. </gray>",
-                    "<light_purple> 공격이 <yellow>주변 적 3명</yellow>에게 <yellow>55%</yellow> 피해로 전이됩니다. </light_purple>",
-                    "<aqua> 전력 <yellow>24</yellow>를 소비합니다. </aqua>"
+                    "<light_purple> 공격이 주변 적 {ability.chainTargets:integer}명에게 <yellow>{ability.chainDamageRatio:percent}</yellow> 피해로 전이됩니다. </light_purple>",
+                    "<aqua> 전력 <yellow>{ability.powerDraw:integer}</yellow>를 소비합니다. </aqua>"
             )
     );
 
@@ -170,8 +166,8 @@ public final class ThunderTowers {
             surgeSquirrel(1.1),
             List.of(
                     "<gray> 남는 전력을 통째로 먹고 폭주하는 단일 대상 딜러입니다. </gray>",
-                    "<green> 전력 여유에 비례해 공격력이 최대 <yellow>2배</yellow>까지 오릅니다. </green>",
-                    "<aqua> 전력 <yellow>18</yellow>을 소비합니다. </aqua>",
+                    "<green> 전력 여유에 비례해 공격력이 최대 <yellow>{ability.surgeMaxMultiplier:number}배</yellow>까지 오릅니다. </green>",
+                    "<aqua> 전력 <yellow>{ability.powerDraw:integer}</yellow>을 소비합니다. </aqua>",
                     "<gray> 광역이 필요하면 뇌신, 한 대상을 빨리 녹이려면 이쪽입니다. </gray>"
             )
     );
@@ -181,8 +177,8 @@ public final class ThunderTowers {
             surgeSquirrel(1.35),
             List.of(
                     "<gray> 폭주 계열의 최종 형태입니다. 계열 최고의 단일 화력을 냅니다. </gray>",
-                    "<green> 전력 여유에 비례해 공격력이 최대 <yellow>1.6배</yellow>까지 오릅니다. </green>",
-                    "<aqua> 전력 <yellow>30</yellow>을 소비합니다. </aqua>",
+                    "<green> 전력 여유에 비례해 공격력이 최대 <yellow>{ability.surgeMaxMultiplier:number}배</yellow>까지 오릅니다. </green>",
+                    "<aqua> 전력 <yellow>{ability.powerDraw:integer}</yellow>을 소비합니다. </aqua>",
                     "<red> 여유가 없으면 기본 공격력만 냅니다. 발전에 투자한 빌드 전용입니다. </red>"
             )
     );
@@ -203,6 +199,10 @@ public final class ThunderTowers {
             ARMADILLO_T1, ARMADILLO_INSULATED, ARMADILLO_RUBBER, ARMADILLO_GROUNDED, ARMADILLO_EARTH,
             SQUIRREL_T1, SQUIRREL_T2, SQUIRREL_T3, SURGE_T2, SURGE_T3
     );
+
+    static {
+        ALL.forEach(type -> TowerDescriptionRegistry.registerTemplate(type, type.description()));
+    }
 
     private ThunderTowers() {
     }

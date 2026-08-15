@@ -23,15 +23,16 @@ public final class ThunderBalance {
 
     /** Load factor at or below which the grid pays the full surplus bonus. */
     public static final double SURPLUS_FLOOR = 0.5;
-    public static final double SURPLUS_DAMAGE_BONUS = 0.25;
+    public static final double SURPLUS_DAMAGE_BONUS = 0.22;
 
     /** Load factor at or above which the shortage penalty stops getting worse. */
     public static final double SHORTAGE_CEILING = 1.3;
     public static final double SHORTAGE_DAMAGE_PENALTY = 0.4;
     public static final double SHORTAGE_ATTACK_SPEED_PENALTY = 0.3;
 
-    public static final int STUN_TICKS = 30;
+    public static final int STUN_TICKS = 20;
     public static final int STUN_COOLDOWN_TICKS = 40;
+    public static final int STUN_IMMUNITY_TICKS = 50;
     public static final int MARK_DURATION_TICKS = 100;
 
     /** Every N waves the storm rod is guaranteed its maximum output. */
@@ -70,6 +71,10 @@ public final class ThunderBalance {
 
     public static int stunCooldownTicks() {
         return Math.max(1, globalInt("stunCooldownTicks", STUN_COOLDOWN_TICKS));
+    }
+
+    public static int stunImmunityTicks() {
+        return Math.max(1, globalInt("stunImmunityTicks", STUN_IMMUNITY_TICKS));
     }
 
     public static int markDurationTicks() {

@@ -48,6 +48,7 @@ import kim.biryeong.semiontd.tower.ocean.OceanTowers;
 import kim.biryeong.semiontd.tower.plant.PlantTowers;
 import kim.biryeong.semiontd.tower.queen.QueenTowers;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
+import kim.biryeong.semiontd.tower.thunder.ThunderTowers;
 import kim.biryeong.semiontd.tower.area.AreaVfxStyleRegistryImpl;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
@@ -530,6 +531,9 @@ public final class TowerVfxService {
         }
         if (PlantTowers.isPlantTower(type)) {
             return BuilderPalette.PLANT;
+        }
+        if (ThunderTowers.isThunderTower(type)) {
+            return BuilderPalette.THUNDER;
         }
         return BuilderPalette.DEFAULT;
     }

@@ -37,6 +37,7 @@ import kim.biryeong.semiontd.tower.ProductionTowerService;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerPlacementPositions;
+import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.tower.adversary.AdversaryVfx;
@@ -54,6 +55,8 @@ import kim.biryeong.semiontd.tower.mage.MageWizardTower;
 import kim.biryeong.semiontd.tower.ocean.OceanVfx;
 import kim.biryeong.semiontd.tower.queen.QueenBalance;
 import kim.biryeong.semiontd.tower.queen.QueenTowers;
+import kim.biryeong.semiontd.tower.thunder.ThunderTowers;
+import kim.biryeong.semiontd.tower.thunder.ThunderVfx;
 import kim.biryeong.semiontd.tower.hero.HeroCompanionRole;
 import kim.biryeong.semiontd.tower.hero.HeroCompanionSkinGui;
 import kim.biryeong.semiontd.tower.hero.HeroPartyStates;
@@ -558,7 +561,14 @@ public final class SemionCommands {
                                                 context.getSource(), gameManager, false)))
                                 .then(literal("revive")
                                         .executes(context -> debugInsectVfx(
-                                                context.getSource(), gameManager, true)))))
+                                                context.getSource(), gameManager, true))))
+                        .then(literal("thunder")
+                                .then(literal("arc")
+                                        .executes(context -> debugThunderVfx(
+                                                context.getSource(), gameManager, ThunderVfx.DebugKind.ARC)))
+                                .then(literal("discharge")
+                                        .executes(context -> debugThunderVfx(
+                                                context.getSource(), gameManager, ThunderVfx.DebugKind.DISCHARGE)))))
                 .then(literal("summonui")
                         .executes(context -> debugSummonDialog(context.getSource(), gameManager, 1))
                         .then(argument("page", IntegerArgumentType.integer(1))
@@ -828,6 +838,37 @@ public final class SemionCommands {
         failure(source, revive
                 ? "살아 있고 스포너에 연결된 벌레 타워가 필요합니다."
                 : "살아 있는 벌레 스포너가 필요합니다.");
+        return 0;
+    }
+
+    private static int debugThunderVfx(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            ThunderVfx.DebugKind kind
+    ) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGame game = playableGame(source, gameManager);
+        PlayerLane lane = game == null ? null : game.playerLane(player.getUUID()).orElse(null);
+        TowerType requiredType = kind == ThunderVfx.DebugKind.ARC
+                ? ThunderTowers.SQUIRREL_T3
+                : ThunderTowers.ARMADILLO_EARTH;
+        if (lane != null) {
+            for (Tower tower : lane.towers()) {
+                if (!tower.type().id().equals(requiredType.id())
+                        || !(tower instanceof EntityBackedTower backed)
+                        || backed.entityId().isEmpty()) {
+                    continue;
+                }
+                var entity = lane.arenaWorld().getEntity(backed.entityId().getAsInt());
+                if (entity instanceof kim.biryeong.semiontd.entity.tower.SemionTowerEntity towerEntity
+                        && towerEntity.isAlive()) {
+                    ThunderVfx.showDebug(towerEntity, kind);
+                    success(source, "람쥐썬더 " + kind.name().toLowerCase(java.util.Locale.ROOT) + " VFX를 재생했습니다.");
+                    return 1;
+                }
+            }
+        }
+        failure(source, "살아 있는 " + requiredType.displayName() + " 타워가 필요합니다.");
         return 0;
     }
 

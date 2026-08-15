@@ -2,9 +2,15 @@ package kim.biryeong.semiontd.tower.thunder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.JsonParser;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
@@ -143,5 +149,83 @@ class ThunderTowerCatalogTest {
             assertEquals(expected, type.visual().blockbenchModel().orElseThrow(),
                     type.id() + " must use the model for its branch");
         }
+    }
+
+    @Test
+    void tunedDefaultsMergeAndMatchTheBundle() throws Exception {
+        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        assertEquals(20, defaults.abilityTicks(ThunderBalance.CONFIG_ID, "stunTicks", -1));
+        assertEquals(50, defaults.abilityTicks(ThunderBalance.CONFIG_ID, "stunImmunityTicks", -1));
+        assertEquals(0.22, defaults.ability(ThunderBalance.CONFIG_ID, "surplusDamageBonus", -1), 0.0001);
+
+        TowerBalanceConfig partial = new TowerBalanceConfig(
+                Map.of(), Map.of(), Map.of(ThunderBalance.CONFIG_ID, Map.of("stunTicks", 18.0))
+        ).withMissingDefaults(defaults);
+        assertEquals(18, partial.abilityTicks(ThunderBalance.CONFIG_ID, "stunTicks", -1));
+        assertEquals(50, partial.abilityTicks(ThunderBalance.CONFIG_ID, "stunImmunityTicks", -1));
+
+        try (var input = ThunderTowerCatalogTest.class.getResourceAsStream(
+                "/semiontd/balance-defaults/tower_balance.json")) {
+            var bundled = JsonParser.parseReader(new InputStreamReader(
+                    java.util.Objects.requireNonNull(input), StandardCharsets.UTF_8))
+                    .getAsJsonObject().getAsJsonObject("abilities");
+            for (var entry : defaults.abilities().entrySet()) {
+                if (!entry.getKey().startsWith("thunder_")) {
+                    continue;
+                }
+                var values = bundled.getAsJsonObject(entry.getKey());
+                assertEquals(entry.getValue().keySet(), values.keySet(), entry.getKey());
+                entry.getValue().forEach((key, value) ->
+                        assertEquals(value, values.get(key).getAsDouble(), 0.0001, entry.getKey() + "." + key));
+            }
+        }
+    }
+
+    @Test
+    void invalidThunderTimingAndTargetCountsAreRejected() {
+        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        assertInvalidAbility(defaults, ThunderBalance.CONFIG_ID, "stunImmunityTicks", 10.0);
+        assertInvalidAbility(defaults, ThunderTowers.SQUIRREL_T3.id(), "chainTargets", 2.5);
+        assertInvalidAbility(defaults, ThunderTowers.SURGE_T3.id(), "surgeMaxMultiplier", 0.9);
+    }
+
+    @Test
+    void tunedDamageStaysWithinThePlannedCeilings() {
+        TowerType chain = TowerBalanceRuntime.resolve(ThunderTowers.SQUIRREL_T3);
+        double primary = chain.damage() * 20.0 / chain.attackIntervalTicks()
+                * new ThunderPower.Snapshot(80.0, ThunderBalance.powerDraw(chain.id()), 0.3).damageMultiplier();
+        assertEquals(128.6545, primary, 0.001);
+        double ratio = ThunderBalance.chainDamageRatio(chain.id());
+        assertEquals(252.1629, primary * (1.0 + 2.0 * ratio), 0.001);
+        assertEquals(313.9171, primary * (1.0 + 3.0 * ratio), 0.001);
+
+        assertEquals(94.4382, surgeDps(ThunderTowers.SURGE_T2), 0.001);
+        assertEquals(138.775, surgeDps(ThunderTowers.SURGE_T3), 0.001);
+    }
+
+    private static double surgeDps(TowerType type) {
+        TowerType resolved = TowerBalanceRuntime.resolve(type);
+        double draw = ThunderBalance.powerDraw(type.id());
+        ThunderPower.Snapshot grid = new ThunderPower.Snapshot(ThunderBalance.basePower(), draw,
+                draw / ThunderBalance.basePower());
+        return resolved.damage() * 20.0 / resolved.attackIntervalTicks() * grid.damageMultiplier()
+                * (1.0 + (ThunderBalance.surgeMaxMultiplier(type.id()) - 1.0) * grid.headroom());
+    }
+
+    private static void assertInvalidAbility(
+            TowerBalanceConfig defaults,
+            String configId,
+            String key,
+            double value
+    ) {
+        LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>(defaults.abilities());
+        LinkedHashMap<String, Double> values = new LinkedHashMap<>(abilities.get(configId));
+        values.put(key, value);
+        abilities.put(configId, values);
+        TowerBalanceConfig invalid = new TowerBalanceConfig(
+                defaults.towers(), defaults.upgradeCosts(), abilities,
+                defaults.illusionCloneQueue(), defaults.villagerAdv(), defaults.schemaVersion()
+        );
+        assertThrows(IllegalArgumentException.class, invalid::validateForRuntime);
     }
 }

@@ -12,24 +12,6 @@ base {
 
 
 repositories {
-    // Offline fallback for the three de.tomalbrc artifacts (DialogUtils, avatar-renderer,
-    // blockbench-import-library).
-    //
-    // maven.tomalbrc.de resolves in DNS but refuses TCP 443 for long stretches. While it is down
-    // those dependencies cannot be fetched at all, so a developer can drop the jars — they ship
-    // inside the mod's own META-INF/jars/ — into local-libs/ and keep building.
-    //
-    // Safe to commit: local-libs/ is gitignored, so a fresh checkout has no such directory and this
-    // block is skipped entirely, leaving maven.tomalbrc.de below as the only source. It is scoped to
-    // the one group and declared first so that, while the fallback is in use, resolution does not
-    // have to wait out a connection timeout per artifact.
-    if (file("${rootDir}/local-libs").isDirectory()) {
-        flatDir {
-            dirs "${rootDir}/local-libs"
-            content { includeGroup "de.tomalbrc" }
-        }
-    }
-
     // Serves Polymer modules
     maven {
         url 'https://maven.nucleoid.xyz'

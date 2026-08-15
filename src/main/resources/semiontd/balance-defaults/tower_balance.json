@@ -5454,12 +5454,13 @@
     "thunder_global": {
       "basePower": 80.0,
       "surplusFloor": 0.5,
-      "surplusDamageBonus": 0.25,
+      "surplusDamageBonus": 0.22,
       "shortageCeiling": 1.3,
       "shortageDamagePenalty": 0.4,
       "shortageAttackSpeedPenalty": 0.3,
-      "stunTicks": 30.0,
+      "stunTicks": 20.0,
       "stunCooldownTicks": 40.0,
+      "stunImmunityTicks": 50.0,
       "markDurationTicks": 100.0,
       "stormWaveInterval": 3.0
     },
@@ -5481,17 +5482,17 @@
     },
     "thunder_armadillo_grounded": {
       "powerDraw": 7.0,
-      "markDamageBonus": 0.35,
-      "markAttackReduction": 0.22,
-      "damageAbsorb": 0.25
+      "markDamageBonus": 0.3,
+      "markAttackReduction": 0.2,
+      "damageAbsorb": 0.22
     },
     "thunder_armadillo_earth": {
       "powerDraw": 10.0,
-      "markDamageBonus": 0.55,
-      "dischargeDamage": 240.0,
-      "dischargeRadius": 4.5,
-      "markAttackReduction": 0.35,
-      "damageAbsorb": 0.4
+      "markDamageBonus": 0.48,
+      "dischargeDamage": 210.0,
+      "dischargeRadius": 4.0,
+      "markAttackReduction": 0.3,
+      "damageAbsorb": 0.35
     },
     "thunder_squirrel_t1": {
       "powerDraw": 6.0
@@ -5503,15 +5504,15 @@
       "powerDraw": 24.0,
       "chainTargets": 3.0,
       "chainRadius": 3.5,
-      "chainDamageRatio": 0.55
+      "chainDamageRatio": 0.48
     },
     "thunder_surge_t2": {
       "powerDraw": 18.0,
-      "surgeMaxMultiplier": 2.0
+      "surgeMaxMultiplier": 1.85
     },
     "thunder_surge_t3": {
       "powerDraw": 30.0,
-      "surgeMaxMultiplier": 1.6
+      "surgeMaxMultiplier": 1.5
     }
   },
   "illusionCloneQueue": {

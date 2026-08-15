@@ -38,6 +38,7 @@ import kim.biryeong.semiontd.tower.ocean.OceanTowers;
 import kim.biryeong.semiontd.tower.plant.PlantTowers;
 import kim.biryeong.semiontd.tower.queen.QueenTowers;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
+import kim.biryeong.semiontd.tower.thunder.ThunderTowers;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
 import kim.biryeong.semiontd.tower.villager.VillagerTowers;
 import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
@@ -79,6 +80,7 @@ public final class TowerVfxGameTest {
         assertPalette(MageTowers.WIZARD, BuilderPalette.MAGE);
         assertPalette(InsectTowers.SILVERFISH, BuilderPalette.INSECT);
         assertPalette(InsectTowers.SPAWNER, BuilderPalette.INSECT);
+        assertPalette(ThunderTowers.SQUIRREL_T3, BuilderPalette.THUNDER);
         context.succeed();
     }
 
@@ -346,6 +348,19 @@ public final class TowerVfxGameTest {
         var dispatcher = context.getLevel().getServer().getCommands().getDispatcher();
         for (String effect : List.of("radius", "revive")) {
             String command = "semiontd-debug vfx insect " + effect;
+            var parsed = dispatcher.parse(command, context.getLevel().getServer().createCommandSourceStack());
+            if (parsed.getContext().getNodes().isEmpty() || parsed.getReader().canRead()) {
+                throw new AssertionError("Expected /" + command + " to parse completely");
+            }
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void thunderDebugCommandsParse(GameTestHelper context) {
+        var dispatcher = context.getLevel().getServer().getCommands().getDispatcher();
+        for (String effect : List.of("arc", "discharge")) {
+            String command = "semiontd-debug vfx thunder " + effect;
             var parsed = dispatcher.parse(command, context.getLevel().getServer().createCommandSourceStack());
             if (parsed.getContext().getNodes().isEmpty() || parsed.getReader().canRead()) {
                 throw new AssertionError("Expected /" + command + " to parse completely");

@@ -5,7 +5,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.api.area.AreaVfxSpec;
+import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
@@ -17,6 +19,8 @@ import kim.biryeong.semiontd.tower.ProductionTower;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
+import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
 
@@ -32,7 +36,6 @@ public class ThunderTower extends ProductionTower {
     /** How often the grid is recomputed. Walking the lane roster every tick is wasteful. */
     private static final int GRID_SCAN_INTERVAL_TICKS = 10;
 
-    private PlayerLane currentLane;
     private ThunderPower.Snapshot grid = ThunderPower.empty();
     private long lastGridScanTick = Long.MIN_VALUE;
     private long lastStunTick = Long.MIN_VALUE;
@@ -73,7 +76,6 @@ public class ThunderTower extends ProductionTower {
     @Override
     public void onPlaced(PlayerLane lane) {
         super.onPlaced(lane);
-        currentLane = lane;
         refreshGrid(lane, true);
     }
 
@@ -86,14 +88,12 @@ public class ThunderTower extends ProductionTower {
     @Override
     public void tick(PlayerLane lane) {
         super.tick(lane);
-        currentLane = lane;
         refreshGrid(lane, false);
     }
 
     @Override
     public void onWaveStarted(PlayerLane lane, int currentRound) {
         super.onWaveStarted(lane, currentRound);
-        currentLane = lane;
         // The storm roll for this wave is already in place; force a rescan so the first attack of
         // the wave uses the real output rather than the previous wave's number.
         refreshGrid(lane, true);
@@ -156,7 +156,14 @@ public class ThunderTower extends ProductionTower {
             boolean killedTarget
     ) {
         super.onAttackResolved(towerEntity, target, attemptedDamage, resolvedOutgoingDamage, dealtDamage, killedTarget);
-        if (towerEntity == null || target == null || killedTarget || !target.isAlive()) {
+        if (towerEntity == null || target == null) {
+            return;
+        }
+
+        if (ThunderBalance.chainTargets(type().id()) > 0) {
+            fireChain(towerEntity, target, resolvedOutgoingDamage);
+        }
+        if (killedTarget || !target.isAlive()) {
             return;
         }
 
@@ -164,10 +171,7 @@ public class ThunderTower extends ProductionTower {
             applyStun(towerEntity, target);
         }
         if (ThunderTowers.isGrounded(type())) {
-            applyGroundingMark(target);
-        }
-        if (ThunderBalance.chainTargets(type().id()) > 0) {
-            fireChain(towerEntity, target, resolvedOutgoingDamage);
+            applyGroundingMark(towerEntity, target);
         }
     }
 
@@ -187,8 +191,31 @@ public class ThunderTower extends ProductionTower {
         if (now - lastStunTick < ThunderBalance.stunCooldownTicks()) {
             return;
         }
+        ResourceLocation immunitySource = ResourceLocation.fromNamespaceAndPath(
+                SemionTd.MOD_ID,
+                "thunder_stun/" + ownerPlayer()
+        );
+        if (!target.applyTimedEffect(
+                TimedEffectType.MONSTER_STUN_IMMUNITY,
+                immunitySource,
+                1.0,
+                ThunderBalance.stunImmunityTicks()
+        )) {
+            return;
+        }
         lastStunTick = now;
         target.applyTimedEffect(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION, 1.0, ThunderBalance.stunTicks());
+        TowerVfxService.showAreaEffect(
+                towerEntity,
+                AreaEffectIds.tower(this, "stun"),
+                AreaVfxStyles.DEBUFF,
+                target.position(),
+                0.8,
+                List.of(target.position()),
+                1,
+                1,
+                0
+        );
     }
 
     /**
@@ -198,17 +225,32 @@ public class ThunderTower extends ProductionTower {
      * <p>The second half is why this route can afford lower health than the insulated one. It does
      * not protect the tank that applied it — it protects the whole lane from that monster.
      */
-    private void applyGroundingMark(SemionMonsterEntity target) {
+    private void applyGroundingMark(SemionTowerEntity towerEntity, SemionMonsterEntity target) {
         String id = type().id();
         int duration = ThunderBalance.markDurationTicks();
 
         double bonus = ThunderBalance.markDamageBonus(id);
+        double weaken = ThunderBalance.markAttackReduction(id);
+        boolean newMark = target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS) < bonus
+                || target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION) < weaken;
         if (bonus > 0.0) {
             target.applyTimedEffect(TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS, bonus, duration);
         }
-        double weaken = ThunderBalance.markAttackReduction(id);
         if (weaken > 0.0) {
             target.applyTimedEffect(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION, weaken, duration);
+        }
+        if (newMark) {
+            TowerVfxService.showAreaEffect(
+                    towerEntity,
+                    AreaEffectIds.tower(this, "grounding_mark"),
+                    AreaVfxStyles.PULSE,
+                    target.position(),
+                    1.1,
+                    List.of(target.position()),
+                    1,
+                    1,
+                    0
+            );
         }
     }
 
@@ -261,12 +303,13 @@ public class ThunderTower extends ProductionTower {
                 AreaVfxSpec.onTrigger(ThunderVfx.ARC)
         );
 
-        TowerAreaDamage.apply(
+        TowerAreaDamage.applyResolved(
                 this,
                 towerEntity,
                 request,
                 monster -> remaining.getAndDecrement() > 0 ? chainDamage : 0.0,
-                true
+                true,
+                (monster, damage, killed) -> {}
         );
     }
 

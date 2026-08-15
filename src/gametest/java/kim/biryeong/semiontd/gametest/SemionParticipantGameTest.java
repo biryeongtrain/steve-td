@@ -124,6 +124,7 @@ import kim.biryeong.semiontd.job.PlantTowerJob;
 import kim.biryeong.semiontd.job.QueenTowerJob;
 import kim.biryeong.semiontd.job.ResonanceTowerJob;
 import kim.biryeong.semiontd.job.SemionJob;
+import kim.biryeong.semiontd.job.ThunderTowerJob;
 import kim.biryeong.semiontd.job.UndeadTowerJob;
 import kim.biryeong.semiontd.job.InsectTowerJob;
 import kim.biryeong.semiontd.job.VillagerTowerJob;
@@ -10063,7 +10064,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertPresent(context, JobRegistry.find(PlantTowerJob.ID), "Built-in reload should register the plant tower job.")) {
             return;
         }
-        if (!assertEquals(context, 94L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose every production starter family.")) {
+        if (!assertPresent(context, JobRegistry.find(ThunderTowerJob.ID), "Built-in reload should register the thunder tower job.")) {
+            return;
+        }
+        if (!assertEquals(context, 97L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose every production starter family.")) {
             return;
         }
         context.succeed();

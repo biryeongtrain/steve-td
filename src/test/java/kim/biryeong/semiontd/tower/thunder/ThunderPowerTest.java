@@ -4,12 +4,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.UUID;
+import kim.biryeong.semiontd.game.GridPosition;
+import kim.biryeong.semiontd.game.PlayerLane;
+import kim.biryeong.semiontd.game.TeamId;
+import kim.biryeong.semiontd.map.LaneRegionLayout;
+import net.minecraft.core.BlockPos;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
+import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import xyz.nucleoid.map_templates.BlockBounds;
 
 class ThunderPowerTest {
     private static final UUID PLAYER = UUID.nameUUIDFromBytes("thunder-player".getBytes());
@@ -97,6 +105,27 @@ class ThunderPowerTest {
     }
 
     @Test
+    void gridCountsOnlyLivingThunderTowersOwnedByThePlayer() {
+        UUID other = UUID.nameUUIDFromBytes("other-thunder-player".getBytes());
+        PlayerLane lane = testLane();
+        ThunderTower rod = tower(ThunderTowers.ROD_T1, PLAYER, 1);
+        ThunderTower squirrel = tower(ThunderTowers.SQUIRREL_T1, PLAYER, 2);
+        lane.addTower(rod);
+        lane.addTower(squirrel);
+        lane.addTower(tower(ThunderTowers.ROD_COPPER, other, 3));
+
+        ThunderPower.Snapshot active = ThunderPower.snapshot(PLAYER, lane);
+        assertEquals(106.0, active.generation(), EPSILON);
+        assertEquals(6.0, active.consumption(), EPSILON);
+
+        rod.syncHealth(0.0);
+        squirrel.syncHealth(0.0);
+        ThunderPower.Snapshot destroyed = ThunderPower.snapshot(PLAYER, lane);
+        assertEquals(80.0, destroyed.generation(), EPSILON);
+        assertEquals(0.0, destroyed.consumption(), EPSILON);
+    }
+
+    @Test
     void stormWavesLandOnTheConfiguredInterval() {
         int interval = ThunderBalance.stormWaveInterval();
         assertTrue(ThunderStates.isStormWave(interval));
@@ -168,5 +197,22 @@ class ThunderPowerTest {
 
         assertEquals(0, ThunderStates.currentRound(PLAYER),
                 "a stale round would make the next match forecast a storm that is not coming");
+    }
+
+    private static ThunderTower tower(kim.biryeong.semiontd.tower.TowerType type, UUID owner, int x) {
+        return new ThunderTower(type, owner, TeamId.RED, 1, new GridPosition(x, 64, 1));
+    }
+
+    private static PlayerLane testLane() {
+        Vec3 spawn = new Vec3(0.5, 64.0, 0.5);
+        LaneRegionLayout layout = new LaneRegionLayout(
+                1,
+                spawn,
+                List.of(new Vec3(0.5, 64.0, 4.5)),
+                new Vec3(0.5, 64.0, 10.5),
+                BlockBounds.of(new BlockPos(0, 63, 0), new BlockPos(10, 66, 10)),
+                List.of(new GridPosition(0, 63, 10))
+        );
+        return new PlayerLane(TeamId.RED, 1, PLAYER, null, layout);
     }
 }

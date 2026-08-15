@@ -1133,6 +1133,46 @@ public record TowerBalanceConfig(
         validateHeroPartyBalance();
         validateAtlantisAbilities();
         validatePlantAbilities();
+        validateThunderAbilities();
+    }
+
+    private void validateThunderAbilities() {
+        String global = ThunderBalance.CONFIG_ID;
+        validatePositive(global,
+                "basePower", "shortageCeiling", "stunTicks", "stunCooldownTicks",
+                "stunImmunityTicks", "markDurationTicks", "stormWaveInterval");
+        validateIntegral(global, false,
+                "stunTicks", "stunCooldownTicks", "stunImmunityTicks", "markDurationTicks", "stormWaveInterval");
+        validateRange(global, "surplusFloor", 0.0, 1.0);
+        validateRatios(global,
+                "surplusDamageBonus", "shortageDamagePenalty", "shortageAttackSpeedPenalty");
+        Double stunTicks = configuredAbility(global, "stunTicks");
+        Double immunityTicks = configuredAbility(global, "stunImmunityTicks");
+        if (stunTicks != null && immunityTicks != null && immunityTicks < stunTicks) {
+            throw new IllegalArgumentException("Thunder stun immunity must not be shorter than the stun.");
+        }
+        Double shortageCeiling = configuredAbility(global, "shortageCeiling");
+        if (shortageCeiling != null && shortageCeiling <= 1.0) {
+            throw new IllegalArgumentException("Thunder shortage ceiling must be greater than 1.");
+        }
+
+        for (TowerType type : ThunderTowers.all()) {
+            String id = type.id();
+            validateAtLeast(id, 0.0,
+                    "powerOutput", "stormMinOutput", "stormMaxOutput", "powerDraw", "healthToPower",
+                    "dischargeDamage", "dischargeRadius", "chainTargets", "chainRadius", "chainDamageRatio");
+            validateRatios(id, "damageAbsorb", "markAttackReduction", "markDamageBonus", "chainDamageRatio");
+            validateAtLeast(id, 1.0, "surgeMaxMultiplier");
+        }
+
+        Double stormMin = configuredAbility(ThunderTowers.ROD_STORM.id(), "stormMinOutput");
+        Double stormMax = configuredAbility(ThunderTowers.ROD_STORM.id(), "stormMaxOutput");
+        if (stormMin != null && stormMax != null && stormMin > stormMax) {
+            throw new IllegalArgumentException("Thunder storm minimum output must not exceed its maximum output.");
+        }
+        validatePositive(ThunderTowers.ARMADILLO_EARTH.id(), "dischargeDamage", "dischargeRadius");
+        validatePositive(ThunderTowers.SQUIRREL_T3.id(), "chainRadius", "chainDamageRatio");
+        validateIntegral(ThunderTowers.SQUIRREL_T3.id(), false, "chainTargets");
     }
 
     private void validateAtlantisAbilities() {
@@ -1566,6 +1606,7 @@ public record TowerBalanceConfig(
         global.put("shortageAttackSpeedPenalty", ThunderBalance.SHORTAGE_ATTACK_SPEED_PENALTY);
         global.put("stunTicks", (double) ThunderBalance.STUN_TICKS);
         global.put("stunCooldownTicks", (double) ThunderBalance.STUN_COOLDOWN_TICKS);
+        global.put("stunImmunityTicks", (double) ThunderBalance.STUN_IMMUNITY_TICKS);
         global.put("markDurationTicks", (double) ThunderBalance.MARK_DURATION_TICKS);
         global.put("stormWaveInterval", (double) ThunderBalance.STORM_WAVE_INTERVAL);
         putAbilities(abilities, ThunderBalance.CONFIG_ID, global);
@@ -1586,17 +1627,17 @@ public record TowerBalanceConfig(
         // 접지 루트: 전력을 쓰는 대신 표식으로 아군 전체의 피해를 키운다.
         putAbilities(abilities, ThunderTowers.ARMADILLO_GROUNDED.id(), Map.of(
                 "powerDraw", 7.0,
-                "markDamageBonus", 0.35,
-                "markAttackReduction", 0.22,
-                "damageAbsorb", 0.25
+                "markDamageBonus", 0.30,
+                "markAttackReduction", 0.20,
+                "damageAbsorb", 0.22
         ));
         putAbilities(abilities, ThunderTowers.ARMADILLO_EARTH.id(), Map.of(
                 "powerDraw", 10.0,
-                "markDamageBonus", 0.55,
-                "markAttackReduction", 0.35,
-                "damageAbsorb", 0.40,
-                "dischargeDamage", 240.0,
-                "dischargeRadius", 4.5
+                "markDamageBonus", 0.48,
+                "markAttackReduction", 0.30,
+                "damageAbsorb", 0.35,
+                "dischargeDamage", 210.0,
+                "dischargeRadius", 4.0
         ));
 
         putAbilities(abilities, ThunderTowers.SQUIRREL_T1.id(), Map.of("powerDraw", 6.0));
@@ -1606,16 +1647,16 @@ public record TowerBalanceConfig(
                 "powerDraw", 24.0,
                 "chainTargets", 3.0,
                 "chainRadius", 3.5,
-                "chainDamageRatio", 0.55
+                "chainDamageRatio", 0.48
         ));
         // 폭주: 단일 대상 담당. 여유 전력을 그대로 화력으로 환산한다.
         putAbilities(abilities, ThunderTowers.SURGE_T2.id(), Map.of(
                 "powerDraw", 18.0,
-                "surgeMaxMultiplier", 2.0
+                "surgeMaxMultiplier", 1.85
         ));
         putAbilities(abilities, ThunderTowers.SURGE_T3.id(), Map.of(
                 "powerDraw", 30.0,
-                "surgeMaxMultiplier", 1.6
+                "surgeMaxMultiplier", 1.50
         ));
     }
 

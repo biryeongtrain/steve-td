@@ -17,15 +17,7 @@ import java.util.UUID;
  * handles stacking, expiry and cleanup.
  */
 public final class ThunderStates {
-    private static final Map<UUID, Double> STORM_ROLL = new HashMap<>();
-
-    /**
-     * Last round each player rolled for.
-     *
-     * <p>Tracked here rather than read off the lane because the forecast is a player-level fact and
-     * {@code runtimeDetailLines()} has no round argument to work with.
-     */
-    private static final Map<UUID, Integer> LAST_ROUND = new HashMap<>();
+    private static final Map<UUID, StormState> STORMS = new HashMap<>();
 
     private static final Random RANDOM = new Random();
 
@@ -34,14 +26,12 @@ public final class ThunderStates {
 
     public static void clear(UUID playerId) {
         if (playerId != null) {
-            STORM_ROLL.remove(playerId);
-            LAST_ROUND.remove(playerId);
+            STORMS.remove(playerId);
         }
     }
 
     public static void clearAll() {
-        STORM_ROLL.clear();
-        LAST_ROUND.clear();
+        STORMS.clear();
     }
 
     /** Round this player last rolled for, 0 before the first wave. */
@@ -49,7 +39,7 @@ public final class ThunderStates {
         if (playerId == null) {
             return 0;
         }
-        return LAST_ROUND.getOrDefault(playerId, 0);
+        return STORMS.getOrDefault(playerId, StormState.DEFAULT).round();
     }
 
     /** Waves remaining until this player's next guaranteed storm. */
@@ -83,8 +73,10 @@ public final class ThunderStates {
         if (playerId == null) {
             return;
         }
-        LAST_ROUND.put(playerId, Math.max(0, round));
-        STORM_ROLL.put(playerId, isStormWave(round) ? 1.0 : clamp01(roll));
+        STORMS.put(playerId, new StormState(
+                Math.max(0, round),
+                isStormWave(round) ? 1.0 : clamp01(roll)
+        ));
     }
 
     /**
@@ -97,7 +89,7 @@ public final class ThunderStates {
         if (playerId == null) {
             return 0.5;
         }
-        return STORM_ROLL.getOrDefault(playerId, 0.5);
+        return STORMS.getOrDefault(playerId, StormState.DEFAULT).roll();
     }
 
     private static double clamp01(double value) {
@@ -105,5 +97,9 @@ public final class ThunderStates {
             return 0.0;
         }
         return Math.max(0.0, Math.min(1.0, value));
+    }
+
+    private record StormState(int round, double roll) {
+        private static final StormState DEFAULT = new StormState(0, 0.5);
     }
 }
