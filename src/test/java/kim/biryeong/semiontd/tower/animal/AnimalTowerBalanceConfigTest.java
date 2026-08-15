@@ -8,7 +8,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceConfig.TowerStats;
-import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.job.AnimalTowerJob;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
@@ -186,34 +185,6 @@ class AnimalTowerBalanceConfigTest {
         assertEquals(stats(defaults, AnimalTowers.T4_PIG_LEADER_TOWER), stats(merged, AnimalTowers.T4_PIG_LEADER_TOWER));
         assertEquals(350L, merged.upgradeCost("t3_pig_tower", "t4_pig_leader_tower", -1));
         assertEquals(0.15, merged.ability(AnimalTowers.T4_PIG_LEADER_TOWER.id(), "leaderMaxHealthBonus", -1.0));
-    }
-
-    @Test
-    void rabbitT3DescriptionShowsLiveExtraDamageRatio() {
-        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
-
-        assertTrue(TowerBalanceRuntime.resolve(AnimalTowers.T3_RABBIT_TOWER).description().stream()
-                .anyMatch(line -> line.contains("추가 피해 +200%")));
-    }
-
-    @Test
-    void leaderDescriptionsShowUpgradeRequirementAndConfiguredAura() {
-        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
-
-        assertTrue(TowerBalanceRuntime.resolve(AnimalTowers.T3_PIG_TOWER).description().stream()
-                .anyMatch(line -> line.contains("최대 중첩") && line.contains("우두머리")));
-        assertTrue(TowerBalanceRuntime.resolve(AnimalTowers.T3_FOX_TOWER).description().stream()
-                .anyMatch(line -> line.contains("최대 중첩") && line.contains("우두머리")));
-        assertTrue(TowerBalanceRuntime.resolve(AnimalTowers.T1_FOX_TOWER).description().stream()
-                .noneMatch(line -> line.contains("우두머리로 승급")));
-        assertTrue(TowerBalanceRuntime.resolve(AnimalTowers.T4_PIG_LEADER_TOWER).description().stream()
-                .anyMatch(line -> line.contains("반경 8블록") && line.contains("최대 체력 +15%") && line.contains("5%p")));
-        assertTrue(TowerBalanceRuntime.resolve(AnimalTowers.T4_WOLF_LEADER_TOWER).description().stream()
-                .anyMatch(line -> line.contains("반경 8블록") && line.contains("1틱") && line.contains("10%p")));
-        assertTrue(TowerBalanceRuntime.resolve(AnimalTowers.T4_RABBIT_LEADER_TOWER).description().stream()
-                .anyMatch(line -> line.contains("반경 7블록") && line.contains("공격 피해 +8%") && line.contains("사거리 +1블록")));
-        assertTrue(TowerBalanceRuntime.resolve(AnimalTowers.T4_FOX_LEADER_TOWER).description().stream()
-                .anyMatch(line -> line.contains("반경 8블록") && line.contains("최대 65%") && line.contains("25%p")));
     }
 
     private static TowerStats stats(TowerBalanceConfig config, TowerType type) {

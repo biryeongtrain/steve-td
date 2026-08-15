@@ -43,7 +43,7 @@ public enum FoxForm {
             5.0,
             30.0,
             3,
-            0.0,
+            0.10,
             EvolutionRecipe.visible(RivalKind.BREEZE, 50)
     ),
     SHIELD_BEARER(
@@ -52,7 +52,7 @@ public enum FoxForm {
             FoxRoute.RAPID,
             2,
             Items.SHIELD,
-            950.0,
+            1050.0,
             3.5,
             60.0,
             7,
@@ -119,8 +119,8 @@ public enum FoxForm {
             Items.FIREWORK_ROCKET,
             650.0,
             10.0,
-            48.0,
-            8,
+            56.0,
+            5,
             0.0,
             EvolutionRecipe.visible(RivalKind.CREEPER, 60, RivalKind.BREEZE, 30)
     ),
@@ -133,7 +133,7 @@ public enum FoxForm {
             750.0,
             11.0,
             96.0,
-            16,
+            8,
             0.0,
             EvolutionRecipe.visible(RivalKind.CREEPER, 60, RivalKind.POLAR_BEAR, 30)
     ),
@@ -170,7 +170,7 @@ public enum FoxForm {
             2,
             Items.SCULK_CATALYST,
             800.0,
-            8.0,
+            13.0,
             AdversaryBalance.SCULK_DETONATION_DAMAGE,
             AdversaryBalance.SCULK_ATTACK_INTERVAL_TICKS,
             0.0,

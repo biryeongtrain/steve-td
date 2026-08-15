@@ -48,6 +48,25 @@ class LaneRegionLayoutTest {
     }
 
     @Test
+    void personalWaypointsExcludeSharedFinalPath() {
+        Vec3 personal = new Vec3(10.5, 64.0, 22.5);
+        Vec3 shared = new Vec3(10.5, 64.0, 26.5);
+        LaneRegionLayout layout = new LaneRegionLayout(
+                1,
+                new Vec3(10.5, 64.0, 20.5),
+                BlockBounds.of(new BlockPos(10, 64, 20), new BlockPos(10, 64, 20)),
+                List.of(personal, shared),
+                new Vec3(10.5, 64.0, 30.5),
+                BlockBounds.of(new BlockPos(8, 63, 18), new BlockPos(12, 66, 32)),
+                List.of(new GridPosition(10, 63, 30)),
+                1
+        );
+
+        assertEquals(List.of(personal), layout.personalWaypoints());
+        assertEquals(List.of(personal, shared), layout.waypoints());
+    }
+
+    @Test
     void finalDefenseTowerAreaUsesHorizontalBoundsAndPreservesHeightWhenClamped() {
         LaneRegionLayout layout = new LaneRegionLayout(
                 1,

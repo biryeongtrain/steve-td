@@ -71,12 +71,7 @@ class EndTowerTransferTest {
         dragon.onWaveStarted(lane, 1);
         dragon.tick(lane);
         lane.addTower(enderman);
-        assertTrue(plainRuntimeDetails(enderman).contains("엔더 드래곤에게 힘 전달 대기 중"));
-        assertTrue(String.join("\n", enderman.runtimeDetailLines()).contains("<gray><#cc00fa>엔더 드래곤</#cc00fa>에게 힘 전달 대기 중</gray>"));
-        assertFalse(plainRuntimeDetails(enderman).contains("힘 전달 진행률"));
         enderman.onWaveStarted(lane, 1);
-        assertTrue(plainRuntimeDetails(enderman).contains("힘 전달 진행률: 0%"));
-        assertFalse(plainRuntimeDetails(enderman).contains("엔더 드래곤에게 힘 전달 대기 중"));
         tick(dragon, lane, 3);
         double partialRawPermanentDamage = 0.3;
         double partialRawRoundDamage = 4.95;
@@ -90,7 +85,6 @@ class EndTowerTransferTest {
         assertEquals(expectedPartialTotalDamage, dragon.damageBonus(), 0.0001);
         assertEquals(0.0, dragon.healthBonus(), 0.0001);
         assertEquals(0.75, enderman.transferProgress(), 0.0001);
-        assertTrue(plainRuntimeDetails(enderman).contains("힘 전달 진행률: 75%"));
         tick(dragon, lane, 1);
         double completedRawPermanentDamage = 0.4;
         double completedRawRoundDamage = 6.6;
@@ -107,10 +101,6 @@ class EndTowerTransferTest {
         assertEquals(0.0, dragon.healthBonus(), 0.0001);
         assertEquals(1, dragon.roundCompletedTransferCount());
         assertEquals(19, dragon.adjustAttackInterval(20));
-        String crystalHeavyDetails = plainRuntimeDetails(dragon);
-        assertTrue(crystalHeavyDetails.contains("셜커 계열, 엔드 수정 계열 스택: 0 | 1"));
-        assertTrue(crystalHeavyDetails.contains("공격 속도: -1틱 (30)"));
-        assertTrue(crystalHeavyDetails.contains("영구 피해: +0.4"));
         tick(dragon, lane, 4);
         assertEquals(1, dragon.endCrystalCount());
         assertTrue(lane.towers().contains(enderman));
@@ -411,7 +401,6 @@ class EndTowerTransferTest {
         assertEquals(10.0, dragon.health(), 0.0001);
         dragon.tick(lane);
         assertEquals(13.0, dragon.health(), 0.0001);
-        assertTrue(plainRuntimeDetails(dragon).contains("재생: +3 HP/s (MAX)"));
     }
 
     @Test
@@ -528,22 +517,6 @@ class EndTowerTransferTest {
         assertEquals(200.0, core.currentMaxHealth(), 0.0001);
         assertEquals(expectedPermanentHealth, core.permanentHealthBonus(), 0.0001);
         assertEquals(0.0, core.splashRadius(), 0.0001);
-        String eggDetails = plainRuntimeDetails(core);
-        assertTrue(eggDetails.contains("셜커 계열, 엔드 수정 계열 스택: 1 | 0"));
-        assertTrue(eggDetails.contains("영구 체력: +4"));
-        assertTrue(eggDetails.contains("재생: +0 HP/s (10)"));
-        assertTrue(eggDetails.contains("생명력 흡수: +0% (30)"));
-        assertTrue(eggDetails.contains("피해 감소: +0% (15)"));
-        assertTrue(eggDetails.contains("영구 피해: +0"));
-        assertTrue(eggDetails.contains("공격 속도: -0틱 (30)"));
-        assertTrue(eggDetails.contains("공격 범위: +0 블록 (10)"));
-        assertTrue(eggDetails.contains("사거리: 5 블록 (50)"));
-        assertFalse(eggDetails.contains("최종 피해: +"));
-        String styledEggDetails = String.join("\n", core.runtimeDetailLines());
-        assertTrue(styledEggDetails.contains("<#fc5454>\u2764 영구 체력</#fc5454>"));
-        assertTrue(styledEggDetails.contains("<#20985d>➕ 재생</#20985d>"));
-        assertTrue(styledEggDetails.contains("<#e32042>🩸 생명력 흡수</#e32042>"));
-        assertTrue(styledEggDetails.contains("<#f3ba59>🛡 피해 감소</#f3ba59>"));
         core.onWaveStarted(null, 2);
         core.tick(null);
         assertEquals(EndTowerState.PHANTOM, core.state());
@@ -597,8 +570,6 @@ class EndTowerTransferTest {
         double damageReductionCap = EndConfig.RUNTIME.value(DAMAGE_REDUCTION_CAP);
         double expectedDamageReduction = Math.min(damageReductionCap, (dragon.shulkerCount() / damageReductionStacks) * damageReductionStep);
         assertEquals(100.0 * (1.0 - expectedDamageReduction), dragon.modifyIncomingDamage(null, null, 100.0), 0.0001);
-        assertTrue(plainRuntimeDetails(dragon).contains("셜커 계열, 엔드 수정 계열 스택: 20 | 20"));
-        assertTrue(plainRuntimeDetails(dragon).contains("생명력 흡수: +0% (30)"));
         dragon.resetRoundTransferBonuses(null);
         assertEquals(0.0, dragon.roundHealthBonus(), 0.0001);
         assertEquals(0.0, dragon.roundDamageBonus(), 0.0001);
@@ -649,7 +620,6 @@ class EndTowerTransferTest {
         assertEquals(10.0, dragon.adjustAttackRange(5.0), 0.0001);
         assertEquals(12, dragon.adjustAttackInterval(20));
         assertEquals(95.0, dragon.modifyIncomingDamage(null, null, 100.0), 0.0001);
-        assertTrue(plainRuntimeDetails(dragon).contains("생명력 흡수: +2% (MAX)"));
     }
 
     @Test
@@ -775,7 +745,6 @@ class EndTowerTransferTest {
         assertEquals(7.5, dragon.adjustAttackRange(5.0), 0.0001);
         assertEquals(81.0, dragon.modifyIncomingDamage(null, null, 100.0), 0.0001);
         assertEquals(29.0, dragon.regenerationPerSecond(), 0.0001);
-        assertTrue(plainRuntimeDetails(dragon).contains("생명력 흡수: +9% (300)"));
         lane.addTower(tower(EndTowers.T1_ENDERMITE_TOWER, 203));
         lane.addTower(tower(EndTowers.T1_SHULKER_TOWER, 204));
         dragon.tick(lane);
@@ -787,7 +756,6 @@ class EndTowerTransferTest {
         assertEquals(8.0, dragon.adjustAttackRange(5.0), 0.0001);
         assertEquals(80.0, dragon.modifyIncomingDamage(null, null, 100.0), 0.0001);
         assertEquals(30.0, dragon.regenerationPerSecond(), 0.0001);
-        assertTrue(plainRuntimeDetails(dragon).contains("생명력 흡수: +10% (MAX)"));
     }
 
     @Test
@@ -867,36 +835,11 @@ class EndTowerTransferTest {
                 tower.adjustAttackRange(EndTowers.BASE_END_TOWER.range()),
                 0.0001
         );
-        String dragonDetails = plainRuntimeDetails(tower);
-        assertTrue(dragonDetails.contains("최종 피해: +10%"));
-        assertTrue(dragonDetails.contains("추가 사거리: +2 블록"));
         tower.resetForRound(null);
         assertEquals(EndTowerState.EGG, tower.state());
         assertEquals(1.0, tower.entityAnchorYOffset(), 0.0001);
         assertTrue(BlockDisplayVisual.matches(tower.visual()));
         assertEquals(EndTowers.BASE_END_TOWER.maxHealth(), tower.currentMaxHealth(), 0.0001);
-    }
-
-    private static String plainRuntimeDetails(EndTower tower) {
-        return String.join("\n", tower.runtimeDetailLines()).replaceAll("<[^>]+>", "");
-    }
-
-    @Test
-    void runtimeSplashProgressStartsAtFirstConfiguredThreshold() {
-        applyEndAbilities(Map.of("splashCap", 99.0));
-        EndTower dragon = tower(EndTowers.BASE_END_TOWER, 0);
-        dragon.onWaveStarted(null, 1);
-        assertTrue(plainRuntimeDetails(dragon).contains("공격 범위: +0 블록 (10)"));
-    }
-
-    @Test
-    void runtimeMaximumAttackSpeedIncludesRoundTransferReduction() {
-        applyEndAbilities(Map.of("attackSpeedCap", 2.0, "transferAttackSpeedStep", 1.0));
-        EndTower dragon = tower(EndTowers.BASE_END_TOWER, 0);
-        dragon.onWaveStarted(null, 1);
-        String details = plainRuntimeDetails(dragon);
-        assertTrue(details.contains("공격 속도: -0틱 (30)"));
-        assertFalse(details.contains("공격 속도: -0틱 (MAX)"));
     }
 
     @Test

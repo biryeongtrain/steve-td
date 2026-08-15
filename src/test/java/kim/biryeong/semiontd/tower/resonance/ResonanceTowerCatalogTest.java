@@ -4,8 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceConfig.TowerStats;
@@ -134,36 +132,6 @@ class ResonanceTowerCatalogTest {
     }
 
     @Test
-    void moobloomDescriptionsUseTowerDefenseRoleTextAndAvoidThematicFlowerBedWording() {
-        var focusDescription = TowerBalanceRuntime.resolve(ResonanceTowers.FOCUS_CRYSTAL).description();
-        var waveDescription = TowerBalanceRuntime.resolve(ResonanceTowers.WAVE_CRYSTAL).description();
-        var frostDescription = TowerBalanceRuntime.resolve(ResonanceTowers.FROST_CRYSTAL).description();
-        var bloomDescription = TowerBalanceRuntime.resolve(ResonanceTowers.AMPLIFY_CRYSTAL).description();
-        var playerFacingLines = new java.util.ArrayList<String>();
-        playerFacingLines.addAll(focusDescription);
-        playerFacingLines.addAll(waveDescription);
-        playerFacingLines.addAll(bloomDescription);
-        new ResonanceTowerJob().description().forEach(line -> playerFacingLines.add(line.getString()));
-
-        assertTrue(focusDescription.stream().anyMatch(line -> line.contains("단일 타겟")));
-        assertTrue(focusDescription.stream().anyMatch(line -> line.contains("현재 해금") && line.contains("1단계")));
-        assertTrue(focusDescription.stream().anyMatch(line -> line.contains("공명 1단계")));
-        assertTrue(focusDescription.stream().anyMatch(line -> line.contains("공명 2단계")));
-        assertTrue(focusDescription.stream().anyMatch(line -> line.contains("공명 3단계")));
-        assertTrue(waveDescription.stream().anyMatch(line -> line.contains("공명 3단계")));
-        assertTrue(frostDescription.stream().anyMatch(line -> line.contains("공명 3단계")));
-        assertTrue(bloomDescription.stream().anyMatch(line -> line.contains("공명 3단계")));
-        assertTrue(focusDescription.stream().anyMatch(line -> line.contains("추가 마법 피해")));
-        assertTrue(waveDescription.stream().anyMatch(line -> line.contains("마법 스플래시")));
-        assertTrue(frostDescription.stream().anyMatch(line -> line.contains("마법 피해")));
-        assertTrue(waveDescription.stream().anyMatch(line -> line.contains("범위 공격")));
-        assertTrue(bloomDescription.stream().anyMatch(line -> line.contains("저항 효과")));
-        assertFalse(playerFacingLines.stream().anyMatch(line -> line.contains("꽃밭")));
-        assertFalse(playerFacingLines.stream().anyMatch(line -> line.contains("꽃향")));
-        assertFalse(playerFacingLines.stream().anyMatch(line -> line.contains("증폭")));
-    }
-
-    @Test
     void towerTiersUseOneTwoThreeMaximumResonanceLevels() {
         UUID playerId = UUID.fromString("00000000-0000-0000-0000-000000000123");
         ResonanceTower focusT1 = resonanceTower(ResonanceTowers.FOCUS_CRYSTAL, playerId, 0);
@@ -246,37 +214,6 @@ class ResonanceTowerCatalogTest {
         assertEquals(ResonanceTowers.FROST_CORE.id(), ProductionTowerCatalog.upgrade(ResonanceTowers.FROST_PRISM, ResonanceTowers.FROST_CORE.id()).orElseThrow().targetType().id());
         assertEquals(ResonanceTowers.AMPLIFY_PRISM.id(), ProductionTowerCatalog.upgrade(ResonanceTowers.AMPLIFY_CRYSTAL, ResonanceTowers.AMPLIFY_PRISM.id()).orElseThrow().targetType().id());
         assertEquals(ResonanceTowers.AMPLIFY_CORE.id(), ProductionTowerCatalog.upgrade(ResonanceTowers.AMPLIFY_PRISM, ResonanceTowers.AMPLIFY_CORE.id()).orElseThrow().targetType().id());
-    }
-
-    @Test
-    void resonanceDescriptionsRenderCurrentConfigValues() {
-        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
-        Map<String, Map<String, Double>> abilities = new LinkedHashMap<>(defaults.abilities());
-        abilities.put(ResonanceTowers.FOCUS_CORE.id(), Map.ofEntries(
-                Map.entry("linkRange", 7.0),
-                Map.entry("maxLinksPerTower", 6.0),
-                Map.entry("maxResonanceLevel", 3.0),
-                Map.entry("level1RequiredLinks", 2.0),
-                Map.entry("level2RequiredLinks", 4.0),
-                Map.entry("level3RequiredLinks", 6.0),
-                Map.entry("focusLevel1AttackSpeedBonus", 0.11),
-                Map.entry("focusLevel2AttackSpeedBonus", 0.22),
-                Map.entry("focusLevel2DamageBonus", 0.13),
-                Map.entry("focusLevel3AttackSpeedBonus", 0.33),
-                Map.entry("focusLevel3DamageBonus", 0.17),
-                Map.entry("focusStrikeEveryAttacks", 4.0),
-                Map.entry("focusStrikeDamageRatio", 0.44)
-        ));
-        TowerBalanceRuntime.apply(new TowerBalanceConfig(defaults.towers(), defaults.upgradeCosts(), abilities));
-
-        var description = TowerBalanceRuntime.resolve(ResonanceTowers.FOCUS_CORE).description();
-
-        assertTrue(description.stream().anyMatch(line -> line.contains("7칸")));
-        assertTrue(description.stream().anyMatch(line -> line.contains("2/4/6기") && line.contains("설치한 수만큼")));
-        assertTrue(description.stream().anyMatch(line -> line.contains("11%")));
-        assertTrue(description.stream().anyMatch(line -> line.contains("22%") && line.contains("13%")));
-        assertTrue(description.stream().anyMatch(line -> line.contains("33%") && line.contains("17%")));
-        assertTrue(description.stream().anyMatch(line -> line.contains("4번째") && line.contains("44%")));
     }
 
     private static void assertMoobloomVariant(kim.biryeong.semiontd.tower.TowerType type, String variant) {

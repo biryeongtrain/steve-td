@@ -4,6 +4,7 @@ import static kim.biryeong.semiontd.tower.end.EndConfig.Ability.*;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityStates;
@@ -14,14 +15,36 @@ import kim.biryeong.semiontd.tower.adversary.FoxForm;
 import kim.biryeong.semiontd.tower.adversary.FoxRoute;
 import kim.biryeong.semiontd.tower.adversary.RivalKind;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
+import kim.biryeong.semiontd.tower.atlantis.AtlantisBalance;
+import kim.biryeong.semiontd.tower.atlantis.AtlantisTowers;
 import kim.biryeong.semiontd.tower.end.EndTowers;
+import kim.biryeong.semiontd.tower.engineer.EngineerBalance;
+import kim.biryeong.semiontd.tower.engineer.EngineerTowers;
+import kim.biryeong.semiontd.tower.engineer.EngineerTrapTower;
+import kim.biryeong.semiontd.tower.futureagency.FutureAgencyBalance;
+import kim.biryeong.semiontd.tower.futureagency.FutureAgencyLeaderTower;
+import kim.biryeong.semiontd.tower.futureagency.FutureAgencyPolicy;
+import kim.biryeong.semiontd.tower.futureagency.FutureAgencyRole;
+import kim.biryeong.semiontd.tower.futureagency.FutureAgencyTowers;
+import kim.biryeong.semiontd.tower.hero.HeroCompanionRole;
+import kim.biryeong.semiontd.tower.hero.HeroPartyBalance;
+import kim.biryeong.semiontd.tower.hero.HeroPartyTowers;
+import kim.biryeong.semiontd.tower.hero.HeroWeapon;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
 import kim.biryeong.semiontd.tower.illager.IllagerTowers;
+import kim.biryeong.semiontd.tower.insect.InsectBalance;
+import kim.biryeong.semiontd.tower.insect.InsectTowers;
 import kim.biryeong.semiontd.tower.legion.LegionTowers;
+import kim.biryeong.semiontd.tower.mage.MageBalance;
+import kim.biryeong.semiontd.tower.mage.MageSpell;
+import kim.biryeong.semiontd.tower.mage.MageTowers;
 import kim.biryeong.semiontd.tower.nether.NetherTower;
 import kim.biryeong.semiontd.tower.nether.NetherTowers;
 import kim.biryeong.semiontd.tower.ocean.OceanTower;
 import kim.biryeong.semiontd.tower.ocean.OceanTowers;
+import kim.biryeong.semiontd.tower.queen.PokerHand;
+import kim.biryeong.semiontd.tower.queen.QueenBalance;
+import kim.biryeong.semiontd.tower.queen.QueenTowers;
 import kim.biryeong.semiontd.tower.plant.PlantSoil;
 import kim.biryeong.semiontd.tower.plant.PlantTowers;
 import kim.biryeong.semiontd.tower.resonance.ResonanceAspect;
@@ -188,6 +211,13 @@ public record TowerBalanceConfig(
         addOceanTowers(towers);
         addAncientCityTowers(towers);
         addAdversaryTowers(towers);
+        addMageTowers(towers);
+        addEngineerTowers(towers);
+        addInsectTowers(towers);
+        addFutureAgencyTowers(towers);
+        addQueenTowers(towers);
+        addHeroPartyTowers(towers);
+        addAtlantisTowers(towers);
         addPlantTowers(towers);
         addThunderTowers(towers);
 
@@ -262,6 +292,12 @@ public record TowerBalanceConfig(
         putOceanUpgrades(upgradeCosts);
         putAncientCityUpgrades(upgradeCosts);
         putAdversaryUpgrades(upgradeCosts);
+        putMageUpgrades(upgradeCosts);
+        putEngineerUpgrades(upgradeCosts);
+        putInsectUpgrades(upgradeCosts);
+        putFutureAgencyUpgrades(upgradeCosts);
+        putHeroPartyUpgrades(upgradeCosts);
+        putAtlantisUpgrades(upgradeCosts);
         putPlantUpgrades(upgradeCosts);
         putThunderUpgrades(upgradeCosts);
 
@@ -822,6 +858,13 @@ public record TowerBalanceConfig(
         putOceanAbilities(abilities);
         putAncientCityAbilities(abilities);
         putAdversaryAbilities(abilities);
+        putMageAbilities(abilities);
+        putEngineerAbilities(abilities);
+        putInsectAbilities(abilities);
+        putFutureAgencyAbilities(abilities);
+        putQueenAbilities(abilities);
+        putHeroPartyAbilities(abilities);
+        putAtlantisAbilities(abilities);
         putPlantAbilities(abilities);
         putThunderAbilities(abilities);
 
@@ -1082,7 +1125,73 @@ public record TowerBalanceConfig(
                 );
             }
         }));
+        validateMageBalance();
+        validateEngineerBalance();
+        validateInsectBalance();
+        validateFutureAgencyBalance();
+        validateQueenBalance();
+        validateHeroPartyBalance();
+        validateAtlantisAbilities();
         validatePlantAbilities();
+    }
+
+    private void validateAtlantisAbilities() {
+        String global = AtlantisBalance.CONFIG_ID;
+        validateRatios(global,
+                "slowPerStack", "maxSlow", "maxZoneAllyDamageReduction", "waterPressureDamageRatio");
+        validatePositive(global,
+                "maxPressureStacks", "stackDurationTicks", "waterPressureDamageCap", "waterPressureRadius",
+                "zoneStackMultiplier", "maxZoneCount", "zoneSpacingBlocks", "zoneScanIntervalTicks",
+                "zoneVfxIntervalTicks");
+        validateIntegral(global, false,
+                "maxPressureStacks", "stackDurationTicks", "maxZoneCount", "zoneScanIntervalTicks",
+                "zoneVfxIntervalTicks");
+        validateIntegral(global, true, "maxChainDepth");
+        validateAtLeast(global, 1.0, "waterPressureDamageCap", "zoneStackMultiplier");
+
+        Double slowPerStack = configuredAbility(global, "slowPerStack");
+        Double maxSlow = configuredAbility(global, "maxSlow");
+        if (slowPerStack != null && maxSlow != null && slowPerStack > maxSlow) {
+            throw new IllegalArgumentException("Atlantis slow per stack must not exceed the maximum slow.");
+        }
+        Double scanTicks = configuredAbility(global, "zoneScanIntervalTicks");
+        Double vfxTicks = configuredAbility(global, "zoneVfxIntervalTicks");
+        if (scanTicks != null && vfxTicks != null && vfxTicks < scanTicks) {
+            throw new IllegalArgumentException("Atlantis zone VFX interval must not be shorter than the scan interval.");
+        }
+
+        Double maxReduction = configuredAbility(global, "maxZoneAllyDamageReduction");
+        for (TowerType type : List.of(
+                AtlantisTowers.TURTLE_T1, AtlantisTowers.TURTLE_T2, AtlantisTowers.TURTLE_T3)) {
+            String id = type.id();
+            validatePositive(id, "zoneCapacity", "zoneRadius");
+            validateIntegral(id, false, "zoneCapacity");
+            validateRatios(id, "zoneAllyDamageReduction");
+            Double reduction = configuredAbility(id, "zoneAllyDamageReduction");
+            if (reduction != null && maxReduction != null && reduction > maxReduction) {
+                throw new IllegalArgumentException("Atlantis turtle reduction exceeds the global cap: " + id);
+            }
+        }
+        for (TowerType type : List.of(
+                AtlantisTowers.DOLPHIN_T1, AtlantisTowers.DOLPHIN_T2, AtlantisTowers.DOLPHIN_T3)) {
+            validatePositive(type.id(), "stackPerHit");
+            validateIntegral(type.id(), false, "stackPerHit");
+            validateRatios(type.id(), "waterPressureRatioBonus");
+        }
+        for (TowerType type : List.of(
+                AtlantisTowers.AXOLOTL_T1, AtlantisTowers.AXOLOTL_T2, AtlantisTowers.AXOLOTL_T3)) {
+            validatePositive(type.id(), "regenAmount", "supportRadius", "supportIntervalTicks");
+            validateIntegral(type.id(), false, "supportIntervalTicks");
+            validateRatios(type.id(), "attackSpeedBonus", "waterPressureRatioBonus");
+        }
+        validatePositive(AtlantisTowers.AXOLOTL_T3.id(), "stackBonus");
+        validateIntegral(AtlantisTowers.AXOLOTL_T3.id(), false, "stackBonus");
+        for (TowerType type : List.of(
+                AtlantisTowers.CONDUIT_T1, AtlantisTowers.CONDUIT_T2, AtlantisTowers.CONDUIT_T3)) {
+            validatePositive(type.id(), "amplifyRadius", "maxStackBonus");
+            validateIntegral(type.id(), false, "maxStackBonus");
+            validateRatios(type.id(), "waterPressureRatioBonus");
+        }
     }
 
     private void validatePlantAbilities() {
@@ -1510,6 +1619,132 @@ public record TowerBalanceConfig(
         ));
     }
 
+    private static void addMageTowers(Map<String, TowerStats> towers) {
+        MageTowers.all().forEach(type -> addTower(towers, type));
+    }
+
+    private static void addEngineerTowers(Map<String, TowerStats> towers) {
+        EngineerTowers.all().forEach(type -> addTower(towers, type));
+    }
+
+    private static void addInsectTowers(Map<String, TowerStats> towers) {
+        InsectTowers.all().forEach(type -> addTower(towers, type));
+    }
+
+    private static void addFutureAgencyTowers(Map<String, TowerStats> towers) {
+        FutureAgencyTowers.all().forEach(type -> addTower(towers, type));
+    }
+
+    private static void addQueenTowers(Map<String, TowerStats> towers) {
+        QueenTowers.all().forEach(type -> addTower(towers, type));
+    }
+
+    private static void addAtlantisTowers(Map<String, TowerStats> towers) {
+        AtlantisTowers.all().forEach(type -> addTower(towers, type));
+    }
+
+    private static void putAtlantisUpgrades(Map<String, Long> upgrades) {
+        putUpgrade(upgrades, AtlantisTowers.TURTLE_T1, AtlantisTowers.TURTLE_T2.id(), 115);
+        putUpgrade(upgrades, AtlantisTowers.TURTLE_T2, AtlantisTowers.TURTLE_T3.id(), 240);
+        putUpgrade(upgrades, AtlantisTowers.DOLPHIN_T1, AtlantisTowers.DOLPHIN_T2.id(), 120);
+        putUpgrade(upgrades, AtlantisTowers.DOLPHIN_T2, AtlantisTowers.DOLPHIN_T3.id(), 250);
+        putUpgrade(upgrades, AtlantisTowers.AXOLOTL_T1, AtlantisTowers.AXOLOTL_T2.id(), 95);
+        putUpgrade(upgrades, AtlantisTowers.AXOLOTL_T2, AtlantisTowers.AXOLOTL_T3.id(), 200);
+        putUpgrade(upgrades, AtlantisTowers.CONDUIT_T1, AtlantisTowers.CONDUIT_T2.id(), 105);
+        putUpgrade(upgrades, AtlantisTowers.CONDUIT_T2, AtlantisTowers.CONDUIT_T3.id(), 215);
+    }
+
+    private static void putAtlantisAbilities(Map<String, Map<String, Double>> abilities) {
+        LinkedHashMap<String, Double> global = new LinkedHashMap<>();
+        global.put("maxPressureStacks", (double) AtlantisBalance.MAX_PRESSURE_STACKS);
+        global.put("stackDurationTicks", (double) AtlantisBalance.STACK_DURATION_TICKS);
+        global.put("slowPerStack", AtlantisBalance.SLOW_PER_STACK);
+        global.put("maxSlow", AtlantisBalance.MAX_SLOW);
+        global.put("maxZoneAllyDamageReduction", AtlantisBalance.MAX_ZONE_ALLY_DAMAGE_REDUCTION);
+        global.put("waterPressureDamageRatio", AtlantisBalance.WATER_PRESSURE_DAMAGE_RATIO);
+        global.put("waterPressureDamageCap", AtlantisBalance.WATER_PRESSURE_DAMAGE_CAP);
+        global.put("waterPressureRadius", AtlantisBalance.WATER_PRESSURE_RADIUS);
+        global.put("zoneStackMultiplier", AtlantisBalance.ZONE_STACK_MULTIPLIER);
+        global.put("maxZoneCount", (double) AtlantisBalance.MAX_ZONE_COUNT);
+        global.put("zoneSpacingBlocks", AtlantisBalance.ZONE_SPACING_BLOCKS);
+        global.put("zoneScanIntervalTicks", (double) AtlantisBalance.ZONE_SCAN_INTERVAL_TICKS);
+        global.put("zoneVfxIntervalTicks", (double) AtlantisBalance.ZONE_VFX_INTERVAL_TICKS);
+        global.put("maxChainDepth", (double) AtlantisBalance.MAX_CHAIN_DEPTH);
+        putAbilities(abilities, AtlantisBalance.CONFIG_ID, global);
+
+        putAtlantisTurtle(abilities, AtlantisTowers.TURTLE_T1, 1.0, 3.0, 0.10);
+        putAtlantisTurtle(abilities, AtlantisTowers.TURTLE_T2, 2.0, 3.5, 0.18);
+        putAtlantisTurtle(abilities, AtlantisTowers.TURTLE_T3, 3.0, 4.0, 0.25);
+
+        putAtlantisDolphin(abilities, AtlantisTowers.DOLPHIN_T1, 1.0, 0.03);
+        putAtlantisDolphin(abilities, AtlantisTowers.DOLPHIN_T2, 2.0, 0.05);
+        putAtlantisDolphin(abilities, AtlantisTowers.DOLPHIN_T3, 3.0, 0.08);
+
+        putAbilities(abilities, AtlantisTowers.AXOLOTL_T1.id(), Map.of(
+                "regenAmount", 6.0,
+                "supportRadius", 4.5,
+                "supportIntervalTicks", 40.0
+        ));
+        putAbilities(abilities, AtlantisTowers.AXOLOTL_T2.id(), Map.of(
+                "regenAmount", 16.0,
+                "attackSpeedBonus", 0.08,
+                "supportRadius", 5.5,
+                "supportIntervalTicks", 40.0
+        ));
+        putAbilities(abilities, AtlantisTowers.AXOLOTL_T3.id(), Map.of(
+                "regenAmount", 32.0,
+                "attackSpeedBonus", 0.15,
+                "stackBonus", 1.0,
+                "waterPressureRatioBonus", 0.04,
+                "supportRadius", 6.5,
+                "supportIntervalTicks", 40.0
+        ));
+
+        putAtlantisConduit(abilities, AtlantisTowers.CONDUIT_T1, 6.0, 2.0, 0.02);
+        putAtlantisConduit(abilities, AtlantisTowers.CONDUIT_T2, 7.0, 3.0, 0.04);
+        putAtlantisConduit(abilities, AtlantisTowers.CONDUIT_T3, 8.0, 4.0, 0.06);
+    }
+
+    private static void putAtlantisTurtle(
+            Map<String, Map<String, Double>> abilities,
+            TowerType type,
+            double zoneCapacity,
+            double zoneRadius,
+            double allyDamageReduction
+    ) {
+        putAbilities(abilities, type.id(), Map.of(
+                "zoneCapacity", zoneCapacity,
+                "zoneRadius", zoneRadius,
+                "zoneAllyDamageReduction", allyDamageReduction
+        ));
+    }
+
+    private static void putAtlantisDolphin(
+            Map<String, Map<String, Double>> abilities,
+            TowerType type,
+            double stackPerHit,
+            double waterPressureRatioBonus
+    ) {
+        putAbilities(abilities, type.id(), Map.of(
+                "stackPerHit", stackPerHit,
+                "waterPressureRatioBonus", waterPressureRatioBonus
+        ));
+    }
+
+    private static void putAtlantisConduit(
+            Map<String, Map<String, Double>> abilities,
+            TowerType type,
+            double amplifyRadius,
+            double maxStackBonus,
+            double waterPressureRatioBonus
+    ) {
+        putAbilities(abilities, type.id(), Map.of(
+                "amplifyRadius", amplifyRadius,
+                "maxStackBonus", maxStackBonus,
+                "waterPressureRatioBonus", waterPressureRatioBonus
+        ));
+    }
+
     private static void putNetherUpgrades(Map<String, Long> upgrades) {
         putUpgrade(upgrades, NetherTowers.T1_STRIDER, NetherTowers.T2_PIGLIN.id(), 100);
         putUpgrade(upgrades, NetherTowers.T2_PIGLIN, NetherTowers.T3_PIGLIN_BRUTE.id(), 180);
@@ -1579,6 +1814,779 @@ public record TowerBalanceConfig(
         }
     }
 
+    private static void putMageUpgrades(Map<String, Long> upgrades) {
+        for (MageSpell spell : MageSpell.values()) {
+            putUpgrade(upgrades, MageTowers.WIZARD, MageTowers.spellType(spell).id(), 0);
+        }
+        MageTowers.predictionTypes().values().forEach(type ->
+                putUpgrade(upgrades, MageTowers.PROPHET, type.id(), 0));
+    }
+
+    private static void putEngineerUpgrades(Map<String, Long> upgrades) {
+        EngineerTowers.repeaters().values().forEach(type ->
+                putUpgrade(upgrades, EngineerTowers.REDSTONE_DUST, type.id(), 8));
+        java.util.List<net.minecraft.core.Direction> directions = java.util.List.of(
+                net.minecraft.core.Direction.NORTH,
+                net.minecraft.core.Direction.EAST,
+                net.minecraft.core.Direction.SOUTH,
+                net.minecraft.core.Direction.WEST
+        );
+        for (int index = 0; index < directions.size(); index++) {
+            TowerType from = EngineerTowers.repeater(directions.get(index));
+            TowerType to = EngineerTowers.repeater(directions.get((index + 1) % directions.size()));
+            putUpgrade(upgrades, from, to.id(), 0);
+        }
+        for (EngineerTowers.PlateKind kind : EngineerTowers.PlateKind.values()) {
+            kind.next().ifPresent(next ->
+                    putUpgrade(upgrades, EngineerTowers.plate(kind), EngineerTowers.plate(next).id(), 15));
+        }
+        long[][] costs = {
+                {70, 120},
+                {100, 160},
+                {80, 130},
+                {120, 180},
+                {85, 140}
+        };
+        for (EngineerTowers.TrapKind kind : EngineerTowers.TrapKind.values()) {
+            int row = kind.ordinal();
+            putUpgrade(upgrades, EngineerTowers.trap(kind, 1), EngineerTowers.trap(kind, 2).id(), costs[row][0]);
+            putUpgrade(upgrades, EngineerTowers.trap(kind, 2), EngineerTowers.trap(kind, 3).id(), costs[row][1]);
+        }
+    }
+
+    private static void putInsectUpgrades(Map<String, Long> upgrades) {
+        putUpgrade(upgrades, InsectTowers.SILVERFISH, InsectTowers.ENDERMITE.id(), 75);
+        putUpgrade(upgrades, InsectTowers.ENDERMITE, InsectTowers.ENHANCED_ENDERMITE.id(), 140);
+        putUpgrade(upgrades, InsectTowers.CAVE_SPIDER, InsectTowers.SPIDER.id(), 90);
+        putUpgrade(upgrades, InsectTowers.SPIDER, InsectTowers.ENHANCED_SPIDER.id(), 160);
+        putUpgrade(upgrades, InsectTowers.BEE, InsectTowers.ENHANCED_BEE.id(), 90);
+        putUpgrade(upgrades, InsectTowers.ENHANCED_BEE, InsectTowers.QUEEN_BEE.id(), 170);
+    }
+
+    private static void putFutureAgencyUpgrades(Map<String, Long> upgrades) {
+        putUpgrade(upgrades, FutureAgencyTowers.ESCAPEE, FutureAgencyLeaderTower.RECONSTRUCT, 0);
+        putUpgrade(upgrades, FutureAgencyTowers.REBUILDER, FutureAgencyLeaderTower.PROMOTE_COMMANDER, 800);
+        for (TowerType leader : java.util.List.of(FutureAgencyTowers.REBUILDER, FutureAgencyTowers.COMMANDER)) {
+            for (FutureAgencyPolicy policy : FutureAgencyPolicy.values()) {
+                putUpgrade(upgrades, leader, policy.upgradeId(), 0);
+            }
+        }
+        putUpgrade(upgrades, FutureAgencyTowers.REBUILDER, FutureAgencyLeaderTower.SAVE_WORLD, 1500);
+        putUpgrade(upgrades, FutureAgencyTowers.COMMANDER, FutureAgencyLeaderTower.SAVE_WORLD, 1500);
+        long[] costs = {100, 180, 360, 700};
+        for (FutureAgencyRole role : FutureAgencyRole.values()) {
+            for (int grade = 5; grade > 1; grade--) {
+                putUpgrade(upgrades, FutureAgencyTowers.agent(role, grade),
+                        FutureAgencyTowers.agent(role, grade - 1).id(), costs[5 - grade]);
+            }
+        }
+    }
+
+    private static void addHeroPartyTowers(Map<String, TowerStats> towers) {
+        for (TowerType type : HeroPartyTowers.all()) {
+            addTower(towers, type);
+        }
+    }
+
+    private static void putHeroPartyUpgrades(Map<String, Long> upgrades) {
+        for (HeroCompanionRole role : HeroCompanionRole.values()) {
+            for (int tier = 1; tier < 4; tier++) {
+                TowerType from = HeroPartyTowers.companion(role, tier);
+                TowerType to = HeroPartyTowers.companion(role, tier + 1);
+                putUpgrade(upgrades, from, to.id(), to.mineralCost());
+            }
+        }
+    }
+
+    private static void putEngineerAbilities(Map<String, Map<String, Double>> abilities) {
+        LinkedHashMap<String, Double> global = new LinkedHashMap<>();
+        global.put("activeTicks", (double) EngineerBalance.ACTIVE_TICKS);
+        global.put("doorActiveTicks", (double) EngineerBalance.DOOR_ACTIVE_TICKS);
+        global.put("plateCooldownTicks", (double) EngineerBalance.PLATE_COOLDOWN_TICKS);
+        global.put("golemMoveSpeed", EngineerBalance.GOLEM_MOVE_SPEED);
+        global.put("pistonImmunityTicks", (double) EngineerBalance.PISTON_IMMUNITY_TICKS);
+        global.put("doorRetargetTicks", (double) EngineerBalance.DOOR_RETARGET_TICKS);
+        global.put("tntFuseTicks", (double) EngineerBalance.TNT_FUSE_TICKS);
+        global.put("maxRedstone", (double) EngineerBalance.MAX_REDSTONE);
+        global.put("maxPlates", (double) EngineerBalance.MAX_PLATES);
+        global.put("maxPistons", (double) EngineerBalance.MAX_PISTONS);
+        global.put("dispenserDamagePerPlateBlock", EngineerBalance.DISPENSER_DAMAGE_PER_PLATE_BLOCK);
+        global.put("dispenserMaxPlateDistance", (double) EngineerBalance.DISPENSER_MAX_PLATE_DISTANCE);
+        global.put("activeVfxIntervalTicks", (double) EngineerBalance.ACTIVE_VFX_INTERVAL_TICKS);
+        global.put("tntFuseVfxIntervalTicks", (double) EngineerBalance.TNT_FUSE_VFX_INTERVAL_TICKS);
+        putAbilities(abilities, EngineerBalance.GLOBAL_ID, global);
+        for (EngineerTowers.TrapKind kind : EngineerTowers.TrapKind.values()) {
+            for (int tier = 1; tier <= 3; tier++) {
+                LinkedHashMap<String, Double> values = new LinkedHashMap<>();
+                switch (kind) {
+                    case DOOR -> values.put("radius", EngineerTrapTower.doorRadius(tier));
+                    case TNT -> {
+                        values.put("damage", EngineerTrapTower.tntDamage(tier));
+                        values.put("radius", EngineerTrapTower.tntRadius(tier));
+                        values.put("maxTargets", (double) EngineerTrapTower.tntMaxTargets(tier));
+                    }
+                    case DISPENSER -> {
+                        values.put("damage", EngineerTrapTower.dispenserDamage(tier));
+                        values.put("intervalTicks", (double) EngineerTrapTower.dispenserInterval(tier));
+                        values.put("range", EngineerTrapTower.dispenserRange(tier));
+                    }
+                    case PISTON -> {
+                        values.put("radius", EngineerTrapTower.pistonRadius(tier));
+                        values.put("maxTargets", (double) EngineerTrapTower.pistonMaxTargets(tier));
+                    }
+                    case SLIME -> {
+                        values.put("radius", EngineerTrapTower.slimeRadius(tier));
+                        values.put("slow", EngineerTrapTower.slimeSlow(tier));
+                    }
+                }
+                putAbilities(abilities, EngineerTowers.trap(kind, tier).id(), values);
+            }
+        }
+    }
+
+    private static void putInsectAbilities(Map<String, Map<String, Double>> abilities) {
+        putAbilities(abilities, InsectBalance.GLOBAL_ID, Map.of(
+                "freshPowerMultiplier", InsectBalance.FRESH_POWER_MULTIPLIER,
+                "freshPowerScale", InsectBalance.FRESH_POWER_SCALE,
+                "reviveBaseTicks", (double) InsectBalance.REVIVE_BASE_TICKS,
+                "reviveIncrementTicks", (double) InsectBalance.REVIVE_INCREMENT_TICKS,
+                "radiusVfxIntervalTicks", (double) InsectBalance.RADIUS_VFX_INTERVAL_TICKS,
+                "deathDamageTakenPerStack", InsectBalance.DEATH_DAMAGE_TAKEN_PER_STACK
+        ));
+        putAbilities(abilities, InsectTowers.SPAWNER.id(), Map.of(
+                "reviveRadius", InsectBalance.SPAWNER_RADIUS
+        ));
+        for (int tier = 1; tier <= 3; tier++) {
+            putAbilities(abilities, InsectTowers.spider(tier).id(), Map.of(
+                    "damageReduction", switch (tier) {
+                        case 1 -> 0.08;
+                        case 2 -> 0.16;
+                        default -> 0.25;
+                    }
+            ));
+        }
+    }
+
+    private static void putHeroPartyAbilities(Map<String, Map<String, Double>> abilities) {
+        putAbilities(abilities, HeroPartyBalance.GLOBAL_CONFIG_ID, Map.ofEntries(
+                Map.entry("weaponUpgradeCost1", 80.0),
+                Map.entry("weaponUpgradeCost2", 140.0),
+                Map.entry("weaponUpgradeCost3", 220.0),
+                Map.entry("weaponUpgradeCost4", 320.0),
+                Map.entry("weaponUpgradeCost5", 450.0),
+                Map.entry("weaponMultiplier1", 1.15),
+                Map.entry("weaponMultiplier2", 1.32),
+                Map.entry("weaponMultiplier3", 1.50),
+                Map.entry("weaponMultiplier4", 1.72),
+                Map.entry("weaponMultiplier5", 2.00),
+                Map.entry("armorUpgradeCost1", 90.0),
+                Map.entry("armorUpgradeCost2", 150.0),
+                Map.entry("armorUpgradeCost3", 230.0),
+                Map.entry("armorUpgradeCost4", 340.0),
+                Map.entry("armorUpgradeCost5", 480.0),
+                Map.entry("armorHealth1", 60.0),
+                Map.entry("armorHealth2", 140.0),
+                Map.entry("armorHealth3", 240.0),
+                Map.entry("armorHealth4", 380.0),
+                Map.entry("armorHealth5", 560.0),
+                Map.entry("armorReduction1", 0.04),
+                Map.entry("armorReduction2", 0.08),
+                Map.entry("armorReduction3", 0.12),
+                Map.entry("armorReduction4", 0.16),
+                Map.entry("armorReduction5", 0.20),
+                Map.entry("adventureDamagePerPoint", 0.0025),
+                Map.entry("adventureHealingPerPoint", 0.0025),
+                Map.entry("adventureHealthPerPoint", 0.0035),
+                Map.entry(
+                        "focusFireDamageReductionPerExtraAttacker",
+                        HeroPartyBalance.FOCUS_FIRE_REDUCTION_PER_EXTRA_ATTACKER
+                ),
+                Map.entry("focusFireDamageReductionCap", HeroPartyBalance.FOCUS_FIRE_REDUCTION_CAP)
+        ));
+        for (HeroWeapon weapon : HeroWeapon.values()) {
+            putAbilities(abilities, weapon.configId(), Map.of(
+                    "purchaseCost", (double) weapon.defaultPurchaseCost(),
+                    "damage", weapon.defaultDamage(),
+                    "range", weapon.defaultRange(),
+                    "attackIntervalTicks", (double) weapon.defaultAttackIntervalTicks()
+            ));
+        }
+        putAbilities(abilities, HeroPartyTowers.HERO.id(), Map.of("towerSlotCost", 3.0));
+        for (HeroCompanionRole role : HeroCompanionRole.values()) {
+            for (int tier = 1; tier <= 4; tier++) {
+                putAbilities(abilities, HeroPartyTowers.companion(role, tier).id(), Map.of(
+                        "towerSlotCost", (double) (tier + 1)
+                ));
+            }
+        }
+        putHeroCompanionAbilities(abilities);
+    }
+
+    private static void putHeroCompanionAbilities(Map<String, Map<String, Double>> abilities) {
+        double[] knightReduction = {0.0, 0.07, 0.13, 0.20};
+        double[] archerBoss = {0.0, 0.12, 0.23, 0.35};
+        double[] mageRatio = {0.30, 0.40, 0.50, 0.60};
+        double[] mageRadius = {2.0, 2.3, 2.6, 3.0};
+        double[] priestHeal = {14.0, 21.0, 31.0, 45.0};
+        double[] priestInterval = {40.0, 38.0, 34.0, 30.0};
+        double[] priestSecond = {0.0, 0.0, 0.50, 1.0};
+        double[] rogueExecute = {0.25, 0.35, 0.47, 0.60};
+        double[] bardSpeed = {0.08, 0.11, 0.14, 0.18};
+        double[] bardDamage = {0.0, 0.03, 0.06, 0.10};
+        double[] bardRadius = {8.0, 9.0, 10.0, 12.0};
+        for (int index = 0; index < 4; index++) {
+            int tier = index + 1;
+            mergeAbilities(abilities, HeroPartyTowers.companion(HeroCompanionRole.KNIGHT, tier).id(), Map.of(
+                    "damageReduction", knightReduction[index]
+            ));
+            mergeAbilities(abilities, HeroPartyTowers.companion(HeroCompanionRole.ARCHER, tier).id(), Map.of(
+                    "bossDamageBonus", archerBoss[index]
+            ));
+            mergeAbilities(abilities, HeroPartyTowers.companion(HeroCompanionRole.MAGE, tier).id(), Map.of(
+                    "splashDamageRatio", mageRatio[index],
+                    "splashRadius", mageRadius[index]
+            ));
+            mergeAbilities(abilities, HeroPartyTowers.companion(HeroCompanionRole.PRIEST, tier).id(), Map.of(
+                    "healAmount", priestHeal[index],
+                    "healIntervalTicks", priestInterval[index],
+                    "secondTargetRatio", priestSecond[index]
+            ));
+            mergeAbilities(abilities, HeroPartyTowers.companion(HeroCompanionRole.ROGUE, tier).id(), Map.of(
+                    "executeThreshold", 0.30,
+                    "executeDamageBonus", rogueExecute[index]
+            ));
+            mergeAbilities(abilities, HeroPartyTowers.companion(HeroCompanionRole.BARD, tier).id(), Map.of(
+                    "attackSpeedBonus", bardSpeed[index],
+                    "damageBonus", bardDamage[index],
+                    "auraRadius", bardRadius[index]
+            ));
+        }
+    }
+
+    private static void putFutureAgencyAbilities(Map<String, Map<String, Double>> abilities) {
+        LinkedHashMap<String, Double> values = new LinkedHashMap<>();
+        values.put("rebuilderDamageBonus", FutureAgencyBalance.REBUILDER_DAMAGE);
+        values.put("rebuilderMaxHealthBonus", FutureAgencyBalance.REBUILDER_HEALTH);
+        values.put("commanderDamageBonus", FutureAgencyBalance.COMMANDER_DAMAGE);
+        values.put("commanderMaxHealthBonus", FutureAgencyBalance.COMMANDER_HEALTH);
+        values.put("commanderAttackSpeedBonus", FutureAgencyBalance.COMMANDER_ATTACK_SPEED);
+        values.put("damageReductionCap", FutureAgencyBalance.DAMAGE_REDUCTION_CAP);
+        values.put("slowCap", FutureAgencyBalance.SLOW_CAP);
+        values.put("suppressionDenseCap", FutureAgencyBalance.SUPPRESSION_DENSE_CAP);
+        values.put("suppressionDenseRadius", FutureAgencyBalance.SUPPRESSION_DENSE_RADIUS);
+        values.put("escortRadius", FutureAgencyBalance.ESCORT_RADIUS);
+        for (FutureAgencyPolicy policy : FutureAgencyPolicy.values()) {
+            values.put("policy." + policy.id(), policy.defaultValue());
+        }
+        putAbilities(abilities, FutureAgencyBalance.GLOBAL_ID, values);
+        double[] suppressionRadius = {1.25, 1.5, 1.75, 2.0, 2.5};
+        double[] suppressionTargets = {3, 4, 5, 6, 7};
+        double[] suppressionRatio = {.40, .45, .50, .55, .60};
+        double[] suppressionSlow = {.08, .12, .16, .20, .25};
+        double[] protectionReduction = {.08, .12, .16, .20, .25};
+        for (int index = 0; index < 5; index++) {
+            int grade = 5 - index;
+            putAbilities(abilities, FutureAgencyTowers.agent(FutureAgencyRole.SUPPRESSION, grade).id(), Map.of(
+                    "suppressionRadius", suppressionRadius[index],
+                    "suppressionMaxTargets", suppressionTargets[index],
+                    "suppressionDamageRatio", suppressionRatio[index],
+                    "suppressionSlow", suppressionSlow[index]
+            ));
+            putAbilities(abilities, FutureAgencyTowers.agent(FutureAgencyRole.PROTECTION, grade).id(), Map.of(
+                    "damageReduction", protectionReduction[index]
+            ));
+        }
+    }
+
+    private static void putQueenAbilities(Map<String, Map<String, Double>> abilities) {
+        LinkedHashMap<String, Double> values = new LinkedHashMap<>();
+        values.put("shrinkFactorPerPoint", 0.98);
+        values.put("minimumStatScale", 0.20);
+        values.put("minimumVisualScale", 0.50);
+        values.put("queenShrinkPoints", 5.0);
+        values.put("cardShrinkPoints", 0.75);
+        values.put("cardDeathShrinkPoints", 1.5);
+        values.put("cardDeathRadius", 3.0);
+        values.put("heartHealIntervalTicks", 60.0);
+        values.put("heartHealAmount", 12.0);
+        values.put("heartHealRadius", 5.0);
+        values.put("clubDamageReduction", 0.15);
+        values.put("cardSplashRadius", 1.25);
+        values.put("cardSplashExtraTargets", 1.0);
+        values.put("spadeRadius", 1.5);
+        values.put("spadeExtraTargets", 3.0);
+        values.put("giantChargeTicks", 400.0);
+        values.put("giantAccelerationRadius", 6.0);
+        values.put("giantAccelerationMemoryTicks", 40.0);
+        values.put("giantInitialExecutionHealth", 50.0);
+        values.put("giantExecutionGrowthRatio", 0.02);
+        values.put("giantGrowthTargetCapMultiplier", 4.0);
+        values.put("giantContactRadius", 4.0);
+        values.put("giantSpeed", 0.65);
+        values.put("giantSlow", 0.55);
+        values.put("giantSlowTicks", 40.0);
+        values.put("rangeVfxIntervalTicks", 80.0);
+        values.put("card.heart.maxHealth", 60.0);
+        values.put("card.heart.range", 6.0);
+        values.put("card.heart.intervalTicks", 20.0);
+        values.put("card.heart.aggro", 55.0);
+        values.put("card.diamond.maxHealth", 45.0);
+        values.put("card.diamond.range", 8.0);
+        values.put("card.diamond.intervalTicks", 10.0);
+        values.put("card.diamond.aggro", 45.0);
+        values.put("card.club.maxHealth", 125.0);
+        values.put("card.club.range", 2.5);
+        values.put("card.club.intervalTicks", 24.0);
+        values.put("card.club.aggro", 110.0);
+        values.put("card.spade.maxHealth", 75.0);
+        values.put("card.spade.range", 3.0);
+        values.put("card.spade.intervalTicks", 18.0);
+        values.put("card.spade.aggro", 80.0);
+        for (PokerHand hand : PokerHand.values()) {
+            values.put("hand." + hand.name().toLowerCase(), hand.defaultBonus());
+        }
+        putAbilities(abilities, QueenBalance.GLOBAL_ID, values);
+    }
+
+    private void validateQueenBalance() {
+        Map<String, Double> values = abilities.get(QueenBalance.GLOBAL_ID);
+        if (values == null) return;
+        values.forEach((key, value) -> {
+            if (value == null || !Double.isFinite(value) || value < 0.0) {
+                throw new IllegalArgumentException("Queen balance must be finite and non-negative: " + key);
+            }
+        });
+        double shrinkFactor = values.getOrDefault("shrinkFactorPerPoint", 0.0);
+        if (shrinkFactor <= 0.0 || shrinkFactor >= 1.0) {
+            throw new IllegalArgumentException("Queen shrinkFactorPerPoint must be between 0 and 1 (exclusive).");
+        }
+        double minimumVisualScale = values.getOrDefault("minimumVisualScale", 0.0);
+        if (minimumVisualScale <= 0.0 || minimumVisualScale > 1.0) {
+            throw new IllegalArgumentException("Queen minimumVisualScale must be between 0 (exclusive) and 1.");
+        }
+        double minimumStatScale = values.getOrDefault("minimumStatScale", 0.0);
+        if (minimumStatScale <= 0.0 || minimumStatScale > 1.0) {
+            throw new IllegalArgumentException("Queen minimumStatScale must be between 0 (exclusive) and 1.");
+        }
+        for (String key : java.util.List.of("clubDamageReduction", "giantExecutionGrowthRatio", "giantSlow")) {
+            double value = values.getOrDefault(key, -1.0);
+            if (value < 0.0 || value > 1.0) throw new IllegalArgumentException("Queen ratio must be between 0 and 1: " + key);
+        }
+        for (String key : java.util.List.of("heartHealIntervalTicks", "cardSplashExtraTargets", "spadeExtraTargets", "giantChargeTicks",
+                "giantAccelerationMemoryTicks", "giantSlowTicks", "rangeVfxIntervalTicks", "card.heart.intervalTicks",
+                "card.diamond.intervalTicks", "card.club.intervalTicks", "card.spade.intervalTicks",
+                "card.heart.aggro", "card.diamond.aggro", "card.club.aggro", "card.spade.aggro")) {
+            double value = values.getOrDefault(key, 0.0);
+            if (value <= 0.0 || value != Math.rint(value)) {
+                throw new IllegalArgumentException("Queen integer must be positive: " + key);
+            }
+        }
+        for (String key : java.util.List.of("queenShrinkPoints", "cardShrinkPoints", "cardDeathShrinkPoints",
+                "cardDeathRadius", "heartHealAmount", "heartHealRadius", "cardSplashRadius", "spadeRadius", "giantAccelerationRadius",
+                "giantInitialExecutionHealth", "giantGrowthTargetCapMultiplier", "giantContactRadius", "giantSpeed",
+                "card.heart.maxHealth", "card.heart.range", "card.diamond.maxHealth", "card.diamond.range",
+                "card.club.maxHealth", "card.club.range", "card.spade.maxHealth", "card.spade.range")) {
+            if (values.getOrDefault(key, 0.0) <= 0.0) {
+                throw new IllegalArgumentException("Queen value must be positive: " + key);
+            }
+        }
+        double previousHandBonus = -1.0;
+        for (PokerHand hand : PokerHand.values()) {
+            String key = "hand." + hand.name().toLowerCase();
+            double value = values.getOrDefault(key, -1.0);
+            if (value < 0.0 || value > 1.0 || value < previousHandBonus) {
+                throw new IllegalArgumentException("Queen poker bonuses must be ordered ratios: " + key);
+            }
+            previousHandBonus = value;
+        }
+        if (values.getOrDefault("spadeRadius", 0.0) < values.getOrDefault("cardSplashRadius", 0.0)
+                || values.getOrDefault("spadeExtraTargets", 0.0) < values.getOrDefault("cardSplashExtraTargets", 0.0)) {
+            throw new IllegalArgumentException("Queen spade splash must not be weaker than the common card splash.");
+        }
+    }
+
+    private void validateHeroPartyBalance() {
+        Map<String, Double> values = abilities.get(HeroPartyBalance.GLOBAL_CONFIG_ID);
+        if (values == null) {
+            return;
+        }
+        Double perExtraAttacker = values.get("focusFireDamageReductionPerExtraAttacker");
+        Double cap = values.get("focusFireDamageReductionCap");
+        if (perExtraAttacker != null && perExtraAttacker >= 1.0) {
+            throw new IllegalArgumentException("Hero Party focus-fire reduction must be in [0, 1).");
+        }
+        if (cap != null && cap >= 1.0) {
+            throw new IllegalArgumentException("Hero Party focus-fire reduction cap must be in [0, 1).");
+        }
+        if (perExtraAttacker != null && cap != null && perExtraAttacker > cap) {
+            throw new IllegalArgumentException("Hero Party focus-fire reduction must not exceed its cap.");
+        }
+    }
+
+    private void validateFutureAgencyBalance() {
+        Map<String, Double> values = abilities.get(FutureAgencyBalance.GLOBAL_ID);
+        if (values == null) return;
+        values.forEach((key, value) -> {
+            if (value == null || !Double.isFinite(value) || value < 0.0) {
+                throw new IllegalArgumentException("Future agency balance must be finite and non-negative: " + key);
+            }
+        });
+        for (String key : java.util.List.of(
+                "rebuilderDamageBonus", "rebuilderMaxHealthBonus", "commanderDamageBonus",
+                "commanderMaxHealthBonus", "commanderAttackSpeedBonus", "damageReductionCap",
+                "slowCap", "suppressionDenseCap")) {
+            double value = values.getOrDefault(key, 0.0);
+            if (value < 0.0 || value > 1.0) {
+                throw new IllegalArgumentException("Future agency ratio must be between 0 and 1: " + key);
+            }
+        }
+        for (FutureAgencyPolicy policy : FutureAgencyPolicy.values()) {
+            if (policy == FutureAgencyPolicy.LONG_RANGE_OPTICS
+                    || policy == FutureAgencyPolicy.AREA_SUPPRESSION
+                    || policy == FutureAgencyPolicy.MULTI_TARGET
+                    || policy == FutureAgencyPolicy.FORCED_TAUNT) continue;
+            double value = values.getOrDefault("policy." + policy.id(), -1.0);
+            if (value < 0.0 || value > 1.0) {
+                throw new IllegalArgumentException("Future agency policy ratio must be between 0 and 1: " + policy.id());
+            }
+        }
+        if (values.getOrDefault("escortRadius", 0.0) <= 0.0
+                || values.getOrDefault("suppressionDenseRadius", 0.0) <= 0.0) {
+            throw new IllegalArgumentException("Future agency radii must be positive.");
+        }
+        if (values.getOrDefault("policy.dense_control", 0.0)
+                > values.getOrDefault("suppressionDenseCap", 0.0)) {
+            throw new IllegalArgumentException("Future agency dense-control bonus exceeds its cap.");
+        }
+        for (int grade = 5; grade >= 1; grade--) {
+            Map<String, Double> suppression = abilities.get(
+                    FutureAgencyTowers.agent(FutureAgencyRole.SUPPRESSION, grade).id());
+            if (suppression != null) {
+                double targetCount = suppression.getOrDefault("suppressionMaxTargets", 0.0);
+                if (targetCount <= 0.0 || targetCount != Math.rint(targetCount)) {
+                    throw new IllegalArgumentException("Future agency suppression target count must be a positive integer.");
+                }
+                double ratio = suppression.getOrDefault("suppressionDamageRatio", 0.0);
+                double slow = suppression.getOrDefault("suppressionSlow", 0.0);
+                if (suppression.getOrDefault("suppressionRadius", 0.0) <= 0.0
+                        || ratio <= 0.0 || ratio > 1.0 || slow < 0.0 || slow > 1.0
+                        || slow > values.getOrDefault("slowCap", 0.0)) {
+                    throw new IllegalArgumentException("Future agency suppression values are invalid.");
+                }
+            }
+            Map<String, Double> protection = abilities.get(
+                    FutureAgencyTowers.agent(FutureAgencyRole.PROTECTION, grade).id());
+            if (protection != null) {
+                double reduction = protection.getOrDefault("damageReduction", -1.0);
+                if (reduction < 0.0 || reduction > 1.0
+                        || reduction > values.getOrDefault("damageReductionCap", 0.0)) {
+                    throw new IllegalArgumentException("Future agency protection reduction must be between 0 and 1.");
+                }
+            }
+        }
+    }
+
+    private void validateEngineerBalance() {
+        Map<String, Double> global = abilities.get(EngineerBalance.GLOBAL_ID);
+        if (global == null) {
+            return;
+        }
+        validateEngineerValues(EngineerBalance.GLOBAL_ID, global);
+        requireEngineerPositive(global,
+                "activeTicks", "doorActiveTicks", "plateCooldownTicks", "golemMoveSpeed", "pistonImmunityTicks",
+                "doorRetargetTicks", "tntFuseTicks", "maxRedstone", "maxPlates", "maxPistons",
+                "dispenserMaxPlateDistance", "activeVfxIntervalTicks", "tntFuseVfxIntervalTicks");
+        requireEngineerIntegral(global,
+                "activeTicks", "doorActiveTicks", "plateCooldownTicks", "pistonImmunityTicks", "doorRetargetTicks", "tntFuseTicks",
+                "maxRedstone", "maxPlates", "maxPistons", "dispenserMaxPlateDistance",
+                "activeVfxIntervalTicks", "tntFuseVfxIntervalTicks");
+        double distanceBonus = global.getOrDefault("dispenserDamagePerPlateBlock", -1.0);
+        if (distanceBonus < 0.0 || distanceBonus > 1.0) {
+            throw new IllegalArgumentException("Engineer dispenser distance bonus must be in [0, 1].");
+        }
+        if (global.getOrDefault("dispenserMaxPlateDistance", 0.0)
+                > global.getOrDefault("maxRedstone", 0.0)) {
+            throw new IllegalArgumentException("Engineer dispenser distance cap must not exceed maxRedstone.");
+        }
+        for (EngineerTowers.TrapKind kind : EngineerTowers.TrapKind.values()) {
+            for (int tier = 1; tier <= 3; tier++) {
+                String id = EngineerTowers.trap(kind, tier).id();
+                Map<String, Double> values = abilities.get(id);
+                if (values == null) {
+                    continue;
+                }
+                validateEngineerValues(id, values);
+                values.forEach((key, value) -> {
+                    if (!key.equals("slow") && value <= 0.0) {
+                        throw new IllegalArgumentException("Engineer balance ability must be positive: " + id + "." + key);
+                    }
+                });
+                if (values.containsKey("maxTargets")) {
+                    requireEngineerIntegral(values, "maxTargets");
+                }
+                if (values.containsKey("intervalTicks")) {
+                    requireEngineerIntegral(values, "intervalTicks");
+                }
+                if (values.containsKey("slow") && values.get("slow") >= 1.0) {
+                    throw new IllegalArgumentException("Engineer slow ratio must be in [0, 1): " + id);
+                }
+            }
+        }
+        validateEngineerTierOrder(EngineerTowers.TrapKind.DOOR, "radius", true);
+        validateEngineerTierOrder(EngineerTowers.TrapKind.TNT, "damage", true);
+        validateEngineerTierOrder(EngineerTowers.TrapKind.TNT, "radius", true);
+        validateEngineerTierOrder(EngineerTowers.TrapKind.TNT, "maxTargets", true);
+        validateEngineerTierOrder(EngineerTowers.TrapKind.DISPENSER, "damage", true);
+        validateEngineerTierOrder(EngineerTowers.TrapKind.DISPENSER, "range", true);
+        validateEngineerTierOrder(EngineerTowers.TrapKind.DISPENSER, "intervalTicks", false);
+        validateEngineerTierOrder(EngineerTowers.TrapKind.PISTON, "radius", true);
+        validateEngineerTierOrder(EngineerTowers.TrapKind.PISTON, "maxTargets", true);
+        validateEngineerTierOrder(EngineerTowers.TrapKind.SLIME, "radius", true);
+        validateEngineerTierOrder(EngineerTowers.TrapKind.SLIME, "slow", true);
+
+        Double previousHealth = null;
+        for (int tier = 1; tier <= 3; tier++) {
+            TowerStats stats = towers.get(EngineerTowers.trap(EngineerTowers.TrapKind.DOOR, tier).id());
+            if (stats != null && stats.maxHealth() != null) {
+                if (previousHealth != null && stats.maxHealth() < previousHealth) {
+                    throw new IllegalArgumentException("Engineer door health must not decrease by tier.");
+                }
+                previousHealth = stats.maxHealth();
+            }
+        }
+    }
+
+    private void validateEngineerTierOrder(EngineerTowers.TrapKind kind, String key, boolean nondecreasing) {
+        Double previous = null;
+        for (int tier = 1; tier <= 3; tier++) {
+            Double current = configuredAbility(EngineerTowers.trap(kind, tier).id(), key);
+            if (current == null) {
+                continue;
+            }
+            if (previous != null && (nondecreasing ? current < previous : current > previous)) {
+                throw new IllegalArgumentException("Engineer " + kind + "." + key + " tier order is invalid.");
+            }
+            previous = current;
+        }
+    }
+
+    private void validateInsectBalance() {
+        Map<String, Double> global = abilities.get(InsectBalance.GLOBAL_ID);
+        if (global != null) {
+            validateEngineerValues(InsectBalance.GLOBAL_ID, global);
+            requireEngineerPositive(global,
+                    "freshPowerMultiplier", "freshPowerScale", "reviveBaseTicks", "reviveIncrementTicks",
+                    "radiusVfxIntervalTicks");
+            requireEngineerIntegral(global, "reviveBaseTicks", "reviveIncrementTicks", "radiusVfxIntervalTicks");
+            double power = global.getOrDefault("freshPowerMultiplier", 0.0);
+            double scale = global.getOrDefault("freshPowerScale", 0.0);
+            double vulnerability = global.getOrDefault("deathDamageTakenPerStack", -1.0);
+            if (power < 1.0 || scale < 1.0 || scale > 1.25 || vulnerability < 0.0 || vulnerability > 1.0) {
+                throw new IllegalArgumentException("Insect global multipliers are outside their supported range.");
+            }
+        }
+        Map<String, Double> spawner = abilities.get(InsectTowers.SPAWNER.id());
+        if (spawner != null) {
+            validateEngineerValues(InsectTowers.SPAWNER.id(), spawner);
+            requireEngineerPositive(spawner, "reviveRadius");
+        }
+        Double previousReduction = null;
+        for (int tier = 1; tier <= 3; tier++) {
+            String id = InsectTowers.spider(tier).id();
+            Map<String, Double> values = abilities.get(id);
+            if (values == null) {
+                continue;
+            }
+            double reduction = values.getOrDefault("damageReduction", -1.0);
+            if (!Double.isFinite(reduction) || reduction < 0.0 || reduction >= 1.0) {
+                throw new IllegalArgumentException("Insect spider damage reduction must be in [0, 1): " + id);
+            }
+            if (previousReduction != null && reduction < previousReduction) {
+                throw new IllegalArgumentException("Insect spider damage reduction must not decrease by tier.");
+            }
+            previousReduction = reduction;
+        }
+        validateInsectTierOrder(List.of(InsectTowers.SILVERFISH, InsectTowers.ENDERMITE, InsectTowers.ENHANCED_ENDERMITE));
+        validateInsectTierOrder(List.of(InsectTowers.CAVE_SPIDER, InsectTowers.SPIDER, InsectTowers.ENHANCED_SPIDER));
+        validateInsectTierOrder(List.of(InsectTowers.BEE, InsectTowers.ENHANCED_BEE, InsectTowers.QUEEN_BEE));
+    }
+
+    private void validateInsectTierOrder(List<TowerType> types) {
+        TowerStats previous = null;
+        for (TowerType type : types) {
+            TowerStats current = towers.get(type.id());
+            if (current != null && previous != null
+                    && (current.maxHealth() < previous.maxHealth()
+                    || current.damage() < previous.damage()
+                    || current.range() < previous.range()
+                    || current.attackIntervalTicks() > previous.attackIntervalTicks())) {
+                throw new IllegalArgumentException("Insect tower stats must improve by tier: " + type.id());
+            }
+            if (current != null) {
+                previous = current;
+            }
+        }
+    }
+
+    private static void validateEngineerValues(String id, Map<String, Double> values) {
+        values.forEach((key, value) -> {
+            if (value == null || !Double.isFinite(value) || value < 0.0) {
+                throw new IllegalArgumentException("Engineer balance ability must be finite and non-negative: " + id + "." + key);
+            }
+        });
+    }
+
+    private static void requireEngineerPositive(Map<String, Double> values, String... keys) {
+        for (String key : keys) {
+            if (values.getOrDefault(key, 0.0) <= 0.0) {
+                throw new IllegalArgumentException("Engineer balance ability must be positive: " + key);
+            }
+        }
+    }
+
+    private static void requireEngineerIntegral(Map<String, Double> values, String... keys) {
+        for (String key : keys) {
+            double value = values.getOrDefault(key, -1.0);
+            if (value < 0.0 || value != Math.rint(value) || value > Integer.MAX_VALUE) {
+                throw new IllegalArgumentException("Engineer balance ability must be an integer: " + key);
+            }
+        }
+    }
+
+    private static void putMageAbilities(Map<String, Map<String, Double>> abilities) {
+        LinkedHashMap<String, Double> values = new LinkedHashMap<>();
+        values.put("manaCapacity", (double) MageBalance.MANA_CAPACITY);
+        values.put("startingMana", (double) MageBalance.STARTING_MANA);
+        values.put("idleWizardMana", (double) MageBalance.IDLE_WIZARD_MANA);
+        values.put("prophetMana", (double) MageBalance.PROPHET_MANA);
+        values.put("coreMana", (double) MageBalance.CORE_MANA);
+        values.put("coreBreakManaLossRatio", MageBalance.CORE_BREAK_MANA_LOSS_RATIO);
+        values.put("prophecyReward", (double) MageBalance.PROPHECY_REWARD);
+        values.put("supportRadius", MageBalance.SUPPORT_RADIUS);
+        values.put("amplificationBonus", MageBalance.AMPLIFICATION_BONUS);
+        values.put("manaDamageBonusAtCapacity", MageBalance.MANA_DAMAGE_BONUS_AT_CAPACITY);
+        values.put("rangedBarrierReduction", MageBalance.RANGED_BARRIER_REDUCTION);
+        values.put("intermediateCasts", (double) MageBalance.INTERMEDIATE_CASTS);
+        values.put("archmageCasts", (double) MageBalance.ARCHMAGE_CASTS);
+        values.put("intermediateDamageMultiplier", MageBalance.INTERMEDIATE_DAMAGE_MULTIPLIER);
+        values.put("archmageDamageMultiplier", MageBalance.ARCHMAGE_DAMAGE_MULTIPLIER);
+        values.put("maxSpellDamageMultiplier", MageBalance.MAX_SPELL_DAMAGE_MULTIPLIER);
+        values.put("manaRetryTicks", (double) MageBalance.MANA_RETRY_TICKS);
+        for (MageSpell spell : MageSpell.values()) {
+            values.put(spell.id() + "ManaCost", (double) spell.defaultManaCost());
+            values.put(spell.id() + "CooldownTicks", (double) spell.defaultCooldownTicks());
+            values.put(spell.id() + "Range", spell.defaultRange());
+        }
+        values.put("missileDamage", MageBalance.MISSILE_DAMAGE);
+        values.put("missileCount", (double) MageBalance.MISSILE_COUNT);
+        values.put("missileIntervalTicks", (double) MageBalance.MISSILE_INTERVAL_TICKS);
+        values.put("windCutterDamage", MageBalance.WIND_CUTTER_DAMAGE);
+        values.put("windCutterWidth", MageBalance.WIND_CUTTER_WIDTH);
+        values.put("windCutterMaxTargets", (double) MageBalance.WIND_CUTTER_MAX_TARGETS);
+        values.put("manaBombDamage", MageBalance.MANA_BOMB_DAMAGE);
+        values.put("manaBombRadius", MageBalance.MANA_BOMB_RADIUS);
+        values.put("manaBombMaxTargets", (double) MageBalance.MANA_BOMB_MAX_TARGETS);
+        values.put("manaBombDelayTicks", (double) MageBalance.MANA_BOMB_DELAY_TICKS);
+        for (int index = 0; index < MageBalance.CHAIN_LIGHTNING_DAMAGE.length; index++) {
+            values.put("chainDamage" + (index + 1), MageBalance.CHAIN_LIGHTNING_DAMAGE[index]);
+        }
+        values.put("chainJumpRange", MageBalance.CHAIN_LIGHTNING_JUMP_RANGE);
+        values.put("frostWaveDamage", MageBalance.FROST_WAVE_DAMAGE);
+        values.put("frostWaveRadius", MageBalance.FROST_WAVE_RADIUS);
+        values.put("frostWaveMaxTargets", (double) MageBalance.FROST_WAVE_MAX_TARGETS);
+        values.put("frostWaveSlow", MageBalance.FROST_WAVE_SLOW);
+        values.put("frostWaveDurationTicks", (double) MageBalance.FROST_WAVE_DURATION_TICKS);
+        values.put("collapseDamage", MageBalance.DIMENSIONAL_COLLAPSE_DAMAGE);
+        values.put("collapseRadius", MageBalance.DIMENSIONAL_COLLAPSE_RADIUS);
+        values.put("collapseDelayTicks", (double) MageBalance.DIMENSIONAL_COLLAPSE_DELAY_TICKS);
+        putAbilities(abilities, MageBalance.GLOBAL_ID, values);
+    }
+
+    private void validateMageBalance() {
+        Map<String, Double> values = abilities.get(MageBalance.GLOBAL_ID);
+        if (values == null) {
+            return;
+        }
+        values.forEach((key, value) -> {
+            if (value == null || !Double.isFinite(value) || value < 0.0) {
+                throw new IllegalArgumentException("Mage balance ability must be finite and non-negative: " + key);
+            }
+        });
+        requireMagePositive(values,
+                "manaCapacity", "supportRadius", "intermediateCasts", "archmageCasts",
+                "intermediateDamageMultiplier", "archmageDamageMultiplier", "maxSpellDamageMultiplier", "manaRetryTicks",
+                "missileCount", "missileIntervalTicks",
+                "windCutterWidth", "windCutterMaxTargets", "manaBombRadius", "manaBombMaxTargets", "manaBombDelayTicks",
+                "chainJumpRange", "frostWaveRadius", "frostWaveMaxTargets", "frostWaveDurationTicks",
+                "collapseRadius", "collapseDelayTicks", "missileDamage", "windCutterDamage",
+                "manaBombDamage", "chainDamage1", "chainDamage2", "chainDamage3", "chainDamage4",
+                "chainDamage5", "chainDamage6", "frostWaveDamage", "collapseDamage");
+        requireMageRatio(values, "amplificationBonus", "manaDamageBonusAtCapacity",
+                "rangedBarrierReduction", "frostWaveSlow", "coreBreakManaLossRatio");
+        requireMageIntegral(values,
+                "manaCapacity", "startingMana", "idleWizardMana", "prophetMana", "coreMana", "prophecyReward",
+                "intermediateCasts", "archmageCasts", "manaRetryTicks", "missileCount", "missileIntervalTicks",
+                "windCutterMaxTargets", "manaBombMaxTargets",
+                "manaBombDelayTicks", "frostWaveMaxTargets", "frostWaveDurationTicks", "collapseDelayTicks");
+        for (MageSpell spell : MageSpell.values()) {
+            requireMagePositive(values, spell.id() + "ManaCost");
+            requireMagePositive(values, spell.id() + "CooldownTicks", spell.id() + "Range");
+            requireMageIntegral(values, spell.id() + "ManaCost");
+            requireMageIntegral(values, spell.id() + "CooldownTicks");
+        }
+        if (values.get("archmageCasts") <= values.get("intermediateCasts")) {
+            throw new IllegalArgumentException("Mage archmage cast threshold must exceed intermediate threshold");
+        }
+        if (values.get("archmageDamageMultiplier") < values.get("intermediateDamageMultiplier")) {
+            throw new IllegalArgumentException("Mage rank damage multipliers must not decrease");
+        }
+        if (values.get("intermediateDamageMultiplier") < 1.0
+                || values.get("archmageDamageMultiplier") > values.get("maxSpellDamageMultiplier")) {
+            throw new IllegalArgumentException("Mage rank damage multipliers must stay between 1 and the spell cap");
+        }
+        for (int index = 2; index <= MageBalance.CHAIN_LIGHTNING_DAMAGE.length; index++) {
+            if (values.get("chainDamage" + index) > values.get("chainDamage" + (index - 1))) {
+                throw new IllegalArgumentException("Mage chain lightning damage must not increase at jump " + index);
+            }
+        }
+    }
+
+    private static void requireMagePositive(Map<String, Double> values, String... keys) {
+        for (String key : keys) {
+            if (values.getOrDefault(key, 0.0) <= 0.0) {
+                throw new IllegalArgumentException("Mage balance ability must be positive: " + key);
+            }
+        }
+    }
+
+    private static void requireMageRatio(Map<String, Double> values, String... keys) {
+        for (String key : keys) {
+            double value = values.getOrDefault(key, -1.0);
+            if (value < 0.0 || value > 1.0) {
+                throw new IllegalArgumentException("Mage balance ratio must be between 0 and 1: " + key);
+            }
+        }
+    }
+
+    private static void requireMageIntegral(Map<String, Double> values, String... keys) {
+        for (String key : keys) {
+            double value = values.getOrDefault(key, -1.0);
+            if (value < 0.0 || value != Math.rint(value) || value > Integer.MAX_VALUE) {
+                throw new IllegalArgumentException("Mage balance ability must be an integer: " + key);
+            }
+        }
+    }
+
+    private static void mergeAbilities(
+            Map<String, Map<String, Double>> abilities,
+            String configId,
+            Map<String, Double> values
+    ) {
+        LinkedHashMap<String, Double> merged = new LinkedHashMap<>(abilities.getOrDefault(configId, Map.of()));
+        merged.putAll(values);
+        abilities.put(configId, Collections.unmodifiableMap(merged));
+    }
+
     private static void putAdversaryAbilities(Map<String, Map<String, Double>> abilities) {
         putAbilities(abilities, AdversaryBalance.GLOBAL_CONFIG_ID, Map.ofEntries(
                 Map.entry("maxFoxTowers", (double) AdversaryBalance.MAX_FOX_TOWERS),
@@ -1622,6 +2630,9 @@ public record TowerBalanceConfig(
                 Map.entry("fireworkSecondary3Ratio", AdversaryBalance.FIREWORK_TARGET_DAMAGE_RATIOS[2]),
                 Map.entry("fireworkSecondary4Ratio", AdversaryBalance.FIREWORK_TARGET_DAMAGE_RATIOS[3]),
                 Map.entry("fireworkSecondary5Ratio", AdversaryBalance.FIREWORK_TARGET_DAMAGE_RATIOS[4]),
+                Map.entry("fireworkSecondary6Ratio", AdversaryBalance.FIREWORK_TARGET_DAMAGE_RATIOS[5]),
+                Map.entry("fireworkSecondary7Ratio", AdversaryBalance.FIREWORK_TARGET_DAMAGE_RATIOS[6]),
+                Map.entry("fireworkSecondary8Ratio", AdversaryBalance.FIREWORK_TARGET_DAMAGE_RATIOS[7]),
                 Map.entry("bigGameWaveDamageMultiplier", AdversaryBalance.BIG_GAME_WAVE_DAMAGE_MULTIPLIER),
                 Map.entry("bigGameIncomeDamageMultiplier", AdversaryBalance.BIG_GAME_INCOME_DAMAGE_MULTIPLIER),
                 Map.entry("bigGameStreak2", AdversaryBalance.BIG_GAME_STREAK_MULTIPLIERS[1]),

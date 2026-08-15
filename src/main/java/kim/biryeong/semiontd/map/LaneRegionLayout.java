@@ -15,7 +15,8 @@ public record LaneRegionLayout(
         List<Vec3> waypoints,
         Vec3 bossPosition,
         BlockBounds laneArea,
-        List<GridPosition> finalDefenseTowerSlots
+        List<GridPosition> finalDefenseTowerSlots,
+        int personalWaypointCount
 ) {
     private static final double AREA_BOUNDARY_EPSILON = 0.001;
 
@@ -27,7 +28,21 @@ public record LaneRegionLayout(
             BlockBounds laneArea,
             List<GridPosition> finalDefenseTowerSlots
     ) {
-        this(laneId, spawn, singleCellBounds(spawn), waypoints, bossPosition, laneArea, finalDefenseTowerSlots);
+        this(laneId, spawn, singleCellBounds(spawn), waypoints, bossPosition, laneArea,
+                finalDefenseTowerSlots, waypoints.size());
+    }
+
+    public LaneRegionLayout(
+            int laneId,
+            Vec3 spawn,
+            BlockBounds spawnArea,
+            List<Vec3> waypoints,
+            Vec3 bossPosition,
+            BlockBounds laneArea,
+            List<GridPosition> finalDefenseTowerSlots
+    ) {
+        this(laneId, spawn, spawnArea, waypoints, bossPosition, laneArea,
+                finalDefenseTowerSlots, waypoints.size());
     }
 
     public LaneRegionLayout {
@@ -36,6 +51,11 @@ public record LaneRegionLayout(
         }
         waypoints = List.copyOf(waypoints);
         finalDefenseTowerSlots = List.copyOf(finalDefenseTowerSlots);
+        personalWaypointCount = Math.max(0, Math.min(personalWaypointCount, waypoints.size()));
+    }
+
+    public List<Vec3> personalWaypoints() {
+        return waypoints.subList(0, personalWaypointCount);
     }
 
     public List<Vec3> pathPoints() {

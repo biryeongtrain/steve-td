@@ -63,6 +63,9 @@ public final class AcquireLaneDefenseTargetGoal extends Goal {
                 ).stream()
                 .filter(LivingEntity.class::isInstance)
                 .map(LivingEntity.class::cast)
+                .filter(entity -> !(entity instanceof SemionTowerEntity towerEntity)
+                        || towerEntity.runtimeTower() == null
+                        || towerEntity.runtimeTower().targetableByMonsters())
                 .sorted(Comparator
                         .comparingInt((LivingEntity entity) -> ((LaneDefenseEntity) entity).aggroPriority()).reversed()
                         .thenComparingDouble(monster::distanceToSqr))

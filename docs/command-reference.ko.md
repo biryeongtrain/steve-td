@@ -34,6 +34,11 @@
 | `/semiontd trait current` | 현재 특성을 봅니다. |
 | `/semiontd trait list` | 선택 가능한 특성을 봅니다. |
 | `/semiontd trait select <slot> <id>` | 특성을 선택합니다. |
+| `/semiontd hero shop` | 용사 장비 상점을 엽니다. 웨이브 중에는 조회만 가능합니다. |
+| `/semiontd hero quest` | 현재 용사 퀘스트와 진행도를 봅니다. |
+| `/semiontd hero party` | 확정 동료와 모험 점수 보너스를 봅니다. |
+| `/semiontd hero skin` | 여섯 동료의 계정 저장 스킨을 설정합니다. 로비에서도 사용할 수 있습니다. |
+| `/semiontd hero companion <role>` | 처음 설치할 동료 종류를 확인합니다. |
 | `/semiontd tower list` | 현재 빌더가 설치할 수 있는 starter 타워를 봅니다. |
 | `/semiontd tower ui` | 타워 UI를 엽니다. |
 | `/semiontd tower limitup` | 타워 제한을 구매로 올립니다. |
@@ -147,6 +152,12 @@
 | `/semiontd-debug vfx stats` | VFX 큐, 생략량, 일반 packet, GCB 도형 명령 통계를 봅니다. |
 | `/semiontd-debug vfx reset` | VFX 통계만 초기화합니다. 설정과 대기 중인 이벤트는 바꾸지 않습니다. |
 | `/semiontd-debug vfx transcendence` | 플레이어 전방에 초월 발동 VFX를 재생합니다. |
+| `/semiontd-debug vfx engineer power` | 설치된 기술자 함정의 전력 VFX를 재생합니다. |
+| `/semiontd-debug vfx engineer tnt` | 설치된 기술자 TNT 함정의 점화 VFX를 재생합니다. |
+| `/semiontd-debug vfx mage spell` | 설치된 마법사의 주문 VFX를 재생합니다. |
+| `/semiontd-debug vfx mage prophecy` | 설치된 예언가의 성공 VFX를 재생합니다. |
+| `/semiontd-debug vfx insect radius` | 설치된 벌레 스포너의 부활 반경 VFX를 재생합니다. |
+| `/semiontd-debug vfx insect revive` | 스포너에 연결된 벌레의 부활 VFX를 재생합니다. |
 | `/semiontd-debug summonui [page]` | 디버그 소환 UI를 엽니다. |
 | `/semiontd-debug summon ui [page]` | 디버그 소환 UI를 엽니다. |
 | `/semiontd-debug give diamond <amount> [player]` | 다이아를 지급합니다. |

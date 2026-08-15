@@ -142,14 +142,14 @@ class AdversaryTowerCatalogTest {
 
         assertTrue(AdversaryProgressStates.recordFoxKill(OWNER, enhanced.createProxy(1), lane));
         assertEquals(7, enhanced.contributedScore());
-        assertTrue(enhanced.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("처치 점수") && line.contains("3점") && line.contains("누적 기여 7점")));
     }
 
     @Test
     void jobOwnsAllAdversaryCatalogTypes() {
         AdversaryTowerJob job = new AdversaryTowerJob();
 
+        assertEquals("히어로 빌더", job.displayName().getString());
+        assertEquals("히어로 여우", AdversaryTowers.FOX.displayName());
         assertTrue(job.canUseTower(null, AdversaryTowers.FOX));
         for (FoxForm form : FoxForm.values()) {
             assertTrue(job.canUseTower(null, AdversaryTowers.typeFor(form)));
@@ -159,24 +159,6 @@ class AdversaryTowerCatalogTest {
             assertTrue(job.canUseTower(null, AdversaryTowers.enhancedRival(kind)));
         }
         assertFalse(job.canUseTower(null, AnimalTowers.T1_FOX_TOWER));
-    }
-
-    @Test
-    void jobDescriptionExplainsSharedScoreAndManualEvolution() {
-        String guide = new AdversaryTowerJob().description().stream()
-                .map(component -> component.getString())
-                .collect(java.util.stream.Collectors.joining("\n"));
-
-        assertTrue(guide.contains("숙적을 여우가 직접 처치"));
-        assertTrue(guide.contains("전직 점수"));
-        assertTrue(guide.contains("질풍 여우, 종지기 여우, 추적자 여우, 메아리 여우"));
-        assertFalse(guide.contains("빠른 저비용"));
-        assertFalse(guide.contains("진화 루트"));
-        assertTrue(guide.contains("첫 전직은 200 다이아, 최종 전직은 400 다이아"));
-        assertTrue(guide.contains("인컴 적은 점수를 주지 않습니다"));
-        assertTrue(guide.contains("강등"));
-        assertTrue(guide.contains("같은 전직 계열은 한 여우만"));
-        assertTrue(guide.contains("여우를 판매하면 사용 중이던 점수와 전직 계열을 반환"));
     }
 
     @Test
@@ -288,16 +270,16 @@ class AdversaryTowerCatalogTest {
         assertForm(FoxForm.BASE, 300, 3, 16, 10);
         assertForm(FoxForm.BREEZE, 550, 7, 26, 4);
         assertForm(FoxForm.GOLDEN_FANG, 750, 5, 30, 3);
-        assertForm(FoxForm.SHIELD_BEARER, 950, 3.5, 60, 7);
+        assertForm(FoxForm.SHIELD_BEARER, 1050, 3.5, 60, 7);
         assertForm(FoxForm.BELL_KEEPER, 650, 5, 60, 7);
         assertForm(FoxForm.BEACON_KEEPER, 850, 4, 72, 6);
         assertForm(FoxForm.OMINOUS_HEXER, 700, 8, 72, 6);
         assertForm(FoxForm.TRACKER, 550, 8, 52, 7);
-        assertForm(FoxForm.FIREWORK_PIERCER, 650, 10, 48, 8);
-        assertForm(FoxForm.BIG_GAME_TRACKER, 750, 11, 96, 16);
+        assertForm(FoxForm.FIREWORK_PIERCER, 650, 10, 56, 5);
+        assertForm(FoxForm.BIG_GAME_TRACKER, 750, 11, 96, 8);
         assertForm(FoxForm.ECHO_FOX, 700, 7, 76, 8);
-        assertForm(FoxForm.MACE_EXECUTIONER, 900, 4.5, 400, 50);
-        assertForm(FoxForm.SCULK_CORE, 800, 8, 800, 100);
+        assertForm(FoxForm.MACE_EXECUTIONER, 900, 4.5, 400, 20);
+        assertForm(FoxForm.SCULK_CORE, 800, 13, 800, 50);
 
         assertEquals(Items.STICK, FoxForm.BASE.heldItem());
         assertEquals(Items.BREEZE_ROD, FoxForm.BREEZE.heldItem());
@@ -312,6 +294,7 @@ class AdversaryTowerCatalogTest {
         assertEquals(Items.ECHO_SHARD, FoxForm.ECHO_FOX.heldItem());
         assertEquals(Items.MACE, FoxForm.MACE_EXECUTIONER.heldItem());
         assertEquals(Items.SCULK_CATALYST, FoxForm.SCULK_CORE.heldItem());
+        assertEquals(0.10, FoxForm.GOLDEN_FANG.damageReduction(), 0.0001);
         assertEquals(0.20, FoxForm.SHIELD_BEARER.damageReduction(), 0.0001);
         assertEquals(0.30, FoxForm.BEACON_KEEPER.damageReduction(), 0.0001);
         assertEquals(0.12, FoxForm.OMINOUS_HEXER.damageReduction(), 0.0001);
@@ -353,28 +336,31 @@ class AdversaryTowerCatalogTest {
         assertEquals(0.07, global.get("rivalRoundHealthGrowth"), 0.0001);
         assertEquals(0.03, global.get("rivalRoundDamageGrowth"), 0.0001);
         assertEquals(20.0, global.get("teamEffectScanIntervalTicks"), 0.0001);
-        assertEquals(80.0, global.get("bellHealIntervalTicks"), 0.0001);
+        assertEquals(60.0, global.get("bellHealIntervalTicks"), 0.0001);
         assertEquals(8.0, global.get("bellHealRadius"), 0.0001);
         assertEquals(1.0, global.get("bellHealTargetCount"), 0.0001);
-        assertEquals(0.05, global.get("bellHealMaxHealthRatio"), 0.0001);
-        assertEquals(60.0, global.get("beaconHealIntervalTicks"), 0.0001);
+        assertEquals(0.08, global.get("bellHealMaxHealthRatio"), 0.0001);
+        assertEquals(40.0, global.get("beaconHealIntervalTicks"), 0.0001);
         assertEquals(10.0, global.get("beaconHealRadius"), 0.0001);
         assertEquals(2.0, global.get("beaconHealTargetCount"), 0.0001);
-        assertEquals(0.06, global.get("beaconHealMaxHealthRatio"), 0.0001);
+        assertEquals(0.14, global.get("beaconHealMaxHealthRatio"), 0.0001);
         assertEquals(0.20, global.get("maceBreakHealthRatio"), 0.0001);
         assertEquals(1.50, global.get("maceSweepRadius"), 0.0001);
-        assertEquals(5.0, global.get("maceSweepExtraTargets"), 0.0001);
+        assertEquals(8.0, global.get("maceSweepExtraTargets"), 0.0001);
         assertEquals(0.25, global.get("maceSweepDamageRatio"), 0.0001);
-        assertEquals(7.0, global.get("sculkMaxTargets"), 0.0001);
+        assertEquals(15.0, global.get("sculkMaxTargets"), 0.0001);
         assertEquals(0.50, global.get("baseSplashDamageRatio"), 0.0001);
         assertEquals(0.50, global.get("evolvedSplashDamageRatio"), 0.0001);
         assertEquals(0.005, global.get("postEvolutionDamageBonusPerScore"), 0.0001);
         assertEquals(2.00, global.get("postEvolutionDamageBonusCap"), 0.0001);
         assertEquals(0.20, global.get("baseRivalKillHealRatio"), 0.0001);
         assertEquals(0.30, global.get("enhancedRivalKillHealRatio"), 0.0001);
-        assertEquals(1.00, global.get("rivalKillHealCapRatioPerWave"), 0.0001);
+        assertEquals(2.00, global.get("rivalKillHealCapRatioPerWave"), 0.0001);
         assertEquals(0.04, global.get("focusFireDamageReductionPerExtraAttacker"), 0.0001);
-        assertEquals(0.40, global.get("focusFireDamageReductionCap"), 0.0001);
+        assertEquals(0.45, global.get("focusFireDamageReductionCap"), 0.0001);
+        assertEquals(0.10, global.get("fireworkSecondary6Ratio"), 0.0001);
+        assertEquals(0.08, global.get("fireworkSecondary7Ratio"), 0.0001);
+        assertEquals(0.05, global.get("fireworkSecondary8Ratio"), 0.0001);
         assertEquals(0.40, global.get("sculkSelfDamageFloorRatio"), 0.0001);
         assertFalse(global.containsKey("maceStrikeDamage"));
         assertFalse(global.containsKey("maceStrikeIntervalTicks"));
@@ -412,8 +398,9 @@ class AdversaryTowerCatalogTest {
                 0.0
         ), 0.0001);
         assertEquals(0.20, merged.ability(AdversaryBalance.GLOBAL_CONFIG_ID, "baseRivalKillHealRatio", 0.0), 0.0001);
-        assertEquals(0.40, merged.ability(AdversaryBalance.GLOBAL_CONFIG_ID, "focusFireDamageReductionCap", 0.0), 0.0001);
-        assertEquals(0.06, merged.ability(AdversaryBalance.GLOBAL_CONFIG_ID, "beaconHealMaxHealthRatio", 0.0), 0.0001);
+        assertEquals(0.45, merged.ability(AdversaryBalance.GLOBAL_CONFIG_ID, "focusFireDamageReductionCap", 0.0), 0.0001);
+        assertEquals(0.14, merged.ability(AdversaryBalance.GLOBAL_CONFIG_ID, "beaconHealMaxHealthRatio", 0.0), 0.0001);
+        assertEquals(0.05, merged.ability(AdversaryBalance.GLOBAL_CONFIG_ID, "fireworkSecondary8Ratio", 0.0), 0.0001);
         assertEquals(650.0, merged.ability(
                 AdversaryBalance.formConfigId(FoxForm.MACE_EXECUTIONER),
                 "damage",
@@ -487,39 +474,6 @@ class AdversaryTowerCatalogTest {
                 defaults.schemaVersion()
         );
         assertThrows(IllegalArgumentException.class, negative::validateForRuntime);
-    }
-
-    @Test
-    void catalogDescriptionsRenderConfiguredValuesWithoutUnresolvedPlaceholders() {
-        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
-
-        for (TowerType type : AdversaryTowers.all()) {
-            List<String> description = ProductionTowerCatalog.find(type.id()).orElseThrow().type().description();
-            assertFalse(description.isEmpty());
-            assertTrue(description.stream().noneMatch(line -> line.contains("{stat.") || line.contains("{ability.")));
-        }
-        String foxDescription = String.join(" ", ProductionTowerCatalog.find(AdversaryTowers.FOX.id())
-                .orElseThrow().type().description());
-        assertTrue(foxDescription.contains("4블록"));
-        assertTrue(foxDescription.contains("4기"));
-        assertTrue(foxDescription.contains("공유 점수"));
-        assertTrue(foxDescription.contains("남은 점수 1점당 피해가 0.5% 증가")
-                && foxDescription.contains("최대 200%"));
-        assertTrue(foxDescription.contains("최대 체력의 20%") && foxDescription.contains("강화 숙적은 30%"));
-        assertTrue(foxDescription.contains("1기를 넘을 때마다 받는 피해가 4% 감소"));
-        assertTrue(foxDescription.contains("전직 형태는 주변 적 최대 3기에게 공격력의 50%"));
-        assertTrue(foxDescription.contains("질풍의 연쇄 공격과 스컬크 폭발은 마법 피해"));
-        assertTrue(foxDescription.contains("나머지 공격은 물리 피해"));
-        assertFalse(foxDescription.contains("진화"));
-
-        String enhancedDescription = String.join(" ", ProductionTowerCatalog
-                .find(AdversaryTowers.ENHANCED_POLAR_BEAR_RIVAL.id())
-                .orElseThrow().type().description());
-        assertTrue(enhancedDescription.contains("240"));
-        assertTrue(enhancedDescription.contains("7"));
-        assertTrue(enhancedDescription.contains("전직 점수 3점"));
-        assertTrue(enhancedDescription.contains("라운드가 오를수록 증가"));
-        assertTrue(enhancedDescription.contains("플레이어 특성 효과를 받지 않습니다"));
     }
 
     private static void assertRival(

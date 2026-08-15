@@ -64,6 +64,14 @@ public final class TowerAttackMonsterGoal extends Goal {
         SemionMonsterEntity target = findTarget();
         tower.recordCurrentAttackTarget(target);
         if (target == null) {
+            var runtimeTower = tower.runtimeTower();
+            if (!tower.deployedAtFinalDefense() && runtimeTower != null) {
+                var idleTarget = runtimeTower.idleMovementTarget(tower);
+                if (idleTarget.isPresent()) {
+                    tower.moveTowardTarget(idleTarget.get(), tower.chaseSpeedModifier());
+                    return;
+                }
+            }
             tower.getNavigation().stop();
             tower.playAnimation(SemionAnimationState.IDLE);
             return;

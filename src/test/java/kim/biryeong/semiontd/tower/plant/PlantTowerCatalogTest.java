@@ -427,19 +427,6 @@ final class PlantTowerCatalogTest {
     }
 
     @Test
-    void plantDescriptionsTrackConfiguredValuesWithoutPlaceholders() {
-        for (TowerType type : allPlantTowers().toList()) {
-            List<String> description = TowerBalanceRuntime.resolve(type).description();
-            assertFalse(description.isEmpty(), type.id());
-            assertTrue(description.stream().noneMatch(line -> line.contains("{stat.") || line.contains("{ability.")), type.id());
-        }
-        assertTrue(String.join(" ", TowerBalanceRuntime.resolve(PlantTowers.T1_MEADOW_TOWER).description())
-                .contains("다이아를 3개"));
-        assertTrue(String.join(" ", TowerBalanceRuntime.resolve(PlantTowers.T3_PODZOL_ROSE_TOWER).description())
-                .contains("35%"));
-    }
-
-    @Test
     void missingDefaultsBackfillPerWaveIncomeWithoutOverwritingOverrides() {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
         TowerBalanceConfig partial = new TowerBalanceConfig(

@@ -49,7 +49,14 @@ public final class TowerPlacementPositions {
     }
 
     public static Optional<GridPosition> resolveGrid(PlayerLane lane, BlockPos sourcePos) {
-        return resolve(lane, sourcePos).map(GridPosition::from);
+        return resolve(lane, sourcePos).map(position -> {
+            GridPosition resolved = GridPosition.from(position);
+            if (lane.towerAt(resolved) != null) {
+                return resolved;
+            }
+            GridPosition below = GridPosition.from(position.below());
+            return lane.towerAt(below) != null ? below : resolved;
+        });
     }
 
     private static BlockPos floorAtOrBelow(ServerLevel level, BlockPos sourcePos, int minY) {

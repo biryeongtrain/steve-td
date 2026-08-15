@@ -34,13 +34,30 @@ import kim.biryeong.semiontd.test.TestTowerService;
 import kim.biryeong.semiontd.tip.SemionTipService;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerService;
+import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerPlacementPositions;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.tower.adversary.AdversaryVfx;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityVfx;
+import kim.biryeong.semiontd.tower.atlantis.AtlantisTowers;
+import kim.biryeong.semiontd.tower.atlantis.AtlantisVfx;
+import kim.biryeong.semiontd.tower.area.AreaEffectIds;
+import kim.biryeong.semiontd.api.area.AreaVfxStyles;
+import kim.biryeong.semiontd.tower.engineer.EngineerTrapTower;
+import kim.biryeong.semiontd.tower.futureagency.FutureAgencyTowers;
+import kim.biryeong.semiontd.tower.insect.InsectSpawnerTower;
+import kim.biryeong.semiontd.tower.insect.InsectUnitTower;
+import kim.biryeong.semiontd.tower.mage.MageProphetTower;
+import kim.biryeong.semiontd.tower.mage.MageWizardTower;
 import kim.biryeong.semiontd.tower.ocean.OceanVfx;
+import kim.biryeong.semiontd.tower.queen.QueenBalance;
+import kim.biryeong.semiontd.tower.queen.QueenTowers;
+import kim.biryeong.semiontd.tower.hero.HeroCompanionRole;
+import kim.biryeong.semiontd.tower.hero.HeroCompanionSkinGui;
+import kim.biryeong.semiontd.tower.hero.HeroPartyStates;
+import kim.biryeong.semiontd.tower.hero.HeroShopGui;
 import kim.biryeong.semiontd.trait.SemionTrait;
 import kim.biryeong.semiontd.trait.TraitLoadout;
 import kim.biryeong.semiontd.trait.TraitRegistry;
@@ -228,6 +245,26 @@ public final class SemionCommands {
                                                 StringArgumentType.getString(context, "id")
                                         )))))
                 .then(traitCommand("trait", gameManager))
+                .then(literal("hero")
+                        .then(literal("skin")
+                                .executes(context -> heroSkin(context.getSource(), gameManager)))
+                        .then(literal("shop")
+                                .executes(context -> heroShop(context.getSource(), gameManager)))
+                        .then(literal("quest")
+                                .executes(context -> heroQuest(context.getSource(), gameManager)))
+                        .then(literal("party")
+                                .executes(context -> heroParty(context.getSource(), gameManager)))
+                        .then(literal("companion")
+                                .then(argument("role", StringArgumentType.word())
+                                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                                java.util.Arrays.stream(HeroCompanionRole.values()).map(HeroCompanionRole::id),
+                                                builder
+                                        ))
+                                        .executes(context -> heroCompanion(
+                                                context.getSource(),
+                                                gameManager,
+                                                StringArgumentType.getString(context, "role")
+                                        )))))
                 .then(literal("tower")
                         .then(literal("list")
                                 .executes(context -> listProductionTowers(context.getSource(), gameManager)))
@@ -479,7 +516,49 @@ public final class SemionCommands {
                                 .then(literal("mace")
                                         .executes(context -> debugAdversaryVfx(context.getSource(), AdversaryVfx.DebugKind.MACE)))
                                 .then(literal("sculk")
-                                        .executes(context -> debugAdversaryVfx(context.getSource(), AdversaryVfx.DebugKind.SCULK)))))
+                                        .executes(context -> debugAdversaryVfx(context.getSource(), AdversaryVfx.DebugKind.SCULK))))
+                        .then(literal("atlantis")
+                                .then(literal("zone")
+                                        .executes(context -> debugAtlantisVfx(
+                                                context.getSource(), gameManager, AtlantisVfx.DebugKind.ZONE)))
+                                .then(literal("burst")
+                                        .executes(context -> debugAtlantisVfx(
+                                                context.getSource(), gameManager, AtlantisVfx.DebugKind.BURST))))
+                        .then(literal("future_agency")
+                                .then(literal("carry")
+                                        .executes(context -> debugFutureAgencyVfx(
+                                                context.getSource(), gameManager, false)))
+                                .then(literal("suppression")
+                                        .executes(context -> debugFutureAgencyVfx(
+                                                context.getSource(), gameManager, true))))
+                        .then(literal("queen")
+                                .then(literal("shrink")
+                                        .executes(context -> debugQueenVfx(
+                                                context.getSource(), gameManager, false)))
+                                .then(literal("giant")
+                                        .executes(context -> debugQueenVfx(
+                                                context.getSource(), gameManager, true))))
+                        .then(literal("engineer")
+                                .then(literal("power")
+                                        .executes(context -> debugEngineerVfx(
+                                                context.getSource(), gameManager, false)))
+                                .then(literal("tnt")
+                                        .executes(context -> debugEngineerVfx(
+                                                context.getSource(), gameManager, true))))
+                        .then(literal("mage")
+                                .then(literal("spell")
+                                        .executes(context -> debugMageVfx(
+                                                context.getSource(), gameManager, false)))
+                                .then(literal("prophecy")
+                                        .executes(context -> debugMageVfx(
+                                                context.getSource(), gameManager, true))))
+                        .then(literal("insect")
+                                .then(literal("radius")
+                                        .executes(context -> debugInsectVfx(
+                                                context.getSource(), gameManager, false)))
+                                .then(literal("revive")
+                                        .executes(context -> debugInsectVfx(
+                                                context.getSource(), gameManager, true)))))
                 .then(literal("summonui")
                         .executes(context -> debugSummonDialog(context.getSource(), gameManager, 1))
                         .then(argument("page", IntegerArgumentType.integer(1))
@@ -578,6 +657,178 @@ public final class SemionCommands {
         AdversaryVfx.showDebug(source.getPlayerOrException(), kind);
         success(source, "대적자 " + kind.name().toLowerCase(java.util.Locale.ROOT) + " VFX를 재생했습니다.");
         return 1;
+    }
+
+    private static int debugAtlantisVfx(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            AtlantisVfx.DebugKind kind
+    ) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGame game = playableGame(source, gameManager);
+        PlayerLane lane = game == null ? null : game.playerLane(player.getUUID()).orElse(null);
+        if (lane == null) {
+            failure(source, "아틀란티스 VFX를 재생할 샌드박스 또는 경기 라인이 없습니다.");
+            return 0;
+        }
+        for (Tower tower : lane.towers()) {
+            if (!AtlantisTowers.isAtlantisTower(tower.type()) || !(tower instanceof EntityBackedTower backed)) {
+                continue;
+            }
+            var entity = backed.entityId().isPresent() ? lane.arenaWorld().getEntity(backed.entityId().getAsInt()) : null;
+            if (entity instanceof kim.biryeong.semiontd.entity.tower.SemionTowerEntity towerEntity
+                    && towerEntity.isAlive()) {
+                AtlantisVfx.showDebug(towerEntity, player, kind);
+                success(source, "아틀란티스 " + kind.name().toLowerCase(java.util.Locale.ROOT) + " VFX를 재생했습니다.");
+                return 1;
+            }
+        }
+        failure(source, "살아 있는 아틀란티스 타워가 필요합니다.");
+        return 0;
+    }
+
+    private static int debugFutureAgencyVfx(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            boolean suppression
+    ) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGame game = playableGame(source, gameManager);
+        PlayerLane lane = game == null ? null : game.playerLane(player.getUUID()).orElse(null);
+        if (lane != null) {
+            for (Tower tower : lane.towers()) {
+                if (!FutureAgencyTowers.isFutureAgencyTower(tower.type()) || !(tower instanceof EntityBackedTower backed)
+                        || backed.entityId().isEmpty()) continue;
+                var entity = lane.arenaWorld().getEntity(backed.entityId().getAsInt());
+                if (!(entity instanceof kim.biryeong.semiontd.entity.tower.SemionTowerEntity towerEntity)
+                        || !towerEntity.isAlive()) continue;
+                if (suppression) {
+                    TowerVfxService.showAreaEffect(towerEntity,
+                            AreaEffectIds.tower(tower, "future_suppression"), AreaVfxStyles.DEBUFF,
+                            towerEntity.position(), 2.5, List.of(), 0, 0, 0);
+                } else {
+                    TowerVfxService.showTranscendence(List.of(towerEntity));
+                }
+                success(source, "미래기관 " + (suppression ? "suppression" : "carry") + " VFX를 재생했습니다.");
+                return 1;
+            }
+        }
+        failure(source, "살아 있는 미래기관 타워가 필요합니다.");
+        return 0;
+    }
+
+    private static int debugQueenVfx(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            boolean giant
+    ) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGame game = playableGame(source, gameManager);
+        PlayerLane lane = game == null ? null : game.playerLane(player.getUUID()).orElse(null);
+        if (lane != null) {
+            for (Tower tower : lane.towers()) {
+                if (!tower.type().id().equals(QueenTowers.QUEEN.id()) || !(tower instanceof EntityBackedTower backed)
+                        || backed.entityId().isEmpty()) continue;
+                var entity = lane.arenaWorld().getEntity(backed.entityId().getAsInt());
+                if (!(entity instanceof kim.biryeong.semiontd.entity.tower.SemionTowerEntity towerEntity)
+                        || !towerEntity.isAlive()) continue;
+                TowerVfxService.showAreaEffect(
+                        towerEntity,
+                        AreaEffectIds.tower(tower, giant ? "queen_giant_debug" : "queen_shrink_debug"),
+                        giant ? AreaVfxStyles.PULSE : AreaVfxStyles.DEBUFF,
+                        towerEntity.position().add(0.0, 0.08, 0.0),
+                        giant ? QueenBalance.giantContactRadius() : 3.0,
+                        List.of(), 1, 1, 0
+                );
+                success(source, "붉은 여왕 " + (giant ? "giant" : "shrink") + " VFX를 재생했습니다.");
+                return 1;
+            }
+        }
+        failure(source, "살아 있는 붉은 여왕 타워가 필요합니다.");
+        return 0;
+    }
+
+    private static int debugEngineerVfx(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            boolean tnt
+    ) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGame game = playableGame(source, gameManager);
+        PlayerLane lane = game == null ? null : game.playerLane(player.getUUID()).orElse(null);
+        if (lane != null) {
+            for (Tower tower : lane.towers()) {
+                if (tower instanceof EngineerTrapTower trap && trap.showDebugVfx(lane, tnt)) {
+                    success(source, "기술자 " + (tnt ? "TNT" : "전력") + " VFX를 재생했습니다.");
+                    return 1;
+                }
+            }
+        }
+        failure(source, tnt ? "살아 있는 기술자 TNT 함정이 필요합니다." : "살아 있는 기술자 함정이 필요합니다.");
+        return 0;
+    }
+
+    private static int debugMageVfx(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            boolean prophecy
+    ) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGame game = playableGame(source, gameManager);
+        PlayerLane lane = game == null ? null : game.playerLane(player.getUUID()).orElse(null);
+        if (lane == null) {
+            failure(source, "마도사 VFX를 재생할 샌드박스 또는 경기 라인이 없습니다.");
+            return 0;
+        }
+        for (Tower tower : lane.towers()) {
+            if ((prophecy && !(tower instanceof MageProphetTower))
+                    || (!prophecy && !(tower instanceof MageWizardTower))
+                    || !(tower instanceof EntityBackedTower backed)
+                    || backed.entityId().isEmpty()) {
+                continue;
+            }
+            var entity = lane.arenaWorld().getEntity(backed.entityId().getAsInt());
+            if (!(entity instanceof kim.biryeong.semiontd.entity.tower.SemionTowerEntity towerEntity)
+                    || !towerEntity.isAlive()) {
+                continue;
+            }
+            var impact = towerEntity.position().add(4.0, 0.5, 0.0);
+            if (prophecy) {
+                TowerVfxService.showProphecyLightning(towerEntity, impact);
+            } else {
+                TowerVfxService.showSecondaryAttack(towerEntity, impact);
+            }
+            success(source, "마도사 " + (prophecy ? "예언" : "주문") + " VFX를 재생했습니다.");
+            return 1;
+        }
+        failure(source, "살아 있는 " + (prophecy ? "예언가" : "마법사") + " 타워가 필요합니다.");
+        return 0;
+    }
+
+    private static int debugInsectVfx(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            boolean revive
+    ) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGame game = playableGame(source, gameManager);
+        PlayerLane lane = game == null ? null : game.playerLane(player.getUUID()).orElse(null);
+        if (lane != null) {
+            for (Tower tower : lane.towers()) {
+                boolean shown = revive && tower instanceof InsectUnitTower unit
+                        ? unit.showDebugRevivalVfx(lane)
+                        : !revive && tower instanceof InsectSpawnerTower spawner
+                        && spawner.showDebugRadiusVfx(lane);
+                if (shown) {
+                    success(source, "벌레 " + (revive ? "부활" : "스포너 반경") + " VFX를 재생했습니다.");
+                    return 1;
+                }
+            }
+        }
+        failure(source, revive
+                ? "살아 있고 스포너에 연결된 벌레 타워가 필요합니다."
+                : "살아 있는 벌레 스포너가 필요합니다.");
+        return 0;
     }
 
     private static int debugOceanSupplyVfx(CommandSourceStack source) throws CommandSyntaxException {
@@ -2383,6 +2634,65 @@ public final class SemionCommands {
         return 1;
     }
 
+    private static int heroShop(CommandSourceStack source, SemionGameManager gameManager)
+            throws CommandSyntaxException {
+        SemionGame game = playableGame(source, gameManager);
+        ServerPlayer player = source.getPlayerOrException();
+        if (game == null) {
+            failure(source, "진행 중인 게임 또는 샌드박스가 없습니다.");
+            return 0;
+        }
+        if (!HeroPartyStates.hasActiveHero(game, player.getUUID())) {
+            failure(source, "용사를 설치해야 상점을 사용할 수 있습니다.");
+            return 0;
+        }
+        new HeroShopGui(player, game).open();
+        return 1;
+    }
+
+    private static int heroSkin(CommandSourceStack source, SemionGameManager gameManager)
+            throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        gameManager.profile(source.getServer(), player.getUUID(), player.getGameProfile().getName());
+        new HeroCompanionSkinGui(player, gameManager).open();
+        return 1;
+    }
+
+    private static int heroQuest(CommandSourceStack source, SemionGameManager gameManager)
+            throws CommandSyntaxException {
+        SemionGame game = playableGame(source, gameManager);
+        if (game == null) {
+            failure(source, "진행 중인 게임 또는 샌드박스가 없습니다.");
+            return 0;
+        }
+        gameManager.dialogService().showHeroQuest(source.getPlayerOrException(), game);
+        return 1;
+    }
+
+    private static int heroParty(CommandSourceStack source, SemionGameManager gameManager)
+            throws CommandSyntaxException {
+        SemionGame game = playableGame(source, gameManager);
+        if (game == null) {
+            failure(source, "진행 중인 게임 또는 샌드박스가 없습니다.");
+            return 0;
+        }
+        gameManager.dialogService().showHeroParty(source.getPlayerOrException(), game);
+        return 1;
+    }
+
+    private static int heroCompanion(CommandSourceStack source, SemionGameManager gameManager, String roleId)
+            throws CommandSyntaxException {
+        SemionGame game = playableGame(source, gameManager);
+        HeroCompanionRole role = HeroCompanionRole.byId(roleId);
+        if (game == null || role == null) {
+            failure(source, game == null ? "진행 중인 게임 또는 샌드박스가 없습니다." : "알 수 없는 동료입니다.");
+            return 0;
+        }
+        gameManager.dialogService().showHeroCompanionConfirmation(source.getPlayerOrException(), game, role);
+        return 1;
+    }
+
+
     private static int debugTowerDialog(CommandSourceStack source, SemionGameManager gameManager)
             throws CommandSyntaxException {
         gameManager.dialogService().showDebugTowerControl(source.getPlayerOrException());
@@ -3071,6 +3381,7 @@ public final class SemionCommands {
             case UNKNOWN_TARGET_TYPE -> "타워 진화 대상 타입이 등록되지 않았습니다";
             case TOWER_NOT_ALLOWED -> "현재 직업으로 사용할 수 없는 타워입니다";
             case UPGRADE_REQUIREMENTS_NOT_MET -> "이 업그레이드의 추가 조건을 충족하지 못했습니다.";
+            case TOWER_LIMIT_REACHED -> "업그레이드에 필요한 타워 수가 부족합니다";
             case NOT_ENOUGH_MINERAL -> "다이아가 부족합니다";
             case NOT_ENOUGH_ADV_EXPERIENCE -> "주민 ADV 경험치가 부족합니다";
             case SUCCESS -> "성공";
@@ -3086,6 +3397,7 @@ public final class SemionCommands {
             case UNKNOWN_LANE -> "담당 라인을 찾을 수 없습니다.";
             case NO_TOWER_AT_POSITION -> "현재 위치에 판매할 타워가 없습니다.";
             case TOWER_NOT_OWNED -> "자신이 설치한 타워만 판매할 수 있습니다.";
+            case TOWER_NOT_SELLABLE -> "이 타워는 판매할 수 없습니다.";
         };
     }
 

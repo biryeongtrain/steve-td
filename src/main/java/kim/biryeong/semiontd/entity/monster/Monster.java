@@ -42,6 +42,8 @@ public final class Monster {
     private final double attackRange;
     private final int attackIntervalTicks;
     private double attackDamageMultiplier = 1.0;
+    private double permanentStatScale = 1.0;
+    private double minimumVisualScale = 0.10;
     private double attackSpeedMultiplier = 1.0;
     private double health;
     private double laneProgress;
@@ -372,7 +374,33 @@ public final class Monster {
     }
 
     public double attackDamage() {
-        return attackDamage * attackDamageMultiplier;
+        return attackDamage * attackDamageMultiplier * permanentStatScale;
+    }
+
+    /**
+     * Permanently scales this monster without allowing the scale operation itself to kill it.
+     * The maximum-health change preserves the current health ratio; attack and visual scale are
+     * retained independently so later survival-scaling updates do not erase the effect.
+     */
+    public void applyPermanentStatScale(double factor, double minimumVisualScale) {
+        if (!Double.isFinite(factor) || factor <= 0.0 || factor > 1.0
+                || !Double.isFinite(minimumVisualScale) || minimumVisualScale <= 0.0 || minimumVisualScale > 1.0) {
+            throw new IllegalArgumentException("Permanent monster stat and visual scales must be in (0, 1].");
+        }
+        double previousMaxHealth = Math.max(0.000001, maxHealth);
+        double healthRatio = Math.max(0.0, Math.min(1.0, health / previousMaxHealth));
+        maxHealth = Math.max(0.000001, maxHealth * factor);
+        health = Math.max(0.000001, maxHealth * healthRatio);
+        permanentStatScale = Math.max(Double.MIN_NORMAL, permanentStatScale * factor);
+        this.minimumVisualScale = minimumVisualScale;
+    }
+
+    public double permanentStatScale() {
+        return permanentStatScale;
+    }
+
+    public double visualScale() {
+        return Math.max(minimumVisualScale, permanentStatScale);
     }
 
     public AttackKind attackKind() {

@@ -34,10 +34,16 @@ import kim.biryeong.semiontd.summon.SummonResultType;
 import kim.biryeong.semiontd.summon.SummonShop;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.tower.TowerCapacity;
+import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.adversary.AdversaryProgressStates;
 import kim.biryeong.semiontd.tower.adversary.AdversaryTeamEffects;
+import kim.biryeong.semiontd.tower.mage.MageStates;
+import kim.biryeong.semiontd.tower.hero.HeroPartyStates;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityStates;
+import kim.biryeong.semiontd.tower.atlantis.AtlantisPressure;
+import kim.biryeong.semiontd.tower.atlantis.AtlantisStates;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
 import kim.biryeong.semiontd.trait.SemionTrait;
 import kim.biryeong.semiontd.trait.TraitContext;
@@ -491,14 +497,34 @@ public final class SemionGame {
 
     public int towerCount(UUID playerId) {
         return playerLane(playerId)
-                .map(lane -> (int) lane.towers().stream()
+                .map(lane -> lane.towers().stream()
                         .filter(tower -> tower.ownerPlayer().equals(playerId))
-                        .count())
+                        .mapToInt(tower -> Math.max(0, tower.slotWeight()))
+                        .sum())
+                .orElse(0);
+    }
+
+    public int towerCapacityUsed(UUID playerId) {
+        return playerLane(playerId)
+                .map(lane -> lane.towers().stream()
+                        .filter(tower -> tower.ownerPlayer().equals(playerId))
+                        .mapToInt(TowerCapacity::slotCost)
+                        .sum())
                 .orElse(0);
     }
 
     public boolean canPlaceMoreTowers(UUID playerId) {
-        return towerCount(playerId) < towerLimitForPlayer(playerId);
+        return towerCapacityUsed(playerId) < towerLimitForPlayer(playerId);
+    }
+
+    public boolean canFitTower(UUID playerId, TowerType towerType) {
+        return towerCapacityUsed(playerId) + TowerCapacity.slotCost(towerType) <= towerLimitForPlayer(playerId);
+    }
+
+    public boolean canFitUpgrade(UUID playerId, TowerType currentType, TowerType targetType) {
+        int capacityIncrease = TowerCapacity.slotCost(targetType) - TowerCapacity.slotCost(currentType);
+        return capacityIncrease <= 0
+                || towerCapacityUsed(playerId) + capacityIncrease <= towerLimitForPlayer(playerId);
     }
 
     public boolean rosterLocked() {
@@ -758,11 +784,19 @@ public final class SemionGame {
         for (SemionTeam team : teams.values()) {
             team.closeRuntime();
         }
+        for (UUID playerId : players.keySet()) {
+            AtlantisStates.clear(playerId);
+            AtlantisPressure.clearPlayer(playerId);
+        }
         // Rival tower removal reconciles its installed-score ledger while lanes close,
         // so clear Adversary state after every tower has been detached.
         for (UUID playerId : players.keySet()) {
             AdversaryProgressStates.clear(playerId);
             AdversaryTeamEffects.unregisterPlayer(playerId);
+            MageStates.clear(playerId);
+            kim.biryeong.semiontd.tower.futureagency.FutureAgencyStates.clear(playerId);
+            kim.biryeong.semiontd.tower.queen.QueenStates.clear(playerId);
+            HeroPartyStates.clear(playerId);
         }
         players.clear();
         selectedJobs.clear();

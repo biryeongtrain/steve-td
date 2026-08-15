@@ -58,7 +58,7 @@ public final class ProductionTowerService {
         if (!canUseTower(game, laneContext.player, towerType)) {
             return TowerPlacementResult.TOWER_NOT_ALLOWED;
         }
-        if (!game.canPlaceMoreTowers(playerId)) {
+        if (!game.canFitTower(playerId, towerType)) {
             return TowerPlacementResult.TOWER_LIMIT_REACHED;
         }
 
@@ -106,6 +106,9 @@ public final class ProductionTowerService {
         if (!tower.ownerPlayer().equals(playerId)) {
             return SaleResult.failure(TowerSellResult.TOWER_NOT_OWNED);
         }
+        if (!tower.canBeSold()) {
+            return SaleResult.failure(TowerSellResult.TOWER_NOT_SELLABLE);
+        }
 
         long refund = tower.sellRefundAmount();
         if (!laneContext.lane.removeTower(tower)) {
@@ -152,8 +155,10 @@ public final class ProductionTowerService {
             return List.of();
         }
         return ProductionTowerCatalog.upgrades(tower.type()).stream()
-                .filter(option -> canUseTower(game, laneContext.player, option.targetType()))
-                .filter(option -> tower.meetsUpgradeRequirements(laneContext.lane, option))
+                .filter(option -> option.targetType().id().equals(tower.type().id())
+                        || canUseTower(game, laneContext.player, option.targetType()))
+                .filter(option -> tower.meetsUpgradeRequirements(laneContext.lane, option)
+                        || tower.showsUnavailableUpgrade(laneContext.lane, option))
                 .toList();
     }
 
@@ -197,11 +202,14 @@ public final class ProductionTowerService {
         if (targetEntry.isEmpty()) {
             return TowerUpgradeResult.UNKNOWN_TARGET_TYPE;
         }
-        if (!canUseTower(game, laneContext.player, targetType)) {
+        if (!targetType.id().equals(tower.type().id()) && !canUseTower(game, laneContext.player, targetType)) {
             return TowerUpgradeResult.TOWER_NOT_ALLOWED;
         }
         if (!tower.meetsUpgradeRequirements(laneContext.lane, upgrade)) {
             return TowerUpgradeResult.UPGRADE_REQUIREMENTS_NOT_MET;
+        }
+        if (!game.canFitUpgrade(playerId, tower.type(), targetType)) {
+            return TowerUpgradeResult.TOWER_LIMIT_REACHED;
         }
         if (!VillagerAdvStates.canUpgrade(laneContext.player, tower, upgrade)) {
             return TowerUpgradeResult.NOT_ENOUGH_ADV_EXPERIENCE;
@@ -219,11 +227,13 @@ public final class ProductionTowerService {
                 tower.originalPosition(),
                 tower.position()
         );
-        upgradedTower.copyFrom(tower, mineralCost);
+        long saleValueCost = tower.upgradeCostAddsToSaleValue(upgrade) ? mineralCost : 0L;
+        upgradedTower.copyFrom(tower, saleValueCost);
         if (!laneContext.lane.replaceTower(tower, upgradedTower)) {
             laneContext.player.economy().addMineral(mineralCost);
             return TowerUpgradeResult.NO_TOWER_AT_POSITION;
         }
+        upgradedTower.onUpgradeApplied(laneContext.lane, upgrade);
         VillagerAdvStates.refreshTowerEffects(laneContext.player, laneContext.lane, upgradedTower);
         upgradedTower.onUpgradeCompleted(laneContext.lane, tower, upgrade);
         game.recordTowerUpgrade(playerId, upgradeId, position, mineralCost);

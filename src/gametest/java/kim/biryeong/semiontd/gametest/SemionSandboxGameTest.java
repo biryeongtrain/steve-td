@@ -45,7 +45,9 @@ import kim.biryeong.semiontd.summon.SummonRole;
 import kim.biryeong.semiontd.summon.SummonTier;
 import kim.biryeong.semiontd.summon.SummonResultType;
 import kim.biryeong.semiontd.tower.ProductionTowerService;
+import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
+import kim.biryeong.semiontd.trait.TraitEffects;
 import kim.biryeong.semiontd.trait.TraitSelectionSession;
 import kim.biryeong.semiontd.trait.TraitSlot;
 import kim.biryeong.semiontd.ui.SemionHotbarService;
@@ -1245,9 +1247,13 @@ public final class SemionSandboxGameTest {
             )) {
                 return;
             }
+            Tower selectedTower = sandboxLane.towers().getFirst();
+            double maxHealthBonus = TraitEffects.towerMaxHealthBonus(
+                    sandbox.players().get(sandboxOwnerId).traitLoadout(), selectedTower
+            );
             if (!assertTrue(
                     context,
-                    Math.abs(sandboxLane.towers().getFirst().currentMaxHealth() - baseMaxHealth * 1.20D) < 0.0001D,
+                    Math.abs(selectedTower.currentMaxHealth() - baseMaxHealth * (1.0D + maxHealthBonus)) < 0.0001D,
                     "Fortitude should immediately update an existing sandbox tower."
             )) {
                 return;
@@ -1295,7 +1301,8 @@ public final class SemionSandboxGameTest {
             )) {
                 return;
             }
-            long expectedDiamond = EconomyConfig.defaultConfig().startingDiamond() + 75L;
+            long expectedDiamond = EconomyConfig.defaultConfig().startingDiamond()
+                    + TraitEffects.startingMineralBonus(manager.traitLoadoutOrDefault(sandboxOwnerId));
             if (!assertEquals(
                     context,
                     expectedDiamond,

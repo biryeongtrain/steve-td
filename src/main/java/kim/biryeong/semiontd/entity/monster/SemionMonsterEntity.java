@@ -125,8 +125,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
                 : Component.literal(monster.id()));
         setCustomNameVisible(true);
         setPolymerEntityType(monster.entityTypeId());
-        getAttribute(Attributes.MAX_HEALTH).setBaseValue(monster.maxHealth());
-        getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(monster.attackDamage());
+        syncAttributesFromRuntimeMonster();
         getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(followRangeFor(monster));
         getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(DEFAULT_MOVEMENT_SPEED);
         getAttribute(Attributes.KNOCKBACK_RESISTANCE).setBaseValue(1.0);
@@ -148,7 +147,20 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
 
     @Override
     protected EntityDimensions getDefaultDimensions(Pose pose) {
-        return runtimeDimensions.scale(getAgeScale());
+        double monsterScale = runtimeMonster == null ? 1.0 : runtimeMonster.visualScale();
+        return runtimeDimensions.scale((float) (getAgeScale() * monsterScale));
+    }
+
+    /** Applies a persistent max-health, attack-damage, and entity-size reduction. */
+    public void applyPermanentStatScale(double factor, double minimumVisualScale) {
+        if (runtimeMonster == null) {
+            return;
+        }
+        runtimeMonster.syncHealth(Math.min(runtimeMonster.health(), getHealth()));
+        runtimeMonster.applyPermanentStatScale(factor, minimumVisualScale);
+        syncAttributesFromRuntimeMonster();
+        setHealth((float) runtimeMonster.health());
+        refreshDimensions();
     }
 
     @Override
@@ -257,6 +269,10 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         }
         getAttribute(Attributes.MAX_HEALTH).setBaseValue(runtimeMonster.maxHealth());
         getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(runtimeMonster.attackDamage());
+        var scale = getAttribute(Attributes.SCALE);
+        if (scale != null) {
+            scale.setBaseValue(runtimeMonster.visualScale());
+        }
     }
 
     @Override

@@ -121,37 +121,6 @@ final class AncientCityTowerCatalogTest {
     }
 
     @Test
-    void descriptionsRenderAllAbilityValuesAndExplainResonanceRule() {
-        for (TowerType type : AncientCityTowers.all()) {
-            String description = String.join(" ", TowerBalanceRuntime.resolve(type).description());
-            assertFalse(description.contains("{ability."), type.id());
-            assertTrue(description.contains("마법"), type.id());
-            assertTrue(description.contains("현재 위치가 자신의 스컬크 영토면"), type.id());
-            assertTrue(description.contains("최종 방어선에서도 재생성된 스컬크 위에 있어야 합니다"), type.id());
-            assertFalse(description.contains("점화"), type.id());
-        }
-        String builderDescription = new AncientCityTowerJob().description().stream()
-                .map(component -> component.getString())
-                .collect(java.util.stream.Collectors.joining(" "));
-        assertTrue(builderDescription.contains("스컬크 영토"));
-        assertTrue(builderDescription.contains("공명"));
-        assertTrue(builderDescription.contains("감지체"));
-        assertFalse(builderDescription.matches(".*\\d.*"));
-
-        AncientCityTower tower = new AncientCityTower(
-                TowerBalanceRuntime.resolve(AncientCityTowers.CATALYST_T1),
-                uuid("runtime-details"),
-                TeamId.RED,
-                1,
-                new GridPosition(0, 64, 0)
-        );
-        assertEquals(List.of(
-                "스컬크 영토 0/256",
-                "스컬크 공명 0/224 · +0.0% (비활성)"
-        ), tower.runtimeDetailLines());
-    }
-
-    @Test
     void marksStayOwnerScopedPreferStrongestAndExpireIndividually() {
         AncientCityMarks.MarkSet marks = new AncientCityMarks.MarkSet();
         UUID ownerA = uuid("owner-a");

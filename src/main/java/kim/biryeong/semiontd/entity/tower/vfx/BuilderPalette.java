@@ -18,6 +18,11 @@ public enum BuilderPalette {
     OCEAN(0x2196F3, 0x80DEEA, "minecraft:nautilus", "minecraft:splash"),
     ANCIENT_CITY(0x0B4F57, 0x63E6E2, "minecraft:sculk_soul", "minecraft:electric_spark"),
     ADVERSARY(0xF28C28, 0xFFD166, "minecraft:crit", "minecraft:wax_on"),
+    FUTURE_AGENCY(0x2DE2E6, 0xFF4FD8, "minecraft:electric_spark", "minecraft:portal"),
+    QUEEN(0xC62828, 0xFFD54F, "minecraft:damage_indicator", "minecraft:totem_of_undying"),
+    ENGINEER(0xE53935, 0x39E7FF, "minecraft:damage_indicator", "minecraft:electric_spark"),
+    MAGE(0x5E35B1, 0x4DD0E1, "minecraft:witch", "minecraft:electric_spark"),
+    INSECT(0xAEEA00, 0x7E57C2, "minecraft:infested", "minecraft:witch"),
     PLANT(0x43A047, 0xF48FB1, "minecraft:spore_blossom_air", "minecraft:cherry_leaves"),
     DEFAULT(0xE0E0E0, 0xFFFFFF, "minecraft:end_rod", "minecraft:crit");
 

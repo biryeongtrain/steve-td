@@ -37,13 +37,19 @@ import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.adversary.AdversaryTowers;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityTowers;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
+import kim.biryeong.semiontd.tower.engineer.EngineerTowers;
+import kim.biryeong.semiontd.tower.futureagency.FutureAgencyTowers;
 import kim.biryeong.semiontd.tower.illager.IllagerTowers;
+import kim.biryeong.semiontd.tower.insect.InsectTowers;
 import kim.biryeong.semiontd.tower.legion.LegionTowers;
+import kim.biryeong.semiontd.tower.mage.MageTowers;
 import kim.biryeong.semiontd.tower.nether.NetherTowers;
 import kim.biryeong.semiontd.tower.ocean.OceanTowers;
 import kim.biryeong.semiontd.tower.plant.PlantTowers;
+import kim.biryeong.semiontd.tower.queen.QueenTowers;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
 import kim.biryeong.semiontd.tower.area.AreaVfxStyleRegistryImpl;
+import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
 import kim.biryeong.semiontd.tower.villager.VillagerTowers;
 import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
@@ -124,6 +130,7 @@ public final class TowerVfxService {
     private static volatile BiConsumer<Vec3, Vec3> warlockSacrificeTestObserver;
     private static volatile Consumer<List<Vec3>> transcendenceTestObserver;
     private static volatile Consumer<Vec3> magicHitTestObserver;
+    private static volatile Consumer<Vec3> prophecyLightningTestObserver;
     private static final Set<net.minecraft.resources.ResourceLocation> MISSING_STYLE_WARNINGS = ConcurrentHashMap.newKeySet();
     private static final Map<net.minecraft.resources.ResourceLocation, Long> STYLE_ERROR_LOG_TICKS = new ConcurrentHashMap<>();
 
@@ -179,9 +186,16 @@ public final class TowerVfxService {
         if (!config.enabled() || tower == null || target == null) {
             return;
         }
-        EventContext context = context(tower, targetCenter(target));
+        showSecondaryAttack(tower, targetCenter(target));
+    }
+
+    public static void showSecondaryAttack(SemionTowerEntity tower, Vec3 impact) {
+        if (!config.enabled() || tower == null || impact == null) {
+            return;
+        }
+        EventContext context = context(tower, impact);
         if (context != null) {
-            enqueue(new AttackEvent(context, towerCenter(tower), targetCenter(target), visualKind(tower.attackRange()), true));
+            enqueue(new AttackEvent(context, towerCenter(tower), impact, visualKind(tower.attackRange()), true));
         }
     }
 
@@ -194,6 +208,40 @@ public final class TowerVfxService {
         if (context != null) {
             enqueueMagicHit(context, impact);
         }
+    }
+
+    public static void showProphecyLightning(SemionTowerEntity tower, SemionMonsterEntity target) {
+        if (target != null) {
+            showProphecyLightning(tower, target.position());
+        }
+    }
+
+    public static void showProphecyLightning(SemionTowerEntity tower, Vec3 impact) {
+        if (!config.enabled() || tower == null || impact == null
+                || !(tower.level() instanceof ServerLevel level)) {
+            return;
+        }
+        Consumer<Vec3> observer = prophecyLightningTestObserver;
+        if (observer != null) {
+            observer.accept(impact);
+        }
+        LightningBolt lightning = EntityType.LIGHTNING_BOLT.create(level, EntitySpawnReason.TRIGGERED);
+        if (lightning != null) {
+            lightning.setVisualOnly(true);
+            lightning.setPos(impact.x, impact.y, impact.z);
+            level.addFreshEntity(lightning);
+        }
+        showAreaEffect(
+                tower,
+                AreaEffectIds.tower(tower.runtimeTower(), "prophecy"),
+                AreaVfxStyles.PULSE,
+                impact,
+                2.0,
+                List.of(impact),
+                1,
+                1,
+                1
+        );
     }
 
     public static void showNetherTransition(SemionTowerEntity tower) {
@@ -465,6 +513,21 @@ public final class TowerVfxService {
         if (AdversaryTowers.isAdversaryTower(type)) {
             return BuilderPalette.ADVERSARY;
         }
+        if (FutureAgencyTowers.isFutureAgencyTower(type)) {
+            return BuilderPalette.FUTURE_AGENCY;
+        }
+        if (QueenTowers.isQueenTower(type)) {
+            return BuilderPalette.QUEEN;
+        }
+        if (EngineerTowers.isEngineerTower(type)) {
+            return BuilderPalette.ENGINEER;
+        }
+        if (MageTowers.isMageTower(type)) {
+            return BuilderPalette.MAGE;
+        }
+        if (InsectTowers.isInsectTower(type)) {
+            return BuilderPalette.INSECT;
+        }
         if (PlantTowers.isPlantTower(type)) {
             return BuilderPalette.PLANT;
         }
@@ -580,6 +643,10 @@ public final class TowerVfxService {
 
     static void setMagicHitTestObserver(Consumer<Vec3> observer) {
         magicHitTestObserver = observer;
+    }
+
+    static void setProphecyLightningTestObserver(Consumer<Vec3> observer) {
+        prophecyLightningTestObserver = observer;
     }
 
     private static Vec3 towerCenter(SemionTowerEntity tower) {
@@ -988,6 +1055,11 @@ public final class TowerVfxService {
                 true
         );
         int pointsPerTarget = Math.max(24, points / targetCount);
+        boolean futureAgency = event.context().palette() == BuilderPalette.FUTURE_AGENCY;
+        ParticleOptions primary = futureAgency ? event.context().palette().rayParticle() : TRANSCENDENCE_GOLD_PARTICLE;
+        ParticleOptions accent = futureAgency ? event.context().palette().accentParticle() : TRANSCENDENCE_LIGHT_PARTICLE;
+        String primaryId = futureAgency ? event.context().palette().gcbRayParticle() : "minecraft:electric_spark";
+        String accentId = futureAgency ? event.context().palette().gcbAccentParticle() : "minecraft:end_rod";
         for (Vec3 center : event.centers) {
             int lowerRingPoints = Math.max(4, pointsPerTarget * 20 / 100);
             int upperRingPoints = Math.max(4, pointsPerTarget * 15 / 100);
@@ -999,12 +1071,12 @@ public final class TowerVfxService {
             Vec3 base = center.add(0.0, -0.65, 0.0);
             Vec3 crown = center.add(0.0, 0.85, 0.0);
 
-            sendCircle(event.context(), TRANSCENDENCE_GOLD_PARTICLE, "minecraft:electric_spark",
+            sendCircle(event.context(), primary, primaryId,
                     base, 0.76, lowerRingPoints, true, config, packetCounts, shapeCounts);
-            sendCircle(event.context(), TRANSCENDENCE_LIGHT_PARTICLE, "minecraft:end_rod",
+            sendCircle(event.context(), accent, accentId,
                     center.add(0.0, 0.12, 0.0), 0.48, upperRingPoints,
                     true, config, packetCounts, shapeCounts);
-            sendSphere(event.context(), ParticleTypes.END_ROD, "minecraft:end_rod",
+            sendSphere(event.context(), futureAgency ? accent : ParticleTypes.END_ROD, accentId,
                     crown, 0.28, sparkPoints, true, config, packetCounts, shapeCounts);
 
             for (int index = 0; index < 3; index++) {
@@ -1012,8 +1084,8 @@ public final class TowerVfxService {
                 Vec3 direction = new Vec3(Math.cos(angle), 0.0, Math.sin(angle));
                 sendTrail(
                         event.context(),
-                        TRANSCENDENCE_GOLD_PARTICLE,
-                        "minecraft:electric_spark",
+                        primary,
+                        primaryId,
                         base.add(direction.scale(0.62)),
                         center.add(direction.scale(0.85)),
                         crown.add(direction.scale(0.12)),

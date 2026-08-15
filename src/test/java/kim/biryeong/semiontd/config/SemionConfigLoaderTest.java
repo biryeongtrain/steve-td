@@ -512,7 +512,14 @@ final class SemionConfigLoaderTest {
 
         assertEquals(99L, balance.towers().get(LegionTowers.T1_GOAT_TOWER.id()).mineralCost());
         assertEquals(defaults.upgradeCosts().get(endUpgradeKey), balance.upgradeCosts().get(endUpgradeKey));
-        assertFalse(Files.readString(tempDir.resolve("tower_balance.json")).contains("-50"));
+        JsonElement repaired = JsonParser.parseString(Files.readString(tempDir.resolve("tower_balance.json")));
+        assertEquals(
+                defaults.upgradeCosts().get(endUpgradeKey),
+                repaired.getAsJsonObject()
+                        .getAsJsonObject("upgradeCosts")
+                        .get(endUpgradeKey)
+                        .getAsLong()
+        );
     }
 
     @Test

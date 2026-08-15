@@ -58,6 +58,14 @@ final class WebCatalogExporterTest {
         assertTrue(first.traits().stream().allMatch(trait -> !trait.displayName().equals(trait.id())));
         assertTrue(first.summons().stream().allMatch(summon -> !summon.displayName().equals(summon.id())));
         assertTrue(first.towers().stream().allMatch(tower -> tower.builderId() != null));
+        assertTrue(first.builders().stream().flatMap(entry -> entry.description().stream())
+                .noneMatch(WebCatalogExporterTest::hasUnresolvedPlaceholder));
+        assertTrue(first.towers().stream().flatMap(entry -> entry.description().stream())
+                .noneMatch(WebCatalogExporterTest::hasUnresolvedPlaceholder));
+        assertTrue(first.traits().stream().flatMap(entry -> entry.description().stream())
+                .noneMatch(WebCatalogExporterTest::hasUnresolvedPlaceholder));
+        assertTrue(SummonRegistry.all().stream().flatMap(summon -> summon.description().stream())
+                .noneMatch(WebCatalogExporterTest::hasUnresolvedPlaceholder));
         first.upgrades().forEach(upgrade -> {
             var sourceType = ProductionTowerCatalog.find(upgrade.fromTowerId()).orElseThrow().type();
             var option = ProductionTowerCatalog.upgrade(sourceType, upgrade.id()).orElseThrow();
@@ -95,7 +103,7 @@ final class WebCatalogExporterTest {
     }
 
     @Test
-    void adversaryFamilyExportsWithOneBuilderAndResolvedDescriptions() {
+    void adversaryFamilyExportsWithOneBuilder() {
         ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
         IncomeSummons.reloadBuiltIns(SummonConfig.defaultConfig());
 
@@ -114,8 +122,34 @@ final class WebCatalogExporterTest {
                 .toList();
         assertEquals(expectedIds, towers.stream().map(WebCatalogExporter.TowerEntry::id)
                 .collect(java.util.stream.Collectors.toSet()));
-        assertTrue(towers.stream().flatMap(entry -> entry.description().stream())
-                .noneMatch(line -> line.contains("{ability.") || line.contains("{stat.")));
         assertTrue(document.abilities().containsKey(AdversaryBalance.GLOBAL_CONFIG_ID));
+    }
+
+    @Test
+    void atlantisFamilyExportsWithOneBuilder() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        IncomeSummons.reloadBuiltIns(SummonConfig.defaultConfig());
+
+        WebCatalogExporter.CatalogDocument document = WebCatalogExporter.snapshot(1L);
+        Set<String> expectedIds = kim.biryeong.semiontd.tower.atlantis.AtlantisTowers.all().stream()
+                .map(type -> type.id())
+                .collect(java.util.stream.Collectors.toSet());
+        var builder = document.builders().stream()
+                .filter(entry -> entry.id().equals(kim.biryeong.semiontd.job.AtlantisTowerJob.ID.toString()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(expectedIds, Set.copyOf(builder.towerIds()));
+
+        var towers = document.towers().stream()
+                .filter(entry -> entry.builderId().equals(kim.biryeong.semiontd.job.AtlantisTowerJob.ID.toString()))
+                .toList();
+        assertEquals(expectedIds, towers.stream().map(WebCatalogExporter.TowerEntry::id)
+                .collect(java.util.stream.Collectors.toSet()));
+        assertTrue(document.abilities()
+                .containsKey(kim.biryeong.semiontd.tower.atlantis.AtlantisBalance.CONFIG_ID));
+    }
+
+    private static boolean hasUnresolvedPlaceholder(String line) {
+        return line.contains("{ability.") || line.contains("{stat.");
     }
 }

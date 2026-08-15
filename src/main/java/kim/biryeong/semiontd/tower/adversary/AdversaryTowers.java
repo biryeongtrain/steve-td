@@ -15,7 +15,7 @@ import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
 import net.minecraft.world.entity.animal.Fox;
 
 public final class AdversaryTowers {
-    public static final TowerType FOX = TowerType.builder("adversary_fox", "대적자 여우")
+    public static final TowerType FOX = TowerType.builder("adversary_fox", "히어로 여우")
             .category(TowerCategory.DIRECT)
             .mineralCost(AdversaryBalance.FOX_COST)
             .maxHealth(AdversaryBalance.defaultFormValue(FoxForm.BASE, "maxHealth"))

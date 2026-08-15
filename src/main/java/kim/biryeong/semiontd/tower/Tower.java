@@ -119,6 +119,14 @@ public abstract class Tower {
         return originalPosition;
     }
 
+    public GridPosition managementPosition() {
+        return position();
+    }
+
+    public boolean reservesPlacementPosition(GridPosition position) {
+        return position != null && managementPosition().equals(position);
+    }
+
     public int level() {
         return level;
     }
@@ -172,6 +180,30 @@ public abstract class Tower {
 
     public int aggroPriority() {
         return type.aggroPriority();
+    }
+
+    public int slotWeight() {
+        return 1;
+    }
+
+    public boolean participatesInFinalDefense() {
+        return true;
+    }
+
+    public boolean canBeSold() {
+        return true;
+    }
+
+    public String saleActionLabel() {
+        return "판매";
+    }
+
+    public boolean targetableByMonsters() {
+        return true;
+    }
+
+    public boolean countsForLaneDefense() {
+        return true;
     }
 
     public boolean deployedAtFinalDefense() {
@@ -331,6 +363,9 @@ public abstract class Tower {
     public void onWaveStarted(PlayerLane lane, int currentRound) {
     }
 
+    public void onLaneCleared(PlayerLane lane) {
+    }
+
     public long sellRefundAmount() {
         double rate = TraitEffects.sellRefundRate(traitLoadout, waveStartedAfterPlacement);
         return Math.round(paidMineralCost * rate);
@@ -385,6 +420,25 @@ public abstract class Tower {
     }
 
     public void onSold(PlayerLane lane) {
+    }
+
+    public boolean showsUnavailableUpgrade(PlayerLane lane, TowerUpgradeOption option) {
+        return false;
+    }
+
+    public void onUpgradeApplied(PlayerLane lane, TowerUpgradeOption option) {
+    }
+
+    public List<String> upgradeTooltipLines(TowerUpgradeOption option) {
+        return List.of();
+    }
+
+    public boolean upgradeCostAddsToSaleValue(TowerUpgradeOption option) {
+        return true;
+    }
+
+    public Optional<Vec3> idleMovementTarget(SemionTowerEntity towerEntity) {
+        return Optional.empty();
     }
 
     public Optional<SemionMonsterEntity> selectAttackTarget(SemionTowerEntity towerEntity, List<SemionMonsterEntity> candidates) {

@@ -52,9 +52,11 @@ public record ArenaLayout(
                     .sorted(Comparator.comparingInt(OrderedPoint::order))
                     .map(OrderedPoint::point)
                     .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
+            int personalWaypointCount = waypoints.size();
             waypoints.addAll(finalWaypoints);
             List<GridPosition> slots = requiredFinalDefenseSlots(finalDefenseTowerSlots, laneId, markers.finalDefenseTower());
-            lanes.put(laneId, new LaneRegionLayout(laneId, laneSpawn, laneSpawnArea, waypoints, bossSpawn, laneArea, slots));
+            lanes.put(laneId, new LaneRegionLayout(laneId, laneSpawn, laneSpawnArea, waypoints, bossSpawn,
+                    laneArea, slots, personalWaypointCount));
         }
 
         return new ArenaLayout(teamSpawn, bossSpawn, lanes);
