@@ -1855,6 +1855,110 @@
       "damage": 38.0,
       "attackIntervalTicks": 45,
       "aggroPriority": 35
+    },
+    "army_clerk_t1": {
+      "mineralCost": 30,
+      "maxHealth": 70.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -5
+    },
+    "army_drill_sergeant_t2": {
+      "mineralCost": 75,
+      "maxHealth": 130.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -5
+    },
+    "army_quartermaster_t2": {
+      "mineralCost": 75,
+      "maxHealth": 130.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -5
+    },
+    "army_guard_t1": {
+      "mineralCost": 50,
+      "maxHealth": 190.0,
+      "range": 2.4,
+      "damage": 6.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 55
+    },
+    "army_military_police_t2": {
+      "mineralCost": 105,
+      "maxHealth": 320.0,
+      "range": 2.6,
+      "damage": 11.0,
+      "attackIntervalTicks": 19,
+      "aggroPriority": 85
+    },
+    "army_mp_commander_t3": {
+      "mineralCost": 220,
+      "maxHealth": 620.0,
+      "range": 2.8,
+      "damage": 20.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": 110
+    },
+    "army_gop_sentry_t2": {
+      "mineralCost": 100,
+      "maxHealth": 250.0,
+      "range": 2.6,
+      "damage": 10.0,
+      "attackIntervalTicks": 19,
+      "aggroPriority": 85
+    },
+    "army_outpost_chief_t3": {
+      "mineralCost": 215,
+      "maxHealth": 470.0,
+      "range": 2.8,
+      "damage": 18.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": 110
+    },
+    "army_recruit_t1": {
+      "mineralCost": 50,
+      "maxHealth": 90.0,
+      "range": 6.0,
+      "damage": 8.0,
+      "attackIntervalTicks": 13,
+      "aggroPriority": 0
+    },
+    "army_specialist_t2": {
+      "mineralCost": 130,
+      "maxHealth": 140.0,
+      "range": 6.5,
+      "damage": 18.0,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 0
+    },
+    "army_platoon_leader_t3": {
+      "mineralCost": 280,
+      "maxHealth": 190.0,
+      "range": 7.0,
+      "damage": 37.0,
+      "attackIntervalTicks": 11,
+      "aggroPriority": 0
+    },
+    "army_gunner_t2": {
+      "mineralCost": 130,
+      "maxHealth": 110.0,
+      "range": 7.5,
+      "damage": 16.0,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 0
+    },
+    "army_battery_chief_t3": {
+      "mineralCost": 280,
+      "maxHealth": 150.0,
+      "range": 8.5,
+      "damage": 30.0,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 0
     }
   },
   "upgradeCosts": {
@@ -2027,7 +2131,17 @@
     "t1_podzol_tower->t2_podzol_tower": 170,
     "t2_podzol_tower->t3_podzol_lilac_tower": 285,
     "t2_podzol_tower->t3_podzol_rose_tower": 285,
-    "t2_podzol_tower->t3_podzol_pitcher_tower": 285
+    "t2_podzol_tower->t3_podzol_pitcher_tower": 285,
+    "army_clerk_t1->army_drill_sergeant_t2": 75,
+    "army_clerk_t1->army_quartermaster_t2": 75,
+    "army_guard_t1->army_military_police_t2": 105,
+    "army_guard_t1->army_gop_sentry_t2": 100,
+    "army_military_police_t2->army_mp_commander_t3": 220,
+    "army_gop_sentry_t2->army_outpost_chief_t3": 215,
+    "army_recruit_t1->army_specialist_t2": 130,
+    "army_recruit_t1->army_gunner_t2": 130,
+    "army_specialist_t2->army_platoon_leader_t3": 280,
+    "army_gunner_t2->army_battery_chief_t3": 280
   },
   "abilities": {
     "villager_splash_t2": {
@@ -3990,6 +4104,49 @@
       "critMultiplier": 2.0,
       "soilPower": 1.2,
       "splashDamageRatio": 0.45
+    },
+    "army_global": {
+      "commandRadius": 5.5,
+      "maxCommandBonus": 1.2,
+      "dischargeRefundRatio": 0.9,
+      "medalDamageBonus": 0.015,
+      "maxMedals": 10.0
+    },
+    "army_clerk_t1": {
+      "serviceRateBonus": 1.0,
+      "serviceRateRadius": 6.0
+    },
+    "army_drill_sergeant_t2": {
+      "serviceRateBonus": 2.0,
+      "serviceRateRadius": 7.0
+    },
+    "army_quartermaster_t2": {
+      "serviceRateBonus": 1.0,
+      "serviceRateRadius": 6.0,
+      "dischargeRefundBonus": 0.4,
+      "medalValueBonus": 0.5
+    },
+    "army_military_police_t2": {
+      "damageReduction": 0.12
+    },
+    "army_mp_commander_t3": {
+      "damageReduction": 0.18
+    },
+    "army_gop_sentry_t2": {
+      "serviceRatePenalty": 1.0,
+      "serviceRateRadius": 6.0
+    },
+    "army_outpost_chief_t3": {
+      "serviceRatePenalty": 2.0,
+      "serviceRateRadius": 7.0
+    },
+    "army_gunner_t2": {
+      "splashDamageRatio": 0.4,
+      "splashRadius": 2.5
+    },
+    "army_battery_chief_t3": {
+      "splashDamageRatio": 0.55,
+      "splashRadius": 3.5
     }
   },
   "illusionCloneQueue": {
