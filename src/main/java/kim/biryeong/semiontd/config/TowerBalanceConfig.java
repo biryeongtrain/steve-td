@@ -954,7 +954,12 @@ public record TowerBalanceConfig(
                 "attackSpeedBonus", 0.25,
                 // 잔디가 체력을 키우듯 회백토는 피해를 키웁니다. 40라운드까지 계속 오릅니다.
                 "damageGrowthPerRound", 0.015,
-                "damageGrowthCap", 0.6
+                "damageGrowthCap", 0.6,
+                // 잔디와 같은 방식으로 라인 전체에 나눠 줍니다. 회백토 타워 수만큼 합산되므로
+                // 비율을 낮게 잡고 합계 상한을 둡니다.
+                "growthShareRatio", 0.2,
+                "growthShareCap", 0.4,
+                "supportDurationTicks", 60.0
         ));
 
         // 지형 효과는 계열 공용이고, soilPower 가 티어별 배율을 담당합니다.
@@ -1036,7 +1041,9 @@ public record TowerBalanceConfig(
                 "splashDamageRatio", 0.45,
                 "snareMoveSpeedReduction", 0.7,
                 // 실효 공격 간격(35틱)보다 짧아야 재장전 사이에 적이 움직일 틈이 생깁니다.
-                "snareDurationTicks", 20.0
+                "snareDurationTicks", 20.0,
+                // 곡사 연출용 포물선 높이입니다. 0 이면 궤적을 그리지 않습니다.
+                "lobArcHeight", 5.0
         ));
     }
 

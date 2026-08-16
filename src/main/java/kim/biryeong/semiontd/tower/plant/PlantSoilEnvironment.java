@@ -65,30 +65,44 @@ public final class PlantSoilEnvironment {
      * 같은 값으로 걸기 때문에, 최댓값만 잡는 소스 없는 효과를 써도 결과가 동일합니다.
      */
     private static void applyMeadowGrowthShare(PlayerLane lane, int intervalTicks) {
+        applyGrowthShare(lane, intervalTicks, PlantSoil.MEADOW,
+                PlantCombatTower::sharedGrowthBonus, TimedEffectType.TOWER_MAX_HEALTH_BONUS);
+        // 회백토도 같은 방식으로 피해를 나눕니다. 잔디가 체력을, 회백토가 피해를 담당합니다.
+        applyGrowthShare(lane, intervalTicks, PlantSoil.PODZOL,
+                PlantCombatTower::sharedDamageGrowthBonus, TimedEffectType.TOWER_DAMAGE_BONUS);
+    }
+
+    private static void applyGrowthShare(
+            PlayerLane lane,
+            int intervalTicks,
+            PlantSoil soil,
+            java.util.function.ToDoubleFunction<PlantCombatTower> share,
+            TimedEffectType effect
+    ) {
         double total = 0.0;
         for (Tower tower : List.copyOf(lane.towers())) {
             if (tower instanceof PlantCombatTower plant && tower.health() > 0.0) {
-                total += plant.sharedGrowthBonus();
+                total += share.applyAsDouble(plant);
             }
         }
         if (total <= 0.0) {
             return;
         }
-        // 잔디 타워를 늘릴수록 합계가 커지므로 라인 전체 버프에는 상한을 둡니다.
-        double cap = TowerBalanceRuntime.ability(PlantSoil.MEADOW.configId(), "growthShareCap", 0.0);
+        // 같은 계열 타워를 늘릴수록 합계가 커지므로 라인 전체 버프에는 상한을 둡니다.
+        double cap = TowerBalanceRuntime.ability(soil.configId(), "growthShareCap", 0.0);
         if (cap > 0.0) {
             total = Math.min(cap, total);
         }
         int durationTicks = Math.max(
                 intervalTicks * 2,
-                TowerBalanceRuntime.abilityTicks(PlantSoil.MEADOW.configId(), "supportDurationTicks", 0)
+                TowerBalanceRuntime.abilityTicks(soil.configId(), "supportDurationTicks", 0)
         );
         for (Tower tower : List.copyOf(lane.towers())) {
             if (!(tower instanceof EntityBackedTower backed) || backed.entityId().isEmpty()) {
                 continue;
             }
             if (lane.arenaWorld().getEntity(backed.entityId().getAsInt()) instanceof SemionTowerEntity entity) {
-                entity.applyTimedEffect(TimedEffectType.TOWER_MAX_HEALTH_BONUS, total, durationTicks);
+                entity.applyTimedEffect(effect, total, durationTicks);
             }
         }
     }

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -17,6 +18,8 @@ import java.util.stream.Stream;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.entity.visual.BlockDisplayVisual;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.job.PlantTowerJob;
@@ -137,6 +140,66 @@ final class PlantTowerCatalogTest {
         assertEquals(Blocks.CACTUS_FLOWER.defaultBlockState(), BlockDisplayVisual.topBlockState(visual));
         assertNull(BlockDisplayVisual.topBlockState(
                 TowerBalanceRuntime.resolve(PlantTowers.T2_DESERT_TOWER).visual()));
+    }
+
+    /**
+     * 2칸짜리 식물은 윗단까지 그려야 합니다.
+     *
+     * <p>{@code defaultBlockState()} 는 아랫단이라 그것만 그리면 장미 덤불·라일락·큰 고사리·
+     * 물병 식물·해바라기가 반토막으로 보입니다. 블록 목록을 나열하는 대신 속성으로 판별하므로,
+     * 나중에 다른 2칸 식물을 써도 자동으로 처리됩니다.
+     */
+    @Test
+    void twoBlockTallPlantsRenderTheirUpperHalf() {
+        List<TowerType> tallPlants = Stream.concat(
+                        PlantTowers.TERRAFORM_TOWERS.stream(), PlantTowers.COMBAT_TOWERS.stream())
+                .map(TowerBalanceRuntime::resolve)
+                .filter(type -> BlockDisplayVisual.matches(type.visual()))
+                .filter(type -> BlockDisplayVisual.blockState(type.visual())
+                        .hasProperty(BlockStateProperties.DOUBLE_BLOCK_HALF))
+                .toList();
+        assertFalse(tallPlants.isEmpty(), "2칸 식물을 쓰는 타워가 하나도 없다면 이 테스트가 무의미합니다");
+
+        for (TowerType type : tallPlants) {
+            var visual = type.visual();
+            assertEquals(DoubleBlockHalf.LOWER,
+                    BlockDisplayVisual.blockState(visual).getValue(BlockStateProperties.DOUBLE_BLOCK_HALF),
+                    type.id() + " 아랫단");
+            var top = BlockDisplayVisual.topBlockState(visual);
+            assertNotNull(top, type.id() + " 는 윗단이 없어 잘려 보입니다");
+            assertEquals(DoubleBlockHalf.UPPER, top.getValue(BlockStateProperties.DOUBLE_BLOCK_HALF),
+                    type.id() + " 윗단");
+            assertEquals(BlockDisplayVisual.blockState(visual).getBlock(), top.getBlock(),
+                    type.id() + " 윗단은 같은 블록이어야 합니다");
+        }
+    }
+
+    /**
+     * 플레이어가 체감하는 능력은 툴팁에 반드시 나와야 합니다.
+     *
+     * <p>고사리 T1·T2 는 치명타를 8%/18% 로 갖고 있으면서도 툴팁에 한 줄도 없어서 없는 기능처럼
+     * 보였습니다. 설정에 값을 넣는 것과 설명을 쓰는 것이 따로 놀기 때문에, 같은 누락이 다시
+     * 생기지 않도록 여기서 대조합니다.
+     */
+    @Test
+    void everyAdvertisableAbilityAppearsInTheTooltip() {
+        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        // 값이 켜져 있으면 플레이어에게 반드시 알려야 하는 키들입니다.
+        List<String> mustAdvertise = List.of(
+                "critChance", "superCritChance", "snareMoveSpeedReduction",
+                "splashRadius", "novaRadius", "diamondPerWave");
+
+        List<String> missing = new java.util.ArrayList<>();
+        for (TowerType type : PlantTowers.COMBAT_TOWERS) {
+            String tooltip = String.join("\n", type.description());
+            for (String key : mustAdvertise) {
+                if (defaults.ability(type.id(), key, 0.0) > 0.0
+                        && !tooltip.contains("{ability." + key + ":")) {
+                    missing.add(type.id() + " -> " + key);
+                }
+            }
+        }
+        assertTrue(missing.isEmpty(), "툴팁에서 빠진 능력: " + missing);
     }
 
     @Test

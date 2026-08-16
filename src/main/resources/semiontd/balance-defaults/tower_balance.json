@@ -5234,7 +5234,10 @@
       "attackSpeedBonus": 0.25,
       "rangeBonus": 4.0,
       "damageGrowthCap": 0.6,
-      "damageGrowthPerRound": 0.015
+      "damageGrowthPerRound": 0.015,
+      "growthShareRatio": 0.2,
+      "growthShareCap": 0.4,
+      "supportDurationTicks": 60.0
     },
     "t1_meadow_tower": {
       "diamondPerWave": 3.0,
@@ -5330,6 +5333,7 @@
       "snareMoveSpeedReduction": 0.7,
       "splashRadius": 4.0,
       "snareDurationTicks": 20.0,
+      "lobArcHeight": 5.0,
       "critMultiplier": 2.0,
       "soilPower": 1.2,
       "splashDamageRatio": 0.45
