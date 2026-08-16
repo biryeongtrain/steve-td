@@ -171,6 +171,8 @@ public final class PlantTowers {
                     "<green>공격할 때 자기 주변 <aqua>{ability.novaRadius:blocks}</aqua> 안의 적을 "
                             + "주 대상 피해의 <yellow>{ability.novaDamageRatio:percent}</yellow>로 함께 휩씁니다.</green>",
                     MEADOW_HEAL_LINE,
+                    MEADOW_GROWTH_LINE,
+                    MEADOW_SHARE_LINE,
                     SOIL_POWER_LINE
             ));
     public static final TowerType T2_MEADOW_NOVA_TOWER = combatTower(
@@ -181,6 +183,8 @@ public final class PlantTowers {
                     "<green>자기 주변 <aqua>{ability.novaRadius:blocks}</aqua>를 "
                             + "주 대상 피해의 <yellow>{ability.novaDamageRatio:percent}</yellow>로 휩씁니다.</green>",
                     MEADOW_HEAL_LINE,
+                    MEADOW_GROWTH_LINE,
+                    MEADOW_SHARE_LINE,
                     SOIL_POWER_LINE
             ));
     public static final TowerType T3_MEADOW_NOVA_TOWER = combatTower(
@@ -191,6 +195,8 @@ public final class PlantTowers {
                     "<green>자기 주변 <aqua>{ability.novaRadius:blocks}</aqua>의 적에게 "
                             + "주 대상 피해의 <yellow>{ability.novaDamageRatio:percent}</yellow>를 줍니다.</green>",
                     MEADOW_HEAL_LINE,
+                    MEADOW_GROWTH_LINE,
+                    MEADOW_SHARE_LINE,
                     SOIL_POWER_LINE
             ));
 
@@ -257,7 +263,8 @@ public final class PlantTowers {
                     "<green>사거리와 공격 속도가 오릅니다.</green>",
                     PODZOL_CRIT_LINE,
                     PODZOL_GROWTH_LINE,
-                    PODZOL_SHARE_LINE
+                    PODZOL_SHARE_LINE,
+                    SOIL_POWER_LINE
             ));
     public static final TowerType T2_PODZOL_TOWER = combatTower(
             "t2_podzol_tower", "큰 고사리", 170, 130, 14.0, 26, 18, 30,
@@ -268,6 +275,7 @@ public final class PlantTowers {
                     PODZOL_CRIT_LINE,
                     PODZOL_GROWTH_LINE,
                     PODZOL_SHARE_LINE,
+                    SOIL_POWER_LINE,
                     "<yellow>세 갈래 최종 형태로 갈라집니다.</yellow>"
             ));
     public static final TowerType T3_PODZOL_LILAC_TOWER = combatTower(
@@ -281,6 +289,7 @@ public final class PlantTowers {
                     PODZOL_CRIT_LINE,
                     PODZOL_GROWTH_LINE,
                     PODZOL_SHARE_LINE,
+                    SOIL_POWER_LINE,
                     "<gray>단일 피해는 세 형태 중 가장 낮습니다.</gray>"
             ));
     public static final TowerType T3_PODZOL_ROSE_TOWER = combatTower(
@@ -292,6 +301,7 @@ public final class PlantTowers {
                     "<green>그 위에 <yellow>{ability.superCritChance:percent}</yellow> 확률로 초치명타가 터져 {ability.superCritMultiplier:number}배가 됩니다.</green>",
                     PODZOL_GROWTH_LINE,
                     PODZOL_SHARE_LINE,
+                    SOIL_POWER_LINE,
                     "<gray>한 번에 한 대상만 때립니다.</gray>"
             ));
     public static final TowerType T3_PODZOL_PITCHER_TOWER = combatTower(
@@ -308,6 +318,7 @@ public final class PlantTowers {
                     PODZOL_CRIT_LINE,
                     PODZOL_GROWTH_LINE,
                     PODZOL_SHARE_LINE,
+                    SOIL_POWER_LINE,
                     "<gray>공격 속도는 가장 느립니다.</gray>"
             ));
 

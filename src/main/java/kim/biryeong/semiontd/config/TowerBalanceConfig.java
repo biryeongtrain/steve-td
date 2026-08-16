@@ -1380,19 +1380,21 @@ public record TowerBalanceConfig(
                 "environmentAttackSpeedReduction", "environmentMaxHealthDamagePerSecond",
                 "attackSpeedReduction", "thornReflectRatio");
         validateRatios(PlantSoil.PODZOL.configId(),
-                "attackSpeedBonus");
+                "attackSpeedBonus", "growthShareRatio");
         validateAtLeast(PlantSoil.MEADOW.configId(), 0.0,
                 "maxHealthGrowthPerRound", "maxHealthGrowthCap", "growthShareCap");
         validateAtLeast(PlantSoil.PODZOL.configId(), 0.0,
-                "damageGrowthPerRound", "damageGrowthCap");
+                "damageGrowthPerRound", "damageGrowthCap", "growthShareCap");
 
         validatePositive(PlantTowers.GLOBAL_CONFIG_ID,
                 "soilAuraMinRadius", "soilAuraMaxRadius", "soilPulseIntervalTicks", "environmentTickIntervalTicks");
         validatePositive(PlantSoil.MEADOW.configId(), "supportRadius", "supportDurationTicks");
+        validatePositive(PlantSoil.PODZOL.configId(), "supportDurationTicks");
         validatePositive(PlantSoil.MYCELIUM.configId(), "environmentDurationTicks");
         validatePositive(PlantSoil.DESERT.configId(), "environmentDurationTicks", "debuffDurationTicks", "auraRadius");
         validateIntegral(PlantTowers.GLOBAL_CONFIG_ID, false, "soilPulseIntervalTicks", "environmentTickIntervalTicks");
         validateIntegral(PlantSoil.MEADOW.configId(), false, "supportDurationTicks");
+        validateIntegral(PlantSoil.PODZOL.configId(), false, "supportDurationTicks");
         validateIntegral(PlantSoil.MYCELIUM.configId(), false, "environmentDurationTicks");
         validateIntegral(PlantSoil.DESERT.configId(), false, "environmentDurationTicks", "debuffDurationTicks");
 

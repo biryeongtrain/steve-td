@@ -15,6 +15,7 @@ import kim.biryeong.semiontd.entity.boss.BossMonster;
 import kim.biryeong.semiontd.entity.monster.KillSourceKind;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
+import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.AssignedParticipant;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.MatchMode;
@@ -47,6 +48,122 @@ import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
 public final class PlantIntegrationGameTest {
+    @GameTest
+    public void tallPlantVisualKeepsAOneBlockInteractionHitbox(GameTestHelper context) {
+        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        TowerBalanceRuntime.apply(defaults);
+        PlantCombatTower tower = new PlantCombatTower(
+                TowerBalanceRuntime.resolve(PlantTowers.T3_DESERT_TOWER),
+                stableUuid("plant-tall-hitbox"),
+                TeamId.RED,
+                1,
+                position(context, 3, 1, 3)
+        );
+        SemionTowerEntity entity = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+        entity.configure(tower, null);
+
+        require(entity.getBbWidth() <= 1.0F && entity.getBbHeight() <= 1.0F,
+                "Tall block-display plants must not overlap adjacent cells or suffocate in final defense.");
+        context.succeed();
+    }
+
+    @GameTest
+    public void pitcherSnareIncludesTheDirectTargetAndUsesSharedLobVfx(GameTestHelper context) {
+        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        UUID owner = stableUuid("plant-pitcher-snare");
+        TeamLaneGroup group = new TeamLaneGroup(TeamId.RED, BossMonster.defaultBoss(TeamId.RED));
+        PlayerLane lane = testLane(context, owner);
+        group.addLane(lane);
+        try {
+            TowerBalanceRuntime.apply(defaults);
+            fillFloor(context);
+            PlantTerraformTower terraformer = new PlantTerraformTower(
+                    TowerBalanceRuntime.resolve(PlantTowers.T1_SPRUCE_SEED_TOWER),
+                    owner, TeamId.RED, 1, position(context, 3, 1, 3));
+            PlantCombatTower pitcher = new PlantCombatTower(
+                    TowerBalanceRuntime.resolve(PlantTowers.T3_PODZOL_PITCHER_TOWER),
+                    owner, TeamId.RED, 1, position(context, 4, 1, 3));
+            lane.addTower(terraformer);
+            lane.addTower(pitcher);
+            SemionTowerEntity source = (SemionTowerEntity) context.getLevel()
+                    .getEntity(pitcher.entityId().orElseThrow());
+            Monster direct = spawnMonster(context, lane, "plant-pitcher-direct", position(context, 6, 1, 3));
+            Monster nearby = spawnMonster(context, lane, "plant-pitcher-nearby", position(context, 6, 1, 4));
+
+            pitcher.onAttackResolved(source, entity(context, direct), 48.0, 48.0, 48.0, false);
+
+            requireClose(0.7, entity(context, direct).activeTimedEffectMagnitude(
+                    TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION), "The direct target must be snared.");
+            requireClose(0.7, entity(context, nearby).activeTimedEffectMagnitude(
+                    TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION), "Nearby splash targets must still be snared.");
+            requireClose(1_000.0, direct.health(), "The direct target must not take duplicate splash damage.");
+            require(nearby.health() < 1_000.0, "A nearby target must take splash damage.");
+            context.succeed();
+        } catch (RuntimeException | Error failure) {
+            failure.printStackTrace();
+            context.fail(Component.literal("Plant pitcher regression failed: " + failure.getMessage()));
+        } finally {
+            group.closeRuntime();
+            PlantSoilStates.clear(owner);
+            TowerBalanceRuntime.apply(defaults);
+        }
+    }
+
+    @GameTest(maxTicks = 30)
+    public void podzolGrowthShareBuffsTheWholeLane(GameTestHelper context) {
+        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        UUID owner = stableUuid("plant-podzol-share");
+        TeamLaneGroup group = new TeamLaneGroup(TeamId.RED, BossMonster.defaultBoss(TeamId.RED));
+        PlayerLane lane = testLane(context, owner);
+        group.addLane(lane);
+        try {
+            TowerBalanceRuntime.apply(defaults);
+            fillFloor(context);
+            PlantTerraformTower terraformer = new PlantTerraformTower(
+                    TowerBalanceRuntime.resolve(PlantTowers.T1_SPRUCE_SEED_TOWER),
+                    owner, TeamId.RED, 1, position(context, 3, 1, 3));
+            PlantCombatTower pitcher = new PlantCombatTower(
+                    TowerBalanceRuntime.resolve(PlantTowers.T3_PODZOL_PITCHER_TOWER),
+                    owner, TeamId.RED, 1, position(context, 4, 1, 3));
+            lane.addTower(terraformer);
+            lane.addTower(pitcher);
+            pitcher.resetForRound(lane);
+            double expected = pitcher.sharedDamageGrowthBonus();
+            require(expected > 0.0, "A surviving podzol tower must contribute shared damage growth.");
+            int interval = TowerBalanceRuntime.abilityTicks(
+                    PlantTowers.GLOBAL_CONFIG_ID, "environmentTickIntervalTicks", 20);
+            int delay = (int) ((interval - context.getLevel().getGameTime() % interval) % interval);
+
+            context.runAfterDelay(delay, () -> {
+                try {
+                    PlantSoilEnvironment.tick(lane);
+                    SemionTowerEntity terraformerEntity = (SemionTowerEntity) context.getLevel()
+                            .getEntity(terraformer.entityId().orElseThrow());
+                    SemionTowerEntity pitcherEntity = (SemionTowerEntity) context.getLevel()
+                            .getEntity(pitcher.entityId().orElseThrow());
+                    requireClose(expected, terraformerEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_BONUS),
+                            "Podzol growth must reach non-combat towers across the lane.");
+                    requireClose(expected, pitcherEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_BONUS),
+                            "Podzol growth must also reach its source tower.");
+                    context.succeed();
+                } catch (RuntimeException | Error failure) {
+                    failure.printStackTrace();
+                    context.fail(Component.literal("Plant podzol share failed: " + failure.getMessage()));
+                } finally {
+                    group.closeRuntime();
+                    PlantSoilStates.clear(owner);
+                    TowerBalanceRuntime.apply(defaults);
+                }
+            });
+        } catch (RuntimeException | Error failure) {
+            failure.printStackTrace();
+            group.closeRuntime();
+            PlantSoilStates.clear(owner);
+            TowerBalanceRuntime.apply(defaults);
+            context.fail(Component.literal("Plant podzol share setup failed: " + failure.getMessage()));
+        }
+    }
+
     @GameTest
     public void plantSoilUpgradeSaleAndWaveSettlementUseTheRealLane(GameTestHelper context) {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();

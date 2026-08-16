@@ -38,6 +38,7 @@ import kim.biryeong.semiontd.tower.nether.NetherTowerState;
 import kim.biryeong.semiontd.tower.nether.NetherTowers;
 import kim.biryeong.semiontd.tower.ocean.OceanTowers;
 import kim.biryeong.semiontd.tower.plant.PlantTowers;
+import kim.biryeong.semiontd.tower.plant.PlantVfx;
 import kim.biryeong.semiontd.tower.queen.QueenTowers;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
 import kim.biryeong.semiontd.tower.thunder.ThunderTowers;
@@ -374,6 +375,53 @@ public final class TowerVfxGameTest {
             }
         }
         context.succeed();
+    }
+
+    @GameTest
+    public void plantLobDebugCommandParses(GameTestHelper context) {
+        var dispatcher = context.getLevel().getServer().getCommands().getDispatcher();
+        var parsed = dispatcher.parse(
+                "semiontd-debug vfx plant lob",
+                context.getLevel().getServer().createCommandSourceStack()
+        );
+        if (parsed.getContext().getNodes().isEmpty() || parsed.getReader().canRead()) {
+            throw new AssertionError("Expected /semiontd-debug vfx plant lob to parse completely");
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void plantLobStyleFlowsThroughSharedAreaVfxService(GameTestHelper context) {
+        List<AreaEffectVfxEvent> observed = new ArrayList<>();
+        TowerVfxService.setAreaEffectTestObserver(observed::add);
+        try {
+            UUID owner = UUID.nameUUIDFromBytes("plant-lob-vfx".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            TestTower runtimeTower = new TestTower(PlantTowers.T3_PODZOL_PITCHER_TOWER, owner);
+            SemionTowerEntity tower = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+            tower.setPos(2.0, 2.0, 2.0);
+            tower.configure(runtimeTower, null);
+
+            TowerVfxService.showAreaEffect(
+                    tower,
+                    ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "test_plant_lob"),
+                    PlantVfx.LOBBED_SPLASH,
+                    new Vec3(8.0, 2.0, 2.0),
+                    4.0,
+                    List.of(),
+                    1,
+                    1,
+                    0
+            );
+
+            if (observed.size() != 1
+                    || !observed.getFirst().visual().styleId().equals(PlantVfx.LOBBED_SPLASH)
+                    || Math.abs(observed.getFirst().visual().radius() - 4.0) > 1.0E-6) {
+                throw new AssertionError("Plant lob VFX must use the shared area service with its runtime radius");
+            }
+            context.succeed();
+        } finally {
+            TowerVfxService.setAreaEffectTestObserver(null);
+        }
     }
 
     @GameTest

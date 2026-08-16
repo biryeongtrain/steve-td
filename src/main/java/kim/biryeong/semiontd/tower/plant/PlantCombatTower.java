@@ -30,10 +30,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -225,8 +221,6 @@ public class PlantCombatTower extends ProductionTower {
             return;
         }
 
-        drawLobbedShot(towerEntity, target, radius);
-
         // 포격에 직접 맞은 대상은 중복 피해를 막으려고 광역 판정에서 빠집니다
         // (aroundTarget 이 대상 UUID 를 제외 목록에 넣습니다). 그래서 속박까지 같이 빠져
         // "맞은 적이 발이 묶인다"는 물병 식물의 핵심이 정작 맞은 적에게만 안 걸렸습니다.
@@ -241,7 +235,9 @@ public class PlantCombatTower extends ProductionTower {
                         towerEntity,
                         target,
                         radius,
-                        AreaVfxSpec.onTrigger(AreaVfxStyles.SPLASH)
+                        AreaVfxSpec.onTrigger(ability("lobArcHeight") > 0.0
+                                ? PlantVfx.LOBBED_SPLASH
+                                : AreaVfxStyles.SPLASH)
                 )
                 .withFilter(monster -> withinCone(towerEntity, target, monster, coneDegrees));
 
@@ -258,47 +254,6 @@ public class PlantCombatTower extends ProductionTower {
             }
             return AreaEffectOutcome.APPLIED;
         });
-    }
-
-    /**
-     * 곡사 연출. 타워에서 대상까지 포물선을 그리고 착탄 지점에 폭발 반경을 원으로 남깁니다.
-     *
-     * <p>{@code lobArcHeight} 가 없는 타워(라일락의 부채꼴 등)는 아무것도 그리지 않습니다. 직사와
-     * 곡사가 같은 연출이면 사거리 30짜리 포대라는 게 화면에서 드러나지 않습니다.
-     *
-     * <p>원 반경은 실제 판정에 쓰는 {@code splashRadius} 그대로입니다. 하드코딩하면 밸런스를
-     * 조정할 때 보이는 범위와 맞는 범위가 어긋납니다.
-     */
-    private void drawLobbedShot(SemionTowerEntity source, SemionMonsterEntity target, double impactRadius) {
-        double arcHeight = ability("lobArcHeight");
-        if (arcHeight <= 0.0 || source == null || target == null
-                || !(source.level() instanceof ServerLevel level)) {
-            return;
-        }
-        Vec3 start = source.position().add(0.0, source.getBbHeight() * 0.7, 0.0);
-        Vec3 end = target.position().add(0.0, target.getBbHeight() * 0.5, 0.0);
-        int steps = Math.max(8, (int) Math.round(start.distanceTo(end)));
-        for (int i = 0; i <= steps; i++) {
-            double t = (double) i / steps;
-            Vec3 point = start.lerp(end, t);
-            // 포물선: 양 끝에서 0, 중간에서 arcHeight 만큼 솟습니다.
-            double lift = 4.0 * arcHeight * t * (1.0 - t);
-            level.sendParticles(ParticleTypes.FALLING_WATER,
-                    point.x, point.y + lift, point.z, 1, 0.0, 0.0, 0.0, 0.0);
-        }
-
-        int ringPoints = Math.max(12, (int) Math.round(impactRadius * 10.0));
-        for (int i = 0; i < ringPoints; i++) {
-            double angle = Math.PI * 2.0 * i / ringPoints;
-            level.sendParticles(ParticleTypes.SPORE_BLOSSOM_AIR,
-                    end.x + Math.cos(angle) * impactRadius,
-                    target.position().y + 0.2,
-                    end.z + Math.sin(angle) * impactRadius,
-                    1, 0.0, 0.0, 0.0, 0.0);
-        }
-        level.sendParticles(ParticleTypes.SPLASH, end.x, end.y, end.z, 12, 0.4, 0.2, 0.4, 0.05);
-        level.playSound(null, end.x, end.y, end.z,
-                SoundEvents.GENERIC_SPLASH, SoundSource.BLOCKS, 0.7f, 0.7f);
     }
 
     /** 대상이 잃은 체력에 비례한 추가 피해입니다. 두들겨 맞은 적일수록 더 아픕니다. */

@@ -430,6 +430,9 @@ final class PlantTowerCatalogTest {
         assertEquals(6.0, defaults.ability(PlantSoil.MEADOW.configId(), "supportRadius", -1), EPSILON);
         assertEquals(0.2, defaults.ability(PlantSoil.MEADOW.configId(), "growthShareRatio", -1), EPSILON);
         assertEquals(0.5, defaults.ability(PlantSoil.MEADOW.configId(), "growthShareCap", -1), EPSILON);
+        assertEquals(0.2, defaults.ability(PlantSoil.PODZOL.configId(), "growthShareRatio", -1), EPSILON);
+        assertEquals(0.4, defaults.ability(PlantSoil.PODZOL.configId(), "growthShareCap", -1), EPSILON);
+        assertEquals(60.0, defaults.ability(PlantSoil.PODZOL.configId(), "supportDurationTicks", -1), EPSILON);
 
         // 성장은 40라운드 게임 내내 붙어야 합니다. 상한에 너무 일찍 닿으면 후반이 죽습니다.
         double perRound = defaults.ability(PlantSoil.MEADOW.configId(), "maxHealthGrowthPerRound", -1);
@@ -493,6 +496,8 @@ final class PlantTowerCatalogTest {
         assertPlantConfigRejected(defaults, PlantTowers.GLOBAL_CONFIG_ID, "bloomDamageCap", 1.01);
         assertPlantConfigRejected(defaults, PlantTowers.T1_MEADOW_TOWER.id(), "diamondPerWave", 3.5);
         assertPlantConfigRejected(defaults, PlantTowers.T1_MYCELIUM_TOWER.id(), "explosionDisableTicks", 20.5);
+        assertPlantConfigRejected(defaults, PlantSoil.PODZOL.configId(), "growthShareRatio", 1.01);
+        assertPlantConfigRejected(defaults, PlantSoil.PODZOL.configId(), "supportDurationTicks", 20.5);
 
         Map<String, Map<String, Double>> abilities = mutableAbilities(defaults);
         abilities.get(PlantTowers.GLOBAL_CONFIG_ID).put("soilAuraMinRadius", 7.0);
@@ -510,6 +515,7 @@ final class PlantTowerCatalogTest {
         TowerBalanceConfig merged = partial.withMissingDefaults(defaults);
         assertEquals(5.0, merged.ability(PlantTowers.T1_MEADOW_TOWER.id(), "diamondPerWave", -1), EPSILON);
         assertEquals(9.0, merged.ability(PlantTowers.T2_MEADOW_TOWER.id(), "diamondPerWave", -1), EPSILON);
+        assertEquals(0.2, merged.ability(PlantSoil.PODZOL.configId(), "growthShareRatio", -1), EPSILON);
     }
 
     private static Stream<TowerType> allPlantTowers() {

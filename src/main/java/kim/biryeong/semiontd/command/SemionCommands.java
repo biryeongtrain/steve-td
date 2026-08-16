@@ -54,6 +54,8 @@ import kim.biryeong.semiontd.tower.insect.InsectUnitTower;
 import kim.biryeong.semiontd.tower.mage.MageProphetTower;
 import kim.biryeong.semiontd.tower.mage.MageWizardTower;
 import kim.biryeong.semiontd.tower.ocean.OceanVfx;
+import kim.biryeong.semiontd.tower.plant.PlantTowers;
+import kim.biryeong.semiontd.tower.plant.PlantVfx;
 import kim.biryeong.semiontd.tower.queen.QueenBalance;
 import kim.biryeong.semiontd.tower.queen.QueenTowers;
 import kim.biryeong.semiontd.tower.thunder.ThunderTowers;
@@ -619,6 +621,9 @@ public final class SemionCommands {
                                 .then(literal("discharge")
                                         .executes(context -> debugArmyVfx(
                                                 context.getSource(), gameManager, ArmyTower.DebugVfx.DISCHARGE))))
+                        .then(literal("plant")
+                                .then(literal("lob")
+                                        .executes(context -> debugPlantVfx(context.getSource(), gameManager))))
                         .then(literal("thunder")
                                 .then(literal("arc")
                                         .executes(context -> debugThunderVfx(
@@ -751,6 +756,33 @@ public final class SemionCommands {
             }
         }
         failure(source, "살아 있는 아틀란티스 타워가 필요합니다.");
+        return 0;
+    }
+
+    private static int debugPlantVfx(
+            CommandSourceStack source,
+            SemionGameManager gameManager
+    ) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGame game = playableGame(source, gameManager);
+        PlayerLane lane = game == null ? null : game.playerLane(player.getUUID()).orElse(null);
+        if (lane != null) {
+            for (Tower tower : lane.towers()) {
+                if (!tower.type().id().equals(PlantTowers.T3_PODZOL_PITCHER_TOWER.id())
+                        || !(tower instanceof EntityBackedTower backed)
+                        || backed.entityId().isEmpty()) {
+                    continue;
+                }
+                if (lane.arenaWorld().getEntity(backed.entityId().getAsInt())
+                        instanceof kim.biryeong.semiontd.entity.tower.SemionTowerEntity towerEntity
+                        && towerEntity.isAlive()) {
+                    PlantVfx.showDebug(towerEntity, player);
+                    success(source, "식물 물병 포격 VFX를 재생했습니다.");
+                    return 1;
+                }
+            }
+        }
+        failure(source, "살아 있는 물병 식물 타워가 필요합니다.");
         return 0;
     }
 

@@ -47,7 +47,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
@@ -964,7 +963,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     @Override
     protected void actuallyHurt(ServerLevel serverLevel, DamageSource damageSource, float amount) {
-        if (damageSource.getEntity() instanceof ServerPlayer || isInvulnerableTower() || isTerrainDamage(damageSource)) {
+        if (damageSource.getEntity() instanceof ServerPlayer || isInvulnerableTower()) {
             return;
         }
 
@@ -978,24 +977,6 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         }
 
         applyDamage(serverLevel, damageSource, damageAmount);
-    }
-
-    /**
-     * Damage the arena itself inflicts, which a tower must never die to.
-     *
-     * <p>Tower hitboxes follow their visual scale, so a tall one (꽃선인장 is 1.3) can end up with
-     * its head inside a block once towers are packed into the final defense grid - and then it just
-     * suffocates. The player never placed it there, so charging them for it is nonsense. Monster
-     * attacks always carry an attacker and are unaffected; mod-driven damage goes through
-     * {@link #hurtIgnoringReductions} and never reaches here.
-     */
-    private static boolean isTerrainDamage(DamageSource damageSource) {
-        return damageSource.is(DamageTypes.IN_WALL)
-                || damageSource.is(DamageTypes.CRAMMING)
-                || damageSource.is(DamageTypes.FALL)
-                || damageSource.is(DamageTypes.FLY_INTO_WALL)
-                || damageSource.is(DamageTypes.CACTUS)
-                || damageSource.is(DamageTypes.SWEET_BERRY_BUSH);
     }
 
     public void hurtIgnoringReductions(DamageSource damageSource, double damageAmount) {
@@ -1345,7 +1326,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
             return EntityDimensions.fixed(END_CORE_HITBOX_WIDTH, END_CORE_HITBOX_HEIGHT);
         }
         if (usesBlockDisplayOverlayVisual()) {
-            float scale = (float) visual.scale();
+            float scale = Math.min(1.0F, (float) visual.scale());
             return EntityDimensions.fixed(scale, scale);
         }
         return super.getDefaultDimensions(pose);
