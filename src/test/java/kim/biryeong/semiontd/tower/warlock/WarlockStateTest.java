@@ -1,6 +1,8 @@
 package kim.biryeong.semiontd.tower.warlock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -59,5 +61,29 @@ class WarlockStateTest {
         assertEquals(0.5, copy.permanentDamageBonus(), 0.0001);
         assertEquals(1, copy.totalSacrificeCount());
         assertEquals(1, copy.roundSacrificeCount());
+    }
+
+    @Test
+    void awakeningCanOccurOncePerRoundAndResetsWithRoundState() {
+        WarlockState state = new WarlockState();
+
+        assertTrue(state.awaken());
+        assertFalse(state.awaken());
+        assertTrue(state.awakenedThisRound());
+
+        state.resetRound();
+
+        assertFalse(state.awakenedThisRound());
+        assertTrue(state.awaken());
+    }
+
+    @Test
+    void awakeningRequiresUnlockLowHealthAndLastSurvivorTogether() {
+        assertTrue(WarlockTower.meetsAwakeningConditions(true, 0.40, 0.40, true));
+        assertFalse(WarlockTower.meetsAwakeningConditions(false, 0.40, 0.40, true));
+        assertFalse(WarlockTower.meetsAwakeningConditions(true, 0.41, 0.40, true));
+        assertFalse(WarlockTower.meetsAwakeningConditions(true, 0.40, 0.40, false));
+        assertFalse(WarlockTower.meetsAwakeningConditions(true, 0.0, 0.40, true));
+        assertFalse(WarlockTower.meetsAwakeningConditions(true, Double.NaN, 0.40, true));
     }
 }

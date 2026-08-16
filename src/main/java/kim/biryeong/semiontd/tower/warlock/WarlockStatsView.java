@@ -18,11 +18,15 @@ final class WarlockStatsView {
         boolean ranged = stats.ranged();
         boolean melee = stats.melee();
         int lifeStealEvery = ranged ? Math.max(1, WarlockConfig.RUNTIME.integer(RANGED_LIFE_EVERY)) : 1;
+        int splashEvery = ranged ? Math.max(1, WarlockConfig.RUNTIME.integer(RANGED_SPLASH_EVERY)) : 1;
         int damageReductionEvery = ranged ? Math.max(1, WarlockConfig.RUNTIME.integer(RANGED_DEFENSE_THRESHOLD) + 1) : Math.max(1, WarlockConfig.RUNTIME.integer(MELEE_DEFENSE_EVERY));
-        lines.add(sacrificeLine("흡수한 타워", stats.totalSacrifices()));
-        lines.add(sacrificeLine("이번 라운드에 흡수한 타워", stats.roundSacrifices()));
+        lines.add(sacrificeLine("영구 흡수", stats.totalSacrifices()));
+        lines.add(sacrificeLine("라운드 흡수", stats.roundSacrifices()));
         if (stats.showAwakening()) {
-            lines.add(awakeningLine(stats.awakened()));
+            lines.add(awakeningLine(stats.awakened(), ranged || melee, stats.awakening()));
+            if (!stats.awakened() && stats.awakening().unlocked() && (ranged || melee)) {
+                lines.add(awakeningConditionLine(stats.awakening()));
+            }
         }
         lines.add(formatPermanentHealth(defense.additionalHealth(), scalingProgress(defense.rawAbsorbedHealth(), defense.effectiveAbsorbedHealth())));
         if (defense.maximumRegenerationPerSecond() > 0.0) {
@@ -36,10 +40,10 @@ final class WarlockStatsView {
         ));
         if (melee) {
             lines.add(formatAttackSpeedReduction(combat.attackIntervalReductionTicks(), stackProgress(stats.roundSacrifices(), 1, combat.attackIntervalReductionTicks(), combat.maximumAttackIntervalReductionTicks())));
-        } else {
+        } else if (ranged) {
             lines.add(formatAttackSpeedReduction(combat.attackIntervalReductionTicks(), maxOnlyProgress(combat.attackIntervalReductionTicks(), combat.maximumAttackIntervalReductionTicks())));
         } if (combat.showAttackRange()) {
-            lines.add(formatSplashRange(combat.splashRadius(), stackProgress(ranged ? stats.totalSacrifices() : stats.roundSacrifices(), 1, combat.splashRadius(), combat.maximumSplashRadius())));
+            lines.add(formatSplashRange(combat.splashRadius(), stackProgress(ranged ? stats.totalSacrifices() : stats.roundSacrifices(), splashEvery, combat.splashRadius(), combat.maximumSplashRadius())));
         }
         return lines;
     }
@@ -48,8 +52,26 @@ final class WarlockStatsView {
         return "<white>" + label + ": " + warlockText(sacrifices + "기") + "</white>";
     }
 
-    private static String awakeningLine(boolean awakened) {
-        return "<white>각성 상태: " + (awakened ? warlockText("각성") : "<gray>미각성</gray>") + "</white>";
+    private static String awakeningLine(boolean awakened, boolean branchSelected, AwakeningStats awakening) {
+        if (!awakening.unlocked()) {
+            return "<white>각성 해금: " + warlockText(
+                    awakening.kills() + "/" + awakening.requiredKills() + "킬"
+            ) + "</white>";
+        }
+        if (!branchSelected) {
+            return "<white>각성 해금: " + warlockText("완료 · 분기 선택 필요") + "</white>";
+        }
+        if (awakened) {
+            return "<white>각성 상태: " + warlockText("각성 완료") + "</white>";
+        }
+        return "<white>각성 해금: " + warlockText("완료") + "</white>";
+    }
+
+    private static String awakeningConditionLine(AwakeningStats awakening) {
+        String survival = awakening.onlyCoreAlive() ? warlockText("충족") : "<gray>미충족</gray>";
+        String health = format(awakening.currentHealthRatio(), "percent")
+                + " / " + format(awakening.healthThreshold(), "percent");
+        return "<white>각성 조건: 최후 생존 " + survival + " · 체력 " + health + "</white>";
     }
 
     private static String maxOnlyProgress(double currentValue, double maximumValue) {
@@ -71,10 +93,21 @@ final class WarlockStatsView {
             int roundSacrifices,
             boolean showAwakening,
             boolean awakened,
+            AwakeningStats awakening,
             boolean ranged,
             boolean melee,
             CombatStats combat,
             DefenseStats defense
+    ) {
+    }
+
+    record AwakeningStats(
+            long kills,
+            long requiredKills,
+            boolean unlocked,
+            double currentHealthRatio,
+            double healthThreshold,
+            boolean onlyCoreAlive
     ) {
     }
 

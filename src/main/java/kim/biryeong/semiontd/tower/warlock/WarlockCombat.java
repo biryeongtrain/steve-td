@@ -29,8 +29,12 @@ final class WarlockCombat {
     }
 
     double splashRadiusForCount(int sacrificeCount) {
+        int every = config.integer(RANGED_SPLASH_EVERY);
+        if (every <= 0) {
+            return 0.0;
+        }
         double step = Math.max(0.0, config.value(RANGED_SPLASH_STEP));
-        return Math.min(configuredSplashCap(), Math.max(0, sacrificeCount) * step);
+        return Math.min(configuredSplashCap(), (Math.max(0, sacrificeCount) / every) * step);
     }
 
     double maximumSplashRadius(WarlockTower tower) {

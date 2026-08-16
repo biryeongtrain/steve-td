@@ -10,10 +10,10 @@ final class WarlockStats {
     }
 
     List<String> create(WarlockTower tower) {
+        WarlockAwakeningProgress.Snapshot awakeningProgress = WarlockAwakeningProgress.snapshot(tower.ownerPlayer());
         boolean showAwakening =
                 WarlockConfig.AWAKENING_ENABLED
-                        && (tower.is(WarlockTowers.RANGED_WARLOCK_TOWER)
-                        || tower.is(WarlockTowers.MELEE_WARLOCK_TOWER));
+                        && WarlockTowers.isWarlockCore(tower.type());
 
         return WarlockStatsView.core(
                 new WarlockStatsView.CoreStats(
@@ -21,6 +21,14 @@ final class WarlockStats {
                         tower.roundSacrificeCount(),
                         showAwakening,
                         tower.awakenedThisRound(),
+                        new WarlockStatsView.AwakeningStats(
+                                awakeningProgress.kills(),
+                                awakeningProgress.requiredKills(),
+                                awakeningProgress.unlocked(),
+                                tower.currentHealthRatio(),
+                                Math.max(0.0, WarlockConfig.RUNTIME.value(WarlockConfig.Ability.AWAKENING_THRESHOLD)),
+                                tower.onlyCoreTowerAlive()
+                        ),
                         tower.is(WarlockTowers.RANGED_WARLOCK_TOWER),
                         tower.is(WarlockTowers.MELEE_WARLOCK_TOWER),
                         new WarlockStatsView.CombatStats(

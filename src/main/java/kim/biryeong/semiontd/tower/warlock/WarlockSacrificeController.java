@@ -34,10 +34,8 @@ final class WarlockSacrificeController {
             return false;
         }
         Tower target = lane.towers().stream()
-                .filter(tower -> tower != warlock)
-                .filter(tower -> tower.health() > 0.0)
-                .filter(tower -> !WarlockTowers.isWarlockCore(tower.type()))
-                .filter(tower -> sameOwner(warlock, tower) && withinRadius(warlock, tower, radius)).min(priority)
+                .filter(tower -> isEligibleTarget(warlock, tower, radius))
+                .min(priority)
                 .orElse(null);
         if (target == null) {
             return false;
@@ -191,6 +189,16 @@ final class WarlockSacrificeController {
 
     private static boolean sameOwner(WarlockTower warlock, Tower tower) {
         return tower != null && warlock.ownerPlayer().equals(tower.ownerPlayer());
+    }
+
+    static boolean isEligibleTarget(WarlockTower warlock, Tower tower, double radius) {
+        return warlock != null
+                && tower != null
+                && tower != warlock
+                && tower.health() > 0.0
+                && !WarlockTowers.isWarlockCore(tower.type())
+                && sameOwner(warlock, tower)
+                && withinRadius(warlock, tower, radius);
     }
 
     private static boolean withinRadius(WarlockTower warlock, Tower tower, double radius) {

@@ -12,12 +12,14 @@ import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.config.SummonConfig;
 import kim.biryeong.semiontd.job.AdversaryTowerJob;
+import kim.biryeong.semiontd.job.WarlockTowerJob;
 import kim.biryeong.semiontd.summon.IncomeSummons;
 import kim.biryeong.semiontd.summon.SummonRegistry;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.tower.adversary.AdversaryBalance;
 import kim.biryeong.semiontd.tower.adversary.AdversaryTowers;
+import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
 import kim.biryeong.semiontd.trait.TraitRegistry;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
@@ -147,6 +149,64 @@ final class WebCatalogExporterTest {
                 .collect(java.util.stream.Collectors.toSet()));
         assertTrue(document.abilities()
                 .containsKey(kim.biryeong.semiontd.tower.atlantis.AtlantisBalance.CONFIG_ID));
+    }
+
+    @Test
+    void warlockFamilyExportsCompleteOwnedUpgradeGraph() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        IncomeSummons.reloadBuiltIns(SummonConfig.defaultConfig());
+
+        WebCatalogExporter.CatalogDocument document = WebCatalogExporter.snapshot(1L);
+        assertExportedFamily(
+                document,
+                WarlockTowerJob.ID.toString(),
+                WarlockTowers.all().stream().map(type -> type.id()).collect(java.util.stream.Collectors.toSet()),
+                WarlockTowers.CONFIG_ID,
+                Set.of(
+                        edge(WarlockTowers.BASE_WARLOCK_TOWER.id(), "ranged_warlock_tower", WarlockTowers.RANGED_WARLOCK_TOWER.id()),
+                        edge(WarlockTowers.BASE_WARLOCK_TOWER.id(), "melee_warlock_tower", WarlockTowers.MELEE_WARLOCK_TOWER.id()),
+                        edge(WarlockTowers.T1_SLAVE.id(), "t2_slave", WarlockTowers.T2_SLAVE.id()),
+                        edge(WarlockTowers.T2_SLAVE.id(), "t3_slave", WarlockTowers.T3_SLAVE.id()),
+                        edge(WarlockTowers.T1_RANGED_SLAVE.id(), "t2_ranged_slave", WarlockTowers.T2_RANGED_SLAVE.id()),
+                        edge(WarlockTowers.T2_RANGED_SLAVE.id(), "t3_ranged_slave", WarlockTowers.T3_RANGED_SLAVE.id())
+                )
+        );
+    }
+
+    private static void assertExportedFamily(
+            WebCatalogExporter.CatalogDocument document,
+            String builderId,
+            Set<String> expectedTowerIds,
+            String globalAbilityId,
+            Set<String> expectedUpgradeEdges
+    ) {
+        WebCatalogExporter.BuilderEntry builder = document.builders().stream()
+                .filter(entry -> entry.id().equals(builderId))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(expectedTowerIds, Set.copyOf(builder.towerIds()));
+        assertTrue(builder.description().stream().noneMatch(WebCatalogExporterTest::hasUnresolvedPlaceholder));
+
+        var towers = document.towers().stream()
+                .filter(entry -> entry.builderId().equals(builderId))
+                .toList();
+        assertEquals(expectedTowerIds, towers.stream().map(WebCatalogExporter.TowerEntry::id)
+                .collect(java.util.stream.Collectors.toSet()));
+        assertTrue(towers.stream().flatMap(entry -> entry.description().stream())
+                .noneMatch(WebCatalogExporterTest::hasUnresolvedPlaceholder));
+        assertTrue(towers.stream().allMatch(entry -> entry.visual() != null
+                && entry.visual().entityTypeId() != null));
+
+        Set<String> actualUpgradeEdges = document.upgrades().stream()
+                .filter(upgrade -> expectedTowerIds.contains(upgrade.fromTowerId()))
+                .map(upgrade -> edge(upgrade.fromTowerId(), upgrade.id(), upgrade.toTowerId()))
+                .collect(java.util.stream.Collectors.toSet());
+        assertEquals(expectedUpgradeEdges, actualUpgradeEdges);
+        assertTrue(document.abilities().containsKey(globalAbilityId));
+    }
+
+    private static String edge(String fromTowerId, String upgradeId, String toTowerId) {
+        return fromTowerId + "|" + upgradeId + "|" + toTowerId;
     }
 
     private static boolean hasUnresolvedPlaceholder(String line) {

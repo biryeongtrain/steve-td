@@ -228,6 +228,7 @@ import kim.biryeong.semiontd.tower.villager.VillagerTowerCatalogs;
 import kim.biryeong.semiontd.tower.villager.VillagerThornTower;
 import kim.biryeong.semiontd.tower.villager.VillagerTowers;
 import kim.biryeong.semiontd.tower.warlock.WarlockSacrificeTower;
+import kim.biryeong.semiontd.tower.warlock.WarlockAwakeningProgress;
 import kim.biryeong.semiontd.tower.warlock.WarlockTower;
 import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
 import kim.biryeong.semiontd.test.tower.TestTowerTypes;
@@ -11583,6 +11584,253 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertTrue(context, t3Melee.entityId().isPresent() && t3Melee.entityId().getAsInt() != sacrificedEntityId, "Melee warlock sacrifice target should get a fresh entity on next-round respawn.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void warlockSacrificeRejectsInvalidTargetsWithoutGrowth(GameTestHelper context) {
+        UUID playerId = stableUuid("warlock-invalid-sacrifice-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, WarlockTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        BlockPos corePos = towerPlacementPos(lane);
+        WarlockTower core = new WarlockTower(
+                TowerBalanceRuntime.resolve(WarlockTowers.RANGED_WARLOCK_TOWER),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(corePos)
+        );
+        WarlockSacrificeTower foreign = new WarlockSacrificeTower(
+                TowerBalanceRuntime.resolve(WarlockTowers.T1_RANGED_SLAVE),
+                stableUuid("warlock-invalid-sacrifice-foreign"),
+                TeamId.RED,
+                1,
+                GridPosition.from(nearbyTowerPlacementPos(lane, corePos))
+        );
+        WarlockSacrificeTower distant = new WarlockSacrificeTower(
+                TowerBalanceRuntime.resolve(WarlockTowers.T1_RANGED_SLAVE),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(corePos.offset(30, 0, 0))
+        );
+        WarlockTower otherCore = new WarlockTower(
+                TowerBalanceRuntime.resolve(WarlockTowers.BASE_WARLOCK_TOWER),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(corePos.offset(2, 0, 2))
+        );
+        lane.addTower(core);
+        lane.addTower(foreign);
+        lane.addTower(distant);
+        lane.addTower(otherCore);
+
+        SemionTowerEntity coreEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(core.entityId().orElseThrow());
+        core.syncHealth(100.0);
+        coreEntity.setHealth(100.0F);
+        core.onDamaged(coreEntity, null, 10.0, 110.0, 100.0);
+
+        if (!assertTrue(context, foreign.health() > 0.0, "Warlock must not sacrifice another owner's tower.")) {
+            return;
+        }
+        if (!assertTrue(context, distant.health() > 0.0, "Warlock must not sacrifice a tower outside the configured radius.")) {
+            return;
+        }
+        if (!assertTrue(context, otherCore.health() > 0.0, "Warlock must never sacrifice another core tower.")) {
+            return;
+        }
+        if (!assertClose(context, 100.0, core.health(), "Failed sacrifice must not heal or grow the warlock.")) {
+            return;
+        }
+        String details = String.join("\n", core.runtimeDetailLines()).replaceAll("<[^>]+>", "");
+        if (!assertTrue(context, details.contains("영구 흡수: 0기") && details.contains("라운드 흡수: 0기"), "Failed sacrifice must not advance absorption progress.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void rangedWarlockAwakensWithoutSacrificeRequirementAndResetsNextRound(GameTestHelper context) {
+        UUID playerId = stableUuid("warlock-ranged-awakening-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, WarlockTowerJob.ID);
+        for (int kill = 0; kill < 1349; kill++) {
+            WarlockAwakeningProgress.recordKill(playerId);
+        }
+        if (!assertEquals(context, 1349L, WarlockAwakeningProgress.snapshot(playerId).kills(), "Warlock awakening progress should remain locked before the configured kill requirement.")) {
+            return;
+        }
+        PlayerLane lane = redLane(game, 1);
+        BlockPos corePos = towerPlacementPos(lane);
+        WarlockTower core = new WarlockTower(
+                TowerBalanceRuntime.resolve(WarlockTowers.RANGED_WARLOCK_TOWER),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(corePos)
+        );
+        lane.addTower(core);
+        SemionTowerEntity coreEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(core.entityId().orElseThrow());
+        core.syncHealth(40.0);
+        coreEntity.setHealth(40.0F);
+
+        String lockedDetails = String.join("\n", core.runtimeDetailLines()).replaceAll("<[^>]+>", "");
+        if (!assertTrue(context, lockedDetails.contains("각성 해금: 1349/1350킬"), "Ranged awakening should stay locked before the kill requirement.")) {
+            return;
+        }
+        Monster creditedKill = new Monster(
+                "warlock-awakening-progress",
+                TeamId.RED,
+                1,
+                Optional.empty(),
+                Optional.empty(),
+                20.0,
+                0.0,
+                5.0,
+                AttackKind.MELEE,
+                "minecraft:zombie",
+                1L
+        );
+        creditedKill.recordLastHit(playerId, KillSourceKind.TOWER);
+        creditedKill.syncHealth(0.0);
+        new EconomyService(game.economyConfig(), game).awardMonsterKillReward(creditedKill, game.players());
+        if (!assertEquals(context, 1350L, WarlockAwakeningProgress.snapshot(playerId).kills(), "The credited 1350th kill should unlock awakening.")) {
+            return;
+        }
+
+        String awakenedDetails = String.join("\n", core.runtimeDetailLines()).replaceAll("<[^>]+>", "");
+        if (!assertTrue(context, awakenedDetails.contains("각성 상태: 각성 완료"), "The 1350th kill should immediately awaken a ranged warlock that already satisfies the combat conditions.")) {
+            return;
+        }
+        if (!assertTrue(context, awakenedDetails.contains("라운드 흡수: 0기"), "Ranged awakening should not require sacrifices.")) {
+            return;
+        }
+        if (!assertTrue(context, coreEntity.isCurrentlyGlowing(), "Awakened ranged warlock should expose its active VFX state.")) {
+            return;
+        }
+        if (!assertTrue(context, core.health() > 40.0, "Ranged awakening should apply its configured recovery.")) {
+            return;
+        }
+        if (!assertTrue(context, awakenedDetails.contains("재생: +40 HP/s"), "Ranged awakening should expose its regeneration in the tower UI.")) {
+            return;
+        }
+
+        game.teams().get(TeamId.RED).resetForRound();
+        String resetDetails = String.join("\n", core.runtimeDetailLines()).replaceAll("<[^>]+>", "");
+        if (!assertTrue(context, resetDetails.contains("각성 해금: 완료"), "Ranged awakening should remain unlocked after round reset.")) {
+            return;
+        }
+        if (!assertTrue(context, !coreEntity.isCurrentlyGlowing(), "Ranged awakening glow should clear at round reset.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void rangedWarlockUsesPostSacrificeHealthForAwakening(GameTestHelper context) {
+        UUID playerId = stableUuid("warlock-post-sacrifice-awakening-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, WarlockTowerJob.ID);
+        for (int kill = 0; kill < 1350; kill++) {
+            WarlockAwakeningProgress.recordKill(playerId);
+        }
+        PlayerLane lane = redLane(game, 1);
+        BlockPos corePos = towerPlacementPos(lane);
+        WarlockTower core = new WarlockTower(
+                TowerBalanceRuntime.resolve(WarlockTowers.RANGED_WARLOCK_TOWER),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(corePos)
+        );
+        WarlockSacrificeTower sacrifice = new WarlockSacrificeTower(
+                TowerBalanceRuntime.resolve(WarlockTowers.T1_RANGED_SLAVE),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(nearbyTowerPlacementPos(lane, corePos))
+        );
+        lane.addTower(core);
+        lane.addTower(sacrifice);
+
+        SemionTowerEntity coreEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(core.entityId().orElseThrow());
+        core.syncHealth(40.0);
+        coreEntity.setHealth(40.0F);
+        core.onDamaged(coreEntity, null, 1.0, 41.0, 40.0);
+
+        if (!assertTrue(context, sacrifice.health() <= 0.0, "Low health should still trigger the ranged sacrifice.")) {
+            return;
+        }
+        double postSacrificeHealthRatio = core.health() / core.currentMaxHealth();
+        if (!assertTrue(context, postSacrificeHealthRatio > 0.40, "Sacrifice recovery should raise the current health ratio above the awakening threshold.")) {
+            return;
+        }
+        String details = String.join("\n", core.runtimeDetailLines()).replaceAll("<[^>]+>", "");
+        if (!assertTrue(context, !details.contains("각성 상태: 각성 완료"), "Awakening must use post-sacrifice health instead of the stale damaged ratio.")) {
+            return;
+        }
+        if (!assertTrue(context, !coreEntity.isCurrentlyGlowing(), "A warlock above the post-sacrifice health threshold must not enter awakening VFX.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void meleeWarlockAwakeningCreatesRoundBurstAndResetsNextRound(GameTestHelper context) {
+        UUID playerId = stableUuid("warlock-melee-awakening-owner");
+        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, WarlockTowerJob.ID);
+        for (int kill = 0; kill < 1350; kill++) {
+            WarlockAwakeningProgress.recordKill(playerId);
+        }
+        PlayerLane lane = redLane(game, 1);
+        BlockPos corePos = towerPlacementPos(lane);
+        WarlockTower core = new WarlockTower(
+                TowerBalanceRuntime.resolve(WarlockTowers.MELEE_WARLOCK_TOWER),
+                playerId,
+                TeamId.RED,
+                1,
+                GridPosition.from(corePos)
+        );
+        lane.addTower(core);
+        for (int index = 0; index < 20; index++) {
+            BlockPos sacrificePos = corePos.offset(index % 5 + 1, 0, index / 5 + 1);
+            lane.addTower(new WarlockSacrificeTower(
+                    TowerBalanceRuntime.resolve(WarlockTowers.T1_SLAVE),
+                    playerId,
+                    TeamId.RED,
+                    1,
+                    GridPosition.from(sacrificePos)
+            ));
+        }
+
+        SemionTowerEntity coreEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(core.entityId().orElseThrow());
+        for (int index = 0; index < 20; index++) {
+            core.syncHealth(70.0);
+            coreEntity.setHealth(70.0F);
+            core.onDamaged(coreEntity, null, 1.0, 71.0, 70.0);
+        }
+
+        double awakenedDamage = core.modifyAttackDamage(null, null, core.type().damage());
+        String awakenedDetails = String.join("\n", core.runtimeDetailLines()).replaceAll("<[^>]+>", "");
+        if (!assertTrue(context, awakenedDetails.contains("각성 상태: 각성 완료"), "Melee warlock should awaken after satisfying all three conditions.")) {
+            return;
+        }
+        if (!assertTrue(context, awakenedDamage >= 82.0, "Melee awakening should add its configured 75 attack damage burst.")) {
+            return;
+        }
+        if (!assertTrue(context, core.health() > 600.0, "Melee awakening should apply its configured 600 health recovery.")) {
+            return;
+        }
+        if (!assertClose(context, 1.30, core.adjustMovementSpeed(1.0), "Melee awakening should add thirty percent movement speed.")) {
+            return;
+        }
+
+        game.teams().get(TeamId.RED).resetForRound();
+        if (!assertClose(context, 1.0, core.adjustMovementSpeed(1.0), "Melee awakening movement speed should reset after the round.")) {
+            return;
+        }
+        if (!assertTrue(context, core.modifyAttackDamage(null, null, core.type().damage()) < awakenedDamage, "Melee awakening damage should reset after the round.")) {
             return;
         }
         context.succeed();

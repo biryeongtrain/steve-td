@@ -3,7 +3,7 @@ package kim.biryeong.semiontd.tower.warlock;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 final class WarlockConfig {
     static final WarlockConfig RUNTIME = new WarlockConfig();
-    static final boolean AWAKENING_ENABLED = false;
+    static final boolean AWAKENING_ENABLED = true;
 
     private WarlockConfig() {
     }
@@ -17,14 +17,10 @@ final class WarlockConfig {
     }
 
     enum Ability {
-        DAMAGE_THRESHOLD(Scope.GLOBAL, "damageThreshold"),
-        DAMAGE_SCALE(Scope.GLOBAL, "damageScale"),
-        HEALTH_THRESHOLD(Scope.GLOBAL, "healthThreshold"),
-        HEALTH_SCALE(Scope.GLOBAL, "healthScale"),
         SACRIFICE_RADIUS(Scope.GLOBAL, "sacrificeRadius"),
         MIN_INTERVAL(Scope.GLOBAL, "minInterval"),
         SPEED_CAP(Scope.GLOBAL, "speedCap"),
-        AWAKENING_ABSORPTIONS(Scope.GLOBAL, "awakeningAbsorptions"),
+        AWAKENING_KILLS(Scope.GLOBAL, "awakeningKills"),
         AWAKENING_THRESHOLD(Scope.GLOBAL, "awakeningThreshold"),
         BASE_RADIUS(Scope.BASE, "sacrificeRadius"),
         BASE_HEAL(Scope.BASE, "fatalHeal"),
@@ -33,10 +29,15 @@ final class WarlockConfig {
         RANGED_THRESHOLD(Scope.RANGED, "threshold"),
         RANGED_ROUND_STAT(Scope.RANGED, "roundStat"),
         RANGED_PERMANENT_HEALTH(Scope.RANGED, "permanentHealth"),
+        RANGED_HEALTH_THRESHOLD(Scope.RANGED, "healthThreshold"),
+        RANGED_HEALTH_SCALE(Scope.RANGED, "healthScale"),
         RANGED_PERMANENT_DAMAGE(Scope.RANGED, "permanentDamage"),
+        RANGED_DAMAGE_THRESHOLD(Scope.RANGED, "damageThreshold"),
+        RANGED_DAMAGE_SCALE(Scope.RANGED, "damageScale"),
         RANGED_LIFE_EVERY(Scope.RANGED, "lifeEvery"),
         RANGED_LIFE_STEP(Scope.RANGED, "lifeStep"),
         RANGED_LIFE_CAP(Scope.RANGED, "lifeCap"),
+        RANGED_SPLASH_EVERY(Scope.RANGED, "splashEvery"),
         RANGED_SPLASH_STEP(Scope.RANGED, "splashStep"),
         RANGED_SPLASH_CAP(Scope.RANGED, "splashCap"),
         RANGED_SPLASH_DAMAGE(Scope.RANGED, "splashDamage"),
@@ -52,7 +53,11 @@ final class WarlockConfig {
         MELEE_THRESHOLD(Scope.MELEE, "threshold"),
         MELEE_ROUND_STAT(Scope.MELEE, "roundStat"),
         MELEE_PERMANENT_HEALTH(Scope.MELEE, "permanentHealth"),
+        MELEE_HEALTH_THRESHOLD(Scope.MELEE, "healthThreshold"),
+        MELEE_HEALTH_SCALE(Scope.MELEE, "healthScale"),
         MELEE_PERMANENT_DAMAGE(Scope.MELEE, "permanentDamage"),
+        MELEE_DAMAGE_THRESHOLD(Scope.MELEE, "damageThreshold"),
+        MELEE_DAMAGE_SCALE(Scope.MELEE, "damageScale"),
         MELEE_LIFE_STEP(Scope.MELEE, "lifeStep"),
         MELEE_LIFE_CAP(Scope.MELEE, "lifeCap"),
         MELEE_SPEED_STEP(Scope.MELEE, "speedStep"),
@@ -66,6 +71,7 @@ final class WarlockConfig {
         MELEE_PET_HEALTH_CAP(Scope.MELEE, "petHealthCap"),
         MELEE_PET_DAMAGE(Scope.MELEE, "petDamage"),
         MELEE_PET_DAMAGE_CAP(Scope.MELEE, "petDamageCap"),
+        MELEE_AWAKENING_HEAL(Scope.MELEE, "awakeningHeal"),
         MELEE_AWAKENING_DAMAGE(Scope.MELEE, "awakeningDamage"),
         MELEE_AWAKENING_MOVE_SPEED(Scope.MELEE, "awakeningMoveSpeed");
 
