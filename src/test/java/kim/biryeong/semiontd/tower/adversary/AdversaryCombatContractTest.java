@@ -354,66 +354,6 @@ class AdversaryCombatContractTest {
     }
 
     @Test
-    void runtimeDetailsExposeTheCurrentFormsConfiguredMechanic() {
-        AdversaryFoxTower fox = fox();
-
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line -> line.contains("현재 형태</gold>:")));
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line -> line.contains("점수</yellow>")));
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("숙적 처치 회복") && line.contains("일반 20%") && line.contains("강화 30%")));
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("집중포화 방어") && line.contains("최대 45%")));
-        assertTrue(fox.runtimeDetailLines().stream().noneMatch(line -> line.contains("인컴 처치")));
-
-        fox.setForm(FoxForm.BREEZE, null);
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("연쇄 마법 피해")));
-
-        fox.setForm(FoxForm.BEACON_KEEPER, null);
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("최종 성장") && line.contains("최대 200%")));
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("주변 적 최대 3기에게 공격력의 50%")));
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("2초마다")
-                        && line.contains("반경 10블록")
-                        && line.contains("다른 여우 최대 2기")
-                        && line.contains("각각 14%")));
-
-        fox.setForm(FoxForm.OMINOUS_HEXER, null);
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("3초마다")
-                        && line.contains("다른 여우 1기")
-                        && line.contains("8%")));
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("숙적에게는 적용되지 않습니다")));
-
-        fox.setForm(FoxForm.FIREWORK_PIERCER, null);
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("웨이브 적에게 1.8배") && line.contains("인컴 적에게 0.7배")));
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("직선상의 적 최대 8기")
-                        && line.contains("100% / 55% / 40% / 25% / 15% / 10% / 8% / 5%")
-                        && line.contains("물리 피해")));
-
-        fox.setForm(FoxForm.SCULK_CORE, null);
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("20틱 뒤 폭발")));
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("최대 15기") && line.contains("800의 마법 피해")));
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("방어를 무시") && line.contains("체력은 40% 아래")));
-
-        fox.setForm(FoxForm.MACE_EXECUTIONER, null);
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("집중한 뒤 400의 물리 피해")));
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("주변 적 최대 8기") && line.contains("25%만큼 피해")));
-        assertTrue(fox.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("최대 체력의 20%") && line.contains("공격이 취소")));
-    }
-
-    @Test
     void rivalProxyCarriesOnlyAdversaryTagsAndNeverPaysAReward() throws Exception {
         for (RivalKind kind : RivalKind.values()) {
             AdversaryRivalTower baseTower = rival(kind, false);

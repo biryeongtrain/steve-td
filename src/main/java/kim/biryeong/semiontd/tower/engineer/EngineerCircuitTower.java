@@ -182,7 +182,7 @@ public final class EngineerCircuitTower extends Tower {
         }
         Direction repeaterDirection = EngineerTowers.repeaterDirection(type()).orElse(null);
         if (repeaterDirection != null) {
-            return Blocks.REPEATER.defaultBlockState().setValue(RepeaterBlock.FACING, repeaterDirection);
+            return Blocks.REPEATER.defaultBlockState().setValue(RepeaterBlock.FACING, repeaterDirection.getOpposite());
         }
         EngineerTowers.PlateKind kind = plateKind();
         return kind == null ? null : kindBlock(kind).defaultBlockState();

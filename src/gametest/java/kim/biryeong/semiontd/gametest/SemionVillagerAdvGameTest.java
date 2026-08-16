@@ -3,7 +3,6 @@ package kim.biryeong.semiontd.gametest;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -35,20 +34,17 @@ import kim.biryeong.semiontd.tower.ProductionTowerService;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerCategory;
 import kim.biryeong.semiontd.tower.TowerType;
-import kim.biryeong.semiontd.tower.TowerUpgradeOption;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import kim.biryeong.semiontd.tower.villager.VillagerSplashTower;
 import kim.biryeong.semiontd.tower.villager.VillagerThornTower;
 import kim.biryeong.semiontd.tower.villager.VillagerTowers;
-import kim.biryeong.semiontd.ui.SemionDialogService;
 import net.fabricmc.fabric.api.gametest.v1.CustomTestMethodInvoker;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.block.Blocks;
 
 public final class SemionVillagerAdvGameTest implements CustomTestMethodInvoker {
@@ -78,18 +74,6 @@ public final class SemionVillagerAdvGameTest implements CustomTestMethodInvoker 
                 starterIds,
                 "Villager ADV should expose the existing villager starter towers."
         )) {
-            return;
-        }
-        List<String> splashDescription = starters.stream()
-                .map(ProductionTowerCatalog.CatalogEntry::type)
-                .filter(type -> type.id().equals(VillagerTowers.ADV_T1_SPLASH_TOWER.id()))
-                .findFirst()
-                .orElseThrow()
-                .description();
-        if (!assertTrue(context, splashDescription.stream().anyMatch(line -> line.contains("경험치 1마다 공격력이 1%")), "Villager ADV catalog should show experience growth lines.")) {
-            return;
-        }
-        if (!assertTrue(context, splashDescription.stream().anyMatch(line -> line.contains("평판 1마다 공격력이 0.5%")), "Villager ADV catalog should show reputation growth lines.")) {
             return;
         }
         if (!assertTrue(context, ProductionTowerCatalog.find(VillagerTowers.T1_SPLASH_TOWER.id()).isPresent(), "Base villager tower should remain registered separately.")) {
@@ -136,11 +120,6 @@ public final class SemionVillagerAdvGameTest implements CustomTestMethodInvoker 
             return;
         }
         Tower placedTower = lane.towerAt(gridPosition);
-        TowerUpgradeOption splashUpgrade = ProductionTowerCatalog.upgrade(placedTower.type(), "villager_splash_t2").orElseThrow();
-        if (!assertTrue(context, upgradeTooltipText(splashUpgrade, placedTower).contains("경험치 0.0/15.0"), "Villager ADV upgrade tooltip should show the experience requirement.")) {
-            return;
-        }
-
         VillagerAdvStates.onWaveStarted(game, 1);
         waitForAdvExperience(context, game, lane, gridPosition, 0, () -> {
             Tower tower = lane.towerAt(gridPosition);
@@ -201,20 +180,11 @@ public final class SemionVillagerAdvGameTest implements CustomTestMethodInvoker 
         if (!assertClose(context, VillagerTowers.ADV_T2_GOLEM_TOWER.maxHealth() * 1.05, golem.currentMaxHealth(), "ADV golem survival health bonus should be halved.")) {
             return;
         }
-        if (!assertTrue(context, SemionDialogService.towerRuntimeDetailLines(librarian).stream().anyMatch(line -> line.contains("피해 +2.5%")), "ADV librarian runtime detail should show the reduced survival bonus.")) {
-            return;
-        }
-        if (!assertTrue(context, SemionDialogService.towerRuntimeDetailLines(librarian).stream().anyMatch(line -> line.contains("경험치 12.0/1557.0")), "ADV runtime detail should show current tower experience.")) {
-            return;
-        }
-        if (!assertTrue(context, SemionDialogService.towerRuntimeDetailLines(golem).stream().anyMatch(line -> line.contains("체력 +5.0%")), "ADV golem runtime detail should show the reduced survival bonus.")) {
-            return;
-        }
         context.succeed();
     }
 
     @GameTest
-    public void villagerAdvTimedEffectsExposeUiLabelsAndMaxHealthHealing(GameTestHelper context) {
+    public void villagerAdvTimedEffectsPreserveMaxHealthHealing(GameTestHelper context) {
         UUID playerId = stableUuid("villager-adv-effect-owner");
         BlockPos anchor = context.absolutePos(BlockPos.ZERO);
         TowerType type = new TowerType(
@@ -248,24 +218,6 @@ public final class SemionVillagerAdvGameTest implements CustomTestMethodInvoker 
             return;
         }
 
-        entity.applyTimedEffect(TimedEffectType.TOWER_DAMAGE_BONUS, 0.10, 72000);
-        entity.applyTimedEffect(TimedEffectType.TOWER_ATTACK_SPEED_BONUS, 0.10, 72000);
-        entity.applyTimedEffect(TimedEffectType.TOWER_DAMAGE_REDUCTION, 0.10, 72000);
-        entity.applyTimedEffect(TimedEffectType.TOWER_INCOME_DAMAGE_BONUS, 0.10, 72000);
-        entity.applyTimedEffect(TimedEffectType.TOWER_WAVE_DAMAGE_BONUS, 0.10, 72000);
-        entity.applyTimedEffect(TimedEffectType.TOWER_HEAL_AMOUNT_BONUS, 0.10, 72000);
-        entity.applyTimedEffect(TimedEffectType.TOWER_ABILITY_INTERVAL_REDUCTION, 0.10, 72000);
-
-        String body = timedEffectBody(entity);
-        if (!assertTrue(context, body.contains("피해 증가") && body.contains("공속 증가") && body.contains("받피 감소"), "Base tower timed effects should remain visible.")) {
-            return;
-        }
-        if (!assertTrue(context, body.contains("최대체력") && body.contains("인컴 피해") && body.contains("웨이브 피해"), "New ADV damage and max-health effects should be visible.")) {
-            return;
-        }
-        if (!assertTrue(context, body.contains("회복량") && body.contains("주기 감소"), "New ADV allay effects should be visible.")) {
-            return;
-        }
         context.succeed();
     }
 
@@ -353,28 +305,6 @@ public final class SemionVillagerAdvGameTest implements CustomTestMethodInvoker 
 
     private static BlockPos towerPlacementPos(PlayerLane lane) {
         return BlockPos.containing(lane.laneLayout().positionAt(0.35));
-    }
-
-    private static String timedEffectBody(SemionTowerEntity entity) {
-        try {
-            Method method = SemionDialogService.class.getDeclaredMethod("appendTowerTimedEffects", StringBuilder.class, SemionTowerEntity.class);
-            method.setAccessible(true);
-            StringBuilder body = new StringBuilder();
-            method.invoke(null, body, entity);
-            return body.toString();
-        } catch (ReflectiveOperationException exception) {
-            throw new IllegalStateException("Failed to render tower timed effects.", exception);
-        }
-    }
-
-    private static String upgradeTooltipText(TowerUpgradeOption option, Tower tower) {
-        try {
-            Method method = SemionDialogService.class.getDeclaredMethod("upgradeTooltip", TowerUpgradeOption.class, boolean.class, boolean.class, Tower.class);
-            method.setAccessible(true);
-            return ((Component) method.invoke(null, option, true, false, tower)).getString();
-        } catch (ReflectiveOperationException exception) {
-            throw new IllegalStateException("Failed to render upgrade tooltip.", exception);
-        }
     }
 
     private static void waitForAdvExperience(

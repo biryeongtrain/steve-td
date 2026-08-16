@@ -10,9 +10,12 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import kim.biryeong.semiontd.config.SemionConfigLoader.LoadedConfigs;
 import kim.biryeong.semiontd.rating.RatingConfig;
+import kim.biryeong.semiontd.tower.army.ArmyBalance;
 import kim.biryeong.semiontd.tower.end.EndTowers;
+import kim.biryeong.semiontd.tower.hero.HeroWeapon;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
 import kim.biryeong.semiontd.tower.illager.IllagerTowers;
 import kim.biryeong.semiontd.tower.legion.LegionTowers;
@@ -20,6 +23,7 @@ import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
 import kim.biryeong.semiontd.trait.TraitSelectionConfig;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
+import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -77,6 +81,68 @@ final class SemionConfigLoaderTest {
 
         assertTrue(Files.exists(tempDir.resolve("web_integration.json")));
         assertFalse(configs.webIntegration().enabled());
+    }
+
+    @Test
+    void jobAvailabilityIsCreatedSavedAndReloaded() {
+        LoadedConfigs defaults = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+        ResourceLocation disabledJob = ResourceLocation.fromNamespaceAndPath("semion-td", "nether");
+        JobAvailabilityConfig updated = defaults.jobAvailability().withEnabled(disabledJob, false);
+
+        assertTrue(Files.exists(tempDir.resolve("jobs.json")));
+        assertTrue(SemionConfigLoader.saveJobAvailability(tempDir, updated, LoggerFactory.getLogger("test")));
+
+        LoadedConfigs reloaded = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+        assertEquals(updated, reloaded.jobAvailability());
+        assertFalse(reloaded.jobAvailability().isEnabled(disabledJob));
+    }
+
+    @Test
+    void invalidJobAvailabilityRetainsLastKnownGood() throws Exception {
+        ResourceLocation disabledJob = ResourceLocation.fromNamespaceAndPath("semion-td", "nether");
+        JobAvailabilityConfig lastKnownGood = JobAvailabilityConfig.defaultConfig()
+                .withEnabled(disabledJob, false);
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("jobs.json"), """
+                {
+                  "disabledJobs": ["invalid job id"]
+                }
+                """);
+
+        LoadedConfigs configs = SemionConfigLoader.load(
+                tempDir,
+                LoggerFactory.getLogger("test"),
+                TowerBalanceConfig.defaultConfig(),
+                lastKnownGood
+        );
+
+        assertEquals(lastKnownGood, configs.jobAvailability());
+    }
+
+    @Test
+    void jobAvailabilityPreservesUnknownValidIds() throws Exception {
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("jobs.json"), """
+                {
+                  "disabledJobs": ["removed-mod:old_job"]
+                }
+                """);
+
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+
+        assertEquals(Set.of("removed-mod:old_job"), configs.jobAvailability().disabledJobs());
+    }
+
+    @Test
+    void failedJobAvailabilitySaveReturnsFalse() throws Exception {
+        Path fileInsteadOfDirectory = tempDir.resolve("not-a-directory");
+        Files.writeString(fileInsteadOfDirectory, "occupied");
+
+        assertFalse(SemionConfigLoader.saveJobAvailability(
+                fileInsteadOfDirectory,
+                JobAvailabilityConfig.defaultConfig(),
+                LoggerFactory.getLogger("test")
+        ));
     }
 
     @Test
@@ -299,6 +365,41 @@ final class SemionConfigLoaderTest {
     }
 
     @Test
+    void invalidArmyThresholdOrderRetainsLastKnownGoodBalance() throws Exception {
+        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>(defaults.abilities());
+        LinkedHashMap<String, Double> army = new LinkedHashMap<>(abilities.get(ArmyBalance.CONFIG_ID));
+        army.put("corporalAttackMultiplier", 0.70);
+        abilities.put(ArmyBalance.CONFIG_ID, army);
+        TowerBalanceConfig lastKnownGood = new TowerBalanceConfig(
+                defaults.towers(), defaults.upgradeCosts(), abilities
+        );
+        lastKnownGood.validateForRuntime();
+
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("tower_balance.json"), """
+                {
+                  "schemaVersion": 2,
+                  "towers": {},
+                  "upgradeCosts": {},
+                  "abilities": {
+                    "army_global": {
+                      "corporalService": 6,
+                      "sergeantService": 5
+                    }
+                  }
+                }
+                """);
+
+        TowerBalanceConfig loaded = SemionConfigLoader.load(
+                tempDir, LoggerFactory.getLogger("test"), lastKnownGood
+        ).towerBalance();
+        assertEquals(ArmyBalance.CORPORAL_SERVICE,
+                loaded.ability(ArmyBalance.CONFIG_ID, "corporalService", -1.0));
+        assertEquals(0.70, loaded.ability(ArmyBalance.CONFIG_ID, "corporalAttackMultiplier", -1.0));
+    }
+
+    @Test
     void loadBackfillsMissingWarlockAbilitiesWithoutOverwritingConfiguredValues() throws Exception {
         Files.createDirectories(tempDir);
         Files.writeString(tempDir.resolve("tower_balance.json"), """
@@ -481,6 +582,30 @@ final class SemionConfigLoaderTest {
         String repaired = Files.readString(tempDir.resolve("tower_balance.json"));
         assertFalse(repaired.contains("\"transferTicks\": -1.0"));
         assertTrue(repaired.contains("\"roundDamageRatio\": 1.75"));
+    }
+
+    @Test
+    void loadPreservesSignedHeroWeaponAggro() throws Exception {
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("tower_balance.json"), """
+            {
+              "abilities": {
+                "hero_party_weapon_tome": {
+                  "aggroPriority": -25.0
+                }
+              }
+            }
+            """);
+
+        TowerBalanceConfig balance = SemionConfigLoader.load(
+                tempDir,
+                LoggerFactory.getLogger("test"),
+                TowerBalanceConfig.defaultConfig()
+        ).towerBalance();
+
+        assertEquals(-25.0, balance.ability(HeroWeapon.TOME.configId(), "aggroPriority", 0.0), 0.0001);
+        assertTrue(Files.readString(tempDir.resolve("tower_balance.json"))
+                .contains("\"aggroPriority\": -25.0"));
     }
 
     @Test

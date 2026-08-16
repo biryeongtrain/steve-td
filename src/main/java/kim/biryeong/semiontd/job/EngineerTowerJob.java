@@ -17,18 +17,11 @@ public final class EngineerTowerJob extends SemionJob {
         super(
                 ID,
                 Component.literal("기술자"),
-                List.of(SemionText.mini("<gray>구리 골렘이 <aqua>발판</aqua>을 밟아 <red>레드스톤</red> <yellow>함정</yellow>을 작동시키는 빌더입니다.</gray>"))
-        );
-    }
-
-    @Override
-    public List<Component> description() {
-        return List.of(
-                SemionText.mini("<gray>실제 바닐라 <red>레드스톤</red> 회로로 함정에 <gold>전력</gold>을 공급합니다.</gray>"),
-                SemionText.mini("<gray>구리 골렘은 가장 높은 우선순위의 <aqua>발판</aqua>부터 찾아갑니다.</gray>"),
-                SemionText.mini("<gray>회로는 슬롯을 쓰지 않지만 <aqua>발판</aqua>과 <yellow>함정</yellow>은 슬롯 하나를 사용합니다.</gray>"),
-                SemionText.mini("<gray><red>레드스톤</red>과 중계기 합계는 화면 위 보스바에서 확인합니다.</gray>"),
-                SemionText.mini("<red>강제 최종방어에서는 모든 회로와 함정이 정지합니다.</red>")
+                List.of(
+                        SemionText.mini("<green><bold>시작</bold></green> <gray>구리 골렘과 발판을 놓고 함정까지 레드스톤으로 연결하세요.</gray>"),
+                        SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>골렘이 밟을 발판의 위치와 등급으로 함정 발동 순서를 정하세요.</gray>"),
+                        SemionText.mini("<yellow><bold>주의</bold></yellow> <gray>회로가 끊기면 함정이 멈추며 강제 최종 방어에서도 작동하지 않습니다.</gray>")
+                )
         );
     }
 

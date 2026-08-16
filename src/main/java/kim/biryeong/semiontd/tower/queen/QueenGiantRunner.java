@@ -2,7 +2,6 @@ package kim.biryeong.semiontd.tower.queen;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -137,12 +136,9 @@ final class QueenGiantRunner {
     }
 
     private static List<Vec3> finalDefensePath(PlayerLane lane) {
-        Vec3 boss = lane.laneLayout().bossPosition();
-        return lane.laneLayout().finalDefenseTowerSlots().stream()
-                .map(slot -> new Vec3(slot.x() + 0.5, boss.y, slot.z() + 0.5))
-                .max(Comparator.comparingDouble(position -> position.distanceToSqr(boss)))
-                .map(start -> List.of(start, boss))
-                .orElseGet(() -> List.of(boss.add(6.0, 0.0, 0.0), boss));
+        ArrayList<Vec3> path = new ArrayList<>(lane.finalDefensePathLane().laneLayout().pathPoints());
+        Collections.reverse(path);
+        return path;
     }
 
     private static List<Vec3> reverseLanePath(PlayerLane lane) {

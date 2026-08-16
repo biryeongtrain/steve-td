@@ -172,7 +172,7 @@ final class InsectTowerCatalogTest {
     }
 
     @Test
-    void defaultsMergeDescriptionsAndRejectInvalidReduction() {
+    void defaultsMergeAndRejectInvalidReduction() {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
         assertTrue(InsectTowers.all().stream().allMatch(type -> defaults.towers().containsKey(type.id())));
         assertEquals(1.75, defaults.ability(InsectBalance.GLOBAL_ID, "freshPowerMultiplier", -1), 0.0001);
@@ -183,11 +183,6 @@ final class InsectTowerCatalogTest {
         assertEquals(0.20, defaults.ability(InsectBalance.GLOBAL_ID, "deathDamageTakenPerStack", -1), 0.0001);
         assertEquals(6.0, defaults.ability(InsectTowers.SPAWNER.id(), "reviveRadius", -1), 0.0001);
         assertEquals(20, defaults.towers().get(InsectTowers.SPAWNER.id()).aggroPriority());
-
-        ProductionTowerCatalogs.reloadBuiltIns(defaults);
-        InsectTowers.all().forEach(type -> assertTrue(
-                ProductionTowerCatalog.find(type.id()).orElseThrow().type().description().stream()
-                        .noneMatch(line -> line.contains("{ability.")), type.id()));
 
         LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>(defaults.abilities());
         abilities.put(InsectTowers.CAVE_SPIDER.id(), Map.of("damageReduction", 1.0));

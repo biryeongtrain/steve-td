@@ -22,8 +22,11 @@ public enum BuilderPalette {
     QUEEN(0xC62828, 0xFFD54F, "minecraft:damage_indicator", "minecraft:totem_of_undying"),
     ENGINEER(0xE53935, 0x39E7FF, "minecraft:damage_indicator", "minecraft:electric_spark"),
     MAGE(0x5E35B1, 0x4DD0E1, "minecraft:witch", "minecraft:electric_spark"),
+    HERO_PARTY(0x3B82F6, 0xF4D35E, "minecraft:enchant", "minecraft:wax_on"),
     INSECT(0xAEEA00, 0x7E57C2, "minecraft:infested", "minecraft:witch"),
     PLANT(0x43A047, 0xF48FB1, "minecraft:spore_blossom_air", "minecraft:cherry_leaves"),
+    ARMY(0x556B2F, 0xD4AF37, "minecraft:smoke", "minecraft:crit"),
+    THUNDER(0x38BDF8, 0xFACC15, "minecraft:electric_spark", "minecraft:end_rod"),
     DEFAULT(0xE0E0E0, 0xFFFFFF, "minecraft:end_rod", "minecraft:crit");
 
     private final DustParticleOptions rayParticle;

@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import kim.biryeong.semiontd.entity.monster.DamageType;
+import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.GridPosition;
@@ -14,8 +15,11 @@ import kim.biryeong.semiontd.tower.ProductionTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
 
 public abstract class HeroPartyTower extends ProductionTower {
+    private PlayerLane currentLane;
+
     protected HeroPartyTower(
             TowerType type,
             UUID ownerPlayer,
@@ -29,6 +33,7 @@ public abstract class HeroPartyTower extends ProductionTower {
 
     @Override
     public void onPlaced(PlayerLane lane) {
+        currentLane = lane;
         applyPartyMaxHealth(false);
         super.onPlaced(lane);
     }
@@ -49,6 +54,9 @@ public abstract class HeroPartyTower extends ProductionTower {
     public void onRemoved(PlayerLane lane) {
         HeroPlayerVisuals.remove(this);
         super.onRemoved(lane);
+        if (currentLane == lane) {
+            currentLane = null;
+        }
     }
 
     @Override
@@ -74,12 +82,25 @@ public abstract class HeroPartyTower extends ProductionTower {
     }
 
     @Override
+    public double modifyIncomingDamage(
+            SemionTowerEntity towerEntity,
+            DamageSource damageSource,
+            double damageAmount
+    ) {
+        return damageAmount * (1.0 - focusFireDamageReduction(focusFireAttackerCount(towerEntity)));
+    }
+
+    @Override
     public List<String> runtimeDetailLines() {
         HeroPartyState state = state();
+        int focusFireAttackers = focusFireAttackerCount(towerEntity(currentLane, this));
         return List.of(
                 "모험 점수: " + state.adventurePoints(),
                 "파티 공격/회복: +" + oneDecimal((HeroPartyBalance.partyDamageMultiplier(state.adventurePoints()) - 1.0) * 100.0) + "%",
-                "파티 최대 체력: +" + oneDecimal((HeroPartyBalance.partyHealthMultiplier(state.adventurePoints()) - 1.0) * 100.0) + "%"
+                "파티 최대 체력: +" + oneDecimal((HeroPartyBalance.partyHealthMultiplier(state.adventurePoints()) - 1.0) * 100.0) + "%",
+                "집중 방어: " + focusFireAttackers + "기 / 피해 감소 "
+                        + oneDecimal(focusFireDamageReduction(focusFireAttackers) * 100.0) + "% (최대 "
+                        + oneDecimal(HeroPartyBalance.focusFireReductionCap() * 100.0) + "%)"
         );
     }
 
@@ -94,6 +115,12 @@ public abstract class HeroPartyTower extends ProductionTower {
 
     protected double bonusFlatHealth() {
         return 0.0;
+    }
+
+    @Override
+    public double effectBaseMaxHealth() {
+        return type().maxHealth() * HeroPartyBalance.partyHealthMultiplier(state().adventurePoints())
+                + Math.max(0.0, bonusFlatHealth());
     }
 
     protected final List<SemionTowerEntity> partyEntities(SemionTowerEntity source) {
@@ -127,6 +154,11 @@ public abstract class HeroPartyTower extends ProductionTower {
                 : source.getServer().getPlayerList().getPlayer(ownerPlayer());
     }
 
+    protected static boolean isIncomeTarget(SemionMonsterEntity target) {
+        Monster monster = target == null ? null : target.runtimeMonster();
+        return monster != null && (monster.ownerPlayer().isPresent() || monster.senderTeam().isPresent());
+    }
+
     protected final SemionTowerEntity towerEntity(PlayerLane lane, Tower tower) {
         if (lane == null || lane.arenaWorld() == null || !(tower instanceof HeroPartyTower heroTower)) {
             return null;
@@ -137,12 +169,39 @@ public abstract class HeroPartyTower extends ProductionTower {
                 : null;
     }
 
+    static double focusFireDamageReduction(int attackerCount) {
+        int extraAttackers = Math.max(0, attackerCount - 1);
+        return Math.min(
+                HeroPartyBalance.focusFireReductionCap(),
+                extraAttackers * HeroPartyBalance.focusFireReductionPerExtraAttacker()
+        );
+    }
+
+    private int focusFireAttackerCount(SemionTowerEntity towerEntity) {
+        if (towerEntity == null || currentLane == null || currentLane.arenaWorld() != towerEntity.level()) {
+            return 0;
+        }
+        int count = 0;
+        for (Monster monster : List.copyOf(currentLane.activeMonsters())) {
+            if (!monster.hasMinecraftEntity()) {
+                continue;
+            }
+            if (!(currentLane.arenaWorld().getEntity(monster.minecraftEntityId())
+                    instanceof SemionMonsterEntity attacker)
+                    || !attacker.isAlive()
+                    || attacker.isRemoved()
+                    || attacker.getTarget() != towerEntity) {
+                continue;
+            }
+            count++;
+        }
+        return count;
+    }
+
     private void applyPartyMaxHealth(boolean preserveRatio) {
         double previousMaximum = Math.max(1.0, currentMaxHealth());
         double ratio = preserveRatio ? health() / previousMaximum : 1.0;
-        double next = type().maxHealth() * HeroPartyBalance.partyHealthMultiplier(state().adventurePoints())
-                + Math.max(0.0, bonusFlatHealth());
-        syncMaxHealth(next, false);
+        syncMaxHealth(effectBaseMaxHealth(), false);
         syncHealth(currentMaxHealth() * Math.max(0.0, Math.min(1.0, ratio)));
     }
 }

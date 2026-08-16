@@ -172,8 +172,12 @@ public final class AtlantisIntegrationGameTest {
     public void finalDefenseRelaysZonesOntoTheApproachKeepingTheSameCount(GameTestHelper context) {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
         AtlantisStates.clearAll();
+        PlayerLane lane = testLane(context, OWNER, 1, 0);
+        PlayerLane finalDefenseLane = testFinalDefenseLane(context);
+        TeamLaneGroup group = new TeamLaneGroup(TeamId.RED, BossMonster.defaultBoss(TeamId.RED));
+        group.addLane(lane);
+        group.addLane(finalDefenseLane);
         try {
-            PlayerLane lane = testLane(context, OWNER, 1, 0);
             AtlantisTower turtle = atlantisTower(AtlantisTowers.TURTLE_T3, OWNER, position(context, 3, 2, 8));
             lane.addTower(turtle);
             int before = AtlantisStates.zoneCount(OWNER);
@@ -187,14 +191,17 @@ public final class AtlantisIntegrationGameTest {
 
             double line = kim.biryeong.semiontd.entity.monster.Monster.FINAL_DEFENSE_PROGRESS;
             for (PressureZone zone : zones) {
-                double progress = lane.laneLayout().progressAt(zone.center());
+                double progress = finalDefenseLane.laneLayout().progressAt(zone.center());
                 require(progress <= line + 0.001,
                         "Final defense zones must sit on the approach to the line, got " + progress);
                 require(progress > 0.0, "Final defense zones must stay on the path, got " + progress);
             }
-            double leading = lane.laneLayout().progressAt(zones.get(0).center());
+            double leading = finalDefenseLane.laneLayout().progressAt(zones.get(0).center());
             require(Math.abs(leading - line) < 0.001,
                     "The leading zone should sit on the final defense line, got " + leading);
+            Vec3 boss = finalDefenseLane.laneLayout().bossPosition();
+            require(zones.getLast().center().distanceToSqr(boss) > zones.getFirst().center().distanceToSqr(boss),
+                    "Final defense zones must extend away from the boss along lane 5.");
 
             // The round reset clears the final defense flag, so zones return to the forward layout.
             turtle.resetForRound(lane);
@@ -206,6 +213,7 @@ public final class AtlantisIntegrationGameTest {
                     "After the reset zones must return ahead of the turtle, got " + resetLeading);
             context.succeed();
         } finally {
+            group.closeRuntime();
             AtlantisStates.clearAll();
         }
     }
@@ -425,6 +433,25 @@ public final class AtlantisIntegrationGameTest {
                 List.of(position(context, xOffset + 7, 2, 11))
         );
         return new PlayerLane(TeamId.RED, laneId, owner, context.getLevel(), layout);
+    }
+
+    private static PlayerLane testFinalDefenseLane(GameTestHelper context) {
+        Vec3 spawn = Vec3.atCenterOf(context.absolutePos(new BlockPos(5, 2, 40)));
+        Vec3 boss = Vec3.atCenterOf(context.absolutePos(new BlockPos(5, 2, 13)));
+        LaneRegionLayout layout = new LaneRegionLayout(
+                5,
+                spawn,
+                BlockBounds.of(BlockPos.containing(spawn), BlockPos.containing(spawn)),
+                List.of(Vec3.atCenterOf(context.absolutePos(new BlockPos(5, 2, 20)))),
+                boss,
+                BlockBounds.of(
+                        context.absolutePos(new BlockPos(0, 1, 0)),
+                        context.absolutePos(new BlockPos(10, 5, 40))
+                ),
+                List.of(position(context, 7, 2, 11)),
+                0
+        );
+        return new PlayerLane(TeamId.RED, 5, OTHER, context.getLevel(), layout);
     }
 
     private static GridPosition position(GameTestHelper context, int x, int y, int z) {

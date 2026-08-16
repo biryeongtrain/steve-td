@@ -91,6 +91,10 @@ public final class PlantIntegrationGameTest {
                     "Plant environment ticks must not pay continuous income.");
 
             lane.moveTowersToFinalDefense();
+            require(PlantSoilStates.soilAt(owner, dandelion.position()) == null,
+                    "The final-defense slot must be bare ground for this regression test.");
+            require(dandelion.bloomBonus() > 0.0,
+                    "A plant at final defense must keep its family terrain effect.");
             new PlantTowerJob().onRoundEnded(new JobContext(game, game.players().get(owner)), 1);
             require(game.players().get(owner).economy().mineral() == beforeSettlement + 3,
                     "A surviving T1 dandelion must pay three diamonds exactly once at settlement.");
@@ -150,15 +154,15 @@ public final class PlantIntegrationGameTest {
             mine.tick(lane);
 
             require(!lane.towers().contains(mine), "A triggered mine must remove itself.");
-            requireClose(904.625, first.health(), "The trigger target must take the tuned T1 explosion.");
-            requireClose(904.625, second.health(), "A second target inside the blast must take splash damage.");
+            requireClose(900.6875, first.health(), "The trigger target must take the tuned T1 explosion.");
+            requireClose(900.6875, second.health(), "A second target inside the blast must take splash damage.");
             requireClose(1_000.0, outside.health(), "A target outside the blast must remain unharmed.");
             SemionMonsterEntity firstEntity = entity(context, first);
             requireClose(0.35, firstEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION),
                     "The mine must apply its tuned slow.");
             requireClose(1.0, firstEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION),
                     "The mine must disable attacks.");
-            requireClose(190.75, mine.roundMagicDamageDealt(), "Mine splash damage must be attributed as magic damage.");
+            requireClose(198.625, mine.roundMagicDamageDealt(), "Mine splash damage must be attributed as magic damage.");
             context.succeed();
         } catch (RuntimeException | Error failure) {
             failure.printStackTrace();
@@ -192,8 +196,8 @@ public final class PlantIntegrationGameTest {
             context.runAfterDelay(delay, () -> {
                 try {
                     PlantSoilEnvironment.tick(lane);
-                    requireClose(995.0, target.health(), "Desert terrain must deal 0.5% max-health magic damage.");
-                    requireClose(5.0, source.roundMagicDamageDealt(),
+                    requireClose(992.5, target.health(), "Desert terrain must deal 0.75% max-health magic damage.");
+                    requireClose(7.5, source.roundMagicDamageDealt(),
                             "Desert terrain damage must be credited to its terraformer.");
                     require(owner.equals(target.lastHitPlayerId().orElse(null))
                                     && target.lastHitSourceKind() == KillSourceKind.TOWER,

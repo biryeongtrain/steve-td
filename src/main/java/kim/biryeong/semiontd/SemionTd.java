@@ -29,6 +29,7 @@ import kim.biryeong.semiontd.tower.area.AreaEffectService;
 import kim.biryeong.semiontd.tower.area.AreaVfxStyleRegistryImpl;
 import kim.biryeong.semiontd.tower.area.BuiltinAreaVfxStyles;
 import kim.biryeong.semiontd.tower.atlantis.AtlantisVfx;
+import kim.biryeong.semiontd.tower.thunder.ThunderVfx;
 import kim.biryeong.semiontd.tip.SemionTipService;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
 import kim.biryeong.semiontd.ui.SemionHotbarService;
@@ -81,6 +82,7 @@ public class SemionTd implements ModInitializer {
         SemionSkyboxResourcePack.register(skyboxService::library, LOGGER);
         gameManager.configureWebIntegration(configs.webIntegration());
         gameManager.configureCombatSpeed(configs.combatSpeed());
+        gameManager.configureJobAvailability(configs.jobAvailability());
         gameManager.configure(
                 configs.economy(),
                 configs.waves(),
@@ -103,6 +105,7 @@ public class SemionTd implements ModInitializer {
         AreaVfxStyleRegistryImpl areaVfxStyles = new AreaVfxStyleRegistryImpl();
         BuiltinAreaVfxStyles.register(areaVfxStyles);
         AtlantisVfx.register(areaVfxStyles);
+        ThunderVfx.register(areaVfxStyles);
         SemionTdApi.initializeInternal(new AreaEffectService(gameManager), areaVfxStyles);
         TowerVfxService.initialize(configs.vfx(), gameManager, areaVfxStyles);
         ServerLifecycleEvents.SERVER_STARTING.register(server -> areaVfxStyles.freeze());

@@ -6,6 +6,7 @@ public final class EngineerBalance {
     public static final String GLOBAL_ID = "engineer_global";
 
     public static final int ACTIVE_TICKS = 60;
+    public static final int DOOR_ACTIVE_TICKS = 120;
     public static final int PLATE_COOLDOWN_TICKS = 100;
     public static final double GOLEM_MOVE_SPEED = 0.18;
     public static final int PISTON_IMMUNITY_TICKS = 300;
@@ -14,6 +15,7 @@ public final class EngineerBalance {
     public static final int MAX_REDSTONE = 35;
     public static final int MAX_PLATES = 4;
     public static final int MAX_PISTONS = 3;
+    public static final double PLATE_DAMAGE_BONUS_PER_TIER = 0.10;
     public static final double DISPENSER_DAMAGE_PER_PLATE_BLOCK = 0.10;
     public static final int DISPENSER_MAX_PLATE_DISTANCE = 10;
     public static final int ACTIVE_VFX_INTERVAL_TICKS = 20;
@@ -24,6 +26,10 @@ public final class EngineerBalance {
 
     public static int activeTicks() {
         return TowerBalanceRuntime.abilityTicks(GLOBAL_ID, "activeTicks", ACTIVE_TICKS);
+    }
+
+    public static int doorActiveTicks() {
+        return TowerBalanceRuntime.abilityTicks(GLOBAL_ID, "doorActiveTicks", DOOR_ACTIVE_TICKS);
     }
 
     public static int plateCooldownTicks() {
@@ -89,5 +95,13 @@ public final class EngineerBalance {
                         "dispenserDamagePerPlateBlock",
                         DISPENSER_DAMAGE_PER_PLATE_BLOCK
                 );
+    }
+
+    public static double plateDamageMultiplier(EngineerTowers.PlateKind kind) {
+        return 1.0 + (kind == null ? 0 : kind.ordinal()) * TowerBalanceRuntime.ability(
+                GLOBAL_ID,
+                "plateDamageBonusPerTier",
+                PLATE_DAMAGE_BONUS_PER_TIER
+        );
     }
 }

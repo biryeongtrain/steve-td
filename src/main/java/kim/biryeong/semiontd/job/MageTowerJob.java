@@ -22,19 +22,11 @@ public final class MageTowerJob extends SemionJob {
         super(
                 ID,
                 Component.literal("마도사 빌더"),
-                List.of(SemionText.mini("<gray><aqua>마나</aqua>를 모아 주문과 <light_purple>예언</light_purple>으로 인컴을 요격하는 빌더입니다.</gray>"))
-        );
-    }
-
-    @Override
-    public List<Component> description() {
-        return List.of(
-                SemionText.mini("<gray>준비 단계에 주문을 선택하면 마나가 있는 동안 매 웨이브 반복 시전합니다. 예언만 라운드 종료 시 초기화됩니다.</gray>"),
-                SemionText.mini("<gray>현재 <aqua>마나</aqua>는 화면 위 보스바에서 확인합니다.</gray>"),
-                SemionText.mini("<gray>라운드마다 살아 있는 마법핵은 <aqua>50</aqua>, 쉬는 마법사는 <aqua>8</aqua>, 예언가는 <aqua>15</aqua> 마나를 생산합니다.</gray>"),
-                SemionText.mini("<gray>정확한 <light_purple>예언</light_purple>은 인컴을 즉사시키고 많은 <aqua>마나</aqua>를 충전합니다.</gray>"),
-                SemionText.mini("<gold>초급→중급→대마법사</gold><gray> 순으로 자동 진화하며 시전 횟수가 쌓일수록 주문 피해가 강해집니다.</gray>"),
-                SemionText.mini("<gold>고차원 주문</gold><gray>은 비싸지만 라인 전체를 공격할 수 있습니다.</gray>")
+                List.of(
+                        SemionText.mini("<green><bold>시작</bold></green> <gray>마법핵을 먼저 놓고 마법사나 예언가를 배치하세요.</gray>"),
+                        SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>준비 단계에 타워를 우클릭해 주문이나 다음 웨이브의 인컴 예언을 고르세요.</gray>"),
+                        SemionText.mini("<yellow><bold>주의</bold></yellow> <gray>두 타워는 기본 공격을 하지 않고 마나가 없으면 주문도 멈춥니다.</gray>")
+                )
         );
     }
 

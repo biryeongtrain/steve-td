@@ -1,12 +1,7 @@
 package kim.biryeong.semiontd.job;
 
-import static kim.biryeong.semiontd.tower.warlock.WarlockFormatting.warningText;
-import static kim.biryeong.semiontd.tower.warlock.WarlockFormatting.warlockText;
-
-import java.util.ArrayList;
 import java.util.List;
 import kim.biryeong.semiontd.SemionTd;
-import kim.biryeong.semiontd.summon.SummonMonsterType;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
@@ -22,24 +17,11 @@ public final class WarlockTowerJob extends SemionJob {
                 ID,
                 Component.literal("흑마법사"),
                 List.of(
-                        SemionText.mini("<gray>아군 타워를 희생해 " + warlockText("흑마법사") + " 타워를 키우는 빌더입니다.</gray>")
+                        SemionText.mini("<green><bold>시작</bold></green> <gray>흑마법사를 먼저 놓고, 희생시킬 아군 타워를 주변에 배치하세요.</gray>"),
+                        SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>아군을 흡수해 흑마법사의 체력과 공격 능력을 키우세요.</gray>"),
+                        SemionText.mini("<yellow><bold>주의</bold></yellow> <gray>흑마법사는 라인마다 1기만 운용할 수 있습니다.</gray>")
                 )
         );
-    }
-
-    @Override
-    public List<Component> description() {
-        ArrayList<Component> lines = new ArrayList<>();
-        lines.add(SemionText.mini("<gray>아군 타워를 희생해 " + warlockText("흑마법사") + " 타워를 키우는 빌더입니다.</gray>"));
-        lines.add(SemionText.mini("<gray>능력치는 높아질수록 증가 효율이 감소합니다.</gray>"));
-        if (WarlockTowers.awakeningEnabled()) {
-            lines.add(SemionText.mini("<gray>한 라운드에 충분한 타워를 흡수하고 " + warlockText("흑마법사") + "만 생존한 채 체력이 낮아지면 " + warlockText("각성") + "합니다.</gray>"));
-            lines.add(SemionText.mini("<gray>원거리는 회복·재생, 근거리는 피해·이동 속도를 얻으며 각성은 라운드 종료 시 해제됩니다.</gray>"));
-        } else {
-            lines.add(SemionText.mini(warningText("현재 각성은 비활성화 상태입니다.")));
-        }
-        lines.add(SemionText.mini(warningText(warlockText("흑마법사") + " 타워는 한 라인에 하나만 운용할 수 있습니다.")));
-        return List.copyOf(lines);
     }
 
     @Override

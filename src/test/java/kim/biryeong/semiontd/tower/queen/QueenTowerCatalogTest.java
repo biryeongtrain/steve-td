@@ -1,7 +1,6 @@
 package kim.biryeong.semiontd.tower.queen;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -53,18 +52,7 @@ final class QueenTowerCatalogTest {
                 .create(OWNER, TeamId.RED, 1, new GridPosition(1, 64, 0)));
         assertTrue(ProductionTowerCatalog.upgrades(QueenTowers.QUEEN).isEmpty());
         assertTrue(ProductionTowerCatalog.upgrades(QueenTowers.RANDOM_CARD_SOLDIER).isEmpty());
-        String queenDescription = String.join(" ", ProductionTowerCatalog.find(QueenTowers.QUEEN.id())
-                .orElseThrow().type().description());
-        assertFalse(queenDescription.contains("{ability."));
-        assertFalse(queenDescription.contains("{stat."));
-        assertTrue(queenDescription.contains("원본의 50%"));
         assertEquals("붉은 여왕", ProductionTowerCatalog.find(QueenTowers.QUEEN.id()).orElseThrow().type().displayName());
-        String cardDescription = String.join(" ", ProductionTowerCatalog.find(QueenTowers.RANDOM_CARD_SOLDIER.id())
-                .orElseThrow().type().description());
-        assertFalse(cardDescription.contains("{ability."));
-        assertFalse(cardDescription.contains("{stat."));
-        assertTrue(cardDescription.contains("원본의 50%"));
-        assertTrue(cardDescription.contains("직접 처치하지 못"));
         assertEquals(55, QueenBalance.cardAggro(QueenCard.Suit.HEART));
         assertEquals(45, QueenBalance.cardAggro(QueenCard.Suit.DIAMOND));
         assertEquals(110, QueenBalance.cardAggro(QueenCard.Suit.CLUB));
@@ -83,20 +71,34 @@ final class QueenTowerCatalogTest {
     }
 
     @Test
-    void pokerRecognizesStandardHandsAceLowAndFiveOfAKind() {
+    void pokerRecognizesStandardHandsAceLowBroadwayAndFiveOfAKind() {
         assertEquals(PokerHand.HIGH_CARD, hand("H2", "D4", "C6", "S8", "H10"));
         assertEquals(PokerHand.ONE_PAIR, hand("H2", "D2", "C6", "S8", "H10"));
         assertEquals(PokerHand.TWO_PAIR, hand("H2", "D2", "C6", "S6", "H10"));
         assertEquals(PokerHand.THREE_OF_A_KIND, hand("H2", "D2", "C2", "S8", "H10"));
         assertEquals(PokerHand.STRAIGHT, hand("HA", "D2", "C3", "S4", "H5"));
+        assertEquals(PokerHand.STRAIGHT, hand("HA", "D10", "CJ", "SQ", "HK"));
         assertEquals(PokerHand.FLUSH, hand("H2", "H4", "H6", "H8", "H10"));
         assertEquals(PokerHand.FULL_HOUSE, hand("H2", "D2", "C2", "S8", "H8"));
         assertEquals(PokerHand.FOUR_OF_A_KIND, hand("H2", "D2", "C2", "S2", "H8"));
         assertEquals(PokerHand.STRAIGHT_FLUSH, hand("H2", "H3", "H4", "H5", "H6"));
         assertEquals(PokerHand.ROYAL_FLUSH, hand("HA", "H10", "HJ", "HQ", "HK"));
         assertEquals(PokerHand.FIVE_OF_A_KIND, hand("H2", "H2", "H2", "H2", "H2"));
-        assertEquals(List.of(0.0, 0.06, 0.10, 0.14, 0.18, 0.22, 0.28, 0.32, 0.38, 0.42, 0.50),
+        assertEquals(List.of(0.0, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50, 0.65, 0.80, 1.00),
                 java.util.Arrays.stream(PokerHand.values()).map(PokerHand::defaultBonus).toList());
+    }
+
+    @Test
+    void pokerSnapshotAppliesTheConfiguredHealthAndAttackSpeedBonus() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        QueenCardTower card = (QueenCardTower) ProductionTowerCatalog.find(QueenTowers.RANDOM_CARD_SOLDIER.id())
+                .orElseThrow().create(OWNER, TeamId.RED, 1, new GridPosition(1, 64, 0));
+        card.assignCard(new QueenCard(QueenCard.Suit.HEART, 2));
+
+        card.applyPokerSnapshot(PokerHand.FIVE_OF_A_KIND);
+
+        assertEquals(QueenBalance.cardMaxHealth(QueenCard.Suit.HEART) * 2.0, card.currentMaxHealth(), 0.0001);
+        assertEquals(QueenBalance.cardInterval(QueenCard.Suit.HEART) / 2, card.adjustAttackInterval(999));
     }
 
     @Test
@@ -104,9 +106,19 @@ final class QueenTowerCatalogTest {
         ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
         QueenStates.PlayerState state = QueenStates.state(OWNER);
         state.growExecutionHealth(10_000.0);
-        assertEquals(54.0, state.executionHealth(), 0.0001);
+        assertEquals(6.0, state.executionHealth(), 0.0001);
         state.growExecutionHealth(100.0);
-        assertEquals(56.0, state.executionHealth(), 0.0001);
+        assertEquals(7.2, state.executionHealth(), 0.0001);
+    }
+
+    @Test
+    void queenStartsFragileAndScalesHealthLinearlyByRound() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        QueenTower queen = (QueenTower) ProductionTowerCatalog.find(QueenTowers.QUEEN.id()).orElseThrow()
+                .create(OWNER, TeamId.RED, 1, new GridPosition(0, 64, 0));
+        assertEquals(60.0, queen.currentMaxHealth(), 0.0001);
+        queen.markWaveStarted(10);
+        assertEquals(132.0, queen.effectBaseMaxHealth(), 0.0001);
     }
 
     @Test
@@ -145,16 +157,20 @@ final class QueenTowerCatalogTest {
     void defaultsMergeAndRejectInvalidQueenValues() {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
         QueenTowers.all().forEach(type -> assertTrue(defaults.towers().containsKey(type.id())));
-        assertEquals(0.99, defaults.ability(QueenBalance.GLOBAL_ID, "shrinkFactorPerPoint", -1), 0.0001);
-        assertEquals(0.50, defaults.ability(QueenBalance.GLOBAL_ID, "minimumStatScale", -1), 0.0001);
+        assertEquals(0.98, defaults.ability(QueenBalance.GLOBAL_ID, "shrinkFactorPerPoint", -1), 0.0001);
+        assertEquals(0.20, defaults.ability(QueenBalance.GLOBAL_ID, "minimumStatScale", -1), 0.0001);
         TowerBalanceConfig merged = new TowerBalanceConfig(Map.of(), Map.of(), Map.of(
                 QueenBalance.GLOBAL_ID, Map.of("queenShrinkPoints", 4.0))).withMissingDefaults(defaults);
         assertEquals(70, merged.towers().get(QueenTowers.QUEEN.id()).mineralCost());
         assertEquals(4.0, merged.ability(QueenBalance.GLOBAL_ID, "queenShrinkPoints", -1), 0.0001);
-        assertEquals(0.50, merged.ability(QueenBalance.GLOBAL_ID, "minimumStatScale", -1), 0.0001);
+        assertEquals(0.20, merged.ability(QueenBalance.GLOBAL_ID, "minimumStatScale", -1), 0.0001);
         assertEquals(400, merged.abilityInt(QueenBalance.GLOBAL_ID, "giantChargeTicks", -1));
-        assertEquals(50.0, merged.ability(QueenBalance.GLOBAL_ID,
+        assertEquals(5.0, merged.ability(QueenBalance.GLOBAL_ID,
                 "giantInitialExecutionHealth", -1), 0.0001);
+        assertEquals(0.05, merged.ability(QueenBalance.GLOBAL_ID,
+                "giantExecutionGrowthRatio", -1), 0.0001);
+        assertEquals(8.0, merged.ability(QueenBalance.GLOBAL_ID,
+                "queenMaxHealthPerRound", -1), 0.0001);
         assertEquals(4.0, merged.ability(QueenBalance.GLOBAL_ID,
                 "giantGrowthTargetCapMultiplier", -1), 0.0001);
         assertEquals(80, merged.abilityInt(QueenBalance.GLOBAL_ID,

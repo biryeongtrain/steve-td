@@ -7,6 +7,10 @@ public final class HeroPartyBalance {
     public static final int MAX_COMPANIONS = 4;
     public static final int MAX_WEAPON_LEVEL = 5;
     public static final int MAX_ARMOR_LEVEL = 5;
+    public static final double INCOME_DAMAGE_BONUS = 0.35;
+    public static final int WEAPON_ATTACK_INTERVAL_REDUCTION_PER_LEVEL = 1;
+    public static final double FOCUS_FIRE_REDUCTION_PER_EXTRA_ATTACKER = 0.08;
+    public static final double FOCUS_FIRE_REDUCTION_CAP = 0.40;
 
     private static final long[] WEAPON_UPGRADE_COSTS = {0, 80, 140, 220, 320, 450};
     private static final double[] WEAPON_MULTIPLIERS = {1.0, 1.15, 1.32, 1.50, 1.72, 2.0};
@@ -31,6 +35,30 @@ public final class HeroPartyBalance {
 
     public static int weaponAttackInterval(HeroWeapon weapon) {
         return Math.max(1, integer(weapon.configId(), "attackIntervalTicks", weapon.defaultAttackIntervalTicks()));
+    }
+
+    public static int weaponAttackInterval(HeroWeapon weapon, int level) {
+        int reduction = bounded(level, MAX_WEAPON_LEVEL) * globalInt(
+                "weaponAttackIntervalReductionPerLevel",
+                WEAPON_ATTACK_INTERVAL_REDUCTION_PER_LEVEL
+        );
+        return Math.max(1, weaponAttackInterval(weapon) - reduction);
+    }
+
+    public static double weaponMaxHealthMultiplier(HeroWeapon weapon) {
+        return positive(value(
+                weapon.configId(),
+                "maxHealthMultiplier",
+                weapon.defaultMaxHealthMultiplier()
+        ), weapon.defaultMaxHealthMultiplier());
+    }
+
+    public static int weaponAggroPriority(HeroWeapon weapon) {
+        return (int) Math.round(value(weapon.configId(), "aggroPriority", weapon.defaultAggroPriority()));
+    }
+
+    public static double weaponIncomeDamageBonus(HeroWeapon weapon) {
+        return ratio(value(weapon.configId(), "incomeDamageBonus", 0.0));
     }
 
     public static long weaponUpgradeCost(int level) {
@@ -59,15 +87,26 @@ public final class HeroPartyBalance {
     }
 
     public static double partyDamageMultiplier(int adventurePoints) {
-        return 1.0 + Math.max(0, adventurePoints) * global("adventureDamagePerPoint", 0.0025);
+        return 1.0 + Math.max(0, adventurePoints) * global("adventureDamagePerPoint", 0.0030);
     }
 
     public static double partyHealingMultiplier(int adventurePoints) {
-        return 1.0 + Math.max(0, adventurePoints) * global("adventureHealingPerPoint", 0.0025);
+        return 1.0 + Math.max(0, adventurePoints) * global("adventureHealingPerPoint", 0.0030);
     }
 
     public static double partyHealthMultiplier(int adventurePoints) {
-        return 1.0 + Math.max(0, adventurePoints) * global("adventureHealthPerPoint", 0.0035);
+        return 1.0 + Math.max(0, adventurePoints) * global("adventureHealthPerPoint", 0.0045);
+    }
+
+    public static double focusFireReductionPerExtraAttacker() {
+        return ratio(global(
+                "focusFireDamageReductionPerExtraAttacker",
+                FOCUS_FIRE_REDUCTION_PER_EXTRA_ATTACKER
+        ));
+    }
+
+    public static double focusFireReductionCap() {
+        return ratio(global("focusFireDamageReductionCap", FOCUS_FIRE_REDUCTION_CAP));
     }
 
     public static double global(String key, double fallback) {

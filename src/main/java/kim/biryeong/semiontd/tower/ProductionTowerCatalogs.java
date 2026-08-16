@@ -6,6 +6,7 @@ import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityTowerCatalogs;
 import kim.biryeong.semiontd.tower.adversary.AdversaryTowerCatalogs;
 import kim.biryeong.semiontd.tower.animal.AnimalTowerCatalogs;
+import kim.biryeong.semiontd.tower.army.ArmyTowerCatalogs;
 import kim.biryeong.semiontd.tower.atlantis.AtlantisTowerCatalogs;
 import kim.biryeong.semiontd.tower.end.EndTowerCatalogs;
 import kim.biryeong.semiontd.tower.engineer.EngineerTowerCatalogs;
@@ -20,6 +21,7 @@ import kim.biryeong.semiontd.tower.ocean.OceanTowerCatalogs;
 import kim.biryeong.semiontd.tower.queen.QueenTowerCatalogs;
 import kim.biryeong.semiontd.tower.plant.PlantTowerCatalogs;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowerCatalogs;
+import kim.biryeong.semiontd.tower.thunder.ThunderTowerCatalogs;
 import kim.biryeong.semiontd.tower.undead.UndeadTowerCatalogs;
 import kim.biryeong.semiontd.tower.villager.VillagerTowerCatalogs;
 import kim.biryeong.semiontd.tower.warlock.WarlockTowerCatalogs;
@@ -53,6 +55,8 @@ public final class ProductionTowerCatalogs {
             HeroPartyTowerCatalogs.register();
             AtlantisTowerCatalogs.register();
             PlantTowerCatalogs.register();
+            ArmyTowerCatalogs.register();
+            ThunderTowerCatalogs.register();
         }
     }
 }

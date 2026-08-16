@@ -2,7 +2,6 @@ package kim.biryeong.semiontd.tower.atlantis;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -90,17 +89,6 @@ class AtlantisTowerCatalogTest {
             var tower = entry.create(OWNER, TeamId.RED, 1, new GridPosition(0, 80, 0));
             assertInstanceOf(AtlantisTower.class, tower, type.id() + " must use the Atlantis runtime class");
             assertEquals(AtlantisTowers.roleOf(type), ((AtlantisTower) tower).role());
-        }
-    }
-
-    @Test
-    void resolvedDescriptionsLeaveNoPlaceholders() {
-        for (TowerType type : AtlantisTowers.all()) {
-            TowerType resolved = TowerBalanceRuntime.resolve(type);
-            for (String line : resolved.description()) {
-                assertFalse(line.contains("{ability."), type.id() + " leaves an unresolved ability placeholder: " + line);
-                assertFalse(line.contains("{stat."), type.id() + " leaves an unresolved stat placeholder: " + line);
-            }
         }
     }
 

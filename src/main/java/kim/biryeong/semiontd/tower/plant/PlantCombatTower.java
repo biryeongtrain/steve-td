@@ -600,22 +600,8 @@ public class PlantCombatTower extends ProductionTower {
         return PlantTowers.soilOf(type());
     }
 
-    /**
-     * Soil this tower draws its power from.
-     *
-     * <p><b>Keyed to {@link #originalPosition()}, never the live one.</b> Clearing a lane moves its
-     * towers to the central final defense, where no soil exists. Reading the live position there
-     * silently zeroes 개화·성장·반사·회복 - the builder goes inert for the part of the round that
-     * decides the game.
-     *
-     * <p>It also breaks growth outright. {@link #resetForRound(PlayerLane)} counts a growth stack
-     * before delegating, and {@code Tower.resetForRound} only restores {@code currentPosition} to
-     * the original <i>after</i> that. So a live-position lookup sees the final-defense tile and
-     * skips the stack - every round the player actually cleared, which is the successful outcome.
-     * Growth would appear to never accumulate.
-     */
     private PlantSoil standingSoil() {
-        return PlantSoilStates.soilAt(ownerPlayer(), originalPosition());
+        return deployedAtFinalDefense() ? family() : PlantSoilStates.soilAt(ownerPlayer(), position());
     }
 
     private boolean standsOn(PlantSoil soil) {

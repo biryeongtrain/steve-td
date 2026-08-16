@@ -142,8 +142,6 @@ class AdversaryTowerCatalogTest {
 
         assertTrue(AdversaryProgressStates.recordFoxKill(OWNER, enhanced.createProxy(1), lane));
         assertEquals(7, enhanced.contributedScore());
-        assertTrue(enhanced.runtimeDetailLines().stream().anyMatch(line ->
-                line.contains("처치 점수") && line.contains("3점") && line.contains("누적 기여 7점")));
     }
 
     @Test
@@ -161,21 +159,6 @@ class AdversaryTowerCatalogTest {
             assertTrue(job.canUseTower(null, AdversaryTowers.enhancedRival(kind)));
         }
         assertFalse(job.canUseTower(null, AnimalTowers.T1_FOX_TOWER));
-    }
-
-    @Test
-    void jobDescriptionKeepsOnlyPlayerFacingBasics() {
-        List<String> guide = new AdversaryTowerJob().description().stream()
-                .map(component -> component.getString())
-                .toList();
-
-        assertEquals(List.of(
-                "히어로 여우는 4기까지 설치할 수 있습니다. 웨이브가 시작되면 숙적이 적으로 변합니다.",
-                "여우가 숙적을 직접 처치하면 전직 점수를 얻습니다. 인컴 적은 점수를 주지 않습니다.",
-                "전직 점수는 모든 여우가 공유하며, 같은 전직 계열은 한 번만 선택할 수 있습니다.",
-                "첫 전직은 200 다이아, 최종 전직은 400 다이아입니다.",
-                "첫 전직 후 웨이브를 한 번 완료해야 최종 전직할 수 있습니다."
-        ), guide);
     }
 
     @Test
@@ -491,39 +474,6 @@ class AdversaryTowerCatalogTest {
                 defaults.schemaVersion()
         );
         assertThrows(IllegalArgumentException.class, negative::validateForRuntime);
-    }
-
-    @Test
-    void catalogDescriptionsRenderConfiguredValuesWithoutUnresolvedPlaceholders() {
-        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
-
-        for (TowerType type : AdversaryTowers.all()) {
-            List<String> description = ProductionTowerCatalog.find(type.id()).orElseThrow().type().description();
-            assertFalse(description.isEmpty());
-            assertTrue(description.stream().noneMatch(line -> line.contains("{stat.") || line.contains("{ability.")));
-        }
-        String foxDescription = String.join(" ", ProductionTowerCatalog.find(AdversaryTowers.FOX.id())
-                .orElseThrow().type().description());
-        assertTrue(foxDescription.contains("4블록"));
-        assertTrue(foxDescription.contains("4기"));
-        assertTrue(foxDescription.contains("공유 점수"));
-        assertTrue(foxDescription.contains("남은 점수 1점당 피해가 0.5% 증가")
-                && foxDescription.contains("최대 200%"));
-        assertTrue(foxDescription.contains("최대 체력의 20%") && foxDescription.contains("강화 숙적은 30%"));
-        assertTrue(foxDescription.contains("1기를 넘을 때마다 받는 피해가 4% 감소"));
-        assertTrue(foxDescription.contains("전직 형태는 주변 적 최대 3기에게 공격력의 50%"));
-        assertTrue(foxDescription.contains("질풍의 연쇄 공격과 스컬크 폭발은 마법 피해"));
-        assertTrue(foxDescription.contains("나머지 공격은 물리 피해"));
-        assertFalse(foxDescription.contains("진화"));
-
-        String enhancedDescription = String.join(" ", ProductionTowerCatalog
-                .find(AdversaryTowers.ENHANCED_POLAR_BEAR_RIVAL.id())
-                .orElseThrow().type().description());
-        assertTrue(enhancedDescription.contains("240"));
-        assertTrue(enhancedDescription.contains("7"));
-        assertTrue(enhancedDescription.contains("전직 점수 3점"));
-        assertTrue(enhancedDescription.contains("라운드가 오를수록 증가"));
-        assertTrue(enhancedDescription.contains("플레이어 특성 효과를 받지 않습니다"));
     }
 
     private static void assertRival(

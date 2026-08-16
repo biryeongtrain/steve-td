@@ -18,18 +18,11 @@ public final class PlantTowerJob extends SemionJob {
         super(
                 ID,
                 Component.literal("식물 빌더"),
-                List.of(SemionText.mini("<gray>지형을 바꾸고 그 위에만 식물을 심는 빌더입니다.</gray>"))
-        );
-    }
-
-    @Override
-    public List<Component> description() {
-        return List.of(
-                SemionText.mini("<gray><green>테라포밍 타워</green>로 라인 바닥을 자기 지형으로 바꾸는 빌더입니다.</gray>"),
-                SemionText.mini("<gray>전투 타워는 <green>자기 계열 지형 위에만</green> 심고, 그 지형의 효과를 받습니다.</gray>"),
-                SemionText.mini("<gray>한 칸에는 한 계열만 깔리므로 라인 자리를 나눠 써야 합니다.</gray>"),
-                SemionText.mini("<yellow>잔디 회복·성장·정산 / 균사 취약·지뢰 / 사암 공속 약화·가시 / 회백토 사거리·치명타</yellow>"),
-                SemionText.mini("<red>모든 식물은 뿌리를 내려 사거리 밖 적을 쫓아가지 않습니다.</red>")
+                List.of(
+                        SemionText.mini("<green><bold>시작</bold></green> <gray>테라포밍 타워로 바닥을 바꾼 뒤 같은 지형의 식물을 심으세요.</gray>"),
+                        SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>잔디, 균사, 사암, 회백토 중 원하는 효과에 맞춰 자리를 나누세요.</gray>"),
+                        SemionText.mini("<yellow><bold>주의</bold></yellow> <gray>식물은 자기 지형에만 놓을 수 있고 사거리 밖의 적을 쫓지 않습니다.</gray>")
+                )
         );
     }
 

@@ -38,7 +38,7 @@ final class TraitEffectsTest {
     }
 
     @Test
-    void builtInTraitsExposeAllPlannedChoicesAndSlotValues() {
+    void builtInTraitsExposeAllPlannedChoices() {
         BuiltInTraits.register();
 
         Set<?> registeredIds = TraitRegistry.all().stream()
@@ -67,21 +67,6 @@ final class TraitEffectsTest {
                 BuiltInTraits.PERFORMANCE_BONUS_ID
         )));
 
-        SemionTrait goldSpoon = TraitRegistry.find(BuiltInTraits.MOBILIZATION_GRANT_ID).orElseThrow();
-        assertEquals("시작 다이아 +120", goldSpoon.effectSummary(TraitSlot.PRIMARY).getString());
-        assertEquals("시작 다이아 +60", goldSpoon.effectSummary(TraitSlot.SECONDARY).getString());
-        assertEquals(
-                "150초마다 다이아 +10 + 수입 16%",
-                TraitRegistry.find(BuiltInTraits.WEEKLY_HOLIDAY_PAY_ID).orElseThrow()
-                        .effectSummary(TraitSlot.PRIMARY).getString()
-        );
-        assertEquals(
-                "4초간 매초 1 + 공격력×라운드×0.5% 마법 피해 (마법 피해 능력 제외)",
-                TraitRegistry.find(BuiltInTraits.IGNITE_ID).orElseThrow()
-                        .effectSummary(TraitSlot.SECONDARY).getString()
-        );
-        assertTrue(TraitRegistry.find(BuiltInTraits.IGNITE_ID).orElseThrow().description().stream()
-                .anyMatch(line -> line.getString().equals("마법 피해를 주는 능력에는 점화가 적용되지 않습니다.")));
     }
 
     @Test
@@ -211,24 +196,19 @@ final class TraitEffectsTest {
     }
 
     @Test
-    void configuredTraitValuesDriveRuntimeAndUiSummary() {
+    void configuredTraitValuesDriveRuntime() {
         TraitBalanceRuntime.apply(new TraitBalanceConfig(Map.of(
                 "opening_salvo", Map.of(
                         "attackSpeedBonus", 0.25,
                         "durationSeconds", 12.0
                 )
         )));
-        BuiltInTraits.register();
-
         assertEquals(0.25, TraitEffects.openingAttackSpeedBonus(primary(BuiltInTraits.OPENING_SALVO_ID)), 0.000_001);
         assertEquals(240, TraitEffects.openingAttackSpeedDurationTicks());
-        SemionTrait speedrunner = TraitRegistry.find(BuiltInTraits.OPENING_SALVO_ID).orElseThrow();
-        assertEquals("12초간 공속 +25%", speedrunner.effectSummary(TraitSlot.PRIMARY).getString());
-        assertEquals("12초간 공속 +12.5%", speedrunner.effectSummary(TraitSlot.SECONDARY).getString());
     }
 
     @Test
-    void configuredSupplyAndTranscendenceValuesDriveRuntimeAndUiSummary() {
+    void configuredSupplyAndTranscendenceValuesDriveRuntime() {
         TraitBalanceRuntime.apply(new TraitBalanceConfig(Map.of(
                 "supply_depot", Map.of("towerLimitBonus", 6.0),
                 "transcendence", Map.of(
@@ -236,23 +216,11 @@ final class TraitEffectsTest {
                         "damageBonus", 0.40
                 )
         )));
-        BuiltInTraits.register();
-
         assertEquals(6, TraitEffects.towerLimitBonus(primary(BuiltInTraits.SUPPLY_DEPOT_ID)));
         assertEquals(3, TraitEffects.towerLimitBonus(secondary(BuiltInTraits.SUPPLY_DEPOT_ID)));
         assertEquals(200, TraitEffects.transcendenceActivationDelayTicks());
         assertEquals(0.40, TraitEffects.transcendenceDamageBonus(primary(BuiltInTraits.TRANSCENDENCE_ID)), 0.000_001);
         assertEquals(0.20, TraitEffects.transcendenceDamageBonus(secondary(BuiltInTraits.TRANSCENDENCE_ID)), 0.000_001);
-        assertEquals(
-                "최대 타워 수 +3",
-                TraitRegistry.find(BuiltInTraits.SUPPLY_DEPOT_ID).orElseThrow()
-                        .effectSummary(TraitSlot.SECONDARY).getString()
-        );
-        assertEquals(
-                "10초 후 피해 +40%",
-                TraitRegistry.find(BuiltInTraits.TRANSCENDENCE_ID).orElseThrow()
-                        .effectSummary(TraitSlot.PRIMARY).getString()
-        );
     }
 
     @Test

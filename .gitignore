@@ -29,6 +29,3 @@ logs/
 
 # Privately licensed resource-pack assets
 /src/main/resources/assets/semion-td/
-
-# Third-party jars extracted locally when maven.tomalbrc.de is unreachable
-/local-libs/

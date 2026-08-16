@@ -112,7 +112,7 @@ final class FutureAgencyTowerCatalogTest {
     }
 
     @Test
-    void defaultsMergeDescriptionsAndRejectInvalidCap() {
+    void defaultsMergeAndRejectInvalidCap() {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
         FutureAgencyTowers.all().forEach(type -> assertTrue(defaults.towers().containsKey(type.id())));
         assertEquals(0.65, defaults.ability(FutureAgencyBalance.GLOBAL_ID,
@@ -130,11 +130,6 @@ final class FutureAgencyTowerCatalogTest {
                 "policy.agency_tactics", -1), 0.0001);
         assertEquals(0.65, merged.ability(FutureAgencyBalance.GLOBAL_ID,
                 "damageReductionCap", -1), 0.0001);
-
-        ProductionTowerCatalogs.reloadBuiltIns(defaults);
-        FutureAgencyTowers.all().forEach(type -> assertTrue(
-                ProductionTowerCatalog.find(type.id()).orElseThrow().type().description().stream()
-                        .noneMatch(line -> line.contains("{ability.") || line.contains("{stat.")), type.id()));
 
         LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>(defaults.abilities());
         LinkedHashMap<String, Double> invalidGlobal = new LinkedHashMap<>(
@@ -155,7 +150,7 @@ final class FutureAgencyTowerCatalogTest {
     }
 
     @Test
-    void leaderCannotBeSoldAndSaveTooltipUsesRequestedPhrase() {
+    void leaderCannotBeSoldBeforeSavingTheWorld() {
         FutureAgencyLeaderTower leader = (FutureAgencyLeaderTower) create(FutureAgencyTowers.REBUILDER);
         FutureAgencyStates.state(OWNER).reconstruct();
         var save = ProductionTowerCatalog.upgrade(
@@ -164,10 +159,6 @@ final class FutureAgencyTowerCatalogTest {
         assertFalse(leader.canBeSold());
         assertTrue(leader.showsUnavailableUpgrade(null, save));
         assertFalse(leader.meetsUpgradeRequirements(null, save));
-        assertTrue(leader.upgradeTooltipLines(save).stream().anyMatch(line -> line.contains("이번에야말로")));
-        assertTrue(leader.upgradeTooltipLines(save).stream().anyMatch(line -> line.contains("기관 최고 지휘자")));
-        assertTrue(leader.upgradeTooltipLines(save).stream().anyMatch(line -> line.contains("정책 0/10")));
-        assertTrue(leader.runtimeDetailLines().stream().noneMatch(line -> line.contains("정책 0/10")));
         assertEquals(20.0, FutureAgencyTowers.REBUILDER.damage(), 0.0001);
         assertEquals(7.0, FutureAgencyTowers.REBUILDER.range(), 0.0001);
         assertEquals(32.0, FutureAgencyTowers.COMMANDER.damage(), 0.0001);

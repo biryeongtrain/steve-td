@@ -2194,7 +2194,7 @@
     },
     "queen": {
       "mineralCost": 70,
-      "maxHealth": 140.0,
+      "maxHealth": 60.0,
       "range": 9.0,
       "damage": 0.0,
       "attackIntervalTicks": 120,
@@ -2220,7 +2220,7 @@
       "mineralCost": 60,
       "maxHealth": 260.0,
       "range": 3.0,
-      "damage": 6.0,
+      "damage": 7.2,
       "attackIntervalTicks": 20,
       "aggroPriority": 80
     },
@@ -2228,7 +2228,7 @@
       "mineralCost": 90,
       "maxHealth": 430.0,
       "range": 3.0,
-      "damage": 9.0,
+      "damage": 10.8,
       "attackIntervalTicks": 19,
       "aggroPriority": 80
     },
@@ -2236,7 +2236,7 @@
       "mineralCost": 140,
       "maxHealth": 650.0,
       "range": 3.0,
-      "damage": 13.0,
+      "damage": 15.6,
       "attackIntervalTicks": 18,
       "aggroPriority": 80
     },
@@ -2244,7 +2244,7 @@
       "mineralCost": 220,
       "maxHealth": 900.0,
       "range": 3.0,
-      "damage": 18.0,
+      "damage": 21.6,
       "attackIntervalTicks": 16,
       "aggroPriority": 80
     },
@@ -2252,7 +2252,7 @@
       "mineralCost": 55,
       "maxHealth": 70.0,
       "range": 10.0,
-      "damage": 12.0,
+      "damage": 14.4,
       "attackIntervalTicks": 15,
       "aggroPriority": 0
     },
@@ -2260,7 +2260,7 @@
       "mineralCost": 85,
       "maxHealth": 105.0,
       "range": 10.0,
-      "damage": 17.0,
+      "damage": 20.4,
       "attackIntervalTicks": 14,
       "aggroPriority": 0
     },
@@ -2268,7 +2268,7 @@
       "mineralCost": 130,
       "maxHealth": 150.0,
       "range": 10.0,
-      "damage": 24.0,
+      "damage": 28.8,
       "attackIntervalTicks": 12,
       "aggroPriority": 0
     },
@@ -2276,7 +2276,7 @@
       "mineralCost": 200,
       "maxHealth": 200.0,
       "range": 10.0,
-      "damage": 32.0,
+      "damage": 38.4,
       "attackIntervalTicks": 10,
       "aggroPriority": 0
     },
@@ -2284,7 +2284,7 @@
       "mineralCost": 70,
       "maxHealth": 80.0,
       "range": 8.0,
-      "damage": 16.0,
+      "damage": 19.2,
       "attackIntervalTicks": 20,
       "aggroPriority": 0
     },
@@ -2292,7 +2292,7 @@
       "mineralCost": 105,
       "maxHealth": 120.0,
       "range": 8.0,
-      "damage": 22.0,
+      "damage": 26.4,
       "attackIntervalTicks": 19,
       "aggroPriority": 0
     },
@@ -2300,7 +2300,7 @@
       "mineralCost": 165,
       "maxHealth": 165.0,
       "range": 8.0,
-      "damage": 31.0,
+      "damage": 37.2,
       "attackIntervalTicks": 18,
       "aggroPriority": 0
     },
@@ -2308,7 +2308,7 @@
       "mineralCost": 260,
       "maxHealth": 220.0,
       "range": 8.0,
-      "damage": 42.0,
+      "damage": 50.4,
       "attackIntervalTicks": 16,
       "aggroPriority": 0
     },
@@ -2316,7 +2316,7 @@
       "mineralCost": 65,
       "maxHealth": 100.0,
       "range": 7.0,
-      "damage": 4.0,
+      "damage": 4.8,
       "attackIntervalTicks": 20,
       "aggroPriority": -5
     },
@@ -2324,7 +2324,7 @@
       "mineralCost": 100,
       "maxHealth": 145.0,
       "range": 7.0,
-      "damage": 6.0,
+      "damage": 7.2,
       "attackIntervalTicks": 19,
       "aggroPriority": -5
     },
@@ -2332,7 +2332,7 @@
       "mineralCost": 155,
       "maxHealth": 205.0,
       "range": 7.0,
-      "damage": 10.0,
+      "damage": 12.0,
       "attackIntervalTicks": 18,
       "aggroPriority": -5
     },
@@ -2340,7 +2340,7 @@
       "mineralCost": 240,
       "maxHealth": 280.0,
       "range": 7.0,
-      "damage": 14.0,
+      "damage": 16.8,
       "attackIntervalTicks": 16,
       "aggroPriority": -5
     },
@@ -2348,7 +2348,7 @@
       "mineralCost": 50,
       "maxHealth": 65.0,
       "range": 3.5,
-      "damage": 10.0,
+      "damage": 12.0,
       "attackIntervalTicks": 10,
       "aggroPriority": 10
     },
@@ -2356,7 +2356,7 @@
       "mineralCost": 75,
       "maxHealth": 95.0,
       "range": 3.5,
-      "damage": 14.0,
+      "damage": 16.8,
       "attackIntervalTicks": 10,
       "aggroPriority": 10
     },
@@ -2364,7 +2364,7 @@
       "mineralCost": 120,
       "maxHealth": 135.0,
       "range": 3.5,
-      "damage": 19.0,
+      "damage": 22.8,
       "attackIntervalTicks": 9,
       "aggroPriority": 10
     },
@@ -2372,7 +2372,7 @@
       "mineralCost": 185,
       "maxHealth": 180.0,
       "range": 3.5,
-      "damage": 26.0,
+      "damage": 31.2,
       "attackIntervalTicks": 8,
       "aggroPriority": 10
     },
@@ -2380,7 +2380,7 @@
       "mineralCost": 60,
       "maxHealth": 90.0,
       "range": 7.0,
-      "damage": 4.0,
+      "damage": 4.8,
       "attackIntervalTicks": 20,
       "aggroPriority": -5
     },
@@ -2388,7 +2388,7 @@
       "mineralCost": 90,
       "maxHealth": 130.0,
       "range": 7.0,
-      "damage": 7.0,
+      "damage": 8.4,
       "attackIntervalTicks": 19,
       "aggroPriority": -5
     },
@@ -2396,7 +2396,7 @@
       "mineralCost": 140,
       "maxHealth": 180.0,
       "range": 7.0,
-      "damage": 10.0,
+      "damage": 12.0,
       "attackIntervalTicks": 18,
       "aggroPriority": -5
     },
@@ -2404,7 +2404,7 @@
       "mineralCost": 220,
       "maxHealth": 240.0,
       "range": 7.0,
-      "damage": 14.0,
+      "damage": 16.8,
       "attackIntervalTicks": 16,
       "aggroPriority": -5
     },
@@ -2612,7 +2612,7 @@
       "mineralCost": 150,
       "maxHealth": 380.0,
       "range": 10.0,
-      "damage": 8.0,
+      "damage": 10.0,
       "attackIntervalTicks": 28,
       "aggroPriority": 35
     },
@@ -2620,7 +2620,7 @@
       "mineralCost": 240,
       "maxHealth": 700.0,
       "range": 12.0,
-      "damage": 14.0,
+      "damage": 20.0,
       "attackIntervalTicks": 28,
       "aggroPriority": 40
     },
@@ -2636,16 +2636,16 @@
       "mineralCost": 175,
       "maxHealth": 440.0,
       "range": 5.0,
-      "damage": 14.0,
+      "damage": 18.0,
       "attackIntervalTicks": 24,
       "aggroPriority": 52
     },
     "t3_meadow_nova_tower": {
       "mineralCost": 275,
       "maxHealth": 780.0,
-      "range": 6.0,
-      "damage": 24.0,
-      "attackIntervalTicks": 22,
+      "range": 7.0,
+      "damage": 32.0,
+      "attackIntervalTicks": 20,
       "aggroPriority": 60
     },
     "t1_mycelium_tower": {
@@ -2658,15 +2658,15 @@
     },
     "t2_mycelium_tower": {
       "mineralCost": 110,
-      "maxHealth": 200.0,
+      "maxHealth": 260.0,
       "range": 0.0,
-      "damage": 40.0,
+      "damage": 45.0,
       "attackIntervalTicks": 20,
       "aggroPriority": 40
     },
     "t3_mycelium_tower": {
       "mineralCost": 180,
-      "maxHealth": 340.0,
+      "maxHealth": 460.0,
       "range": 0.0,
       "damage": 50.0,
       "attackIntervalTicks": 20,
@@ -2682,17 +2682,17 @@
     },
     "t2_desert_tower": {
       "mineralCost": 160,
-      "maxHealth": 400.0,
+      "maxHealth": 500.0,
       "range": 0.0,
-      "damage": 15.0,
+      "damage": 20.0,
       "attackIntervalTicks": 22,
       "aggroPriority": 66
     },
     "t3_desert_tower": {
       "mineralCost": 250,
-      "maxHealth": 700.0,
+      "maxHealth": 900.0,
       "range": 0.0,
-      "damage": 24.0,
+      "damage": 32.0,
       "attackIntervalTicks": 20,
       "aggroPriority": 74
     },
@@ -2708,7 +2708,7 @@
       "mineralCost": 170,
       "maxHealth": 130.0,
       "range": 14.0,
-      "damage": 22.0,
+      "damage": 26.0,
       "attackIntervalTicks": 18,
       "aggroPriority": 30
     },
@@ -2716,8 +2716,8 @@
       "mineralCost": 285,
       "maxHealth": 210.0,
       "range": 14.0,
-      "damage": 26.0,
-      "attackIntervalTicks": 20,
+      "damage": 34.0,
+      "attackIntervalTicks": 18,
       "aggroPriority": 35
     },
     "t3_podzol_rose_tower": {
@@ -2732,9 +2732,217 @@
       "mineralCost": 285,
       "maxHealth": 210.0,
       "range": 30.0,
-      "damage": 38.0,
-      "attackIntervalTicks": 45,
+      "damage": 48.0,
+      "attackIntervalTicks": 38,
       "aggroPriority": 35
+    },
+    "thunder_rod_t1": {
+      "mineralCost": 30,
+      "maxHealth": 70.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -5
+    },
+    "thunder_rod_copper": {
+      "mineralCost": 75,
+      "maxHealth": 130.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -5
+    },
+    "thunder_rod_storm": {
+      "mineralCost": 75,
+      "maxHealth": 100.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -5
+    },
+    "thunder_armadillo_t1": {
+      "mineralCost": 50,
+      "maxHealth": 250.0,
+      "range": 2.4,
+      "damage": 8.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 55
+    },
+    "thunder_armadillo_insulated": {
+      "mineralCost": 105,
+      "maxHealth": 440.0,
+      "range": 2.6,
+      "damage": 15.0,
+      "attackIntervalTicks": 19,
+      "aggroPriority": 85
+    },
+    "thunder_armadillo_rubber": {
+      "mineralCost": 220,
+      "maxHealth": 900.0,
+      "range": 2.8,
+      "damage": 26.0,
+      "attackIntervalTicks": 17,
+      "aggroPriority": 110
+    },
+    "thunder_armadillo_grounded": {
+      "mineralCost": 100,
+      "maxHealth": 300.0,
+      "range": 2.6,
+      "damage": 15.0,
+      "attackIntervalTicks": 19,
+      "aggroPriority": 85
+    },
+    "thunder_armadillo_earth": {
+      "mineralCost": 215,
+      "maxHealth": 560.0,
+      "range": 2.8,
+      "damage": 26.0,
+      "attackIntervalTicks": 17,
+      "aggroPriority": 110
+    },
+    "thunder_squirrel_t1": {
+      "mineralCost": 50,
+      "maxHealth": 90.0,
+      "range": 6.0,
+      "damage": 15.0,
+      "attackIntervalTicks": 13,
+      "aggroPriority": 0
+    },
+    "thunder_squirrel_t2": {
+      "mineralCost": 130,
+      "maxHealth": 140.0,
+      "range": 6.5,
+      "damage": 33.0,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 0
+    },
+    "thunder_squirrel_t3": {
+      "mineralCost": 280,
+      "maxHealth": 190.0,
+      "range": 7.0,
+      "damage": 58.0,
+      "attackIntervalTicks": 11,
+      "aggroPriority": 0
+    },
+    "thunder_surge_t2": {
+      "mineralCost": 130,
+      "maxHealth": 110.0,
+      "range": 6.0,
+      "damage": 28.0,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 0
+    },
+    "thunder_surge_t3": {
+      "mineralCost": 280,
+      "maxHealth": 150.0,
+      "range": 6.5,
+      "damage": 52.0,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 0
+    },
+    "army_clerk_t1": {
+      "mineralCost": 30,
+      "maxHealth": 70.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -5
+    },
+    "army_drill_sergeant_t2": {
+      "mineralCost": 75,
+      "maxHealth": 130.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -5
+    },
+    "army_quartermaster_t2": {
+      "mineralCost": 75,
+      "maxHealth": 130.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -5
+    },
+    "army_guard_t1": {
+      "mineralCost": 50,
+      "maxHealth": 230.0,
+      "range": 2.4,
+      "damage": 6.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 55
+    },
+    "army_military_police_t2": {
+      "mineralCost": 105,
+      "maxHealth": 630.0,
+      "range": 2.6,
+      "damage": 11.0,
+      "attackIntervalTicks": 19,
+      "aggroPriority": 85
+    },
+    "army_mp_commander_t3": {
+      "mineralCost": 220,
+      "maxHealth": 975.0,
+      "range": 2.8,
+      "damage": 20.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": 110
+    },
+    "army_gop_sentry_t2": {
+      "mineralCost": 100,
+      "maxHealth": 450.0,
+      "range": 2.6,
+      "damage": 10.0,
+      "attackIntervalTicks": 19,
+      "aggroPriority": 85
+    },
+    "army_outpost_chief_t3": {
+      "mineralCost": 215,
+      "maxHealth": 810.0,
+      "range": 2.8,
+      "damage": 18.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": 110
+    },
+    "army_recruit_t1": {
+      "mineralCost": 50,
+      "maxHealth": 90.0,
+      "range": 6.0,
+      "damage": 9.0,
+      "attackIntervalTicks": 13,
+      "aggroPriority": 0
+    },
+    "army_specialist_t2": {
+      "mineralCost": 130,
+      "maxHealth": 140.0,
+      "range": 6.5,
+      "damage": 30.0,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 0
+    },
+    "army_platoon_leader_t3": {
+      "mineralCost": 280,
+      "maxHealth": 190.0,
+      "range": 7.0,
+      "damage": 60.0,
+      "attackIntervalTicks": 11,
+      "aggroPriority": 0
+    },
+    "army_gunner_t2": {
+      "mineralCost": 130,
+      "maxHealth": 110.0,
+      "range": 7.5,
+      "damage": 30.0,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 0
+    },
+    "army_battery_chief_t3": {
+      "mineralCost": 280,
+      "maxHealth": 150.0,
+      "range": 8.5,
+      "damage": 56.0,
+      "attackIntervalTicks": 15,
+      "aggroPriority": 0
     }
   },
   "upgradeCosts": {
@@ -3062,7 +3270,27 @@
     "t1_podzol_tower->t2_podzol_tower": 170,
     "t2_podzol_tower->t3_podzol_lilac_tower": 285,
     "t2_podzol_tower->t3_podzol_rose_tower": 285,
-    "t2_podzol_tower->t3_podzol_pitcher_tower": 285
+    "t2_podzol_tower->t3_podzol_pitcher_tower": 285,
+    "thunder_rod_t1->thunder_rod_copper": 75,
+    "thunder_rod_t1->thunder_rod_storm": 75,
+    "thunder_armadillo_t1->thunder_armadillo_insulated": 105,
+    "thunder_armadillo_t1->thunder_armadillo_grounded": 100,
+    "thunder_armadillo_insulated->thunder_armadillo_rubber": 220,
+    "thunder_armadillo_grounded->thunder_armadillo_earth": 215,
+    "thunder_squirrel_t1->thunder_squirrel_t2": 130,
+    "thunder_squirrel_t1->thunder_surge_t2": 130,
+    "thunder_squirrel_t2->thunder_squirrel_t3": 280,
+    "thunder_surge_t2->thunder_surge_t3": 280,
+    "army_clerk_t1->army_drill_sergeant_t2": 75,
+    "army_clerk_t1->army_quartermaster_t2": 75,
+    "army_guard_t1->army_military_police_t2": 105,
+    "army_guard_t1->army_gop_sentry_t2": 100,
+    "army_military_police_t2->army_mp_commander_t3": 220,
+    "army_gop_sentry_t2->army_outpost_chief_t3": 215,
+    "army_recruit_t1->army_specialist_t2": 130,
+    "army_recruit_t1->army_gunner_t2": 130,
+    "army_specialist_t2->army_platoon_leader_t3": 280,
+    "army_gunner_t2->army_battery_chief_t3": 280
   },
   "abilities": {
     "villager_splash_t2": {
@@ -4596,12 +4824,12 @@
     },
     "mage_global": {
       "manaCapacity": 1000.0,
-      "startingMana": 30.0,
-      "idleWizardMana": 8.0,
-      "prophetMana": 15.0,
-      "coreMana": 50.0,
-      "coreBreakManaLossRatio": 0.2,
-      "prophecyReward": 80.0,
+      "startingMana": 45.0,
+      "idleWizardMana": 12.0,
+      "prophetMana": 23.0,
+      "coreMana": 75.0,
+      "coreBreakManaLossRatio": 0.05,
+      "prophecyReward": 120.0,
       "supportRadius": 1.5,
       "amplificationBonus": 0.6,
       "manaDamageBonusAtCapacity": 0.7,
@@ -4636,29 +4864,29 @@
       "projectile_barrierManaCost": 25.0,
       "projectile_barrierCooldownTicks": 20.0,
       "projectile_barrierRange": 1.5,
-      "missileDamage": 10.0,
+      "missileDamage": 15.0,
       "missileCount": 6.0,
       "missileIntervalTicks": 2.0,
-      "windCutterDamage": 30.0,
+      "windCutterDamage": 45.0,
       "windCutterWidth": 0.75,
       "windCutterMaxTargets": 10.0,
-      "manaBombDamage": 105.0,
+      "manaBombDamage": 160.0,
       "manaBombRadius": 2.5,
       "manaBombMaxTargets": 7.0,
       "manaBombDelayTicks": 20.0,
-      "chainDamage1": 90.0,
-      "chainDamage2": 70.0,
-      "chainDamage3": 50.0,
-      "chainDamage4": 35.0,
-      "chainDamage5": 25.0,
-      "chainDamage6": 15.0,
+      "chainDamage1": 135.0,
+      "chainDamage2": 105.0,
+      "chainDamage3": 75.0,
+      "chainDamage4": 55.0,
+      "chainDamage5": 40.0,
+      "chainDamage6": 25.0,
       "chainJumpRange": 4.0,
-      "frostWaveDamage": 60.0,
+      "frostWaveDamage": 90.0,
       "frostWaveRadius": 8.0,
       "frostWaveMaxTargets": 10.0,
       "frostWaveSlow": 0.45,
       "frostWaveDurationTicks": 80.0,
-      "collapseDamage": 380.0,
+      "collapseDamage": 570.0,
       "collapseRadius": 256.0,
       "collapseDelayTicks": 40.0
     },
@@ -4666,16 +4894,21 @@
       "maxPlates": 4.0,
       "golemMoveSpeed": 0.18,
       "activeTicks": 60.0,
+      "doorActiveTicks": 120.0,
       "pistonImmunityTicks": 300.0,
       "doorRetargetTicks": 10.0,
       "maxRedstone": 35.0,
       "maxPistons": 3.0,
       "plateCooldownTicks": 100.0,
+      "plateDamageBonusPerTier": 0.1,
       "dispenserDamagePerPlateBlock": 0.1,
       "dispenserMaxPlateDistance": 10.0,
       "activeVfxIntervalTicks": 20.0,
       "tntFuseVfxIntervalTicks": 10.0,
       "tntFuseTicks": 60.0
+    },
+    "engineer_redstone_dust": {
+      "towerSlotCost": 0.0
     },
     "engineer_door_t1": {
       "radius": 4.0
@@ -4689,30 +4922,30 @@
     "engineer_tnt_t1": {
       "damage": 120.0,
       "radius": 2.5,
-      "maxTargets": 5.0
+      "maxTargets": 8.0
     },
     "engineer_tnt_t2": {
       "damage": 260.0,
       "radius": 3.25,
-      "maxTargets": 7.0
+      "maxTargets": 12.0
     },
     "engineer_tnt_t3": {
       "damage": 480.0,
       "radius": 4.0,
-      "maxTargets": 9.0
+      "maxTargets": 16.0
     },
     "engineer_dispenser_t1": {
-      "damage": 12.0,
+      "damage": 18.0,
       "intervalTicks": 16.0,
       "range": 7.0
     },
     "engineer_dispenser_t2": {
-      "damage": 20.0,
+      "damage": 30.0,
       "intervalTicks": 13.0,
       "range": 9.0
     },
     "engineer_dispenser_t3": {
-      "damage": 30.0,
+      "damage": 45.0,
       "intervalTicks": 10.0,
       "range": 11.0
     },
@@ -4848,8 +5081,8 @@
       "damageReduction": 0.25
     },
     "queen_global": {
-      "shrinkFactorPerPoint": 0.99,
-      "minimumStatScale": 0.5,
+      "shrinkFactorPerPoint": 0.98,
+      "minimumStatScale": 0.2,
       "minimumVisualScale": 0.5,
       "queenShrinkPoints": 5.0,
       "cardShrinkPoints": 0.75,
@@ -4866,9 +5099,10 @@
       "giantChargeTicks": 400.0,
       "giantAccelerationRadius": 6.0,
       "giantAccelerationMemoryTicks": 40.0,
-      "giantInitialExecutionHealth": 50.0,
-      "giantExecutionGrowthRatio": 0.02,
+      "giantInitialExecutionHealth": 5.0,
+      "giantExecutionGrowthRatio": 0.05,
       "giantGrowthTargetCapMultiplier": 4.0,
+      "queenMaxHealthPerRound": 8.0,
       "giantContactRadius": 4.0,
       "giantSpeed": 0.65,
       "giantSlow": 0.55,
@@ -4891,16 +5125,16 @@
       "card.spade.intervalTicks": 18.0,
       "card.spade.aggro": 80.0,
       "hand.high_card": 0.0,
-      "hand.one_pair": 0.06,
-      "hand.two_pair": 0.1,
-      "hand.three_of_a_kind": 0.14,
-      "hand.straight": 0.18,
-      "hand.flush": 0.22,
-      "hand.full_house": 0.28,
-      "hand.four_of_a_kind": 0.32,
-      "hand.straight_flush": 0.38,
-      "hand.royal_flush": 0.42,
-      "hand.five_of_a_kind": 0.5
+      "hand.one_pair": 0.1,
+      "hand.two_pair": 0.15,
+      "hand.three_of_a_kind": 0.2,
+      "hand.straight": 0.25,
+      "hand.flush": 0.3,
+      "hand.full_house": 0.4,
+      "hand.four_of_a_kind": 0.5,
+      "hand.straight_flush": 0.65,
+      "hand.royal_flush": 0.8,
+      "hand.five_of_a_kind": 1.0
     },
     "hero_party_global": {
       "weaponUpgradeCost1": 80.0,
@@ -4913,6 +5147,7 @@
       "weaponMultiplier3": 1.5,
       "weaponMultiplier4": 1.72,
       "weaponMultiplier5": 2.0,
+      "weaponAttackIntervalReductionPerLevel": 1.0,
       "armorUpgradeCost1": 90.0,
       "armorUpgradeCost2": 150.0,
       "armorUpgradeCost3": 230.0,
@@ -4928,162 +5163,280 @@
       "armorReduction3": 0.12,
       "armorReduction4": 0.16,
       "armorReduction5": 0.2,
-      "adventureDamagePerPoint": 0.0025,
-      "adventureHealingPerPoint": 0.0025,
-      "adventureHealthPerPoint": 0.0035
+      "adventureDamagePerPoint": 0.003,
+      "adventureHealingPerPoint": 0.003,
+      "adventureHealthPerPoint": 0.0045,
+      "focusFireDamageReductionPerExtraAttacker": 0.08,
+      "focusFireDamageReductionCap": 0.4
     },
     "hero_party_weapon_sword": {
       "purchaseCost": 0.0,
       "damage": 12.0,
       "range": 3.5,
-      "attackIntervalTicks": 12.0
+      "attackIntervalTicks": 12.0,
+      "maxHealthMultiplier": 1.25,
+      "aggroPriority": 60.0,
+      "incomeDamageBonus": 0.35
     },
     "hero_party_weapon_greatsword": {
       "purchaseCost": 100.0,
       "damage": 20.0,
       "range": 3.5,
-      "attackIntervalTicks": 20.0
+      "attackIntervalTicks": 20.0,
+      "maxHealthMultiplier": 1.15,
+      "aggroPriority": 40.0
     },
     "hero_party_weapon_longbow": {
       "purchaseCost": 110.0,
       "damage": 11.0,
       "range": 10.0,
-      "attackIntervalTicks": 11.0
+      "attackIntervalTicks": 11.0,
+      "maxHealthMultiplier": 0.85,
+      "aggroPriority": 5.0,
+      "incomeDamageBonus": 0.35
     },
     "hero_party_weapon_staff": {
       "purchaseCost": 120.0,
       "damage": 16.0,
       "range": 8.0,
-      "attackIntervalTicks": 16.0
+      "attackIntervalTicks": 16.0,
+      "maxHealthMultiplier": 0.9,
+      "aggroPriority": 0.0
     },
     "hero_party_weapon_tome": {
       "purchaseCost": 100.0,
       "damage": 8.0,
       "range": 7.0,
-      "attackIntervalTicks": 16.0
+      "attackIntervalTicks": 16.0,
+      "maxHealthMultiplier": 1.05,
+      "aggroPriority": -10.0
     },
     "hero_party_hero": {
       "towerSlotCost": 3.0
     },
     "hero_party_knight_1": {
       "towerSlotCost": 2.0,
-      "damageReduction": 0.0
+      "damageReduction": 0.0,
+      "shieldBashEvery": 0.0,
+      "shieldBashSlow": 0.0,
+      "shieldBashDurationTicks": 0.0,
+      "guardRadius": 0.0,
+      "guardDamageReduction": 0.0,
+      "guardDurationTicks": 0.0
     },
     "hero_party_knight_2": {
       "towerSlotCost": 3.0,
-      "damageReduction": 0.07
+      "damageReduction": 0.07,
+      "shieldBashEvery": 4.0,
+      "shieldBashSlow": 0.25,
+      "shieldBashDurationTicks": 40.0,
+      "guardRadius": 0.0,
+      "guardDamageReduction": 0.0,
+      "guardDurationTicks": 0.0
     },
     "hero_party_knight_3": {
       "towerSlotCost": 4.0,
-      "damageReduction": 0.13
+      "damageReduction": 0.13,
+      "shieldBashEvery": 4.0,
+      "shieldBashSlow": 0.25,
+      "shieldBashDurationTicks": 40.0,
+      "guardRadius": 5.0,
+      "guardDamageReduction": 0.08,
+      "guardDurationTicks": 40.0
     },
     "hero_party_knight_4": {
       "towerSlotCost": 5.0,
-      "damageReduction": 0.2
+      "damageReduction": 0.2,
+      "shieldBashEvery": 3.0,
+      "shieldBashSlow": 0.35,
+      "shieldBashDurationTicks": 60.0,
+      "guardRadius": 6.0,
+      "guardDamageReduction": 0.12,
+      "guardDurationTicks": 40.0
     },
     "hero_party_archer_1": {
       "towerSlotCost": 2.0,
-      "bossDamageBonus": 0.0
+      "bossDamageBonus": 0.0,
+      "incomeDamageBonus": 0.35,
+      "pierceEvery": 0.0,
+      "pierceDamageRatio": 0.0,
+      "markDamageBonus": 0.0,
+      "markDurationTicks": 0.0
     },
     "hero_party_archer_2": {
       "towerSlotCost": 3.0,
-      "bossDamageBonus": 0.12
+      "bossDamageBonus": 0.12,
+      "incomeDamageBonus": 0.35,
+      "pierceEvery": 4.0,
+      "pierceDamageRatio": 0.6,
+      "markDamageBonus": 0.0,
+      "markDurationTicks": 0.0
     },
     "hero_party_archer_3": {
       "towerSlotCost": 4.0,
-      "bossDamageBonus": 0.23
+      "bossDamageBonus": 0.23,
+      "incomeDamageBonus": 0.35,
+      "pierceEvery": 4.0,
+      "pierceDamageRatio": 0.6,
+      "markDamageBonus": 0.12,
+      "markDurationTicks": 60.0
     },
     "hero_party_archer_4": {
       "towerSlotCost": 5.0,
-      "bossDamageBonus": 0.35
+      "bossDamageBonus": 0.35,
+      "incomeDamageBonus": 0.35,
+      "pierceEvery": 3.0,
+      "pierceDamageRatio": 0.75,
+      "markDamageBonus": 0.15,
+      "markDurationTicks": 80.0
     },
     "hero_party_mage_1": {
       "towerSlotCost": 2.0,
       "splashDamageRatio": 0.3,
-      "splashRadius": 2.0
+      "splashRadius": 2.0,
+      "splashSlow": 0.0,
+      "splashSlowDurationTicks": 0.0,
+      "empoweredEvery": 0.0,
+      "empoweredSplashMultiplier": 0.0,
+      "empoweredRadiusBonus": 0.0
     },
     "hero_party_mage_2": {
       "towerSlotCost": 3.0,
       "splashDamageRatio": 0.4,
-      "splashRadius": 2.3
+      "splashRadius": 2.3,
+      "splashSlow": 0.2,
+      "splashSlowDurationTicks": 40.0,
+      "empoweredEvery": 0.0,
+      "empoweredSplashMultiplier": 0.0,
+      "empoweredRadiusBonus": 0.0
     },
     "hero_party_mage_3": {
       "towerSlotCost": 4.0,
       "splashDamageRatio": 0.5,
-      "splashRadius": 2.6
+      "splashRadius": 2.6,
+      "splashSlow": 0.2,
+      "splashSlowDurationTicks": 40.0,
+      "empoweredEvery": 5.0,
+      "empoweredSplashMultiplier": 1.5,
+      "empoweredRadiusBonus": 0.5
     },
     "hero_party_mage_4": {
       "towerSlotCost": 5.0,
       "splashDamageRatio": 0.6,
-      "splashRadius": 3.0
+      "splashRadius": 3.0,
+      "splashSlow": 0.3,
+      "splashSlowDurationTicks": 60.0,
+      "empoweredEvery": 4.0,
+      "empoweredSplashMultiplier": 1.75,
+      "empoweredRadiusBonus": 0.75
     },
     "hero_party_priest_1": {
       "towerSlotCost": 2.0,
       "healAmount": 14.0,
       "healIntervalTicks": 40.0,
-      "secondTargetRatio": 0.0
+      "secondTargetRatio": 0.0,
+      "healGuardReduction": 0.0,
+      "healGuardDurationTicks": 0.0
     },
     "hero_party_priest_2": {
       "towerSlotCost": 3.0,
       "healAmount": 21.0,
       "healIntervalTicks": 38.0,
-      "secondTargetRatio": 0.0
+      "secondTargetRatio": 0.0,
+      "healGuardReduction": 0.08,
+      "healGuardDurationTicks": 60.0
     },
     "hero_party_priest_3": {
       "towerSlotCost": 4.0,
       "healAmount": 31.0,
       "healIntervalTicks": 34.0,
-      "secondTargetRatio": 0.5
+      "secondTargetRatio": 0.5,
+      "healGuardReduction": 0.1,
+      "healGuardDurationTicks": 60.0
     },
     "hero_party_priest_4": {
       "towerSlotCost": 5.0,
       "healAmount": 45.0,
       "healIntervalTicks": 30.0,
-      "secondTargetRatio": 1.0
+      "secondTargetRatio": 1.0,
+      "healGuardReduction": 0.15,
+      "healGuardDurationTicks": 60.0
     },
     "hero_party_rogue_1": {
       "towerSlotCost": 2.0,
       "executeThreshold": 0.3,
-      "executeDamageBonus": 0.25
+      "executeDamageBonus": 0.25,
+      "comboEvery": 0.0,
+      "comboDamageRatio": 0.0,
+      "killAttackSpeedBonus": 0.0,
+      "killAttackSpeedDurationTicks": 0.0
     },
     "hero_party_rogue_2": {
       "towerSlotCost": 3.0,
       "executeThreshold": 0.3,
-      "executeDamageBonus": 0.35
+      "executeDamageBonus": 0.35,
+      "comboEvery": 4.0,
+      "comboDamageRatio": 0.4,
+      "killAttackSpeedBonus": 0.0,
+      "killAttackSpeedDurationTicks": 0.0
     },
     "hero_party_rogue_3": {
       "towerSlotCost": 4.0,
       "executeThreshold": 0.3,
-      "executeDamageBonus": 0.47
+      "executeDamageBonus": 0.47,
+      "comboEvery": 4.0,
+      "comboDamageRatio": 0.4,
+      "killAttackSpeedBonus": 0.2,
+      "killAttackSpeedDurationTicks": 60.0
     },
     "hero_party_rogue_4": {
       "towerSlotCost": 5.0,
       "executeThreshold": 0.3,
-      "executeDamageBonus": 0.6
+      "executeDamageBonus": 0.6,
+      "comboEvery": 3.0,
+      "comboDamageRatio": 0.6,
+      "killAttackSpeedBonus": 0.3,
+      "killAttackSpeedDurationTicks": 80.0
     },
     "hero_party_bard_1": {
       "towerSlotCost": 2.0,
       "attackSpeedBonus": 0.08,
       "damageBonus": 0.0,
-      "auraRadius": 8.0
+      "auraRadius": 8.0,
+      "encoreEveryPulses": 0.0,
+      "encoreAttackSpeedBonus": 0.0,
+      "encoreDamageBonus": 0.0,
+      "encoreDurationTicks": 0.0
     },
     "hero_party_bard_2": {
       "towerSlotCost": 3.0,
       "attackSpeedBonus": 0.11,
       "damageBonus": 0.03,
-      "auraRadius": 9.0
+      "auraRadius": 9.0,
+      "encoreEveryPulses": 0.0,
+      "encoreAttackSpeedBonus": 0.0,
+      "encoreDamageBonus": 0.0,
+      "encoreDurationTicks": 0.0
     },
     "hero_party_bard_3": {
       "towerSlotCost": 4.0,
       "attackSpeedBonus": 0.14,
       "damageBonus": 0.06,
-      "auraRadius": 10.0
+      "auraRadius": 10.0,
+      "encoreEveryPulses": 5.0,
+      "encoreAttackSpeedBonus": 0.1,
+      "encoreDamageBonus": 0.1,
+      "encoreDurationTicks": 40.0
     },
     "hero_party_bard_4": {
       "towerSlotCost": 5.0,
       "attackSpeedBonus": 0.18,
       "damageBonus": 0.1,
-      "auraRadius": 12.0
+      "auraRadius": 12.0,
+      "encoreEveryPulses": 4.0,
+      "encoreAttackSpeedBonus": 0.15,
+      "encoreDamageBonus": 0.15,
+      "encoreDurationTicks": 40.0
     },
     "atlantis_global": {
       "maxPressureStacks": 10.0,
@@ -5199,11 +5552,11 @@
       "terraformRadius": 3.0
     },
     "plant_global": {
-      "bloomDamageCap": 0.4,
+      "bloomDamageCap": 0.6,
       "soilAuraMaxRadius": 6.0,
       "soilAuraMinRadius": 3.0,
       "environmentTickIntervalTicks": 20.0,
-      "bloomDamagePerTile": 0.01,
+      "bloomDamagePerTile": 0.015,
       "soilPulseIntervalTicks": 20.0
     },
     "plant_soil_meadow": {
@@ -5222,13 +5575,13 @@
       "environmentDurationTicks": 60.0
     },
     "plant_soil_desert": {
-      "environmentMaxHealthDamagePerSecond": 0.005,
+      "environmentMaxHealthDamagePerSecond": 0.0075,
       "environmentAttackSpeedReduction": 0.15,
       "auraRadius": 5.0,
       "environmentDurationTicks": 60.0,
       "debuffDurationTicks": 60.0,
       "attackSpeedReduction": 0.25,
-      "thornReflectRatio": 0.25
+      "thornReflectRatio": 0.3
     },
     "plant_soil_podzol": {
       "attackSpeedBonus": 0.25,
@@ -5259,12 +5612,12 @@
     "t2_meadow_nova_tower": {
       "novaRadius": 4.5,
       "soilPower": 1.0,
-      "novaDamageRatio": 0.5
+      "novaDamageRatio": 0.6
     },
     "t3_meadow_nova_tower": {
       "novaRadius": 5.5,
       "soilPower": 1.4,
-      "novaDamageRatio": 0.6
+      "novaDamageRatio": 0.75
     },
     "t1_mycelium_tower": {
       "explosionHealthRatio": 0.25,
@@ -5318,8 +5671,8 @@
       "splashConeDegrees": 130.0,
       "critMultiplier": 2.0,
       "soilPower": 1.2,
-      "splashDamageRatio": 0.35,
-      "splashMissingHealthRatio": 0.02
+      "splashDamageRatio": 0.45,
+      "splashMissingHealthRatio": 0.03
     },
     "t3_podzol_rose_tower": {
       "superCritChance": 0.05,
@@ -5336,7 +5689,125 @@
       "lobArcHeight": 5.0,
       "critMultiplier": 2.0,
       "soilPower": 1.2,
-      "splashDamageRatio": 0.45
+      "splashDamageRatio": 0.6
+    },
+    "thunder_global": {
+      "basePower": 80.0,
+      "surplusFloor": 0.5,
+      "surplusDamageBonus": 0.22,
+      "shortageCeiling": 1.3,
+      "shortageDamagePenalty": 0.4,
+      "shortageAttackSpeedPenalty": 0.3,
+      "stunTicks": 20.0,
+      "stunCooldownTicks": 40.0,
+      "stunImmunityTicks": 50.0,
+      "markDurationTicks": 100.0,
+      "stormWaveInterval": 3.0
+    },
+    "thunder_rod_t1": {
+      "powerOutput": 26.0
+    },
+    "thunder_rod_copper": {
+      "powerOutput": 75.0
+    },
+    "thunder_rod_storm": {
+      "stormMinOutput": 18.0,
+      "stormMaxOutput": 135.0
+    },
+    "thunder_armadillo_insulated": {
+      "healthToPower": 55.0
+    },
+    "thunder_armadillo_rubber": {
+      "healthToPower": 120.0
+    },
+    "thunder_armadillo_grounded": {
+      "powerDraw": 7.0,
+      "markDamageBonus": 0.3,
+      "markAttackReduction": 0.2,
+      "damageAbsorb": 0.22
+    },
+    "thunder_armadillo_earth": {
+      "powerDraw": 10.0,
+      "markDamageBonus": 0.48,
+      "dischargeDamage": 210.0,
+      "dischargeRadius": 4.0,
+      "markAttackReduction": 0.3,
+      "damageAbsorb": 0.35
+    },
+    "thunder_squirrel_t1": {
+      "powerDraw": 6.0
+    },
+    "thunder_squirrel_t2": {
+      "powerDraw": 14.0
+    },
+    "thunder_squirrel_t3": {
+      "powerDraw": 24.0,
+      "chainTargets": 3.0,
+      "chainRadius": 3.5,
+      "chainDamageRatio": 0.48
+    },
+    "thunder_surge_t2": {
+      "powerDraw": 18.0,
+      "surgeMaxMultiplier": 1.85
+    },
+    "thunder_surge_t3": {
+      "powerDraw": 30.0,
+      "surgeMaxMultiplier": 1.5
+    },
+    "army_global": {
+      "commandRadius": 5.5,
+      "maxCommandBonus": 1.2,
+      "dischargeRefundRatio": 0.9,
+      "corporalService": 2.0,
+      "corporalAttackMultiplier": 0.75,
+      "corporalDamageBuff": 0.12,
+      "sergeantService": 5.0,
+      "sergeantAttackMultiplier": 0.6,
+      "sergeantDamageBuff": 0.28,
+      "staffSergeantService": 9.0,
+      "staffSergeantAttackMultiplier": 0.4,
+      "staffSergeantDamageBuff": 0.5,
+      "staffSergeantAttackSpeedBuff": 0.15,
+      "dischargeService": 13.0,
+      "dischargeNoticeWaves": 2.0,
+      "medalDamageBonus": 0.02,
+      "maxMedals": 10.0
+    },
+    "army_clerk_t1": {
+      "serviceRateBonus": 1.0,
+      "serviceRateRadius": 6.0
+    },
+    "army_drill_sergeant_t2": {
+      "serviceRateBonus": 2.0,
+      "serviceRateRadius": 7.0
+    },
+    "army_quartermaster_t2": {
+      "serviceRateBonus": 1.0,
+      "serviceRateRadius": 6.0,
+      "dischargeRefundBonus": 0.4,
+      "medalValueBonus": 0.5
+    },
+    "army_military_police_t2": {
+      "damageReduction": 0.18
+    },
+    "army_mp_commander_t3": {
+      "damageReduction": 0.3
+    },
+    "army_gop_sentry_t2": {
+      "serviceRatePenalty": 1.0,
+      "serviceRateRadius": 6.0
+    },
+    "army_outpost_chief_t3": {
+      "serviceRatePenalty": 2.0,
+      "serviceRateRadius": 7.0
+    },
+    "army_gunner_t2": {
+      "splashDamageRatio": 0.5,
+      "splashRadius": 2.5
+    },
+    "army_battery_chief_t3": {
+      "splashDamageRatio": 0.7,
+      "splashRadius": 4.0
     }
   },
   "illusionCloneQueue": {

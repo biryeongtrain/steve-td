@@ -17,16 +17,11 @@ public final class AncientCityTowerJob extends SemionJob {
         super(
                 ID,
                 Component.literal("고대 도시 빌더"),
-                List.of(SemionText.mini("<gray>스컬크 영토를 확장해 마법 능력을 증폭하는 빌더입니다.</gray>"))
-        );
-    }
-
-    @Override
-    public List<Component> description() {
-        return List.of(
-                SemionText.mini("<gray>라운드 진행과 적 처치로 <aqua>스컬크 영토</aqua>를 넓히는 마법 빌더입니다.</gray>"),
-                SemionText.mini("<gray>스컬크 위에 있는 타워는 <aqua>공명</aqua>하여 마법 능력이 강해집니다.</gray>"),
-                SemionText.mini("<gray>감지체는 적에게 표식을 남겨 고대 도시 타워의 마법 피해를 강화합니다.</gray>")
+                List.of(
+                        SemionText.mini("<green><bold>시작</bold></green> <gray>첫 고대 도시 타워를 놓아 그 자리에서 스컬크 영토를 만드세요.</gray>"),
+                        SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>적을 처치해 영토를 넓히고 타워를 스컬크 위에 배치하세요.</gray>"),
+                        SemionText.mini("<gold><bold>연계</bold></gold> <gray>감지체가 표식을 남긴 적은 고대 도시 마법에 더 큰 피해를 받습니다.</gray>")
+                )
         );
     }
 

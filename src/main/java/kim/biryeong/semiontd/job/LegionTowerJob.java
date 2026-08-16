@@ -17,8 +17,8 @@ public final class LegionTowerJob extends SemionJob {
                 ID,
                 Component.literal("무리 빌더"),
                 List.of(
-                        SemionText.mini("<gray>여러 타워와 분신을 전개해 물량으로 전선을 유지하는 빌더입니다.</gray>"),
-                        SemionText.mini("<gray>같은 계열을 모으면 무리 효과가 강화되고, 지원 타워로 본체와 분신을 함께 강화할 수 있습니다.</gray>")
+                        SemionText.mini("<green><bold>시작</bold></green> <gray>같은 계열 타워를 여러 기 배치해 무리를 만드세요.</gray>"),
+                        SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>분신과 지원 타워를 더해 본체와 소환물을 함께 강화하세요.</gray>")
                 )
         );
     }

@@ -17,17 +17,11 @@ public final class AtlantisTowerJob extends SemionJob {
         super(
                 ID,
                 Component.literal("아틀란티스 빌더"),
-                List.of(SemionText.mini("<gray>심해 수압을 쌓아 터뜨리는 빌더입니다.</gray>"))
-        );
-    }
-
-    @Override
-    public List<Component> description() {
-        return List.of(
-                SemionText.mini("<gray>거북이가 <yellow>몬스터가 오는 쪽</yellow> 경로에 고압 구역을 일렬로 깔고, 돌고래가 적에게 압력을 쌓습니다. 구역 안에서는 더 빠르게 쌓이고 적은 느려집니다.</gray>"),
-                SemionText.mini("<aqua>압력이 가득 차거나 적이 구역을 벗어나면 <yellow>수압</yellow>이 터져 쌓인 만큼 큰 피해를 줍니다.</aqua>"),
-                SemionText.mini("<gray>우파루파와 전달체는 아군을 보조하고 압력 상한과 수압 배율을 올립니다.</gray>"),
-                SemionText.mini("<gray>거북이를 늘리거나 승급하면 구역 벽이 길어지고, 구역이 겹치는 자리에서는 효과가 합쳐집니다.</gray>")
+                List.of(
+                        SemionText.mini("<green><bold>시작</bold></green> <gray>거북이를 몬스터가 오는 쪽에 놓아 고압 구역을 만드세요.</gray>"),
+                        SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>구역 안의 적에게 돌고래로 압력을 쌓아 수압 폭발을 일으키세요.</gray>"),
+                        SemionText.mini("<gold><bold>연계</bold></gold> <gray>우파루파와 전달체는 압력 상한과 폭발 피해를 높입니다.</gray>")
+                )
         );
     }
 

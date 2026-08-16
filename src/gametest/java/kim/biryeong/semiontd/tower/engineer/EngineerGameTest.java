@@ -1,8 +1,14 @@
 package kim.biryeong.semiontd.tower.engineer;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import kim.biryeong.semiontd.config.AttackKind;
+import kim.biryeong.semiontd.entity.SemionEntityTypes;
+import kim.biryeong.semiontd.entity.monster.Monster;
+import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.visual.BlockDisplayVisual;
 import kim.biryeong.semiontd.game.GridPosition;
@@ -10,6 +16,7 @@ import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.tower.TowerPlacementPositions;
+import kim.biryeong.semiontd.tower.area.AreaEffectLaneIndex;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -111,10 +118,12 @@ public final class EngineerGameTest {
                     "Dust must place a real redstone wire block.");
             require(context.getLevel().getBlockState(repeater.circuitPosition()).is(Blocks.REPEATER),
                     "Repeater must place a real vanilla repeater block.");
-            require(context.getLevel().getBlockState(repeater.circuitPosition()).getValue(RepeaterBlock.FACING) == Direction.EAST,
-                    "Repeater facing must match the selected direction.");
+            require(context.getLevel().getBlockState(repeater.circuitPosition()).getValue(RepeaterBlock.FACING) == Direction.WEST,
+                    "Repeater input must face opposite the selected signal direction.");
             require(TowerPlacementPositions.resolveGrid(lane, dust.circuitPosition()).orElseThrow().equals(dustPosition),
                     "Clicking the physical wire must resolve to the logical tower below it.");
+            require(dust.canBeSold() && repeater.canBeSold() && plate.canBeSold(),
+                    "Dust, repeaters, and pressure plates must all expose the sale action.");
             require(door.hasUpperDoorVisual(), "Iron door traps must render both lower and upper halves.");
             require(BlockDisplayVisual.blockState(dispenser.visual()).getValue(DispenserBlock.FACING) == Direction.WEST,
                     "Dispenser front must face the incoming lane spawn.");
@@ -154,6 +163,11 @@ public final class EngineerGameTest {
             lane.moveTowersToFinalDefense();
             require(slime.activeTicksRemaining() == 0, "Forced final defense must stop traps immediately.");
             require(!slime.deployedAtFinalDefense(), "Engineer traps must not consume a final-defense slot.");
+            for (EngineerCircuitTower circuit : List.of(dust, repeater, plate)) {
+                require(lane.removeTower(circuit), "Selling a circuit must remove its logical tower.");
+                require(context.getLevel().getBlockState(circuit.circuitPosition()).isAir(),
+                        "Selling a circuit must remove its physical block.");
+            }
             context.succeed();
         } catch (Throwable failure) {
             context.fail(Component.literal("Engineer circuit GameTest failed: "
@@ -161,6 +175,53 @@ public final class EngineerGameTest {
         } finally {
             lane.clearTowers();
         }
+    }
+
+    @GameTest
+    public void repeaterPassesPhysicalSignalTowardSelectedDirection(GameTestHelper context) {
+        UUID owner = stableUuid("engineer-repeater-signal");
+        PlayerLane lane = testLane(context, owner);
+        GridPosition platePosition = floor(context, 2, 2, 5);
+        GridPosition repeaterPosition = floor(context, 3, 2, 5);
+        GridPosition trapPosition = floor(context, 4, 2, 5);
+        prepareFloor(context, platePosition, repeaterPosition, trapPosition);
+
+        EngineerCircuitTower plate = new EngineerCircuitTower(
+                EngineerTowers.plate(EngineerTowers.PlateKind.WOOD),
+                owner, TeamId.RED, 1, platePosition, platePosition
+        );
+        EngineerCircuitTower repeater = new EngineerCircuitTower(
+                EngineerTowers.repeater(Direction.EAST),
+                owner, TeamId.RED, 1, repeaterPosition, repeaterPosition
+        );
+        EngineerTrapTower trap = new EngineerTrapTower(
+                EngineerTowers.trap(EngineerTowers.TrapKind.DISPENSER, 1),
+                owner, TeamId.RED, 1, trapPosition, trapPosition
+        );
+        lane.addTower(plate);
+        lane.addTower(repeater);
+        lane.addTower(trap);
+        lane.markWaveStarted(1);
+        require(plate.pressPlate(lane), "The source plate must be pressable.");
+
+        context.runAfterDelay(4, () -> {
+            try {
+                require(context.getLevel().getBlockState(repeater.circuitPosition())
+                                .getValue(BlockStateProperties.POWERED),
+                        "The repeater must receive the plate signal from behind.");
+                trap.tick(lane);
+                require(trap.activeTicksRemaining() > 0,
+                        "The repeater must physically power the trap in the selected direction.");
+                require(trap.activationPlateDistance() == 2,
+                        "The repeater path must preserve its two-block circuit distance.");
+                context.succeed();
+            } catch (Throwable failure) {
+                context.fail(Component.literal("Engineer repeater signal GameTest failed: "
+                        + failure.getClass().getName() + ": " + failure.getMessage()));
+            } finally {
+                lane.clearTowers();
+            }
+        });
     }
 
     @GameTest
@@ -284,6 +345,64 @@ public final class EngineerGameTest {
     }
 
     @GameTest
+    public void doorTauntLastsSixSecondsAndRefreshesWithoutAPlateCycleGap(GameTestHelper context) {
+        UUID owner = stableUuid("engineer-door-duration");
+        PlayerLane lane = testLane(context, owner);
+        GridPosition platePosition = floor(context, 6, 2, 7);
+        GridPosition doorPosition = floor(context, 7, 2, 7);
+        prepareFloor(context, platePosition, doorPosition);
+        EngineerCircuitTower plate = new EngineerCircuitTower(
+                EngineerTowers.plate(EngineerTowers.PlateKind.WOOD),
+                owner, TeamId.RED, 1, platePosition, platePosition
+        );
+        EngineerTrapTower door = new EngineerTrapTower(
+                EngineerTowers.trap(EngineerTowers.TrapKind.DOOR, 1),
+                owner, TeamId.RED, 1, doorPosition, doorPosition
+        );
+        SemionMonsterEntity monster = null;
+        try {
+            AreaEffectLaneIndex.register(lane);
+            lane.addTower(plate);
+            lane.addTower(door);
+            monster = spawnMonster(context, lane, "engineer-door-target",
+                    Vec3.atCenterOf(new BlockPos(doorPosition.x(), doorPosition.y() + 1, doorPosition.z())));
+            SemionTowerEntity doorEntity = (SemionTowerEntity) context.getLevel()
+                    .getEntity(door.entityId().orElseThrow());
+            lane.markWaveStarted(1);
+            require(plate.pressPlate(lane), "The plate must activate both adjacent traps.");
+            door.tick(lane);
+            require(door.activeTicksRemaining() == EngineerBalance.doorActiveTicks() - 1,
+                    "The iron door must latch for six seconds.");
+            require(monster.getTarget() == doorEntity, "The active door must taunt nearby monsters.");
+
+            unpowerPlate(context, plate);
+            door.tick(lane);
+            for (int tick = 0; tick < 97; tick++) {
+                door.tick(lane);
+            }
+            require(door.activeTicksRemaining() > 0 && monster.getTarget() == doorEntity,
+                    "The six-second taunt must cover the five-second plate cycle without a gap.");
+
+            require(plate.pressPlate(lane), "The next plate pulse must refresh the door.");
+            door.tick(lane);
+            require(door.activeTicksRemaining() == EngineerBalance.doorActiveTicks() - 1,
+                    "A new rising edge must refresh the door to six seconds.");
+            require(lane.removeTower(door), "The door must be removable.");
+            require(monster.getTarget() == null, "Selling the door must immediately release its targets.");
+            context.succeed();
+        } catch (Throwable failure) {
+            context.fail(Component.literal("Engineer door duration GameTest failed: "
+                    + failure.getClass().getName() + ": " + failure.getMessage()));
+        } finally {
+            if (monster != null) {
+                monster.discard();
+            }
+            lane.clearTowers();
+            AreaEffectLaneIndex.unregister(lane);
+        }
+    }
+
+    @GameTest
     public void newestConnectedPlateDeterminesDispenserDistance(GameTestHelper context) {
         UUID owner = stableUuid("engineer-newest-plate");
         PlayerLane lane = testLane(context, owner);
@@ -341,6 +460,143 @@ public final class EngineerGameTest {
         }
     }
 
+    @GameTest(maxTicks = 160)
+    public void goldPlateTntDamagesOnlyTheNearestSixteenTargets(GameTestHelper context) {
+        UUID owner = stableUuid("engineer-tnt-gold-cap");
+        PlayerLane lane = testLane(context, owner);
+        GridPosition tntPosition = floor(context, 7, 2, 7);
+        GridPosition goldPosition = floor(context, 6, 2, 7);
+        GridPosition woodPosition = floor(context, 8, 2, 7);
+        prepareFloor(context, tntPosition, goldPosition, woodPosition);
+        EngineerTrapTower tnt = new EngineerTrapTower(
+                EngineerTowers.trap(EngineerTowers.TrapKind.TNT, 3),
+                owner, TeamId.RED, 1, tntPosition, tntPosition
+        );
+        EngineerCircuitTower gold = new EngineerCircuitTower(
+                EngineerTowers.plate(EngineerTowers.PlateKind.GOLD),
+                owner, TeamId.RED, 1, goldPosition, goldPosition
+        );
+        EngineerCircuitTower wood = new EngineerCircuitTower(
+                EngineerTowers.plate(EngineerTowers.PlateKind.WOOD),
+                owner, TeamId.RED, 1, woodPosition, woodPosition
+        );
+        ArrayList<SemionMonsterEntity> targets = new ArrayList<>();
+        try {
+            AreaEffectLaneIndex.register(lane);
+            lane.addTower(tnt);
+            lane.addTower(gold);
+            lane.addTower(wood);
+            Vec3 center = Vec3.atCenterOf(new BlockPos(tntPosition.x(), tntPosition.y() + 1, tntPosition.z()));
+            for (int index = 0; index < 18; index++) {
+                double radius = index < 16 ? 1.0 + index * 0.08 : 3.4 + (index - 16) * 0.3;
+                double angle = index * Math.PI * 2.0 / 18.0;
+                SemionMonsterEntity target = spawnMonster(
+                        context,
+                        lane,
+                        "engineer-tnt-target-" + index,
+                        center.add(Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius)
+                );
+                target.setNoAi(true);
+                targets.add(target);
+            }
+
+            lane.markWaveStarted(20);
+            require(gold.pressPlate(lane), "The gold plate must ignite the TNT.");
+            tnt.tick(lane);
+            context.getLevel().setBlock(
+                    gold.circuitPosition(),
+                    context.getLevel().getBlockState(gold.circuitPosition())
+                            .setValue(BlockStateProperties.POWER, 0),
+                    3
+            );
+            tnt.tick(lane);
+            require(wood.pressPlate(lane), "A later wood pulse must be accepted while the fuse is running.");
+            tnt.tick(lane);
+            for (int tick = 0; tick < EngineerBalance.tntFuseTicks(); tick++) {
+                tnt.tick(lane);
+            }
+
+            for (int index = 0; index < targets.size(); index++) {
+                double expectedHealth = index < 16 ? 376.0 : 1_000.0;
+                requireClose(expectedHealth, targets.get(index).runtimeMonster().health(),
+                        "TNT target " + index + " health");
+            }
+            require(tnt.runtimeDetailLines().stream().anyMatch(line -> line.contains("금 발판")),
+                    "TNT details must preserve the ignition plate grade.");
+            require(tnt.runtimeDetailLines().stream().anyMatch(line -> line.contains("+30%")),
+                    "TNT details must show the gold plate damage bonus.");
+            context.succeed();
+        } catch (Throwable failure) {
+            context.fail(Component.literal("Engineer TNT cap GameTest failed: "
+                    + failure.getClass().getName() + ": " + failure.getMessage()));
+        } finally {
+            targets.forEach(SemionMonsterEntity::discard);
+            lane.clearTowers();
+            AreaEffectLaneIndex.unregister(lane);
+        }
+    }
+
+    @GameTest(maxTicks = 80)
+    public void dispenserCombinesGoldPlateAndCircuitDistanceDamage(GameTestHelper context) {
+        UUID owner = stableUuid("engineer-dispenser-gold-distance");
+        PlayerLane lane = testLane(context, owner);
+        GridPosition platePosition = floor(context, 4, 2, 7);
+        GridPosition dustOnePosition = floor(context, 5, 2, 7);
+        GridPosition dustTwoPosition = floor(context, 6, 2, 7);
+        GridPosition dispenserPosition = floor(context, 7, 2, 7);
+        prepareFloor(context, platePosition, dustOnePosition, dustTwoPosition, dispenserPosition);
+        EngineerCircuitTower plate = new EngineerCircuitTower(
+                EngineerTowers.plate(EngineerTowers.PlateKind.GOLD),
+                owner, TeamId.RED, 1, platePosition, platePosition
+        );
+        EngineerCircuitTower dustOne = new EngineerCircuitTower(
+                EngineerTowers.REDSTONE_DUST, owner, TeamId.RED, 1, dustOnePosition, dustOnePosition
+        );
+        EngineerCircuitTower dustTwo = new EngineerCircuitTower(
+                EngineerTowers.REDSTONE_DUST, owner, TeamId.RED, 1, dustTwoPosition, dustTwoPosition
+        );
+        EngineerTrapTower dispenser = new EngineerTrapTower(
+                EngineerTowers.trap(EngineerTowers.TrapKind.DISPENSER, 3),
+                owner, TeamId.RED, 1, dispenserPosition, dispenserPosition
+        );
+        SemionMonsterEntity target = null;
+        try {
+            lane.addTower(plate);
+            lane.addTower(dustOne);
+            lane.addTower(dustTwo);
+            lane.addTower(dispenser);
+            target = spawnMonster(
+                    context,
+                    lane,
+                    "engineer-dispenser-target",
+                    Vec3.atCenterOf(new BlockPos(dispenserPosition.x(), dispenserPosition.y() + 1, dispenserPosition.z() + 2))
+            );
+            target.setNoAi(true);
+
+            lane.markWaveStarted(20);
+            require(plate.pressPlate(lane), "The gold plate must power the dispenser through the circuit.");
+            dispenser.tick(lane);
+
+            requireClose(923.95, target.runtimeMonster().health(),
+                    "The dispenser shot must combine 45 damage, three circuit blocks, and the gold plate bonus.");
+            require(dispenser.runtimeDetailLines().stream().anyMatch(line -> line.contains("금 발판")),
+                    "Dispenser details must show the activating plate grade.");
+            require(dispenser.runtimeDetailLines().stream().anyMatch(line -> line.contains("+30%")),
+                    "Dispenser details must show the gold plate damage bonus.");
+            require(dispenser.runtimeDetailLines().stream().anyMatch(line -> line.contains("3/10칸")),
+                    "Dispenser details must show the applied circuit distance.");
+            context.succeed();
+        } catch (Throwable failure) {
+            context.fail(Component.literal("Engineer dispenser damage GameTest failed: "
+                    + failure.getClass().getName() + ": " + failure.getMessage()));
+        } finally {
+            if (target != null) {
+                target.discard();
+            }
+            lane.clearTowers();
+        }
+    }
+
     private static PlayerLane testLane(GameTestHelper context, UUID owner) {
         BlockPos min = context.absolutePos(new BlockPos(0, 1, 0));
         BlockPos max = context.absolutePos(new BlockPos(14, 6, 14));
@@ -371,6 +627,34 @@ public final class EngineerGameTest {
         }
     }
 
+    private static SemionMonsterEntity spawnMonster(
+            GameTestHelper context,
+            PlayerLane lane,
+            String id,
+            Vec3 position
+    ) {
+        Monster monster = new Monster(
+                id, lane.teamId(), lane.laneId(), Optional.empty(), Optional.empty(),
+                1_000.0, 0.0, 1.0, AttackKind.MELEE, "minecraft:zombie", 0L
+        );
+        SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
+        entity.configureFrom(monster, lane.laneLayout());
+        entity.setPos(position);
+        require(context.getLevel().addFreshEntity(entity), "The door target must spawn.");
+        monster.markMinecraftEntitySpawned(entity.getId(), position.x, position.y, position.z);
+        lane.activeMonsters().add(monster);
+        return entity;
+    }
+
+    private static void unpowerPlate(GameTestHelper context, EngineerCircuitTower plate) {
+        context.getLevel().setBlock(
+                plate.circuitPosition(),
+                context.getLevel().getBlockState(plate.circuitPosition())
+                        .setValue(BlockStateProperties.POWERED, false),
+                3
+        );
+    }
+
     private static BlockPos slimePosition(GridPosition position) {
         return new BlockPos(position.x(), position.y() + 1, position.z());
     }
@@ -382,6 +666,12 @@ public final class EngineerGameTest {
     private static void require(boolean condition, String message) {
         if (!condition) {
             throw new AssertionError(message);
+        }
+    }
+
+    private static void requireClose(double expected, double actual, String message) {
+        if (Math.abs(expected - actual) > 0.001) {
+            throw new AssertionError(message + ": expected=" + expected + ", actual=" + actual);
         }
     }
 }

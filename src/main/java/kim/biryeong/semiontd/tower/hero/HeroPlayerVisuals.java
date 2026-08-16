@@ -12,17 +12,21 @@ import java.util.Set;
 import java.util.UUID;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.mixin.accessor.PlayerInfoUpdatePacketAccessor;
+import kim.biryeong.semiontd.tower.TowerType;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.network.protocol.game.ClientboundRotateHeadPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
 import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
 import net.minecraft.server.level.ClientInformation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.PositionMoveRotation;
@@ -33,6 +37,7 @@ import net.minecraft.world.level.GameType;
 
 public final class HeroPlayerVisuals {
     private static final double TRACKING_DISTANCE_SQR = 128.0 * 128.0;
+    private static final float COMBAT_PITCH_CORRECTION = 37.5F;
     private static final Map<HeroPartyTower, Visual> VISUALS = new IdentityHashMap<>();
 
     private HeroPlayerVisuals() {
@@ -126,6 +131,24 @@ public final class HeroPlayerVisuals {
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
     }
 
+    static synchronized List<ServerPlayer> activeFakePlayersForTesting() {
+        return VISUALS.values().stream()
+                .map(visual -> visual.fakePlayer)
+                .toList();
+    }
+
+    public static synchronized Entity resolveInteractionAnchor(ServerLevel level, int entityId) {
+        if (level == null) {
+            return null;
+        }
+        return VISUALS.values().stream()
+                .filter(visual -> visual.fakePlayer.getId() == entityId)
+                .map(visual -> visual.anchor)
+                .filter(anchor -> anchor.level() == level && !anchor.isRemoved())
+                .findFirst()
+                .orElse(null);
+    }
+
     private static GameProfile profile(ServerLevel level, HeroPartyTower tower) {
         if (HeroPartyTowers.isHero(tower.type())) {
             ServerPlayer owner = level.getServer().getPlayerList().getPlayer(tower.ownerPlayer());
@@ -133,26 +156,29 @@ public final class HeroPlayerVisuals {
                 UUID visualId = UUID.nameUUIDFromBytes(
                         ("semion-td:hero:" + tower.ownerPlayer()).getBytes(StandardCharsets.UTF_8)
                 );
-                GameProfile profile = new GameProfile(visualId, profileName("Hero", visualId));
+                GameProfile profile = new GameProfile(visualId, displayProfileName(tower.type()));
                 profile.getProperties().putAll(owner.getGameProfile().getProperties());
                 return profile;
             }
         }
         HeroCompanionRole role = HeroPartyTowers.role(tower.type()).orElse(null);
         if (role != null) {
-            return HeroCompanionSkins.profile(tower.ownerPlayer(), role);
+            GameProfile skinProfile = HeroCompanionSkins.profile(tower.ownerPlayer(), role);
+            GameProfile profile = new GameProfile(skinProfile.getId(), displayProfileName(tower.type()));
+            profile.getProperties().putAll(skinProfile.getProperties());
+            return profile;
         }
         UUID uuid = UUID.nameUUIDFromBytes("semion-td:hero-party:unknown".getBytes(StandardCharsets.UTF_8));
-        return new GameProfile(uuid, profileName("Hero", uuid));
+        return new GameProfile(uuid, "용사 타워");
     }
 
     static UUID companionProfileId(HeroCompanionRole role) {
         return HeroCompanionSkins.roleDefaultProfileId(role);
     }
 
-    private static String profileName(String prefix, UUID uuid) {
-        String suffix = uuid.toString().replace("-", "").substring(0, 6);
-        String name = prefix + suffix;
+    static String displayProfileName(TowerType type) {
+        String displayName = type == null ? "용사" : type.displayName();
+        String name = displayName.endsWith("타워") ? displayName : displayName + " 타워";
         return name.length() <= 16 ? name : name.substring(0, 16);
     }
 
@@ -264,6 +290,8 @@ public final class HeroPlayerVisuals {
         private double lastX = Double.NaN;
         private double lastY = Double.NaN;
         private double lastZ = Double.NaN;
+        private float lastYaw = Float.NaN;
+        private float lastPitch = Float.NaN;
 
         private Visual(SemionTowerEntity anchor, HeroPartyTower tower, ServerPlayer fakePlayer) {
             this.anchor = anchor;
@@ -300,8 +328,12 @@ public final class HeroPlayerVisuals {
             double x = anchor.getX();
             double y = anchor.getY();
             double z = anchor.getZ();
-            if (forceMove || ticks % 2 == 0 && (x != lastX || y != lastY || z != lastZ)) {
-                fakePlayer.snapTo(x, y, z, fakePlayer.getYRot(), fakePlayer.getXRot());
+            float yaw = anchor.getYHeadRot();
+            float pitch = correctedPitch(anchor.getXRot(), anchor.currentAttackTarget() != null);
+            if (forceMove || ticks % 2 == 0 && (x != lastX || y != lastY || z != lastZ
+                    || yaw != lastYaw || pitch != lastPitch)) {
+                fakePlayer.snapTo(x, y, z, yaw, pitch);
+                fakePlayer.setYHeadRot(yaw);
                 ClientboundTeleportEntityPacket packet = ClientboundTeleportEntityPacket.teleport(
                         fakePlayer.getId(),
                         PositionMoveRotation.of(fakePlayer),
@@ -309,9 +341,16 @@ public final class HeroPlayerVisuals {
                         true
                 );
                 viewers().forEach(viewer -> viewer.connection.send(packet));
+                ClientboundRotateHeadPacket headPacket = new ClientboundRotateHeadPacket(
+                        fakePlayer,
+                        (byte) (yaw * 256.0F / 360.0F)
+                );
+                viewers().forEach(viewer -> viewer.connection.send(headPacket));
                 lastX = x;
                 lastY = y;
                 lastZ = z;
+                lastYaw = yaw;
+                lastPitch = pitch;
             }
         }
 
@@ -369,5 +408,9 @@ public final class HeroPlayerVisuals {
             });
             trackingViewers.clear();
         }
+    }
+
+    static float correctedPitch(float pitch, boolean hasTarget) {
+        return hasTarget ? Mth.clamp(pitch + COMBAT_PITCH_CORRECTION, -90.0F, 90.0F) : pitch;
     }
 }

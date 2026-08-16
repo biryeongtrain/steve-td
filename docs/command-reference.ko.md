@@ -158,6 +158,10 @@
 | `/semiontd-debug vfx mage prophecy` | 설치된 예언가의 성공 VFX를 재생합니다. |
 | `/semiontd-debug vfx insect radius` | 설치된 벌레 스포너의 부활 반경 VFX를 재생합니다. |
 | `/semiontd-debug vfx insect revive` | 스포너에 연결된 벌레의 부활 VFX를 재생합니다. |
+| `/semiontd-debug vfx army promotion` | 살아 있는 군대 타워에서 승진 VFX를 재생합니다. |
+| `/semiontd-debug vfx army command` | 살아 있는 군대 타워에서 지휘 VFX를 재생합니다. |
+| `/semiontd-debug vfx army barrage` | 살아 있는 군대 포병 타워에서 포격 VFX를 재생합니다. |
+| `/semiontd-debug vfx army discharge` | 살아 있는 군대 타워에서 전역 VFX를 재생합니다. |
 | `/semiontd-debug summonui [page]` | 디버그 소환 UI를 엽니다. |
 | `/semiontd-debug summon ui [page]` | 디버그 소환 UI를 엽니다. |
 | `/semiontd-debug give diamond <amount> [player]` | 다이아를 지급합니다. |

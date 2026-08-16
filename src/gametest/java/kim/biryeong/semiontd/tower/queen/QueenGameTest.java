@@ -23,8 +23,12 @@ import kim.biryeong.semiontd.tower.Tower;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
@@ -36,8 +40,11 @@ public final class QueenGameTest {
         UUID owner = UUID.nameUUIDFromBytes("queen-runtime".getBytes(StandardCharsets.UTF_8));
         QueenStates.clear(owner);
         PlayerLane lane = testLane(context, owner);
+        PlayerLane finalDefenseLane = testFinalDefenseLane(context);
         TeamLaneGroup group = new TeamLaneGroup(TeamId.RED, BossMonster.defaultBoss(TeamId.RED));
         group.addLane(lane);
+        group.addLane(finalDefenseLane);
+        QueenStates.begin(owner, group);
         prepareFloor(context);
         QueenTower queen = (QueenTower) ProductionTowerCatalog.find(QueenTowers.QUEEN.id()).orElseThrow()
                 .create(owner, TeamId.RED, 1, GridPosition.from(context.absolutePos(new BlockPos(3, 2, 3))));
@@ -47,6 +54,7 @@ public final class QueenGameTest {
             card.assignCard(new QueenCard(QueenCard.Suit.DIAMOND, 7));
             lane.addTower(queen);
             lane.addTower(card);
+            requireClose(60.0, queen.currentMaxHealth(), "The Queen must start with reduced early-game health.");
             Monster monster = new Monster("queen-target", TeamId.RED, 1, Optional.empty(), Optional.empty(),
                     80.0, 0.0, 20.0, AttackKind.MELEE, "minecraft:zombie", 5L);
             SemionMonsterEntity target = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
@@ -73,6 +81,14 @@ public final class QueenGameTest {
                             && queenEquipment.getItemBySlot(EquipmentSlot.CHEST).is(Items.LEATHER_CHESTPLATE)
                             && queenEquipment.getItemBySlot(EquipmentSlot.MAINHAND).is(Items.GOLDEN_SWORD),
                     "The Queen equipment overlay must render the complete equipment set.");
+            var player = context.makeMockServerPlayerInLevel();
+            player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            require(queenEquipment.isMarker() && !queenEquipment.isPickable(),
+                    "The Queen equipment overlay must not intercept player interaction.");
+            require(queenEquipment.interactAt(player, Vec3.ZERO, InteractionHand.MAIN_HAND) == InteractionResult.PASS
+                            && player.getItemInHand(InteractionHand.MAIN_HAND).isEmpty()
+                            && queenEquipment.getItemBySlot(EquipmentSlot.MAINHAND).is(Items.GOLDEN_SWORD),
+                    "Players must not take equipment from the Queen overlay.");
 
             monster.syncHealth(40.0);
             target.setHealth(40.0F);
@@ -85,7 +101,9 @@ public final class QueenGameTest {
             SemionTowerEntity cardEntity = (SemionTowerEntity) context.getLevel().getEntity(card.entityId().orElseThrow());
             require(cardEntity.getItemBySlot(EquipmentSlot.CHEST).is(Items.LEATHER_CHESTPLATE),
                     "Card soldiers must wear suit-colored leather armor.");
-            require(equipmentVisual(context, cardEntity).getItemBySlot(EquipmentSlot.CHEST).is(Items.LEATHER_CHESTPLATE),
+            ArmorStand cardEquipment = equipmentVisual(context, cardEntity);
+            require(cardEquipment.isMarker()
+                            && cardEquipment.getItemBySlot(EquipmentSlot.CHEST).is(Items.LEATHER_CHESTPLATE),
                     "Card soldiers must render their suit-colored armor overlay.");
             card.onAttackResolved(cardEntity, target, 0.0, 0.0, 0.0, false);
             require(nearbyMonster.maxHealth() < 80.0,
@@ -93,9 +111,10 @@ public final class QueenGameTest {
             for (int hit = 0; hit < 200; hit++) {
                 QueenShrink.apply(target, QueenBalance.queenShrinkPoints());
             }
-            requireClose(40.0, monster.maxHealth(), "Queen shrink must stop at half maximum health.");
-            requireClose(20.0, monster.health(), "The shrink floor must preserve the current health ratio.");
-            requireClose(10.0, monster.attackDamage(), "Queen shrink must stop at half attack damage.");
+            requireClose(16.0, monster.maxHealth(), "Queen shrink must stop at the configured stat floor.");
+            requireClose(8.0, monster.health(), "The shrink floor must preserve the current health ratio.");
+            requireClose(4.0, monster.attackDamage(), "Queen shrink must stop at the configured attack floor.");
+            requireClose(0.50, monster.visualScale(), "Queen shrink must preserve the separate visual floor.");
             double appliedPoints = QueenShrink.points(target);
             requireClose(Math.log(QueenBalance.minimumStatScale()) / Math.log(QueenBalance.shrinkFactorPerPoint()),
                     appliedPoints, "Only effective shrink points must be recorded.");
@@ -103,9 +122,12 @@ public final class QueenGameTest {
                     "Shrink at the floor must report no state change.");
             requireClose(appliedPoints, QueenShrink.points(target),
                     "Rejected shrink must not increase the recorded points.");
+            monster.syncHealth(4.0);
+            target.setHealth(4.0F);
 
             QueenStates.PlayerState state = QueenStates.state(owner);
             state.addCharge(QueenBalance.giantChargeTicks());
+            queen.markWaveStarted(1);
             queen.onWaveStarted(lane, 1);
             queen.tick(lane);
             require(state.runnerActive(), "A full gauge must dispatch a Giant.");
@@ -119,7 +141,7 @@ public final class QueenGameTest {
             for (int tick = 0; tick < 80 && monster.isAlive(); tick++) queen.tick(lane);
             require(!monster.isAlive(), "The Giant must execute a contacted enemy below its threshold.");
             requireClose(QueenBalance.giantInitialExecutionHealth()
-                            + 40.0 * QueenBalance.giantExecutionGrowthRatio(), state.executionHealth(),
+                            + 16.0 * QueenBalance.giantExecutionGrowthRatio(), state.executionHealth(),
                     "A successful execution must use the bounded growth formula.");
             require(owner.equals(monster.lastHitPlayerId().orElse(null))
                             && monster.lastHitSourceKind() == KillSourceKind.TOWER,
@@ -138,17 +160,70 @@ public final class QueenGameTest {
             queen.resetForRound(lane);
             lane.moveTowersToFinalDefense();
             state.addCharge(QueenBalance.giantChargeTicks());
+            queen.markWaveStarted(2);
             queen.onWaveStarted(lane, 2);
+            requireClose(68.0, queen.currentMaxHealth(),
+                    "The Queen must gain a fixed amount of maximum health each round.");
+            requireClose(68.0, queen.health(), "Round health growth must heal the gained maximum health.");
+            Vec3 boss = finalDefenseLane.laneLayout().bossPosition();
+            group.spawnBossEntity(context.getLevel(), boss);
+            double teamBossHealth = group.boss().health();
             queen.tick(lane);
-            Vec3 boss = lane.laneLayout().bossPosition();
-            GridPosition finalSlot = lane.laneLayout().finalDefenseTowerSlots().getFirst();
-            Vec3 expectedFinalStart = new Vec3(finalSlot.x() + 0.5, boss.y, finalSlot.z() + 0.5);
-            require(state.runnerActive() && state.runner().position().distanceToSqr(expectedFinalStart) < 0.01,
-                    "Final-defense Giants must use the final-defense route.");
+            require(state.runnerActive() && state.runner().position().distanceToSqr(boss) < 0.01,
+                    "Final-defense Giants must start at the boss.");
+            Vec3 finalWaypoint = finalDefenseLane.laneLayout().waypoints().getLast();
+            Vec3 finalDirection = finalWaypoint.subtract(boss);
+            float expectedFinalYaw = (float) Math.toDegrees(Math.atan2(-finalDirection.x, finalDirection.z));
+            require(angleDifference(state.runner().yaw(), expectedFinalYaw) < 0.1,
+                    "Final-defense Giants must face back along lane 5.");
+            Vec3 lastRunnerPosition = state.runner().position();
+            for (int tick = 0; tick < 200 && state.runnerActive(); tick++) {
+                lastRunnerPosition = state.runner().position();
+                queen.tick(lane);
+            }
+            require(!state.runnerActive(), "The final-defense Giant must finish its lane 5 run.");
+            require(lastRunnerPosition.distanceTo(finalDefenseLane.laneLayout().spawn())
+                            <= QueenBalance.giantSpeed() + 0.01,
+                    "The final-defense Giant must run to the end of lane 5.");
+            require(group.boss().isAlive(), "The final-defense Giant must not kill its own team's boss.");
+            requireClose(teamBossHealth, group.boss().health(),
+                    "The final-defense Giant must not damage its own team's boss.");
             context.succeed();
         } finally {
             group.closeRuntime();
             QueenStates.clear(owner);
+        }
+    }
+
+    @GameTest(maxTicks = 20)
+    public void equipmentOverlayUsesTheTowerInterpolationAndPose(GameTestHelper context) {
+        UUID owner = UUID.nameUUIDFromBytes("queen-equipment-sync".getBytes(StandardCharsets.UTF_8));
+        PlayerLane lane = testLane(context, owner);
+        prepareFloor(context);
+        QueenTower queen = (QueenTower) ProductionTowerCatalog.find(QueenTowers.QUEEN.id()).orElseThrow()
+                .create(owner, TeamId.RED, 1, GridPosition.from(context.absolutePos(new BlockPos(3, 2, 3))));
+        try {
+            lane.addTower(queen);
+            SemionTowerEntity source = towerEntity(context, queen);
+            ArmorStand equipment = equipmentVisual(context, source);
+            require(SemionEntityTypes.TOWER.updateInterval() == EntityType.ARMOR_STAND.updateInterval(),
+                    "Tower and equipment-overlay packets must use the same interpolation interval.");
+            Vec3 shiftedPosition = source.position().add(0.75, 0.25, -0.5);
+            source.teleportTo(shiftedPosition.x, shiftedPosition.y, shiftedPosition.z);
+            source.setYRot(15.0F);
+            source.setXRot(-25.0F);
+            source.yBodyRot = 35.0F;
+            source.setYHeadRot(55.0F);
+            queen.tick(lane);
+            require(equipment.position().distanceToSqr(shiftedPosition) < 0.0001,
+                    "The equipment overlay must follow the tower position exactly.");
+            requireClose(source.yBodyRot, equipment.getYRot(), "Equipment yaw must match the tower body.");
+            requireClose(source.yBodyRot, equipment.yBodyRot, "Equipment body rotation must match the tower body.");
+            requireClose(source.getXRot(), equipment.getHeadPose().x(), "Equipment head pitch must match the tower.");
+            requireClose(20.0, equipment.getHeadPose().y(), "Equipment head yaw must follow the tower head.");
+            context.succeed();
+        } finally {
+            lane.clearTowers();
         }
     }
 
@@ -196,10 +271,10 @@ public final class QueenGameTest {
             lane.addTower(queen);
             lane.addTower(heart);
             lane.addTower(club);
-            queen.syncHealth(100.0);
+            queen.syncHealth(30.0);
             lane.markWaveStarted(1);
             for (int tick = 0; tick <= QueenBalance.heartHealIntervalTicks(); tick++) heart.tick(lane);
-            requireClose(100.0 + QueenBalance.heartHealAmount(), queen.health(),
+            requireClose(30.0 + QueenBalance.heartHealAmount(), queen.health(),
                     "Heart cards must heal damaged Queen-family towers.");
 
             SemionTowerEntity clubEntity = towerEntity(context, club);
@@ -225,11 +300,21 @@ public final class QueenGameTest {
             );
             hand.forEach(lane::addTower);
             lane.markWaveStarted(2);
-            require(hasDetail(hand.getFirst(), "원 페어"), "Poker hands must be fixed at wave start.");
-            hand.getFirst().assignCard(new QueenCard(QueenCard.Suit.HEART, 3));
-            require(hasDetail(hand.getFirst(), "원 페어"), "Card changes during a wave must not change the snapshot.");
+            QueenCardTower firstCard = hand.getFirst();
+            double pairHealth = QueenBalance.cardMaxHealth(QueenCard.Suit.HEART)
+                    * (1.0 + QueenBalance.handBonus(PokerHand.ONE_PAIR));
+            requireClose(pairHealth, firstCard.currentMaxHealth(),
+                    "Poker hands must increase card maximum health.");
+            require(firstCard.adjustAttackInterval(999) == 19,
+                    "One pair must improve the Heart card attack interval.");
+            firstCard.assignCard(new QueenCard(QueenCard.Suit.HEART, 3));
+            requireClose(pairHealth, firstCard.currentMaxHealth(),
+                    "Card changes during a wave must not change the snapshot.");
             lane.markWaveStarted(3);
-            require(hasDetail(hand.getFirst(), "하이 카드"), "The next wave must capture the updated hand.");
+            requireClose(QueenBalance.cardMaxHealth(QueenCard.Suit.HEART), firstCard.currentMaxHealth(),
+                    "The next wave must capture the updated hand.");
+            require(firstCard.adjustAttackInterval(999) == QueenBalance.cardInterval(QueenCard.Suit.HEART),
+                    "The next wave must replace the previous attack-speed bonus.");
             context.succeed();
         } finally {
             group.closeRuntime();
@@ -290,10 +375,6 @@ public final class QueenGameTest {
                 .orElseThrow(() -> new AssertionError("The equipment overlay must spawn with its tower."));
     }
 
-    private static boolean hasDetail(QueenCardTower card, String text) {
-        return card.runtimeDetailLines().stream().anyMatch(line -> line.contains(text));
-    }
-
     private static PlayerLane testLane(GameTestHelper context, UUID owner) {
         BlockPos min = context.absolutePos(new BlockPos(0, 1, 0));
         BlockPos max = context.absolutePos(new BlockPos(14, 6, 14));
@@ -307,6 +388,33 @@ public final class QueenGameTest {
                 Vec3.atCenterOf(context.absolutePos(new BlockPos(12, 2, 12))),
                 BlockBounds.of(min, max), List.of(GridPosition.from(context.absolutePos(new BlockPos(10, 2, 11)))), 1);
         return new PlayerLane(TeamId.RED, 1, owner, context.getLevel(), layout);
+    }
+
+    private static PlayerLane testFinalDefenseLane(GameTestHelper context) {
+        BlockPos min = context.absolutePos(new BlockPos(0, 1, 0));
+        BlockPos max = context.absolutePos(new BlockPos(14, 6, 14));
+        Vec3 spawn = Vec3.atCenterOf(context.absolutePos(new BlockPos(13, 2, 2)));
+        Vec3 boss = Vec3.atCenterOf(context.absolutePos(new BlockPos(12, 2, 12)));
+        LaneRegionLayout layout = new LaneRegionLayout(
+                5,
+                spawn,
+                BlockBounds.of(BlockPos.containing(spawn), BlockPos.containing(spawn)),
+                List.of(
+                        Vec3.atCenterOf(context.absolutePos(new BlockPos(13, 2, 7))),
+                        Vec3.atCenterOf(context.absolutePos(new BlockPos(13, 2, 10)))
+                ),
+                boss,
+                BlockBounds.of(min, max),
+                List.of(GridPosition.from(context.absolutePos(new BlockPos(10, 2, 11)))),
+                0
+        );
+        return new PlayerLane(
+                TeamId.RED,
+                5,
+                UUID.nameUUIDFromBytes("queen-final-defense-lane".getBytes(StandardCharsets.UTF_8)),
+                context.getLevel(),
+                layout
+        );
     }
 
     private static void prepareFloor(GameTestHelper context) {

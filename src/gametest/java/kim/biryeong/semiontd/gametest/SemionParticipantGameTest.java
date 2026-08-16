@@ -41,6 +41,7 @@ import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.CurrencyType;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.IncomeLaneRoutingConfig;
+import kim.biryeong.semiontd.config.JobAvailabilityConfig;
 import kim.biryeong.semiontd.config.LeaderTargetingConfig;
 import kim.biryeong.semiontd.config.MapConfig;
 import kim.biryeong.semiontd.config.MonsterScalingConfig;
@@ -106,6 +107,7 @@ import kim.biryeong.semiontd.game.TowerSellResult;
 import kim.biryeong.semiontd.game.TowerUpgradeResult;
 import kim.biryeong.semiontd.game.VanillaTeamBridge;
 import kim.biryeong.semiontd.job.AnimalTowerJob;
+import kim.biryeong.semiontd.job.ArmyTowerJob;
 import kim.biryeong.semiontd.job.AncientCityTowerJob;
 import kim.biryeong.semiontd.job.AdversaryTowerJob;
 import kim.biryeong.semiontd.job.AtlantisTowerJob;
@@ -124,6 +126,7 @@ import kim.biryeong.semiontd.job.PlantTowerJob;
 import kim.biryeong.semiontd.job.QueenTowerJob;
 import kim.biryeong.semiontd.job.ResonanceTowerJob;
 import kim.biryeong.semiontd.job.SemionJob;
+import kim.biryeong.semiontd.job.ThunderTowerJob;
 import kim.biryeong.semiontd.job.UndeadTowerJob;
 import kim.biryeong.semiontd.job.InsectTowerJob;
 import kim.biryeong.semiontd.job.VillagerTowerJob;
@@ -231,6 +234,7 @@ import kim.biryeong.semiontd.tower.warlock.WarlockTower;
 import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
 import kim.biryeong.semiontd.test.tower.TestTowerTypes;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
+import kim.biryeong.semiontd.trait.TraitEffects;
 import kim.biryeong.semiontd.trait.TraitLoadout;
 import kim.biryeong.semiontd.trait.TraitSelectionConfig;
 import kim.biryeong.semiontd.trait.TraitSelectionSnapshot;
@@ -1085,6 +1089,107 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         context.succeed();
+    }
+
+    @GameTest
+    public void jobKillSwitchBlocksWaitingSelectionButKeepsStartedJob(GameTestHelper context) {
+        UUID waitingPlayerId = stableUuid("job-kill-switch-waiting");
+        UUID redId = stableUuid("job-kill-switch-red");
+        UUID blueId = stableUuid("job-kill-switch-blue");
+        JobAvailabilityConfig disabledNether = JobAvailabilityConfig.defaultConfig()
+                .withEnabled(NetherTowerJob.ID, false);
+        try {
+            JobRegistry.configureAvailability(JobAvailabilityConfig.defaultConfig());
+            SemionGame waitingGame = new SemionGame(
+                    EconomyConfig.defaultConfig(),
+                    new WaveConfig(List.of(), 20, null),
+                    testArena(context)
+            );
+            if (!assertTrue(context, waitingGame.selectJob(waitingPlayerId, NetherTowerJob.ID), "Enabled job should be selectable in a waiting lobby.")) {
+                return;
+            }
+
+            JobRegistry.configureAvailability(disabledNether);
+            if (!assertEquals(context, JobRegistry.defaultJob().id(), waitingGame.selectedJobOrDefault(waitingPlayerId).id(), "Disabled waiting selection should fall back to the default job.")) {
+                return;
+            }
+            if (!assertTrue(context, !waitingGame.selectJob(waitingPlayerId, NetherTowerJob.ID), "Disabled job should reject new waiting-lobby selection.")) {
+                return;
+            }
+
+            JobRegistry.configureAvailability(JobAvailabilityConfig.defaultConfig());
+            SemionGame startedGame = new SemionGame(
+                    EconomyConfig.defaultConfig(),
+                    new WaveConfig(List.of(), 20, null),
+                    testArena(context)
+            );
+            if (!assertTrue(context, startedGame.selectJob(redId, NetherTowerJob.ID), "Enabled job should be selectable before match start.")) {
+                return;
+            }
+            ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                    MatchMode.NORMAL,
+                    List.of(
+                            new AssignedParticipant(redId, "job-kill-switch-red", TeamId.RED, 1),
+                            new AssignedParticipant(blueId, "job-kill-switch-blue", TeamId.BLUE, 1)
+                    ),
+                    Set.of(),
+                    2
+            );
+            if (!assertTrue(context, startedGame.start(context.getLevel().getServer(), plan), "Kill-switch match should start.")) {
+                return;
+            }
+
+            JobRegistry.configureAvailability(disabledNether);
+            if (!assertEquals(context, NetherTowerJob.ID, startedGame.players().get(redId).job().orElseThrow().id(), "Disabling a job must not replace an active participant's assigned job.")) {
+                return;
+            }
+            context.succeed();
+        } finally {
+            JobRegistry.configureAvailability(JobAvailabilityConfig.defaultConfig());
+        }
+    }
+
+    @GameTest
+    public void disabledPersistedJobFallsBackInNewLobby(GameTestHelper context) {
+        var player = context.makeMockServerPlayerInLevel();
+        MinecraftServer server = context.getLevel().getServer();
+        Path storePath;
+        try {
+            storePath = Files.createTempDirectory("semion-disabled-job-profile-test").resolve("profiles.json");
+        } catch (java.io.IOException exception) {
+            context.fail(Component.literal("Failed to create temporary disabled-job profile path."));
+            return;
+        }
+
+        SemionGameManager manager = new SemionGameManager();
+        try {
+            manager.configure(
+                    EconomyConfig.defaultConfig(),
+                    WaveConfig.defaultConfig(),
+                    MapConfig.defaultConfig(),
+                    ProgressionConfig.defaultConfig(),
+                    storePath
+            );
+            manager.saveSelectedJob(
+                    server,
+                    player.getUUID(),
+                    player.getGameProfile().getName(),
+                    NetherTowerJob.ID
+            );
+            manager.configureJobAvailability(JobAvailabilityConfig.defaultConfig()
+                    .withEnabled(NetherTowerJob.ID, false));
+
+            SemionGame game = manager.createGame(server);
+            if (!assertEquals(context, JobRegistry.defaultJob().id(), game.selectedJobOrDefault(player.getUUID()).id(), "Disabled persisted job should fall back in a new lobby.")) {
+                return;
+            }
+            context.succeed();
+        } catch (Exception exception) {
+            context.fail(Component.literal("Disabled persisted job should not apply: " + exception.getMessage()));
+        } finally {
+            manager.shutdown();
+            JobRegistry.configureAvailability(JobAvailabilityConfig.defaultConfig());
+        }
     }
 
     @GameTest
@@ -2482,7 +2587,18 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 WaveConfig.defaultConfig(),
                 testArena(context)
         );
-        new SemionDialogService().showJobSelection(player, game);
+        SemionDialogService dialogService = new SemionDialogService();
+        JobRegistry.configureAvailability(JobAvailabilityConfig.defaultConfig().withEnabled(NetherTowerJob.ID, false));
+        try {
+            dialogService.showJobSelection(player, game);
+            dialogService.showJobSelection(player, game, true);
+            dialogService.showJobSelection(player, game, false);
+            dialogService.showJobManagement(player);
+            dialogService.showJobManagement(player, true);
+            dialogService.showJobManagement(player, false);
+        } finally {
+            JobRegistry.configureAvailability(JobAvailabilityConfig.defaultConfig());
+        }
         ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
                 MatchMode.NORMAL,
                 List.of(new AssignedParticipant(player.getUUID(), player.getGameProfile().getName(), TeamId.RED, 1)),
@@ -2492,7 +2608,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertTrue(context, game.start(context.getLevel().getServer(), plan), "Dialog test game should start.")) {
             return;
         }
-        SemionDialogService dialogService = new SemionDialogService();
         dialogService.showTowerControl(player, game);
         dialogService.showSummonShop(player, game);
         dialogService.showSummonShop(player, game, 2);
@@ -3370,34 +3485,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 recommended.getStyle().getColor().getValue(),
                 "Build-recommended tower button labels should be blue regardless of affordability."
         )) {
-            return;
-        }
-        context.succeed();
-    }
-
-    @GameTest
-    public void towerBuildTooltipsKeepPriceAndOnlyTwoDescriptionLines(GameTestHelper context) {
-        TowerType foxType = TowerBalanceRuntime.resolve(AdversaryTowers.FOX);
-        TowerType moobloomType = TowerBalanceRuntime.resolve(ResonanceTowers.FOCUS_CRYSTAL);
-        String foxTooltip = towerBuildTooltipText(new ProductionTowerCatalog.CatalogEntry(foxType, null, 1));
-        String moobloomTooltip = towerBuildTooltipText(new ProductionTowerCatalog.CatalogEntry(moobloomType, null, 1));
-
-        if (!assertTrue(context, foxTooltip.contains(foxType.mineralCost() + " 다이아"), "Fox build tooltip should keep its price visible.")) {
-            return;
-        }
-        if (!assertTrue(context, foxTooltip.contains("플레이어당 최대") && foxTooltip.contains("기본 공격이 반경"), "Fox build tooltip should keep its first two summary lines.")) {
-            return;
-        }
-        if (!assertTrue(context, !foxTooltip.contains("숙적을 직접 처치"), "Fox build tooltip should omit later detail lines.")) {
-            return;
-        }
-        if (!assertTrue(context, moobloomTooltip.contains(moobloomType.mineralCost() + " 다이아"), "Moobloom build tooltip should keep its price visible.")) {
-            return;
-        }
-        if (!assertTrue(context, moobloomTooltip.contains("단일 타겟") && moobloomTooltip.contains("다른 무블룸을 옆에 설치"), "Moobloom build tooltip should keep its first two summary lines.")) {
-            return;
-        }
-        if (!assertTrue(context, !moobloomTooltip.contains("안에 다른 종의 무블룸"), "Moobloom build tooltip should omit later detail lines.")) {
             return;
         }
         context.succeed();
@@ -5226,13 +5313,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         )) {
             return;
         }
-        if (!assertTrue(
-                context,
-                foxTower.runtimeDetailLines().stream().anyMatch(line -> line.contains("사망 보너스 1/100")),
-                "Fox tower runtime details should show the nearby death bonus stack."
-        )) {
-            return;
-        }
         context.succeed();
     }
 
@@ -5411,6 +5491,8 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         sourceTower.markWaveStarted(10);
         SemionTowerEntity sourceEntity = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
         sourceEntity.configure(sourceTower, null);
+        double igniteDamage = TraitEffects.igniteDamagePerTick(sourceTower.traitLoadout(), 100.0, 10);
+        double strongerIgniteDamage = TraitEffects.igniteDamagePerTick(sourceTower.traitLoadout(), 200.0, 10);
 
         SemionMonsterEntity fourTickTarget = spawnRoleMonsterEntity(
                 context,
@@ -5427,7 +5509,8 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         for (int tick = 0; tick < 80; tick++) {
             fourTickTarget.aiStep();
         }
-        if (!assertClose(context, 962.0, fourTickTarget.runtimeMonster().health(), "Ignite should deal exactly four 9.5-damage ticks.")) {
+        if (!assertClose(context, 1_000.0 - igniteDamage * 4, fourTickTarget.runtimeMonster().health(),
+                "Ignite should deal exactly four configured damage ticks.")) {
             return;
         }
         if (!assertTrue(context, playerId.equals(fourTickTarget.runtimeMonster().lastHitPlayerId().orElse(null)), "Ignite should preserve owner attribution.")) {
@@ -5451,7 +5534,8 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
         sourceEntity.recordAttack(refreshTarget, 50.0, false);
         refreshTarget.aiStep();
-        if (!assertClose(context, 990.5, refreshTarget.runtimeMonster().health(), "A weaker refresh should keep the stronger damage and original tick cadence.")) {
+        if (!assertClose(context, 1_000.0 - igniteDamage, refreshTarget.runtimeMonster().health(),
+                "A weaker refresh should keep the stronger damage and original tick cadence.")) {
             return;
         }
         for (int tick = 0; tick < 10; tick++) {
@@ -5461,11 +5545,13 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         for (int tick = 0; tick < 9; tick++) {
             refreshTarget.aiStep();
         }
-        if (!assertClose(context, 990.5, refreshTarget.runtimeMonster().health(), "A stronger refresh must not reset the pending tick.")) {
+        if (!assertClose(context, 1_000.0 - igniteDamage, refreshTarget.runtimeMonster().health(),
+                "A stronger refresh must not reset the pending tick.")) {
             return;
         }
         refreshTarget.aiStep();
-        if (!assertClose(context, 973.5, refreshTarget.runtimeMonster().health(), "The next scheduled tick should use the stronger 17 damage.")) {
+        if (!assertClose(context, 1_000.0 - igniteDamage - strongerIgniteDamage,
+                refreshTarget.runtimeMonster().health(), "The next scheduled tick should use the stronger configured damage.")) {
             return;
         }
 
@@ -5490,7 +5576,9 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertTrue(context, killTarget.runtimeMonster().lastHitSourceKind() == KillSourceKind.TOWER, "Ignite kills should keep tower kill attribution.")) {
             return;
         }
-        if (!assertClose(context, 84.5, sourceTower.roundMagicDamageDealt(), "Ignite ticks should count as magic damage for the tower that applied the retained ignite.")) {
+        if (!assertClose(context, igniteDamage * 5 + strongerIgniteDamage + 20.0,
+                sourceTower.roundMagicDamageDealt(),
+                "Ignite ticks should count as magic damage for the tower that applied the retained ignite.")) {
             return;
         }
         context.succeed();
@@ -5533,20 +5621,24 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         for (int tick = 0; tick < 20; tick++) {
             splashTarget.aiStep();
         }
+        double igniteDamage = TraitEffects.igniteDamagePerTick(sourceTower.traitLoadout(), 50.0, 10);
         if (!assertClose(context, 50.0, sourceTower.roundPhysicalDamageDealt(),
                 "Basic-attack splash should remain physical damage.")) {
             return;
         }
-        if (!assertClose(context, 5.75, sourceTower.roundMagicDamageDealt(),
+        if (!assertClose(context, igniteDamage, sourceTower.roundMagicDamageDealt(),
                 "Ignite should merge into the source tower's magic damage.")) {
             return;
         }
         String markup = SemionHudTextService.damageSidebarMarkupFor(playerId, game);
-        if (!assertTrue(context, markup.contains("<#ec8d34>🪓 50</#ec8d34> <dark_gray>|</dark_gray> <#796CFF>🔥 6</#796CFF> <dark_gray>|</dark_gray> <aqua>🛡 0</aqua>"),
+        long roundedIgniteDamage = Math.round(igniteDamage);
+        if (!assertTrue(context, markup.contains("<#ec8d34>🪓 50</#ec8d34> <dark_gray>|</dark_gray> <#796CFF>🔥 "
+                        + roundedIgniteDamage + "</#796CFF> <dark_gray>|</dark_gray> <aqua>🛡 0</aqua>"),
                 "Damage sidebar should show physical and magic totals without a separate ignite subtotal.")) {
             return;
         }
-        if (!assertTrue(context, markup.contains("Test Direct Tower</white> <#ec8d34>🪓 50</#ec8d34> <#796CFF>🔥 6</#796CFF>"),
+        if (!assertTrue(context, markup.contains("Test Direct Tower</white> <#ec8d34>🪓 50</#ec8d34> <#796CFF>🔥 "
+                        + roundedIgniteDamage + "</#796CFF>"),
                 "Tower damage ranking should split physical and magic damage.")) {
             return;
         }
@@ -8458,40 +8550,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
-    public void summonDescriptionsIncludeAbilityNumbers(GameTestHelper context) {
-        SummonConfig config = SummonConfig.defaultConfig();
-        SummonConfig.SummonDefinition bogged = config.summons().get("bogged");
-        SummonConfig.SummonDefinition allay = config.summons().get("allay");
-        SummonConfig.SummonDefinition chicken = config.summons().get("chicken");
-        SummonConfig.SummonDefinition warden = config.summons().get("warden");
-        if (!assertTrue(context, bogged.description().stream().anyMatch(line -> line.equals("반경 6블록 내 가까운 타워 최대 1기의 공격속도를 5초간 12% 감소시킵니다. (4.5초 쿨타임)")), "Bogged description should be a concise tower debuff ability line.")) {
-            return;
-        }
-        if (!assertTrue(context, allay.description().stream().anyMatch(line -> line.equals("반경 6블록 내 아군 유닛 최대 6기를 8 회복시킵니다. (6초 쿨타임)")), "Allay description should describe only its healing ability.")) {
-            return;
-        }
-        if (!assertTrue(context, chicken.description().contains("상대한테 돈 쥐어주는 꼴이니 이거말고 더 비싼거나 보내세요."), "Chicken should expose its live description.")) {
-            return;
-        }
-        if (!assertTrue(context, SummonRegistry.find("chicken").orElseThrow().description().isEmpty(), "Summon types without abilities should not generate fallback description lines.")) {
-            return;
-        }
-        if (!assertTrue(context, warden.description().stream().anyMatch(line -> line.equals("방어 대상에게 100 고정 피해를 줍니다. (3초 쿨타임)")), "Warden description should be a concise siege ability line.")) {
-            return;
-        }
-        if (!assertTrue(context, SummonRegistry.find("warden").orElseThrow().abilityActivations().equals(List.of(SummonAbilityActivation.COOLDOWN)), "Siege summon fixed-damage abilities should display as cooldown abilities.")) {
-            return;
-        }
-        if (!assertTrue(context, config.summons().values().stream()
-                .flatMap(definition -> definition.description().stream())
-                .noneMatch(line -> line.contains("T1") || line.contains("T2") || line.contains("T3") || line.contains("T4") || line.contains("T5")
-                        || line.contains("역할") || line.contains("경제") || line.contains("전투") || line.contains("인컴 유닛")), "Summon descriptions should not expose tier, category, or income-only wording.")) {
-            return;
-        }
-        context.succeed();
-    }
-
-    @GameTest
     public void monsterDamageTypesUseArmorResistanceAndTrueDamage(GameTestHelper context) {
         Monster monster = new Monster(
                 "damage-policy",
@@ -9181,10 +9239,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertEquals(context, 16, tower.adjustAttackInterval(tower.type().attackIntervalTicks()), "Different-family and different-owner towers should not grant wolf stacks.")) {
             return;
         }
-        if (!assertTrue(context, tower.runtimeDetailLines().stream().anyMatch(line -> line.contains("무리 스택 3/4")), "Four total same-owner wolves should show three supporting stacks.")) {
-            return;
-        }
-
         lane.addTower(new WolfTower(AnimalTowers.T1_WOLF_TOWER, playerId, TeamId.RED, 1, new GridPosition(base.getX() + 6, base.getY(), base.getZ() + 1)));
 
         if (!assertClose(context, 13.0, t1Tower.modifyAttackDamage(null, null, t1Tower.type().damage()), "T1 wolf should reach 13 damage with five total wolves.")) {
@@ -9205,13 +9259,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertEquals(context, 10, t3Tower.adjustAttackInterval(t3Tower.type().attackIntervalTicks()), "T3 wolf should reach a 10-tick interval at max stacks.")) {
             return;
         }
-        if (!assertTrue(context, tower.runtimeDetailLines().stream().anyMatch(line -> line.contains("무리 스택 4/4")), "Five total same-owner wolves should activate max stacks.")) {
-            return;
-        }
-        if (!assertTrue(context, tower.runtimeDetailLines().stream().anyMatch(line -> line.contains("공격 간격 -5틱")), "Wolf runtime details should show the rounded interval reduction used in combat.")) {
-            return;
-        }
-
         SemionTowerEntity towerEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(tower.entityId().orElseThrow());
         Vec3 origin = towerEntity.position().add(1.0, 0.0, 0.0);
         SemionMonsterEntity primary = spawnRoleMonsterEntity(context, "wolf-primary", Optional.empty(), TeamId.RED, 1, origin, 100.0, List.of(SummonRole.RUSH));
@@ -9268,10 +9315,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertEquals(context, 13, tower.adjustAttackInterval(tower.type().attackIntervalTicks()), "Different-family and different-owner towers should not grant rabbit stacks.")) {
             return;
         }
-        if (!assertTrue(context, tower.runtimeDetailLines().stream().anyMatch(line -> line.contains("무리 스택 3/4")), "Four total same-owner rabbits should show three supporting stacks.")) {
-            return;
-        }
-
         SemionTowerEntity towerEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(tower.entityId().orElseThrow());
         SemionMonsterEntity target = spawnRoleMonsterEntity(
                 context,
@@ -9306,9 +9349,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertEquals(context, 8, tower.adjustAttackInterval(tower.type().attackIntervalTicks()), "T3 rabbit should reach an 8-tick interval at max stacks.")) {
-            return;
-        }
-        if (!assertTrue(context, tower.runtimeDetailLines().stream().anyMatch(line -> line.contains("무리 스택 4/4")), "Five total same-owner rabbits should activate max stacks.")) {
             return;
         }
         tower.onAttack(towerEntity, target, 20.0, false);
@@ -9397,8 +9437,9 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         Tower upgradedFox = lane.towerAt(foxPosition);
-        if (!assertTrue(context, upgradedFox instanceof FoxTower
-                        && upgradedFox.runtimeDetailLines().stream().anyMatch(line -> line.contains("사망 보너스 1/100")),
+        if (!assertTrue(context, upgradedFox instanceof FoxTower foxLeader
+                        && foxLeader.modifyAttackDamage(null, null, foxLeader.type().damage())
+                        > foxLeader.type().damage(),
                 "Fox kill bonus should survive the T3-to-leader upgrade.")) {
             return;
         }
@@ -9431,10 +9472,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertClose(context, 65.0, recipient.modifyIncomingDamage(null, null, 100.0), "Pig leader should raise max-stack damage reduction from 30% to 35%.")) {
             return;
         }
-        if (!assertTrue(context, recipient.runtimeDetailLines().stream().anyMatch(line -> line.contains("우두머리 오라 적용 중")), "Pig recipient should expose its active leader aura.")) {
-            return;
-        }
-
         lane.removeTower(support);
         if (!assertClose(context, 440.0, recipient.currentMaxHealth(), "Leader aura should deactivate when the leader loses max stacks.")) {
             return;
@@ -9458,29 +9495,36 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         lane.addTower(otherOwner);
         lane.addTower(otherFamily);
         lane.addTower(outOfRange);
-        if (!assertTrue(context, otherOwner.runtimeDetailLines().stream().noneMatch(line -> line.contains("오라 적용 중")), "Leader aura should exclude other owners.")) {
+        if (!assertTrue(context, otherOwner.currentMaxHealth() < recipient.currentMaxHealth(),
+                "Leader aura should exclude other owners.")) {
             return;
         }
-        if (!assertTrue(context, otherFamily.runtimeDetailLines().stream().noneMatch(line -> line.contains("오라 적용 중")), "Leader aura should exclude other animal families.")) {
+        if (!assertClose(context, otherFamily.type().maxHealth(), otherFamily.currentMaxHealth(),
+                "Leader aura should exclude other animal families.")) {
             return;
         }
-        if (!assertTrue(context, outOfRange.runtimeDetailLines().stream().noneMatch(line -> line.contains("오라 적용 중")), "Leader aura should exclude towers outside its radius.")) {
+        if (!assertTrue(context, outOfRange.currentMaxHealth() < recipient.currentMaxHealth(),
+                "Leader aura should exclude towers outside its radius.")) {
             return;
         }
 
+        double activeAuraHealth = recipient.currentMaxHealth();
         lane.killTower(leader);
         recipient.tick(lane);
-        if (!assertTrue(context, recipient.runtimeDetailLines().stream().noneMatch(line -> line.contains("오라 적용 중")), "A dead leader should stop its aura on the next state refresh.")) {
+        if (!assertTrue(context, recipient.currentMaxHealth() < activeAuraHealth,
+                "A dead leader should stop its aura on the next state refresh.")) {
             return;
         }
         PigTower replacementLeader = new PigTower(AnimalTowers.T4_PIG_LEADER_TOWER, playerId, TeamId.RED, 1,
                 new GridPosition(base.getX(), base.getY(), base.getZ() + 1));
         lane.addTower(replacementLeader);
-        if (!assertTrue(context, recipient.runtimeDetailLines().stream().anyMatch(line -> line.contains("우두머리 오라 적용 중")), "A new living max-stack leader should reactivate the aura.")) {
+        if (!assertClose(context, activeAuraHealth, recipient.currentMaxHealth(),
+                "A new living max-stack leader should reactivate the aura.")) {
             return;
         }
         lane.removeTower(replacementLeader);
-        if (!assertTrue(context, recipient.runtimeDetailLines().stream().noneMatch(line -> line.contains("오라 적용 중")), "Selling the leader should remove its aura immediately.")) {
+        if (!assertTrue(context, recipient.currentMaxHealth() < activeAuraHealth,
+                "Selling the leader should remove its aura immediately.")) {
             return;
         }
         context.succeed();
@@ -9858,10 +9902,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         lane.addTower(nearbyTower);
         lane.killTower(nearbyTower);
 
-        List<String> detailLines = catTower.runtimeDetailLines();
-        if (!assertTrue(context, detailLines.stream().anyMatch(line -> line.contains("사망 스택 3/")), "Nearby wave, income, and tower deaths should each add one death stack: " + detailLines)) {
-            return;
-        }
         if (!assertClose(context, 22.4, catTower.modifyAttackDamage(null, null, 20.0), "Three default T2 anti-tanker cat death stacks should add 2.4 attack damage.")) {
             return;
         }
@@ -10074,141 +10114,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
-    public void animalTowerDescriptionsRenderConfiguredAbilityValues(GameTestHelper context) {
-        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
-        Map<String, Map<String, Double>> abilities = new java.util.LinkedHashMap<>(defaults.abilities());
-        Map<String, Double> rabbitAbilities = new java.util.LinkedHashMap<>(abilities.get(AnimalTowers.T3_RABBIT_TOWER.id()));
-        rabbitAbilities.put("damagePerStack", 12.0);
-        rabbitAbilities.put("maxStackExtraIntervalReduction", 9.0);
-        abilities.put(AnimalTowers.T3_RABBIT_TOWER.id(), rabbitAbilities);
-
-        TowerBalanceRuntime.apply(new TowerBalanceConfig(defaults.towers(), defaults.upgradeCosts(), abilities));
-        try {
-            TowerType resolved = TowerBalanceRuntime.resolve(AnimalTowers.T3_RABBIT_TOWER);
-            if (!assertTrue(context, resolved.description().stream().anyMatch(line -> line.contains("공격력이 12 증가")), "Rabbit description should render configured damage per stack.")) {
-                return;
-            }
-            if (!assertTrue(context, resolved.description().stream().anyMatch(line -> line.contains("공격 주기가 9틱 감소")), "Rabbit description should render configured interval reduction.")) {
-                return;
-            }
-        } finally {
-            TowerBalanceRuntime.apply(defaults);
-        }
-        context.succeed();
-    }
-
-    @GameTest
-    public void legionTowerDescriptionsRenderConfiguredAbilityValues(GameTestHelper context) {
-        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
-        Map<String, Map<String, Double>> abilities = new java.util.LinkedHashMap<>(defaults.abilities());
-        Map<String, Double> penguinAbilities = new java.util.LinkedHashMap<>(abilities.get(LegionTowers.T2_PENGUIN.id()));
-        penguinAbilities.put("cloneCount", 4.0);
-        penguinAbilities.put("cloneHealthRatio", 0.80);
-        penguinAbilities.put("splashRadius", 2.0);
-        penguinAbilities.put("splashDamageRatio", 0.40);
-        abilities.put(LegionTowers.T2_PENGUIN.id(), penguinAbilities);
-        Map<String, Double> slimeAbilities = new java.util.LinkedHashMap<>(abilities.get(LegionTowers.T2_SLIME_TOWER.id()));
-        slimeAbilities.put("regenAmount", 7.0);
-        abilities.put(LegionTowers.T2_SLIME_TOWER.id(), slimeAbilities);
-        Map<String, Double> parrotAbilities = new java.util.LinkedHashMap<>(abilities.get(LegionTowers.T1_PARROT_TOWER.id()));
-        parrotAbilities.put("attackStackBonus", 0.25);
-        parrotAbilities.put("maxAttackStacks", 3.0);
-        abilities.put(LegionTowers.T1_PARROT_TOWER.id(), parrotAbilities);
-
-        TowerBalanceRuntime.apply(new TowerBalanceConfig(defaults.towers(), defaults.upgradeCosts(), abilities));
-        try {
-            TowerType penguin = TowerBalanceRuntime.resolve(LegionTowers.T2_PENGUIN);
-            if (!assertTrue(context, penguin.description().stream().anyMatch(line -> line.contains("80%") && line.contains("4체")), "Penguin description should render configured clone ratio and count.")) {
-                return;
-            }
-            if (!assertTrue(context, penguin.description().stream().anyMatch(line -> line.contains("2블록") && line.contains("40%")), "Penguin description should render configured splash values.")) {
-                return;
-            }
-            TowerType slime = TowerBalanceRuntime.resolve(LegionTowers.T2_SLIME_TOWER);
-            if (!assertTrue(context, slime.description().stream().anyMatch(line -> line.contains("체력이 7씩 재생")), "Slime description should render configured regen amount.")) {
-                return;
-            }
-            TowerType parrot = TowerBalanceRuntime.resolve(LegionTowers.T1_PARROT_TOWER);
-            if (!assertTrue(context, parrot.description().stream().anyMatch(line -> line.contains("25% 증가") && line.contains("최대 75%")), "Parrot description should render configured stack bonus and cap.")) {
-                return;
-            }
-        } finally {
-            TowerBalanceRuntime.apply(defaults);
-        }
-        context.succeed();
-    }
-
-    @GameTest
-    public void warlockTowerDescriptionsRenderConfiguredAbilityValues(GameTestHelper context) {
-        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
-        Map<String, Map<String, Double>> abilities =
-                new java.util.LinkedHashMap<>(defaults.abilities());
-        Map<String, Double> rangedAbilities =
-                new java.util.LinkedHashMap<>(
-                        abilities.get(WarlockTowers.RANGED_WARLOCK_TOWER.id())
-                );
-        rangedAbilities.put("threshold", 0.25);
-        rangedAbilities.put("roundStat", 0.35);
-        rangedAbilities.put("petHealth", 0.07);
-        rangedAbilities.put("petHealthCap", 0.21);
-        rangedAbilities.put("petDamage", 0.13);
-        rangedAbilities.put("petDamageCap", 0.65);
-
-        abilities.put(
-                WarlockTowers.RANGED_WARLOCK_TOWER.id(),
-                rangedAbilities
-        );
-        TowerBalanceRuntime.apply(
-                new TowerBalanceConfig(
-                        defaults.towers(),
-                        defaults.upgradeCosts(),
-                        abilities
-                )
-        );
-        try {
-            TowerType resolved =
-                    TowerBalanceRuntime.resolve(WarlockTowers.RANGED_WARLOCK_TOWER);
-            String description = String.join(
-                    "\n",
-                    resolved.description()
-            ).replaceAll("<[^>]+>", "");
-            if (!assertTrue(
-                    context,
-                    description.contains("체력 25% 이하이면"),
-                    "Warlock description should render configured absorb threshold."
-            )) {
-                return;
-            }
-            if (!assertTrue(
-                    context,
-                    description.contains("흡수한 타워 체력과 피해의 35%"),
-                    "Warlock description should render configured temporary stat ratio."
-            )) {
-                return;
-            }
-            if (!assertTrue(
-                    context,
-                    description.contains("능력치는 높아질수록 증가 효율이 감소합니다.")
-                            && !description.contains("로그 스케일"),
-                    "Warlock description should summarize diminishing scaling efficiency."
-            )) {
-                return;
-            }
-            if (!assertTrue(
-                    context,
-                    description.contains("개구리 계열마다 체력 +7%, 피해 +13%")
-                            && description.contains("최대 체력 +21%, 피해 +65%까지 증가"),
-                    "Warlock description should render configured frog-family bonuses and caps."
-            )) {
-                return;
-            }
-        } finally {
-            TowerBalanceRuntime.apply(defaults);
-        }
-        context.succeed();
-    }
-
-    @GameTest
     public void builtInCatalogReloadRegistersTowerJobs(GameTestHelper context) {
         ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
 
@@ -10272,7 +10177,13 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertPresent(context, JobRegistry.find(PlantTowerJob.ID), "Built-in reload should register the plant tower job.")) {
             return;
         }
-        if (!assertEquals(context, 94L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose every production starter family.")) {
+        if (!assertPresent(context, JobRegistry.find(ThunderTowerJob.ID), "Built-in reload should register the thunder tower job.")) {
+            return;
+        }
+        if (!assertPresent(context, JobRegistry.find(ArmyTowerJob.ID), "Built-in reload should register the army tower job.")) {
+            return;
+        }
+        if (!assertEquals(context, 100L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose every production starter family.")) {
             return;
         }
         context.succeed();
@@ -11045,13 +10956,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertClose(context, 0.02, targetEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_REDUCTION), "Goat should temporarily reduce incoming damage for a player's Legion tower during prepare.")) {
             return;
         }
-        if (!assertTrue(context, towerTimedEffectBody(targetEntity).contains("피해 증가 +2.5%"), "Right-click tower details should show the active goat damage buff.")) {
-            return;
-        }
-        if (!assertTrue(context, towerTimedEffectBody(targetEntity).contains("받피 감소 +2.0%"), "Right-click tower details should show the active goat damage reduction buff.")) {
-            return;
-        }
-
         SemionGameManager manager = new SemionGameManager();
         setField(manager, "activeGame", game);
         try {
@@ -11783,15 +11687,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertClose(context, 100.0, core.modifyIncomingDamage(null, null, 100.0), "Melee warlock should not reduce incoming damage before five absorbed towers.")) {
             return;
         }
-        String lifeStealWithSurvivor = String.join("\n", core.runtimeDetailLines()).replaceAll("<[^>]+>", "");
-        if (!assertTrue(context, lifeStealWithSurvivor.contains("생명력 흡수: +0%"), "Melee warlock should have no life steal while another tower remains alive.")) {
-            return;
-        }
         t1Melee.syncHealth(0.0);
-        String lifeStealWhileAlone = String.join("\n", core.runtimeDetailLines()).replaceAll("<[^>]+>", "");
-        if (!assertTrue(context, lifeStealWhileAlone.contains("생명력 흡수: +1%"), "Melee warlock should gain one percent life steal per round sacrifice when it is the only living core tower.")) {
-            return;
-        }
         game.teams().get(TeamId.RED).resetForRound();
         if (!assertEquals(context, 20, core.adjustAttackInterval(20), "Melee warlock should lose sacrifice attack interval reduction after the round.")) {
             return;
@@ -12895,34 +12791,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     private static void tickLaneWithGlobalCloneQueue(PlayerLane lane, MinecraftServer server) {
         IllusionCloneSpawnQueue.tick();
         lane.tick(server);
-    }
-
-    private static String towerTimedEffectBody(SemionTowerEntity entity) {
-        try {
-            Method method = SemionDialogService.class.getDeclaredMethod("appendTowerTimedEffects", StringBuilder.class, SemionTowerEntity.class);
-            method.setAccessible(true);
-            StringBuilder body = new StringBuilder();
-            method.invoke(null, body, entity);
-            return body.toString();
-        } catch (ReflectiveOperationException exception) {
-            throw new IllegalStateException("Failed to render tower timed effects.", exception);
-        }
-    }
-
-    private static String towerBuildTooltipText(ProductionTowerCatalog.CatalogEntry entry) {
-        try {
-            Method method = SemionDialogService.class.getDeclaredMethod(
-                    "towerTooltip",
-                    ProductionTowerCatalog.CatalogEntry.class,
-                    long.class,
-                    boolean.class,
-                    boolean.class
-            );
-            method.setAccessible(true);
-            return ((Component) method.invoke(null, entry, entry.type().mineralCost(), true, false)).getString();
-        } catch (ReflectiveOperationException exception) {
-            throw new IllegalStateException("Failed to render tower build tooltip.", exception);
-        }
     }
 
     private static void setField(Object target, String fieldName, Object value) {

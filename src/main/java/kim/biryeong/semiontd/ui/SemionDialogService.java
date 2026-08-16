@@ -227,16 +227,88 @@ public final class SemionDialogService {
     }
 
     public void showJobSelection(ServerPlayer player, SemionGame game) {
-        SemionJob currentJob = game.selectedJobOrDefault(player.getUUID());
+        SemionJob currentJob = displayedJob(player, game);
         String body = "<gradient:#67e8f9:#a78bfa><bold>직업 선택</bold></gradient>\n"
                 + "<gray>현재 선택</gray> <yellow>" + currentJob.displayName().getString() + "</yellow>\n"
-                + "<gray>버튼에 마우스를 올려 직업 특성을 확인하세요.</gray>";
-        ArrayList<ActionButton> actions = new ArrayList<>();
-        for (SemionJob job : JobRegistry.all()) {
-            actions.add(jobButton(job, currentJob.id().equals(job.id())));
-        }
+                + "<gray>살펴볼 빌더 분류를 선택하세요.</gray>";
+        List<ActionButton> actions = List.of(
+                actionButton(
+                        jobCategoryLabel("공식 빌더", JobRegistry.officialBuilders()),
+                        "/semiontd job ui official",
+                        "세미온 TD의 기본 플레이를 담은 빌더입니다."
+                ),
+                actionButton(
+                        jobCategoryLabel("창작 빌더", JobRegistry.creativeBuilders()),
+                        "/semiontd job ui creative",
+                        "색다른 규칙과 운영을 담은 빌더입니다."
+                )
+        );
 
         showActions(player, "세미온 TD 직업", body, actions, 2);
+    }
+
+    public void showJobSelection(ServerPlayer player, SemionGame game, boolean official) {
+        SemionJob currentJob = displayedJob(player, game);
+        String category = official ? "공식 빌더" : "창작 빌더";
+        String body = "<gradient:#67e8f9:#a78bfa><bold>" + category + "</bold></gradient>\n"
+                + "<gray>현재 선택</gray> <yellow>" + currentJob.displayName().getString() + "</yellow>\n"
+                + "<gray>버튼에 마우스를 올려 운영 방법을 확인하세요.</gray>";
+        ArrayList<ActionButton> actions = new ArrayList<>();
+        List<SemionJob> jobs = official ? JobRegistry.officialBuilders() : JobRegistry.creativeBuilders();
+        for (SemionJob job : jobs) {
+            actions.add(jobButton(job, currentJob.id().equals(job.id())));
+        }
+        actions.add(actionButton("← 분류 선택", "/semiontd job ui", "빌더 분류 화면으로 돌아갑니다."));
+
+        showActions(player, "세미온 TD " + category, body, actions, 2);
+    }
+
+    private static SemionJob displayedJob(ServerPlayer player, SemionGame game) {
+        SemionPlayer participant = game.players().get(player.getUUID());
+        return participant == null
+                ? game.selectedJobOrDefault(player.getUUID())
+                : participant.job().orElse(JobRegistry.defaultJob());
+    }
+
+    public void showJobManagement(ServerPlayer player) {
+        List<ActionButton> actions = List.of(
+                actionButton(
+                        jobCategoryLabel("공식 빌더", JobRegistry.officialBuilders()),
+                        "/semiontd job manage official",
+                        "공식 빌더 킬스위치를 관리합니다."
+                ),
+                actionButton(
+                        jobCategoryLabel("창작 빌더", JobRegistry.creativeBuilders()),
+                        "/semiontd job manage creative",
+                        "창작 빌더 킬스위치를 관리합니다."
+                )
+        );
+        showActions(
+                player,
+                "세미온 TD 직업 관리",
+                "<gradient:#67e8f9:#a78bfa><bold>직업 킬스위치</bold></gradient>\n"
+                        + "<gray>관리할 빌더 분류를 선택하세요.</gray>",
+                actions,
+                2
+        );
+    }
+
+    public void showJobManagement(ServerPlayer player, boolean official) {
+        String category = official ? "공식 빌더" : "창작 빌더";
+        List<SemionJob> jobs = official ? JobRegistry.officialBuilders() : JobRegistry.creativeBuilders();
+        ArrayList<ActionButton> actions = new ArrayList<>();
+        for (SemionJob job : jobs) {
+            actions.add(jobManagementButton(job));
+        }
+        actions.add(actionButton("← 분류 선택", "/semiontd job manage", "빌더 분류 화면으로 돌아갑니다."));
+        showActions(
+                player,
+                "세미온 TD " + category + " 관리",
+                "<gradient:#67e8f9:#a78bfa><bold>" + category + " 킬스위치</bold></gradient>\n"
+                        + "<gray>버튼을 눌러 활성 상태를 전환하세요.</gray>",
+                actions,
+                2
+        );
     }
 
     public void showJobStatistics(
@@ -1523,6 +1595,17 @@ public final class SemionDialogService {
         );
     }
 
+    private static ActionButton jobManagementButton(SemionJob job) {
+        boolean enabled = JobRegistry.isEnabled(job);
+        Component label = Component.literal((enabled ? "켜짐 · " : "꺼짐 · ") + job.displayName().getString())
+                .withStyle(enabled ? ChatFormatting.GREEN : ChatFormatting.RED);
+        String command = "/semiontd job " + (enabled ? "disable " : "enable ") + job.id();
+        String tooltip = enabled
+                ? "클릭하면 이 직업을 비활성화합니다. 진행 중인 경기는 유지됩니다."
+                : "클릭하면 이 직업을 다시 활성화합니다.";
+        return actionButton(label, command, Component.literal(tooltip), BUTTON_WIDTH);
+    }
+
     private static ActionButton traitButton(SemionTrait trait, TraitSlot slot, boolean selected) {
         return actionButton(
                 traitButtonLabel(trait, selected),
@@ -1533,7 +1616,7 @@ public final class SemionDialogService {
     }
 
     public static String jobSelectionCommand(SemionJob job) {
-        return "/semiontd job select " + job.id().getPath();
+        return JobRegistry.isEnabled(job) ? "/semiontd job select " + job.id().getPath() : "";
     }
 
     public static String traitSelectionCommand(SemionTrait trait, TraitSlot slot) {
@@ -1560,12 +1643,24 @@ public final class SemionDialogService {
     }
 
     public static Component jobButtonLabel(SemionJob job, boolean selected) {
+        if (!JobRegistry.isEnabled(job)) {
+            return Component.literal("✕ " + job.displayName().getString() + " (비활성화)")
+                    .withStyle(ChatFormatting.RED);
+        }
         String prefix = selected ? "✓ " : "";
         return Component.literal(prefix + job.displayName().getString())
                 .withStyle(selected ? ChatFormatting.GREEN : ChatFormatting.WHITE);
     }
 
-    private static Component jobTooltip(SemionJob job, boolean selected) {
+    static Component jobTooltip(SemionJob job, boolean selected) {
+        if (!JobRegistry.isEnabled(job)) {
+            MutableComponent tooltip = job.displayName().copy().withStyle(ChatFormatting.RED)
+                    .append(Component.literal("\n관리자에 의해 비활성화된 직업입니다.").withStyle(ChatFormatting.RED));
+            for (Component line : job.description()) {
+                tooltip.append(Component.literal("\n").withStyle(ChatFormatting.GRAY).append(line.copy()));
+            }
+            return tooltip;
+        }
         MutableComponent tooltip = job.displayName().copy()
                 .withStyle(selected ? ChatFormatting.GREEN : ChatFormatting.AQUA);
         if (selected) {
@@ -1575,6 +1670,11 @@ public final class SemionDialogService {
             tooltip.append(Component.literal("\n").withStyle(ChatFormatting.GRAY).append(line.copy()));
         }
         return tooltip;
+    }
+
+    private static String jobCategoryLabel(String category, List<SemionJob> jobs) {
+        long enabled = jobs.stream().filter(JobRegistry::isEnabled).count();
+        return category + " (활성 " + enabled + "/" + jobs.size() + ")";
     }
 
     private static Component traitButtonLabel(SemionTrait trait, boolean selected) {

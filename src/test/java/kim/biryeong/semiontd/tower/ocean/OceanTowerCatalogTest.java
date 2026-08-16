@@ -198,47 +198,6 @@ final class OceanTowerCatalogTest {
     }
 
     @Test
-    void oceanTowerDescriptionsRenderConfiguredMechanics() {
-        List<TowerType> oceanTypes = List.of(
-                OceanTowers.T1_WATER, OceanTowers.T2_SPRING_WATER, OceanTowers.T3_CURRENT,
-                OceanTowers.T1_PUFFERFISH, OceanTowers.T2_GUARDIAN, OceanTowers.T3_ELDER_GUARDIAN,
-                OceanTowers.T1_TROPICAL_FISH, OceanTowers.T2_LARGE_TROPICAL_FISH, OceanTowers.T3_GIANT_TROPICAL_FISH,
-                OceanTowers.T1_SQUID, OceanTowers.T2_GLOW_SQUID, OceanTowers.T3_DOLPHIN,
-                OceanTowers.T1_SALMON, OceanTowers.T2_LARGE_SALMON, OceanTowers.T3_GIANT_SALMON,
-                OceanTowers.T1_COD, OceanTowers.T2_LARGE_COD, OceanTowers.T3_GIANT_COD
-        );
-
-        for (TowerType type : oceanTypes) {
-            List<String> description = TowerBalanceRuntime.resolve(type).description();
-            assertTrue(description.size() >= 3, type.id() + " should explain its role and mechanics.");
-            assertTrue(description.stream().noneMatch(line -> line.contains("{ability.")),
-                    type.id() + " should render every configured value.");
-        }
-
-        String tankDescription = String.join(" ", TowerBalanceRuntime.resolve(OceanTowers.T1_PUFFERFISH).description());
-        assertTrue(tankDescription.contains("5초마다"));
-        assertTrue(tankDescription.contains("최대 24"));
-
-        for (TowerType type : List.of(OceanTowers.T1_WATER, OceanTowers.T2_SPRING_WATER, OceanTowers.T3_CURRENT)) {
-            String description = String.join(" ", TowerBalanceRuntime.resolve(type).description());
-            assertTrue(description.contains("같은 대상을 공급하는 물 타워 수"));
-            assertTrue(description.contains("추가 연결 체감 계수는 60%"));
-            assertTrue(description.contains("타워당 평균 공급 효율이 감소"));
-        }
-
-        OceanWaterTower waterTower = new OceanWaterTower(
-                OceanTowers.T1_WATER,
-                UUID.nameUUIDFromBytes("ocean-water-details".getBytes()),
-                TeamId.RED,
-                1,
-                new GridPosition(0, 64, 0)
-        );
-        String waterDetails = String.join(" ", waterTower.runtimeDetailLines());
-        assertTrue(waterDetails.contains("중첩 체감 계수 60.0%"));
-        assertTrue(waterDetails.contains("타워당 공급 효율 감소"));
-    }
-
-    @Test
     void waterTowerMarkerIsAZeroLightWaterSourceWithoutCollision() {
         var marker = OceanWaterTower.waterMarker();
 

@@ -104,6 +104,12 @@ public final class PlayerLane {
         return laneLayout;
     }
 
+    public PlayerLane finalDefensePathLane() {
+        return teamLaneGroup == null
+                ? this
+                : teamLaneGroup.lane(SemionTeam.MAX_PLAYERS).orElse(this);
+    }
+
     public ServerLevel arenaWorld() {
         return arenaWorld;
     }

@@ -25,7 +25,12 @@ public final class SemionConfigLoader {
     }
 
     public static LoadedConfigs load(Path configDir, Logger logger) {
-        return load(configDir, logger, TowerBalanceConfig.defaultConfig());
+        return load(
+                configDir,
+                logger,
+                TowerBalanceConfig.defaultConfig(),
+                JobAvailabilityConfig.defaultConfig()
+        );
     }
 
     public static LoadedConfigs load(
@@ -33,9 +38,26 @@ public final class SemionConfigLoader {
             Logger logger,
             TowerBalanceConfig lastKnownGoodTowerBalance
     ) {
+        return load(
+                configDir,
+                logger,
+                lastKnownGoodTowerBalance,
+                JobAvailabilityConfig.defaultConfig()
+        );
+    }
+
+    public static LoadedConfigs load(
+            Path configDir,
+            Logger logger,
+            TowerBalanceConfig lastKnownGoodTowerBalance,
+            JobAvailabilityConfig lastKnownGoodJobAvailability
+    ) {
         TowerBalanceConfig towerBalanceFallback = lastKnownGoodTowerBalance == null
                 ? TowerBalanceConfig.defaultConfig()
                 : lastKnownGoodTowerBalance;
+        JobAvailabilityConfig jobAvailabilityFallback = lastKnownGoodJobAvailability == null
+                ? JobAvailabilityConfig.defaultConfig()
+                : lastKnownGoodJobAvailability;
         towerBalanceFallback.validateForRuntime();
         try {
             Files.createDirectories(configDir);
@@ -48,6 +70,7 @@ public final class SemionConfigLoader {
                     ProgressionConfig.defaultConfig(),
                     RatingConfig.defaultConfig(),
                     SemionPersistenceConfig.defaultConfig(),
+                    jobAvailabilityFallback,
                     towerBalanceFallback,
                     SummonConfig.defaultConfig(),
                     LeaderTargetingConfig.defaultConfig(),
@@ -95,6 +118,12 @@ public final class SemionConfigLoader {
                 configDir.resolve("persistence.json"),
                 SemionPersistenceConfig.defaultConfig(),
                 SemionPersistenceConfig.class,
+                logger
+        );
+        JobAvailabilityConfig jobAvailability = loadOrCreateJobAvailability(
+                configDir.resolve("jobs.json"),
+                JobAvailabilityConfig.defaultConfig(),
+                jobAvailabilityFallback,
                 logger
         );
         TowerBalanceConfig towerBalance = loadOrCreateTowerBalance(
@@ -157,7 +186,38 @@ public final class SemionConfigLoader {
                 CombatSpeedConfig.class,
                 logger
         );
-        return new LoadedConfigs(economy, waves, map, progression, rating, persistence, towerBalance, summons, leaderTargeting, incomeLaneRouting, monsterScaling, vfx, tips, traits, traitBalance, webIntegration, combatSpeed);
+        return new LoadedConfigs(economy, waves, map, progression, rating, persistence, jobAvailability, towerBalance, summons, leaderTargeting, incomeLaneRouting, monsterScaling, vfx, tips, traits, traitBalance, webIntegration, combatSpeed);
+    }
+
+    private static JobAvailabilityConfig loadOrCreateJobAvailability(
+            Path path,
+            JobAvailabilityConfig defaults,
+            JobAvailabilityConfig lastKnownGood,
+            Logger logger
+    ) {
+        if (Files.notExists(path)) {
+            write(path, defaults, logger);
+            return defaults;
+        }
+
+        try (Reader reader = Files.newBufferedReader(path)) {
+            JobAvailabilityConfig value = GSON.fromJson(reader, JobAvailabilityConfig.class);
+            return value == null ? defaults : value;
+        } catch (IOException | RuntimeException exception) {
+            logger.error("Failed to load config {}; retaining last-known-good job availability.", path, exception);
+            return lastKnownGood;
+        }
+    }
+
+    public static boolean saveJobAvailability(
+            Path configDir,
+            JobAvailabilityConfig config,
+            Logger logger
+    ) {
+        if (configDir == null || config == null) {
+            return false;
+        }
+        return write(configDir.resolve("jobs.json"), config, logger);
     }
 
     private static <T> T loadOrCreate(Path path, T defaults, Class<T> type, Logger logger) {
@@ -570,7 +630,7 @@ public final class SemionConfigLoader {
         }
     }
 
-    private static void write(Path path, Object value, Logger logger) {
+    private static boolean write(Path path, Object value, Logger logger) {
         Path temporary = null;
         try {
             Path absolute = path.toAbsolutePath();
@@ -600,8 +660,10 @@ public final class SemionConfigLoader {
                         StandardCopyOption.REPLACE_EXISTING
                 );
             }
+            return true;
         } catch (IOException exception) {
-            logger.warn("Failed to write default config {}.", path, exception);
+            logger.warn("Failed to write config {}.", path, exception);
+            return false;
         } finally {
             if (temporary != null) {
                 try {
@@ -666,6 +728,7 @@ public final class SemionConfigLoader {
             ProgressionConfig progression,
             RatingConfig rating,
             SemionPersistenceConfig persistence,
+            JobAvailabilityConfig jobAvailability,
             TowerBalanceConfig towerBalance,
             SummonConfig summons,
             LeaderTargetingConfig leaderTargeting,

@@ -21,11 +21,9 @@ public final class AdversaryTowerJob extends SemionJob {
                 ID,
                 Component.literal("히어로 빌더"),
                 List.of(
-                        SemionText.mini("<gold>히어로 여우는 4기까지 설치할 수 있습니다. 웨이브가 시작되면 숙적이 적으로 변합니다.</gold>"),
-                        SemionText.mini("<gray>여우가 숙적을 직접 처치하면 전직 점수를 얻습니다. 인컴 적은 점수를 주지 않습니다.</gray>"),
-                        SemionText.mini("<gray>전직 점수는 모든 여우가 공유하며, 같은 전직 계열은 한 번만 선택할 수 있습니다.</gray>"),
-                        SemionText.mini("<aqua>첫 전직은 200 다이아, 최종 전직은 400 다이아입니다.</aqua>"),
-                        SemionText.mini("<yellow>첫 전직 후 웨이브를 한 번 완료해야 최종 전직할 수 있습니다.</yellow>")
+                        SemionText.mini("<green><bold>시작</bold></green> <gray>여우를 놓고 원하는 전직에 필요한 숙적 타워를 설치하세요.</gray>"),
+                        SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>웨이브가 시작되면 숙적이 적으로 변하며, 여우가 직접 처치해야 전직 점수를 얻습니다.</gray>"),
+                        SemionText.mini("<yellow><bold>주의</bold></yellow> <gray>숙적을 팔면 그 점수도 사라져 여우가 강등될 수 있습니다.</gray>")
                 )
         );
     }

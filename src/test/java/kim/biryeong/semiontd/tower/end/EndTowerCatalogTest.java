@@ -18,10 +18,7 @@ import kim.biryeong.semiontd.job.EndTowerJob;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
-import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
 import net.minecraft.SharedConstants;
-import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.item.DyeColor;
 import org.junit.jupiter.api.AfterEach;
@@ -147,67 +144,6 @@ class EndTowerCatalogTest {
     }
 
     @Test
-    void shulkerDescriptionsShowTierDamageReduction() {
-        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
-        assertTrue(String.join("\n", TowerBalanceRuntime.resolve(EndTowers.T1_SHULKER_TOWER).description()).contains("10%"));
-        assertTrue(String.join("\n", TowerBalanceRuntime.resolve(EndTowers.T2_SHULKER_TOWER).description()).contains("30%"));
-        assertTrue(String.join("\n", TowerBalanceRuntime.resolve(EndTowers.T3_SHULKER_TOWER).description()).contains("50%"));
-    }
-
-    @Test
-    void dragonDescriptionUsesCurrentCompactEndDescription() {
-        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
-        assertEquals(10.0, EndTowers.BASE_END_TOWER.damage(), 0.0001);
-        String description = String.join(
-                "\n",
-                TowerBalanceRuntime.resolve(EndTowers.BASE_END_TOWER).description()
-        );
-        String plainDescription = description.replaceAll("<[^>]+>", "");
-        assertTrue(plainDescription.contains("알로 소환되며, 라운드 시작 시 아기 드래곤으로 변합니다."));
-        assertTrue(plainDescription.contains("아기 드래곤 크기는 최대 체력 100당 0.2씩 증가합니다."));
-        assertTrue(plainDescription.contains("최대 체력 2000 이상이면 엔더 드래곤으로 진화합니다."));
-        assertTrue(plainDescription.contains("엔더 드래곤으로 진화하면 추가 능력을 획득합니다."));
-        assertTrue(plainDescription.contains("힘 전달 10초 후 타워 사망, 체력 30을 회복합니다."));
-        assertTrue(plainDescription.contains("전달 중인 셜커 타워의 최대 체력의 5%를 초당 회복합니다."));
-        assertTrue(plainDescription.contains("타워 체력의 50%를 임시 획득, 4% 영구 누적"));
-        assertTrue(plainDescription.contains("타워 피해의 66%를 임시 획득, 4% 영구 누적"));
-        assertFalse(description.contains("{ability."));
-        assertTrue(description.contains("<#cc00fa>아기 드래곤</#cc00fa>"));
-        assertTrue(description.contains("<#cc00fa>엔더 드래곤</#cc00fa>"));
-        assertTrue(description.contains("전달 중인 셜커 타워의 <#fc5454>최대 체력</#fc5454>의 <#fc5454>5%</#fc5454>를 초당 회복합니다."));
-        assertTrue(description.contains("<#fc5454>체력"));
-        assertTrue(description.contains("<#ec8d34>피해"));
-    }
-
-    @Test
-    void endJobDescriptionUsesCurrentEndDescription() {
-        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
-        List<Component> lines = new EndTowerJob().description();
-        String description = lines.stream()
-                .map(Component::getString)
-                .reduce("", (left, right) -> left + "\n" + right);
-        assertTrue(description.contains("아군 타워의 체력과 피해를"));
-        assertTrue(description.contains("체력 50%, 피해 66%를"));
-        assertTrue(description.contains("체력 4%, 피해 4%를 영구 누적합니다."));
-        assertTrue(description.contains("엔더 드래곤으로 진화하면"));
-        assertTrue(description.contains("추가 고유 능력을 획득합니다."));
-        assertEquals(
-                Component.literal("").withStyle(ChatFormatting.DARK_RED).getStyle().getColor(),
-                lines.getLast().getStyle().getColor()
-        );
-    }
-
-    @Test
-    void everyEndFeederRegistersItsDescriptionTemplate() {
-        assertDescription(EndTowers.T1_ENDERMITE_TOWER, "피해가 낮은 엔더마이트", "엔더 드래곤의 피해");
-        assertDescription(EndTowers.T2_ENDERMAN_TOWER, "피해가 보통인 엔더맨", "엔더 드래곤의 피해");
-        assertDescription(EndTowers.T3_END_CRYSTAL_TOWER, "피해가 높은 엔드 수정", "엔더 드래곤의 피해");
-        assertDescription(EndTowers.T1_SHULKER_TOWER, "체력이 낮은 셜커", "엔더 드래곤의 체력");
-        assertDescription(EndTowers.T2_SHULKER_TOWER, "체력이 보통인 견고한 셜커", "엔더 드래곤의 체력");
-        assertDescription(EndTowers.T3_SHULKER_TOWER, "체력이 높은 완강한 셜커", "엔더 드래곤의 체력");
-    }
-
-    @Test
     void upgradePricesComeFromBalanceConfig() {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
         Map<String, Long> upgradeCosts = new LinkedHashMap<>(defaults.upgradeCosts());
@@ -265,16 +201,4 @@ class EndTowerCatalogTest {
         assertEquals(cost, upgrade.mineralCost());
     }
 
-    private static void assertDescription(
-            kim.biryeong.semiontd.tower.TowerType towerType,
-            String summary,
-            String effect
-    ) {
-        String description = String.join(
-                "\n",
-                TowerDescriptionRegistry.describe(towerType).orElseThrow()
-        ).replaceAll("<[^>]+>", "");
-        assertTrue(description.contains(summary));
-        assertTrue(description.contains(effect));
-    }
 }

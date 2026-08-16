@@ -1,7 +1,10 @@
 package kim.biryeong.semiontd.job;
 
+import static kim.biryeong.semiontd.tower.description.TowerDescriptionTemplate.format;
+
 import java.util.List;
 import kim.biryeong.semiontd.SemionTd;
+import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
 import kim.biryeong.semiontd.ui.SemionText;
@@ -15,10 +18,19 @@ public final class ResonanceTowerJob extends SemionJob {
         super(
                 ID,
                 Component.literal("무블룸 빌더"),
-                List.of(
-                        SemionText.mini("<gray>다른 종의 무블룸을 1칸 안에 모아 공명 단계를 올리는 빌더입니다.</gray>"),
-                        SemionText.mini("<gray>자신과 다른 계열의 주변 무블룸 1/3/5기와 연결되면 공명 1/2/3단계가 열립니다. 같은 다른 계열 타워도 설치한 수만큼 링크됩니다.</gray>")
-                )
+                List.of()
+        );
+    }
+
+    @Override
+    public List<Component> description() {
+        String linkRange = format(
+                TowerBalanceRuntime.ability(ResonanceTowers.FOCUS_CRYSTAL.id(), "linkRange"),
+                "number"
+        );
+        return List.of(
+                SemionText.mini("<green><bold>시작</bold></green> <gray>서로 다른 무블룸을 " + linkRange + "칸 안에 붙여 배치하세요.</gray>"),
+                SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>연결한 종류가 늘수록 공명 단계가 올라 고유 효과가 강해집니다.</gray>")
         );
     }
 
