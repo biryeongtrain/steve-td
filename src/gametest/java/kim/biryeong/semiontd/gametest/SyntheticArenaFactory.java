@@ -18,11 +18,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
-final class SyntheticArenaFactory {
+public final class SyntheticArenaFactory {
     private SyntheticArenaFactory() {
     }
 
-    static GameArena create(ServerLevel level, BlockPos origin) {
+    public static GameArena create(ServerLevel level, BlockPos origin) {
         Map<TeamId, TeamArena> arenas = new EnumMap<>(TeamId.class);
         for (TeamId teamId : TeamId.values()) {
             arenas.put(teamId, new TeamArena(teamId, () -> {

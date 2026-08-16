@@ -3014,8 +3014,8 @@ public record TowerBalanceConfig(
         values.put(HEALTH_SCALE.key(), 500.0);
         values.put(ROUND_DAMAGE_RATIO.key(), 0.66);
         values.put(PERMANENT_DAMAGE_RATIO.key(), 0.04);
-        values.put(DAMAGE_THRESHOLD.key(), 150.0);
-        values.put(DAMAGE_SCALE.key(), 25.0);
+        values.put(DAMAGE_THRESHOLD.key(), 140.0);
+        values.put(DAMAGE_SCALE.key(), 20.0);
         values.put(LIFE_STEAL_STACKS.key(), 30.0);
         values.put(LIFE_STEAL_STEP.key(), 0.01);
         values.put(LIFE_STEAL_CAP.key(), 0.10);

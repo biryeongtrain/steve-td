@@ -276,15 +276,15 @@ class EndTowerTransferTest {
 
         assertEquals(3000.0, merged.ability(EndTower.CONFIG_ID, "healthThreshold", -1.0), 0.0001);
         assertEquals(500.0, merged.ability(EndTower.CONFIG_ID, "healthScale", -1.0), 0.0001);
-        assertEquals(150.0, merged.ability(EndTower.CONFIG_ID, "damageThreshold", -1.0), 0.0001);
-        assertEquals(25.0, merged.ability(EndTower.CONFIG_ID, "damageScale", -1.0), 0.0001);
+        assertEquals(140.0, merged.ability(EndTower.CONFIG_ID, "damageThreshold", -1.0), 0.0001);
+        assertEquals(20.0, merged.ability(EndTower.CONFIG_ID, "damageScale", -1.0), 0.0001);
         assertEquals(0.5, merged.ability(EndTower.CONFIG_ID, "roundDamageRatio", -1.0), 0.0001);
 
         TowerBalanceRuntime.apply(merged);
         assertEquals(3000.0, EndConfig.RUNTIME.value(HEALTH_THRESHOLD), 0.0001);
         assertEquals(500.0, EndConfig.RUNTIME.value(HEALTH_SCALE), 0.0001);
-        assertEquals(150.0, EndConfig.RUNTIME.value(DAMAGE_THRESHOLD), 0.0001);
-        assertEquals(25.0, EndConfig.RUNTIME.value(DAMAGE_SCALE), 0.0001);
+        assertEquals(140.0, EndConfig.RUNTIME.value(DAMAGE_THRESHOLD), 0.0001);
+        assertEquals(20.0, EndConfig.RUNTIME.value(DAMAGE_SCALE), 0.0001);
         assertEquals(0.5, EndConfig.RUNTIME.value(ROUND_DAMAGE_RATIO), 0.0001);
     }
 
