@@ -9,6 +9,10 @@ import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 
+/**
+ * @param crossLane 다른 레인을 노리는 몬스터까지 대상에 넣을지. 기본은 {@code false} 로, 타워는
+ *     자기 레인(과 최종 방어)만 때립니다. 레인을 자유롭게 돌아다니는 시전자만 켭니다.
+ */
 public record MonsterAreaEffectRequest(
         ResourceLocation effectId,
         SemionTowerEntity source,
@@ -16,8 +20,22 @@ public record MonsterAreaEffectRequest(
         double radius,
         Set<UUID> excludedTargetIds,
         Predicate<SemionMonsterEntity> targetFilter,
-        AreaVfxSpec vfx
+        AreaVfxSpec vfx,
+        boolean crossLane
 ) {
+    /** 레인 경계를 지키는 기본 요청. 타워는 전부 이쪽입니다. */
+    public MonsterAreaEffectRequest(
+            ResourceLocation effectId,
+            SemionTowerEntity source,
+            Vec3 center,
+            double radius,
+            Set<UUID> excludedTargetIds,
+            Predicate<SemionMonsterEntity> targetFilter,
+            AreaVfxSpec vfx
+    ) {
+        this(effectId, source, center, radius, excludedTargetIds, targetFilter, vfx, false);
+    }
+
     public MonsterAreaEffectRequest {
         Objects.requireNonNull(effectId, "effectId");
         Objects.requireNonNull(source, "source");
@@ -51,7 +69,12 @@ public record MonsterAreaEffectRequest(
     }
 
     public MonsterAreaEffectRequest withFilter(Predicate<SemionMonsterEntity> filter) {
-        return new MonsterAreaEffectRequest(effectId, source, center, radius, excludedTargetIds, filter, vfx);
+        return new MonsterAreaEffectRequest(effectId, source, center, radius, excludedTargetIds, filter, vfx, crossLane);
+    }
+
+    /** 레인 경계를 무시합니다. 서 있는 자리에 있는 적이면 누구 레인이든 맞습니다. */
+    public MonsterAreaEffectRequest acrossLanes() {
+        return new MonsterAreaEffectRequest(effectId, source, center, radius, excludedTargetIds, targetFilter, vfx, true);
     }
 
     public MonsterAreaEffectRequest including(UUID targetId) {
@@ -60,7 +83,7 @@ public record MonsterAreaEffectRequest(
         }
         java.util.HashSet<UUID> updated = new java.util.HashSet<>(excludedTargetIds);
         updated.remove(targetId);
-        return new MonsterAreaEffectRequest(effectId, source, center, radius, updated, targetFilter, vfx);
+        return new MonsterAreaEffectRequest(effectId, source, center, radius, updated, targetFilter, vfx, crossLane);
     }
 
     private static void validateCenter(Vec3 center) {

@@ -58,7 +58,8 @@ public final class AreaEffectService implements AreaEffectApi {
                                 && monster.isAlive()
                                 && !monster.isRemoved()
                                 && monster.runtimeMonster() != null
-                                && request.source().defendsLane(monster.runtimeMonster().targetLaneId())
+                                && (request.crossLane()
+                                        || request.source().defendsLane(monster.runtimeMonster().targetLaneId()))
                                 && !request.excludedTargetIds().contains(monster.getUUID())
                                 && monster.position().distanceToSqr(request.center()) <= radiusSqr
                                 && request.targetFilter().test(monster))

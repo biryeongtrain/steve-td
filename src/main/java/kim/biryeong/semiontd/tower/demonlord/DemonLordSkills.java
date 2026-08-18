@@ -27,6 +27,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -538,6 +539,8 @@ public final class DemonLordSkills {
         if (source == null) {
             return AreaEffectResult.empty();
         }
+        // 마왕은 레인에 묶여 있지 않습니다. 서 있는 자리에 적이 있으면 누구 레인이든 맞습니다 -
+        // 타워라면 자기 레인만 때리는 게 맞지만, 이쪽은 직접 뛰어다니는 시전자입니다.
         MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
                 ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "demon_lord/" + altar.skill().key()),
                 source,
@@ -546,7 +549,7 @@ public final class DemonLordSkills {
                 Set.of(),
                 filter,
                 AreaVfxSpec.onTrigger(style)
-        );
+        ).acrossLanes();
         return SemionTdApi.areaEffects().applyToMonsters(request, action);
     }
 
@@ -561,23 +564,24 @@ public final class DemonLordSkills {
         return Math.min(Math.max(0.0, dealtDamage) * ratio, Math.max(0.0, maxHealth) * capRatio);
     }
 
-    /** Live monsters of this lane whose entity sits within {@code radius} of {@code center}. */
+    /**
+     * 반경 안의 살아 있는 몬스터. <b>레인을 가리지 않습니다.</b>
+     *
+     * <p>예전에는 자기 레인의 몬스터 목록만 훑었습니다. 마왕이 레인에 묶여 있던 시절에는 같은
+     * 뜻이었지만, 이제는 남의 레인에 서 있어도 지목이 안 되는 결과가 됩니다. 팀 아레나는 팀마다
+     * 월드가 따로라 월드를 훑어도 상대 팀 몬스터가 섞이지 않습니다.
+     */
     private static List<SemionMonsterEntity> monstersNear(PlayerLane lane, Vec3 center, double radius) {
-        List<SemionMonsterEntity> found = new ArrayList<>();
+        AABB box = new AABB(
+                center.x - radius, center.y - radius, center.z - radius,
+                center.x + radius, center.y + radius, center.z + radius);
         double radiusSqr = radius * radius;
-        for (Monster monster : List.copyOf(lane.activeMonsters())) {
-            if (monster == null || !monster.isAlive() || !monster.hasMinecraftEntity()) {
-                continue;
-            }
-            if (!(lane.arenaWorld().getEntity(monster.minecraftEntityId()) instanceof SemionMonsterEntity entity)
-                    || entity.isRemoved()) {
-                continue;
-            }
-            if (entity.position().distanceToSqr(center) <= radiusSqr) {
-                found.add(entity);
-            }
-        }
-        return found;
+        return lane.arenaWorld().getEntitiesOfClass(SemionMonsterEntity.class, box, entity ->
+                entity.isAlive()
+                        && !entity.isRemoved()
+                        && entity.runtimeMonster() != null
+                        && entity.runtimeMonster().isAlive()
+                        && entity.position().distanceToSqr(center) <= radiusSqr);
     }
 
     private static Vec3 horizontal(Vec3 vector) {

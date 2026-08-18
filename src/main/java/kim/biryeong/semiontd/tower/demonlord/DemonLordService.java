@@ -21,6 +21,7 @@ import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.ui.SemionHotbarService;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.ChatFormatting;
 import kim.biryeong.semiontd.SemionTd;
@@ -127,10 +128,28 @@ public final class DemonLordService {
                 return InteractionResult.SUCCESS;
             }
             if (serverPlayer.getInventory().getSelectedSlot() != DemonLordSkill.BLADE_SLOT) {
-                return InteractionResult.PASS;
+                // 스킬 카드는 들고 우클릭해도 아무 일도 일어나면 안 됩니다. 시전은 슬롯을 잡는
+                // 동작이고, 카드 자체는 표시용입니다.
+                //
+                // 그냥 PASS 로 흘려보내면 바닐라가 그 아이템의 사용 동작을 그대로 실행합니다.
+                // 스킬 아이콘 중에는 염소 뿔·방패·화염구·위더 해골처럼 진짜 사용 동작이 붙은
+                // 것들이 있어서, 아레나 한복판에서 불을 놓거나 방패를 들거나 하다가 튕깁니다.
+                return DemonLordKitItems.isKitItem(serverPlayer.getMainHandItem())
+                        ? InteractionResult.FAIL
+                        : InteractionResult.PASS;
             }
             return handleKeyBinding(gameManager, serverPlayer, DemonLordBinding.RIGHT_CLICK)
                     ? InteractionResult.SUCCESS
+                    : InteractionResult.PASS;
+        });
+        // 블록을 보고 우클릭하는 경로는 위 콜백을 타지 않습니다. 화염구와 위더 해골은 이쪽으로
+        // 설치되므로 같이 막습니다.
+        UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
+            if (world.isClientSide() || !(player instanceof ServerPlayer serverPlayer)) {
+                return InteractionResult.PASS;
+            }
+            return DemonLordKitItems.isKitItem(serverPlayer.getItemInHand(hand))
+                    ? InteractionResult.FAIL
                     : InteractionResult.PASS;
         });
         registerCombatHooks(gameManager);
