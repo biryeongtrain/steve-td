@@ -1,8 +1,11 @@
 package kim.biryeong.semiontd.job;
 
+import static kim.biryeong.semiontd.tower.description.TowerDescriptionTemplate.format;
+
 import java.util.List;
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.insect.InsectBalance;
 import kim.biryeong.semiontd.tower.insect.InsectTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
@@ -12,17 +15,16 @@ public final class InsectTowerJob extends SemionJob {
     public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "insect_towers");
 
     public InsectTowerJob() {
-        super(ID, Component.literal("벌레 빌더"), List.of(
-                SemionText.mini("<gray><light_purple>스포너</light_purple> 곁에서 계속 <green>부활</green>하며 시간을 끄는 물량 빌더입니다.</gray>")));
+        super(ID, Component.literal("벌레 빌더"), List.of());
     }
 
     @Override
     public List<Component> description() {
+        String reviveRadius = format(InsectBalance.spawnerRadius(), "number");
         return List.of(
-                SemionText.mini("새로 배치한 기본 벌레는 <gold>처음 참여하는 웨이브</gold>에 체력과 피해가 크게 증가합니다."),
-                SemionText.mini("살아 있는 자기 <light_purple>스포너</light_purple> 반경 안에서 죽으면 잠시 후 <green>부활</green>합니다."),
-                SemionText.mini("같은 라운드에 다시 죽을수록 부활이 늦어지고 <red>받는 피해</red>가 증가합니다."),
-                SemionText.mini("스포너가 파괴되거나 범위 밖에서 죽으면 그 라운드에는 더는 부활하지 못합니다.")
+                SemionText.mini("<green><bold>시작</bold></green> <gray>스포너를 먼저 놓고 " + reviveRadius + "칸 안에 벌레를 배치하세요.</gray>"),
+                SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>새 벌레의 첫 웨이브 강화와 부활로 전선을 버티세요.</gray>"),
+                SemionText.mini("<yellow><bold>주의</bold></yellow> <gray>반복 사망으로 부활이 느려지고, 스포너가 깨지면 대기 중인 부활도 취소됩니다.</gray>")
         );
     }
 

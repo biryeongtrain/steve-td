@@ -8,6 +8,7 @@ import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
+import kim.biryeong.semiontd.entity.visual.TowerEquipmentVisual;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
@@ -38,9 +39,26 @@ public final class QueenTower extends ProductionTower {
     @Override public boolean supportsForcedAttackTargeting() {return true;}
 
     @Override
+    public double effectBaseMaxHealth() {
+        return type().maxHealth() + Math.max(0, currentRound() - 1) * QueenBalance.queenMaxHealthPerRound();
+    }
+
+    @Override
+    protected void refreshMaxHealthAfterTypeChange(PlayerLane lane) {
+        this.lane = lane;
+        refreshRoundHealth(false);
+    }
+
+    @Override
     public Optional<SemionMonsterEntity> selectForcedAttackTarget(SemionTowerEntity source, List<SemionMonsterEntity> candidates) {
-        return candidates.stream().filter(target -> target.runtimeMonster() != null)
-                .max(Comparator.comparingDouble(target -> target.runtimeMonster().maxHealth()));
+        List<SemionMonsterEntity> valid = candidates.stream()
+                .filter(target -> target.runtimeMonster() != null)
+                .toList();
+        return valid.stream()
+                .filter(target -> !QueenGiantRunner.hasRequiredVisualShrink(target.runtimeMonster()))
+                .min(Comparator.comparingDouble(target -> target.runtimeMonster().permanentStatScale()))
+                .or(() -> valid.stream()
+                        .max(Comparator.comparingDouble(target -> target.runtimeMonster().maxHealth())));
     }
 
     @Override
@@ -71,7 +89,7 @@ public final class QueenTower extends ProductionTower {
 
     @Override
     public void onRemoved(PlayerLane lane) {
-        QueenEquipmentVisual.remove(equipmentVisual);
+        TowerEquipmentVisual.remove(equipmentVisual);
         equipmentVisual = null;
         super.onRemoved(lane);
     }
@@ -80,6 +98,7 @@ public final class QueenTower extends ProductionTower {
     public void onWaveStarted(PlayerLane lane, int currentRound) {
         this.lane = lane;
         waveActive = true;
+        refreshRoundHealth(true);
         QueenPoker.snapshot(lane, ownerPlayer());
         showAccelerationRange(lane);
         rangePulseTicks = QueenBalance.rangeVfxIntervalTicks();
@@ -135,7 +154,13 @@ public final class QueenTower extends ProductionTower {
                         + "점 (점당 " + percentInteger(1.0 - QueenBalance.shrinkFactorPerPoint()) + " 감소)",
                 "능력치 하한: 원본의 " + percentInteger(QueenBalance.minimumStatScale()),
                 "외형 하한: 원본의 " + percentInteger(QueenBalance.minimumVisualScale()),
-                "처형선: 현재 체력 " + oneDecimal(state.executionHealth()),
+                "처형 조건: 원본보다 외형 "
+                        + percentInteger(QueenGiantRunner.REQUIRED_EXECUTION_VISUAL_SHRINK)
+                        + " 이상 축소 + 현재 체력 " + oneDecimal(state.executionHealth()) + " 이하",
+                "처형선 성장: 최소 " + oneDecimal(QueenBalance.giantInitialExecutionHealth()
+                        * QueenBalance.giantExecutionGrowthRatio()) + " · 최대 현재 수치의 "
+                        + percentInteger(QueenBalance.giantGrowthTargetCapMultiplier()
+                        * QueenBalance.giantExecutionGrowthRatio()),
                 "저놈의 목을 쳐라!: " + current + "/" + required,
                 "남은 충전: " + oneDecimal(Math.max(0.0, required - state.charge()) / 20.0) + "초",
                 "가속: " + (accelerationActive ? "활성 (2배)" : "비활성")
@@ -177,6 +202,13 @@ public final class QueenTower extends ProductionTower {
     }
 
     private void syncEquipmentVisual() {
-        equipmentVisual = QueenEquipmentVisual.sync(equipmentVisual, entity().orElse(null));
+        equipmentVisual = TowerEquipmentVisual.sync(equipmentVisual, entity().orElse(null));
+    }
+
+    private void refreshRoundHealth(boolean healIncrease) {
+        entity().ifPresentOrElse(
+                entity -> entity.refreshMaxHealthEffects(healIncrease),
+                () -> syncMaxHealth(effectBaseMaxHealth(), healIncrease)
+        );
     }
 }

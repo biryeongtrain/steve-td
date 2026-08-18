@@ -42,17 +42,23 @@ import kim.biryeong.semiontd.tower.TowerUpgradeOption;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.tower.adversary.AdversaryVfx;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityVfx;
+import kim.biryeong.semiontd.tower.army.ArmyTower;
 import kim.biryeong.semiontd.tower.atlantis.AtlantisTowers;
 import kim.biryeong.semiontd.tower.atlantis.AtlantisVfx;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.tower.engineer.EngineerTrapTower;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordService;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordSkill;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordVfx;
 import kim.biryeong.semiontd.tower.futureagency.FutureAgencyTowers;
 import kim.biryeong.semiontd.tower.insect.InsectSpawnerTower;
 import kim.biryeong.semiontd.tower.insect.InsectUnitTower;
 import kim.biryeong.semiontd.tower.mage.MageProphetTower;
 import kim.biryeong.semiontd.tower.mage.MageWizardTower;
 import kim.biryeong.semiontd.tower.ocean.OceanVfx;
+import kim.biryeong.semiontd.tower.plant.PlantTowers;
+import kim.biryeong.semiontd.tower.plant.PlantVfx;
 import kim.biryeong.semiontd.tower.queen.QueenBalance;
 import kim.biryeong.semiontd.tower.queen.QueenTowers;
 import kim.biryeong.semiontd.tower.thunder.ThunderTowers;
@@ -228,6 +234,45 @@ public final class SemionCommands {
                 .then(literal("job")
                         .then(literal("list")
                                 .executes(context -> listJobs(context.getSource())))
+                        .then(literal("manage")
+                                .requires(source -> source.hasPermission(2))
+                                .executes(context -> manageJobs(context.getSource(), gameManager, null))
+                                .then(literal("official")
+                                        .executes(context -> manageJobs(context.getSource(), gameManager, true)))
+                                .then(literal("creative")
+                                        .executes(context -> manageJobs(context.getSource(), gameManager, false))))
+                        .then(literal("enable")
+                                .requires(source -> source.hasPermission(2))
+                                .then(argument("id", StringArgumentType.string())
+                                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                                JobRegistry.all().stream()
+                                                        .filter(job -> job != JobRegistry.defaultJob())
+                                                        .filter(job -> !JobRegistry.isEnabled(job))
+                                                        .map(job -> job.id().toString()),
+                                                builder
+                                        ))
+                                        .executes(context -> setJobEnabled(
+                                                context.getSource(),
+                                                gameManager,
+                                                StringArgumentType.getString(context, "id"),
+                                                true
+                                        ))))
+                        .then(literal("disable")
+                                .requires(source -> source.hasPermission(2))
+                                .then(argument("id", StringArgumentType.string())
+                                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                                JobRegistry.all().stream()
+                                                        .filter(job -> job != JobRegistry.defaultJob())
+                                                        .filter(JobRegistry::isEnabled)
+                                                        .map(job -> job.id().toString()),
+                                                builder
+                                        ))
+                                        .executes(context -> setJobEnabled(
+                                                context.getSource(),
+                                                gameManager,
+                                                StringArgumentType.getString(context, "id"),
+                                                false
+                                        ))))
                         .then(literal("stats")
                                 .executes(context -> jobStatisticsDialog(context.getSource(), gameManager))
                                 .then(argument("id", ResourceLocationArgument.id())
@@ -237,7 +282,11 @@ public final class SemionCommands {
                                                 ResourceLocationArgument.getId(context, "id").toString()
                                         ))))
                         .then(literal("ui")
-                                .executes(context -> jobDialog(context.getSource(), gameManager)))
+                                .executes(context -> jobDialog(context.getSource(), gameManager))
+                                .then(literal("official")
+                                        .executes(context -> jobDialog(context.getSource(), gameManager, true)))
+                                .then(literal("creative")
+                                        .executes(context -> jobDialog(context.getSource(), gameManager, false))))
                         .then(literal("current")
                                 .executes(context -> currentJob(context.getSource(), gameManager)))
                         .then(literal("select")
@@ -562,13 +611,38 @@ public final class SemionCommands {
                                 .then(literal("revive")
                                         .executes(context -> debugInsectVfx(
                                                 context.getSource(), gameManager, true))))
+                        .then(literal("army")
+                                .then(literal("promotion")
+                                        .executes(context -> debugArmyVfx(
+                                                context.getSource(), gameManager, ArmyTower.DebugVfx.PROMOTION)))
+                                .then(literal("command")
+                                        .executes(context -> debugArmyVfx(
+                                                context.getSource(), gameManager, ArmyTower.DebugVfx.COMMAND)))
+                                .then(literal("barrage")
+                                        .executes(context -> debugArmyVfx(
+                                                context.getSource(), gameManager, ArmyTower.DebugVfx.BARRAGE)))
+                                .then(literal("discharge")
+                                        .executes(context -> debugArmyVfx(
+                                                context.getSource(), gameManager, ArmyTower.DebugVfx.DISCHARGE))))
+                        .then(literal("plant")
+                                .then(literal("lob")
+                                        .executes(context -> debugPlantVfx(context.getSource(), gameManager))))
                         .then(literal("thunder")
                                 .then(literal("arc")
                                         .executes(context -> debugThunderVfx(
                                                 context.getSource(), gameManager, ThunderVfx.DebugKind.ARC)))
                                 .then(literal("discharge")
                                         .executes(context -> debugThunderVfx(
-                                                context.getSource(), gameManager, ThunderVfx.DebugKind.DISCHARGE)))))
+                                                context.getSource(), gameManager, ThunderVfx.DebugKind.DISCHARGE))))
+                        .then(literal("demon_lord")
+                                .then(argument("skill", StringArgumentType.word())
+                                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                                java.util.Arrays.stream(DemonLordSkill.values())
+                                                        .map(DemonLordSkill::key), builder))
+                                        .executes(context -> debugDemonLordVfx(
+                                                context.getSource(), gameManager,
+                                                StringArgumentType.getString(context, "skill")))))
+                )
                 .then(literal("summonui")
                         .executes(context -> debugSummonDialog(context.getSource(), gameManager, 1))
                         .then(argument("page", IntegerArgumentType.integer(1))
@@ -694,6 +768,33 @@ public final class SemionCommands {
             }
         }
         failure(source, "살아 있는 아틀란티스 타워가 필요합니다.");
+        return 0;
+    }
+
+    private static int debugPlantVfx(
+            CommandSourceStack source,
+            SemionGameManager gameManager
+    ) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGame game = playableGame(source, gameManager);
+        PlayerLane lane = game == null ? null : game.playerLane(player.getUUID()).orElse(null);
+        if (lane != null) {
+            for (Tower tower : lane.towers()) {
+                if (!tower.type().id().equals(PlantTowers.T3_PODZOL_PITCHER_TOWER.id())
+                        || !(tower instanceof EntityBackedTower backed)
+                        || backed.entityId().isEmpty()) {
+                    continue;
+                }
+                if (lane.arenaWorld().getEntity(backed.entityId().getAsInt())
+                        instanceof kim.biryeong.semiontd.entity.tower.SemionTowerEntity towerEntity
+                        && towerEntity.isAlive()) {
+                    PlantVfx.showDebug(towerEntity, player);
+                    success(source, "식물 물병 포격 VFX를 재생했습니다.");
+                    return 1;
+                }
+            }
+        }
+        failure(source, "살아 있는 물병 식물 타워가 필요합니다.");
         return 0;
     }
 
@@ -869,6 +970,53 @@ public final class SemionCommands {
             }
         }
         failure(source, "살아 있는 " + requiredType.displayName() + " 타워가 필요합니다.");
+        return 0;
+    }
+
+    private static int debugArmyVfx(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            ArmyTower.DebugVfx kind
+    ) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGame game = playableGame(source, gameManager);
+        PlayerLane lane = game == null ? null : game.playerLane(player.getUUID()).orElse(null);
+        if (lane != null) {
+            for (Tower tower : lane.towers()) {
+                if (tower instanceof ArmyTower army && army.showDebugVfx(lane, kind)) {
+                    success(source, "군대 " + kind.name().toLowerCase(java.util.Locale.ROOT) + " VFX를 재생했습니다.");
+                    return 1;
+                }
+            }
+        }
+        failure(source, kind == ArmyTower.DebugVfx.BARRAGE
+                ? "살아 있는 군대 포병 타워가 필요합니다."
+                : "살아 있는 군대 타워가 필요합니다.");
+        return 0;
+    }
+
+    private static int debugDemonLordVfx(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            String skillKey
+    ) throws CommandSyntaxException {
+        DemonLordSkill skill = DemonLordSkill.fromKey(skillKey);
+        if (skill == null) {
+            failure(source, "알 수 없는 마왕 스킬입니다: " + skillKey);
+            return 0;
+        }
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGame game = playableGame(source, gameManager);
+        PlayerLane lane = game == null ? null : game.playerLane(player.getUUID()).orElse(null);
+        if (lane != null) {
+            for (var altar : DemonLordService.orderedAltars(lane, player.getUUID())) {
+                if (altar.skill() == skill && DemonLordVfx.showDebug(altar, lane, player.position())) {
+                    success(source, "마왕 " + skill.displayName() + " VFX를 재생했습니다.");
+                    return 1;
+                }
+            }
+        }
+        failure(source, "해당 스킬의 살아 있는 마왕 제단이 필요합니다.");
         return 0;
     }
 
@@ -2289,14 +2437,26 @@ public final class SemionCommands {
     }
 
     private static int listJobs(CommandSourceStack source) {
-        success(source, "직업 목록:");
-        for (SemionJob job : JobRegistry.all()) {
-            success(source, " - " + job.id() + " => " + job.displayName().getString());
-            for (Component line : job.description()) {
-                success(source, "   " + line.getString());
-            }
-        }
+        success(source, "기본값:");
+        printJob(source, JobRegistry.defaultJob());
+        success(source, jobListCategoryLabel("공식 빌더", JobRegistry.officialBuilders()) + ":");
+        JobRegistry.officialBuilders().forEach(job -> printJob(source, job));
+        success(source, jobListCategoryLabel("창작 빌더", JobRegistry.creativeBuilders()) + ":");
+        JobRegistry.creativeBuilders().forEach(job -> printJob(source, job));
         return JobRegistry.all().size();
+    }
+
+    private static void printJob(CommandSourceStack source, SemionJob job) {
+        String state = JobRegistry.isEnabled(job) ? "활성" : "비활성";
+        success(source, " - [" + state + "] " + job.id() + " => " + job.displayName().getString());
+        for (Component line : job.description()) {
+            success(source, "   " + line.getString());
+        }
+    }
+
+    private static String jobListCategoryLabel(String category, List<SemionJob> jobs) {
+        long enabled = jobs.stream().filter(JobRegistry::isEnabled).count();
+        return category + " (활성 " + enabled + "/" + jobs.size() + ")";
     }
 
     private static int currentJob(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
@@ -2319,14 +2479,85 @@ public final class SemionCommands {
     }
 
     private static int jobDialog(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
+        return jobDialog(source, gameManager, null);
+    }
+
+    private static int jobDialog(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            Boolean official
+    ) throws CommandSyntaxException {
         SemionGame game = gameManager.activeGame().orElse(null);
         if (game == null) {
             failure(source, "열린 로비가 없습니다. 관리자에게 /semiontd create 실행을 요청하세요.");
             return 0;
         }
-        gameManager.dialogService().showJobSelection(source.getPlayerOrException(), game);
+        ServerPlayer player = source.getPlayerOrException();
+        if (official == null) {
+            gameManager.dialogService().showJobSelection(player, game);
+        } else {
+            gameManager.dialogService().showJobSelection(player, game, official);
+        }
         success(source, "직업 선택 창을 열었습니다.");
         return 1;
+    }
+
+    private static int manageJobs(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            Boolean official
+    ) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        if (official == null) {
+            gameManager.dialogService().showJobManagement(player);
+        } else {
+            gameManager.dialogService().showJobManagement(player, official);
+        }
+        return 1;
+    }
+
+    private static int setJobEnabled(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            String rawJobId,
+            boolean enabled
+    ) {
+        ResourceLocation jobId;
+        try {
+            jobId = parseJobId(rawJobId);
+        } catch (IllegalArgumentException exception) {
+            failure(source, exception.getMessage());
+            return 0;
+        }
+        Optional<SemionJob> job = JobRegistry.find(jobId);
+        if (job.isEmpty()) {
+            failure(source, "알 수 없는 직업입니다: " + jobId + ". /semiontd job list를 확인하세요.");
+            return 0;
+        }
+        if (job.get() == JobRegistry.defaultJob()) {
+            failure(source, "무직은 안전한 기본값이므로 킬스위치 대상이 아닙니다.");
+            return 0;
+        }
+        if (!gameManager.setJobEnabled(jobId, enabled)) {
+            failure(source, "직업 상태를 jobs.json에 저장하지 못해 변경을 취소했습니다.");
+            return 0;
+        }
+
+        Component announcement = jobAvailabilityAnnouncement(job.get(), enabled);
+        source.getServer().getPlayerList().broadcastSystemMessage(announcement, false);
+        if (source.getEntity() instanceof ServerPlayer player) {
+            boolean official = JobRegistry.officialBuilders().contains(job.get());
+            gameManager.dialogService().showJobManagement(player, official);
+        } else {
+            source.sendSuccess(() -> announcement, false);
+        }
+        return 1;
+    }
+
+    static Component jobAvailabilityAnnouncement(SemionJob job, boolean enabled) {
+        return SemionText.prefixedError(
+                job.displayName().getString() + " 직업이 " + (enabled ? "활성화" : "비활성화") + "되었습니다."
+        );
     }
 
     private static int jobStatisticsDialog(
@@ -2514,6 +2745,10 @@ public final class SemionCommands {
         Optional<SemionJob> selectedJob = JobRegistry.find(jobId);
         if (selectedJob.isEmpty()) {
             failure(source, "알 수 없는 직업입니다: " + jobId + ". /semiontd job list를 확인하세요.");
+            return 0;
+        }
+        if (!JobRegistry.isEnabled(selectedJob.get())) {
+            failure(source, "관리자에 의해 비활성화된 직업입니다: " + selectedJob.get().displayName().getString());
             return 0;
         }
 

@@ -70,7 +70,8 @@ public final class QueenStates {
                         effectiveMaxHealth,
                         executionHealth * QueenBalance.giantGrowthTargetCapMultiplier()
                 );
-                executionHealth += growthBase * QueenBalance.giantExecutionGrowthRatio();
+                executionHealth += Math.max(QueenBalance.giantInitialExecutionHealth(), growthBase)
+                        * QueenBalance.giantExecutionGrowthRatio();
             }
         }
 

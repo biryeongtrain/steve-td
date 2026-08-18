@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.tower.queen;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -105,10 +106,37 @@ final class QueenTowerCatalogTest {
     void executionGrowthUsesTheTargetAndCurrentThresholdCaps() {
         ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
         QueenStates.PlayerState state = QueenStates.state(OWNER);
+        state.growExecutionHealth(1.0);
+        assertEquals(5.25, state.executionHealth(), 0.0001);
         state.growExecutionHealth(10_000.0);
-        assertEquals(54.0, state.executionHealth(), 0.0001);
+        assertEquals(5.775, state.executionHealth(), 0.0001);
         state.growExecutionHealth(100.0);
-        assertEquals(56.0, state.executionHealth(), 0.0001);
+        assertEquals(6.3525, state.executionHealth(), 0.0001);
+    }
+
+    @Test
+    void giantExecutionRequiresThirtyPercentVisualShrinkAndTheHealthThreshold() {
+        Monster monster = new Monster("queen-execution-rule", TeamId.RED, 1, Optional.empty(), Optional.empty(),
+                80.0, 0.0, 20.0, AttackKind.MELEE, "minecraft:zombie", 0L);
+        monster.syncHealth(4.0);
+
+        assertFalse(QueenGiantRunner.canExecute(monster, 5.0));
+        monster.applyPermanentStatScale(0.71, 0.50);
+        assertFalse(QueenGiantRunner.canExecute(monster, 5.0));
+        monster.applyPermanentStatScale(0.70 / 0.71, 0.50);
+        assertTrue(QueenGiantRunner.canExecute(monster, 5.0));
+        monster.syncHealth(6.0);
+        assertFalse(QueenGiantRunner.canExecute(monster, 5.0));
+    }
+
+    @Test
+    void queenStartsFragileAndScalesHealthLinearlyByRound() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        QueenTower queen = (QueenTower) ProductionTowerCatalog.find(QueenTowers.QUEEN.id()).orElseThrow()
+                .create(OWNER, TeamId.RED, 1, new GridPosition(0, 64, 0));
+        assertEquals(60.0, queen.currentMaxHealth(), 0.0001);
+        queen.markWaveStarted(10);
+        assertEquals(132.0, queen.effectBaseMaxHealth(), 0.0001);
     }
 
     @Test
@@ -149,24 +177,33 @@ final class QueenTowerCatalogTest {
         QueenTowers.all().forEach(type -> assertTrue(defaults.towers().containsKey(type.id())));
         assertEquals(0.98, defaults.ability(QueenBalance.GLOBAL_ID, "shrinkFactorPerPoint", -1), 0.0001);
         assertEquals(0.20, defaults.ability(QueenBalance.GLOBAL_ID, "minimumStatScale", -1), 0.0001);
+        assertEquals(7.0, defaults.ability(QueenBalance.GLOBAL_ID, "queenShrinkPoints", -1), 0.0001);
         TowerBalanceConfig merged = new TowerBalanceConfig(Map.of(), Map.of(), Map.of(
                 QueenBalance.GLOBAL_ID, Map.of("queenShrinkPoints", 4.0))).withMissingDefaults(defaults);
         assertEquals(70, merged.towers().get(QueenTowers.QUEEN.id()).mineralCost());
         assertEquals(4.0, merged.ability(QueenBalance.GLOBAL_ID, "queenShrinkPoints", -1), 0.0001);
         assertEquals(0.20, merged.ability(QueenBalance.GLOBAL_ID, "minimumStatScale", -1), 0.0001);
         assertEquals(400, merged.abilityInt(QueenBalance.GLOBAL_ID, "giantChargeTicks", -1));
-        assertEquals(50.0, merged.ability(QueenBalance.GLOBAL_ID,
+        assertEquals(5.0, merged.ability(QueenBalance.GLOBAL_ID,
                 "giantInitialExecutionHealth", -1), 0.0001);
-        assertEquals(4.0, merged.ability(QueenBalance.GLOBAL_ID,
+        assertEquals(0.05, merged.ability(QueenBalance.GLOBAL_ID,
+                "giantExecutionGrowthRatio", -1), 0.0001);
+        assertEquals(8.0, merged.ability(QueenBalance.GLOBAL_ID,
+                "queenMaxHealthPerRound", -1), 0.0001);
+        assertEquals(2.0, merged.ability(QueenBalance.GLOBAL_ID,
                 "giantGrowthTargetCapMultiplier", -1), 0.0001);
         assertEquals(80, merged.abilityInt(QueenBalance.GLOBAL_ID,
                 "rangeVfxIntervalTicks", -1));
         assertEquals(4.0, merged.ability(QueenBalance.GLOBAL_ID,
                 "giantContactRadius", -1), 0.0001);
-        assertEquals(1.25, merged.ability(QueenBalance.GLOBAL_ID,
+        assertEquals(2.0, merged.ability(QueenBalance.GLOBAL_ID,
                 "cardSplashRadius", -1), 0.0001);
-        assertEquals(1, merged.abilityInt(QueenBalance.GLOBAL_ID,
+        assertEquals(2.5, merged.ability(QueenBalance.GLOBAL_ID,
+                "spadeRadius", -1), 0.0001);
+        assertEquals(5, merged.abilityInt(QueenBalance.GLOBAL_ID,
                 "cardSplashExtraTargets", -1));
+        assertEquals(5, merged.abilityInt(QueenBalance.GLOBAL_ID,
+                "spadeExtraTargets", -1));
 
         assertInvalidAbility(defaults, "shrinkFactorPerPoint", 1.0);
         assertInvalidAbility(defaults, "minimumStatScale", 0.0);

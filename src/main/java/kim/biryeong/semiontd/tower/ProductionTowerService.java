@@ -15,6 +15,10 @@ import kim.biryeong.semiontd.game.TowerUpgradeResult;
 import kim.biryeong.semiontd.job.JobContext;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.SemionJob;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordBinding;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordService;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordSkill;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordTowers;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import kim.biryeong.semiontd.tower.ocean.OceanTowers;
 import kim.biryeong.semiontd.tower.ocean.OceanWaterTower;
@@ -54,6 +58,18 @@ public final class ProductionTowerService {
         if (PlantTowers.isPlantTower(towerType)
                 && !PlantSoilStates.canPlantAt(laneContext.player.uuid(), position, towerType)) {
             return TowerPlacementResult.OCCUPIED;
+        }
+        // 마왕은 스킬 종류별로 제단 하나만 세울 수 있습니다. 같은 스킬을 더 원하면 업그레이드해야 합니다.
+        if (DemonLordTowers.isDemonLordTower(towerType)
+                && hasDemonLordSkillAltar(laneContext.lane, playerId, DemonLordTowers.skillOf(towerType))) {
+            return TowerPlacementResult.OCCUPIED;
+        }
+        // 바인딩은 1·2·3·4·5·F·Q 일곱 개뿐입니다. 더 지으면 누를 키가 없어 다이아와 코스트만
+        // 버리게 되므로, 조용히 죽은 타워를 만드는 대신 아예 막습니다.
+        if (DemonLordTowers.isDemonLordTower(towerType)
+                && DemonLordService.orderedAltars(laneContext.lane, playerId).size()
+                        >= DemonLordBinding.values().length) {
+            return TowerPlacementResult.TOWER_LIMIT_REACHED;
         }
         if (!canUseTower(game, laneContext.player, towerType)) {
             return TowerPlacementResult.TOWER_NOT_ALLOWED;
@@ -238,6 +254,19 @@ public final class ProductionTowerService {
         upgradedTower.onUpgradeCompleted(laneContext.lane, tower, upgrade);
         game.recordTowerUpgrade(playerId, upgradeId, position, mineralCost);
         return TowerUpgradeResult.SUCCESS;
+    }
+
+    /**
+     * True when this player already owns an altar for {@code skill} in the lane, at any tier.
+     * Upgrades replace the tower in place so they never trip this check.
+     */
+    private static boolean hasDemonLordSkillAltar(PlayerLane lane, UUID playerId, DemonLordSkill skill) {
+        if (lane == null || skill == null) {
+            return false;
+        }
+        return lane.towers().stream()
+                .filter(tower -> playerId.equals(tower.ownerPlayer()))
+                .anyMatch(tower -> skill == DemonLordTowers.skillOf(tower.type()));
     }
 
     private static boolean canUseTower(SemionGame game, SemionPlayer player, TowerType towerType) {

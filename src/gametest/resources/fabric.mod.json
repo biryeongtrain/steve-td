@@ -14,6 +14,7 @@
       "kim.biryeong.semiontd.gametest.SemionWaveGameTest",
       "kim.biryeong.semiontd.gametest.PlantIntegrationGameTest",
       "kim.biryeong.semiontd.tower.end.EndIntegrationGameTest",
+      "kim.biryeong.semiontd.gametest.ArmyGameTest",
       "kim.biryeong.semiontd.tower.adversary.AdversaryIntegrationGameTest",
       "kim.biryeong.semiontd.tower.adversary.AdversaryRivalGameTest",
       "kim.biryeong.semiontd.tower.engineer.EngineerGameTest",
@@ -21,6 +22,7 @@
       "kim.biryeong.semiontd.tower.insect.InsectGameTest",
       "kim.biryeong.semiontd.tower.futureagency.FutureAgencyGameTest",
       "kim.biryeong.semiontd.tower.queen.QueenGameTest",
+      "kim.biryeong.semiontd.tower.demonlord.DemonLordHotbarGameTest",
       "kim.biryeong.semiontd.tower.atlantis.AtlantisIntegrationGameTest",
       "kim.biryeong.semiontd.entity.tower.vfx.TowerVfxGameTest",
       "kim.biryeong.semiontd.game.RatingProfileCacheGameTest"

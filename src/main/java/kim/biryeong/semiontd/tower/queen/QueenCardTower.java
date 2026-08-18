@@ -16,6 +16,7 @@ import kim.biryeong.semiontd.api.area.TowerAreaEffectRequest;
 import kim.biryeong.semiontd.api.area.TowerAreaTargetMode;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
+import kim.biryeong.semiontd.entity.visual.TowerEquipmentVisual;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
@@ -88,13 +89,13 @@ public final class QueenCardTower extends ProductionTower {
         this.lane = lane;
         entity(lane).ifPresent(entity -> {
             applyAppearance(entity);
-            equipmentVisual = QueenEquipmentVisual.sync(equipmentVisual, entity);
+            equipmentVisual = TowerEquipmentVisual.sync(equipmentVisual, entity);
         });
     }
 
     @Override
     public void onRemoved(PlayerLane lane) {
-        QueenEquipmentVisual.remove(equipmentVisual);
+        TowerEquipmentVisual.remove(equipmentVisual);
         equipmentVisual = null;
         super.onRemoved(lane);
     }
@@ -140,6 +141,23 @@ public final class QueenCardTower extends ProductionTower {
 
     @Override public double effectBaseMaxHealth() {return desiredMaxHealth();}
     @Override protected void refreshMaxHealthAfterTypeChange(PlayerLane lane) {syncMaxHealth(desiredMaxHealth(), false);}
+    @Override public boolean supportsForcedAttackTargeting() {return true;}
+    @Override public Optional<SemionMonsterEntity> selectForcedAttackTarget(
+            SemionTowerEntity source, List<SemionMonsterEntity> candidates) {
+        List<SemionMonsterEntity> valid = candidates.stream()
+                .filter(target -> target.runtimeMonster() != null)
+                .toList();
+        SemionMonsterEntity current = source == null ? null : source.currentAttackTarget();
+        if (valid.contains(current)
+                && !QueenGiantRunner.hasRequiredVisualShrink(current.runtimeMonster())) {
+            return Optional.of(current);
+        }
+        return valid.stream()
+                .filter(target -> !QueenGiantRunner.hasRequiredVisualShrink(target.runtimeMonster()))
+                .min(Comparator.comparingDouble(target -> target.runtimeMonster().permanentStatScale()))
+                .or(() -> valid.stream()
+                        .max(Comparator.comparingDouble(target -> target.runtimeMonster().maxHealth())));
+    }
     @Override public double adjustAttackRange(double baseRange) {return card().map(value -> QueenBalance.cardRange(value.suit())).orElse(baseRange);}
     @Override public int adjustAttackInterval(int baseIntervalTicks) {
         int interval = card().map(value -> QueenBalance.cardInterval(value.suit())).orElse(baseIntervalTicks);
@@ -275,7 +293,7 @@ public final class QueenCardTower extends ProductionTower {
     }
 
     private void syncEquipmentVisual() {
-        equipmentVisual = QueenEquipmentVisual.sync(equipmentVisual, entity(lane).orElse(null));
+        equipmentVisual = TowerEquipmentVisual.sync(equipmentVisual, entity(lane).orElse(null));
     }
 
     private static ResourceLocation id(String path) {

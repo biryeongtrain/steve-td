@@ -133,7 +133,14 @@ public final class MageGameTest {
             require(MageStates.state(owner).mana() == afterSupport,
                     "Final-defense movement must not recast or recharge a support spell.");
 
+            int beforeCoreBreak = MageStates.state(owner).mana();
             require(lane.killTower(core), "The magic core must enter the normal destroyed lifecycle.");
+            int expectedAfterBreak = (int) Math.floor(
+                    beforeCoreBreak * (1.0 - MageBalance.coreBreakManaLossRatio())
+            );
+            require(MageStates.state(owner).mana() == expectedAfterBreak,
+                    "Core destruction must apply only the configured mana loss, before="
+                            + beforeCoreBreak + ", after=" + MageStates.state(owner).mana() + '.');
             before = MageStates.state(owner).mana();
             MageTowerLifecycle.finishRound(lane, owner);
             int after = MageStates.state(owner).mana();
@@ -195,7 +202,7 @@ public final class MageGameTest {
             long damaged = targets.stream().filter(target -> target.runtime().health() < 200.0).count();
             require(damaged == MageBalance.WIND_CUTTER_MAX_TARGETS,
                     "Wind Cutter must stop at its ten-target cap, damaged=" + damaged + '.');
-            requireClose(900.0, wind.roundMagicDamageDealt(),
+            requireClose(1_350.0, wind.roundMagicDamageDealt(),
                     "Wind Cutter must use the common magic damage path at the capped multiplier.");
             require(targets.stream().noneMatch(target -> !target.runtime().isAlive()),
                     "The target-cap check should damage, not kill, its test targets.");

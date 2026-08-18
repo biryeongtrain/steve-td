@@ -2,8 +2,12 @@ package kim.biryeong.semiontd.job;
 
 import java.util.List;
 import kim.biryeong.semiontd.SemionTd;
+import kim.biryeong.semiontd.game.PlayerLane;
+import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
+import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.plant.PlantCombatTower;
+import kim.biryeong.semiontd.tower.plant.PlantMineTower;
 import kim.biryeong.semiontd.tower.plant.PlantSoil;
 import kim.biryeong.semiontd.tower.plant.PlantSoilStates;
 import kim.biryeong.semiontd.tower.plant.PlantTowers;
@@ -18,18 +22,11 @@ public final class PlantTowerJob extends SemionJob {
         super(
                 ID,
                 Component.literal("식물 빌더"),
-                List.of(SemionText.mini("<gray>지형을 바꾸고 그 위에만 식물을 심는 빌더입니다.</gray>"))
-        );
-    }
-
-    @Override
-    public List<Component> description() {
-        return List.of(
-                SemionText.mini("<gray><green>테라포밍 타워</green>로 라인 바닥을 자기 지형으로 바꾸는 빌더입니다.</gray>"),
-                SemionText.mini("<gray>전투 타워는 <green>자기 계열 지형 위에만</green> 심고, 그 지형의 효과를 받습니다.</gray>"),
-                SemionText.mini("<gray>한 칸에는 한 계열만 깔리므로 라인 자리를 나눠 써야 합니다.</gray>"),
-                SemionText.mini("<yellow>잔디 회복·성장·정산 / 균사 취약·지뢰 / 사암 공속 약화·가시 / 회백토 사거리·치명타</yellow>"),
-                SemionText.mini("<red>모든 식물은 뿌리를 내려 사거리 밖 적을 쫓아가지 않습니다.</red>")
+                List.of(
+                        SemionText.mini("<green><bold>시작</bold></green> <gray>테라포밍 타워로 바닥을 바꾼 뒤 같은 지형의 식물을 심으세요.</gray>"),
+                        SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>잔디, 균사, 사암, 회백토 중 원하는 효과에 맞춰 자리를 나누세요.</gray>"),
+                        SemionText.mini("<yellow><bold>주의</bold></yellow> <gray>식물은 자기 지형에만 놓을 수 있고 사거리 밖의 적을 쫓지 않습니다.</gray>")
+                )
         );
     }
 
@@ -65,7 +62,44 @@ public final class PlantTowerJob extends SemionJob {
             if (payout > 0L) {
                 context.player().economy().addMineral(payout);
             }
+            decayMines(context, lane);
         });
+    }
+
+    /**
+     * 균사 지뢰를 한 단계씩 삭힙니다. 붉은 버섯은 사라집니다.
+     *
+     * <p>지뢰는 폭발 한 번으로 소모되지 않는 대신 라운드마다 값을 치릅니다. 뒤틀린 버섯을 심으면
+     * 세 라운드를 버티고, 붉은 버섯은 한 라운드짜리입니다.
+     *
+     * <p>여기서 도는 이유는 두 가지입니다. 라운드 경계를 아는 쪽이 타워가 아니라 직업이고,
+     * {@code PlayerLane#resetForRound} 는 타워 목록을 그대로 순회하므로 그 안에서 타워를 지우거나
+     * 갈아 끼울 수 없습니다. 이 훅은 정산({@code recordBuilderRoundResults}) 뒤, 준비 단계
+     * 시작 전에 불려서 이번 라운드 전과가 기록된 뒤에 삭습니다.
+     *
+     * <p>삭은 타워는 {@code copyFrom} 을 쓰지 않고 새로 만듭니다. 판매가와 체력이 지금 티어 기준으로
+     * 잡혀야 합니다 - 값을 물려받으면 붉은 버섯을 뒤틀린 버섯 값에 되팔 수 있습니다.
+     */
+    private static void decayMines(JobContext context, PlayerLane lane) {
+        for (Tower tower : List.copyOf(lane.towers())) {
+            if (!(tower instanceof PlantMineTower mine)
+                    || !context.player().uuid().equals(mine.ownerPlayer())) {
+                continue;
+            }
+            TowerType decayed = PlantTowers.previousMyceliumTier(mine.type());
+            if (decayed == null) {
+                lane.removeTower(mine);
+                continue;
+            }
+            ProductionTowerCatalog.entry(decayed)
+                    .map(entry -> entry.create(
+                            mine.ownerPlayer(),
+                            mine.teamId(),
+                            mine.laneId(),
+                            mine.originalPosition(),
+                            mine.position()))
+                    .ifPresent(replacement -> lane.replaceTower(mine, replacement));
+        }
     }
 
     @Override

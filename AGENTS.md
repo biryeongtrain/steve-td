@@ -26,6 +26,10 @@ Add a focused regression test for each behavior change. Use JUnit for pure calcu
 
 Recent commits use short Conventional Commit prefixes such as `feat:` and `fix:`, followed by a Korean or English summary. Keep each commit to one logical change. Pull requests should describe player-visible behavior, config or migration impact, and exact validation commands. Link the relevant issue when one exists. Include screenshots or logs for UI, VFX, resource-pack, or runtime changes.
 
+## Project Skills
+
+Before starting work, inspect `.agents/skills/` and actively use every project skill whose description matches the task. Read each selected `SKILL.md` completely before acting, follow its referenced instructions, and prefer its scripts, templates, and established workflows over recreating them. If several skills apply, use the smallest set that fully covers the task and state the order in which they will be used.
+
 ## Configuration & Agent Notes
 
 Runtime configuration belongs under `config/semion-td/` or local `run/config/semion-td/`; do not commit live databases, credentials, or server-generated state. For builder or production-tower work, follow `.agents/skills/semiontd-builder-tower-dev/SKILL.md` and verify values against the active server configuration.

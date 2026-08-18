@@ -10,6 +10,7 @@ import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.visual.BlockDisplayVisual;
 import kim.biryeong.semiontd.entity.visual.EntityVisual;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
 import net.minecraft.world.level.block.Blocks;
 
 public final class HeroPartyTowers {
@@ -21,7 +22,7 @@ public final class HeroPartyTowers {
     private static final List<TowerType> ALL;
 
     public static final TowerType HERO = TowerType.builder(HERO_ID, "용사")
-            .mineralCost(80)
+            .mineralCost(112)
             .maxHealth(160.0)
             .range(3.5)
             .damage(12.0)
@@ -37,75 +38,76 @@ public final class HeroPartyTowers {
     static {
         register(
                 HeroCompanionRole.KNIGHT,
-                new long[]{60, 90, 140, 220},
+                new long[]{84, 126, 196, 308},
                 new double[]{260, 430, 650, 900},
                 new double[]{3.0, 3.0, 3.0, 3.0},
-                new double[]{6, 9, 13, 18},
+                new double[]{7.2, 10.8, 15.6, 21.6},
                 new int[]{20, 19, 18, 16},
                 80,
                 false,
-                "높은 체력과 피해 감소로 앞라인을 지킵니다."
+                "적의 공격을 받아 내는 앞줄 동료입니다."
         );
         register(
                 HeroCompanionRole.ARCHER,
-                new long[]{55, 85, 130, 200},
+                new long[]{77, 119, 182, 280},
                 new double[]{70, 105, 150, 200},
                 new double[]{10.0, 10.0, 10.0, 10.0},
-                new double[]{12, 17, 24, 32},
-                new int[]{15, 14, 12, 10},
+                new double[]{14.4, 20.4, 28.8, 38.4},
+                new int[]{15, 13, 10, 7},
                 0,
                 false,
-                "보스와 최대 체력이 높은 적을 우선 공격합니다."
+                "강한 적을 먼저 노리는 원거리 딜러입니다."
         );
         register(
                 HeroCompanionRole.MAGE,
-                new long[]{70, 105, 165, 260},
+                new long[]{98, 147, 231, 364},
                 new double[]{80, 120, 165, 220},
                 new double[]{8.0, 8.0, 8.0, 8.0},
-                new double[]{16, 22, 31, 42},
+                new double[]{19.2, 26.4, 37.2, 50.4},
                 new int[]{20, 19, 18, 16},
                 0,
                 true,
-                "밀집한 적을 우선 공격하고 주변에 마법 피해를 줍니다."
+                "적이 모인 곳을 공격하는 광역 딜러입니다."
         );
         register(
                 HeroCompanionRole.PRIEST,
-                new long[]{65, 100, 155, 240},
+                new long[]{91, 140, 217, 336},
                 new double[]{100, 145, 205, 280},
                 new double[]{7.0, 7.0, 7.0, 7.0},
-                new double[]{4, 6, 10, 14},
+                new double[]{4.8, 7.2, 12, 16.8},
                 new int[]{20, 19, 18, 16},
                 -5,
                 true,
-                "피해를 입은 파티원을 주기적으로 회복합니다."
+                "다친 파티원을 치유하는 지원가입니다."
         );
         register(
                 HeroCompanionRole.ROGUE,
-                new long[]{50, 75, 120, 185},
+                new long[]{70, 105, 168, 259},
                 new double[]{65, 95, 135, 180},
                 new double[]{3.5, 3.5, 3.5, 3.5},
-                new double[]{10, 14, 19, 26},
+                new double[]{12, 16.8, 22.8, 31.2},
                 new int[]{10, 10, 9, 8},
                 10,
                 false,
-                "체력이 낮은 적을 빠르게 마무리합니다."
+                "체력이 낮은 적을 마무리하는 근접 딜러입니다."
         );
         register(
                 HeroCompanionRole.BARD,
-                new long[]{60, 90, 140, 220},
+                new long[]{84, 126, 196, 308},
                 new double[]{90, 130, 180, 240},
                 new double[]{7.0, 7.0, 7.0, 7.0},
-                new double[]{4, 7, 10, 14},
+                new double[]{4.8, 8.4, 12, 16.8},
                 new int[]{20, 19, 18, 16},
                 -5,
                 true,
-                "주변 파티원의 공격력과 공격 속도를 높입니다."
+                "주변 파티원의 공격을 강화하는 지원가입니다."
         );
 
         ArrayList<TowerType> all = new ArrayList<>();
         all.add(HERO);
         COMPANIONS.values().forEach(all::addAll);
         ALL = List.copyOf(all);
+        ALL.forEach(type -> TowerDescriptionRegistry.registerTemplate(type, type.description()));
     }
 
     private HeroPartyTowers() {
@@ -171,10 +173,7 @@ public final class HeroPartyTowers {
                     .attackIntervalTicks(intervals[index])
                     .aggroPriority(aggro)
                     .visual(HIDDEN_ANCHOR)
-                    .description(List.of(
-                            "<gray>" + description + "</gray>",
-                            "<yellow>타워 수 " + (tier + 1) + "</yellow>"
-                    ))
+                    .description(companionDescription(role, tier, description))
                     .primaryDamageType(magic ? DamageType.MAGIC : DamageType.PHYSICAL)
                     .build();
             types.add(type);
@@ -193,6 +192,44 @@ public final class HeroPartyTowers {
             case 3 -> "베테랑 사제";
             case 4 -> "대사제";
             default -> role.displayName();
+        };
+    }
+
+    private static List<String> companionDescription(HeroCompanionRole role, int tier, String roleDescription) {
+        String first = firstAbilityName(role);
+        String second = secondAbilityName(role);
+        String abilityLine = switch (tier) {
+            case 1 -> "T2에 " + first + ", T3에 " + second + "를 배웁니다.";
+            case 2 -> "새 능력: " + first;
+            case 3 -> "새 능력: " + second;
+            case 4 -> "두 능력의 효과와 발동 주기가 강화됩니다.";
+            default -> "";
+        };
+        return List.of(
+                "<gray>" + roleDescription + "</gray>",
+                "<yellow>" + abilityLine + "</yellow>"
+        );
+    }
+
+    static String firstAbilityName(HeroCompanionRole role) {
+        return switch (role) {
+            case KNIGHT -> "방패 강타";
+            case ARCHER -> "관통 사격";
+            case MAGE -> "냉기 폭발";
+            case PRIEST -> "보호의 축복";
+            case ROGUE -> "연속 베기";
+            case BARD -> "전투의 노래";
+        };
+    }
+
+    static String secondAbilityName(HeroCompanionRole role) {
+        return switch (role) {
+            case KNIGHT -> "수호 진형";
+            case ARCHER -> "약점 표식";
+            case MAGE -> "마력 폭주";
+            case PRIEST -> "연쇄 치유";
+            case ROGUE -> "추격";
+            case BARD -> "앙코르";
         };
     }
 

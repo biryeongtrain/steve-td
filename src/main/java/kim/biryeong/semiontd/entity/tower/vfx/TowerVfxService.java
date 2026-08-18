@@ -37,8 +37,10 @@ import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.adversary.AdversaryTowers;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityTowers;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
+import kim.biryeong.semiontd.tower.army.ArmyTowers;
 import kim.biryeong.semiontd.tower.engineer.EngineerTowers;
 import kim.biryeong.semiontd.tower.futureagency.FutureAgencyTowers;
+import kim.biryeong.semiontd.tower.hero.HeroPartyTowers;
 import kim.biryeong.semiontd.tower.illager.IllagerTowers;
 import kim.biryeong.semiontd.tower.insect.InsectTowers;
 import kim.biryeong.semiontd.tower.legion.LegionTowers;
@@ -49,6 +51,7 @@ import kim.biryeong.semiontd.tower.plant.PlantTowers;
 import kim.biryeong.semiontd.tower.queen.QueenTowers;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
 import kim.biryeong.semiontd.tower.thunder.ThunderTowers;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordTowers;
 import kim.biryeong.semiontd.tower.area.AreaVfxStyleRegistryImpl;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
@@ -177,6 +180,36 @@ public final class TowerVfxService {
         }
         if (healedTower) {
             enqueue(new LifeStealEvent(context, impact, source));
+        }
+        if (killedPrimaryTarget) {
+            enqueue(new KillEvent(context, impact));
+        }
+    }
+
+    /**
+     * Impact feedback for damage the tower did not fire: the mark and the kill flourish, no trail.
+     *
+     * <p>{@link #showAttack} draws a line from the tower to the target, which only reads correctly
+     * when the tower is what hit it. The demon lord's altars are inert pedestals standing in the
+     * build area - the damage comes from the player's skill, so a beam from the altar points at
+     * nothing. The tower is still needed to resolve who sees the effect.
+     */
+    public static void showRemoteHit(
+            SemionTowerEntity tower,
+            SemionMonsterEntity target,
+            boolean killedPrimaryTarget
+    ) {
+        if (!config.enabled() || tower == null || target == null) {
+            return;
+        }
+        Vec3 impact = targetCenter(target);
+        EventContext context = context(tower, impact);
+        if (context == null) {
+            return;
+        }
+        if (!killedPrimaryTarget
+                && target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS) > 0.0) {
+            enqueue(new MarkEvent(context, impact, Math.max(0.4, target.getBbWidth() * 0.75), Math.max(0.5, target.getBbHeight() * 0.45)));
         }
         if (killedPrimaryTarget) {
             enqueue(new KillEvent(context, impact));
@@ -526,14 +559,23 @@ public final class TowerVfxService {
         if (MageTowers.isMageTower(type)) {
             return BuilderPalette.MAGE;
         }
+        if (HeroPartyTowers.isHeroPartyTower(type)) {
+            return BuilderPalette.HERO_PARTY;
+        }
         if (InsectTowers.isInsectTower(type)) {
             return BuilderPalette.INSECT;
         }
         if (PlantTowers.isPlantTower(type)) {
             return BuilderPalette.PLANT;
         }
+        if (ArmyTowers.isArmyTower(type)) {
+            return BuilderPalette.ARMY;
+        }
         if (ThunderTowers.isThunderTower(type)) {
             return BuilderPalette.THUNDER;
+        }
+        if (DemonLordTowers.isDemonLordTower(type)) {
+            return BuilderPalette.DEMON_LORD;
         }
         return BuilderPalette.DEFAULT;
     }

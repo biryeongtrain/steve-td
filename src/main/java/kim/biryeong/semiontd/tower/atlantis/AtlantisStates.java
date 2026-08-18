@@ -99,6 +99,7 @@ public final class AtlantisStates {
         }
 
         boolean finalDefense = turtles.stream().anyMatch(Tower::deployedAtFinalDefense);
+        PlayerLane pathLane = finalDefense ? lane.finalDefensePathLane() : lane;
 
         // One wall, not one cluster per turtle. Deploying independently around each turtle stacked
         // zones on top of each other whenever turtles stood close together, so adding a turtle did
@@ -120,7 +121,7 @@ public final class AtlantisStates {
 
         // Monsters walk from progress 0 towards 1, so the ground they have yet to cross is the
         // lower side. Zones laid towards 1 sit behind the wave and never get used.
-        double step = spacingProgress(lane);
+        double step = spacingProgress(pathLane);
         GridPosition owner = anchorTurtle(lane, turtles, finalDefense).originalPosition();
         double radius = strongest(turtles, "zoneRadius", 2.5);
         double reduction = strongest(turtles, "zoneAllyDamageReduction", 0.05);
@@ -134,7 +135,7 @@ public final class AtlantisStates {
             }
             deployed.add(new PressureZone(
                     owner,
-                    lane.laneLayout().positionAt(progress),
+                    pathLane.laneLayout().positionAt(progress),
                     radius,
                     reduction
             ));

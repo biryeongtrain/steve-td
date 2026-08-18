@@ -35,9 +35,9 @@ public final class AnimalTowerJob extends SemionJob {
                 ID,
                 Component.literal("동물 빌더"),
                 List.of(
-                        SemionText.mini("<gray>같은 계열 타워를 모아 무리 스택을 쌓는 빌더입니다.</gray>"),
-                        SemionText.mini("<gold>최대 무리의 T3 한 기를 계열당 하나의 우두머리로 승급할 수 있습니다.</gold>"),
-                        SemionText.mini("<gray>우두머리는 최대 무리를 유지하는 동안 주변 같은 계열 타워를 강화합니다.</gray>")
+                        SemionText.mini("<green><bold>시작</bold></green> <gray>한 동물 계열을 골라 같은 타워를 모으세요.</gray>"),
+                        SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>무리를 완성하면 계열마다 1기를 우두머리로 승급하세요.</gray>"),
+                        SemionText.mini("<yellow><bold>주의</bold></yellow> <gray>무리가 풀리면 우두머리의 주변 강화도 약해집니다.</gray>")
                 )
         );
     }

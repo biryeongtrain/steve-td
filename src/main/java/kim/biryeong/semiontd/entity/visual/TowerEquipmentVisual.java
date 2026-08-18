@@ -1,14 +1,16 @@
-package kim.biryeong.semiontd.tower.queen;
+package kim.biryeong.semiontd.entity.visual;
 
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
+import net.minecraft.core.Rotations;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.decoration.ArmorStand;
 
-final class QueenEquipmentVisual {
-    private QueenEquipmentVisual() {}
+public final class TowerEquipmentVisual {
+    private TowerEquipmentVisual() {}
 
-    static ArmorStand sync(ArmorStand visual, SemionTowerEntity source) {
+    public static ArmorStand sync(ArmorStand visual, SemionTowerEntity source) {
         if (source == null || !source.isAlive() || !(source.level() instanceof ServerLevel level)) {
             remove(visual);
             return null;
@@ -28,14 +30,25 @@ final class QueenEquipmentVisual {
         visual.setItemSlot(EquipmentSlot.HEAD, source.getItemBySlot(EquipmentSlot.HEAD).copy());
         visual.setItemSlot(EquipmentSlot.CHEST, source.getItemBySlot(EquipmentSlot.CHEST).copy());
         visual.setItemSlot(EquipmentSlot.MAINHAND, source.getItemBySlot(EquipmentSlot.MAINHAND).copy());
+        visual.setItemSlot(EquipmentSlot.OFFHAND, source.getItemBySlot(EquipmentSlot.OFFHAND).copy());
         visual.teleportTo(source.getX(), source.getY(), source.getZ());
-        visual.setYRot(source.getYRot());
-        visual.setYBodyRot(source.getYRot());
-        visual.setYHeadRot(source.getYHeadRot());
+        float bodyYaw = source.yBodyRot;
+        visual.setYRot(bodyYaw);
+        visual.setXRot(source.getXRot());
+        visual.yRotO = bodyYaw;
+        visual.yBodyRot = bodyYaw;
+        visual.yBodyRotO = bodyYaw;
+        visual.yHeadRot = bodyYaw;
+        visual.yHeadRotO = bodyYaw;
+        visual.setHeadPose(new Rotations(
+                source.getXRot(),
+                Mth.wrapDegrees(source.getYHeadRot() - bodyYaw),
+                0.0F
+        ));
         return visual;
     }
 
-    static void remove(ArmorStand visual) {
+    public static void remove(ArmorStand visual) {
         if (visual != null && !visual.isRemoved()) visual.discard();
     }
 }

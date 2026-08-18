@@ -2,7 +2,6 @@ package kim.biryeong.semiontd.tower.queen;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -15,6 +14,7 @@ import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.monster.DamageType;
+import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
@@ -28,6 +28,7 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.phys.Vec3;
 
 final class QueenGiantRunner {
+    static final double REQUIRED_EXECUTION_VISUAL_SHRINK = 0.30;
     private static final ResourceLocation EFFECT_ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "queen_giant_run");
     private static final ResourceLocation SPAWN_EFFECT_ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "queen_giant_spawn");
     private final Entity entity;
@@ -118,7 +119,7 @@ final class QueenGiantRunner {
         SemionTdApi.areaEffects().applyToMonsters(request, target -> {
             contacted.add(target.getUUID());
             if (target.runtimeMonster() == null) return AreaEffectOutcome.UNCHANGED;
-            if (target.runtimeMonster().health() <= state.executionHealth()) {
+            if (canExecute(target.runtimeMonster(), state.executionHealth())) {
                 double effectiveMaxHealth = target.runtimeMonster().maxHealth();
                 double lethalDamage = Math.max(1.0, effectiveMaxHealth * 1_000_000.0);
                 var damageResult = queen.damageResolvedTargetResult(source, target, lethalDamage, DamageType.TRUE);
@@ -136,19 +137,29 @@ final class QueenGiantRunner {
         });
     }
 
+    static boolean canExecute(Monster target, double executionHealth) {
+        return target != null
+                && target.health() <= executionHealth
+                && hasRequiredVisualShrink(target);
+    }
+
+    static boolean hasRequiredVisualShrink(Monster target) {
+        return target != null
+                && target.visualScale() <= 1.0 - REQUIRED_EXECUTION_VISUAL_SHRINK + 1.0e-9;
+    }
+
     private static List<Vec3> finalDefensePath(PlayerLane lane) {
-        Vec3 boss = lane.laneLayout().bossPosition();
-        return lane.laneLayout().finalDefenseTowerSlots().stream()
-                .map(slot -> new Vec3(slot.x() + 0.5, boss.y, slot.z() + 0.5))
-                .max(Comparator.comparingDouble(position -> position.distanceToSqr(boss)))
-                .map(start -> List.of(start, boss))
-                .orElseGet(() -> List.of(boss.add(6.0, 0.0, 0.0), boss));
+        ArrayList<Vec3> path = new ArrayList<>(lane.finalDefensePathLane().laneLayout().pathPoints());
+        Collections.reverse(path);
+        return path;
     }
 
     private static List<Vec3> reverseLanePath(PlayerLane lane) {
-        ArrayList<Vec3> path = new ArrayList<>(lane.laneLayout().personalWaypoints().size() + 1);
+        List<Vec3> waypoints = lane.laneLayout().personalWaypoints();
+        if (waypoints.isEmpty()) waypoints = lane.laneLayout().waypoints();
+        ArrayList<Vec3> path = new ArrayList<>(waypoints.size() + 1);
         path.add(lane.laneLayout().spawn());
-        path.addAll(lane.laneLayout().personalWaypoints());
+        path.addAll(waypoints);
         Collections.reverse(path);
         return path;
     }

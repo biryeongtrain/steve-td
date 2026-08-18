@@ -318,7 +318,9 @@ Use `TowerVfxService` for attacks, secondary attacks, magic hits, area effects, 
 
 Reuse an `AreaVfxStyles` value such as splash, pulse, corpse explosion, buff, debuff, dragon breath, or none before inventing a new renderer.
 
-`BuilderPalette` selects family color/particle language. Add a palette only when the family genuinely needs distinct VFX, then update `TowerVfxGameTest`. A palette entry without a visual consumer is dead configuration.
+Every new builder/job must define its own `BuilderPalette` entry with a coherent primary color, accent color, vanilla fallback particle, and enhanced-client particle. Route every tower in the family to that palette in `TowerVfxService.paletteFor(...)`; do not accept `DEFAULT` fallback or another builder's palette as finished visual identity.
+
+Verify that ordinary attacks and the builder's secondary, area, support, and special events consume the routed palette through the production `TowerVfxService` or area-effect path. A palette enum entry without routing or a production consumer is incomplete. Update `TowerVfxGameTest` to cover the family mapping and representative events, and add a deterministic debug command when the builder introduces a custom effect.
 
 ## 7. Balance configuration and reload
 
@@ -549,6 +551,7 @@ Compilation is not a smoke test.
 - [ ] Every catalog endpoint registered before upgrade links.
 - [ ] Upgrade IDs/costs use runtime directed lookup.
 - [ ] Shared placement, damage, targeting, area-effect, VFX, and state-copy paths reused.
+- [ ] Dedicated `BuilderPalette` entry exists, every family tower resolves to it, and production attack/area/special VFX visibly consume it.
 - [ ] Source defaults, partial merge, validation, and reload behavior covered.
 - [ ] Changing state appears in tower details; new timed effects have labels.
 - [ ] Exactly one web builder owns every exported tower.

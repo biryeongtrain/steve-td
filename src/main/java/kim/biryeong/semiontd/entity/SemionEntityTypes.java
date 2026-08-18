@@ -41,7 +41,7 @@ public final class SemionEntityTypes {
                     .noSave()
                     .sized(0.8F, 1.8F)
                     .clientTrackingRange(8)
-                    .updateInterval(2)
+                    .updateInterval(3)
     );
 
     private SemionEntityTypes() {

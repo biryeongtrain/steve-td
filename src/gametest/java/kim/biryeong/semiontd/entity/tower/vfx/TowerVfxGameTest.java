@@ -24,8 +24,12 @@ import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.adversary.AdversaryTowers;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityTowers;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
+import kim.biryeong.semiontd.tower.army.ArmyTowers;
 import kim.biryeong.semiontd.tower.engineer.EngineerTowers;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordSkill;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordTowers;
 import kim.biryeong.semiontd.tower.futureagency.FutureAgencyTowers;
+import kim.biryeong.semiontd.tower.hero.HeroPartyTowers;
 import kim.biryeong.semiontd.tower.illager.IllagerTower;
 import kim.biryeong.semiontd.tower.illager.IllagerTowers;
 import kim.biryeong.semiontd.tower.insect.InsectTowers;
@@ -36,6 +40,7 @@ import kim.biryeong.semiontd.tower.nether.NetherTowerState;
 import kim.biryeong.semiontd.tower.nether.NetherTowers;
 import kim.biryeong.semiontd.tower.ocean.OceanTowers;
 import kim.biryeong.semiontd.tower.plant.PlantTowers;
+import kim.biryeong.semiontd.tower.plant.PlantVfx;
 import kim.biryeong.semiontd.tower.queen.QueenTowers;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
 import kim.biryeong.semiontd.tower.thunder.ThunderTowers;
@@ -78,9 +83,15 @@ public final class TowerVfxGameTest {
         assertPalette(QueenTowers.RANDOM_CARD_SOLDIER, BuilderPalette.QUEEN);
         assertPalette(EngineerTowers.trap(EngineerTowers.TrapKind.DISPENSER, 3), BuilderPalette.ENGINEER);
         assertPalette(MageTowers.WIZARD, BuilderPalette.MAGE);
+        assertPalette(HeroPartyTowers.HERO, BuilderPalette.HERO_PARTY);
+        assertPalette(HeroPartyTowers.companion(kim.biryeong.semiontd.tower.hero.HeroCompanionRole.ARCHER, 3),
+                BuilderPalette.HERO_PARTY);
         assertPalette(InsectTowers.SILVERFISH, BuilderPalette.INSECT);
         assertPalette(InsectTowers.SPAWNER, BuilderPalette.INSECT);
+        assertPalette(ArmyTowers.RECRUIT, BuilderPalette.ARMY);
+        assertPalette(ArmyTowers.GUARD, BuilderPalette.ARMY);
         assertPalette(ThunderTowers.SQUIRREL_T3, BuilderPalette.THUNDER);
+        assertPalette(DemonLordTowers.tower(DemonLordSkill.WAVE_OF_MALICE, 1), BuilderPalette.DEMON_LORD);
         context.succeed();
     }
 
@@ -361,6 +372,66 @@ public final class TowerVfxGameTest {
         var dispatcher = context.getLevel().getServer().getCommands().getDispatcher();
         for (String effect : List.of("arc", "discharge")) {
             String command = "semiontd-debug vfx thunder " + effect;
+            var parsed = dispatcher.parse(command, context.getLevel().getServer().createCommandSourceStack());
+            if (parsed.getContext().getNodes().isEmpty() || parsed.getReader().canRead()) {
+                throw new AssertionError("Expected /" + command + " to parse completely");
+            }
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void plantLobDebugCommandParses(GameTestHelper context) {
+        var dispatcher = context.getLevel().getServer().getCommands().getDispatcher();
+        var parsed = dispatcher.parse(
+                "semiontd-debug vfx plant lob",
+                context.getLevel().getServer().createCommandSourceStack()
+        );
+        if (parsed.getContext().getNodes().isEmpty() || parsed.getReader().canRead()) {
+            throw new AssertionError("Expected /semiontd-debug vfx plant lob to parse completely");
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void plantLobStyleFlowsThroughSharedAreaVfxService(GameTestHelper context) {
+        List<AreaEffectVfxEvent> observed = new ArrayList<>();
+        TowerVfxService.setAreaEffectTestObserver(observed::add);
+        try {
+            UUID owner = UUID.nameUUIDFromBytes("plant-lob-vfx".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            TestTower runtimeTower = new TestTower(PlantTowers.T3_PODZOL_PITCHER_TOWER, owner);
+            SemionTowerEntity tower = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+            tower.setPos(2.0, 2.0, 2.0);
+            tower.configure(runtimeTower, null);
+
+            TowerVfxService.showAreaEffect(
+                    tower,
+                    ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "test_plant_lob"),
+                    PlantVfx.LOBBED_SPLASH,
+                    new Vec3(8.0, 2.0, 2.0),
+                    4.0,
+                    List.of(),
+                    1,
+                    1,
+                    0
+            );
+
+            if (observed.size() != 1
+                    || !observed.getFirst().visual().styleId().equals(PlantVfx.LOBBED_SPLASH)
+                    || Math.abs(observed.getFirst().visual().radius() - 4.0) > 1.0E-6) {
+                throw new AssertionError("Plant lob VFX must use the shared area service with its runtime radius");
+            }
+            context.succeed();
+        } finally {
+            TowerVfxService.setAreaEffectTestObserver(null);
+        }
+    }
+
+    @GameTest
+    public void armyDebugCommandsParse(GameTestHelper context) {
+        var dispatcher = context.getLevel().getServer().getCommands().getDispatcher();
+        for (String effect : List.of("promotion", "command", "barrage", "discharge")) {
+            String command = "semiontd-debug vfx army " + effect;
             var parsed = dispatcher.parse(command, context.getLevel().getServer().createCommandSourceStack());
             if (parsed.getContext().getNodes().isEmpty() || parsed.getReader().canRead()) {
                 throw new AssertionError("Expected /" + command + " to parse completely");

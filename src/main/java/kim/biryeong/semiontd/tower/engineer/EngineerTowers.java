@@ -221,7 +221,8 @@ public final class EngineerTowers {
             case DOOR -> List.of(powered, "<green>반경 " + placeholder(ability, "radius", "blocks") + "의 몬스터를 유인합니다.</green>");
             case TNT -> List.of(powered, "<red>" + placeholder("ability." + EngineerBalance.GLOBAL_ID + ".", "tntFuseTicks", "seconds")
                     + " 뒤 최대 " + placeholder(ability, "maxTargets", "integer") + "기에게 피해 "
-                    + placeholder(ability, "damage", "integer") + "을 줍니다. 라운드당 한 번만 폭발합니다.</red>");
+                    + placeholder(ability, "damage", "integer") + "을 줍니다. 라운드당 한 번만 폭발합니다.</red>",
+                    plateDamageDescription());
             case DISPENSER -> List.of(
                     powered,
                     "<green>사거리 " + placeholder(ability, "range", "blocks") + "에서 피해 "
@@ -230,7 +231,8 @@ public final class EngineerTowers {
                             + placeholder("ability." + EngineerBalance.GLOBAL_ID + ".", "dispenserDamagePerPlateBlock", "percent")
                             + " 증가하며 최대 "
                             + placeholder("ability." + EngineerBalance.GLOBAL_ID + ".", "dispenserMaxPlateDistance", "integer")
-                            + "칸까지 적용됩니다.</gold>"
+                            + "칸까지 적용됩니다.</gold>",
+                    plateDamageDescription()
             );
             case PISTON -> List.of(powered, "<aqua>반경 " + placeholder(ability, "radius", "blocks") + "의 최대 "
                     + placeholder(ability, "maxTargets", "integer") + "기를 라인 시작점으로 되돌립니다. 같은 적은 "
@@ -242,6 +244,12 @@ public final class EngineerTowers {
 
     private static String placeholder(String prefix, String key, String format) {
         return "{" + prefix + key + ":" + format + "}";
+    }
+
+    private static String plateDamageDescription() {
+        return "<aqua>발판 등급이 오를 때마다 피해가 "
+                + placeholder("ability." + EngineerBalance.GLOBAL_ID + ".", "plateDamageBonusPerTier", "percent")
+                + " 증가합니다.</aqua>";
     }
 
     private static String id(TrapKind kind, int tier) {

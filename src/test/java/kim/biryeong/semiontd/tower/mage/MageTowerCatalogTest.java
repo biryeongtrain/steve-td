@@ -79,11 +79,11 @@ final class MageTowerCatalogTest {
     }
 
     @Test
-    void manaStartsOnceCapsAtOneThousandAndCoreBreakPreservesIt() {
+    void manaStartsOnceCapsAtOneThousandAndCoreBreakPreservesMostOfIt() {
         MageStates.PlayerState state = MageStates.state(OWNER);
         state.grantStartingMana();
         state.grantStartingMana();
-        assertEquals(30, state.mana());
+        assertEquals(45, state.mana());
 
         state.addMana(5_000);
         assertEquals(1_000, state.mana());
@@ -91,7 +91,7 @@ final class MageTowerCatalogTest {
                 MageTowers.MAGIC_CORE, OWNER, TeamId.RED, 1, new GridPosition(0, 64, 0)
         );
         core.onDeath(null);
-        assertEquals(800, state.mana());
+        assertEquals(950, state.mana());
         state.clearMana();
         state.grantStartingMana();
         assertEquals(0, state.mana(), "Reinstalling the core must not grant starting mana twice.");
@@ -107,9 +107,9 @@ final class MageTowerCatalogTest {
         );
         support.onPlaced(null);
         support.onWaveStarted(null, 1);
-        assertEquals(30, state.mana());
+        assertEquals(45, state.mana());
         assertFalse(support.spellUsed());
-        assertEquals(8, support.naturalManaProduction());
+        assertEquals(12, support.naturalManaProduction());
 
         MageStates.clear(OWNER);
         state = MageStates.state(OWNER);
@@ -120,13 +120,13 @@ final class MageTowerCatalogTest {
         );
         unusedAttack.onPlaced(null);
         unusedAttack.onWaveStarted(null, 1);
-        assertEquals(30, state.mana());
+        assertEquals(45, state.mana());
         assertFalse(unusedAttack.spellUsed());
-        assertEquals(8, unusedAttack.naturalManaProduction());
+        assertEquals(12, unusedAttack.naturalManaProduction());
     }
 
     @Test
-    void livingCoreProducesFiftyManaAtRoundEnd() {
+    void livingCoreProducesSeventyFiveManaAtRoundEnd() {
         MageStates.PlayerState state = MageStates.state(OWNER);
         PlayerLane lane = testLane();
         MageCoreTower core = new MageCoreTower(
@@ -134,11 +134,11 @@ final class MageTowerCatalogTest {
                 new GridPosition(0, 64, 0), new GridPosition(0, 64, 0)
         );
         lane.addTower(core);
-        assertEquals(30, state.mana());
+        assertEquals(45, state.mana());
 
         MageTowerLifecycle.finishRound(lane, OWNER);
 
-        assertEquals(80, state.mana());
+        assertEquals(120, state.mana());
     }
 
     @Test
@@ -146,20 +146,24 @@ final class MageTowerCatalogTest {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
         assertTrue(MageTowers.all().stream().allMatch(type -> defaults.towers().containsKey(type.id())));
         assertEquals(1_000.0, defaults.ability(MageBalance.GLOBAL_ID, "manaCapacity", -1), 0.0001);
-        assertEquals(50.0, defaults.ability(MageBalance.GLOBAL_ID, "coreMana", -1), 0.0001);
-        assertEquals(0.20, defaults.ability(MageBalance.GLOBAL_ID, "coreBreakManaLossRatio", -1), 0.0001);
+        assertEquals(45.0, defaults.ability(MageBalance.GLOBAL_ID, "startingMana", -1), 0.0001);
+        assertEquals(12.0, defaults.ability(MageBalance.GLOBAL_ID, "idleWizardMana", -1), 0.0001);
+        assertEquals(23.0, defaults.ability(MageBalance.GLOBAL_ID, "prophetMana", -1), 0.0001);
+        assertEquals(75.0, defaults.ability(MageBalance.GLOBAL_ID, "coreMana", -1), 0.0001);
+        assertEquals(0.05, defaults.ability(MageBalance.GLOBAL_ID, "coreBreakManaLossRatio", -1), 0.0001);
+        assertEquals(120.0, defaults.ability(MageBalance.GLOBAL_ID, "prophecyReward", -1), 0.0001);
         assertEquals(400.0, defaults.ability(MageBalance.GLOBAL_ID, "dimensional_collapseManaCost", -1), 0.0001);
         assertEquals(0.65, defaults.ability(MageBalance.GLOBAL_ID, "rangedBarrierReduction", -1), 0.0001);
         assertEquals(0.6, defaults.ability(MageBalance.GLOBAL_ID, "amplificationBonus", -1), 0.0001);
         assertEquals(0.7, defaults.ability(MageBalance.GLOBAL_ID, "manaDamageBonusAtCapacity", -1), 0.0001);
         assertEquals(3.0, defaults.ability(MageBalance.GLOBAL_ID, "maxSpellDamageMultiplier", -1), 0.0001);
-        assertEquals(10.0, defaults.ability(MageBalance.GLOBAL_ID, "missileDamage", -1), 0.0001);
-        assertEquals(30.0, defaults.ability(MageBalance.GLOBAL_ID, "windCutterDamage", -1), 0.0001);
+        assertEquals(15.0, defaults.ability(MageBalance.GLOBAL_ID, "missileDamage", -1), 0.0001);
+        assertEquals(45.0, defaults.ability(MageBalance.GLOBAL_ID, "windCutterDamage", -1), 0.0001);
         assertEquals(10.0, defaults.ability(MageBalance.GLOBAL_ID, "windCutterMaxTargets", -1), 0.0001);
-        assertEquals(105.0, defaults.ability(MageBalance.GLOBAL_ID, "manaBombDamage", -1), 0.0001);
-        assertEquals(90.0, defaults.ability(MageBalance.GLOBAL_ID, "chainDamage1", -1), 0.0001);
-        assertEquals(60.0, defaults.ability(MageBalance.GLOBAL_ID, "frostWaveDamage", -1), 0.0001);
-        assertEquals(380.0, defaults.ability(MageBalance.GLOBAL_ID, "collapseDamage", -1), 0.0001);
+        assertEquals(160.0, defaults.ability(MageBalance.GLOBAL_ID, "manaBombDamage", -1), 0.0001);
+        assertEquals(135.0, defaults.ability(MageBalance.GLOBAL_ID, "chainDamage1", -1), 0.0001);
+        assertEquals(90.0, defaults.ability(MageBalance.GLOBAL_ID, "frostWaveDamage", -1), 0.0001);
+        assertEquals(570.0, defaults.ability(MageBalance.GLOBAL_ID, "collapseDamage", -1), 0.0001);
 
     }
 
@@ -171,7 +175,7 @@ final class MageTowerCatalogTest {
         );
         TowerBalanceConfig merged = partial.withMissingDefaults(defaults);
         assertEquals(777.0, merged.ability(MageBalance.GLOBAL_ID, "manaCapacity", -1), 0.0001);
-        assertEquals(80.0, merged.ability(MageBalance.GLOBAL_ID, "prophecyReward", -1), 0.0001);
+        assertEquals(120.0, merged.ability(MageBalance.GLOBAL_ID, "prophecyReward", -1), 0.0001);
         assertEquals(3.0, merged.ability(MageBalance.GLOBAL_ID, "maxSpellDamageMultiplier", -1), 0.0001);
         assertEquals(10, merged.abilityInt(MageBalance.GLOBAL_ID, "windCutterMaxTargets", -1));
 
@@ -199,7 +203,7 @@ final class MageTowerCatalogTest {
         }
         int before = state.mana();
         MageTowerLifecycle.finishRound(wizardLane, OWNER);
-        assertEquals(74, state.mana() - before);
+        assertEquals(111, state.mana() - before);
 
         MageStates.clear(OWNER);
         PlayerLane prophetLane = testLane();
@@ -213,7 +217,7 @@ final class MageTowerCatalogTest {
         }
         before = state.mana();
         MageTowerLifecycle.finishRound(prophetLane, OWNER);
-        assertEquals(95, state.mana() - before);
+        assertEquals(144, state.mana() - before);
 
         MageStates.clear(OWNER);
         PlayerLane deadLane = testLane();
@@ -234,7 +238,7 @@ final class MageTowerCatalogTest {
         deadLane.addTower(deadProphet);
         before = state.mana();
         MageTowerLifecycle.finishRound(deadLane, OWNER);
-        assertEquals(50, state.mana() - before);
+        assertEquals(75, state.mana() - before);
         core.syncHealth(0.0);
         before = state.mana();
         MageTowerLifecycle.finishRound(deadLane, OWNER);
@@ -298,41 +302,41 @@ final class MageTowerCatalogTest {
         double missile = MageBalance.MISSILE_DAMAGE * MageBalance.MISSILE_COUNT * multiplier * 20.0
                 / (MageSpell.MANA_MISSILE.defaultCooldownTicks()
                 + (MageBalance.MISSILE_COUNT - 1) * MageBalance.MISSILE_INTERVAL_TICKS);
-        assertEquals(40.0, missile, 0.0001);
+        assertEquals(60.0, missile, 0.0001);
 
         double wind = MageBalance.WIND_CUTTER_DAMAGE * multiplier * 20.0
                 / MageSpell.WIND_CUTTER.defaultCooldownTicks();
-        assertEquals(18.0, wind, 0.0001);
-        assertEquals(54.0, wind * 3, 0.0001);
-        assertEquals(90.0, wind * 5, 0.0001);
-        assertEquals(180.0, wind * MageBalance.WIND_CUTTER_MAX_TARGETS, 0.0001);
+        assertEquals(27.0, wind, 0.0001);
+        assertEquals(81.0, wind * 3, 0.0001);
+        assertEquals(135.0, wind * 5, 0.0001);
+        assertEquals(270.0, wind * MageBalance.WIND_CUTTER_MAX_TARGETS, 0.0001);
 
         double bomb = MageBalance.MANA_BOMB_DAMAGE * multiplier * 20.0
                 / (MageSpell.MANA_BOMB.defaultCooldownTicks() + MageBalance.MANA_BOMB_DELAY_TICKS);
-        assertEquals(45.0, bomb, 0.0001);
-        assertEquals(135.0, bomb * 3, 0.0001);
-        assertEquals(225.0, bomb * 5, 0.0001);
-        assertEquals(315.0, bomb * MageBalance.MANA_BOMB_MAX_TARGETS, 0.0001);
+        assertEquals(68.57, bomb, 0.01);
+        assertEquals(205.71, bomb * 3, 0.01);
+        assertEquals(342.86, bomb * 5, 0.01);
+        assertEquals(480.0, bomb * MageBalance.MANA_BOMB_MAX_TARGETS, 0.0001);
 
         double chainPerDamage = multiplier * 20.0 / MageSpell.CHAIN_LIGHTNING.defaultCooldownTicks();
-        assertEquals(38.57, MageBalance.CHAIN_LIGHTNING_DAMAGE[0] * chainPerDamage, 0.01);
-        assertEquals(90.0, (90.0 + 70.0 + 50.0) * chainPerDamage, 0.0001);
-        assertEquals(115.71, (90.0 + 70.0 + 50.0 + 35.0 + 25.0) * chainPerDamage, 0.01);
-        assertEquals(122.14, java.util.Arrays.stream(MageBalance.CHAIN_LIGHTNING_DAMAGE).sum() * chainPerDamage, 0.01);
+        assertEquals(57.86, MageBalance.CHAIN_LIGHTNING_DAMAGE[0] * chainPerDamage, 0.01);
+        assertEquals(135.0, (135.0 + 105.0 + 75.0) * chainPerDamage, 0.0001);
+        assertEquals(175.71, (135.0 + 105.0 + 75.0 + 55.0 + 40.0) * chainPerDamage, 0.01);
+        assertEquals(186.43, java.util.Arrays.stream(MageBalance.CHAIN_LIGHTNING_DAMAGE).sum() * chainPerDamage, 0.01);
 
         double frost = MageBalance.FROST_WAVE_DAMAGE * multiplier * 20.0
                 / MageSpell.FROST_WAVE.defaultCooldownTicks();
-        assertEquals(22.5, frost, 0.0001);
-        assertEquals(67.5, frost * 3, 0.0001);
-        assertEquals(112.5, frost * 5, 0.0001);
-        assertEquals(225.0, frost * MageBalance.FROST_WAVE_MAX_TARGETS, 0.0001);
+        assertEquals(33.75, frost, 0.0001);
+        assertEquals(101.25, frost * 3, 0.0001);
+        assertEquals(168.75, frost * 5, 0.0001);
+        assertEquals(337.5, frost * MageBalance.FROST_WAVE_MAX_TARGETS, 0.0001);
 
         double collapse = MageBalance.DIMENSIONAL_COLLAPSE_DAMAGE * multiplier * 20.0
                 / (MageSpell.DIMENSIONAL_COLLAPSE.defaultCooldownTicks()
                 + MageBalance.DIMENSIONAL_COLLAPSE_DELAY_TICKS);
-        assertEquals(51.82, collapse, 0.01);
-        assertEquals(155.45, collapse * 3, 0.01);
-        assertEquals(259.09, collapse * 5, 0.01);
+        assertEquals(77.73, collapse, 0.01);
+        assertEquals(233.18, collapse * 3, 0.01);
+        assertEquals(388.64, collapse * 5, 0.01);
     }
 
     @Test

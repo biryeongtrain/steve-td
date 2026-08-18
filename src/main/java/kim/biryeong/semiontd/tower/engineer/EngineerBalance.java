@@ -15,6 +15,7 @@ public final class EngineerBalance {
     public static final int MAX_REDSTONE = 35;
     public static final int MAX_PLATES = 4;
     public static final int MAX_PISTONS = 3;
+    public static final double PLATE_DAMAGE_BONUS_PER_TIER = 0.10;
     public static final double DISPENSER_DAMAGE_PER_PLATE_BLOCK = 0.10;
     public static final int DISPENSER_MAX_PLATE_DISTANCE = 10;
     public static final int ACTIVE_VFX_INTERVAL_TICKS = 20;
@@ -94,5 +95,13 @@ public final class EngineerBalance {
                         "dispenserDamagePerPlateBlock",
                         DISPENSER_DAMAGE_PER_PLATE_BLOCK
                 );
+    }
+
+    public static double plateDamageMultiplier(EngineerTowers.PlateKind kind) {
+        return 1.0 + (kind == null ? 0 : kind.ordinal()) * TowerBalanceRuntime.ability(
+                GLOBAL_ID,
+                "plateDamageBonusPerTier",
+                PLATE_DAMAGE_BONUS_PER_TIER
+        );
     }
 }
