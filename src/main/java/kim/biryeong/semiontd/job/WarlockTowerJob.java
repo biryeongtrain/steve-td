@@ -1,9 +1,7 @@
 package kim.biryeong.semiontd.job;
 
-import static kim.biryeong.semiontd.tower.warlock.WarlockFormatting.warningText;
 import static kim.biryeong.semiontd.tower.warlock.WarlockFormatting.warlockText;
 
-import java.util.ArrayList;
 import java.util.List;
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
@@ -25,21 +23,20 @@ public final class WarlockTowerJob extends SemionJob {
                 ID,
                 Component.literal("흑마법사"),
                 List.of(
-                        SemionText.mini("<gray>아군을 희생하며 영구적으로 강해지고, 원거리 또는 근거리 흑마법사를 선택해 마지막까지 살아남아 " + warlockText("각성") + "하는 빌더입니다.</gray>")
+                        SemionText.mini("<green><bold>시작</bold></green> <gray>흑마법사를 먼저 놓고, 희생시킬 아군 타워를 주변에 배치하세요.</gray>"),
+                        SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>아군을 흡수해 흑마법사의 체력과 공격 능력을 키우세요.</gray>"),
+                        SemionText.mini("<yellow><bold>주의</bold></yellow> <gray>흑마법사는 라인마다 1기만 운용할 수 있습니다.</gray>")
                 )
         );
     }
 
     @Override
     public List<Component> description() {
-        ArrayList<Component> lines = new ArrayList<>();
-        lines.add(SemionText.mini("<gray>아군을 희생하며 영구적으로 강해지고, 원거리 또는 근거리 흑마법사를 선택한 뒤 마지막까지 살아남아 " + warlockText("각성") + "하는 빌더입니다.</gray>"));
-        lines.add(SemionText.mini("<gray>" + warlockText("원거리") + "는 누적 흡수로 생명력 흡수와 광역 범위를 키우는 장기 성장형입니다.</gray>"));
-        lines.add(SemionText.mini("<gray>" + warlockText("근거리") + "는 라운드 흡수로 공격 속도와 근접 폭발력을 끌어올리는 최후 생존형입니다.</gray>"));
-        lines.add(SemionText.mini("<gray>" + awakeningKills() + "킬에 도달하면 " + warlockText("각성") + "을 습득하고, 최후 생존·저체력 조건을 만족하면 각성합니다.</gray>"));
-        lines.add(SemionText.mini("<gray>원거리는 회복·재생, 근거리는 피해·이동 속도를 얻으며 각성은 라운드 종료 시 해제됩니다.</gray>"));
-        lines.add(SemionText.mini(warningText(warlockText("흑마법사") + " 타워는 한 라인에 하나만 운용할 수 있습니다.")));
-        return List.copyOf(lines);
+        return List.of(
+                SemionText.mini("<green><bold>시작</bold></green> <gray>아군을 희생하며 영구적으로 강해지고, 원거리 또는 근거리 흑마법사를 선택해 마지막까지 살아남아 " + warlockText("각성") + "하세요.</gray>"),
+                SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>원거리는 누적 흡수로 생명력 흡수·광역 범위를, 근거리는 라운드 흡수로 공격 속도·폭발력을 키웁니다. " + awakeningKills() + "킬에 도달하면 " + warlockText("각성") + "을 습득합니다.</gray>"),
+                SemionText.mini("<yellow><bold>주의</bold></yellow> <gray>흑마법사는 라인마다 1기만 운용할 수 있고, 각성은 라운드 종료 시 해제됩니다.</gray>")
+        );
     }
 
     @Override
