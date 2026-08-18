@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
@@ -65,6 +66,8 @@ public final class EngineerTrapTower extends EntityBackedTower {
     private boolean tntUsed;
     private boolean poweredLastTick;
     private int activationPlateDistance;
+    private EngineerTowers.PlateKind activationPlateKind;
+    private EngineerTowers.PlateKind tntPlateKind;
     private EntityVisual placedVisual;
     private ElementHolder upperDoorHolder;
 
@@ -142,6 +145,8 @@ public final class EngineerTrapTower extends EntityBackedTower {
         tntUsed = false;
         poweredLastTick = false;
         activationPlateDistance = 0;
+        activationPlateKind = null;
+        tntPlateKind = null;
         updateActiveName(source(lane), false);
     }
 
@@ -169,13 +174,17 @@ public final class EngineerTrapTower extends EntityBackedTower {
             return;
         }
         boolean physicalPower = lane.arenaWorld().hasNeighborSignal(signalPosition());
-        OptionalInt plateDistance = physicalPower ? recentPlateDistance(lane) : OptionalInt.empty();
-        boolean powered = plateDistance.isPresent();
+        Optional<PlateActivation> plateActivation = physicalPower
+                ? recentPlateActivation(lane)
+                : Optional.empty();
+        boolean powered = plateActivation.isPresent();
         if (!powered) {
             armed = true;
         }
         if (powered && !poweredLastTick) {
-            activationPlateDistance = plateDistance.getAsInt();
+            PlateActivation activation = plateActivation.orElseThrow();
+            activationPlateDistance = activation.distance();
+            activationPlateKind = activation.kind();
             if (activeTicks > 0) {
                 activeTicks = activationDurationTicks();
                 armed = false;
@@ -232,6 +241,14 @@ public final class EngineerTrapTower extends EntityBackedTower {
                         + String.format(java.util.Locale.ROOT, "%.1f초", fuseTicks / 20.0) + "</white>");
             }
         }
+        if ((kind == EngineerTowers.TrapKind.TNT || kind == EngineerTowers.TrapKind.DISPENSER)
+                && damagePlateKind() != null) {
+            EngineerTowers.PlateKind plateKind = damagePlateKind();
+            lines.add("<aqua>발동 발판</aqua> <white>" + EngineerTowers.plate(plateKind).displayName() + "</white>");
+            lines.add("<gold>발판 피해 보너스</gold> <green>+"
+                    + Math.round((EngineerBalance.plateDamageMultiplier(plateKind) - 1.0) * 100.0)
+                    + "%</green>");
+        }
         if (kind == EngineerTowers.TrapKind.DISPENSER) {
             int appliedDistance = Math.min(activationPlateDistance, EngineerBalance.dispenserMaxPlateDistance());
             lines.add("<aqua>적용 회로 거리</aqua> <white>" + appliedDistance + "/"
@@ -269,6 +286,7 @@ public final class EngineerTrapTower extends EntityBackedTower {
             case TNT -> {
                 if (!tntUsed) {
                     tntUsed = true;
+                    tntPlateKind = activationPlateKind;
                     fuseTicks = EngineerBalance.tntFuseTicks();
                 }
             }
@@ -311,7 +329,8 @@ public final class EngineerTrapTower extends EntityBackedTower {
                 .max(Comparator.comparingDouble(target -> target.runtimeMonster().laneProgress()))
                 .ifPresent(target -> {
                     double damage = ability("damage", dispenserDamage(tier))
-                            * EngineerBalance.dispenserDamageMultiplier(activationPlateDistance);
+                            * EngineerBalance.dispenserDamageMultiplier(activationPlateDistance)
+                            * EngineerBalance.plateDamageMultiplier(activationPlateKind);
                     DamageResult result = damageTargetResult(source, target, damage, DamageType.PHYSICAL);
                     TowerVfxService.showSecondaryAttack(source, target);
                     if (result.killed()) {
@@ -347,7 +366,10 @@ public final class EngineerTrapTower extends EntityBackedTower {
                 target -> ids.contains(target.getUUID()), AreaVfxSpec.onTrigger(AreaVfxStyles.CORPSE_EXPLOSION)
         );
         TowerAreaDamage.apply(
-                this, source, request, ignored -> ability("damage", tntDamage(tier)), true,
+                this, source, request,
+                ignored -> ability("damage", tntDamage(tier))
+                        * EngineerBalance.plateDamageMultiplier(tntPlateKind),
+                true,
                 (target, amount, killed) -> {}, DamageType.PHYSICAL
         );
     }
@@ -392,6 +414,8 @@ public final class EngineerTrapTower extends EntityBackedTower {
         fuseTicks = -1;
         poweredLastTick = false;
         activationPlateDistance = 0;
+        activationPlateKind = null;
+        tntPlateKind = null;
         updateActiveName(source, false);
     }
 
@@ -516,6 +540,11 @@ public final class EngineerTrapTower extends EntityBackedTower {
     }
 
     OptionalInt recentPlateDistance(PlayerLane lane) {
+        Optional<PlateActivation> activation = recentPlateActivation(lane);
+        return activation.isPresent() ? OptionalInt.of(activation.orElseThrow().distance()) : OptionalInt.empty();
+    }
+
+    private Optional<PlateActivation> recentPlateActivation(PlayerLane lane) {
         long now = lane.arenaWorld().getGameTime();
         long oldestAccepted = now - EngineerBalance.activeTicks();
         Map<BlockPos, EngineerCircuitTower> circuits = new HashMap<>();
@@ -531,7 +560,8 @@ public final class EngineerTrapTower extends EntityBackedTower {
                 .map(circuit -> new PlatePath(
                         circuit.lastPressedGameTime(),
                         shortestDirectedDistance(circuits, circuit.circuitPosition()),
-                        circuit.circuitPosition()
+                        circuit.circuitPosition(),
+                        circuit.plateKind()
                 ))
                 .filter(path -> path.distance() > 0)
                 .sorted(Comparator.comparingLong(PlatePath::pressedAt).reversed()
@@ -539,7 +569,7 @@ public final class EngineerTrapTower extends EntityBackedTower {
                         .thenComparingInt(path -> path.position().getX())
                         .thenComparingInt(path -> path.position().getY())
                         .thenComparingInt(path -> path.position().getZ()))
-                .mapToInt(PlatePath::distance)
+                .map(path -> new PlateActivation(path.distance(), path.kind()))
                 .findFirst();
     }
 
@@ -584,10 +614,24 @@ public final class EngineerTrapTower extends EntityBackedTower {
         return activationPlateDistance;
     }
 
+    private EngineerTowers.PlateKind damagePlateKind() {
+        return kind == EngineerTowers.TrapKind.TNT && tntPlateKind != null
+                ? tntPlateKind
+                : activationPlateKind;
+    }
+
     private record CircuitStep(BlockPos position, int distance) {
     }
 
-    private record PlatePath(long pressedAt, int distance, BlockPos position) {
+    private record PlatePath(
+            long pressedAt,
+            int distance,
+            BlockPos position,
+            EngineerTowers.PlateKind kind
+    ) {
+    }
+
+    private record PlateActivation(int distance, EngineerTowers.PlateKind kind) {
     }
 
     private double ability(String key, double fallback) {
@@ -601,8 +645,8 @@ public final class EngineerTrapTower extends EntityBackedTower {
     public static double doorRadius(int tier) { return new double[]{4.0, 5.5, 7.0}[tier - 1]; }
     public static double tntDamage(int tier) { return new double[]{120.0, 260.0, 480.0}[tier - 1]; }
     public static double tntRadius(int tier) { return new double[]{2.5, 3.25, 4.0}[tier - 1]; }
-    public static int tntMaxTargets(int tier) { return new int[]{5, 7, 9}[tier - 1]; }
-    public static double dispenserDamage(int tier) { return new double[]{12.0, 20.0, 30.0}[tier - 1]; }
+    public static int tntMaxTargets(int tier) { return new int[]{8, 12, 16}[tier - 1]; }
+    public static double dispenserDamage(int tier) { return new double[]{18.0, 30.0, 45.0}[tier - 1]; }
     public static int dispenserInterval(int tier) { return new int[]{16, 13, 10}[tier - 1]; }
     public static double dispenserRange(int tier) { return new double[]{7.0, 9.0, 11.0}[tier - 1]; }
     public static double pistonRadius(int tier) { return new double[]{2.5, 3.0, 3.5}[tier - 1]; }

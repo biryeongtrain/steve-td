@@ -58,7 +58,6 @@ repositories {
             includeGroup "maven.modrinth"
         }
     }
-    maven { url "https://maven.tomalbrc.de" }
 }
 
 dependencies {

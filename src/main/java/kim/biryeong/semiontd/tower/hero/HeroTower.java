@@ -50,7 +50,18 @@ public final class HeroTower extends HeroPartyTower {
 
     @Override
     public int adjustAttackInterval(int baseIntervalTicks) {
-        return HeroPartyBalance.weaponAttackInterval(weapon());
+        HeroWeapon weapon = weapon();
+        return HeroPartyBalance.weaponAttackInterval(weapon, state().weaponLevel(weapon));
+    }
+
+    @Override
+    public double effectBaseMaxHealth() {
+        return super.effectBaseMaxHealth() * HeroPartyBalance.weaponMaxHealthMultiplier(weapon());
+    }
+
+    @Override
+    public int aggroPriority() {
+        return HeroPartyBalance.weaponAggroPriority(weapon());
     }
 
     @Override
@@ -77,6 +88,9 @@ public final class HeroTower extends HeroPartyTower {
                     HeroPartyBalance.weaponDamage(weapon) * HeroPartyBalance.weaponMultiplier(level) * 2.0
             );
             damageAmount += bonus;
+        }
+        if ((weapon == HeroWeapon.SWORD || weapon == HeroWeapon.LONGBOW) && isIncomeTarget(target)) {
+            damageAmount *= 1.0 + HeroPartyBalance.weaponIncomeDamageBonus(weapon);
         }
         return damageAmount;
     }
@@ -150,6 +164,10 @@ public final class HeroTower extends HeroPartyTower {
         ArrayList<String> lines = new ArrayList<>(super.runtimeDetailLines());
         HeroPartyState state = state();
         lines.add("장비: " + state.equippedWeapon().displayName() + " +" + state.weaponLevel(state.equippedWeapon()));
+        double incomeDamageBonus = HeroPartyBalance.weaponIncomeDamageBonus(state.equippedWeapon());
+        if (incomeDamageBonus > 0.0) {
+            lines.add("인컴/소환 피해: +" + Math.round(incomeDamageBonus * 100.0) + "%");
+        }
         lines.add("갑옷: +" + state.armorLevel());
         lines.add("확정 동료: " + state.committedCompanions().size() + "/" + HeroPartyBalance.MAX_COMPANIONS);
         HeroPartyState.HeroQuestSnapshot quest = state.quest();

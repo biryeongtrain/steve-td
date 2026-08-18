@@ -102,6 +102,16 @@ public final class EndTowers {
             .description(endCrystalLineDescription("높은", "엔드 수정"))
             .build();
 
+    private static final List<TowerType> ALL = List.of(
+            BASE_END_TOWER,
+            T1_SHULKER_TOWER,
+            T2_SHULKER_TOWER,
+            T3_SHULKER_TOWER,
+            T1_ENDERMITE_TOWER,
+            T2_ENDERMAN_TOWER,
+            T3_END_CRYSTAL_TOWER
+    );
+
     private static final Set<String> ENDER_TOWER_IDS = Set.of(
             BASE_END_TOWER.id(),
             T1_SHULKER_TOWER.id(),
@@ -169,6 +179,10 @@ public final class EndTowers {
 
     public static boolean isEndTower(TowerType type) {
         return type != null && ENDER_TOWER_IDS.contains(type.id());
+    }
+
+    public static List<TowerType> all() {
+        return ALL;
     }
 
     public static boolean isBaseEndTower(TowerType type) {

@@ -42,8 +42,10 @@ import kim.biryeong.semiontd.tower.mage.MageStates;
 import kim.biryeong.semiontd.tower.hero.HeroPartyStates;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityStates;
+import kim.biryeong.semiontd.tower.army.ArmyStates;
 import kim.biryeong.semiontd.tower.atlantis.AtlantisPressure;
 import kim.biryeong.semiontd.tower.atlantis.AtlantisStates;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordService;
 import kim.biryeong.semiontd.tower.warlock.WarlockAwakeningProgress;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
 import kim.biryeong.semiontd.trait.SemionTrait;
@@ -601,7 +603,7 @@ public final class SemionGame {
             return false;
         }
         Optional<SemionJob> job = JobRegistry.find(jobId);
-        if (job.isEmpty()) {
+        if (job.isEmpty() || !JobRegistry.isEnabled(job.get())) {
             return false;
         }
         selectedJobs.put(playerId, job.get());
@@ -609,7 +611,8 @@ public final class SemionGame {
     }
 
     public SemionJob selectedJobOrDefault(UUID playerId) {
-        return selectedJobs.getOrDefault(playerId, JobRegistry.defaultJob());
+        SemionJob selected = selectedJobs.get(playerId);
+        return JobRegistry.isEnabled(selected) ? selected : JobRegistry.defaultJob();
     }
 
     public Map<UUID, TraitLoadout> selectedTraitLoadouts() {
@@ -778,6 +781,18 @@ public final class SemionGame {
     }
 
     private void closeRuntimeState() {
+        for (SemionPlayer semionPlayer : players.values()) {
+            ServerPlayer online = arena.teamArena(semionPlayer.teamId())
+                    .map(TeamArena::world)
+                    .map(ServerLevel::getServer)
+                    .map(server -> server.getPlayerList().getPlayer(semionPlayer.uuid()))
+                    .orElse(null);
+            if (online == null) {
+                DemonLordService.clearPlayerState(semionPlayer.uuid());
+            } else {
+                DemonLordService.cleanupPlayer(online);
+            }
+        }
         for (UUID playerId : players.keySet()) {
             VillagerAdvStates.clear(playerId);
             AncientCityStates.clear(playerId);
@@ -799,6 +814,7 @@ public final class SemionGame {
             kim.biryeong.semiontd.tower.futureagency.FutureAgencyStates.clear(playerId);
             kim.biryeong.semiontd.tower.queen.QueenStates.clear(playerId);
             HeroPartyStates.clear(playerId);
+            ArmyStates.clear(playerId);
         }
         players.clear();
         selectedJobs.clear();
@@ -1068,6 +1084,9 @@ public final class SemionGame {
         for (SemionTeam team : livingTeams()) {
             for (PlayerLane lane : team.laneGroup().lanes()) {
                 lane.tickTowers();
+                // 준비 단계는 lane.tick 을 돌리지 않습니다. 마왕은 이때 핫바를 준비 도구로
+                // 되돌리고 스탯 분배 도구를 쥐여 줘야 하므로 여기서도 한 번 봐 줍니다.
+                DemonLordService.tick(lane, players);
             }
         }
         if (phaseTicks % 80 == 0) {
@@ -1624,6 +1643,7 @@ public final class SemionGame {
             if (player == null) {
                 continue;
             }
+            DemonLordService.cleanupPlayer(player);
             VanillaTeamBridge.assignSpectator(server, player);
             placeSpectatorPlayer(player, spectatorIndex(memberId), team.id());
             player.sendSystemMessage(SemionText.prefixedPlain("소속 팀이 탈락했습니다. 관전 모드로 전환됩니다."));

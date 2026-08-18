@@ -1326,7 +1326,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
             return EntityDimensions.fixed(END_CORE_HITBOX_WIDTH, END_CORE_HITBOX_HEIGHT);
         }
         if (usesBlockDisplayOverlayVisual()) {
-            float scale = (float) visual.scale();
+            float scale = Math.min(1.0F, (float) visual.scale());
             return EntityDimensions.fixed(scale, scale);
         }
         return super.getDefaultDimensions(pose);

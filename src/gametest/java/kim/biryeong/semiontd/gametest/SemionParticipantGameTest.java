@@ -41,6 +41,7 @@ import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.CurrencyType;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.IncomeLaneRoutingConfig;
+import kim.biryeong.semiontd.config.JobAvailabilityConfig;
 import kim.biryeong.semiontd.config.LeaderTargetingConfig;
 import kim.biryeong.semiontd.config.MapConfig;
 import kim.biryeong.semiontd.config.MonsterScalingConfig;
@@ -106,6 +107,7 @@ import kim.biryeong.semiontd.game.TowerSellResult;
 import kim.biryeong.semiontd.game.TowerUpgradeResult;
 import kim.biryeong.semiontd.game.VanillaTeamBridge;
 import kim.biryeong.semiontd.job.AnimalTowerJob;
+import kim.biryeong.semiontd.job.ArmyTowerJob;
 import kim.biryeong.semiontd.job.AncientCityTowerJob;
 import kim.biryeong.semiontd.job.AdversaryTowerJob;
 import kim.biryeong.semiontd.job.AtlantisTowerJob;
@@ -120,6 +122,7 @@ import kim.biryeong.semiontd.job.LegionTowerJob;
 import kim.biryeong.semiontd.job.MageTowerJob;
 import kim.biryeong.semiontd.job.NetherTowerJob;
 import kim.biryeong.semiontd.job.OceanTowerJob;
+import kim.biryeong.semiontd.job.DemonLordTowerJob;
 import kim.biryeong.semiontd.job.PlantTowerJob;
 import kim.biryeong.semiontd.job.QueenTowerJob;
 import kim.biryeong.semiontd.job.ResonanceTowerJob;
@@ -1088,6 +1091,107 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         context.succeed();
+    }
+
+    @GameTest
+    public void jobKillSwitchBlocksWaitingSelectionButKeepsStartedJob(GameTestHelper context) {
+        UUID waitingPlayerId = stableUuid("job-kill-switch-waiting");
+        UUID redId = stableUuid("job-kill-switch-red");
+        UUID blueId = stableUuid("job-kill-switch-blue");
+        JobAvailabilityConfig disabledNether = JobAvailabilityConfig.defaultConfig()
+                .withEnabled(NetherTowerJob.ID, false);
+        try {
+            JobRegistry.configureAvailability(JobAvailabilityConfig.defaultConfig());
+            SemionGame waitingGame = new SemionGame(
+                    EconomyConfig.defaultConfig(),
+                    new WaveConfig(List.of(), 20, null),
+                    testArena(context)
+            );
+            if (!assertTrue(context, waitingGame.selectJob(waitingPlayerId, NetherTowerJob.ID), "Enabled job should be selectable in a waiting lobby.")) {
+                return;
+            }
+
+            JobRegistry.configureAvailability(disabledNether);
+            if (!assertEquals(context, JobRegistry.defaultJob().id(), waitingGame.selectedJobOrDefault(waitingPlayerId).id(), "Disabled waiting selection should fall back to the default job.")) {
+                return;
+            }
+            if (!assertTrue(context, !waitingGame.selectJob(waitingPlayerId, NetherTowerJob.ID), "Disabled job should reject new waiting-lobby selection.")) {
+                return;
+            }
+
+            JobRegistry.configureAvailability(JobAvailabilityConfig.defaultConfig());
+            SemionGame startedGame = new SemionGame(
+                    EconomyConfig.defaultConfig(),
+                    new WaveConfig(List.of(), 20, null),
+                    testArena(context)
+            );
+            if (!assertTrue(context, startedGame.selectJob(redId, NetherTowerJob.ID), "Enabled job should be selectable before match start.")) {
+                return;
+            }
+            ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                    MatchMode.NORMAL,
+                    List.of(
+                            new AssignedParticipant(redId, "job-kill-switch-red", TeamId.RED, 1),
+                            new AssignedParticipant(blueId, "job-kill-switch-blue", TeamId.BLUE, 1)
+                    ),
+                    Set.of(),
+                    2
+            );
+            if (!assertTrue(context, startedGame.start(context.getLevel().getServer(), plan), "Kill-switch match should start.")) {
+                return;
+            }
+
+            JobRegistry.configureAvailability(disabledNether);
+            if (!assertEquals(context, NetherTowerJob.ID, startedGame.players().get(redId).job().orElseThrow().id(), "Disabling a job must not replace an active participant's assigned job.")) {
+                return;
+            }
+            context.succeed();
+        } finally {
+            JobRegistry.configureAvailability(JobAvailabilityConfig.defaultConfig());
+        }
+    }
+
+    @GameTest
+    public void disabledPersistedJobFallsBackInNewLobby(GameTestHelper context) {
+        var player = context.makeMockServerPlayerInLevel();
+        MinecraftServer server = context.getLevel().getServer();
+        Path storePath;
+        try {
+            storePath = Files.createTempDirectory("semion-disabled-job-profile-test").resolve("profiles.json");
+        } catch (java.io.IOException exception) {
+            context.fail(Component.literal("Failed to create temporary disabled-job profile path."));
+            return;
+        }
+
+        SemionGameManager manager = new SemionGameManager();
+        try {
+            manager.configure(
+                    EconomyConfig.defaultConfig(),
+                    WaveConfig.defaultConfig(),
+                    MapConfig.defaultConfig(),
+                    ProgressionConfig.defaultConfig(),
+                    storePath
+            );
+            manager.saveSelectedJob(
+                    server,
+                    player.getUUID(),
+                    player.getGameProfile().getName(),
+                    NetherTowerJob.ID
+            );
+            manager.configureJobAvailability(JobAvailabilityConfig.defaultConfig()
+                    .withEnabled(NetherTowerJob.ID, false));
+
+            SemionGame game = manager.createGame(server);
+            if (!assertEquals(context, JobRegistry.defaultJob().id(), game.selectedJobOrDefault(player.getUUID()).id(), "Disabled persisted job should fall back in a new lobby.")) {
+                return;
+            }
+            context.succeed();
+        } catch (Exception exception) {
+            context.fail(Component.literal("Disabled persisted job should not apply: " + exception.getMessage()));
+        } finally {
+            manager.shutdown();
+            JobRegistry.configureAvailability(JobAvailabilityConfig.defaultConfig());
+        }
     }
 
     @GameTest
@@ -2485,7 +2589,18 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 WaveConfig.defaultConfig(),
                 testArena(context)
         );
-        new SemionDialogService().showJobSelection(player, game);
+        SemionDialogService dialogService = new SemionDialogService();
+        JobRegistry.configureAvailability(JobAvailabilityConfig.defaultConfig().withEnabled(NetherTowerJob.ID, false));
+        try {
+            dialogService.showJobSelection(player, game);
+            dialogService.showJobSelection(player, game, true);
+            dialogService.showJobSelection(player, game, false);
+            dialogService.showJobManagement(player);
+            dialogService.showJobManagement(player, true);
+            dialogService.showJobManagement(player, false);
+        } finally {
+            JobRegistry.configureAvailability(JobAvailabilityConfig.defaultConfig());
+        }
         ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
                 MatchMode.NORMAL,
                 List.of(new AssignedParticipant(player.getUUID(), player.getGameProfile().getName(), TeamId.RED, 1)),
@@ -2495,7 +2610,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertTrue(context, game.start(context.getLevel().getServer(), plan), "Dialog test game should start.")) {
             return;
         }
-        SemionDialogService dialogService = new SemionDialogService();
         dialogService.showTowerControl(player, game);
         dialogService.showSummonShop(player, game);
         dialogService.showSummonShop(player, game, 2);
@@ -10068,7 +10182,13 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertPresent(context, JobRegistry.find(ThunderTowerJob.ID), "Built-in reload should register the thunder tower job.")) {
             return;
         }
-        if (!assertEquals(context, 97L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose every production starter family.")) {
+        if (!assertPresent(context, JobRegistry.find(ArmyTowerJob.ID), "Built-in reload should register the army tower job.")) {
+            return;
+        }
+        if (!assertPresent(context, JobRegistry.find(DemonLordTowerJob.ID), "Built-in reload should register the demon lord tower job.")) {
+            return;
+        }
+        if (!assertEquals(context, 110L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose every production starter family.")) {
             return;
         }
         context.succeed();

@@ -29,8 +29,8 @@ public final class UndeadTowerJob extends SemionJob {
                 ID,
                 Component.literal("언데드 빌더"),
                 List.of(
-                        SemionText.mini("<gray>흡혈과 부활, 주변 사망으로 장기전에 강해지는 빌더입니다.</gray>"),
-                        SemionText.mini("<gray>좀비는 전선을 버티고, 해골 계열은 주변 적과 타워의 죽음을 힘으로 바꿉니다.</gray>")
+                        SemionText.mini("<green><bold>시작</bold></green> <gray>좀비를 앞에 세우고 해골을 뒤에서 지원하세요.</gray>"),
+                        SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>흡혈과 부활로 버티며 주변 적과 타워의 죽음을 해골 강화에 활용하세요.</gray>")
                 )
         );
     }

@@ -77,7 +77,7 @@ public final class FutureAgencyGameTest {
     }
 
     @GameTest
-    public void finalDefenseCarryIsSafe(GameTestHelper context) {
+    public void finalDefenseDoesNotCreateSurvivorCopies(GameTestHelper context) {
         UUID owner = UUID.nameUUIDFromBytes("future-agency-final-defense".getBytes(StandardCharsets.UTF_8));
         FutureAgencyStates.clear(owner);
         FutureAgencyStates.state(owner).reconstruct();
@@ -86,11 +86,21 @@ public final class FutureAgencyGameTest {
         GridPosition secondOrigin = floor(context, 5, 2, 3);
         prepareFloor(context, firstOrigin, secondOrigin);
         try {
-            lane.addTower(agent(owner, FutureAgencyRole.COMBAT, firstOrigin));
-            lane.addTower(agent(owner, FutureAgencyRole.SUPPRESSION, secondOrigin));
+            FutureAgencyAgentTower first = agent(owner, FutureAgencyRole.COMBAT, firstOrigin);
+            FutureAgencyAgentTower second = agent(owner, FutureAgencyRole.SUPPRESSION, secondOrigin);
+            lane.addTower(first);
+            lane.addTower(second);
+            lane.markWaveStarted(1);
+            finishWave(lane);
+            lane.resetForRound();
+            require(carried(lane).size() == 2, "A cleared lane must still create survivor copies.");
+            lane.markWaveStarted(2);
             lane.moveTowersToFinalDefense();
-            require(carried(lane).size() == 2,
-                    "Final defense transition must safely establish one survivor per original.");
+            require(carried(lane).isEmpty(),
+                    "A failed lane must not create survivor copies at final defense.");
+            lane.resetForRound();
+            require(lane.towers().size() == 2 && carried(lane).isEmpty(),
+                    "Only installed originals must return after a failed lane.");
             context.succeed();
         } finally {
             lane.clearTowers();

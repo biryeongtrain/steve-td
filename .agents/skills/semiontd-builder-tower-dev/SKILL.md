@@ -60,7 +60,7 @@ For a new builder family, normally cover:
 - family catalog registration and top-level `ProductionTowerCatalogs` wiring;
 - defaults, upgrade costs, abilities, merge behavior, and runtime validation;
 - state ownership and cleanup when state outlives a tower instance;
-- dialog/runtime details, timed-effect labels, VFX palette, and web ownership where applicable;
+- dialog/runtime details, timed-effect labels, a dedicated `BuilderPalette` entry with production VFX routing, and web ownership;
 - unit and GameTest assertions for the actual risk surface.
 
 Do not create a custom placement, targeting, damage, scan, or visual-effect pipeline if the shared pipeline can express the mechanic.
@@ -93,6 +93,7 @@ Prefix with `rtk` where required. Run `runGameTest` for entity, placement, upgra
 - Preserve original/current positions and call the shared `copyFrom` path on upgrade. Add `copyRuntimeStateFrom` only for custom fields or mutable state that the typed data map cannot safely copy.
 - Route damage through tower/shared damage APIs. Route AoE through `SemionTdApi.areaEffects()` and `TowerAreaDamage`; do not call entity damage directly or hand-scan the world.
 - Use `onAttackResolved` when a mechanic depends on actual dealt damage or kill outcome. Use `onWaveStarted` for wave snapshots whose ordering matters.
+- Give every new builder/job its own `BuilderPalette` entry and route all of its tower IDs through `TowerVfxService.paletteFor(...)`. Do not leave a new builder on `DEFAULT` or reuse another builder's palette. The palette must be exercised by production attack, secondary, area, or special VFX; an enum-only entry is incomplete.
 - Render config-driven numeric descriptions with `TowerDescriptionRegistry` templates. Expose changing state through `runtimeDetailLines()` or the timed-effect dialog path.
 - Keep `WebCatalogExporter.snapshot()` valid and verify that descriptions contain no unresolved placeholders.
 - Do not declare success from compilation alone. Report the exact checks run, their result, and any environment-only blocker.

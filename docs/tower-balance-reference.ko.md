@@ -343,8 +343,9 @@
 | `plant_global` | `environmentTickIntervalTicks` | 환경 효과 적용 주기입니다. 타워와 무관하게 돕니다. |
 | `plant_soil_mycelium` | `environmentWeakness`, `environmentDamageTakenBonus`, `environmentDurationTicks` | 균사 위 적의 공격력 감소, 받는 타워 피해 증가, 지속 시간입니다. 균사 전투 타워는 지뢰라 상주하지 않으므로 딜증도 지형이 담당합니다. |
 | 균사 계열 id | `triggerRadius`, `triggerIntervalTicks` | 지뢰 발동 반경과 확인 주기입니다. |
+| 균사 계열 id | `fuseTicks` | 밟은 뒤 터지기까지의 도화선 길이입니다. 점화 순간 섬광 파티클이 한 번 뜨고, 이 시간이 지나야 폭발합니다. **폭발 판정은 터지는 시점에 다시 잡으므로 그 사이에 빠져나간 적은 맞지 않습니다.** 0 은 즉발이라 거부됩니다 — 밟는 순간 이미 맞은 뒤면 피할 여지가 없습니다. |
 | 균사 계열 id | `explosionRadius`, `explosionDamageMultiplier`, `explosionHealthRatio` | 폭발 반경, 공격력 배율, 남은 체력 반영 비율입니다. 실제 피해는 `(damage × 배율 + 현재 체력 × 체력 비율) × (1+개화)`입니다. |
-| 균사 계열 id | `explosionMoveSpeedReduction`, `explosionDisableTicks` | 폭발 둔화율과 무력화 시간입니다. 무력화 동안 공격 속도·공격력이 100% 깎입니다. |
+| 균사 계열 id | `explosionMoveSpeedReduction`, `explosionDisableTicks` | 폭발 둔화율과 무력화 시간입니다. 무력화 동안 공격 속도·공격력이 100% 깎입니다. 지뢰는 **라운드당 한 번**만 터지므로 이 시간이 그대로 라운드당 무력화 총량입니다. 라운드 안에서 다시 장전하는 값은 일부러 두지 않았습니다 — 재장전보다 무력화가 길면 그 길목의 적이 영영 공격하지 못합니다. |
 | `plant_soil_desert` | `environmentAttackSpeedReduction` | 사암 위 적의 공격 속도 감소입니다. |
 | `plant_soil_desert` | `environmentMaxHealthDamagePerSecond` | 사암 위 적이 초당 잃는 **최대 체력 비율**입니다. 펄스 간격을 바꿔도 초당 피해량은 유지됩니다. |
 | `plant_soil_meadow` | `supportRadius`, `healPercentPerPulse` | 잔디 지원 범위와 펄스마다 주변 아군을 회복시키는 최대 체력 비율입니다. |
@@ -361,6 +362,55 @@
 기본 피해는 모든 티어에서 50 이하로 두고, 화력은 이 배율로 만듭니다. 이 규칙을 바꿀 때는
 `PlantTowerCatalogTest`의 `baseDamageStaysAtOrBelowFiftyOnEveryTier`와
 `soilAmplificationStaysWithinTheConservativeCap`도 함께 갱신합니다.
+
+## 마왕 빌더
+
+마왕은 타워가 아니라 플레이어가 싸우므로, `towers`의 전투 수치는 전부 0입니다. 실제 값은 제단별
+`abilities`와 전역 `demon_lord_global`에 있습니다. 제단 id는 `t{1..4}_{스킬키}_tower` 형식이며
+스킬 키는 `wave_of_malice`, `demon_wings`, `sky_breaker`, `arcane_bombardment`, `demon_barrier`,
+`hellfire_brand`, `soul_drain`, `roar_of_dread`, `grip_of_doom`, `hell_guillotine`입니다.
+
+| config id | 주요 키 | 의미 |
+|---|---|---|
+| 제단 id 전체 | `towerSlotCost` | 빌더의 "코스트". 라운드 타워 한도를 이만큼 차지합니다. 티어가 올라도 바뀌지 않습니다. |
+| 제단 id 전체 | `cooldownTicks` | 스킬 쿨타임입니다. 기본값은 티어마다 1초씩 줄어듭니다. |
+| `demon_lord_global` | `baseMaxHealth`, `maxHealthPerLevel`, `maxLevel` | 마왕 체력 곡선입니다. 기본 450, 레벨당 +52.5, 만렙 30입니다. |
+| `demon_lord_global` | `experiencePerMaxHealth`, `experienceBase`, `experienceGrowth` | 처치 경험치입니다. 처치 대상 최대 체력에 비례하며, 다음 레벨 요구량은 `experienceBase × experienceGrowth^(레벨-1)`입니다. |
+| `demon_lord_global` | `damagePerLevel` | 스킬과 평타 모두에 곱해지는 성장 배율입니다. 기본 레벨당 +5%입니다. |
+| `demon_lord_global` | `bladeDamage`, `bladeAttackIntervalTicks` | 마검 평타 수치입니다. 기본 피해는 19입니다. `bladeAttackIntervalTicks`는 바닐라와 같은 차지 곡선(`0.2 + 차지² × 0.8`)으로 피해에 곱해집니다. 바닐라 공격 쿨다운은 바닐라 피해 경로에만 걸리므로 직접 계산합니다. |
+| `demon_lord_global` | `passiveExperiencePerRound` | 몹을 하나도 못 잡은 라운드에도 주는 기본 경험치입니다. 한 번 밀린 마왕이 영영 따라잡지 못하는 상황을 막습니다. 직접 잡는 편이 여전히 훨씬 빠릅니다. |
+| `demon_lord_global` | `statPointsPerLevel` | 레벨업마다 받는 스탯 포인트 수입니다. 기본 3입니다. |
+| `demon_lord_global` | `statHealthPerPoint`, `statAttackPerPoint` | 포인트당 최대 체력(기본 +40)과 피해 배율(기본 +4%p) 증가입니다. |
+| `demon_lord_global` | `statDefensePerPoint`, `statDefenseCap` | 포인트당 피해 감소율(기본 +2%p)과 그 상한(기본 60%)입니다. 상한이 없으면 무적이 됩니다. |
+| `demon_lord_global` | `statCooldownHalvingPoints` | 쿨감은 선형이 아니라 이 포인트마다 절반이 되는 곱연산입니다(기본 40 → 50%, 80 → 25%). 0 에 닿지 않습니다. **다른 스탯보다 포인트를 많이 요구하는 것은 의도된 것입니다** — 쿨감은 모든 스킬에 한꺼번에 곱해지고 딜뿐 아니라 생존기·이동기 회전율까지 같이 올려서, 같은 효율로 두면 다른 선택지가 존재할 이유가 없어집니다. |
+| `demon_lord_global` | `statSkillRangePerPoint` | 포인트당 스킬 거리 증가입니다(기본 +3%p). 사거리·반경·돌진 거리 같은 거리 계열 값 전부에 곱해집니다. |
+| `demon_lord_global` | `statMoveSpeedPerPoint`, `statMoveSpeedCap` | 포인트당 이동 속도 증가와 상한입니다. 물약 효과가 아니라 일시 속성 수정자라 등급 단위(20%)가 아닌 잔단위를 표현할 수 있습니다. |
+| `..._wave_of_malice_tower` | `coneDegrees`, `range`, `damage`, `knockback` | 전방 부채꼴 각도·거리·피해·넉백입니다. |
+| `..._demon_wings_tower` | `leapPower`, `radius`, `damage`, `knockback`, `healRatio` | 도약력, 광역 반경, 피해, 넉백, 최대 체력 대비 회복량입니다. |
+| `..._sky_breaker_tower` | `dashDistance`, `hitRadius`, `damage`, `liftPower`, `stunTicks` | 돌진 거리, 경로 판정 반경, 피해, 띄우기 세기, 기절 시간입니다. 기절은 이동·공격 속도·공격력을 100% 깎습니다. |
+| `..._arcane_bombardment_tower` | `jumpPower`, `castDelayTicks`, `projectileRange`, `blastRadius`, `damage` | 솟아오르는 힘, 정점에서 발사까지의 대기 시간, 착탄 지점까지의 최대 거리, 폭발 반경, 피해입니다. 조준은 시전 시점이 아니라 **발사 시점의 시선**을 씁니다. |
+| `..._demon_barrier_tower` | `shieldRatio`, `shieldDurationTicks` | 최대 체력 대비 방어막 비율과 지속 시간입니다. 중첩되지 않고 큰 쪽으로 갱신됩니다. |
+| `..._hellfire_brand_tower` | `placementRange`, `zoneRadius`, `zoneDurationTicks`, `tickIntervalTicks` | 시선으로 까는 최대 거리, 장판 반경, 지속 시간, 피해 주기입니다. 장판은 한 번에 하나만 유지되고 재시전하면 이전 것을 덮어씁니다. |
+| `..._hellfire_brand_tower` | `damage`, `damageTakenBonus` | 주기마다 들어가는 피해와, 장판 위 적이 받는 피해 증가입니다. |
+| `..._soul_drain_tower` | `range`, `width`, `damage` | 전방 직선 판정의 길이·폭과 대상당 피해입니다. |
+| `..._soul_drain_tower` | `rootDurationTicks` | 꿰뚫린 적을 그 자리에 묶는 시간입니다. 이동 속도를 100% 깎는 것이라 **공격은 계속합니다** — 붙어 있는 적을 떼어내는 용도가 아니라 지나가려는 줄을 세우는 용도입니다. |
+| `..._soul_drain_tower` | `lifeStealRatio`, `lifeStealCap` | 입힌 피해 대비 회복 비율과, 1회 회복량의 최대 체력 대비 상한입니다. 여럿을 꿰뚫어도 상한을 넘지 않습니다. |
+| `..._roar_of_dread_tower` | `radius`, `damage`, `knockback` | 광역 반경, 피해, 넉백 세기입니다. |
+| `..._roar_of_dread_tower` | `moveSpeedReduction`, `dreadDurationTicks` | 이동 속도 감소율과 지속 시간입니다. 지속 동안 공격도 함께 막힙니다. |
+| `..._grip_of_doom_tower` | `range`, `executeHealthRatio` | 지목 사거리와 처형 임계값입니다. 대상 체력이 최대 체력의 이 비율 이하면 고정 피해로 즉사시킵니다. **1.0으로 올리면 체력과 무관한 무조건 즉사가 되어 상대가 비싼 유닛을 뽑을 이유가 사라집니다.** |
+| `..._grip_of_doom_tower` | `explosionRadius`, `explosionHealthRatio`, `areaDamage` | 처형 시 시체 폭발입니다. 피해는 `처형 시점 체력 × explosionHealthRatio + areaDamage`이므로 단단한 적일수록 크게 터집니다. |
+| `..._grip_of_doom_tower` | `damage`, `missingHealthRatio`, `pullStrength`, `killRefundTicks` | 임계값을 넘긴 대상에게 들어가는 일반 피해와 **대상이** 잃은 체력 비례 추가 피해, 끌어당김 세기, 처형 성공 시 쿨타임 환급입니다. |
+| `..._hell_guillotine_tower` | `range`, `radius`, `damage` | 순간이동 사거리, 착지 광역 반경, 기본 피해입니다. |
+| `..._hell_guillotine_tower` | `missingHealthDamageBonus` | **마왕 자신이** 잃은 체력 비율에 곱해지는 최대 피해 증가폭입니다. 빈사에서 `기본 × (1 + 이 값)`이 됩니다. 손아귀와 달리 시전자 기준인 점에 주의합니다. |
+
+스킬 10종을 전부 열면 코스트 합이 32입니다. 이 값을 바꾸면
+`DemonLordTowerCatalogTest`의 `skillCostsMatchTheDesignedValues`와
+`openingEverySkillCostsMoreThanAnEarlyTowerLimit`도 함께 갱신합니다.
+
+> **주의**: `tower_balance.json`은 번들 리소스가 코드 기본값과 **병합되지 않고 통째로 대체**합니다.
+> Java의 `putDemonLordAbilities`만 고치면 런타임에서 값이 폴백으로 떨어지며 컴파일로는 잡히지 않습니다.
+> `src/main/resources/semiontd/balance-defaults/tower_balance.json`도 함께 고쳐야 하며,
+> 어긋나면 `bundledResourceCarriesEveryDemonLordEntryThatCodeDefines` 테스트가 깨집니다.
 
 ## 수정 절차
 

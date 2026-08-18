@@ -221,12 +221,23 @@ public class PlantCombatTower extends ProductionTower {
             return;
         }
 
+        // 포격에 직접 맞은 대상은 중복 피해를 막으려고 광역 판정에서 빠집니다
+        // (aroundTarget 이 대상 UUID 를 제외 목록에 넣습니다). 그래서 속박까지 같이 빠져
+        // "맞은 적이 발이 묶인다"는 물병 식물의 핵심이 정작 맞은 적에게만 안 걸렸습니다.
+        // 피해는 이미 들어갔으니 여기서는 속박만 따로 겁니다.
+        if (snare > 0.0 && snareTicks > 0 && target != null
+                && target.runtimeMonster() != null && target.runtimeMonster().isAlive()) {
+            target.applyTimedEffect(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION, snare, snareTicks);
+        }
+
         MonsterAreaEffectRequest request = MonsterAreaEffectRequest.aroundTarget(
                         AreaEffectIds.tower(this, "petal_burst"),
                         towerEntity,
                         target,
                         radius,
-                        AreaVfxSpec.onTrigger(AreaVfxStyles.SPLASH)
+                        AreaVfxSpec.onTrigger(ability("lobArcHeight") > 0.0
+                                ? PlantVfx.LOBBED_SPLASH
+                                : AreaVfxStyles.SPLASH)
                 )
                 .withFilter(monster -> withinCone(towerEntity, target, monster, coneDegrees));
 
@@ -398,6 +409,20 @@ public class PlantCombatTower extends ProductionTower {
         return Math.max(0.0, growthBonus() * soilValue(PlantSoil.MEADOW, "growthShareRatio"));
     }
 
+    /**
+     * 회백토가 라인 전체에 나눠 주는 피해 성장입니다.
+     *
+     * <p>잔디가 최대 체력을 나누듯 회백토는 피해를 나눕니다. 나누기 전의 {@link #damageGrowthBonus()}
+     * 는 회백토 위에 선 자기 자신에게만 붙고, 여기서 계산한 몫은 계열과 무관하게 라인 안 모든
+     * 타워에게 같은 값으로 걸립니다.
+     */
+    public double sharedDamageGrowthBonus() {
+        if (!standsOn(PlantSoil.PODZOL)) {
+            return 0.0;
+        }
+        return Math.max(0.0, damageGrowthBonus() * soilValue(PlantSoil.PODZOL, "growthShareRatio"));
+    }
+
     private boolean heal(AreaTowerTarget target, double percent) {
         double amount = target.tower().currentMaxHealth() * percent;
         if (amount <= 0.0) {
@@ -491,6 +516,12 @@ public class PlantCombatTower extends ProductionTower {
             case MEADOW -> {
                 lines.add("성장 최대 체력 +" + percentInteger(growthBonus())
                         + " · " + growthRounds() + "라운드째");
+                // 툴팁은 지형 기본값을 보여 주므로, 여기서는 배율까지 곱한 실제 적용값을 보여 줍니다.
+                double healPercent = scaled(PlantSoil.MEADOW, "healPercentPerPulse");
+                if (healPercent > 0.0) {
+                    lines.add("회복 " + percentInteger(healPercent) + "/펄스 · 범위 "
+                            + oneDecimal(scaled(PlantSoil.MEADOW, "supportRadius")));
+                }
                 long diamondPerWave = diamondPerWave();
                 if (diamondPerWave > 0L) {
                     lines.add("웨이브 정산 다이아 +" + diamondPerWave);
@@ -525,7 +556,7 @@ public class PlantCombatTower extends ProductionTower {
     }
 
     private PlantSoil standingSoil() {
-        return PlantSoilStates.soilAt(ownerPlayer(), position());
+        return deployedAtFinalDefense() ? family() : PlantSoilStates.soilAt(ownerPlayer(), position());
     }
 
     private boolean standsOn(PlantSoil soil) {

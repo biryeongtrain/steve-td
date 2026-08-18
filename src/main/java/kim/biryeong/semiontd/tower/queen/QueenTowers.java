@@ -9,13 +9,13 @@ import net.minecraft.world.entity.EntityType;
 
 public final class QueenTowers {
     public static final TowerType QUEEN = TowerType.builder("queen", "붉은 여왕")
-            .mineralCost(70).maxHealth(140).range(9).damage(0).attackIntervalTicks(120).aggroPriority(1)
+            .mineralCost(70).maxHealth(60).range(9).damage(0).attackIntervalTicks(120).aggroPriority(1)
             .visual(EntityVisual.builder(EntityTypeUtil.byId(EntityType.EVOKER)).build())
             .description(List.of(
-                    "가장 강한 적에게 축소 {ability.queen_global.queenShrinkPoints:number}(1점당 ×{ability.queen_global.shrinkFactorPerPoint:number})을 가해 능력치를 원본의 {ability.queen_global.minimumStatScale:percent}, 외형을 {ability.queen_global.minimumVisualScale:percent}까지 낮춥니다.",
+                    "가장 강한 적을 고른 뒤 처형에 필요한 외형 30% 축소까지 집중합니다. 공격마다 축소 {ability.queen_global.queenShrinkPoints:number}(1점당 ×{ability.queen_global.shrinkFactorPerPoint:number})을 가해 능력치를 원본의 {ability.queen_global.minimumStatScale:percent}, 외형을 {ability.queen_global.minimumVisualScale:percent}까지 낮춥니다.",
                     "적이 남아 있는 동안 <gold>저놈의 목을 쳐라!</gold>가 {ability.queen_global.giantChargeTicks:seconds} 동안 충전됩니다. 반경 {ability.queen_global.giantAccelerationRadius:blocks}에서 카드병정이 교전하면 2배로 충전됩니다.",
-                    "자이언트가 현재 체력 {ability.queen_global.giantInitialExecutionHealth:number} 이하의 적을 <dark_red>처형</dark_red>하며, 처형선은 경기 동안 제한적으로 성장합니다.",
-                    "플레이어당 1기이며 판매할 수 없습니다."
+                    "자이언트가 원본보다 외형이 30% 이상 작아지고 현재 체력이 {ability.queen_global.giantInitialExecutionHealth:number} 이하인 적을 <dark_red>처형</dark_red>합니다. 처형선은 저체력 적에게도 최소 성장하며, 고체력 적의 증가량은 제한됩니다.",
+                    "본체 체력은 라운드마다 {ability.queen_global.queenMaxHealthPerRound:health} 증가합니다. 플레이어당 1기이며 판매할 수 없습니다."
             )).build();
 
     public static final TowerType RANDOM_CARD_SOLDIER = TowerType.builder("queen_random_card_soldier", "무작위 카드병정")

@@ -16,16 +16,11 @@ public final class ThunderTowerJob extends SemionJob {
         super(
                 ID,
                 Component.literal("람쥐썬더 빌더"),
-                List.of(SemionText.mini("<gray>전력 수급 균형으로 모든 타워의 성능이 동시에 정해지는 빌더입니다.</gray>"))
-        );
-    }
-
-    @Override
-    public List<Component> description() {
-        return List.of(
-                SemionText.mini("<gray>모든 타워가 <yellow>전력</yellow>을 나눠 씁니다. 여유가 있으면 함께 강해지고, 모자라면 함께 약해집니다.</gray>"),
-                SemionText.mini("<aqua>피뢰침은 공격하지 않고 전력만 생산하고, 절연 아르마딜로는 맞을수록 전력을 보탭니다.</aqua>"),
-                SemionText.mini("<red>타워를 늘릴수록 소비가 늘어 기존 타워까지 약해집니다.</red>")
+                List.of(
+                        SemionText.mini("<green><bold>시작</bold></green> <gray>피뢰침으로 발전량을 확보한 뒤 전투 타워를 놓으세요.</gray>"),
+                        SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>화면의 발전량과 소비량을 보며 전력 여유를 유지하세요.</gray>"),
+                        SemionText.mini("<yellow><bold>주의</bold></yellow> <gray>소비가 발전을 넘으면 이미 놓은 타워도 함께 약해집니다.</gray>")
+                )
         );
     }
 

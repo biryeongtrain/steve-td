@@ -19,9 +19,9 @@ public final class HeroPartyTowerJob extends SemionJob {
                 ID,
                 Component.literal("용사 빌더"),
                 List.of(
-                        SemionText.mini("<gray>용사를 먼저 설치하고 최대 네 명의 동료로 파티를 완성합니다.</gray>"),
-                        SemionText.mini("<gray>준비 시간에 장비를 바꾸고 웨이브 퀘스트로 파티를 강화합니다.</gray>"),
-                        SemionText.mini("<yellow>선택한 동료 종류는 해당 경기 동안 변경할 수 없습니다.</yellow>")
+                        SemionText.mini("<green><bold>시작</bold></green> <gray>용사를 먼저 놓은 뒤 원하는 동료를 최대 4명 고르세요.</gray>"),
+                        SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>준비 단계에 장비를 바꾸고 웨이브 퀘스트로 파티를 성장시키세요.</gray>"),
+                        SemionText.mini("<yellow><bold>주의</bold></yellow> <gray>고른 동료 종류는 그 경기에서 바꿀 수 없습니다.</gray>")
                 )
         );
     }

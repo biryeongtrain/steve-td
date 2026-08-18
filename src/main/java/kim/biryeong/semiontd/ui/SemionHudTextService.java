@@ -33,6 +33,8 @@ import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.placeholder.SemionPlaceholders;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordState;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordStates;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -95,6 +97,17 @@ public final class SemionHudTextService {
                     ),
                     TowerDamageSummary::merge
             );
+        }
+        DemonLordState demonLord = DemonLordStates.get(viewerId);
+        if (demonLord != null && (demonLord.roundPhysicalDamageDealt() > 0.0
+                || demonLord.roundMagicDamageDealt() > 0.0)) {
+            byType.put("semion-td:demon_lord", new TowerDamageSummary(
+                    "semion-td:demon_lord",
+                    "마왕",
+                    demonLord.roundPhysicalDamageDealt(),
+                    demonLord.roundMagicDamageDealt(),
+                    0.0
+            ));
         }
 
         List<TowerDamageSummary> summaries = List.copyOf(byType.values());

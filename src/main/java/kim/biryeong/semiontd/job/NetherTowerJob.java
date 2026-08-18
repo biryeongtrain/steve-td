@@ -1,12 +1,8 @@
 package kim.biryeong.semiontd.job;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.List;
 import kim.biryeong.semiontd.SemionTd;
-import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.tower.TowerType;
-import kim.biryeong.semiontd.tower.nether.NetherTower;
 import kim.biryeong.semiontd.tower.nether.NetherTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
@@ -20,41 +16,15 @@ public final class NetherTowerJob extends SemionJob {
                 ID,
                 Component.literal("네더 빌더"),
                 List.of(
-                        SemionText.mini("<gray>체력을 소모하고 흡혈로 버티는 타워를 사용합니다.</gray>"),
-                        SemionText.mini("<gray>네더 상태에서 첫 사망 시 좀비 상태로 전환됩니다.</gray>")
+                        SemionText.mini("<green><bold>시작</bold></green> <gray>전투 중 체력을 잃으므로 흡혈 계열을 함께 준비하세요.</gray>"),
+                        SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>체력이 낮을수록 강해지는 효과를 이용해 위험한 상태를 유지하세요.</gray>"),
+                        SemionText.mini("<yellow><bold>주의</bold></yellow> <gray>처음 쓰러지면 좀비로 부활하지만 다시 쓰러지면 돌아오지 않습니다.</gray>")
                 )
-        );
-    }
-
-    @Override
-    public List<Component> description() {
-        return List.of(
-                SemionText.mini("<gray>웨이브에 몬스터가 남아 있으면 네더 상태 타워는 초당 최대 체력의 "
-                        + percent("netherDecayMaxHealthRatioPerSecond") + "를 잃고 기본 "
-                        + percent("netherLifeStealRatio") + " 흡혈을 가집니다.</gray>"),
-                SemionText.mini("<yellow>최종 방어선에 도착하면 상태로 인한 체력 감소가 중단됩니다.</yellow>"),
-                SemionText.mini("<red>[좀비] 처음 체력이 0이 되면 최대 체력의 "
-                        + percent("zombieReviveHealthRatio") + "로 회복하고 좀비 상태가 됩니다. 초당 최대 체력의 "
-                        + percent("zombieDecayMaxHealthRatioPerSecond") + "를 잃으며 기본 흡혈은 "
-                        + percent("zombieLifeStealRatio") + "입니다.</red>"),
-                SemionText.mini("<gray>체력이 " + percent("lowHealthThreshold")
-                        + " 이하로 내려가면 잃은 체력에 비례해 공격력과 흡혈이 증가합니다. 공격력은 최대 "
-                        + percent("lowHealthDamageBonusCap") + ", 흡혈은 최대 "
-                        + percent("lifeStealBonusCap") + "까지 증가합니다.</gray>"),
-                SemionText.mini("<yellow>체력이 " + percent("criticalHealthThreshold")
-                        + " 이하일 때 타워별 추가 능력이 발동합니다.</yellow>")
         );
     }
 
     @Override
     public boolean canUseTower(JobContext context, TowerType towerType) {
         return NetherTowers.isNetherTower(towerType);
-    }
-
-    private static String percent(String key) {
-        BigDecimal value = BigDecimal.valueOf(TowerBalanceRuntime.ability(NetherTower.CONFIG_ID, key) * 100.0)
-                .setScale(2, RoundingMode.HALF_UP)
-                .stripTrailingZeros();
-        return value.toPlainString() + "%";
     }
 }

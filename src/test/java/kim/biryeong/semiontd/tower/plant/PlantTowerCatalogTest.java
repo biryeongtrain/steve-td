@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -17,6 +18,8 @@ import java.util.stream.Stream;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.entity.visual.BlockDisplayVisual;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.job.PlantTowerJob;
@@ -93,11 +96,12 @@ final class PlantTowerCatalogTest {
 
         assertUpgrade(PlantTowers.T1_MEADOW_TOWER, PlantTowers.T2_MEADOW_TOWER, 150);
         assertUpgrade(PlantTowers.T2_MEADOW_TOWER, PlantTowers.T3_MEADOW_TOWER, 240);
-        assertUpgrade(PlantTowers.T1_MYCELIUM_TOWER, PlantTowers.T2_MYCELIUM_TOWER, 110);
-        assertUpgrade(PlantTowers.T2_MYCELIUM_TOWER, PlantTowers.T3_MYCELIUM_TOWER, 180);
-        // 탱커 업그레이드는 실서버 기준값(160/250)에 맞춰 둡니다.
-        assertUpgrade(PlantTowers.T1_DESERT_TOWER, PlantTowers.T2_DESERT_TOWER, 160);
-        assertUpgrade(PlantTowers.T2_DESERT_TOWER, PlantTowers.T3_DESERT_TOWER, 250);
+        // 지뢰는 폭발 한 번이 아니라 라운드 하나를 사는 값이라 티어 비용을 낮춰 두었습니다.
+        assertUpgrade(PlantTowers.T1_MYCELIUM_TOWER, PlantTowers.T2_MYCELIUM_TOWER, 80);
+        assertUpgrade(PlantTowers.T2_MYCELIUM_TOWER, PlantTowers.T3_MYCELIUM_TOWER, 130);
+        // 탱커는 싼값에 벽을 세우지 못하도록 상위 티어 값을 올렸습니다.
+        assertUpgrade(PlantTowers.T1_DESERT_TOWER, PlantTowers.T2_DESERT_TOWER, 190);
+        assertUpgrade(PlantTowers.T2_DESERT_TOWER, PlantTowers.T3_DESERT_TOWER, 300);
         assertUpgrade(PlantTowers.T1_PODZOL_TOWER, PlantTowers.T2_PODZOL_TOWER, 170);
 
         // 계열마다 자기 테라포머가 필요합니다. 다른 계열을 섞으면 지형값을 두 번 냅니다.
@@ -139,6 +143,66 @@ final class PlantTowerCatalogTest {
                 TowerBalanceRuntime.resolve(PlantTowers.T2_DESERT_TOWER).visual()));
     }
 
+    /**
+     * 2칸짜리 식물은 윗단까지 그려야 합니다.
+     *
+     * <p>{@code defaultBlockState()} 는 아랫단이라 그것만 그리면 장미 덤불·라일락·큰 고사리·
+     * 물병 식물·해바라기가 반토막으로 보입니다. 블록 목록을 나열하는 대신 속성으로 판별하므로,
+     * 나중에 다른 2칸 식물을 써도 자동으로 처리됩니다.
+     */
+    @Test
+    void twoBlockTallPlantsRenderTheirUpperHalf() {
+        List<TowerType> tallPlants = Stream.concat(
+                        PlantTowers.TERRAFORM_TOWERS.stream(), PlantTowers.COMBAT_TOWERS.stream())
+                .map(TowerBalanceRuntime::resolve)
+                .filter(type -> BlockDisplayVisual.matches(type.visual()))
+                .filter(type -> BlockDisplayVisual.blockState(type.visual())
+                        .hasProperty(BlockStateProperties.DOUBLE_BLOCK_HALF))
+                .toList();
+        assertFalse(tallPlants.isEmpty(), "2칸 식물을 쓰는 타워가 하나도 없다면 이 테스트가 무의미합니다");
+
+        for (TowerType type : tallPlants) {
+            var visual = type.visual();
+            assertEquals(DoubleBlockHalf.LOWER,
+                    BlockDisplayVisual.blockState(visual).getValue(BlockStateProperties.DOUBLE_BLOCK_HALF),
+                    type.id() + " 아랫단");
+            var top = BlockDisplayVisual.topBlockState(visual);
+            assertNotNull(top, type.id() + " 는 윗단이 없어 잘려 보입니다");
+            assertEquals(DoubleBlockHalf.UPPER, top.getValue(BlockStateProperties.DOUBLE_BLOCK_HALF),
+                    type.id() + " 윗단");
+            assertEquals(BlockDisplayVisual.blockState(visual).getBlock(), top.getBlock(),
+                    type.id() + " 윗단은 같은 블록이어야 합니다");
+        }
+    }
+
+    /**
+     * 플레이어가 체감하는 능력은 툴팁에 반드시 나와야 합니다.
+     *
+     * <p>고사리 T1·T2 는 치명타를 8%/18% 로 갖고 있으면서도 툴팁에 한 줄도 없어서 없는 기능처럼
+     * 보였습니다. 설정에 값을 넣는 것과 설명을 쓰는 것이 따로 놀기 때문에, 같은 누락이 다시
+     * 생기지 않도록 여기서 대조합니다.
+     */
+    @Test
+    void everyAdvertisableAbilityAppearsInTheTooltip() {
+        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        // 값이 켜져 있으면 플레이어에게 반드시 알려야 하는 키들입니다.
+        List<String> mustAdvertise = List.of(
+                "critChance", "superCritChance", "snareMoveSpeedReduction",
+                "splashRadius", "novaRadius", "diamondPerWave");
+
+        List<String> missing = new java.util.ArrayList<>();
+        for (TowerType type : PlantTowers.COMBAT_TOWERS) {
+            String tooltip = String.join("\n", type.description());
+            for (String key : mustAdvertise) {
+                if (defaults.ability(type.id(), key, 0.0) > 0.0
+                        && !tooltip.contains("{ability." + key + ":")) {
+                    missing.add(type.id() + " -> " + key);
+                }
+            }
+        }
+        assertTrue(missing.isEmpty(), "툴팁에서 빠진 능력: " + missing);
+    }
+
     @Test
     void terraformersAndCombatTowersUseTheirOwnRuntimeClasses() {
         assertInstanceOf(PlantTerraformTower.class, create(PlantTowers.T3_OAK_SEED_TOWER));
@@ -154,19 +218,22 @@ final class PlantTowerCatalogTest {
         }
         for (TowerType type : PlantTowers.COMBAT_TOWERS) {
             Tower tower = create(type);
+            // 전투 타워는 무적이 아닙니다. 지뢰도 광역 피해로는 깎이고, 깎이면 약하게 터집니다.
             assertFalse(tower.invulnerable(), type.id());
-            assertTrue(tower.drawsAggro(), type.id());
+            // 어그로는 다릅니다. 지뢰는 밟고 지나가는 함정이지 물어뜯을 몸이 아닙니다.
+            // 자세한 이유는 minesAreTrapsNotBodiesToChewOn 을 봅니다.
+            assertEquals(!(tower instanceof PlantMineTower), tower.drawsAggro(), type.id());
         }
     }
 
     @Test
-    void soilEffectsUseConservativeEnvironmentDefaults() {
+    void soilEffectsUseMidgameEnvironmentDefaults() {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
         assertEquals(20.0, defaults.ability(PlantTowers.GLOBAL_CONFIG_ID, "environmentTickIntervalTicks", -1), EPSILON);
         assertEquals(0.15, defaults.ability(PlantSoil.MYCELIUM.configId(), "environmentWeakness", -1), EPSILON);
         assertEquals(0.25, defaults.ability(PlantSoil.MYCELIUM.configId(), "environmentDamageTakenBonus", -1), EPSILON);
         assertEquals(0.15, defaults.ability(PlantSoil.DESERT.configId(), "environmentAttackSpeedReduction", -1), EPSILON);
-        assertEquals(0.005, defaults.ability(PlantSoil.DESERT.configId(), "environmentMaxHealthDamagePerSecond", -1), EPSILON);
+        assertEquals(0.0075, defaults.ability(PlantSoil.DESERT.configId(), "environmentMaxHealthDamagePerSecond", -1), EPSILON);
         // 잔디와 회백토는 아군 지형이라 환경 효과가 없습니다.
         assertEquals(0.0, defaults.ability(PlantSoil.MEADOW.configId(), "environmentMaxHealthDamagePerSecond", 0.0), EPSILON);
         assertEquals(0.0, defaults.ability(PlantSoil.PODZOL.configId(), "environmentWeakness", 0.0), EPSILON);
@@ -205,7 +272,7 @@ final class PlantTowerCatalogTest {
             // 반사에 얹을 공격력은 남아 있어야 합니다.
             assertTrue(TowerBalanceRuntime.resolve(type).damage() > 0.0, type.id());
         }
-        assertEquals(0.25, defaults.ability(PlantSoil.DESERT.configId(), "thornReflectRatio", -1), EPSILON);
+        assertEquals(0.30, defaults.ability(PlantSoil.DESERT.configId(), "thornReflectRatio", -1), EPSILON);
         // 사거리가 0 이라 장판은 지형이 정한 반경을 씁니다.
         assertEquals(5.0, defaults.ability(PlantSoil.DESERT.configId(), "auraRadius", -1), EPSILON);
 
@@ -253,9 +320,9 @@ final class PlantTowerCatalogTest {
         assertEquals(PlantSoil.MEADOW, PlantTowers.soilOf(PlantTowers.T3_MEADOW_NOVA_TOWER));
 
         // 민들레 계열만 웨이브 정산 다이아를, 튤립 계열만 자기 중심 광역을 가집니다.
-        assertEquals(3.0, defaults.ability(PlantTowers.T1_MEADOW_TOWER.id(), "diamondPerWave", -1), EPSILON);
-        assertEquals(9.0, defaults.ability(PlantTowers.T2_MEADOW_TOWER.id(), "diamondPerWave", -1), EPSILON);
-        assertEquals(24.0, defaults.ability(PlantTowers.T3_MEADOW_TOWER.id(), "diamondPerWave", -1), EPSILON);
+        assertEquals(4.0, defaults.ability(PlantTowers.T1_MEADOW_TOWER.id(), "diamondPerWave", -1), EPSILON);
+        assertEquals(11.0, defaults.ability(PlantTowers.T2_MEADOW_TOWER.id(), "diamondPerWave", -1), EPSILON);
+        assertEquals(28.0, defaults.ability(PlantTowers.T3_MEADOW_TOWER.id(), "diamondPerWave", -1), EPSILON);
         assertEquals(0.0, defaults.ability(PlantTowers.T3_MEADOW_TOWER.id(), "novaRadius", 0.0), EPSILON);
         assertEquals(5.5, defaults.ability(PlantTowers.T3_MEADOW_NOVA_TOWER.id(), "novaRadius", -1), EPSILON);
         assertEquals(0.0, defaults.ability(PlantTowers.T3_MEADOW_NOVA_TOWER.id(), "diamondPerWave", 0.0), EPSILON);
@@ -304,7 +371,7 @@ final class PlantTowerCatalogTest {
 
         // 라일락만 부채꼴 + 잃은 체력 비례, 물병 식물만 속박입니다.
         assertEquals(130.0, defaults.ability(PlantTowers.T3_PODZOL_LILAC_TOWER.id(), "splashConeDegrees", -1), EPSILON);
-        assertEquals(0.02, defaults.ability(PlantTowers.T3_PODZOL_LILAC_TOWER.id(), "splashMissingHealthRatio", -1), EPSILON);
+        assertEquals(0.03, defaults.ability(PlantTowers.T3_PODZOL_LILAC_TOWER.id(), "splashMissingHealthRatio", -1), EPSILON);
         assertEquals(0.0, defaults.ability(PlantTowers.T3_PODZOL_PITCHER_TOWER.id(), "splashConeDegrees", 0.0), EPSILON);
         assertEquals(0.7, defaults.ability(PlantTowers.T3_PODZOL_PITCHER_TOWER.id(), "snareMoveSpeedReduction", -1), EPSILON);
 
@@ -343,38 +410,41 @@ final class PlantTowerCatalogTest {
     }
 
     @Test
-    void soilAmplificationStaysWithinTheConservativeCap() {
+    void soilAmplificationRewardsACompletedTerraformer() {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
         double bloomCap = defaults.ability(PlantTowers.GLOBAL_CONFIG_ID, "bloomDamageCap", -1);
         // T1 테라포머 한 기(3x3)만 깔아도 전투 타워를 놓을 빈 칸이 남아야 합니다.
         int t1Tiles = (int) Math.pow(PlantTowers.terraformRadius(PlantTowers.T1_OAK_SEED_TOWER) * 2 + 1, 2);
         assertTrue(t1Tiles - 1 >= 4, "T1 free tiles " + (t1Tiles - 1));
         double frailty = defaults.ability(PlantSoil.MYCELIUM.configId(), "environmentDamageTakenBonus", -1);
-        assertEquals(0.4, bloomCap, EPSILON);
+        assertEquals(0.6, bloomCap, EPSILON);
         assertEquals(0.25, frailty, EPSILON);
 
         double totalMultiplier = (1.0 + bloomCap) * (1.0 + frailty);
-        assertEquals(1.75, totalMultiplier, EPSILON);
+        assertEquals(2.0, totalMultiplier, EPSILON);
     }
 
     @Test
     void defaultConfigCarriesEverySoilValue() {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
-        assertEquals(0.01, defaults.ability(PlantTowers.GLOBAL_CONFIG_ID, "bloomDamagePerTile", -1), EPSILON);
+        assertEquals(0.015, defaults.ability(PlantTowers.GLOBAL_CONFIG_ID, "bloomDamagePerTile", -1), EPSILON);
         assertEquals(1.0, defaults.ability(PlantTowers.T1_OAK_SEED_TOWER.id(), "terraformRadius", -1), EPSILON);
         assertEquals(20.0, defaults.ability(PlantTowers.GLOBAL_CONFIG_ID, "soilPulseIntervalTicks", -1), EPSILON);
-        assertEquals(0.015, defaults.ability(PlantSoil.MEADOW.configId(), "healPercentPerPulse", -1), EPSILON);
+        assertEquals(0.012, defaults.ability(PlantSoil.MEADOW.configId(), "healPercentPerPulse", -1), EPSILON);
         assertEquals(6.0, defaults.ability(PlantSoil.MEADOW.configId(), "supportRadius", -1), EPSILON);
-        assertEquals(0.2, defaults.ability(PlantSoil.MEADOW.configId(), "growthShareRatio", -1), EPSILON);
-        assertEquals(0.5, defaults.ability(PlantSoil.MEADOW.configId(), "growthShareCap", -1), EPSILON);
+        assertEquals(0.15, defaults.ability(PlantSoil.MEADOW.configId(), "growthShareRatio", -1), EPSILON);
+        assertEquals(0.25, defaults.ability(PlantSoil.MEADOW.configId(), "growthShareCap", -1), EPSILON);
+        assertEquals(0.2, defaults.ability(PlantSoil.PODZOL.configId(), "growthShareRatio", -1), EPSILON);
+        assertEquals(0.4, defaults.ability(PlantSoil.PODZOL.configId(), "growthShareCap", -1), EPSILON);
+        assertEquals(60.0, defaults.ability(PlantSoil.PODZOL.configId(), "supportDurationTicks", -1), EPSILON);
 
-        // 성장은 40라운드 게임 내내 붙어야 합니다. 상한에 너무 일찍 닿으면 후반이 죽습니다.
         double perRound = defaults.ability(PlantSoil.MEADOW.configId(), "maxHealthGrowthPerRound", -1);
         double growthCap = defaults.ability(PlantSoil.MEADOW.configId(), "maxHealthGrowthCap", -1);
-        assertTrue(growthCap / perRound >= 40.0, "rounds to cap " + (growthCap / perRound));
+        assertEquals(0.015, perRound, EPSILON);
+        assertEquals(0.5, growthCap, EPSILON);
         assertEquals(2.0, defaults.ability(PlantTowers.T1_MYCELIUM_TOWER.id(), "explosionDamageMultiplier", -1), EPSILON);
         assertEquals(0.25, defaults.ability(PlantSoil.DESERT.configId(), "attackSpeedReduction", -1), EPSILON);
-        assertEquals(0.25, defaults.ability(PlantSoil.DESERT.configId(), "thornReflectRatio", -1), EPSILON);
+        assertEquals(0.30, defaults.ability(PlantSoil.DESERT.configId(), "thornReflectRatio", -1), EPSILON);
         assertEquals(4.0, defaults.ability(PlantSoil.PODZOL.configId(), "rangeBonus", -1), EPSILON);
 
         // 체력은 잔디, 피해는 회백토가 키웁니다. 둘 다 40라운드까지 붙어야 합니다.
@@ -399,18 +469,106 @@ final class PlantTowerCatalogTest {
         double baseDps = rose.damage() * 20.0 / interval;
         double critMultiplier = 0.05 * 3.0 + 0.95 * (0.35 * 2.0 + 0.65);
 
-        assertEquals(154.0, baseDps * 1.4 * critMultiplier, 0.5);
-        assertEquals(200.0, baseDps * (1.4 + 0.015 * soilPower * 20) * critMultiplier, 0.5);
-        assertEquals(246.0, baseDps * (1.4 + 0.6 * soilPower) * critMultiplier, 0.5);
-        assertEquals(307.0, baseDps * (1.4 + 0.6 * soilPower) * critMultiplier * 1.25, 0.6);
+        assertEquals(176.0, baseDps * 1.6 * critMultiplier, 0.5);
+        assertEquals(222.0, baseDps * (1.6 + 0.015 * soilPower * 20) * critMultiplier, 0.5);
+        assertEquals(268.0, baseDps * (1.6 + 0.6 * soilPower) * critMultiplier, 0.5);
+        assertEquals(335.0, baseDps * (1.6 + 0.6 * soilPower) * critMultiplier * 1.25, 0.6);
 
-        assertEffectiveTargetMultiplier(PlantTowers.T3_MEADOW_NOVA_TOWER, "novaDamageRatio", 1.0, 2.2, 3.4);
-        assertEffectiveTargetMultiplier(PlantTowers.T3_PODZOL_LILAC_TOWER, "splashDamageRatio", 1.0, 1.7, 2.4);
-        assertEffectiveTargetMultiplier(PlantTowers.T3_PODZOL_PITCHER_TOWER, "splashDamageRatio", 1.0, 1.9, 2.8);
+        assertEffectiveTargetMultiplier(PlantTowers.T3_MEADOW_NOVA_TOWER, "novaDamageRatio", 1.0, 2.5, 4.0);
+        assertEffectiveTargetMultiplier(PlantTowers.T3_PODZOL_LILAC_TOWER, "splashDamageRatio", 1.0, 1.9, 2.8);
+        assertEffectiveTargetMultiplier(PlantTowers.T3_PODZOL_PITCHER_TOWER, "splashDamageRatio", 1.0, 2.2, 3.4);
 
         var mine = TowerBalanceRuntime.resolve(PlantTowers.T3_MYCELIUM_TOWER);
-        double explosion = (mine.damage() * 2.0 + mine.maxHealth() * 0.25) * 1.4;
-        assertEquals(259.0, explosion, EPSILON);
+        double explosion = (mine.damage() * 2.0 + mine.maxHealth() * 0.25) * 1.6;
+        assertEquals(344.0, explosion, EPSILON);
+    }
+
+    /**
+     * 지뢰는 폭발 한 번이 아니라 라운드 하나를 삽니다.
+     *
+     * <p>재장전이 없으면 감시 간격(5틱)마다 다시 터져 지뢰 하나가 광역 기관총이 됩니다. 삭는
+     * 사슬이 끊기면 지뢰가 영원히 남습니다. 둘 다 값 하나만 잘못 들어가도 조용히 깨지는 곳이라
+     * 여기서 붙잡습니다.
+     */
+    @Test
+    void minesRearmAndDecayOneTierPerRound() {
+        assertEquals(PlantTowers.T2_MYCELIUM_TOWER,
+                PlantTowers.previousMyceliumTier(PlantTowers.T3_MYCELIUM_TOWER));
+        assertEquals(PlantTowers.T1_MYCELIUM_TOWER,
+                PlantTowers.previousMyceliumTier(PlantTowers.T2_MYCELIUM_TOWER));
+        assertNull(PlantTowers.previousMyceliumTier(PlantTowers.T1_MYCELIUM_TOWER),
+                "붉은 버섯 아래는 없습니다. 라운드가 끝나면 사라져야 합니다.");
+        assertNull(PlantTowers.previousMyceliumTier(PlantTowers.T3_DESERT_TOWER),
+                "다른 계열은 삭지 않습니다.");
+
+        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        for (TowerType mine : List.of(
+                PlantTowers.T1_MYCELIUM_TOWER, PlantTowers.T2_MYCELIUM_TOWER, PlantTowers.T3_MYCELIUM_TOWER)) {
+            // 라운드 안에서 다시 장전하는 값은 두지 않습니다. 두는 순간 무력화 시간과의 관계에
+            // 따라 그 길목의 적이 영영 공격하지 못하는 장판이 만들어집니다.
+            assertEquals(0.0, defaults.ability(mine.id(), "rearmTicks", 0.0), EPSILON,
+                    mine.id() + ": 라운드당 한 번이라 재장전 값이 있으면 안 됩니다");
+            // 도화선이 있어야 밟은 쪽에 빠져나갈 여지가 생깁니다. 0 이면 즉발입니다.
+            assertTrue(defaults.ability(mine.id(), "fuseTicks", -1) > 0.0,
+                    mine.id() + ": 도화선이 0 이면 밟는 순간 이미 맞은 뒤라 피할 수 없습니다");
+        }
+        assertPlantConfigRejected(defaults, PlantTowers.T1_MYCELIUM_TOWER.id(), "fuseTicks", 0.0);
+        assertPlantConfigRejected(defaults, PlantTowers.T1_MYCELIUM_TOWER.id(), "fuseTicks", 8.5);
+    }
+
+    /**
+     * 지뢰는 몬스터의 표적이 아닙니다.
+     *
+     * <p>터지고 사라지던 시절에는 상관없었지만, 라운드 내내 남게 된 지금 어그로를 끌면 지뢰가
+     * 사암 탱커보다 싼 고기방패가 됩니다. 붉은 버섯은 다이아당 체력이 죽은 덤불보다 높습니다.
+     */
+    @Test
+    void minesAreTrapsNotBodiesToChewOn() {
+        for (TowerType type : List.of(
+                PlantTowers.T1_MYCELIUM_TOWER, PlantTowers.T2_MYCELIUM_TOWER, PlantTowers.T3_MYCELIUM_TOWER)) {
+            assertFalse(create(type).drawsAggro(),
+                    type.id() + ": 지뢰가 어그로를 끌면 도배 벽이 사암보다 싸게 세워집니다");
+        }
+        assertTrue(create(PlantTowers.T1_DESERT_TOWER).drawsAggro(),
+                "탱커는 계속 어그로를 끌어야 합니다. 그게 그 계열의 역할입니다.");
+
+        var t1Mine = TowerBalanceRuntime.resolve(PlantTowers.T1_MYCELIUM_TOWER);
+        var t1Tank = TowerBalanceRuntime.resolve(PlantTowers.T1_DESERT_TOWER);
+        assertTrue(t1Mine.maxHealth() / t1Mine.mineralCost() > t1Tank.maxHealth() / t1Tank.mineralCost(),
+                "이 테스트의 전제입니다. 지뢰가 탱커보다 다이아당 체력이 낮아지면 어그로 여부를 "
+                        + "다시 판단해도 됩니다.");
+    }
+
+    /**
+     * 죽은 덤불을 도배해 레인을 막는 것을 막습니다.
+     *
+     * <p>벽의 값은 개수가 아니라 총 체력입니다. 시작 다이아 안에서 살 수 있는 T1 탱커 벽의 체력이
+     * 그대로면 비용만 만져 봐야 소용이 없습니다.
+     */
+    @Test
+    void tierOneTankCannotWallTheLaneOnTheOpeningBudget() {
+        var t1 = TowerBalanceRuntime.resolve(PlantTowers.T1_DESERT_TOWER);
+        var t2 = TowerBalanceRuntime.resolve(PlantTowers.T2_DESERT_TOWER);
+        var t3 = TowerBalanceRuntime.resolve(PlantTowers.T3_DESERT_TOWER);
+
+        // 오프닝 예산은 그대로 둡니다. 여기를 올리면 사암 계열로는 시작조차 못 합니다.
+        assertEquals(50L, t1.mineralCost());
+        // 다이아당 체력이 상위 티어보다 높으면, 올리는 것보다 도배하는 쪽이 언제나 이깁니다.
+        double t1PerMineral = t1.maxHealth() / t1.mineralCost();
+        assertTrue(t1PerMineral <= t2.maxHealth() / t2.mineralCost(),
+                "T1 다이아당 체력 " + t1PerMineral + " 이 T2 보다 높으면 도배가 정답이 됩니다");
+        assertTrue(t1PerMineral <= t3.maxHealth() / t3.mineralCost(),
+                "T1 다이아당 체력 " + t1PerMineral + " 이 T3 보다 높으면 도배가 정답이 됩니다");
+    }
+
+    @Test
+    void midAndLateTiersPayBackTheirTerrainInvestment() {
+        assertEquals(20.0, TowerBalanceRuntime.resolve(PlantTowers.T3_MEADOW_TOWER).damage(), EPSILON);
+        assertEquals(34.0, TowerBalanceRuntime.resolve(PlantTowers.T3_MEADOW_NOVA_TOWER).damage(), EPSILON);
+        assertEquals(460.0, TowerBalanceRuntime.resolve(PlantTowers.T3_MYCELIUM_TOWER).maxHealth(), EPSILON);
+        assertEquals(750.0, TowerBalanceRuntime.resolve(PlantTowers.T3_DESERT_TOWER).maxHealth(), EPSILON);
+        assertEquals(34.0, TowerBalanceRuntime.resolve(PlantTowers.T3_PODZOL_LILAC_TOWER).damage(), EPSILON);
+        assertEquals(48.0, TowerBalanceRuntime.resolve(PlantTowers.T3_PODZOL_PITCHER_TOWER).damage(), EPSILON);
     }
 
     @Test
@@ -420,6 +578,8 @@ final class PlantTowerCatalogTest {
         assertPlantConfigRejected(defaults, PlantTowers.GLOBAL_CONFIG_ID, "bloomDamageCap", 1.01);
         assertPlantConfigRejected(defaults, PlantTowers.T1_MEADOW_TOWER.id(), "diamondPerWave", 3.5);
         assertPlantConfigRejected(defaults, PlantTowers.T1_MYCELIUM_TOWER.id(), "explosionDisableTicks", 20.5);
+        assertPlantConfigRejected(defaults, PlantSoil.PODZOL.configId(), "growthShareRatio", 1.01);
+        assertPlantConfigRejected(defaults, PlantSoil.PODZOL.configId(), "supportDurationTicks", 20.5);
 
         Map<String, Map<String, Double>> abilities = mutableAbilities(defaults);
         abilities.get(PlantTowers.GLOBAL_CONFIG_ID).put("soilAuraMinRadius", 7.0);
@@ -436,7 +596,8 @@ final class PlantTowerCatalogTest {
         );
         TowerBalanceConfig merged = partial.withMissingDefaults(defaults);
         assertEquals(5.0, merged.ability(PlantTowers.T1_MEADOW_TOWER.id(), "diamondPerWave", -1), EPSILON);
-        assertEquals(9.0, merged.ability(PlantTowers.T2_MEADOW_TOWER.id(), "diamondPerWave", -1), EPSILON);
+        assertEquals(11.0, merged.ability(PlantTowers.T2_MEADOW_TOWER.id(), "diamondPerWave", -1), EPSILON);
+        assertEquals(0.2, merged.ability(PlantSoil.PODZOL.configId(), "growthShareRatio", -1), EPSILON);
     }
 
     private static Stream<TowerType> allPlantTowers() {

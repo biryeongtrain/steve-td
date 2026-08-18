@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.mixin;
 
 import kim.biryeong.semiontd.cosmetic.CosmeticItemSupport;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordKitItems;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -31,7 +32,7 @@ abstract class PlayerMixin {
             boolean includeThrowerName,
             CallbackInfoReturnable<ItemEntity> cir
     ) {
-        if (CosmeticItemSupport.isLockedOffhandCosmetic(stack)) {
+        if (CosmeticItemSupport.isLockedOffhandCosmetic(stack) || DemonLordKitItems.isKitItem(stack)) {
             cir.setReturnValue(null);
         }
     }

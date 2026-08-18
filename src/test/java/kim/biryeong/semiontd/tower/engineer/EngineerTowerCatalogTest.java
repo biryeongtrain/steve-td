@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
+import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerEconomy;
@@ -31,6 +32,7 @@ import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.tower.TowerCapacity;
 import kim.biryeong.semiontd.tower.TowerType;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
@@ -93,9 +95,13 @@ final class EngineerTowerCatalogTest {
         assertEquals(0, create(EngineerTowers.COPPER_GOLEM).slotWeight());
         assertEquals(0, create(EngineerTowers.REDSTONE_DUST).slotWeight());
         assertEquals(0, create(EngineerTowers.repeater(Direction.WEST)).slotWeight());
+        assertEquals(0, TowerCapacity.slotCost(EngineerTowers.REDSTONE_DUST));
         assertEquals(1, create(EngineerTowers.plate(EngineerTowers.PlateKind.WOOD)).slotWeight());
         assertEquals(1, create(EngineerTowers.trap(EngineerTowers.TrapKind.DOOR, 1)).slotWeight());
         assertFalse(create(EngineerTowers.trap(EngineerTowers.TrapKind.DOOR, 1)).participatesInFinalDefense());
+        assertTrue(create(EngineerTowers.REDSTONE_DUST).canBeSold());
+        assertTrue(create(EngineerTowers.repeater(Direction.WEST)).canBeSold());
+        assertTrue(create(EngineerTowers.plate(EngineerTowers.PlateKind.WOOD)).canBeSold());
     }
 
     @Test
@@ -118,16 +124,27 @@ final class EngineerTowerCatalogTest {
         assertEquals(4, defaults.abilityInt(EngineerBalance.GLOBAL_ID, "maxPlates", -1));
         assertEquals(3, defaults.abilityInt(EngineerBalance.GLOBAL_ID, "maxPistons", -1));
         assertEquals(0.10, defaults.ability(
+                EngineerBalance.GLOBAL_ID, "plateDamageBonusPerTier", -1), 0.0001);
+        assertEquals(0.10, defaults.ability(
                 EngineerBalance.GLOBAL_ID, "dispenserDamagePerPlateBlock", -1), 0.0001);
         assertEquals(10, defaults.abilityInt(EngineerBalance.GLOBAL_ID, "dispenserMaxPlateDistance", -1));
+        assertEquals(0, defaults.abilityInt(EngineerTowers.REDSTONE_DUST.id(), TowerCapacity.CONFIG_KEY, -1));
         assertEquals(20, defaults.abilityTicks(EngineerBalance.GLOBAL_ID, "activeVfxIntervalTicks", -1));
         assertEquals(10, defaults.abilityTicks(EngineerBalance.GLOBAL_ID, "tntFuseVfxIntervalTicks", -1));
         assertEquals(1.1, EngineerBalance.dispenserDamageMultiplier(1), 0.0001);
         assertEquals(1.5, EngineerBalance.dispenserDamageMultiplier(5), 0.0001);
         assertEquals(2.0, EngineerBalance.dispenserDamageMultiplier(10), 0.0001);
         assertEquals(2.0, EngineerBalance.dispenserDamageMultiplier(35), 0.0001);
+        assertEquals(1.0, EngineerBalance.plateDamageMultiplier(EngineerTowers.PlateKind.WOOD), 0.0001);
+        assertEquals(1.1, EngineerBalance.plateDamageMultiplier(EngineerTowers.PlateKind.STONE), 0.0001);
+        assertEquals(1.2, EngineerBalance.plateDamageMultiplier(EngineerTowers.PlateKind.IRON), 0.0001);
+        assertEquals(1.3, EngineerBalance.plateDamageMultiplier(EngineerTowers.PlateKind.GOLD), 0.0001);
         assertEquals(480.0, defaults.ability(
                 EngineerTowers.trap(EngineerTowers.TrapKind.TNT, 3).id(), "damage", -1), 0.0001);
+        assertEquals(16, defaults.abilityInt(
+                EngineerTowers.trap(EngineerTowers.TrapKind.TNT, 3).id(), "maxTargets", -1));
+        assertEquals(45.0, defaults.ability(
+                EngineerTowers.trap(EngineerTowers.TrapKind.DISPENSER, 3).id(), "damage", -1), 0.0001);
         assertEquals(850.0, defaults.towers()
                 .get(EngineerTowers.trap(EngineerTowers.TrapKind.DOOR, 3).id()).maxHealth(), 0.0001);
         assertDoesNotThrow(defaults::validateForRuntime);
@@ -145,7 +162,18 @@ final class EngineerTowerCatalogTest {
         assertEquals(120, merged.abilityTicks(EngineerBalance.GLOBAL_ID, "doorActiveTicks", -1));
         assertEquals(100, merged.abilityTicks(EngineerBalance.GLOBAL_ID, "plateCooldownTicks", -1));
         assertEquals(10, merged.abilityInt(EngineerBalance.GLOBAL_ID, "dispenserMaxPlateDistance", -1));
+        assertEquals(0.10, merged.ability(
+                EngineerBalance.GLOBAL_ID, "plateDamageBonusPerTier", -1), 0.0001);
         assertEquals(20, merged.abilityTicks(EngineerBalance.GLOBAL_ID, "activeVfxIntervalTicks", -1));
+
+        for (EngineerTowers.TrapKind kind : List.of(
+                EngineerTowers.TrapKind.TNT,
+                EngineerTowers.TrapKind.DISPENSER
+        )) {
+            TowerType resolved = TowerBalanceRuntime.resolve(EngineerTowers.trap(kind, 3));
+            assertTrue(resolved.description().stream().noneMatch(line -> line.contains("{ability.")));
+            assertTrue(resolved.description().stream().anyMatch(line -> line.contains("10%")));
+        }
 
     }
 
@@ -168,26 +196,33 @@ final class EngineerTowerCatalogTest {
     void tunedDamageRegressionMatchesTheEngineerCeilings() {
         double t3Shot = EngineerTrapTower.dispenserDamage(3);
         double shotsPerSecond = 20.0 / EngineerTrapTower.dispenserInterval(3);
-        assertEquals(60.0, t3Shot * shotsPerSecond, 0.0001);
-        assertEquals(90.0, t3Shot * shotsPerSecond * EngineerBalance.dispenserDamageMultiplier(5), 0.0001);
-        assertEquals(120.0, t3Shot * shotsPerSecond * EngineerBalance.dispenserDamageMultiplier(10), 0.0001);
-        assertEquals(120.0, t3Shot * shotsPerSecond * EngineerBalance.dispenserDamageMultiplier(35), 0.0001);
+        assertEquals(90.0, t3Shot * shotsPerSecond, 0.0001);
+        assertEquals(135.0, t3Shot * shotsPerSecond * EngineerBalance.dispenserDamageMultiplier(5), 0.0001);
+        assertEquals(180.0, t3Shot * shotsPerSecond * EngineerBalance.dispenserDamageMultiplier(10), 0.0001);
+        assertEquals(180.0, t3Shot * shotsPerSecond * EngineerBalance.dispenserDamageMultiplier(35), 0.0001);
+        assertEquals(234.0, t3Shot * shotsPerSecond
+                * EngineerBalance.dispenserDamageMultiplier(10)
+                * EngineerBalance.plateDamageMultiplier(EngineerTowers.PlateKind.GOLD), 0.0001);
 
         double tnt = EngineerTrapTower.tntDamage(3);
         assertEquals(480.0, tnt, 0.0001);
         assertEquals(1_440.0, tnt * 3, 0.0001);
         assertEquals(2_400.0, tnt * 5, 0.0001);
-        assertEquals(4_320.0, tnt * EngineerTrapTower.tntMaxTargets(3), 0.0001);
+        assertEquals(7_680.0, tnt * EngineerTrapTower.tntMaxTargets(3), 0.0001);
+        assertEquals(9_984.0, tnt * EngineerTrapTower.tntMaxTargets(3)
+                * EngineerBalance.plateDamageMultiplier(EngineerTowers.PlateKind.GOLD), 0.0001);
     }
 
     @Test
     void invalidEngineerCapsTicksAndTierOrderAreRejected() {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        assertInvalidAbility(defaults, EngineerBalance.GLOBAL_ID, "plateDamageBonusPerTier", 1.1);
         assertInvalidAbility(defaults, EngineerBalance.GLOBAL_ID, "dispenserDamagePerPlateBlock", 1.1);
         assertInvalidAbility(defaults, EngineerBalance.GLOBAL_ID, "dispenserMaxPlateDistance", 36.0);
         assertInvalidAbility(defaults, EngineerBalance.GLOBAL_ID, "doorActiveTicks", 0.0);
         assertInvalidAbility(defaults, EngineerBalance.GLOBAL_ID, "doorActiveTicks", 2.5);
         assertInvalidAbility(defaults, EngineerBalance.GLOBAL_ID, "activeVfxIntervalTicks", 2.5);
+        assertInvalidAbility(defaults, EngineerTowers.REDSTONE_DUST.id(), TowerCapacity.CONFIG_KEY, 0.5);
         assertInvalidAbility(defaults,
                 EngineerTowers.trap(EngineerTowers.TrapKind.DISPENSER, 2).id(), "intervalTicks", 20.0);
         assertInvalidAbility(defaults,
@@ -256,6 +291,25 @@ final class EngineerTowerCatalogTest {
         assertFalse(job.canUseTower(context, EngineerTowers.trap(EngineerTowers.TrapKind.PISTON, 1)));
         assertTrue(job.canUseTower(context, EngineerTowers.trap(EngineerTowers.TrapKind.PISTON, 2)),
                 "The three-piston limit must not block upgrading an existing piston.");
+    }
+
+    @Test
+    void redstoneDustCanBePlacedAtTheTowerLimitWithoutUsingCapacity() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        EconomyConfig economy = EconomyConfig.defaultConfig();
+        SemionGame game = new SemionGame(economy, WaveConfig.defaultConfig(), new GameArena(Map.of()));
+        SemionPlayer player = new SemionPlayer(OWNER, "engineer", TeamId.RED, 1, new PlayerEconomy(economy));
+        game.players().put(OWNER, player);
+        game.teams().get(TeamId.RED).activate();
+        PlayerLane lane = testLane();
+        game.teams().get(TeamId.RED).laneGroup().addLane(lane);
+        for (int index = 0; index < game.towerLimitForPlayer(OWNER); index++) {
+            lane.addTower(new TestTower(EngineerTowers.trap(EngineerTowers.TrapKind.DOOR, 1), index));
+        }
+
+        assertEquals(game.towerLimitForPlayer(OWNER), game.towerCapacityUsed(OWNER));
+        assertTrue(game.canFitTower(OWNER, EngineerTowers.REDSTONE_DUST));
+        assertFalse(game.canFitTower(OWNER, EngineerTowers.plate(EngineerTowers.PlateKind.WOOD)));
     }
 
     @Test

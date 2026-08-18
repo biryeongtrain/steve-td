@@ -25,6 +25,7 @@ import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
 import net.minecraft.server.level.ClientInformation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.HumanoidArm;
@@ -36,6 +37,7 @@ import net.minecraft.world.level.GameType;
 
 public final class HeroPlayerVisuals {
     private static final double TRACKING_DISTANCE_SQR = 128.0 * 128.0;
+    private static final float COMBAT_PITCH_CORRECTION = 37.5F;
     private static final Map<HeroPartyTower, Visual> VISUALS = new IdentityHashMap<>();
 
     private HeroPlayerVisuals() {
@@ -327,7 +329,7 @@ public final class HeroPlayerVisuals {
             double y = anchor.getY();
             double z = anchor.getZ();
             float yaw = anchor.getYHeadRot();
-            float pitch = anchor.getXRot();
+            float pitch = correctedPitch(anchor.getXRot(), anchor.currentAttackTarget() != null);
             if (forceMove || ticks % 2 == 0 && (x != lastX || y != lastY || z != lastZ
                     || yaw != lastYaw || pitch != lastPitch)) {
                 fakePlayer.snapTo(x, y, z, yaw, pitch);
@@ -406,5 +408,9 @@ public final class HeroPlayerVisuals {
             });
             trackingViewers.clear();
         }
+    }
+
+    static float correctedPitch(float pitch, boolean hasTarget) {
+        return hasTarget ? Mth.clamp(pitch + COMBAT_PITCH_CORRECTION, -90.0F, 90.0F) : pitch;
     }
 }

@@ -12,7 +12,7 @@ public final class TowerCapacity {
         if (type == null) {
             return 1;
         }
-        return Math.max(1, TowerBalanceRuntime.abilityInt(type.id(), CONFIG_KEY, 1));
+        return Math.max(0, TowerBalanceRuntime.abilityInt(type.id(), CONFIG_KEY, 1));
     }
 
     public static int slotCost(Tower tower) {

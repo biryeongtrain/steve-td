@@ -24,6 +24,7 @@ import kim.biryeong.semiontd.buildguide.BuildGuideService;
 import kim.biryeong.semiontd.config.CombatSpeedConfig;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.IncomeLaneRoutingConfig;
+import kim.biryeong.semiontd.config.JobAvailabilityConfig;
 import kim.biryeong.semiontd.config.LeaderTargetingConfig;
 import kim.biryeong.semiontd.config.MapConfig;
 import kim.biryeong.semiontd.config.MonsterScalingConfig;
@@ -38,6 +39,7 @@ import kim.biryeong.semiontd.config.TraitBalanceRuntime;
 import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.config.WebIntegrationConfig;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
+import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.map.ArenaLoadException;
 import kim.biryeong.semiontd.map.GameArena;
 import kim.biryeong.semiontd.map.GameArenaLoader;
@@ -128,6 +130,7 @@ public final class SemionGameManager {
     private ProgressionConfig progressionConfig = ProgressionConfig.defaultConfig();
     private RatingConfig ratingConfig = RatingConfig.defaultConfig();
     private SemionPersistenceConfig persistenceConfig = SemionPersistenceConfig.defaultConfig();
+    private JobAvailabilityConfig jobAvailabilityConfig = JobAvailabilityConfig.defaultConfig();
     private TowerBalanceConfig towerBalanceConfig = TowerBalanceConfig.defaultConfig();
     private SummonConfig summonConfig = SummonConfig.defaultConfig();
     private LeaderTargetingConfig leaderTargetingConfig = LeaderTargetingConfig.defaultConfig();
@@ -237,6 +240,29 @@ public final class SemionGameManager {
                 ? CombatSpeedConfig.defaultConfig()
                 : combatSpeedConfig;
         resetCombatSpeedState();
+    }
+
+    public void configureJobAvailability(JobAvailabilityConfig config) {
+        this.jobAvailabilityConfig = config == null ? JobAvailabilityConfig.defaultConfig() : config;
+        JobRegistry.configureAvailability(this.jobAvailabilityConfig);
+    }
+
+    public boolean setJobEnabled(ResourceLocation jobId, boolean enabled) {
+        if (configDir == null
+                || jobId == null
+                || JobRegistry.find(jobId).isEmpty()
+                || (!enabled && JobRegistry.defaultJob().id().equals(jobId))) {
+            return false;
+        }
+        JobAvailabilityConfig updated = jobAvailabilityConfig.withEnabled(jobId, enabled);
+        if (updated.equals(jobAvailabilityConfig)) {
+            return true;
+        }
+        if (!SemionConfigLoader.saveJobAvailability(configDir, updated, SemionTd.LOGGER)) {
+            return false;
+        }
+        configureJobAvailability(updated);
+        return true;
     }
 
     public void configure(
@@ -588,8 +614,10 @@ public final class SemionGameManager {
         LoadedConfigs configs = SemionConfigLoader.load(
                 configDir,
                 SemionTd.LOGGER,
-                TowerBalanceRuntime.current()
+                TowerBalanceRuntime.current(),
+                jobAvailabilityConfig
         );
+        configureJobAvailability(configs.jobAvailability());
         TraitBalanceRuntime.apply(configs.traitBalance());
         TowerVfxService.configure(configs.vfx());
         configureTips(configs.tips());
@@ -1867,6 +1895,7 @@ public final class SemionGameManager {
     private void applyFallbackSandboxJob(SemionGame sandbox, UUID playerId) {
         kim.biryeong.semiontd.job.JobRegistry.all().stream()
                 .filter(job -> !job.id().equals(kim.biryeong.semiontd.job.JobRegistry.defaultJob().id()))
+                .filter(kim.biryeong.semiontd.job.JobRegistry::isEnabled)
                 .findFirst()
                 .ifPresent(job -> sandbox.selectJob(playerId, job.id()));
     }
