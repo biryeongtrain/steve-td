@@ -383,6 +383,41 @@ final class DemonLordTowerCatalogTest {
         assertEquals(state.maxHealth(), state.health(), EPSILON);
     }
 
+    /**
+     * 튕겼다 돌아와도 찍어 둔 스탯과 남은 포인트가 남아 있어야 합니다.
+     *
+     * <p>예전에는 레벨과 경험치만 챙겨서, 상태가 한 번 버려지면 스탯 배분이 통째로 사라졌습니다.
+     * 레벨업으로 받은 포인트는 경험치를 다시 넣어 주는 경로가 없어 영영 돌아오지 않습니다.
+     */
+    @Test
+    void statAllocationSurvivesStateTeardownJustLikeTheLevel() {
+        UUID playerId = UUID.randomUUID();
+        try {
+            DemonLordState state = DemonLordStates.getOrCreate(playerId);
+            state.enterCombat();
+            state.addExperience(500.0);
+            int granted = state.unspentPoints();
+            assertTrue(granted >= 2, "레벨업으로 포인트를 받아야 이 테스트가 의미가 있습니다");
+            assertTrue(state.allocate(DemonLordStat.ATTACK));
+            assertTrue(state.allocate(DemonLordStat.DEFENSE));
+            int level = state.level();
+            double damage = state.damageMultiplier();
+
+            // 튕김: 상태를 버렸다가 다시 만듭니다.
+            DemonLordStates.clear(playerId);
+            DemonLordState restored = DemonLordStates.getOrCreate(playerId);
+
+            assertEquals(level, restored.level());
+            assertEquals(1, restored.points(DemonLordStat.ATTACK), "찍어 둔 공격력이 남아야 합니다");
+            assertEquals(1, restored.points(DemonLordStat.DEFENSE), "찍어 둔 방어력이 남아야 합니다");
+            assertEquals(granted - 2, restored.unspentPoints(), "안 쓴 포인트도 남아야 합니다");
+            assertEquals(damage, restored.damageMultiplier(), EPSILON);
+        } finally {
+            DemonLordStates.clear(playerId);
+            DemonLordStates.resetProgression(playerId);
+        }
+    }
+
     @Test
     void balanceConfigCarriesEverySkillNumber() {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
@@ -643,28 +678,38 @@ final class DemonLordTowerCatalogTest {
     /** 포인트를 아무리 쌓아도 쿨타임 0 과 피해 감소 100% 에는 닿으면 안 됩니다. */
     @Test
     void cooldownAndDefenceApproachTheirFloorWithoutCrossingIt() {
-        DemonLordState state = new DemonLordState(UUID.randomUUID());
-        state.enterCombat();
-        state.addExperience(1.0E9);
+        int halving = (int) TowerBalanceRuntime.ability(
+                DemonLordTowers.GLOBAL_CONFIG_ID, "statCooldownHalvingPoints", 60.0);
 
-        assertEquals(1.0, state.cooldownMultiplier(), EPSILON, "찍기 전에는 100% 그대로여야 합니다");
-        // 기본값은 40 포인트마다 절반입니다. 다른 스탯보다 비싼 것은 의도된 것으로,
+        DemonLordState cooldown = new DemonLordState(UUID.randomUUID());
+        cooldown.enterCombat();
+        cooldown.addExperience(1.0E9);
+        assertEquals(1.0, cooldown.cooldownMultiplier(), EPSILON, "찍기 전에는 100% 그대로여야 합니다");
+
+        // 쿨감은 이 포인트마다 절반이 되는 곱연산입니다. 다른 스탯보다 비싼 것은 의도된 것으로,
         // 쿨감은 모든 스킬에 한꺼번에 곱해져 같은 효율이면 다른 선택지가 없어집니다.
-        for (int i = 0; i < 40; i++) {
-            assertTrue(state.allocate(DemonLordStat.COOLDOWN));
+        assertTrue(cooldown.unspentPoints() >= halving,
+                "만렙까지 모은 포인트로 절반은 찍을 수 있어야 의미 있는 선택지입니다: "
+                        + cooldown.unspentPoints() + " / " + halving);
+        for (int i = 0; i < halving; i++) {
+            assertTrue(cooldown.allocate(DemonLordStat.COOLDOWN));
         }
-        assertEquals(0.5, state.cooldownMultiplier(), EPSILON, "40 포인트면 절반");
-        for (int i = 0; i < 40; i++) {
-            assertTrue(state.allocate(DemonLordStat.COOLDOWN));
-        }
-        assertEquals(0.25, state.cooldownMultiplier(), EPSILON, "80 포인트면 4분의 1");
+        assertEquals(0.5, cooldown.cooldownMultiplier(), EPSILON, halving + " 포인트면 절반");
 
-        for (int i = 0; i < 200 && state.unspentPoints() > 0; i++) {
-            state.allocate(DemonLordStat.COOLDOWN);
-            state.allocate(DemonLordStat.DEFENSE);
+        // 남은 포인트를 전부 쿨감에 부어도 0 에 닿지 않습니다. 닿으면 스킬을 무한히 씁니다.
+        while (cooldown.unspentPoints() > 0) {
+            assertTrue(cooldown.allocate(DemonLordStat.COOLDOWN));
         }
-        assertTrue(state.cooldownMultiplier() > 0.0, "쿨타임이 0 이 되면 스킬을 무한히 씁니다");
-        assertTrue(state.damageReduction() < 1.0, "피해 감소가 100% 가 되면 죽지 않습니다");
+        assertTrue(cooldown.cooldownMultiplier() > 0.0, "쿨타임이 0 이 되면 스킬을 무한히 씁니다");
+        assertTrue(cooldown.cooldownMultiplier() < 0.5, "더 부었으면 더 줄어야 합니다");
+
+        DemonLordState defence = new DemonLordState(UUID.randomUUID());
+        defence.enterCombat();
+        defence.addExperience(1.0E9);
+        while (defence.unspentPoints() > 0) {
+            assertTrue(defence.allocate(DemonLordStat.DEFENSE));
+        }
+        assertTrue(defence.damageReduction() < 1.0, "피해 감소가 100% 가 되면 죽지 않습니다");
     }
 
     /** 몹을 못 잡아도 라운드를 넘기면 조금은 자라야 합니다. */

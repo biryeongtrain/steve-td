@@ -90,11 +90,13 @@ final class PlayerMatchStatsAttributionTest {
     }
 
     /**
-     * 남의 레인을 청소해 주는 것은 도움이지만, 그 레인의 수입까지 가져가면 강탈입니다. 잡은
-     * 사람은 수고비만 가지고 나머지는 주인에게 갑니다.
+     * 남의 레인을 청소해 주는 것은 도움이지 파밍이 아닙니다. 다이아는 전액 레인 주인에게 갑니다.
+     *
+     * <p>잡은 쪽이 빈손인 것은 아닙니다. 경험치는 그대로 들어가므로(마왕의 유일한 성장 수단)
+     * 도우러 갈 이유는 남고, 남의 레인을 파밍터로 쓸 이유만 사라집니다.
      */
     @Test
-    void sameTeamCrossLaneWaveKillBeforeFinalDefensePaysMostOfItToTheLaneOwner() {
+    void sameTeamCrossLaneWaveKillBeforeFinalDefensePaysAllOfItToTheLaneOwner() {
         UUID killerId = UUID.nameUUIDFromBytes("cross-lane-early-killer".getBytes());
         UUID ownerId = UUID.nameUUIDFromBytes("cross-lane-early-owner".getBytes());
         SemionPlayer killer = player(killerId, TeamId.BLUE, 1);
@@ -108,12 +110,12 @@ final class PlayerMatchStatsAttributionTest {
                 .awardMonsterKillReward(monster, Map.of(killerId, killer, ownerId, owner));
 
         long starting = EconomyConfig.defaultConfig().startingDiamond();
-        assertEquals(starting + 3, killer.economy().diamond(), "잡은 사람은 30% 만 가집니다");
-        assertEquals(starting + 7, owner.economy().diamond(), "나머지 70% 는 레인 주인에게 갑니다");
+        assertEquals(starting, killer.economy().diamond(), "남의 레인 처치로는 다이아를 받지 않습니다");
+        assertEquals(starting + 10, owner.economy().diamond(), "전액이 레인 주인에게 갑니다");
 
         PlayerMatchStatsSnapshot killerStats = killer.matchStats().snapshot(killer.economy().income());
         assertEquals(0, killerStats.ownLaneDiamondGain());
-        assertEquals(3, killerStats.assistClearDiamondGain(), "전과에도 실제로 받은 몫만 남습니다");
+        assertEquals(0, killerStats.assistClearDiamondGain(), "전과에도 실제로 받은 몫만 남습니다");
 
         PlayerMatchStatsSnapshot ownerStats = owner.matchStats().snapshot(owner.economy().income());
         assertEquals(0, ownerStats.ownLaneDiamondGain(),

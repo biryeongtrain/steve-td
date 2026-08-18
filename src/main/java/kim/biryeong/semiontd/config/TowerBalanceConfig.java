@@ -3887,13 +3887,13 @@ public record TowerBalanceConfig(
         global.put("statAttackPerPoint", 0.04);
         global.put("statDefensePerPoint", 0.02);
         global.put("statDefenseCap", 0.6);
-        // 쿨감은 이 포인트마다 절반이 되는 곱연산입니다. 40 이면 50%, 80 이면 25% 가 되고
+        // 쿨감은 이 포인트마다 절반이 되는 곱연산입니다. 60 이면 50%, 120 이면 25% 가 되고
         // 0 에는 닿지 않습니다. 선형이면 어느 지점에서 쿨타임이 사라져 버립니다.
         //
         // 다른 스탯보다 포인트를 많이 요구합니다. 쿨감은 모든 스킬에 한꺼번에 곱해지는 데다
         // 딜뿐 아니라 생존기와 이동기 회전율까지 같이 올려서, 같은 효율로 두면 다른 선택지가
         // 존재할 이유가 없어집니다.
-        global.put("statCooldownHalvingPoints", 40.0);
+        global.put("statCooldownHalvingPoints", 60.0);
         global.put("statSkillRangePerPoint", 0.03);
         global.put("statMoveSpeedPerPoint", 0.03);
         global.put("statMoveSpeedCap", 0.5);

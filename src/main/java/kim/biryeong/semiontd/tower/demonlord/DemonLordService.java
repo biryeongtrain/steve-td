@@ -473,7 +473,8 @@ public final class DemonLordService {
         if (state.inCombat()) {
             bar.setName(Component.literal(
                             "마왕 Lv." + state.level() + "  " + Math.round(state.health()) + " / " + Math.round(state.maxHealth())
-                                    + (state.shield() > 0.0 ? "  (+" + Math.round(state.shield()) + ")" : ""))
+                                    + (state.shield() > 0.0 ? "  (+" + Math.round(state.shield()) + ")" : "")
+                                    + experienceSuffix(state))
                     .withStyle(ChatFormatting.RED));
             bar.setColor(BossEvent.BossBarColor.RED);
             bar.setProgress((float) state.healthRatio());
@@ -486,6 +487,20 @@ public final class DemonLordService {
             bar.setColor(BossEvent.BossBarColor.WHITE);
             bar.setProgress(knockedOut ? 0.0f : (float) state.healthRatio());
         }
+    }
+
+    /**
+     * 다음 레벨까지 남은 경험치. 만렙이면 그 사실을 대신 보여 줍니다.
+     *
+     * <p>레벨이 이 빌더의 성장 전부인데 얼마나 남았는지 볼 곳이 없었습니다. 보스바는 전투 중
+     * 항상 떠 있는 유일한 표시라 여기에 붙입니다.
+     */
+    private static String experienceSuffix(DemonLordState state) {
+        if (state.level() >= state.maxLevel()) {
+            return "  [만렙]";
+        }
+        double remaining = Math.max(0.0, state.experienceForNextLevel() - state.experience());
+        return "  EXP " + (long) Math.ceil(remaining) + " 남음";
     }
 
     /**

@@ -230,8 +230,10 @@ public record EconomyConfig(
 
     /**
      * @param crossLaneOwnerShare 남의 레인에서 잡은 몫 중 레인 주인에게 돌아가는 비율입니다. 잡은
-     *     사람은 나머지를 가집니다. 최종 방어 구간은 원래 모두가 같이 막는 자리라 여기서 빼고
-     *     기존 {@code crossLaneFinalDefenseWaveMultiplier} 가 계속 담당합니다.
+     *     사람은 나머지를 가집니다. 기본은 전액으로, 남의 레인 청소는 도와주는 행위이지 파밍이
+     *     아니라는 뜻입니다 - 경험치는 그대로 들어가므로 도울 이유는 남습니다. 최종 방어 구간은
+     *     원래 모두가 같이 막는 자리라 여기서 빼고 기존
+     *     {@code crossLaneFinalDefenseWaveMultiplier} 가 계속 담당합니다.
      */
     public record KillRewardConfig(
             boolean crossLaneWaveReductionEnabled,
@@ -247,7 +249,7 @@ public record EconomyConfig(
                 boolean applyToIncomeUnits
         ) {
             this(crossLaneWaveReductionEnabled, crossLaneFinalDefenseWaveMultiplier,
-                    finalDefenseProgressThreshold, applyToIncomeUnits, 0.70);
+                    finalDefenseProgressThreshold, applyToIncomeUnits, 1.00);
         }
 
         public KillRewardConfig {
@@ -259,7 +261,7 @@ public record EconomyConfig(
         }
 
         public static KillRewardConfig defaultConfig() {
-            return new KillRewardConfig(true, 0.40, 0.90, false, 0.70);
+            return new KillRewardConfig(true, 0.40, 0.90, false, 1.00);
         }
     }
 
