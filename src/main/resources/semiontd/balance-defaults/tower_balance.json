@@ -2676,7 +2676,7 @@
       "mineralCost": 50,
       "maxHealth": 100.0,
       "range": 0.0,
-      "damage": 8.0,
+      "damage": 2.0,
       "attackIntervalTicks": 22,
       "aggroPriority": 58
     },
@@ -2684,7 +2684,7 @@
       "mineralCost": 190,
       "maxHealth": 420.0,
       "range": 0.0,
-      "damage": 20.0,
+      "damage": 10.0,
       "attackIntervalTicks": 22,
       "aggroPriority": 66
     },
@@ -2692,7 +2692,7 @@
       "mineralCost": 300,
       "maxHealth": 750.0,
       "range": 0.0,
-      "damage": 32.0,
+      "damage": 20.0,
       "attackIntervalTicks": 20,
       "aggroPriority": 74
     },
@@ -5346,12 +5346,12 @@
       "dispenserMaxPlateDistance": 10.0,
       "dispenserDamageBonusPerGolemPress": 0.01,
       "dispenserDamageBonusCap": 2.0,
-      "doorDamageReductionPerGolemPress": 5.0E-4,
+      "doorDamageReductionPerGolemPress": 0.0005,
       "doorDamageReductionCap": 0.4,
       "golemPressesPerExtraTarget": 10.0,
       "tntExtraTargetCap": 20.0,
       "pistonExtraTargetCap": 10.0,
-      "slimeSlowPerGolemPress": 5.0E-4,
+      "slimeSlowPerGolemPress": 0.0005,
       "slimeSlowCap": 0.8,
       "activeVfxIntervalTicks": 20.0,
       "tntFuseVfxIntervalTicks": 10.0,
@@ -6008,7 +6008,8 @@
       "soilAuraMinRadius": 3.0,
       "environmentTickIntervalTicks": 20.0,
       "bloomDamagePerTile": 0.015,
-      "soilPulseIntervalTicks": 20.0
+      "soilPulseIntervalTicks": 20.0,
+      "meadowHealOverlapReduction": 0.5
     },
     "plant_soil_meadow": {
       "healPercentPerPulse": 0.012,

@@ -248,7 +248,7 @@ public final class PlantTowers {
 
     // 사암 - 반사 탱커. 스스로 공격하지 않고 맞은 만큼 되돌려줍니다.
     public static final TowerType T1_DESERT_TOWER = combatTower(
-            "t1_desert_tower", "죽은 덤불", 50, 100, 0.0, 8, 22, 58,
+            "t1_desert_tower", "죽은 덤불", 50, 100, 0.0, 2, 22, 58,
             plantVisual(Blocks.DEAD_BUSH, 1.0), PlantSoil.DESERT, 1,
             List.of(
                     "<gray>사암 위에만 심는 반사 탱커입니다.</gray>",
@@ -257,7 +257,7 @@ public final class PlantTowers {
                     "<green>주변 사암 위의 적은 공격 속도가 느려집니다.</green>"
             ));
     public static final TowerType T2_DESERT_TOWER = combatTower(
-            "t2_desert_tower", "선인장", 190, 420, 0.0, 20, 22, 66,
+            "t2_desert_tower", "선인장", 190, 420, 0.0, 10, 22, 66,
             plantVisual(Blocks.CACTUS, 1.15), PlantSoil.DESERT, 2,
             List.of(
                     "<gray>사암 위에만 심는 반사 탱커입니다.</gray>",
@@ -265,7 +265,7 @@ public final class PlantTowers {
                     "<green>반사 비율과 얹히는 공격력이 늘어납니다.</green>"
             ));
     public static final TowerType T3_DESERT_TOWER = combatTower(
-            "t3_desert_tower", "꽃선인장", 300, 750, 0.0, 32, 20, 74,
+            "t3_desert_tower", "꽃선인장", 300, 750, 0.0, 20, 20, 74,
             stackedPlantVisual(Blocks.CACTUS, Blocks.CACTUS_FLOWER, 1.3), PlantSoil.DESERT, 3,
             List.of(
                     "<gray>식물 빌더의 최종 반사 탱커입니다.</gray>",
