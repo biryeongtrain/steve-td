@@ -27,19 +27,19 @@ import xyz.nucleoid.map_templates.BlockBounds;
  * <p>넉백 계열 스킬을 이어 쓰면 몹이 공허로 떨어집니다. 그러면 죽지도 사라지지도 않은 채 남아
  * 웨이브가 영영 끝나지 않습니다.
  */
-public final class MonsterVoidRescueGameTest {
+public final class MonsterVoidFallGameTest {
     @GameTest
-    public void monsterKnockedIntoTheVoidComesBackToItsPath(GameTestHelper context) {
+    public void monsterKnockedIntoTheVoidDiesInsteadOfHangingTheWave(GameTestHelper context) {
         UUID owner = stableUuid("void-rescue-owner");
         TeamLaneGroup group = new TeamLaneGroup(TeamId.RED, BossMonster.defaultBoss(TeamId.RED));
         PlayerLane lane = testLane(context, owner);
         group.addLane(lane);
         try {
-            Monster monster = spawnMonster(context, lane, "void-rescue-target", position(context, 3, 1, 3));
+            Monster monster = spawnMonster(context, lane, "void-fall-target", position(context, 3, 1, 3));
             SemionMonsterEntity entity =
                     (SemionMonsterEntity) context.getLevel().getEntity(monster.minecraftEntityId());
             require(entity != null, "The test monster must have an entity.");
-            double progressBeforeFall = monster.laneProgress();
+            require(lane.activeMonsters().contains(monster), "The monster must start in the lane.");
 
             // 공허로 밀려납니다. 넉백은 속도만 주므로 결과는 좌표가 아래로 빠지는 것입니다.
             double floor = lane.laneLayout().laneArea().min().getY();
@@ -48,17 +48,11 @@ public final class MonsterVoidRescueGameTest {
 
             lane.tick(context.getLevel().getServer());
 
-            require(monster.isAlive(), "떨어졌다고 몹이 사라지면 넉백이 가장 싼 처형 수단이 됩니다.");
-            require(entity.getY() >= floor - 4.0,
-                    "떨어진 몹은 경로 위로 돌아와야 합니다. y=" + entity.getY() + " (바닥 " + floor + ")");
-            require(entity.getDeltaMovement().lengthSqr() < 1.0E-6,
-                    "되돌린 뒤에도 낙하 속도가 남아 있으면 그대로 다시 떨어집니다.");
-            requireClose(progressBeforeFall, monster.laneProgress(),
-                    "되돌리기는 진행도를 건드리지 않아야 합니다.");
-
-            // 되돌아온 뒤에는 평소대로 진행도가 갱신됩니다.
-            lane.tick(context.getLevel().getServer());
-            require(monster.isAlive(), "되돌아온 몹은 계속 살아 있어야 합니다.");
+            require(!monster.isAlive(), "떨어진 몹은 죽어야 합니다. 안 죽으면 웨이브가 끝나지 않습니다.");
+            require(!lane.activeMonsters().contains(monster),
+                    "죽은 몹은 레인 목록에서 빠져야 웨이브가 정리됩니다.");
+            require(context.getLevel().getEntity(monster.minecraftEntityId()) == null,
+                    "엔티티도 같이 정리돼야 합니다. 남으면 다시 소환되는 경로를 탑니다.");
             context.succeed();
         } catch (RuntimeException | Error failure) {
             failure.printStackTrace();
@@ -117,12 +111,6 @@ public final class MonsterVoidRescueGameTest {
     private static void require(boolean condition, String message) {
         if (!condition) {
             throw new AssertionError(message);
-        }
-    }
-
-    private static void requireClose(double expected, double actual, String message) {
-        if (Math.abs(expected - actual) > 0.001) {
-            throw new AssertionError(message + " expected=" + expected + " actual=" + actual);
         }
     }
 }
