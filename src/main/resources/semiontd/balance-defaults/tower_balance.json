@@ -2603,7 +2603,7 @@
     "t1_meadow_tower": {
       "mineralCost": 50,
       "maxHealth": 200.0,
-      "range": 8.0,
+      "range": 11.0,
       "damage": 4.0,
       "attackIntervalTicks": 28,
       "aggroPriority": 30
@@ -2611,7 +2611,7 @@
     "t2_meadow_tower": {
       "mineralCost": 150,
       "maxHealth": 380.0,
-      "range": 10.0,
+      "range": 13.0,
       "damage": 10.0,
       "attackIntervalTicks": 28,
       "aggroPriority": 35
@@ -2619,7 +2619,7 @@
     "t3_meadow_tower": {
       "mineralCost": 240,
       "maxHealth": 700.0,
-      "range": 12.0,
+      "range": 16.0,
       "damage": 20.0,
       "attackIntervalTicks": 28,
       "aggroPriority": 40
@@ -2699,7 +2699,7 @@
     "t1_podzol_tower": {
       "mineralCost": 60,
       "maxHealth": 80.0,
-      "range": 12.0,
+      "range": 16.0,
       "damage": 9.0,
       "attackIntervalTicks": 20,
       "aggroPriority": 25
@@ -2707,7 +2707,7 @@
     "t2_podzol_tower": {
       "mineralCost": 170,
       "maxHealth": 130.0,
-      "range": 14.0,
+      "range": 18.0,
       "damage": 26.0,
       "attackIntervalTicks": 18,
       "aggroPriority": 30
@@ -2715,7 +2715,7 @@
     "t3_podzol_lilac_tower": {
       "mineralCost": 285,
       "maxHealth": 210.0,
-      "range": 14.0,
+      "range": 18.0,
       "damage": 34.0,
       "attackIntervalTicks": 18,
       "aggroPriority": 35
@@ -2723,7 +2723,7 @@
     "t3_podzol_rose_tower": {
       "mineralCost": 285,
       "maxHealth": 210.0,
-      "range": 16.0,
+      "range": 20.0,
       "damage": 46.0,
       "attackIntervalTicks": 16,
       "aggroPriority": 35

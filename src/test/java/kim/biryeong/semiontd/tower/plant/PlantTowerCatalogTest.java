@@ -129,6 +129,9 @@ final class PlantTowerCatalogTest {
         assertEquals(4.0, defaults.ability(PlantTowers.T3_PODZOL_PITCHER_TOWER.id(), "splashRadius", -1), EPSILON);
         assertEquals(0.0, defaults.ability(PlantTowers.T3_PODZOL_ROSE_TOWER.id(), "splashRadius", 0.0), EPSILON);
         // 곡사 포대는 단일 극딜형보다 사거리가 확실히 길어야 역할이 갈립니다.
+        //
+        // 지금 딱 1.5 배입니다(20 → 30). 장미 덤불 사거리를 더 올리려면 물병 식물도 같이 올려야
+        // 하고, 안 그러면 "라인 전체를 덮는 곡사 포대" 라는 역할이 사라집니다.
         assertTrue(TowerBalanceRuntime.resolve(PlantTowers.T3_PODZOL_PITCHER_TOWER).range()
                 >= TowerBalanceRuntime.resolve(PlantTowers.T3_PODZOL_ROSE_TOWER).range() * 1.5);
     }
@@ -612,6 +615,38 @@ final class PlantTowerCatalogTest {
                 "T1 다이아당 고정 반사 " + t1PerMineral + " 이 T2 보다 높습니다");
         assertTrue(t1PerMineral <= t3.damage() / t3.mineralCost(),
                 "T1 다이아당 고정 반사 " + t1PerMineral + " 이 T3 보다 높습니다");
+    }
+
+    /**
+     * 식물은 못 움직이므로 사거리가 곧 생존과 기여입니다.
+     *
+     * <p>민들레 계열은 어그로가 가장 낮아 뒤에 서는데, 사거리가 짧으면 뒤에 선 채로는 아무것도
+     * 못 합니다. 고사리 계열은 딜러인데 사거리가 짧으면 맞아 가며 쏴야 합니다. 둘 다 티어가
+     * 오를수록 길어지는 순서만은 깨지지 않아야 합니다.
+     */
+    @Test
+    void rootedLinesKeepTheirRangeOrderAcrossTiers() {
+        double dandelion = TowerBalanceRuntime.resolve(PlantTowers.T1_MEADOW_TOWER).range();
+        double daisy = TowerBalanceRuntime.resolve(PlantTowers.T2_MEADOW_TOWER).range();
+        double sunflower = TowerBalanceRuntime.resolve(PlantTowers.T3_MEADOW_TOWER).range();
+        assertTrue(dandelion < daisy && daisy < sunflower,
+                "민들레 계열 사거리 " + dandelion + " / " + daisy + " / " + sunflower);
+
+        double fern = TowerBalanceRuntime.resolve(PlantTowers.T1_PODZOL_TOWER).range();
+        double largeFern = TowerBalanceRuntime.resolve(PlantTowers.T2_PODZOL_TOWER).range();
+        assertTrue(fern < largeFern, "고사리 계열 사거리 " + fern + " -> " + largeFern);
+        for (TowerType finisher : List.of(
+                PlantTowers.T3_PODZOL_LILAC_TOWER,
+                PlantTowers.T3_PODZOL_ROSE_TOWER,
+                PlantTowers.T3_PODZOL_PITCHER_TOWER)) {
+            assertTrue(TowerBalanceRuntime.resolve(finisher).range() >= largeFern,
+                    finisher.id() + " 는 큰 고사리보다 사거리가 짧으면 안 됩니다");
+        }
+
+        // 자기 중심 광역인 튤립 계열은 붙어서 싸우는 역할이라 짧게 둡니다. 이쪽까지 같이
+        // 늘리면 근접 광역이라는 구분이 사라집니다.
+        assertTrue(TowerBalanceRuntime.resolve(PlantTowers.T3_MEADOW_NOVA_TOWER).range() < sunflower,
+                "횃불꽃이 해바라기보다 멀리 쏘면 근접 광역이라는 역할이 사라집니다");
     }
 
     @Test
