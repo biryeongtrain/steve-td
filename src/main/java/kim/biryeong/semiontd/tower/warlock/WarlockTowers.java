@@ -181,6 +181,7 @@ public final class WarlockTowers {
     private static List<String> baseWarlockDescription() {
         return List.of(
                 "<gray>치명적인 피해를 입으면 주위 " + ability(BASE_RADIUS, "blocks") + " 내 아군을 흡수하고, " + healthText("최대 체력의 " + ability(BASE_HEAL, "percent")) + "를 회복합니다.</gray>",
+                "<gray>흡수 시 " + healthText("최대 체력 증가분") + "에 " + healthText("체력 " + globalAbility(ABSORPTION_HEAL, "integer")) + "을 더해 회복합니다.</gray>",
                 "<gray>희생한 타워의 " + healthText("체력 " + ability(BASE_PERMANENT_HEALTH, "percent")) + ", " + attackDamageText("피해 " + ability(BASE_PERMANENT_DAMAGE, "percent")) + "를 영구 누적합니다.</gray>",
                 "<gray>업그레이드 시 원거리 또는 근거리 흑마법사를 선택할 수 있으며, 선택 후에는 변경할 수 없습니다.</gray>",
                 "<gray>흑마법사 핵심 타워는 단 한 기만 설치할 수 있습니다.</gray>",
@@ -191,6 +192,7 @@ public final class WarlockTowers {
     private static List<String> rangedWarlockDescription() {
         List<String> lines = new ArrayList<>(List.of(
                 "<gray>" + healthText("체력 " + ability(RANGED_THRESHOLD, "percent")) + " 이하이면 주위 " + globalAbility(SACRIFICE_RADIUS, "blocks") + " 내 아군 중 공격 우선순위가 가장 낮은 타워를 흡수합니다.</gray>",
+                "<gray>흡수 시 " + healthText("최대 체력 증가분") + "에 " + healthText("체력 " + globalAbility(ABSORPTION_HEAL, "integer")) + "을 더해 회복합니다.</gray>",
                 "<gray>흡수한 타워 " + healthText("체력") + "과 " + attackDamageText("피해") + "의 " + ability(RANGED_ROUND_STAT, "percent") + "를 이번 라운드 동안 획득합니다.</gray>",
                 "<gray>흡수한 타워마다 " + healthText("체력 +" + ability(RANGED_PERMANENT_HEALTH, "percent")) + ", " + attackDamageText("피해 +" + ability(RANGED_PERMANENT_DAMAGE, "percent")) + "를 영구 누적합니다.</gray>",
                 "<gray>생존 중인 " + attackDamageText("개구리 계열") + "마다 " + healthText("체력 +" + ability(RANGED_PET_HEALTH, "percent")) + ", " + attackDamageText("피해 +" + ability(RANGED_PET_DAMAGE, "percent")) + "를 얻으며, 최대 " + healthText("체력 +" + ability(RANGED_PET_HEALTH_CAP, "percent")) + ", " + attackDamageText("피해 +" + ability(RANGED_PET_DAMAGE_CAP, "percent")) + "까지 증가합니다.</gray>",
@@ -212,6 +214,7 @@ public final class WarlockTowers {
     private static List<String> meleeWarlockDescription() {
         List<String> lines = new ArrayList<>(List.of(
                 "<gray>" + healthText("체력 " + ability(MELEE_THRESHOLD, "percent")) + " 이하이면 주위 " + globalAbility(SACRIFICE_RADIUS, "blocks") + " 내 아군 중 공격 우선순위가 가장 높은 타워를 흡수합니다.</gray>",
+                "<gray>흡수 시 " + healthText("최대 체력 증가분") + "에 " + healthText("체력 " + globalAbility(ABSORPTION_HEAL, "integer")) + "을 더해 회복합니다.</gray>",
                 "<gray>흡수한 타워 " + healthText("체력") + "과 " + attackDamageText("피해") + "의 " + ability(MELEE_ROUND_STAT, "percent") + "를 이번 라운드 동안 획득합니다.</gray>",
                 "<gray>흡수한 타워마다 " + healthText("체력 +" + ability(MELEE_PERMANENT_HEALTH, "percent")) + ", " + attackDamageText("피해 +" + ability(MELEE_PERMANENT_DAMAGE, "percent")) + "를 영구 누적합니다.</gray>",
                 "<gray>생존 중인 " + healthText("양 계열") + "마다 " + healthText("체력 +" + ability(MELEE_PET_HEALTH, "percent")) + ", " + attackDamageText("피해 +" + ability(MELEE_PET_DAMAGE, "percent")) + "를 얻으며, 최대 " + healthText("체력 +" + ability(MELEE_PET_HEALTH_CAP, "percent")) + ", " + attackDamageText("피해 +" + ability(MELEE_PET_DAMAGE_CAP, "percent")) + "까지 증가합니다.</gray>",

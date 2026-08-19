@@ -102,6 +102,7 @@ class WarlockTowerBalanceTest {
         assertEquals(2.0, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "splashEvery", -1.0), 0.0001);
         assertEquals(8.0, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "splashCap", -1.0), 0.0001);
         assertEquals(25.0, config.ability(WarlockTower.CONFIG_ID, "sacrificeRadius", -1.0), 0.0001);
+        assertEquals(30.0, config.ability(WarlockTower.CONFIG_ID, "absorptionHeal", -1.0), 0.0001);
         assertEquals(5.0, config.ability(WarlockTower.CONFIG_ID, "minInterval", -1.0), 0.0001);
         assertEquals(6.0, config.ability(WarlockTowers.BASE_WARLOCK_TOWER.id(), "sacrificeRadius", -1.0), 0.0001);
         assertEquals(-1.0, config.ability(WarlockTower.CONFIG_ID, "attackRangeStep", -1.0), 0.0001);
@@ -136,7 +137,7 @@ class WarlockTowerBalanceTest {
         assertEquals(0.04, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "petDamage", -1.0), 0.0001);
         assertEquals(600.0, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "awakeningHeal", -1.0), 0.0001);
         assertEquals(List.of(
-                "sacrificeRadius", "minInterval", "speedCap", "awakeningKills", "awakeningThreshold"
+                "sacrificeRadius", "absorptionHeal", "minInterval", "speedCap", "awakeningKills", "awakeningThreshold"
         ), List.copyOf(config.abilities().get(WarlockTowers.CONFIG_ID).keySet()));
         assertEquals(List.of(
                 "sacrificeRadius", "fatalHeal", "permanentHealth", "permanentDamage"
@@ -328,6 +329,7 @@ class WarlockTowerBalanceTest {
         assertFalse(description.contains("긴 사거리에서 누적 흡수로 광역 전투력을 키웁니다."));
         assertFalse(description.contains("원거리 · 영구 성장"));
         assertTrue(description.contains("체력 55% 이하이면"));
+        assertTrue(description.contains("흡수 시 최대 체력 증가분에 체력 30을 더해 회복"));
         assertTrue(description.contains("공격 우선순위가 가장 낮은 타워"));
         assertTrue(description.contains("흡수한 타워 체력과 피해의 50%"));
         assertTrue(description.contains("체력 +2.5%"));
@@ -358,6 +360,7 @@ class WarlockTowerBalanceTest {
         assertFalse(meleeDescription.contains("최전선에서 한 라운드의 희생을 폭발적인 근접 전투력으로 바꿉니다."));
         assertFalse(meleeDescription.contains("근거리 · 라운드 폭발"));
         assertTrue(meleeDescription.contains("체력 55% 이하이면"));
+        assertTrue(meleeDescription.contains("흡수 시 최대 체력 증가분에 체력 30을 더해 회복"));
         assertTrue(meleeDescription.contains("공격 우선순위가 가장 높은 타워"));
         assertTrue(meleeDescription.contains("흡수한 타워 체력과 피해의 60%"));
         assertTrue(meleeDescription.contains("체력 +5%"));
@@ -383,6 +386,7 @@ class WarlockTowerBalanceTest {
 
         List<String> baseDescriptionLines = TowerBalanceRuntime.resolve(WarlockTowers.BASE_WARLOCK_TOWER).description();
         String baseDescription = String.join("\n", baseDescriptionLines).replaceAll("<[^>]+>", "");
+        assertTrue(baseDescription.contains("흡수 시 최대 체력 증가분에 체력 30을 더해 회복"));
         assertTrue(baseDescription.contains("영구 흡수 보너스는 선형으로 증가합니다."));
         assertFalse(baseDescription.contains("로그 스케일"));
     }

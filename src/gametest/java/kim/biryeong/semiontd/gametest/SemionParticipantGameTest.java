@@ -11549,6 +11549,13 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                         TowerBalanceRuntime.ability(core.type().id(), "roundStat")
                                 + TowerBalanceRuntime.ability(core.type().id(), "permanentHealth")
                 );
+        double maxHealthBeforeAbsorption = core.type().maxHealth()
+                * (1.0 + TowerBalanceRuntime.ability(core.type().id(), "petHealth"));
+        double expectedHealthAfterAbsorption = Math.min(
+                expectedMaxHealth,
+                10.0 + (expectedMaxHealth - maxHealthBeforeAbsorption)
+                        + TowerBalanceRuntime.ability(WarlockTower.CONFIG_ID, "absorptionHeal")
+        );
         double expectedDamage = (
                 core.type().damage()
                         + sacrificedDamage * (
@@ -11568,6 +11575,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         core.syncHealth(10.0);
         coreEntity.setHealth(10.0F);
         core.onDamaged(coreEntity, null, 50.0, 60.0, 10.0);
+
+        if (!assertClose(context, expectedHealthAfterAbsorption, core.health(), "Ranged warlock should heal its max-health increase plus 30 after a successful absorption.")) {
+            return;
+        }
 
         if (!assertTrue(context, lane.towers().contains(t1Ranged), "Ranged warlock should leave the higher-numbered aggro tower alive after absorbing lowest priority.")) {
             return;
@@ -11654,6 +11665,13 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                         TowerBalanceRuntime.ability(core.type().id(), "roundStat")
                                 + TowerBalanceRuntime.ability(core.type().id(), "permanentHealth")
                 );
+        double maxHealthBeforeAbsorption = core.type().maxHealth()
+                * (1.0 + TowerBalanceRuntime.ability(core.type().id(), "petHealth"));
+        double expectedHealthAfterAbsorption = Math.min(
+                expectedMaxHealth,
+                20.0 + (expectedMaxHealth - maxHealthBeforeAbsorption)
+                        + TowerBalanceRuntime.ability(WarlockTower.CONFIG_ID, "absorptionHeal")
+        );
         double expectedDamage = (
                 core.type().damage()
                         + sacrificedDamage * (
@@ -11666,6 +11684,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         core.syncHealth(20.0);
         coreEntity.setHealth(20.0F);
         core.onDamaged(coreEntity, null, 80.0, 100.0, 20.0);
+
+        if (!assertClose(context, expectedHealthAfterAbsorption, core.health(), "Melee warlock should heal its max-health increase plus 30 after a successful absorption.")) {
+            return;
+        }
 
         if (!assertTrue(context, lane.towers().contains(t1Melee), "Melee warlock should leave the lower-priority sacrifice tower alive.")) {
             return;

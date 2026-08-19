@@ -375,9 +375,9 @@ public class WarlockTower extends EntityBackedTower {
         towerEntity.setHealth((float) nextHealth);
     }
 
-    void refreshAfterSacrifice(PlayerLane lane, SemionTowerEntity towerEntity, double gainedHealth) {
+    void refreshAfterSacrifice(PlayerLane lane, SemionTowerEntity towerEntity, double healAmount) {
         onStateChanged(lane);
-        heal(towerEntity, gainedHealth);
+        heal(towerEntity, healAmount);
         onStateChanged(lane);
     }
 

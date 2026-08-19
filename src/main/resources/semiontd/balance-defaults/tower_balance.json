@@ -3965,6 +3965,7 @@
     },
     "warlock_global": {
       "sacrificeRadius": 25.0,
+      "absorptionHeal": 30.0,
       "minInterval": 5.0,
       "speedCap": 15.0,
       "awakeningKills": 1200.0,

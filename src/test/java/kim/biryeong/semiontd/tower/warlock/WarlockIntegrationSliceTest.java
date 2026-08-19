@@ -70,6 +70,7 @@ final class WarlockIntegrationSliceTest {
                 "Partial config did not backfill Warlock tower " + type.id()));
         assertEquals(42.0, merged.ability(WarlockTowers.CONFIG_ID, "awakeningKills", -1.0));
         assertTrue(merged.abilities().get(WarlockTowers.CONFIG_ID).containsKey("sacrificeRadius"));
+        assertEquals(30.0, merged.ability(WarlockTowers.CONFIG_ID, "absorptionHeal", -1.0));
         upgrades().forEach(upgrade -> assertTrue(merged.upgradeCosts().containsKey(upgrade.configKey())));
 
         ProductionTowerCatalogs.reloadBuiltIns(merged);

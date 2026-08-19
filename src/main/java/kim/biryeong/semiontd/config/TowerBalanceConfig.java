@@ -3691,6 +3691,7 @@ public record TowerBalanceConfig(
     private static Map<String, Double> warlockGlobalAbilities() {
         LinkedHashMap<String, Double> values = new LinkedHashMap<>();
         values.put("sacrificeRadius", 25.0);
+        values.put("absorptionHeal", 30.0);
         values.put("minInterval", 5.0);
         values.put("speedCap", 15.0);
         values.put("awakeningKills", 1200.0);

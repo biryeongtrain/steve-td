@@ -18,6 +18,7 @@ final class WarlockConfig {
 
     enum Ability {
         SACRIFICE_RADIUS(Scope.GLOBAL, "sacrificeRadius"),
+        ABSORPTION_HEAL(Scope.GLOBAL, "absorptionHeal"),
         MIN_INTERVAL(Scope.GLOBAL, "minInterval"),
         SPEED_CAP(Scope.GLOBAL, "speedCap"),
         AWAKENING_KILLS(Scope.GLOBAL, "awakeningKills"),

@@ -53,7 +53,8 @@ final class WarlockSacrificeController {
         double previousMaxHealth = warlock.currentMaxHealth();
         absorbStats(warlock, sacrificedHealth, sacrificedDamage, sacrificedInterval);
         double increasedMaxHealth = Math.max(0.0, warlock.currentMaxHealth() - previousMaxHealth);
-        warlock.refreshAfterSacrifice(lane, towerEntity, increasedMaxHealth);
+        double healAmount = increasedMaxHealth + Math.max(0.0, config.value(ABSORPTION_HEAL));
+        warlock.refreshAfterSacrifice(lane, towerEntity, healAmount);
         return true;
     }
 
