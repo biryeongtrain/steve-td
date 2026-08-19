@@ -44,6 +44,9 @@ import net.minecraft.world.phys.Vec3;
 
 public final class PlayerLane {
     private static final double FINAL_DEFENSE_MONSTER_PROGRESS = Monster.FINAL_DEFENSE_PROGRESS;
+    /** 레인 바닥에서 이만큼 아래로 떨어졌으면 넉백에 밀려 아레나 밖으로 나간 것입니다. */
+    private static final double MONSTER_FALL_RESCUE_DEPTH = 4.0;
+
     private static final int FORCED_FINAL_DEFENSE_COLUMNS = 5;
     private static final int FORCED_FINAL_DEFENSE_ROWS = 20;
     private static final double FORCED_FINAL_DEFENSE_COLUMN_SPACING = 0.9;
@@ -872,6 +875,9 @@ public final class PlayerLane {
             return;
         }
 
+        if (rescueFallenMonster(monster, monsterEntity)) {
+            return;
+        }
         monster.syncLaneProgress(laneLayout.progressAt(monsterEntity.position()));
         if (monster.health() < monsterEntity.getHealth()) {
             monsterEntity.setHealth((float) Math.max(0.1, monster.health()));
@@ -885,6 +891,32 @@ public final class PlayerLane {
             monsterEntity.syncAttributesFromRuntimeMonster();
             monsterEntity.setHealth((float) Math.max(0.1, monster.health()));
         }
+    }
+
+    /**
+     * 레인 바닥 아래로 떨어진 몹을 경로 위로 되돌립니다.
+     *
+     * <p>넉백 계열 스킬을 이어 쓰면 몹이 아레나 밖으로 밀려 공허로 떨어집니다. 그러면 몹은
+     * 죽지도 않고 사라지지도 않은 채 남아 웨이브가 끝나지 않습니다. 런타임 체력은 엔티티의
+     * 바닐라 체력을 따라가는데, 공허에서는 그 체력이 줄지 않거나 줄기 전에 엔티티가 사라지고,
+     * 엔티티가 사라지면 이 클래스가 다시 소환해 주기 때문에 어느 쪽이든 결말이 나지 않습니다.
+     *
+     * <p>죽이지 않고 되돌리는 쪽을 택했습니다. 밀어서 떨어뜨리는 것이 즉사기가 되면 넉백이
+     * 가장 싼 처형 수단이 됩니다. 넉백은 자리를 흔드는 기술이지 지우는 기술이 아닙니다.
+     *
+     * <p>진행도를 다시 계산하기 <b>전에</b> 부릅니다. 떨어진 좌표로 진행도를 잡으면 경로에서
+     * 가장 가까운 엉뚱한 지점으로 튈 수 있습니다.
+     */
+    private boolean rescueFallenMonster(Monster monster, SemionMonsterEntity monsterEntity) {
+        double floor = laneLayout.laneArea().min().getY();
+        if (monsterEntity.getY() >= floor - MONSTER_FALL_RESCUE_DEPTH) {
+            return false;
+        }
+        Vec3 back = laneLayout.positionAt(monster.laneProgress());
+        monsterEntity.teleportTo(back.x, back.y, back.z);
+        monsterEntity.setDeltaMovement(Vec3.ZERO);
+        monsterEntity.resetFallDistance();
+        return true;
     }
 
     private void restoreMinecraftEntity(Monster monster) {

@@ -16,6 +16,7 @@
       "kim.biryeong.semiontd.tower.warlock.WarlockIntegrationGameTest",
       "kim.biryeong.semiontd.tower.end.EndIntegrationGameTest",
       "kim.biryeong.semiontd.gametest.ArmyGameTest",
+      "kim.biryeong.semiontd.gametest.MonsterVoidRescueGameTest",
       "kim.biryeong.semiontd.tower.adversary.AdversaryIntegrationGameTest",
       "kim.biryeong.semiontd.tower.adversary.AdversaryRivalGameTest",
       "kim.biryeong.semiontd.tower.engineer.EngineerGameTest",
