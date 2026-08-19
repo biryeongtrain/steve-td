@@ -50,8 +50,10 @@ final class WarlockSacrificeController {
         }
 
         TowerVfxService.showWarlockSacrifice(towerEntity, center);
-        double gainedHealth = absorbStats(warlock, sacrificedHealth, sacrificedDamage, sacrificedInterval);
-        warlock.refreshAfterSacrifice(lane, towerEntity, gainedHealth);
+        double previousMaxHealth = warlock.currentMaxHealth();
+        absorbStats(warlock, sacrificedHealth, sacrificedDamage, sacrificedInterval);
+        double increasedMaxHealth = Math.max(0.0, warlock.currentMaxHealth() - previousMaxHealth);
+        warlock.refreshAfterSacrifice(lane, towerEntity, increasedMaxHealth);
         return true;
     }
 
@@ -103,14 +105,14 @@ final class WarlockSacrificeController {
         return 0.0;
     }
 
-    private double absorbStats(
+    private void absorbStats(
             WarlockTower warlock,
             double sacrificedHealth,
             double sacrificedDamage,
             int sacrificedIntervalTicks
     ) {
         if (warlock.is(WarlockTowers.BASE_WARLOCK_TOWER)) {
-            return state.absorbBasePermanently(
+            state.absorbBasePermanently(
                     sacrificedHealth,
                     sacrificedDamage,
                     config.value(BASE_PERMANENT_HEALTH),
@@ -119,7 +121,7 @@ final class WarlockSacrificeController {
         }
 
         if (warlock.is(WarlockTowers.RANGED_WARLOCK_TOWER)) {
-            double gainedHealth = state.absorbForRound(
+            state.absorbForRound(
                     sacrificedHealth,
                     sacrificedDamage,
                     config.value(RANGED_ROUND_STAT)
@@ -135,11 +137,11 @@ final class WarlockSacrificeController {
                     sacrificedIntervalTicks,
                     config.value(SPEED_CAP)
             );
-            return gainedHealth;
+            return;
         }
 
         if (warlock.is(WarlockTowers.MELEE_WARLOCK_TOWER)) {
-            double gainedHealth = state.absorbForRound(
+            state.absorbForRound(
                     sacrificedHealth,
                     sacrificedDamage,
                     config.value(MELEE_ROUND_STAT)
@@ -150,9 +152,8 @@ final class WarlockSacrificeController {
                     config.value(MELEE_PERMANENT_HEALTH),
                     config.value(MELEE_PERMANENT_DAMAGE)
             );
-            return gainedHealth;
+            return;
         }
-        return 0.0;
     }
 
     private double passiveBonus(

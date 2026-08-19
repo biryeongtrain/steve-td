@@ -11776,10 +11776,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     public void rangedWarlockAwakensWithoutSacrificeRequirementAndResetsNextRound(GameTestHelper context) {
         UUID playerId = stableUuid("warlock-ranged-awakening-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, WarlockTowerJob.ID);
-        for (int kill = 0; kill < 1349; kill++) {
+        for (int kill = 0; kill < 1199; kill++) {
             WarlockAwakeningProgress.recordKill(playerId);
         }
-        if (!assertEquals(context, 1349L, WarlockAwakeningProgress.snapshot(playerId).kills(), "Warlock awakening progress should remain locked before the configured kill requirement.")) {
+        if (!assertEquals(context, 1199L, WarlockAwakeningProgress.snapshot(playerId).kills(), "Warlock awakening progress should remain locked before the configured kill requirement.")) {
             return;
         }
         PlayerLane lane = redLane(game, 1);
@@ -11797,7 +11797,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         coreEntity.setHealth(40.0F);
 
         String lockedDetails = String.join("\n", core.runtimeDetailLines()).replaceAll("<[^>]+>", "");
-        if (!assertTrue(context, lockedDetails.contains("각성 해금: 1349/1350킬"), "Ranged awakening should stay locked before the kill requirement.")) {
+        if (!assertTrue(context, lockedDetails.contains("각성 해금: 1199/1200킬"), "Ranged awakening should stay locked before the kill requirement.")) {
             return;
         }
         Monster creditedKill = new Monster(
@@ -11816,12 +11816,12 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         creditedKill.recordLastHit(playerId, KillSourceKind.TOWER);
         creditedKill.syncHealth(0.0);
         new EconomyService(game.economyConfig(), game).awardMonsterKillReward(creditedKill, game.players());
-        if (!assertEquals(context, 1350L, WarlockAwakeningProgress.snapshot(playerId).kills(), "The credited 1350th kill should unlock awakening.")) {
+        if (!assertEquals(context, 1200L, WarlockAwakeningProgress.snapshot(playerId).kills(), "The credited 1200th kill should unlock awakening.")) {
             return;
         }
 
         String awakenedDetails = String.join("\n", core.runtimeDetailLines()).replaceAll("<[^>]+>", "");
-        if (!assertTrue(context, awakenedDetails.contains("각성 상태: 각성 완료"), "The 1350th kill should immediately awaken a ranged warlock that already satisfies the combat conditions.")) {
+        if (!assertTrue(context, awakenedDetails.contains("각성 상태: 각성 완료"), "The 1200th kill should immediately awaken a ranged warlock that already satisfies the combat conditions.")) {
             return;
         }
         if (!assertTrue(context, awakenedDetails.contains("라운드 흡수: 0기"), "Ranged awakening should not require sacrifices.")) {
@@ -11852,7 +11852,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     public void rangedWarlockUsesPostSacrificeHealthForAwakening(GameTestHelper context) {
         UUID playerId = stableUuid("warlock-post-sacrifice-awakening-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, WarlockTowerJob.ID);
-        for (int kill = 0; kill < 1350; kill++) {
+        for (int kill = 0; kill < 1200; kill++) {
             WarlockAwakeningProgress.recordKill(playerId);
         }
         PlayerLane lane = redLane(game, 1);
@@ -11900,7 +11900,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     public void meleeWarlockAwakeningCreatesRoundBurstAndResetsNextRound(GameTestHelper context) {
         UUID playerId = stableUuid("warlock-melee-awakening-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, WarlockTowerJob.ID);
-        for (int kill = 0; kill < 1350; kill++) {
+        for (int kill = 0; kill < 1200; kill++) {
             WarlockAwakeningProgress.recordKill(playerId);
         }
         PlayerLane lane = redLane(game, 1);

@@ -93,7 +93,7 @@ class WarlockTowerBalanceTest {
         assertEquals(-1.0, config.ability(WarlockTower.CONFIG_ID, "damageCap", -1.0), 0.0001);
         assertEquals(0.08, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "lifeCap", -1.0), 0.0001);
         assertEquals(10.0, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "lifeEvery", -1.0), 0.0001);
-        assertEquals(0.12, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "lifeCap", -1.0), 0.0001);
+        assertEquals(0.14, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "lifeCap", -1.0), 0.0001);
         assertEquals(0.30, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "defenseCap", -1.0), 0.0001);
         assertEquals(10.0, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "defenseEvery", -1.0), 0.0001);
         assertEquals(-1.0, config.ability(WarlockTower.CONFIG_ID, "splashStep", -1.0), 0.0001);
@@ -107,15 +107,15 @@ class WarlockTowerBalanceTest {
         assertEquals(-1.0, config.ability(WarlockTower.CONFIG_ID, "attackRangeStep", -1.0), 0.0001);
         assertEquals(-1.0, config.ability(WarlockTower.CONFIG_ID, "awakeningAbsorptions", -1.0), 0.0001);
         assertEquals(0.40, config.ability(WarlockTower.CONFIG_ID, "awakeningThreshold", -1.0), 0.0001);
-        assertEquals(1350.0, config.ability(WarlockTower.CONFIG_ID, "awakeningKills", -1.0), 0.0001);
+        assertEquals(1200.0, config.ability(WarlockTower.CONFIG_ID, "awakeningKills", -1.0), 0.0001);
         assertEquals(0.55, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "threshold", -1.0), 0.0001);
         assertEquals(0.40, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "roundStat", -1.0), 0.0001);
         assertEquals(15.0, config.ability(WarlockTower.CONFIG_ID, "speedCap", -1.0), 0.0001);
         assertEquals(-1.0, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "speedCap", -1.0), 0.0001);
         assertEquals(3.0, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "defenseThreshold", -1.0), 0.0001);
         assertEquals(0.15, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "defense", -1.0), 0.0001);
-        assertEquals(0.45, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "splashDamage", -1.0), 0.0001);
-        assertEquals(0.20, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "petHealthCap", -1.0), 0.0001);
+        assertEquals(0.50, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "splashDamage", -1.0), 0.0001);
+        assertEquals(0.50, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "petHealthCap", -1.0), 0.0001);
         assertEquals(0.04, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "petHealth", -1.0), 0.0001);
         assertEquals(0.50, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "petDamageCap", -1.0), 0.0001);
         assertEquals(0.10, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "petDamage", -1.0), 0.0001);
@@ -132,7 +132,7 @@ class WarlockTowerBalanceTest {
         assertEquals(0.75, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "splashDamage", -1.0), 0.0001);
         assertEquals(0.50, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "petHealthCap", -1.0), 0.0001);
         assertEquals(0.10, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "petHealth", -1.0), 0.0001);
-        assertEquals(0.20, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "petDamageCap", -1.0), 0.0001);
+        assertEquals(0.50, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "petDamageCap", -1.0), 0.0001);
         assertEquals(0.04, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "petDamage", -1.0), 0.0001);
         assertEquals(600.0, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "awakeningHeal", -1.0), 0.0001);
         assertEquals(List.of(
@@ -171,7 +171,7 @@ class WarlockTowerBalanceTest {
         assertEquals(1.5, combat.meleeSplashRadiusForCount(6), 0.0001);
         assertEquals(2.0, combat.meleeSplashRadiusForCount(8), 0.0001);
         assertEquals(2.0, combat.meleeSplashRadiusForCount(100), 0.0001);
-        assertEquals(157.5, combat.resolvedSplashDamage(WarlockTowers.RANGED_WARLOCK_TOWER, 350.0), 0.0001);
+        assertEquals(175.0, combat.resolvedSplashDamage(WarlockTowers.RANGED_WARLOCK_TOWER, 350.0), 0.0001);
         assertEquals(262.5, combat.resolvedSplashDamage(WarlockTowers.MELEE_WARLOCK_TOWER, 350.0), 0.0001);
     }
 
@@ -309,12 +309,12 @@ class WarlockTowerBalanceTest {
         assertEquals(0.0, combat.lifeStealRatioForCounts(WarlockTowers.MELEE_WARLOCK_TOWER, 20, 0), 0.0001);
         assertEquals(0.03, combat.lifeStealRatioForCounts(WarlockTowers.MELEE_WARLOCK_TOWER, 20, 3), 0.0001);
         assertEquals(0.12, combat.lifeStealRatioForCounts(WarlockTowers.MELEE_WARLOCK_TOWER, 40, 12), 0.0001);
-        assertEquals(0.12, combat.lifeStealRatioForCounts(WarlockTowers.MELEE_WARLOCK_TOWER, 40, 13), 0.0001);
-        assertEquals(0.12, combat.lifeStealRatioForCounts(WarlockTowers.MELEE_WARLOCK_TOWER, 40, 25), 0.0001);
+        assertEquals(0.13, combat.lifeStealRatioForCounts(WarlockTowers.MELEE_WARLOCK_TOWER, 40, 13), 0.0001);
+        assertEquals(0.14, combat.lifeStealRatioForCounts(WarlockTowers.MELEE_WARLOCK_TOWER, 40, 25), 0.0001);
         assertEquals(0.0, combat.lifeStealRatioForCounts(WarlockTowers.MELEE_WARLOCK_TOWER, 20, 3, false), 0.0001);
         assertEquals(0.0, combat.lifeStealRatioForCounts(WarlockTowers.MELEE_WARLOCK_TOWER, 0, 0, true), 0.0001);
         assertEquals(0.03, combat.lifeStealRatioForCounts(WarlockTowers.MELEE_WARLOCK_TOWER, 20, 3, true), 0.0001);
-        assertEquals(0.12, combat.lifeStealRatioForCounts(WarlockTowers.MELEE_WARLOCK_TOWER, 40, 20, true), 0.0001);
+        assertEquals(0.14, combat.lifeStealRatioForCounts(WarlockTowers.MELEE_WARLOCK_TOWER, 40, 20, true), 0.0001);
         assertEquals(0.005, combat.lifeStealRatioForCounts(WarlockTowers.RANGED_WARLOCK_TOWER, 10, 3), 0.0001);
         assertEquals(0.005, combat.lifeStealRatioForCounts(WarlockTowers.RANGED_WARLOCK_TOWER, 10, 3, true), 0.0001);
     }
@@ -337,12 +337,12 @@ class WarlockTowerBalanceTest {
         assertTrue(description.contains("최대 8%"));
         assertTrue(description.contains("누적 흡수 2기마다 스플래시 범위 +0.1블록"));
         assertTrue(description.contains("스플래시 범위 +0.1블록"));
-        assertTrue(description.contains("본 피해의 45%"));
+        assertTrue(description.contains("본 피해의 50%"));
         assertTrue(description.contains("받는 피해 15% 감소"));
         assertTrue(description.contains("생존 중인 개구리 계열마다 체력 +4%, 피해 +10%"));
-        assertTrue(description.contains("최대 체력 +20%, 피해 +50%까지 증가"));
+        assertTrue(description.contains("최대 체력 +50%, 피해 +50%까지 증가"));
         assertFalse(description.contains("20기 이상 흡수"));
-        assertTrue(description.contains("누적 1350킬에 각성을 해금"));
+        assertTrue(description.contains("누적 1200킬에 각성을 해금"));
         assertTrue(description.contains("체력 40% 이하"));
         assertTrue(description.contains("체력 600을 회복"));
         assertTrue(description.contains("재생 +40 HP/s"));
@@ -363,17 +363,17 @@ class WarlockTowerBalanceTest {
         assertTrue(meleeDescription.contains("체력 +5%"));
         assertTrue(meleeDescription.contains("피해 +2.5%"));
         assertTrue(meleeDescription.contains("생존 중인 양 계열마다 체력 +10%, 피해 +4%"));
-        assertTrue(meleeDescription.contains("최대 체력 +50%, 피해 +20%까지 증가"));
+        assertTrue(meleeDescription.contains("최대 체력 +50%, 피해 +50%까지 증가"));
         assertTrue(meleeDescription.contains("공격 간격이 1틱 감소"));
         assertTrue(meleeDescription.contains("스플래시 범위 +0.25블록"));
         assertTrue(meleeDescription.contains("본 피해의 75%"));
         assertTrue(meleeDescription.contains("생명력 흡수 +1%"));
-        assertTrue(meleeDescription.contains("최대 12%"));
+        assertTrue(meleeDescription.contains("최대 14%"));
         assertTrue(meleeDescription.contains("누적 흡수 10기마다 받는 피해 2.5% 감소"));
         assertTrue(meleeDescription.contains("최대 30%"));
         assertTrue(meleeDescription.contains("피해 +75"));
         assertTrue(meleeDescription.contains("이동 속도 +30%"));
-        assertTrue(meleeDescription.contains("누적 1350킬에 각성을 해금"));
+        assertTrue(meleeDescription.contains("누적 1200킬에 각성을 해금"));
         assertTrue(meleeDescription.contains("체력 600을 회복"));
         assertFalse(meleeDescription.contains("체력 3500, 피해 200까지 선형"));
         assertFalse(meleeDescription.contains("로그 스케일"));
@@ -389,18 +389,16 @@ class WarlockTowerBalanceTest {
 
     @Test
     void jobDescriptionCommunicatesTheCompleteBuilderFantasy() {
-        assertTrue(WarlockTowers.awakeningEnabled());
         String description = new WarlockTowerJob().description().stream()
                 .map(component -> component.getString())
                 .collect(java.util.stream.Collectors.joining("\n"));
 
-        assertTrue(description.contains("아군을 희생하며 영구적으로 강해지고"));
-        assertTrue(description.contains("원거리 또는 근거리 흑마법사"));
+        assertTrue(description.contains("희생으로 성장해"));
+        assertTrue(description.contains("원거리·근거리 중 선택"));
         assertFalse(description.contains("전투 방식"));
-        assertTrue(description.contains("마지막까지 살아남아 각성"));
-        assertTrue(description.contains("원거리는 누적 흡수"));
-        assertTrue(description.contains("근거리는 라운드 흡수"));
-        assertTrue(description.contains("1350킬에 도달하면 각성을 습득"));
+        assertTrue(description.contains("1200킬 후 최후 생존·저체력에서 각성"));
+        assertTrue(new WarlockTowerJob().description().stream()
+                .allMatch(component -> component.getString().length() <= 31));
         assertFalse(description.contains("비활성화"));
 
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
@@ -413,8 +411,8 @@ class WarlockTowerBalanceTest {
         String configuredDescription = new WarlockTowerJob().description().stream()
                 .map(component -> component.getString())
                 .collect(java.util.stream.Collectors.joining("\n"));
-        assertTrue(configuredDescription.contains("42킬에 도달하면 각성을 습득"));
-        assertFalse(configuredDescription.contains("1350킬에 도달하면 각성을 습득"));
+        assertTrue(configuredDescription.contains("42킬 후 최후 생존·저체력에서 각성"));
+        assertFalse(configuredDescription.contains("1200킬 후 최후 생존·저체력에서 각성"));
     }
 
     @Test
@@ -434,7 +432,7 @@ class WarlockTowerBalanceTest {
         assertFalse(details.contains("전투 방식:"));
         assertTrue(details.contains("영구 흡수: 0기"));
         assertTrue(details.contains("라운드 흡수: 0기"));
-        assertTrue(details.contains("각성 해금: 0/1350킬"));
+        assertTrue(details.contains("각성 해금: 0/1200킬"));
         assertFalse(details.contains("최후 생존"));
         assertFalse(details.contains("피해량 상한"));
         assertTrue(details.contains("영구 체력: +0"));
@@ -457,8 +455,8 @@ class WarlockTowerBalanceTest {
                 new GridPosition(0, 0, 0)
         );
         String baseLockedDetails = String.join("\n", base.runtimeDetailLines()).replaceAll("<[^>]+>", "");
-        assertTrue(baseLockedDetails.contains("각성 해금: 0/1350킬"));
-        for (int kill = 0; kill < 1350; kill++) {
+        assertTrue(baseLockedDetails.contains("각성 해금: 0/1200킬"));
+        for (int kill = 0; kill < 1200; kill++) {
             WarlockAwakeningProgress.recordKill(baseOwner);
         }
         String baseUnlockedDetails = String.join("\n", base.runtimeDetailLines()).replaceAll("<[^>]+>", "");
@@ -476,7 +474,7 @@ class WarlockTowerBalanceTest {
         assertFalse(meleeDetails.contains("전투 방식:"));
         assertTrue(meleeDetails.contains("영구 흡수: 0기"));
         assertTrue(meleeDetails.contains("라운드 흡수: 0기"));
-        assertTrue(meleeDetails.contains("각성 해금: 0/1350킬"));
+        assertTrue(meleeDetails.contains("각성 해금: 0/1200킬"));
         assertTrue(meleeDetails.contains("영구 체력: +0"));
         assertFalse(meleeDetails.contains("재생:"));
         assertTrue(meleeDetails.contains("생명력 흡수: +0% (1)"));
@@ -498,7 +496,7 @@ class WarlockTowerBalanceTest {
                         7,
                         true,
                         true,
-                        new WarlockStatsView.AwakeningStats(1350, 1350, true, 0.35, 0.40, true),
+                        new WarlockStatsView.AwakeningStats(1200, 1200, true, 0.35, 0.40, true),
                         true,
                         false,
                         new WarlockStatsView.CombatStats(
@@ -549,7 +547,7 @@ class WarlockTowerBalanceTest {
                         20,
                         false,
                         false,
-                        new WarlockStatsView.AwakeningStats(0, 1350, false, 0.35, 0.40, true),
+                        new WarlockStatsView.AwakeningStats(0, 1200, false, 0.35, 0.40, true),
                         true,
                         false,
                         new WarlockStatsView.CombatStats(

@@ -11,7 +11,8 @@ class WarlockStateTest {
     void absorptionSeparatesPermanentAndRoundState() {
         WarlockState state = new WarlockState();
 
-        assertEquals(40.0, state.absorbForRound(100.0, 20.0, 0.40), 0.0001);
+        state.absorbForRound(100.0, 20.0, 0.40);
+        assertEquals(40.0, state.roundHealthBonus(), 0.0001);
         state.absorbPermanently(100.0, 20.0, 0.025, 0.05);
         state.absorbAttackInterval(20, 12, 15.0);
 

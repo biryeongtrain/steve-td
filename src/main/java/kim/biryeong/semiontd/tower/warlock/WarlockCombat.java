@@ -134,13 +134,6 @@ final class WarlockCombat {
         return 0.0;
     }
 
-    private static double steppedBonus(int count, int every, double step) {
-        if (every <= 0) {
-            return 0.0;
-        }
-        return (Math.max(0, count) / every) * Math.max(0.0, step);
-    }
-
     void resolveAttack(
             WarlockTower tower,
             SemionTowerEntity towerEntity,

@@ -10,26 +10,23 @@ final class WarlockState {
     private int roundSacrificeCount;
     private boolean awakenedThisRound;
 
-    double absorbBasePermanently(
+    void absorbBasePermanently(
             double sacrificedHealth,
             double sacrificedDamage,
             double healthRatio,
             double damageRatio
     ) {
-        double gainedHealth = Math.max(0.0, sacrificedHealth) * Math.max(0.0, healthRatio);
-        permanentHealthBonus += gainedHealth;
+        permanentHealthBonus += Math.max(0.0, sacrificedHealth) * Math.max(0.0, healthRatio);
         permanentDamageBonus += Math.max(0.0, sacrificedDamage) * Math.max(0.0, damageRatio);
-        return gainedHealth;
     }
 
-    double absorbForRound(double sacrificedHealth, double sacrificedDamage, double ratio) {
+    void absorbForRound(double sacrificedHealth, double sacrificedDamage, double ratio) {
         totalSacrificeCount++;
         roundSacrificeCount++;
         double resolvedRatio = Math.max(0.0, ratio);
         double gainedHealth = Math.max(0.0, sacrificedHealth) * resolvedRatio;
         roundHealthBonus += gainedHealth;
         roundDamageBonus += Math.max(0.0, sacrificedDamage) * resolvedRatio;
-        return gainedHealth;
     }
 
     void absorbPermanently(

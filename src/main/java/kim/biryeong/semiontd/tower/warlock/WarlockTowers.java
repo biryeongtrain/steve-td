@@ -237,10 +237,6 @@ public final class WarlockTowers {
         return "{ability." + CONFIG_ID + "." + ability.key() + ":" + format + "}";
     }
 
-    public static boolean awakeningEnabled() {
-        return WarlockConfig.AWAKENING_ENABLED;
-    }
-
     public static List<TowerType> all() {
         return ALL;
     }
