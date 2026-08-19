@@ -649,6 +649,43 @@ final class PlantTowerCatalogTest {
                 "횃불꽃이 해바라기보다 멀리 쏘면 근접 광역이라는 역할이 사라집니다");
     }
 
+    /**
+     * 탱커가 계열 중에서 가장 단단해야 합니다.
+     *
+     * <p>잔디 계열은 다이아당 체력이 사암 탱커보다 높았습니다. 민들레는 탱커의 두 배였습니다.
+     * 뒤에서 회복과 정산을 담당하는 라인이 앞에서 맞아 주는 라인보다 단단하면, 탱커를 세울
+     * 이유가 없어집니다. 잔디는 서로 회복까지 하므로 실제 내구력은 기본 체력보다 더 높습니다.
+     */
+    @Test
+    void supportLinesAreLessDurablePerDiamondThanTheTankLine() {
+        for (int tier = 1; tier <= 3; tier++) {
+            double tank = healthPerDiamond(switch (tier) {
+                case 1 -> PlantTowers.T1_DESERT_TOWER;
+                case 2 -> PlantTowers.T2_DESERT_TOWER;
+                default -> PlantTowers.T3_DESERT_TOWER;
+            });
+            double economy = healthPerDiamond(switch (tier) {
+                case 1 -> PlantTowers.T1_MEADOW_TOWER;
+                case 2 -> PlantTowers.T2_MEADOW_TOWER;
+                default -> PlantTowers.T3_MEADOW_TOWER;
+            });
+            double nova = healthPerDiamond(switch (tier) {
+                case 1 -> PlantTowers.T1_MEADOW_NOVA_TOWER;
+                case 2 -> PlantTowers.T2_MEADOW_NOVA_TOWER;
+                default -> PlantTowers.T3_MEADOW_NOVA_TOWER;
+            });
+            assertTrue(economy < tank,
+                    "T" + tier + " 민들레 계열 " + economy + " 이 탱커 " + tank + " 보다 단단합니다");
+            assertTrue(nova < tank,
+                    "T" + tier + " 튤립 계열 " + nova + " 이 탱커 " + tank + " 보다 단단합니다");
+        }
+    }
+
+    private static double healthPerDiamond(TowerType type) {
+        var resolved = TowerBalanceRuntime.resolve(type);
+        return resolved.maxHealth() / resolved.mineralCost();
+    }
+
     @Test
     void midAndLateTiersPayBackTheirTerrainInvestment() {
         assertEquals(20.0, TowerBalanceRuntime.resolve(PlantTowers.T3_MEADOW_TOWER).damage(), EPSILON);

@@ -2602,7 +2602,7 @@
     },
     "t1_meadow_tower": {
       "mineralCost": 50,
-      "maxHealth": 200.0,
+      "maxHealth": 90.0,
       "range": 11.0,
       "damage": 4.0,
       "attackIntervalTicks": 28,
@@ -2610,7 +2610,7 @@
     },
     "t2_meadow_tower": {
       "mineralCost": 150,
-      "maxHealth": 380.0,
+      "maxHealth": 230.0,
       "range": 13.0,
       "damage": 10.0,
       "attackIntervalTicks": 28,
@@ -2618,7 +2618,7 @@
     },
     "t3_meadow_tower": {
       "mineralCost": 240,
-      "maxHealth": 700.0,
+      "maxHealth": 400.0,
       "range": 16.0,
       "damage": 20.0,
       "attackIntervalTicks": 28,
@@ -2626,7 +2626,7 @@
     },
     "t1_meadow_nova_tower": {
       "mineralCost": 65,
-      "maxHealth": 220.0,
+      "maxHealth": 120.0,
       "range": 5.0,
       "damage": 7.5,
       "attackIntervalTicks": 26,
@@ -2634,7 +2634,7 @@
     },
     "t2_meadow_nova_tower": {
       "mineralCost": 175,
-      "maxHealth": 440.0,
+      "maxHealth": 270.0,
       "range": 5.0,
       "damage": 19.0,
       "attackIntervalTicks": 24,
@@ -2642,7 +2642,7 @@
     },
     "t3_meadow_nova_tower": {
       "mineralCost": 275,
-      "maxHealth": 780.0,
+      "maxHealth": 450.0,
       "range": 7.0,
       "damage": 34.0,
       "attackIntervalTicks": 20,
