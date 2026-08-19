@@ -3978,7 +3978,7 @@
     },
     "ranged_warlock_tower": {
       "threshold": 0.55,
-      "roundStat": 0.4,
+      "roundStat": 0.5,
       "permanentHealth": 0.025,
       "healthThreshold": 2000.0,
       "healthScale": 500.0,
@@ -3995,7 +3995,7 @@
       "defenseThreshold": 3.0,
       "defense": 0.15,
       "petHealth": 0.04,
-      "petHealthCap": 0.5,
+      "petHealthCap": 0.2,
       "petDamage": 0.1,
       "petDamageCap": 0.5,
       "awakeningHeal": 600.0,
@@ -4023,7 +4023,7 @@
       "petHealth": 0.1,
       "petHealthCap": 0.5,
       "petDamage": 0.04,
-      "petDamageCap": 0.5,
+      "petDamageCap": 0.2,
       "awakeningHeal": 600.0,
       "awakeningDamage": 75.0,
       "awakeningMoveSpeed": 0.3

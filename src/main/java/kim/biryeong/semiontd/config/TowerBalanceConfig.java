@@ -3710,7 +3710,7 @@ public record TowerBalanceConfig(
     private static Map<String, Double> rangedWarlockAbilities() {
         LinkedHashMap<String, Double> values = new LinkedHashMap<>();
         values.put("threshold", 0.55);
-        values.put("roundStat", 0.40);
+        values.put("roundStat", 0.50);
         values.put("permanentHealth", 0.025);
         values.put("healthThreshold", 2000.0);
         values.put("healthScale", 500.0);
@@ -3727,7 +3727,7 @@ public record TowerBalanceConfig(
         values.put("defenseThreshold", 3.0);
         values.put("defense", 0.15);
         values.put("petHealth", 0.04);
-        values.put("petHealthCap", 0.50);
+        values.put("petHealthCap", 0.20);
         values.put("petDamage", 0.10);
         values.put("petDamageCap", 0.50);
         values.put("awakeningHeal", 600.0);
@@ -3758,7 +3758,7 @@ public record TowerBalanceConfig(
         values.put("petHealth", 0.10);
         values.put("petHealthCap", 0.50);
         values.put("petDamage", 0.04);
-        values.put("petDamageCap", 0.50);
+        values.put("petDamageCap", 0.20);
         values.put("awakeningHeal", 600.0);
         values.put("awakeningDamage", 75.0);
         values.put("awakeningMoveSpeed", 0.30);

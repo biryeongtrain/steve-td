@@ -109,13 +109,13 @@ class WarlockTowerBalanceTest {
         assertEquals(0.40, config.ability(WarlockTower.CONFIG_ID, "awakeningThreshold", -1.0), 0.0001);
         assertEquals(1200.0, config.ability(WarlockTower.CONFIG_ID, "awakeningKills", -1.0), 0.0001);
         assertEquals(0.55, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "threshold", -1.0), 0.0001);
-        assertEquals(0.40, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "roundStat", -1.0), 0.0001);
+        assertEquals(0.50, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "roundStat", -1.0), 0.0001);
         assertEquals(15.0, config.ability(WarlockTower.CONFIG_ID, "speedCap", -1.0), 0.0001);
         assertEquals(-1.0, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "speedCap", -1.0), 0.0001);
         assertEquals(3.0, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "defenseThreshold", -1.0), 0.0001);
         assertEquals(0.15, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "defense", -1.0), 0.0001);
         assertEquals(0.50, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "splashDamage", -1.0), 0.0001);
-        assertEquals(0.50, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "petHealthCap", -1.0), 0.0001);
+        assertEquals(0.20, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "petHealthCap", -1.0), 0.0001);
         assertEquals(0.04, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "petHealth", -1.0), 0.0001);
         assertEquals(0.50, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "petDamageCap", -1.0), 0.0001);
         assertEquals(0.10, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "petDamage", -1.0), 0.0001);
@@ -132,7 +132,7 @@ class WarlockTowerBalanceTest {
         assertEquals(0.75, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "splashDamage", -1.0), 0.0001);
         assertEquals(0.50, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "petHealthCap", -1.0), 0.0001);
         assertEquals(0.10, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "petHealth", -1.0), 0.0001);
-        assertEquals(0.50, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "petDamageCap", -1.0), 0.0001);
+        assertEquals(0.20, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "petDamageCap", -1.0), 0.0001);
         assertEquals(0.04, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "petDamage", -1.0), 0.0001);
         assertEquals(600.0, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "awakeningHeal", -1.0), 0.0001);
         assertEquals(List.of(
@@ -329,7 +329,7 @@ class WarlockTowerBalanceTest {
         assertFalse(description.contains("원거리 · 영구 성장"));
         assertTrue(description.contains("체력 55% 이하이면"));
         assertTrue(description.contains("공격 우선순위가 가장 낮은 타워"));
-        assertTrue(description.contains("흡수한 타워 체력과 피해의 40%"));
+        assertTrue(description.contains("흡수한 타워 체력과 피해의 50%"));
         assertTrue(description.contains("체력 +2.5%"));
         assertTrue(description.contains("피해 +5%"));
         assertTrue(description.contains("최소 공격 간격은 5틱"));
@@ -340,7 +340,7 @@ class WarlockTowerBalanceTest {
         assertTrue(description.contains("본 피해의 50%"));
         assertTrue(description.contains("받는 피해 15% 감소"));
         assertTrue(description.contains("생존 중인 개구리 계열마다 체력 +4%, 피해 +10%"));
-        assertTrue(description.contains("최대 체력 +50%, 피해 +50%까지 증가"));
+        assertTrue(description.contains("최대 체력 +20%, 피해 +50%까지 증가"));
         assertFalse(description.contains("20기 이상 흡수"));
         assertTrue(description.contains("누적 1200킬에 각성을 해금"));
         assertTrue(description.contains("체력 40% 이하"));
@@ -363,7 +363,7 @@ class WarlockTowerBalanceTest {
         assertTrue(meleeDescription.contains("체력 +5%"));
         assertTrue(meleeDescription.contains("피해 +2.5%"));
         assertTrue(meleeDescription.contains("생존 중인 양 계열마다 체력 +10%, 피해 +4%"));
-        assertTrue(meleeDescription.contains("최대 체력 +50%, 피해 +50%까지 증가"));
+        assertTrue(meleeDescription.contains("최대 체력 +50%, 피해 +20%까지 증가"));
         assertTrue(meleeDescription.contains("공격 간격이 1틱 감소"));
         assertTrue(meleeDescription.contains("스플래시 범위 +0.25블록"));
         assertTrue(meleeDescription.contains("본 피해의 75%"));
