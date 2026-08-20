@@ -3774,6 +3774,72 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
+    public void disconnectClearsReadyStateAndCancelsPendingStart(GameTestHelper context) {
+        MinecraftServer server = context.getLevel().getServer();
+        var leavingPlayer = context.makeMockServerPlayerInLevel();
+        UUID leavingId = leavingPlayer.getUUID();
+        UUID stayingId = stableUuid("ready-disconnect-staying");
+        SemionGame game = new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(), SyntheticArenaFactory.create(
+                context.getLevel(),
+                context.absolutePos(BlockPos.ZERO)
+        ));
+        SemionGameManager manager = new SemionGameManager();
+        setField(manager, "activeGame", game);
+        ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                MatchMode.NORMAL,
+                List.of(
+                        new AssignedParticipant(leavingId, "ready-disconnect-leaving", TeamId.RED, 1),
+                        new AssignedParticipant(stayingId, "ready-disconnect-staying", TeamId.BLUE, 1)
+                ),
+                Set.of(),
+                2
+        );
+
+        try {
+            game.markReady(stayingId);
+            manager.handlePlayerDisconnect(leavingPlayer);
+            if (!assertEquals(context, 1, game.readyPlayerCount(), "An unready disconnect should not change the ready count.")) {
+                return;
+            }
+
+            game.markReady(leavingId);
+            manager.handlePlayerDisconnect(leavingPlayer);
+            if (!assertTrue(context, !game.isReady(leavingId), "A ready disconnect should remove the leaving player from the ready roster.")) {
+                return;
+            }
+            if (!assertEquals(context, 1, game.readyPlayerCount(), "The remaining ready player should stay ready after another player disconnects.")) {
+                return;
+            }
+
+            game.markReady(leavingId);
+            manager.configureTraits(new TraitSelectionConfig(false, 45));
+            if (!assertEquals(context, SemionGameManager.StartCountdownResult.SCHEDULED, manager.scheduleStart(server, plan), "Normal start countdown should be scheduled.")) {
+                return;
+            }
+            manager.handlePlayerDisconnect(leavingPlayer);
+            if (!assertTrue(context, !manager.startCountdownActive(), "A selected participant disconnect should cancel the normal start countdown.")) {
+                return;
+            }
+
+            game.markReady(leavingId);
+            manager.configureTraits(new TraitSelectionConfig(true, 45));
+            if (!assertEquals(context, SemionGameManager.StartCountdownResult.SCHEDULED, manager.scheduleStart(server, plan), "Trait selection should be scheduled.")) {
+                return;
+            }
+            if (!assertTrue(context, manager.traitSelectionActive(), "Trait selection should be active before the selected participant disconnects.")) {
+                return;
+            }
+            manager.handlePlayerDisconnect(leavingPlayer);
+            if (!assertTrue(context, !manager.startCountdownActive(), "A selected participant disconnect should cancel trait selection.")) {
+                return;
+            }
+            context.succeed();
+        } finally {
+            manager.shutdown();
+        }
+    }
+
+    @GameTest
     public void buildGuideRemainsPublishableUntilNextCountdownCompletes(GameTestHelper context) {
         MinecraftServer server = context.getLevel().getServer();
         var player = context.makeMockServerPlayerInLevel();

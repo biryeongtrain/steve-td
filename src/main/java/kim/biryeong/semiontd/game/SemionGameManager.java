@@ -1824,15 +1824,36 @@ public final class SemionGameManager {
         if (player == null) {
             return;
         }
+        UUID playerId = player.getUUID();
+        MinecraftServer server = player.getServer();
+        if (activeGame != null && activeGame.canConfigureRoster()) {
+            activeGame.markNotReady(playerId);
+            ParticipantSelectionPlan pendingPlan = pendingStartPlan != null
+                    ? pendingStartPlan
+                    : pendingTraitSelection == null ? null : pendingTraitSelection.plan();
+            if (pendingPlan != null && isSelectedForPendingMatch(pendingPlan, playerId)) {
+                clearStartCountdown();
+                clearTraitSelection();
+                if (server != null) {
+                    server.getPlayerList().broadcastSystemMessage(
+                            SemionText.prefixedPlain("참가자가 퇴장하여 게임 시작 준비가 취소되었습니다. 다시 준비해주세요."),
+                            false
+                    );
+                }
+            }
+            if (server != null) {
+                sidebarHudService.refreshNow(server, activeGame, matchMode, practiceViewerIds());
+            }
+        }
         sidebarHudService.remove(player);
-        illagerRaidBossBarService.removePlayer(player.getUUID());
-        villagerAdvReputationBossBarService.removePlayer(player.getUUID());
-        engineerRedstoneBossBarService.removePlayer(player.getUUID());
-        mageManaBossBarService.removePlayer(player.getUUID());
-        queenBossBarService.removePlayer(player.getUUID());
-        releaseSandboxSpectator(player.getUUID());
-        stopSandbox(player.getServer(), player.getUUID());
-        stopTutorial(player.getServer(), player.getUUID());
+        illagerRaidBossBarService.removePlayer(playerId);
+        villagerAdvReputationBossBarService.removePlayer(playerId);
+        engineerRedstoneBossBarService.removePlayer(playerId);
+        mageManaBossBarService.removePlayer(playerId);
+        queenBossBarService.removePlayer(playerId);
+        releaseSandboxSpectator(playerId);
+        stopSandbox(server, playerId);
+        stopTutorial(server, playerId);
     }
 
     public void handlePlayerWorldChanged(ServerPlayer player) {
