@@ -17,7 +17,7 @@ public final class SemionLaneIndicatorService {
     private static final DustParticleOptions DIRECTION_PARTICLE = new DustParticleOptions(0xFFD54F, 2.25F);
     private static final int DIRECTION_ARROW_COUNT = 4;
     private static final int DIRECTION_LOOP_TICKS = 200;
-    private static final double DIRECTION_HEIGHT = 1.0;
+    private static final double DIRECTION_HEIGHT = 2.0;
     private static final double DIRECTION_WING_LENGTH = 2.5;
     private static final double DIRECTION_WING_WIDTH = 1.75;
 

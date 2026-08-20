@@ -22,18 +22,18 @@ final class SemionLaneIndicatorServiceTest {
         );
 
         List<SemionLaneIndicatorService.DirectionArrow> initial = SemionLaneIndicatorService.directionArrows(layout, 0);
-        assertPosition(initial.get(0).head(), 0.0, 1.0, 0.0);
-        assertPosition(initial.get(0).leftWing(), -2.5, 1.0, 1.75);
-        assertPosition(initial.get(0).rightWing(), -2.5, 1.0, -1.75);
-        assertPosition(initial.get(1).head(), 5.0, 1.0, 0.0);
-        assertPosition(initial.get(2).head(), 10.0, 1.0, 0.0);
-        assertPosition(initial.get(3).head(), 10.0, 1.0, 5.0);
+        assertPosition(initial.get(0).head(), 0.0, 2.0, 0.0);
+        assertPosition(initial.get(0).leftWing(), -2.5, 2.0, 1.75);
+        assertPosition(initial.get(0).rightWing(), -2.5, 2.0, -1.75);
+        assertPosition(initial.get(1).head(), 5.0, 2.0, 0.0);
+        assertPosition(initial.get(2).head(), 10.0, 2.0, 0.0);
+        assertPosition(initial.get(3).head(), 10.0, 2.0, 5.0);
 
         List<SemionLaneIndicatorService.DirectionArrow> advanced = SemionLaneIndicatorService.directionArrows(layout, 10);
-        assertPosition(advanced.get(0).head(), 1.0, 1.0, 0.0);
-        assertPosition(advanced.get(1).head(), 6.0, 1.0, 0.0);
-        assertPosition(advanced.get(2).head(), 10.0, 1.0, 1.0);
-        assertPosition(advanced.get(3).head(), 10.0, 1.0, 6.0);
+        assertPosition(advanced.get(0).head(), 1.0, 2.0, 0.0);
+        assertPosition(advanced.get(1).head(), 6.0, 2.0, 0.0);
+        assertPosition(advanced.get(2).head(), 10.0, 2.0, 1.0);
+        assertPosition(advanced.get(3).head(), 10.0, 2.0, 6.0);
 
         List<SemionLaneIndicatorService.DirectionArrow> repeated = SemionLaneIndicatorService.directionArrows(layout, 200);
         for (int index = 0; index < initial.size(); index++) {

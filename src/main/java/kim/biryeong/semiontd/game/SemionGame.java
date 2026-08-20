@@ -119,6 +119,7 @@ public final class SemionGame {
     private long activeMatchTicks;
     private int phaseTicks;
     private boolean finalDefenseForcedThisRound;
+    private boolean tutorialFinalDefenseExplanation;
     private boolean emeraldIncomeBoostAnnounced;
     private String catalogVersion;
     private RoundWaveConfig selectedRoundWave;
@@ -302,6 +303,19 @@ public final class SemionGame {
             return false;
         }
         moveToRound(server, round);
+        return true;
+    }
+
+    public boolean beginTutorialFinalDefenseExplanation(UUID playerId) {
+        if (!tutorialMode || phase != RoundPhase.ROUND_PAYOUT) {
+            return false;
+        }
+        PlayerLane lane = playerLane(playerId).orElse(null);
+        if (lane == null || !lane.clearedThisRound() || lane.leakedThisRound() || lane.laneDefenseBroken()) {
+            return false;
+        }
+        lane.moveTowersToFinalDefense();
+        tutorialFinalDefenseExplanation = true;
         return true;
     }
 
@@ -1235,6 +1249,9 @@ public final class SemionGame {
     }
 
     private void tickPayout(MinecraftServer server) {
+        if (tutorialFinalDefenseExplanation) {
+            return;
+        }
         recordBuilderRoundResults(currentRound);
         advancementService.onRoundCompleted(server, this, currentRound);
         VillagerAdvStates.onWaveCleared(this, currentRound);

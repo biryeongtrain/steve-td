@@ -11,6 +11,7 @@ import kim.biryeong.semiontd.config.SummonConfig;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.entity.monster.Monster;
+import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.MatchMode;
 import kim.biryeong.semiontd.game.PlayerLane;
@@ -24,6 +25,7 @@ import kim.biryeong.semiontd.job.AnimalTowerJob;
 import kim.biryeong.semiontd.map.GameArena;
 import kim.biryeong.semiontd.summon.SummonResult;
 import kim.biryeong.semiontd.summon.SummonResultType;
+import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.ProductionTowerService;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
 import kim.biryeong.semiontd.tutorial.TutorialService;
@@ -214,6 +216,13 @@ public final class SemionTutorialGameTest {
             if (!assertHighlight(context, manager, playerId, TutorialService.HighlightTarget.DIAMOND)) {
                 return;
             }
+            List<SemionTowerEntity> upgradeTargets = towerEntities(lane);
+            if (!assertEquals(context, lane.towers().size(), upgradeTargets.size(), "Every tutorial tower should have a visible entity.")) {
+                return;
+            }
+            if (!assertTrue(context, upgradeTargets.stream().allMatch(SemionTowerEntity::isCurrentlyGlowing), "Tower entities should glow during the upgrade explanation.")) {
+                return;
+            }
 
             GridPosition towerPosition = lane.towers().stream()
                     .filter(tower -> tower.type().id().equals(AnimalTowers.T1_WOLF_TOWER.id()))
@@ -230,6 +239,9 @@ public final class SemionTutorialGameTest {
             }
             tickMany(manager, server, 51);
             if (!assertHighlight(context, manager, playerId, TutorialService.HighlightTarget.EMERALD)) {
+                return;
+            }
+            if (!assertTrue(context, towerEntities(lane).stream().noneMatch(SemionTowerEntity::isCurrentlyGlowing), "Tower glow should clear after the upgrade task.")) {
                 return;
             }
             tickMany(manager, server, 51);
@@ -302,20 +314,54 @@ public final class SemionTutorialGameTest {
             if (!enterWaveAfterTutorialCountdown(context, manager, server, tutorial)) {
                 return;
             }
+            int finalDefenseRound = tutorial.currentRound();
             lane.disableMonsters();
             manager.tick(server);
             manager.tick(server);
             if (!assertStage(context, manager, playerId, TutorialService.Stage.FINAL_DEFENSE)) {
                 return;
             }
+            if (!assertEquals(context, RoundPhase.ROUND_PAYOUT, tutorial.phase(), "Final-defense explanation should hold the completed round before payout.")) {
+                return;
+            }
+            if (!assertEquals(context, finalDefenseRound, tutorial.currentRound(), "Final-defense explanation must not advance the round.")) {
+                return;
+            }
+            if (!assertTrue(
+                    context,
+                    lane.towers().stream().allMatch(tower -> tower.deployedAtFinalDefense()),
+                    "Surviving tutorial towers should move to the final defense line."
+            )) {
+                return;
+            }
+            List<SemionTowerEntity> finalDefenseTowers = towerEntities(lane);
+            if (!assertEquals(context, lane.towers().size(), finalDefenseTowers.size(), "Every surviving tutorial tower should remain visible at final defense.")) {
+                return;
+            }
+            if (!assertTrue(
+                    context,
+                    finalDefenseTowers.stream().allMatch(entity -> lane.laneLayout().isInsideFinalDefenseTowerArea(entity.position())),
+                    "Tutorial tower entities should stand inside the final defense area."
+            )) {
+                return;
+            }
+            if (!assertTrue(context, finalDefenseTowers.stream().allMatch(SemionTowerEntity::isCurrentlyGlowing), "Final-defense tower entities should glow.")) {
+                return;
+            }
+            var team = tutorial.teams().get(tutorial.players().get(playerId).teamId());
+            if (!assertTrue(context, team.laneGroup().bossEntity().orElseThrow().isCurrentlyGlowing(), "The team boss should glow during the final-defense explanation.")) {
+                return;
+            }
             if (!assertTrue(context, !manager.completeTutorial(server, playerId), "Final confirmation should wait until every explanation line is shown.")) {
                 return;
             }
             tickMany(manager, server, 153);
+            if (!assertEquals(context, finalDefenseRound, tutorial.currentRound(), "The round should remain fixed throughout the final-defense narration.")) {
+                return;
+            }
             if (!assertHighlight(context, manager, playerId, TutorialService.HighlightTarget.BOSS_HEALTH)) {
                 return;
             }
-            var team = tutorial.teams().get(tutorial.players().get(playerId).teamId());
             String bossHealth = Math.round(team.laneGroup().boss().health())
                     + "/"
                     + Math.round(team.laneGroup().boss().maxHealth());
@@ -459,6 +505,16 @@ public final class SemionTutorialGameTest {
             TutorialService.HighlightTarget expected
     ) {
         return assertEquals(context, expected, manager.tutorialHighlight(playerId), "Unexpected tutorial HUD highlight.");
+    }
+
+    private static List<SemionTowerEntity> towerEntities(PlayerLane lane) {
+        return lane.towers().stream()
+                .filter(EntityBackedTower.class::isInstance)
+                .map(EntityBackedTower.class::cast)
+                .flatMap(tower -> tower.entityId().stream().mapToObj(lane.arenaWorld()::getEntity))
+                .filter(SemionTowerEntity.class::isInstance)
+                .map(SemionTowerEntity.class::cast)
+                .toList();
     }
 
     private static boolean assertTrue(GameTestHelper context, boolean condition, String message) {

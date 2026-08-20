@@ -8,10 +8,12 @@ import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.buildguide.BuildAction;
 import kim.biryeong.semiontd.buildguide.BuildActionType;
-import kim.biryeong.semiontd.game.RoundPhase;
+import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
+import kim.biryeong.semiontd.game.RoundPhase;
 import kim.biryeong.semiontd.game.SemionGame;
+import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
 import kim.biryeong.semiontd.ui.SemionLaneIndicatorService;
 import kim.biryeong.semiontd.ui.SemionText;
@@ -66,6 +68,7 @@ public final class TutorialService {
         ServerPlayer player = server.getPlayerList().getPlayer(playerId);
         if (player != null) {
             updateBossBar(player, session);
+            updateEntityHighlights(game, playerId, session.stage);
             if (showsDirection(session.stage)
                     && server.getTickCount() % DIRECTION_VFX_INTERVAL_TICKS == 0) {
                 game.playerLane(playerId)
@@ -154,7 +157,8 @@ public final class TutorialService {
                 }
             }
             case DEFEND_INCOME_MONSTER -> {
-                if (game.hasClearedRound(playerId, session.incomeDefenseRound)) {
+                if (game.currentRound() == session.incomeDefenseRound
+                        && game.beginTutorialFinalDefenseExplanation(playerId)) {
                     advance(server, playerId, session, game, Stage.FINAL_DEFENSE);
                 }
             }
@@ -278,7 +282,30 @@ public final class TutorialService {
 
     private void advance(MinecraftServer server, UUID playerId, Session session, SemionGame game, Stage next) {
         session.stage = next;
+        updateEntityHighlights(game, playerId, next);
         showStage(server, playerId, session, game);
+    }
+
+    private static void updateEntityHighlights(SemionGame game, UUID playerId, Stage stage) {
+        boolean glowTowers = stage == Stage.UPGRADE_TOWER || stage == Stage.FINAL_DEFENSE;
+        game.playerLane(playerId).ifPresent(lane -> {
+            for (var tower : lane.towers()) {
+                if (!(tower instanceof EntityBackedTower entityBackedTower)) {
+                    continue;
+                }
+                entityBackedTower.entityId().ifPresent(entityId -> {
+                    if (lane.arenaWorld().getEntity(entityId) instanceof SemionTowerEntity towerEntity) {
+                        towerEntity.setGlowingTag(glowTowers);
+                    }
+                });
+            }
+        });
+
+        var player = game.players().get(playerId);
+        if (player != null) {
+            game.teams().get(player.teamId()).laneGroup().bossEntity()
+                    .ifPresent(entity -> entity.setGlowingTag(stage == Stage.FINAL_DEFENSE));
+        }
     }
 
     private void showStage(MinecraftServer server, UUID playerId, Session session, SemionGame game) {
