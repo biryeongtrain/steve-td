@@ -12,6 +12,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import kim.biryeong.semiontd.advancement.SemionAdvancementService;
 import kim.biryeong.semiontd.buildguide.BuildGuideService;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.IncomeLaneRoutingConfig;
@@ -86,6 +87,7 @@ public final class SemionGame {
     private IncomeLaneRoutingPolicy incomeLaneRoutingPolicy;
     private final SummonShop summonShop;
     private final BuildGuideService buildGuideService;
+    private final SemionAdvancementService advancementService = new SemionAdvancementService();
     private final Random random = new Random();
     private final Map<TeamId, SemionTeam> teams = new EnumMap<>(TeamId.class);
     private final Map<UUID, SemionPlayer> players = new java.util.HashMap<>();
@@ -201,6 +203,10 @@ public final class SemionGame {
         return currentRound;
     }
 
+    public MatchMode matchMode() {
+        return matchMode;
+    }
+
     public boolean isSandboxMode() {
         return sandboxMode;
     }
@@ -277,6 +283,10 @@ public final class SemionGame {
 
     public boolean hasClearedRound(UUID playerId, int round) {
         return playerId != null && clearedRoundsByPlayer.getOrDefault(playerId, Set.of()).contains(round);
+    }
+
+    public boolean hasAttemptedRound(UUID playerId, int round) {
+        return playerId != null && attemptedRoundsByPlayer.getOrDefault(playerId, Set.of()).contains(round);
     }
 
     public boolean moveSandboxToRound(MinecraftServer server, int round) {
@@ -732,6 +742,14 @@ public final class SemionGame {
         ));
     }
 
+    public void awardMatchAdvancements(
+            MinecraftServer server,
+            MatchResult matchResult,
+            Map<UUID, Integer> gamesPlayed
+    ) {
+        advancementService.awardMatch(server, matchResult, gamesPlayed);
+    }
+
     public boolean start(MinecraftServer server, ParticipantSelectionPlan plan) {
         return start(server, plan, TraitSelectionSnapshot.empty());
     }
@@ -786,6 +804,7 @@ public final class SemionGame {
         if (buildGuideService != null) {
             buildGuideService.startMatch(this);
         }
+        advancementService.onMatchStarted(server, this);
         startPreparePhase(server);
         return true;
     }
@@ -879,6 +898,7 @@ public final class SemionGame {
         attemptedRoundsByPlayer.clear();
         clearedRoundsByPlayer.clear();
         eliminationOrder.clear();
+        advancementService.clear();
         selectedRoundWave = null;
         rosterLocked = false;
         phase = RoundPhase.ENDED;
@@ -944,6 +964,7 @@ public final class SemionGame {
                 TraitEffects.incomeAttackSpeedMultiplier(player.traitLoadout())
         );
         player.matchStats().recordSentIncomeThreat(monster.attributionThreat());
+        advancementService.recordIncomeSent(this, playerId, targetLane.get().ownerPlayer(), monster.attributionThreat());
         job.onSummonedMonster(jobContext, type.get(), monster);
         type.get().onSummoned(summonContext, monster);
         if (phase == RoundPhase.LANE_WAVE) {
@@ -1022,9 +1043,10 @@ public final class SemionGame {
         }
         if (announcedEliminations.add(teamId)) {
             recordTeamEliminated(team);
+            advancementService.onTeamEliminated(server, this);
             handleTeamEliminated(server, team);
         }
-        checkVictory();
+        checkVictory(server);
         return true;
     }
 
@@ -1109,6 +1131,7 @@ public final class SemionGame {
 
     public void tick(MinecraftServer server) {
         tickCounter++;
+        advancementService.tick(server, this);
         VillagerAdvStates.applyPending(this);
         if (phase != RoundPhase.WAITING && phase != RoundPhase.ENDED) {
             activeMatchTicks++;
@@ -1178,10 +1201,11 @@ public final class SemionGame {
             team.tick(server, economyService, players, monsterScalingConfig, phaseTicks);
             if (team.active() && team.eliminated() && announcedEliminations.add(team.id())) {
                 recordTeamEliminated(team);
+                advancementService.onTeamEliminated(server, this);
                 handleTeamEliminated(server, team);
             }
         }
-        if (checkVictory()) {
+        if (checkVictory(server)) {
             return;
         }
         if (currentWaveTeamIds.stream().allMatch(this::isCurrentWaveTeamResolved)) {
@@ -1212,6 +1236,7 @@ public final class SemionGame {
 
     private void tickPayout(MinecraftServer server) {
         recordBuilderRoundResults(currentRound);
+        advancementService.onRoundCompleted(server, this, currentRound);
         VillagerAdvStates.onWaveCleared(this, currentRound);
         notifyRoundEnded(currentRound);
         economyService.payRoundIncome(players.values(), teams);
@@ -1228,6 +1253,7 @@ public final class SemionGame {
         for (SemionTeam team : livingTeams()) {
             team.resetForRound();
         }
+        advancementService.onRoundStarted(server, this);
         prepareActivePlayers(server);
         notifyRoundStarted(currentRound);
         announceEmeraldIncomeBoostIfNeeded(server);
@@ -1303,10 +1329,11 @@ public final class SemionGame {
                 : team.finalTowerComposition(player.uuid(), player.laneId());
     }
 
-    private boolean checkVictory() {
+    private boolean checkVictory(MinecraftServer server) {
         List<SemionTeam> living = livingTeams();
         if (living.size() <= 1 && phase != RoundPhase.WAITING) {
             recordBuilderRoundResults(currentRound);
+            advancementService.onRoundCompleted(server, this, currentRound);
             if (endedAtEpochMillis == 0L) {
                 endedAtEpochMillis = System.currentTimeMillis();
             }

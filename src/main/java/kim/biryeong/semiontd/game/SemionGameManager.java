@@ -2302,6 +2302,15 @@ public final class SemionGameManager {
             finalizeBuildGuideRecording(finishedGame, result);
             nextMatchPriorityPlayerIds.addAll(result.get().spectatorIds());
             Map<UUID, MatchProgressionReward> rewards = progressionService.applyMatchResult(server, result.get());
+            Map<UUID, Integer> gamesPlayed = result.get().participants().stream().collect(Collectors.toMap(
+                    MatchParticipantResult::playerId,
+                    participant -> progressionService.profile(
+                            server,
+                            participant.playerId(),
+                            participant.playerName()
+                    ).gamesPlayed()
+            ));
+            finishedGame.awardMatchAdvancements(server, result.get(), gamesPlayed);
             queueMatchResultDialog(result.get(), rewards);
         } else {
             lastMatchResult = null;

@@ -1,0 +1,28 @@
+{
+  "parent": "semion-td:newbie_exit",
+  "criteria": {
+    "complete": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "announce_to_chat": true,
+    "description": {
+      "text": "두 명 이상인 팀에서 빌더가 한 명도 겹치지 않은 채 승리하세요."
+    },
+    "frame": "goal",
+    "icon": {
+      "count": 1,
+      "id": "minecraft:nether_star"
+    },
+    "show_toast": true,
+    "title": {
+      "text": "드림팀"
+    }
+  },
+  "requirements": [
+    [
+      "complete"
+    ]
+  ]
+}

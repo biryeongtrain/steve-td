@@ -1,0 +1,28 @@
+{
+  "parent": "semion-td:newbie_exit",
+  "criteria": {
+    "complete": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "announce_to_chat": true,
+    "description": {
+      "text": "다른 팀원이 모두 방어에 실패한 라운드에서 혼자 최종 방어선을 지켜내세요."
+    },
+    "frame": "challenge",
+    "icon": {
+      "count": 1,
+      "id": "minecraft:shield"
+    },
+    "show_toast": true,
+    "title": {
+      "text": "클러치"
+    }
+  },
+  "requirements": [
+    [
+      "complete"
+    ]
+  ]
+}

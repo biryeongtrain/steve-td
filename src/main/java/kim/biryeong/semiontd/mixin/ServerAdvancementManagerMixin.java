@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.mixin;
 
 import java.util.Map;
+import kim.biryeong.semiontd.SemionTd;
 import net.minecraft.advancements.Advancement;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.ServerAdvancementManager;
@@ -17,13 +18,13 @@ abstract class ServerAdvancementManagerMixin {
             method = "apply(Ljava/util/Map;Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/util/profiling/ProfilerFiller;)V",
             at = @At("HEAD")
     )
-    private void semiontd$removeVanillaAdvancements(
+    private void semiontd$keepSemionAdvancementsOnly(
             Map<ResourceLocation, Advancement> advancements,
             ResourceManager resourceManager,
             ProfilerFiller profiler,
             CallbackInfo ci
     ) {
-        advancements.keySet().removeIf(id -> id.getNamespace().equals("minecraft"));
+        advancements.keySet().removeIf(id -> !id.getNamespace().equals(SemionTd.MOD_ID));
         while (advancements.entrySet().removeIf(entry -> entry.getValue().parent()
                 .filter(parent -> !advancements.containsKey(parent))
                 .isPresent())) {

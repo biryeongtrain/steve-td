@@ -1,0 +1,28 @@
+{
+  "parent": "semion-td:newbie_exit",
+  "criteria": {
+    "complete": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "announce_to_chat": true,
+    "description": {
+      "text": "일반 경기를 100판 플레이하세요."
+    },
+    "frame": "challenge",
+    "icon": {
+      "count": 1,
+      "id": "minecraft:diamond_sword"
+    },
+    "show_toast": true,
+    "title": {
+      "text": "슬 고인물"
+    }
+  },
+  "requirements": [
+    [
+      "complete"
+    ]
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "parent": "semion-td:newbie_exit",
+  "criteria": {
+    "complete": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "announce_to_chat": true,
+    "description": {
+      "text": "자신의 모든 라운드를 완벽하게 방어하고 패배하세요."
+    },
+    "frame": "challenge",
+    "icon": {
+      "count": 1,
+      "id": "minecraft:crying_obsidian"
+    },
+    "show_toast": true,
+    "title": {
+      "text": "팀차이 ㅈㅈ"
+    }
+  },
+  "requirements": [
+    [
+      "complete"
+    ]
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "parent": "semion-td:newbie_exit",
+  "criteria": {
+    "complete": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "announce_to_chat": true,
+    "description": {
+      "text": "한 경기에서 한 플레이어에게 위협 10K 이상을 보내세요."
+    },
+    "frame": "challenge",
+    "icon": {
+      "count": 1,
+      "id": "minecraft:fire_charge"
+    },
+    "show_toast": true,
+    "title": {
+      "text": "큰거 한방 갑니다."
+    }
+  },
+  "requirements": [
+    [
+      "complete"
+    ]
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "parent": "semion-td:newbie_exit",
+  "criteria": {
+    "complete": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "announce_to_chat": true,
+    "description": {
+      "text": "가장 인원이 많은 상대 팀보다 한 명 적은 팀에서 승리하세요."
+    },
+    "frame": "challenge",
+    "icon": {
+      "count": 1,
+      "id": "minecraft:golden_apple"
+    },
+    "show_toast": true,
+    "title": {
+      "text": "언더독"
+    }
+  },
+  "requirements": [
+    [
+      "complete"
+    ]
+  ]
+}

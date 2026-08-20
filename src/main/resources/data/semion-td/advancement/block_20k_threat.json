@@ -1,0 +1,28 @@
+{
+  "parent": "semion-td:newbie_exit",
+  "criteria": {
+    "complete": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "announce_to_chat": true,
+    "description": {
+      "text": "한 라운드에 받은 위협이 20K 이상에 도달하세요."
+    },
+    "frame": "challenge",
+    "icon": {
+      "count": 1,
+      "id": "minecraft:totem_of_undying"
+    },
+    "show_toast": true,
+    "title": {
+      "text": "그니까... 이걸 막으라고요? 제가요?"
+    }
+  },
+  "requirements": [
+    [
+      "complete"
+    ]
+  ]
+}

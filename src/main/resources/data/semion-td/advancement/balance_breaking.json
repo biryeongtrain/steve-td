@@ -1,0 +1,28 @@
+{
+  "parent": "semion-td:newbie_exit",
+  "criteria": {
+    "complete": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "announce_to_chat": true,
+    "description": {
+      "text": "한 경기를 40라운드까지 진행하세요."
+    },
+    "frame": "challenge",
+    "icon": {
+      "count": 1,
+      "id": "minecraft:heavy_core"
+    },
+    "show_toast": true,
+    "title": {
+      "text": "벨런스 창나는 소리"
+    }
+  },
+  "requirements": [
+    [
+      "complete"
+    ]
+  ]
+}

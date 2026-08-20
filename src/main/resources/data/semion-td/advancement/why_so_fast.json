@@ -1,0 +1,28 @@
+{
+  "parent": "semion-td:newbie_exit",
+  "criteria": {
+    "complete": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "announce_to_chat": true,
+    "description": {
+      "text": "어느 팀이든 15라운드에 탈락하는 순간을 목격하세요."
+    },
+    "frame": "goal",
+    "icon": {
+      "count": 1,
+      "id": "minecraft:clock"
+    },
+    "show_toast": true,
+    "title": {
+      "text": "왜이리 빨리 끝나나요"
+    }
+  },
+  "requirements": [
+    [
+      "complete"
+    ]
+  ]
+}
