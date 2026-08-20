@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.entity.monster.DamageType;
+import kim.biryeong.semiontd.entity.monster.Monster;
+import kim.biryeong.semiontd.tower.LogarithmicScaling;
 import kim.biryeong.semiontd.tower.TowerType;
 import net.minecraft.world.phys.Vec3;
 
@@ -29,6 +31,7 @@ public final class DemonLordState {
     private double shield;
     private long shieldExpiryTick;
     private boolean inCombat;
+    private boolean centralDefense;
     private boolean pendingSpawn;
     private boolean combatKitGranted;
     private boolean loadoutDirty = true;
@@ -60,7 +63,13 @@ public final class DemonLordState {
         double base = global("baseMaxHealth", 450.0);
         double perLevel = global("maxHealthPerLevel", 52.5);
         double allocated = points(DemonLordStat.MAX_HEALTH) * global("statHealthPerPoint", 40.0);
-        return Math.max(1.0, base + perLevel * (level - 1) + allocated);
+        double rawBonus = perLevel * (level - 1) + allocated;
+        double scaledBonus = LogarithmicScaling.logarithmicBonus(
+                rawBonus,
+                global("healthBonusThreshold", 500.0),
+                global("healthBonusScale", 500.0)
+        );
+        return Math.max(1.0, base + scaledBonus);
     }
 
     // ------------------------------------------------------------------ 스탯
@@ -83,11 +92,12 @@ public final class DemonLordState {
         if (stat == null || unspentPoints <= 0) {
             return false;
         }
+        double previousMaxHealth = stat == DemonLordStat.MAX_HEALTH && inCombat ? maxHealth() : 0.0;
         unspentPoints--;
         statPoints.merge(stat, 1, Integer::sum);
         // 체력에 찍으면 늘어난 만큼 즉시 채워, 전투 중 투자해도 바로 값을 합니다.
         if (stat == DemonLordStat.MAX_HEALTH && inCombat) {
-            health += global("statHealthPerPoint", 40.0);
+            health += Math.max(0.0, maxHealth() - previousMaxHealth);
         }
         return true;
     }
@@ -264,8 +274,13 @@ public final class DemonLordState {
 
     /** Scales every skill and blade hit. Levels grow it, and 공격력 points grow it further. */
     public double damageMultiplier() {
-        return 1.0 + global("damagePerLevel", 0.05) * (level - 1)
+        double rawBonus = global("damagePerLevel", 0.05) * (level - 1)
                 + points(DemonLordStat.ATTACK) * global("statAttackPerPoint", 0.04);
+        return 1.0 + LogarithmicScaling.logarithmicBonus(
+                rawBonus,
+                global("damageBonusThreshold", 0.5),
+                global("damageBonusScale", 0.5)
+        );
     }
 
     public double bladeDamage() {
@@ -374,6 +389,24 @@ public final class DemonLordState {
         return inCombat;
     }
 
+    public boolean centralDefense() {
+        return centralDefense;
+    }
+
+    public void enterCentralDefense() {
+        centralDefense = true;
+    }
+
+    /** Before clearing, fight only this lane; afterwards, fight only final-defense monsters. */
+    public boolean canFight(Monster monster) {
+        if (monster == null || !monster.isAlive()) {
+            return false;
+        }
+        return centralDefense
+                ? monster.inFinalDefenseCombat()
+                : monster.targetLaneId() == laneId;
+    }
+
     /**
      * Called at wave start: full health, no barrier, every cooldown cleared.
      *
@@ -385,6 +418,7 @@ public final class DemonLordState {
      */
     public void enterCombat() {
         inCombat = true;
+        centralDefense = false;
         pendingSpawn = true;
         health = maxHealth();
         clearShield();
@@ -404,6 +438,7 @@ public final class DemonLordState {
     /** Called when the pool empties. Skills stop working and monsters stop caring. */
     public void leaveCombat() {
         inCombat = false;
+        centralDefense = false;
         health = 0.0;
         clearShield();
         clearPendingSkills();
@@ -424,6 +459,7 @@ public final class DemonLordState {
             return;
         }
         inCombat = false;
+        centralDefense = false;
         clearShield();
         clearPendingSkills();
         loadoutDirty = true;

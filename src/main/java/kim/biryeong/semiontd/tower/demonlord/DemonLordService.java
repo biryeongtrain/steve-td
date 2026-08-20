@@ -124,8 +124,13 @@ public final class DemonLordService {
             // 준비 단계의 스탯 분배 도구.
             if (isStatTool(serverPlayer.getMainHandItem())
                     && DemonLordStates.get(serverPlayer.getUUID()) != null) {
-                new DemonLordStatGui(serverPlayer).open();
-                return InteractionResult.SUCCESS;
+                SemionPlayer semionPlayer = gameManager.playableGame(serverPlayer.getUUID())
+                        .map(game -> game.players().get(serverPlayer.getUUID()))
+                        .orElse(null);
+                if (semionPlayer != null) {
+                    new DemonLordStatGui(serverPlayer, semionPlayer.economy()).open();
+                    return InteractionResult.SUCCESS;
+                }
             }
             if (serverPlayer.getInventory().getSelectedSlot() != DemonLordSkill.BLADE_SLOT) {
                 // 스킬 카드는 들고 우클릭해도 아무 일도 일어나면 안 됩니다. 시전은 슬롯을 잡는
@@ -251,13 +256,14 @@ public final class DemonLordService {
 
         if (!state.inCombat()) {
             restoreFlight(player);
-            releaseAggro(lane, player, gameTime);
+            releaseAggro(player, gameTime);
             return;
         }
 
         if (state.consumePendingSpawn()) {
             moveToLaneCentre(player, lane);
         }
+        enforceCombatArea(player, lane, state);
         state.expireShieldIfNeeded(gameTime);
         lockFlight(player);
         rescueFromVoid(player, lane);
@@ -401,6 +407,7 @@ public final class DemonLordService {
 
     private static void knockOutOfCombat(ServerPlayer player, DemonLordState state, boolean voluntary) {
         state.leaveCombat();
+        releaseAggro(player);
         restoreFlight(player);
         setHeldSlot(player, DemonLordSkill.BLADE_SLOT);
         player.displayClientMessage(
@@ -517,19 +524,52 @@ public final class DemonLordService {
      * was still fighting keeps that target until something clears it, so [전투 제외] would not
      * actually take the player out of the fight.
      */
-    private static void releaseAggro(PlayerLane lane, ServerPlayer player, long gameTime) {
+    private static void releaseAggro(ServerPlayer player, long gameTime) {
         if (gameTime % AGGRO_RELEASE_INTERVAL != 0) {
             return;
         }
-        for (Monster monster : List.copyOf(lane.activeMonsters())) {
-            if (monster == null || !monster.hasMinecraftEntity()) {
-                continue;
-            }
-            if (lane.arenaWorld().getEntity(monster.minecraftEntityId()) instanceof SemionMonsterEntity entity
-                    && entity.getTarget() == player) {
+        releaseAggro(player);
+    }
+
+    static void releaseAggro(ServerPlayer player) {
+        if (!(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+        for (Entity candidate : level.getAllEntities()) {
+            if (candidate instanceof SemionMonsterEntity entity && entity.getTarget() == player) {
                 entity.setTarget(null);
             }
         }
+    }
+
+    private static void enforceCombatArea(ServerPlayer player, PlayerLane lane, DemonLordState state) {
+        LaneRegionLayout layout = lane.laneLayout();
+        if (layout == null) {
+            return;
+        }
+        if (!lane.clearedThisRound()) {
+            if (!containsHorizontally(layout.laneArea(), player.position())) {
+                teleport(player, laneCentre(layout));
+            }
+            return;
+        }
+
+        if (!state.centralDefense()) {
+            state.enterCentralDefense();
+            AABB area = layout.finalDefenseTowerAreaBox();
+            teleport(player, new Vec3(
+                    (area.minX + area.maxX) / 2.0,
+                    area.maxY,
+                    (area.minZ + area.maxZ) / 2.0));
+        } else if (!layout.isInsideFinalDefenseTowerArea(player.position())) {
+            teleport(player, layout.clampToFinalDefenseTowerArea(player.position()));
+        }
+    }
+
+    private static void teleport(ServerPlayer player, Vec3 position) {
+        player.teleportTo(position.x, position.y, position.z);
+        player.setDeltaMovement(Vec3.ZERO);
+        player.resetFallDistance();
     }
 
     /**
@@ -608,7 +648,7 @@ public final class DemonLordService {
      * 잠긴 채로 맵 밖으로 떨어집니다. 그래서 목표에서 시작점 쪽으로 되짚어 오며 몸이 들어갈
      * 틈이 있고 발밑에 땅이 있는 첫 지점을 씁니다. 어디에도 설 수 없으면 제자리입니다.
      *
-     * <p>레인 경계는 보지 않습니다. 마왕은 어디든 갈 수 있고, 여기서 막는 것은 벽과 허공뿐입니다.
+     * <p>전투 영역은 호출자가 먼저 자릅니다. 여기서는 벽과 허공만 검사합니다.
      */
     static Vec3 safeLanding(ServerPlayer player, Vec3 from, Vec3 to) {
         Vec3 delta = to.subtract(from);
@@ -625,6 +665,22 @@ public final class DemonLordService {
             }
         }
         return from;
+    }
+
+    static Vec3 safeLanding(
+            ServerPlayer player,
+            PlayerLane lane,
+            DemonLordState state,
+            Vec3 from,
+            Vec3 to
+    ) {
+        LaneRegionLayout layout = lane == null ? null : lane.laneLayout();
+        if (layout != null) {
+            to = state != null && state.centralDefense()
+                    ? layout.clampToFinalDefenseTowerArea(to)
+                    : containsHorizontally(layout.laneArea(), to) ? to : from;
+        }
+        return safeLanding(player, from, to);
     }
 
     /**
@@ -909,6 +965,12 @@ public final class DemonLordService {
         Monster monster = monsterEntity.runtimeMonster();
         if (monster == null || !monster.isAlive()) {
             return Tower.DamageResult.NONE;
+        }
+        if (attacker != null) {
+            DemonLordState state = DemonLordStates.get(attacker.getUUID());
+            if (state == null || !state.inCombat() || !state.canFight(monster)) {
+                return Tower.DamageResult.NONE;
+            }
         }
         SemionTowerEntity source = altar == null ? null : altar.entity(lane);
         if (source != null) {

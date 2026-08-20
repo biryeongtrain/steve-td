@@ -3,9 +3,11 @@ package kim.biryeong.semiontd.tower.demonlord;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.AttackKind;
+import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
 import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.KillSourceKind;
@@ -14,7 +16,10 @@ import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
+import kim.biryeong.semiontd.game.PlayerEconomy;
+import kim.biryeong.semiontd.game.SemionPlayer;
 import kim.biryeong.semiontd.game.TeamId;
+import kim.biryeong.semiontd.job.DemonLordTowerJob;
 import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.tower.Tower;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
@@ -131,6 +136,91 @@ public final class DemonLordGameTest {
         }
     }
 
+    @GameTest
+    public void demonLordStaysInOwnLaneThenMovesToFinalDefense(GameTestHelper context) {
+        ServerPlayer player = context.makeMockServerPlayerInLevel();
+        PlayerLane lane = testLane(context, player.getUUID());
+        prepareFloor(context);
+        try {
+            SemionPlayer semionPlayer = demonLordPlayer(player);
+            DemonLordState state = DemonLordStates.getOrCreate(player.getUUID());
+            state.enterCombat();
+            state.consumePendingSpawn();
+
+            BlockBounds laneArea = lane.laneLayout().laneArea();
+            player.teleportTo(laneArea.max().getX() + 4.0, player.getY(), laneArea.max().getZ() + 4.0);
+            DemonLordService.tick(lane, Map.of(player.getUUID(), semionPlayer));
+            require(player.getX() >= laneArea.min().getX() && player.getX() < laneArea.max().getX() + 1.0,
+                    "Before clearing, the demon lord must be returned to their own lane.");
+
+            lane.disableMonsters();
+            DemonLordService.tick(lane, Map.of(player.getUUID(), semionPlayer));
+            require(state.centralDefense(), "Clearing the lane must switch the demon lord to final defense.");
+            require(lane.laneLayout().isInsideFinalDefenseTowerArea(player.position()),
+                    "After clearing, the demon lord must move into the final-defense area.");
+            context.succeed();
+        } catch (Throwable failure) {
+            context.fail(Component.literal("Demon lord combat-area GameTest failed: " + failure.getMessage()));
+        } finally {
+            DemonLordStates.clear(player.getUUID());
+            player.discard();
+        }
+    }
+
+    @GameTest
+    public void demonLordBlocksOtherLanesUntilFinalDefenseAndReleasesAggro(GameTestHelper context) {
+        ServerPlayer player = context.makeMockServerPlayerInLevel();
+        PlayerLane lane = testLane(context, player.getUUID());
+        prepareFloor(context);
+        DemonLordSkillTower altar = altar(context, player.getUUID(), DemonLordSkill.WAVE_OF_MALICE, 1, 3, 3);
+        ArrayList<SpawnedTarget> targets = new ArrayList<>();
+        try {
+            lane.addTower(altar);
+            DemonLordState state = DemonLordStates.getOrCreate(player.getUUID());
+            state.setLaneId(1);
+            state.enterCombat();
+            SpawnedTarget ownLane = spawnTarget(context, lane, new BlockPos(5, 2, 5), 1, 100.0, 0.0);
+            SpawnedTarget otherLane = spawnTarget(context, lane, new BlockPos(6, 2, 5), 2, 100.0, 0.0);
+            targets.add(ownLane);
+            targets.add(otherLane);
+
+            require(DemonLordService.dealDamage(
+                            player, lane, altar, ownLane.entity(), 10.0, DamageType.TRUE).dealtDamage() > 0.0,
+                    "Before clearing, the demon lord must damage their own lane.");
+            require(DemonLordService.dealDamage(
+                            player, lane, altar, otherLane.entity(), 10.0, DamageType.TRUE).dealtDamage() == 0.0,
+                    "Before clearing, the demon lord must not damage another lane.");
+
+            state.enterCentralDefense();
+            otherLane.runtime().enterFinalDefenseCombat();
+            require(DemonLordService.dealDamage(
+                            player, lane, altar, otherLane.entity(), 10.0, DamageType.TRUE).dealtDamage() > 0.0,
+                    "At final defense, the demon lord must damage final-defense monsters.");
+
+            otherLane.entity().setTarget(player);
+            state.leaveCombat();
+            DemonLordService.releaseAggro(player);
+            require(otherLane.entity().getTarget() == null,
+                    "Leaving combat must clear aggro from monsters in every lane.");
+            context.succeed();
+        } catch (Throwable failure) {
+            context.fail(Component.literal("Demon lord targeting GameTest failed: " + failure.getMessage()));
+        } finally {
+            targets.forEach(target -> target.entity().discard());
+            lane.clearTowers();
+            DemonLordStates.clear(player.getUUID());
+            player.discard();
+        }
+    }
+
+    private static SemionPlayer demonLordPlayer(ServerPlayer player) {
+        SemionPlayer semionPlayer = new SemionPlayer(
+                player.getUUID(), player.getGameProfile().getName(), TeamId.RED, 1,
+                new PlayerEconomy(EconomyConfig.defaultConfig()));
+        semionPlayer.assignJob(new DemonLordTowerJob());
+        return semionPlayer;
+    }
+
     private static DemonLordSkillTower altar(
             GameTestHelper context,
             UUID owner,
@@ -151,10 +241,21 @@ public final class DemonLordGameTest {
             double health,
             double armor
     ) {
+        return spawnTarget(context, lane, relative, 1, health, armor);
+    }
+
+    private static SpawnedTarget spawnTarget(
+            GameTestHelper context,
+            PlayerLane lane,
+            BlockPos relative,
+            int targetLaneId,
+            double health,
+            double armor
+    ) {
         Monster runtime = new Monster(
                 "demon-lord-target-" + relative.toShortString(),
                 TeamId.RED,
-                1,
+                targetLaneId,
                 Optional.empty(),
                 Optional.empty(),
                 health,

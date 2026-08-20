@@ -8,11 +8,27 @@ import java.util.Set;
 import java.util.UUID;
 import kim.biryeong.semiontd.game.MatchParticipantResult;
 import kim.biryeong.semiontd.game.MatchResult;
+import kim.biryeong.semiontd.game.PlayerMatchStats;
 import kim.biryeong.semiontd.game.PlayerMatchStatsSnapshot;
 import kim.biryeong.semiontd.game.TeamId;
 import org.junit.jupiter.api.Test;
 
 final class SemionAdvancementServiceTest {
+    @Test
+    void receivedThreatUsesOnlyCurrentRoundIncomeMonsters() {
+        PlayerMatchStats stats = new PlayerMatchStats();
+        stats.recordOwnLaneIncomingThreat(30_000.0, true);
+        PlayerMatchStatsSnapshot start = stats.snapshot(10);
+
+        stats.recordOwnLaneIncomingThreat(50_000.0, false);
+        assertEquals(0.0, SemionAdvancementService.receivedIncomeThreatThisRound(
+                start, stats.snapshot(10)));
+
+        stats.recordOwnLaneIncomingThreat(20_000.0, true);
+        assertEquals(20_000.0, SemionAdvancementService.receivedIncomeThreatThisRound(
+                start, stats.snapshot(10)));
+    }
+
     @Test
     void awardsOnlyVerifiedMatchConditions() {
         UUID redVeteran = UUID.randomUUID();

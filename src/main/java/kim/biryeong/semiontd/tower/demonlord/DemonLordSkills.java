@@ -89,7 +89,7 @@ public final class DemonLordSkills {
 
         SemionMonsterEntity target = null;
         double bestScore = Double.MAX_VALUE;
-        for (SemionMonsterEntity candidate : monstersNear(lane, origin, range)) {
+        for (SemionMonsterEntity candidate : monstersNear(lane, state, origin, range)) {
             Vec3 toTarget = horizontal(candidate.position().subtract(origin));
             // 정면 90도 안쪽만 후보로 봅니다. 뒤에 있는 적이 잡히면 조준이 안 됩니다.
             if (look.dot(toTarget) < Math.cos(Math.toRadians(45.0))) {
@@ -183,7 +183,8 @@ public final class DemonLordSkills {
             DemonLordSkillTower altar) {
         double radius = reach(state, altar, "radius", 4.0);
         Vec3 landing = DemonLordService.safeLanding(
-                player, player.position(), lookTarget(player, reach(state, altar, "range", 10.0)));
+                player, lane, state, player.position(),
+                lookTarget(player, reach(state, altar, "range", 10.0)));
 
         // 잃은 체력 비율 0(만피)~1(빈사). 빈사에서 missingHealthDamageBonus 만큼 증가합니다.
         double missingRatio = Math.max(0.0, Math.min(1.0, 1.0 - state.healthRatio()));
@@ -326,8 +327,6 @@ public final class DemonLordSkills {
             push(monster, horizontal(monster.position().subtract(origin)), knockback, 0.4);
             return damageOutcome(result);
         });
-        state.heal(state.maxHealth() * ability(altar, "healRatio", 0.10));
-
         Vec3 look = horizontal(player.getLookAngle());
         player.setDeltaMovement(look.x * leapPower, 0.62, look.z * leapPower);
         player.hurtMarked = true;
@@ -352,7 +351,7 @@ public final class DemonLordSkills {
 
         Vec3 start = player.position();
         Vec3 look = horizontal(player.getLookAngle());
-        Vec3 end = resolveDashEnd(player, lane, start, look, distance);
+        Vec3 end = resolveDashEnd(player, lane, state, start, look, distance);
         double travelled = start.distanceTo(end);
 
         applyArea(altar, lane, start.lerp(end, 0.5), travelled / 2.0 + hitRadius,
@@ -379,10 +378,17 @@ public final class DemonLordSkills {
      *
      * <p>텔레포트는 충돌을 무시하므로 그냥 목표 지점으로 옮기면 아레나 배리어를 뚫고 맵 밖으로
      * 나가 떨어집니다. 그래서 두 겹으로 막습니다 — 먼저 블록에 레이캐스트해 벽 앞에서 멈추고,
-     * 그다음 실제로 설 수 있는 자리인지(벽 속이 아닌지, 발밑이 허공이 아닌지) 확인합니다.
-     * 레인 경계는 보지 않습니다 — 마왕은 어디로든 돌진할 수 있습니다.
+     * 그다음 전투 영역 안에서 실제로 설 수 있는 자리인지(벽 속이 아닌지, 발밑이 허공이 아닌지)
+     * 확인합니다.
      */
-    private static Vec3 resolveDashEnd(ServerPlayer player, PlayerLane lane, Vec3 start, Vec3 look, double distance) {
+    private static Vec3 resolveDashEnd(
+            ServerPlayer player,
+            PlayerLane lane,
+            DemonLordState state,
+            Vec3 start,
+            Vec3 look,
+            double distance
+    ) {
         Vec3 from = start.add(0.0, 0.6, 0.0);
         Vec3 to = from.add(look.scale(distance));
         HitResult clip = player.level().clip(new ClipContext(
@@ -396,7 +402,7 @@ public final class DemonLordSkills {
         if (horizontal(end.subtract(start)).dot(look) <= 0.0) {
             end = start;
         }
-        return DemonLordService.safeLanding(player, start, end);
+        return DemonLordService.safeLanding(player, lane, state, start, end);
     }
 
     /**
@@ -539,8 +545,6 @@ public final class DemonLordSkills {
         if (source == null) {
             return AreaEffectResult.empty();
         }
-        // 마왕은 레인에 묶여 있지 않습니다. 서 있는 자리에 적이 있으면 누구 레인이든 맞습니다 -
-        // 타워라면 자기 레인만 때리는 게 맞지만, 이쪽은 직접 뛰어다니는 시전자입니다.
         MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
                 ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "demon_lord/" + altar.skill().key()),
                 source,
@@ -549,7 +553,11 @@ public final class DemonLordSkills {
                 Set.of(),
                 filter,
                 AreaVfxSpec.onTrigger(style)
-        ).acrossLanes();
+        );
+        DemonLordState state = DemonLordStates.get(altar.ownerPlayer());
+        if (state != null && state.centralDefense()) {
+            request = request.acrossLanes();
+        }
         return SemionTdApi.areaEffects().applyToMonsters(request, action);
     }
 
@@ -564,14 +572,12 @@ public final class DemonLordSkills {
         return Math.min(Math.max(0.0, dealtDamage) * ratio, Math.max(0.0, maxHealth) * capRatio);
     }
 
-    /**
-     * 반경 안의 살아 있는 몬스터. <b>레인을 가리지 않습니다.</b>
-     *
-     * <p>예전에는 자기 레인의 몬스터 목록만 훑었습니다. 마왕이 레인에 묶여 있던 시절에는 같은
-     * 뜻이었지만, 이제는 남의 레인에 서 있어도 지목이 안 되는 결과가 됩니다. 팀 아레나는 팀마다
-     * 월드가 따로라 월드를 훑어도 상대 팀 몬스터가 섞이지 않습니다.
-     */
-    private static List<SemionMonsterEntity> monstersNear(PlayerLane lane, Vec3 center, double radius) {
+    private static List<SemionMonsterEntity> monstersNear(
+            PlayerLane lane,
+            DemonLordState state,
+            Vec3 center,
+            double radius
+    ) {
         AABB box = new AABB(
                 center.x - radius, center.y - radius, center.z - radius,
                 center.x + radius, center.y + radius, center.z + radius);
@@ -581,6 +587,7 @@ public final class DemonLordSkills {
                         && !entity.isRemoved()
                         && entity.runtimeMonster() != null
                         && entity.runtimeMonster().isAlive()
+                        && state.canFight(entity.runtimeMonster())
                         && entity.position().distanceToSqr(center) <= radiusSqr);
     }
 

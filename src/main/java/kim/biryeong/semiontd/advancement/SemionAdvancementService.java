@@ -138,7 +138,7 @@ public final class SemionAdvancementService {
                     continue;
                 }
                 PlayerMatchStatsSnapshot end = player.matchStats().snapshot(player.economy().income());
-                if (end.ownLaneIncomingThreat() - start.ownLaneIncomingThreat() >= RECEIVED_THREAT_TARGET) {
+                if (receivedIncomeThreatThisRound(start, end) >= RECEIVED_THREAT_TARGET) {
                     award(server, playerId, BLOCK_20K_THREAT);
                 }
                 if (round >= 10 && clean && end.incomingIncomeThreat() == start.incomingIncomeThreat()) {
@@ -241,6 +241,16 @@ public final class SemionAdvancementService {
 
     private static boolean failed(PlayerLane lane) {
         return lane.leakedThisRound() || lane.laneDefenseBroken();
+    }
+
+    static double receivedIncomeThreatThisRound(
+            PlayerMatchStatsSnapshot start,
+            PlayerMatchStatsSnapshot end
+    ) {
+        if (start == null || end == null) {
+            return 0.0;
+        }
+        return Math.max(0.0, end.incomingIncomeThreat() - start.incomingIncomeThreat());
     }
 
     private static boolean eligible(SemionGame game) {

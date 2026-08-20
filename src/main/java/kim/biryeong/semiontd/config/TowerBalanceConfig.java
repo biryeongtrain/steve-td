@@ -1327,10 +1327,12 @@ public record TowerBalanceConfig(
     private void validateDemonLordAbilities() {
         String global = DemonLordTowers.GLOBAL_CONFIG_ID;
         validatePositive(global,
-                "baseMaxHealth", "experienceBase", "experienceGrowth", "bladeAttackIntervalTicks");
+                "baseMaxHealth", "experienceBase", "experienceGrowth", "bladeAttackIntervalTicks",
+                "healthBonusThreshold", "healthBonusScale", "damageBonusThreshold", "damageBonusScale",
+                "statDiamondCost");
         validateAtLeast(global, 0.0,
                 "maxHealthPerLevel", "experiencePerMaxHealth", "damagePerLevel", "bladeDamage");
-        validateIntegral(global, false, "maxLevel", "bladeAttackIntervalTicks");
+        validateIntegral(global, false, "maxLevel", "bladeAttackIntervalTicks", "statDiamondCost");
         validateAtLeast(global, 1.0, "experienceGrowth");
 
         for (DemonLordSkill skill : DemonLordSkill.values()) {
@@ -1345,7 +1347,6 @@ public record TowerBalanceConfig(
                     }
                     case DEMON_WINGS -> {
                         validatePositive(id, "leapPower", "radius");
-                        validateRatios(id, "healRatio");
                     }
                     case SKY_BREAKER -> {
                         validatePositive(id, "dashDistance", "hitRadius", "liftPower", "stunTicks");
@@ -2293,6 +2294,8 @@ public record TowerBalanceConfig(
         global.put("tntFuseVfxIntervalTicks", (double) EngineerBalance.TNT_FUSE_VFX_INTERVAL_TICKS);
         putAbilities(abilities, EngineerBalance.GLOBAL_ID, global);
         putAbilities(abilities, EngineerTowers.REDSTONE_DUST.id(), Map.of(TowerCapacity.CONFIG_KEY, 0.0));
+        EngineerTowers.repeaters().values().forEach(type ->
+                putAbilities(abilities, type.id(), Map.of(TowerCapacity.CONFIG_KEY, 0.0)));
         for (EngineerTowers.TrapKind kind : EngineerTowers.TrapKind.values()) {
             for (int tier = 1; tier <= 3; tier++) {
                 LinkedHashMap<String, Double> values = new LinkedHashMap<>();
@@ -2862,6 +2865,8 @@ public record TowerBalanceConfig(
             throw new IllegalArgumentException("Engineer dispenser distance cap must not exceed maxRedstone.");
         }
         validateIntegral(EngineerTowers.REDSTONE_DUST.id(), true, TowerCapacity.CONFIG_KEY);
+        EngineerTowers.repeaters().values().forEach(type ->
+                validateIntegral(type.id(), true, TowerCapacity.CONFIG_KEY));
         for (EngineerTowers.TrapKind kind : EngineerTowers.TrapKind.values()) {
             for (int tier = 1; tier <= 3; tier++) {
                 String id = EngineerTowers.trap(kind, tier).id();
@@ -3861,12 +3866,13 @@ public record TowerBalanceConfig(
         ));
     }
 
-    /** Upgrade price is the target tier's own diamond cost, so the shop and the tooltip agree. */
+    /** Demon lord upgrades cost 1.5 times the target tier's placement price, rounded up. */
     private static void putDemonLordUpgrades(LinkedHashMap<String, Long> upgradeCosts) {
         for (DemonLordSkill skill : DemonLordSkill.values()) {
             for (int tier = 1; tier < DemonLordSkill.MAX_TIER; tier++) {
                 TowerType next = DemonLordTowers.tower(skill, tier + 1);
-                putUpgrade(upgradeCosts, DemonLordTowers.tower(skill, tier), next.id(), next.mineralCost());
+                putUpgrade(upgradeCosts, DemonLordTowers.tower(skill, tier), next.id(),
+                        (long) Math.ceil(next.mineralCost() * 1.5));
             }
         }
     }
@@ -3883,6 +3889,10 @@ public record TowerBalanceConfig(
         global.put("experienceGrowth", 1.25);
         // 스킬과 평타 모두에 곱해지는 유일한 성장 배율입니다. 만렙에서 2.45배가 됩니다.
         global.put("damagePerLevel", 0.05);
+        global.put("healthBonusThreshold", 500.0);
+        global.put("healthBonusScale", 500.0);
+        global.put("damageBonusThreshold", 0.5);
+        global.put("damageBonusScale", 0.5);
         global.put("bladeDamage", 19.0);
         global.put("bladeAttackIntervalTicks", 12.0);
         // 몹을 하나도 못 잡은 라운드에도 주는 기본 경험치입니다. 한 번 밀린 마왕이 영영
@@ -3890,6 +3900,7 @@ public record TowerBalanceConfig(
         global.put("passiveExperiencePerRound", 6.0);
         // 스탯 포인트. 레벨업마다 받아 원하는 능력치에 넣습니다.
         global.put("statPointsPerLevel", 3.0);
+        global.put("statDiamondCost", 50.0);
         global.put("statHealthPerPoint", 40.0);
         global.put("statAttackPerPoint", 0.04);
         global.put("statDefensePerPoint", 0.02);
@@ -3934,7 +3945,6 @@ public record TowerBalanceConfig(
                 values.put("radius", new double[] {4.0, 4.5, 5.0, 5.5}[index]);
                 values.put("damage", new double[] {23.0, 36.0, 53.0, 71.0}[index]);
                 values.put("knockback", new double[] {0.7, 0.8, 0.9, 1.0}[index]);
-                values.put("healRatio", new double[] {0.10, 0.13, 0.16, 0.20}[index]);
             }
             case SKY_BREAKER -> {
                 values.put("dashDistance", new double[] {8.0, 9.0, 10.0, 12.0}[index]);

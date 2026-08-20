@@ -3683,36 +3683,36 @@
     "army_recruit_t1->army_gunner_t2": 130,
     "army_specialist_t2->army_platoon_leader_t3": 280,
     "army_gunner_t2->army_battery_chief_t3": 280,
-    "t1_wave_of_malice_tower->t2_wave_of_malice_tower": 130,
-    "t2_wave_of_malice_tower->t3_wave_of_malice_tower": 240,
-    "t3_wave_of_malice_tower->t4_wave_of_malice_tower": 380,
-    "t1_demon_wings_tower->t2_demon_wings_tower": 100,
-    "t2_demon_wings_tower->t3_demon_wings_tower": 190,
-    "t3_demon_wings_tower->t4_demon_wings_tower": 300,
-    "t1_sky_breaker_tower->t2_sky_breaker_tower": 170,
-    "t2_sky_breaker_tower->t3_sky_breaker_tower": 300,
-    "t3_sky_breaker_tower->t4_sky_breaker_tower": 460,
-    "t1_arcane_bombardment_tower->t2_arcane_bombardment_tower": 170,
-    "t2_arcane_bombardment_tower->t3_arcane_bombardment_tower": 300,
-    "t3_arcane_bombardment_tower->t4_arcane_bombardment_tower": 460,
-    "t1_demon_barrier_tower->t2_demon_barrier_tower": 140,
-    "t2_demon_barrier_tower->t3_demon_barrier_tower": 250,
-    "t3_demon_barrier_tower->t4_demon_barrier_tower": 390,
-    "t1_hellfire_brand_tower->t2_hellfire_brand_tower": 150,
-    "t2_hellfire_brand_tower->t3_hellfire_brand_tower": 265,
-    "t3_hellfire_brand_tower->t4_hellfire_brand_tower": 410,
-    "t1_soul_drain_tower->t2_soul_drain_tower": 110,
-    "t2_soul_drain_tower->t3_soul_drain_tower": 200,
-    "t3_soul_drain_tower->t4_soul_drain_tower": 315,
-    "t1_roar_of_dread_tower->t2_roar_of_dread_tower": 140,
-    "t2_roar_of_dread_tower->t3_roar_of_dread_tower": 250,
-    "t3_roar_of_dread_tower->t4_roar_of_dread_tower": 395,
-    "t1_grip_of_doom_tower->t2_grip_of_doom_tower": 180,
-    "t2_grip_of_doom_tower->t3_grip_of_doom_tower": 320,
-    "t3_grip_of_doom_tower->t4_grip_of_doom_tower": 490,
-    "t1_hell_guillotine_tower->t2_hell_guillotine_tower": 160,
-    "t2_hell_guillotine_tower->t3_hell_guillotine_tower": 285,
-    "t3_hell_guillotine_tower->t4_hell_guillotine_tower": 440,
+    "t1_wave_of_malice_tower->t2_wave_of_malice_tower": 195,
+    "t2_wave_of_malice_tower->t3_wave_of_malice_tower": 360,
+    "t3_wave_of_malice_tower->t4_wave_of_malice_tower": 570,
+    "t1_demon_wings_tower->t2_demon_wings_tower": 150,
+    "t2_demon_wings_tower->t3_demon_wings_tower": 285,
+    "t3_demon_wings_tower->t4_demon_wings_tower": 450,
+    "t1_sky_breaker_tower->t2_sky_breaker_tower": 255,
+    "t2_sky_breaker_tower->t3_sky_breaker_tower": 450,
+    "t3_sky_breaker_tower->t4_sky_breaker_tower": 690,
+    "t1_arcane_bombardment_tower->t2_arcane_bombardment_tower": 255,
+    "t2_arcane_bombardment_tower->t3_arcane_bombardment_tower": 450,
+    "t3_arcane_bombardment_tower->t4_arcane_bombardment_tower": 690,
+    "t1_demon_barrier_tower->t2_demon_barrier_tower": 210,
+    "t2_demon_barrier_tower->t3_demon_barrier_tower": 375,
+    "t3_demon_barrier_tower->t4_demon_barrier_tower": 585,
+    "t1_hellfire_brand_tower->t2_hellfire_brand_tower": 225,
+    "t2_hellfire_brand_tower->t3_hellfire_brand_tower": 398,
+    "t3_hellfire_brand_tower->t4_hellfire_brand_tower": 615,
+    "t1_soul_drain_tower->t2_soul_drain_tower": 165,
+    "t2_soul_drain_tower->t3_soul_drain_tower": 300,
+    "t3_soul_drain_tower->t4_soul_drain_tower": 473,
+    "t1_roar_of_dread_tower->t2_roar_of_dread_tower": 210,
+    "t2_roar_of_dread_tower->t3_roar_of_dread_tower": 375,
+    "t3_roar_of_dread_tower->t4_roar_of_dread_tower": 593,
+    "t1_grip_of_doom_tower->t2_grip_of_doom_tower": 270,
+    "t2_grip_of_doom_tower->t3_grip_of_doom_tower": 480,
+    "t3_grip_of_doom_tower->t4_grip_of_doom_tower": 735,
+    "t1_hell_guillotine_tower->t2_hell_guillotine_tower": 240,
+    "t2_hell_guillotine_tower->t3_hell_guillotine_tower": 428,
+    "t3_hell_guillotine_tower->t4_hell_guillotine_tower": 660,
     "gamble_dice_t1->gamble_dice_t2": 100,
     "gamble_dice_t2->gamble_dice_t3": 200,
     "gamble_spectator_t1->gamble_spectator_t2": 100,
@@ -5361,6 +5361,18 @@
     "engineer_redstone_dust": {
       "towerSlotCost": 0.0
     },
+    "engineer_repeater_north": {
+      "towerSlotCost": 0.0
+    },
+    "engineer_repeater_east": {
+      "towerSlotCost": 0.0
+    },
+    "engineer_repeater_south": {
+      "towerSlotCost": 0.0
+    },
+    "engineer_repeater_west": {
+      "towerSlotCost": 0.0
+    },
     "engineer_door_t1": {
       "radius": 4.0
     },
@@ -6274,10 +6286,15 @@
       "experienceBase": 12.0,
       "experienceGrowth": 1.25,
       "damagePerLevel": 0.05,
+      "healthBonusThreshold": 500.0,
+      "healthBonusScale": 500.0,
+      "damageBonusThreshold": 0.5,
+      "damageBonusScale": 0.5,
       "bladeDamage": 19.0,
       "bladeAttackIntervalTicks": 12.0,
       "passiveExperiencePerRound": 6.0,
       "statPointsPerLevel": 3.0,
+      "statDiamondCost": 50.0,
       "statHealthPerPoint": 40.0,
       "statAttackPerPoint": 0.04,
       "statDefensePerPoint": 0.02,
@@ -6325,8 +6342,7 @@
       "leapPower": 1.0,
       "radius": 4.0,
       "damage": 23.0,
-      "knockback": 0.7,
-      "healRatio": 0.1
+      "knockback": 0.7
     },
     "t2_demon_wings_tower": {
       "towerSlotCost": 2.0,
@@ -6334,8 +6350,7 @@
       "leapPower": 1.1,
       "radius": 4.5,
       "damage": 36.0,
-      "knockback": 0.8,
-      "healRatio": 0.13
+      "knockback": 0.8
     },
     "t3_demon_wings_tower": {
       "towerSlotCost": 2.0,
@@ -6343,8 +6358,7 @@
       "leapPower": 1.2,
       "radius": 5.0,
       "damage": 53.0,
-      "knockback": 0.9,
-      "healRatio": 0.16
+      "knockback": 0.9
     },
     "t4_demon_wings_tower": {
       "towerSlotCost": 2.0,
@@ -6352,8 +6366,7 @@
       "leapPower": 1.3,
       "radius": 5.5,
       "damage": 71.0,
-      "knockback": 1.0,
-      "healRatio": 0.2
+      "knockback": 1.0
     },
     "t1_sky_breaker_tower": {
       "towerSlotCost": 4.0,

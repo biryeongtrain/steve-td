@@ -97,6 +97,8 @@ final class EngineerTowerCatalogTest {
         assertEquals(0, create(EngineerTowers.REDSTONE_DUST).slotWeight());
         assertEquals(0, create(EngineerTowers.repeater(Direction.WEST)).slotWeight());
         assertEquals(0, TowerCapacity.slotCost(EngineerTowers.REDSTONE_DUST));
+        EngineerTowers.repeaters().values().forEach(type ->
+                assertEquals(0, TowerCapacity.slotCost(type)));
         assertEquals(1, create(EngineerTowers.plate(EngineerTowers.PlateKind.WOOD)).slotWeight());
         assertEquals(1, create(EngineerTowers.trap(EngineerTowers.TrapKind.DOOR, 1)).slotWeight());
         assertFalse(create(EngineerTowers.trap(EngineerTowers.TrapKind.DOOR, 1)).participatesInFinalDefense());
@@ -408,7 +410,7 @@ final class EngineerTowerCatalogTest {
     }
 
     @Test
-    void redstoneDustCanBePlacedAtTheTowerLimitWithoutUsingCapacity() {
+    void redstoneCircuitsCanBePlacedAndUpgradedAtTheTowerLimitWithoutUsingCapacity() {
         ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
         EconomyConfig economy = EconomyConfig.defaultConfig();
         SemionGame game = new SemionGame(economy, WaveConfig.defaultConfig(), new GameArena(Map.of()));
@@ -423,6 +425,10 @@ final class EngineerTowerCatalogTest {
 
         assertEquals(game.towerLimitForPlayer(OWNER), game.towerCapacityUsed(OWNER));
         assertTrue(game.canFitTower(OWNER, EngineerTowers.REDSTONE_DUST));
+        assertTrue(game.canFitUpgrade(
+                OWNER, EngineerTowers.REDSTONE_DUST, EngineerTowers.repeater(Direction.NORTH)));
+        assertTrue(game.canFitUpgrade(
+                OWNER, EngineerTowers.repeater(Direction.NORTH), EngineerTowers.repeater(Direction.EAST)));
         assertFalse(game.canFitTower(OWNER, EngineerTowers.plate(EngineerTowers.PlateKind.WOOD)));
     }
 

@@ -63,8 +63,7 @@ public final class DemonLordTowers {
                         "<gray>바라보는 방향으로 도약합니다.</gray>",
                         "<green>주위 <aqua>{ability.radius:blocks}</aqua> 안의 적에게 "
                                 + "<yellow>{ability.damage:number}</yellow> 피해를 주고 밀어냅니다.</green>",
-                        "<green>최대 체력의 <aqua>{ability.healRatio:percent}</aqua>를 회복합니다.</green>",
-                        "<yellow>포위를 빠져나오면서 회복까지 챙기는 생존기입니다.</yellow>"
+                        "<yellow>포위를 빠져나오며 진형을 다시 잡는 이동기입니다.</yellow>"
                 )
         );
         register(
