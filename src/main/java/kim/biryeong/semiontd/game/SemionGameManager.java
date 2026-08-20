@@ -1273,6 +1273,10 @@ public final class SemionGameManager {
         return tutorialService.stage(playerId);
     }
 
+    public TutorialService.HighlightTarget tutorialHighlight(UUID playerId) {
+        return tutorialService.highlight(playerId);
+    }
+
     public boolean showTutorial(MinecraftServer server, UUID playerId) {
         SemionGame game = tutorialGames.get(playerId);
         return game != null && tutorialService.showCurrent(server, playerId, game);
@@ -1280,7 +1284,12 @@ public final class SemionGameManager {
 
     public boolean completeTutorial(MinecraftServer server, UUID playerId) {
         SemionGame game = tutorialGames.get(playerId);
-        return game != null && tutorialService.complete(server, playerId, game);
+        ServerPlayer player = server == null ? null : server.getPlayerList().getPlayer(playerId);
+        if (game == null || player == null || !tutorialService.complete(server, playerId, game)) {
+            return false;
+        }
+        returnPlayerToLobby(server, player);
+        return stopTutorial(server, playerId);
     }
 
     public boolean leaveTutorial(MinecraftServer server, ServerPlayer player) {
@@ -1509,7 +1518,13 @@ public final class SemionGameManager {
             SemionGame tutorial = entry.getValue();
             tutorial.tick(server);
             tutorialService.tick(server, entry.getKey(), tutorial);
-            sidebarHudService.refreshPlayersNow(server, tutorial, MatchMode.TEST, Set.of(entry.getKey()));
+            sidebarHudService.refreshTutorialPlayerNow(
+                    server,
+                    tutorial,
+                    MatchMode.TEST,
+                    entry.getKey(),
+                    tutorialService.highlight(entry.getKey())
+            );
             illagerRaidBossBarService.refreshPlayersNow(server, tutorial, Set.of(entry.getKey()));
             villagerAdvReputationBossBarService.refreshPlayersNow(server, tutorial, Set.of(entry.getKey()));
             engineerRedstoneBossBarService.refreshPlayersNow(server, tutorial, Set.of(entry.getKey()));

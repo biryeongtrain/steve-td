@@ -3,6 +3,7 @@ package kim.biryeong.semiontd.gametest;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.MapConfig;
 import kim.biryeong.semiontd.config.ProgressionConfig;
@@ -11,6 +12,7 @@ import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.game.GridPosition;
+import kim.biryeong.semiontd.game.MatchMode;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.RoundPhase;
 import kim.biryeong.semiontd.game.SemionGame;
@@ -25,6 +27,7 @@ import kim.biryeong.semiontd.summon.SummonResultType;
 import kim.biryeong.semiontd.tower.ProductionTowerService;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
 import kim.biryeong.semiontd.tutorial.TutorialService;
+import kim.biryeong.semiontd.ui.SemionHudTextService;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -112,6 +115,10 @@ public final class SemionTutorialGameTest {
                 context.fail(Component.literal("Game introduction should finish before the first tower task."));
                 return;
             }
+            tickMany(manager, server, 51);
+            if (!assertHighlight(context, manager, playerId, TutorialService.HighlightTarget.DIAMOND)) {
+                return;
+            }
 
             PlayerLane lane = tutorial.playerLane(playerId).orElseThrow();
             BlockPos wrongWolfBlock = BlockPos.containing(lane.laneLayout().positionAt(0.05));
@@ -124,6 +131,9 @@ public final class SemionTutorialGameTest {
             }
             manager.tick(server);
             if (!assertStage(context, manager, playerId, TutorialService.Stage.PLACE_PIG)) {
+                return;
+            }
+            if (!assertHighlight(context, manager, playerId, TutorialService.HighlightTarget.DIAMOND)) {
                 return;
             }
             if (!tickUntilStage(manager, server, playerId, TutorialService.Stage.PLACE_WOLF, 400)) {
@@ -200,6 +210,10 @@ public final class SemionTutorialGameTest {
             if (!assertStage(context, manager, playerId, TutorialService.Stage.UPGRADE_TOWER)) {
                 return;
             }
+            tickMany(manager, server, 51);
+            if (!assertHighlight(context, manager, playerId, TutorialService.HighlightTarget.DIAMOND)) {
+                return;
+            }
 
             GridPosition towerPosition = lane.towers().stream()
                     .filter(tower -> tower.type().id().equals(AnimalTowers.T1_WOLF_TOWER.id()))
@@ -212,6 +226,14 @@ public final class SemionTutorialGameTest {
             }
             if (!tickUntilStage(manager, server, playerId, TutorialService.Stage.BUY_INCOME_MONSTER, 300)) {
                 context.fail(Component.literal("Tower upgrade should advance after its paced narration."));
+                return;
+            }
+            tickMany(manager, server, 51);
+            if (!assertHighlight(context, manager, playerId, TutorialService.HighlightTarget.EMERALD)) {
+                return;
+            }
+            tickMany(manager, server, 51);
+            if (!assertHighlight(context, manager, playerId, TutorialService.HighlightTarget.EMERALD_RATE)) {
                 return;
             }
 
@@ -235,12 +257,28 @@ public final class SemionTutorialGameTest {
             if (!assertEquals(context, 1, lane.queuedSummonCount(), "Tutorial income monster should enter the learner's wave queue.")) {
                 return;
             }
+            tickMany(manager, server, 102);
+            if (!assertHighlight(context, manager, playerId, TutorialService.HighlightTarget.EMERALD)) {
+                return;
+            }
             if (!tickUntilStage(manager, server, playerId, TutorialService.Stage.LEARN_INCOME, 400)) {
                 context.fail(Component.literal("Income purchase should reveal the income explanation."));
                 return;
             }
+            tickMany(manager, server, 51);
+            if (!assertHighlight(context, manager, playerId, TutorialService.HighlightTarget.INCOME)) {
+                return;
+            }
             if (!tickUntilStage(manager, server, playerId, TutorialService.Stage.UPGRADE_EMERALD_PRODUCTION, 400)) {
                 context.fail(Component.literal("Income explanation should finish before the production upgrade task."));
+                return;
+            }
+            tickMany(manager, server, 51);
+            if (!assertHighlight(context, manager, playerId, TutorialService.HighlightTarget.EMERALD_RATE)) {
+                return;
+            }
+            tickMany(manager, server, 102);
+            if (!assertHighlight(context, manager, playerId, TutorialService.HighlightTarget.DIAMOND)) {
                 return;
             }
 
@@ -273,6 +311,29 @@ public final class SemionTutorialGameTest {
             if (!assertTrue(context, !manager.completeTutorial(server, playerId), "Final confirmation should wait until every explanation line is shown.")) {
                 return;
             }
+            tickMany(manager, server, 153);
+            if (!assertHighlight(context, manager, playerId, TutorialService.HighlightTarget.BOSS_HEALTH)) {
+                return;
+            }
+            var team = tutorial.teams().get(tutorial.players().get(playerId).teamId());
+            String bossHealth = Math.round(team.laneGroup().boss().health())
+                    + "/"
+                    + Math.round(team.laneGroup().boss().maxHealth());
+            String highlightedSidebar = SemionHudTextService.matchSidebarMarkupFor(
+                    playerId,
+                    Optional.of(team),
+                    tutorial,
+                    MatchMode.TEST,
+                    TutorialService.HighlightTarget.BOSS_HEALTH,
+                    true
+            );
+            if (!assertTrue(
+                    context,
+                    highlightedSidebar.contains("<white><bold>" + bossHealth + "</bold></white>"),
+                    "Tutorial sidebar should highlight the team boss health."
+            )) {
+                return;
+            }
             boolean completed = false;
             for (int tick = 0; tick < 500 && !completed; tick++) {
                 manager.tick(server);
@@ -281,24 +342,31 @@ public final class SemionTutorialGameTest {
             if (!assertTrue(context, completed, "Player should confirm the final-defense explanation after the paced narration.")) {
                 return;
             }
-            if (!assertStage(context, manager, playerId, TutorialService.Stage.COMPLETE)) {
+            if (!assertTrue(
+                    context,
+                    manager.tutorialGame(playerId).isEmpty()
+                            && !manager.isTutorialActive(playerId)
+                            && manager.tutorialStage(playerId).isEmpty()
+                            && manager.tutorialHighlight(playerId) == TutorialService.HighlightTarget.NONE,
+                    "Completion should immediately remove the tutorial session and game."
+            )) {
                 return;
             }
 
             if (!assertEquals(
                     context,
-                    SemionGameManager.SandboxStartResult.REPLACED,
+                    SemionGameManager.SandboxStartResult.STARTED,
                     manager.startSandbox(
                             server,
                             playerId,
                             player.getGameProfile().getName(),
                             SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(new BlockPos(60, 0, 0)))
                     ),
-                    "Starting sandbox should close the independent tutorial session."
+                    "Starting sandbox after completion should create a fresh practice session."
             )) {
                 return;
             }
-            if (!assertTrue(context, manager.tutorialGame(playerId).isEmpty() && manager.sandboxGame(playerId).isPresent(), "Sandbox should own only sandboxGames after replacement.")) {
+            if (!assertTrue(context, manager.tutorialGame(playerId).isEmpty() && manager.sandboxGame(playerId).isPresent(), "Sandbox should own only sandboxGames after tutorial completion.")) {
                 return;
             }
             SemionGame sandbox = manager.sandboxGame(playerId).orElseThrow();
@@ -382,6 +450,15 @@ public final class SemionTutorialGameTest {
             TutorialService.Stage expected
     ) {
         return assertEquals(context, expected, manager.tutorialStage(playerId).orElse(null), "Unexpected tutorial stage.");
+    }
+
+    private static boolean assertHighlight(
+            GameTestHelper context,
+            SemionGameManager manager,
+            java.util.UUID playerId,
+            TutorialService.HighlightTarget expected
+    ) {
+        return assertEquals(context, expected, manager.tutorialHighlight(playerId), "Unexpected tutorial HUD highlight.");
     }
 
     private static boolean assertTrue(GameTestHelper context, boolean condition, String message) {

@@ -35,6 +35,7 @@ import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.demonlord.DemonLordState;
 import kim.biryeong.semiontd.tower.demonlord.DemonLordStates;
+import kim.biryeong.semiontd.tutorial.TutorialService.HighlightTarget;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -62,6 +63,18 @@ public final class SemionHudTextService {
             MinecraftServer server,
             boolean damageView
     ) {
+        return sidebarLinesFor(viewer, game, matchMode, server, damageView, HighlightTarget.NONE, false);
+    }
+
+    public static List<Component> sidebarLinesFor(
+            ServerPlayer viewer,
+            SemionGame game,
+            MatchMode matchMode,
+            MinecraftServer server,
+            boolean damageView,
+            HighlightTarget highlightTarget,
+            boolean highlightOn
+    ) {
         if (game.canConfigureRoster()) {
             return components(lobbyMarkupFor(viewer, game, matchMode, server));
         }
@@ -69,7 +82,7 @@ public final class SemionHudTextService {
             return components(damageSidebarMarkupFor(viewer.getUUID(), game));
         }
         if (game.isActiveParticipant(viewer.getUUID()) || game.isMatchSpectator(viewer.getUUID())) {
-            return components(matchSidebarMarkupFor(viewer, game, matchMode));
+            return components(matchSidebarMarkupFor(viewer, game, matchMode, highlightTarget, highlightOn));
         }
         return List.of();
     }
@@ -132,14 +145,45 @@ public final class SemionHudTextService {
     }
 
     public static String matchSidebarMarkupFor(ServerPlayer viewer, SemionGame game, MatchMode matchMode) {
-        return matchSidebarMarkupFor(viewer.getUUID(), viewer, viewingTeam(viewer, game), game, matchMode);
+        return matchSidebarMarkupFor(viewer, game, matchMode, HighlightTarget.NONE, false);
+    }
+
+    public static String matchSidebarMarkupFor(
+            ServerPlayer viewer,
+            SemionGame game,
+            MatchMode matchMode,
+            HighlightTarget highlightTarget,
+            boolean highlightOn
+    ) {
+        return matchSidebarMarkupFor(viewer.getUUID(), viewer, viewingTeam(viewer, game), game, matchMode,
+                highlightTarget, highlightOn);
     }
 
     public static String matchSidebarMarkupFor(UUID viewerId, Optional<SemionTeam> viewingTeam, SemionGame game, MatchMode matchMode) {
-        return matchSidebarMarkupFor(viewerId, null, viewingTeam, game, matchMode);
+        return matchSidebarMarkupFor(viewerId, viewingTeam, game, matchMode, HighlightTarget.NONE, false);
+    }
+
+    public static String matchSidebarMarkupFor(
+            UUID viewerId,
+            Optional<SemionTeam> viewingTeam,
+            SemionGame game,
+            MatchMode matchMode,
+            HighlightTarget highlightTarget,
+            boolean highlightOn
+    ) {
+        return matchSidebarMarkupFor(viewerId, null, viewingTeam, game, matchMode, highlightTarget, highlightOn);
     }
 
     public static Optional<Component> actionbarTextFor(UUID viewerId, SemionGame game) {
+        return actionbarTextFor(viewerId, game, HighlightTarget.NONE, false);
+    }
+
+    public static Optional<Component> actionbarTextFor(
+            UUID viewerId,
+            SemionGame game,
+            HighlightTarget highlightTarget,
+            boolean highlightOn
+    ) {
         SemionPlayer player = game.players().get(viewerId);
         if (player == null) {
             return Optional.empty();
@@ -148,17 +192,50 @@ public final class SemionHudTextService {
         if (team == null || team.eliminated()) {
             return Optional.empty();
         }
-        return Optional.of(miniMessage(actionbarMarkupFor(player, game)));
+        return Optional.of(miniMessage(actionbarMarkupFor(player, game, highlightTarget, highlightOn)));
     }
 
     public static String actionbarMarkupFor(SemionPlayer player, SemionGame game) {
+        return actionbarMarkupFor(player, game, HighlightTarget.NONE, false);
+    }
+
+    public static String actionbarMarkupFor(
+            SemionPlayer player,
+            SemionGame game,
+            HighlightTarget highlightTarget,
+            boolean highlightOn
+    ) {
         PlayerEconomy economy = player.economy();
         int currentTowers = game.towerCapacityUsed(player.uuid());
         int maxTowers = game.towerLimitForPlayer(player.uuid());
-        return "<aqua>◆ 다이아 " + economy.diamond() + "</aqua>"
-                + " <dark_gray>|</dark_gray> <green>⬢ 에메랄드 " + economy.emerald() + "</green>"
-                + " <dark_gray>|</dark_gray> <dark_green>↗</dark_green> <green>에메랄드/s " + economy.emeraldPerSec() + "</green>"
-                + " <dark_gray>|</dark_gray> <gold>+ 수입 " + economy.income() + "</gold>"
+        return highlightable(
+                HighlightTarget.DIAMOND,
+                highlightTarget,
+                highlightOn,
+                "<aqua>◆ 다이아 " + economy.diamond() + "</aqua>",
+                "◆ 다이아 " + economy.diamond()
+        )
+                + " <dark_gray>|</dark_gray> " + highlightable(
+                        HighlightTarget.EMERALD,
+                        highlightTarget,
+                        highlightOn,
+                        "<green>⬢ 에메랄드 " + economy.emerald() + "</green>",
+                        "⬢ 에메랄드 " + economy.emerald()
+                )
+                + " <dark_gray>|</dark_gray> " + highlightable(
+                        HighlightTarget.EMERALD_RATE,
+                        highlightTarget,
+                        highlightOn,
+                        "<dark_green>↗</dark_green> <green>에메랄드/s " + economy.emeraldPerSec() + "</green>",
+                        "↗ 에메랄드/s " + economy.emeraldPerSec()
+                )
+                + " <dark_gray>|</dark_gray> " + highlightable(
+                        HighlightTarget.INCOME,
+                        highlightTarget,
+                        highlightOn,
+                        "<gold>+ 수입 " + economy.income() + "</gold>",
+                        "+ 수입 " + economy.income()
+                )
                 + " <dark_gray>|</dark_gray> <gray>▣ 타워</gray> " + towerLimitText(currentTowers, maxTowers);
     }
 
@@ -176,7 +253,15 @@ public final class SemionHudTextService {
                 + "<gray>시작 가능</gray> " + startableLabel;
     }
 
-    private static String matchSidebarMarkupFor(UUID viewerId, ServerPlayer viewer, Optional<SemionTeam> viewingTeam, SemionGame game, MatchMode matchMode) {
+    private static String matchSidebarMarkupFor(
+            UUID viewerId,
+            ServerPlayer viewer,
+            Optional<SemionTeam> viewingTeam,
+            SemionGame game,
+            MatchMode matchMode,
+            HighlightTarget highlightTarget,
+            boolean highlightOn
+    ) {
         StringBuilder text = new StringBuilder();
         appendMatchHeader(text, game, matchMode);
 
@@ -185,7 +270,7 @@ public final class SemionHudTextService {
         if (player != null && playerTeam != null && playerTeam.eliminated()) {
             appendEliminatedPlayerHud(text, viewer, player, playerTeam, viewingTeam);
         } else if (player != null) {
-            appendActivePlayerHud(text, viewer, player, playerTeam);
+            appendActivePlayerHud(text, viewer, player, playerTeam, highlightTarget, highlightOn);
             if (game.phase() == RoundPhase.PREPARE_AND_SUMMON) {
                 appendNextWavePreview(text, viewerId, game);
             } else {
@@ -305,7 +390,14 @@ public final class SemionHudTextService {
         text.append('\n');
     }
 
-    private static void appendActivePlayerHud(StringBuilder text, ServerPlayer viewer, SemionPlayer player, SemionTeam team) {
+    private static void appendActivePlayerHud(
+            StringBuilder text,
+            ServerPlayer viewer,
+            SemionPlayer player,
+            SemionTeam team,
+            HighlightTarget highlightTarget,
+            boolean highlightOn
+    ) {
         text.append("<gray>팀/라인</gray> ")
                 .append(teamNameText(player.teamId()))
                 .append(" <dark_gray>/</dark_gray> <white>")
@@ -316,7 +408,7 @@ public final class SemionHudTextService {
                 .append("</yellow>\n");
         if (team != null) {
             text.append("<gray>내 팀 보스</gray> ")
-                    .append(bossHealthText(team))
+                    .append(bossHealthText(team, highlightTarget == HighlightTarget.BOSS_HEALTH && highlightOn))
                     .append('\n');
         }
     }
@@ -529,12 +621,32 @@ public final class SemionHudTextService {
     }
 
     private static String bossHealthText(SemionTeam team) {
+        return bossHealthText(team, false);
+    }
+
+    private static String bossHealthText(SemionTeam team, boolean highlighted) {
         if (team.eliminated()) {
             return "<red><bold>탈락</bold></red>";
         }
         long health = Math.round(team.laneGroup().boss().health());
         long maxHealth = Math.round(team.laneGroup().boss().maxHealth());
+        if (highlighted) {
+            return "<white><bold>" + health + "/" + maxHealth + "</bold></white>";
+        }
         return "<red>" + health + "</red><dark_gray>/</dark_gray><white>" + maxHealth + "</white>";
+    }
+
+    private static String highlightable(
+            HighlightTarget element,
+            HighlightTarget highlightTarget,
+            boolean highlightOn,
+            String normalMarkup,
+            String plainText
+    ) {
+        if (!highlightOn || element != highlightTarget) {
+            return normalMarkup;
+        }
+        return "<white><bold>" + plainText + "</bold></white>";
     }
 
     private static String towerLimitText(int current, int max) {

@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 import kim.biryeong.semiontd.game.MatchMode;
 import kim.biryeong.semiontd.game.SemionGame;
+import kim.biryeong.semiontd.tutorial.TutorialService.HighlightTarget;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.numbers.BlankFormat;
 import net.minecraft.server.MinecraftServer;
@@ -82,6 +83,39 @@ public final class SemionSidebarHudService {
         }
     }
 
+    public void refreshTutorialPlayerNow(
+            MinecraftServer server,
+            SemionGame game,
+            MatchMode matchMode,
+            UUID playerId,
+            HighlightTarget highlightTarget
+    ) {
+        ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+        if (player == null) {
+            return;
+        }
+        boolean highlightOn = tutorialHighlightOn(server.getTickCount());
+        List<Component> lines = SemionHudTextService.sidebarLinesFor(
+                player,
+                game,
+                matchMode,
+                server,
+                false,
+                highlightTarget,
+                highlightOn
+        );
+        if (lines.isEmpty()) {
+            remove(player);
+            return;
+        }
+        update(player, lines);
+        updateActionbar(player, game, highlightTarget, highlightOn);
+    }
+
+    static boolean tutorialHighlightOn(int serverTick) {
+        return Math.floorDiv(serverTick, UPDATE_INTERVAL_TICKS) % 2 == 0;
+    }
+
     public void clear(MinecraftServer server) {
         updateTicker = 0;
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
@@ -125,6 +159,16 @@ public final class SemionSidebarHudService {
 
     private void updateActionbar(ServerPlayer player, SemionGame game) {
         SemionHudTextService.actionbarTextFor(player.getUUID(), game)
+                .ifPresent(component -> player.displayClientMessage(component, true));
+    }
+
+    private void updateActionbar(
+            ServerPlayer player,
+            SemionGame game,
+            HighlightTarget highlightTarget,
+            boolean highlightOn
+    ) {
+        SemionHudTextService.actionbarTextFor(player.getUUID(), game, highlightTarget, highlightOn)
                 .ifPresent(component -> player.displayClientMessage(component, true));
     }
 

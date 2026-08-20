@@ -16,6 +16,7 @@ import kim.biryeong.semiontd.game.SemionGame;
 import kim.biryeong.semiontd.game.SemionPlayer;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.map.GameArena;
+import kim.biryeong.semiontd.tutorial.TutorialService.HighlightTarget;
 import org.junit.jupiter.api.Test;
 
 final class SemionHudTextServiceTest {
@@ -35,6 +36,29 @@ final class SemionHudTextServiceTest {
         assertTrue(actionbar.contains("+ 수입 67"));
         assertTrue(actionbar.contains("에메랄드/s 8"));
         assertTrue(actionbar.contains("▣ 타워"));
+    }
+
+    @Test
+    void tutorialActionbarHighlightsOnlyTheExplainedEconomyElement() {
+        SemionGame game = new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(), new GameArena(Map.of()));
+        UUID playerId = UUID.fromString("00000000-0000-0000-0000-000000000103");
+        PlayerEconomy economy = new PlayerEconomy(EconomyConfig.defaultConfig());
+        economy.overrideStartingValues(123, 45, 67, 8);
+        SemionPlayer player = new SemionPlayer(playerId, "player", TeamId.RED, 1, economy);
+        game.players().put(playerId, player);
+
+        String normal = SemionHudTextService.actionbarMarkupFor(player, game);
+        assertEquals(normal, SemionHudTextService.actionbarMarkupFor(player, game, HighlightTarget.DIAMOND, false));
+        assertTrue(SemionHudTextService.actionbarMarkupFor(player, game, HighlightTarget.DIAMOND, true)
+                .contains("<white><bold>◆ 다이아 123</bold></white>"));
+        assertTrue(SemionHudTextService.actionbarMarkupFor(player, game, HighlightTarget.EMERALD, true)
+                .contains("<white><bold>⬢ 에메랄드 45</bold></white>"));
+        assertTrue(SemionHudTextService.actionbarMarkupFor(player, game, HighlightTarget.EMERALD_RATE, true)
+                .contains("<white><bold>↗ 에메랄드/s 8</bold></white>"));
+        String incomeHighlight = SemionHudTextService.actionbarMarkupFor(player, game, HighlightTarget.INCOME, true);
+        assertTrue(incomeHighlight.contains("<white><bold>+ 수입 67</bold></white>"));
+        assertTrue(incomeHighlight.contains("<aqua>◆ 다이아 123</aqua>"));
+        assertTrue(incomeHighlight.contains("<green>⬢ 에메랄드 45</green>"));
     }
 
     @Test
@@ -71,5 +95,14 @@ final class SemionHudTextServiceTest {
     void sidebarKeepsItsRealTimeRefreshRateDuringCombatSpeedup() {
         assertEquals(10, SemionSidebarHudService.updateIntervalTicks(20.0F));
         assertEquals(20, SemionSidebarHudService.updateIntervalTicks(40.0F));
+    }
+
+    @Test
+    void tutorialHighlightAlternatesEveryHalfSecond() {
+        assertTrue(SemionSidebarHudService.tutorialHighlightOn(0));
+        assertTrue(SemionSidebarHudService.tutorialHighlightOn(9));
+        assertFalse(SemionSidebarHudService.tutorialHighlightOn(10));
+        assertFalse(SemionSidebarHudService.tutorialHighlightOn(19));
+        assertTrue(SemionSidebarHudService.tutorialHighlightOn(20));
     }
 }

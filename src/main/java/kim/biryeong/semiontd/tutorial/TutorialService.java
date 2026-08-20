@@ -13,6 +13,7 @@ import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.SemionGame;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
+import kim.biryeong.semiontd.ui.SemionLaneIndicatorService;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.ClickEvent;
@@ -28,6 +29,7 @@ import net.minecraft.world.phys.Vec3;
 public final class TutorialService {
     public static final long TRAINING_DIAMONDS = 200L;
     private static final int NARRATION_INTERVAL_TICKS = 50;
+    private static final int DIRECTION_VFX_INTERVAL_TICKS = 5;
 
     private static final Map<Stage, String> OBJECTIVES = new EnumMap<>(Stage.class);
 
@@ -64,6 +66,11 @@ public final class TutorialService {
         ServerPlayer player = server.getPlayerList().getPlayer(playerId);
         if (player != null) {
             updateBossBar(player, session);
+            if (showsDirection(session.stage)
+                    && server.getTickCount() % DIRECTION_VFX_INTERVAL_TICKS == 0) {
+                game.playerLane(playerId)
+                        .ifPresent(lane -> SemionLaneIndicatorService.showDirection(player, lane, server.getTickCount()));
+            }
         }
         boolean terminal = session.stage == Stage.COMPLETE || session.stage == Stage.FAILED;
         if (!terminal && game.phase() == RoundPhase.ENDED) {
@@ -179,6 +186,11 @@ public final class TutorialService {
         return Optional.ofNullable(session == null ? null : session.stage);
     }
 
+    public HighlightTarget highlight(UUID playerId) {
+        Session session = sessions.get(playerId);
+        return session == null ? HighlightTarget.NONE : session.highlightTarget;
+    }
+
     public boolean isActive(UUID playerId) {
         return sessions.containsKey(playerId);
     }
@@ -205,6 +217,15 @@ public final class TutorialService {
         FAILED
     }
 
+    public enum HighlightTarget {
+        NONE,
+        DIAMOND,
+        EMERALD,
+        EMERALD_RATE,
+        INCOME,
+        BOSS_HEALTH
+    }
+
     private static boolean holdsPrepareOpen(Stage stage) {
         return stage == Stage.PLACE_PIG
                 || stage == Stage.PLACE_WOLF
@@ -215,6 +236,15 @@ public final class TutorialService {
 
     private static boolean isWaveDefense(Stage stage) {
         return stage == Stage.DEFEND_FIRST_WAVE || stage == Stage.DEFEND_INCOME_MONSTER;
+    }
+
+    private static boolean showsDirection(Stage stage) {
+        return stage == Stage.INTRO
+                || stage == Stage.PLACE_PIG
+                || stage == Stage.PLACE_WOLF
+                || stage == Stage.DEFEND_FIRST_WAVE
+                || stage == Stage.DEFEND_INCOME_MONSTER
+                || stage == Stage.FINAL_DEFENSE;
     }
 
     private static boolean hasAction(List<BuildAction> actions, BuildActionType type) {
@@ -255,10 +285,11 @@ public final class TutorialService {
         showLines(server, playerId, session, stageLines(session.stage, game, playerId, session));
     }
 
-    private void showLines(MinecraftServer server, UUID playerId, Session session, List<String> lines) {
+    private void showLines(MinecraftServer server, UUID playerId, Session session, List<NarrationLine> lines) {
         session.narrationLines = lines;
         session.narrationIndex = 0;
         session.narrationTicks = 0;
+        session.highlightTarget = HighlightTarget.NONE;
         session.completionLinkSent = false;
         session.waveCountdownStarted = false;
         ServerPlayer player = server.getPlayerList().getPlayer(playerId);
@@ -295,7 +326,11 @@ public final class TutorialService {
         if (session.narrationIndex == 0) {
             player.playNotifySound(SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.MUSIC, 1.0F, 1.2F);
         }
-        player.sendSystemMessage(SemionText.prefixedMini(session.narrationLines.get(session.narrationIndex++)));
+        NarrationLine line = session.narrationLines.get(session.narrationIndex++);
+        if (line.highlightTarget != null) {
+            session.highlightTarget = line.highlightTarget;
+        }
+        player.sendSystemMessage(SemionText.prefixedMini(line.text));
         session.narrationTicks = NARRATION_INTERVAL_TICKS;
     }
 
@@ -339,9 +374,9 @@ public final class TutorialService {
         };
     }
 
-    private static List<String> stageLines(Stage stage, SemionGame game, UUID playerId, Session session) {
+    private static List<NarrationLine> stageLines(Stage stage, SemionGame game, UUID playerId, Session session) {
         return switch (stage) {
-            case INTRO -> List.of(
+            case INTRO -> plain(
                     "<gold><bold>튜토리얼 1/10 · 세미온 TD</bold></gold>",
                     "세미온 TD는 타워로 내 라인을 막고, 인컴 몹으로 상대 라인을 압박하는 타워 디펜스입니다.",
                     "웨이브마다 몹이 스폰 지점에서 팀 보스 쪽으로 이동합니다.",
@@ -349,76 +384,72 @@ public final class TutorialService {
                     "이제 타워 설치부터 직접 연습합니다."
             );
             case PLACE_PIG -> List.of(
-                    "<gold><bold>튜토리얼 2/10 · 앞줄 탱커</bold></gold>",
-                    "<aqua>다이아</aqua>는 타워를 설치하고 업그레이드할 때 씁니다.",
-                    "돼지 타워는 체력과 공격 우선순위가 높아 앞줄에서 몹의 공격을 받습니다.",
-                    "<white>과제:</white> 라인 앞쪽 칸에 서서 <aqua>나침반</aqua>을 우클릭하고 <yellow>돼지 타워</yellow>를 설치하세요."
+                    line("<gold><bold>튜토리얼 2/10 · 앞줄 탱커</bold></gold>"),
+                    line("<aqua>다이아</aqua>는 타워를 설치하고 업그레이드할 때 씁니다.", HighlightTarget.DIAMOND),
+                    line("돼지 타워는 체력과 공격 우선순위가 높아 앞줄에서 몹의 공격을 받습니다."),
+                    line("<white>과제:</white> 라인 앞쪽 칸에 서서 <aqua>나침반</aqua>을 우클릭하고 <yellow>돼지 타워</yellow>를 설치하세요.", HighlightTarget.DIAMOND)
             );
-            case PLACE_WOLF -> List.of(
+            case PLACE_WOLF -> plain(
                     "<gold><bold>튜토리얼 3/10 · 뒤줄 딜러</bold></gold>",
                     "늑구 타워는 늑대 딜러입니다. 돼지가 버티는 동안 뒤에서 공격합니다.",
                     "몬스터는 스폰 지점에서 팀 보스 쪽으로 이동합니다.",
                     "<white>과제:</white> 돼지보다 <yellow>팀 보스 쪽</yellow> 칸에 서서 <aqua>나침반</aqua>으로 <yellow>늑구 타워</yellow>를 설치하세요."
             );
-            case DEFEND_FIRST_WAVE -> List.of(
+            case DEFEND_FIRST_WAVE -> plain(
                     "<gold><bold>튜토리얼 4/10 · 첫 방어</bold></gold>",
                     "돼지가 공격을 받아 버티고, 뒤의 늑구가 긴 사거리로 공격합니다.",
                     "몹이 라인 끝을 통과하면 방어 실패로 기록되고 최종 방어선으로 이동합니다.",
                     "<white>과제:</white> <yellow>%d라운드</yellow>의 모든 몹을 막으세요.".formatted(game.currentRound())
             );
             case UPGRADE_TOWER -> List.of(
-                    "<gold><bold>튜토리얼 5/10 · 타워 업그레이드</bold></gold>",
-                    "업그레이드는 다이아를 쓰고 타워의 능력치나 기능을 강화합니다.",
-                    "<white>과제:</white> 돼지나 늑구 타워 위에 서서 나침반을 우클릭한 뒤 업그레이드 하나를 고르세요."
+                    line("<gold><bold>튜토리얼 5/10 · 타워 업그레이드</bold></gold>"),
+                    line("업그레이드는 다이아를 쓰고 타워의 능력치나 기능을 강화합니다.", HighlightTarget.DIAMOND),
+                    line("<white>과제:</white> 돼지나 늑구 타워 위에 서서 나침반을 우클릭한 뒤 업그레이드 하나를 고르세요.", HighlightTarget.DIAMOND)
             );
             case BUY_INCOME_MONSTER -> List.of(
-                    "<gold><bold>튜토리얼 6/10 · 인컴 몹 구매</bold></gold>",
-                    "<green>에메랄드</green>는 인컴 몹을 살 때 씁니다.",
-                    "화면의 <dark_green>에메랄드/초</dark_green>만큼 매초 에메랄드를 받습니다.",
-                    "실제 경기에서는 상대에게 보내지만, 여기서는 방어 연습을 위해 내 라인으로 보냅니다.",
-                    "<white>과제:</white> <light_purple>메아리 조각</light_purple>을 우클릭하고 구매 가능한 인컴 몹 하나를 사세요."
+                    line("<gold><bold>튜토리얼 6/10 · 인컴 몹 구매</bold></gold>"),
+                    line("<green>에메랄드</green>는 인컴 몹을 살 때 씁니다.", HighlightTarget.EMERALD),
+                    line("화면의 <dark_green>에메랄드/초</dark_green>만큼 매초 에메랄드를 받습니다.", HighlightTarget.EMERALD_RATE),
+                    line("실제 경기에서는 상대에게 보내지만, 여기서는 방어 연습을 위해 내 라인으로 보냅니다."),
+                    line("<white>과제:</white> <light_purple>메아리 조각</light_purple>을 우클릭하고 구매 가능한 인컴 몹 하나를 사세요.", HighlightTarget.EMERALD)
             );
             case LEARN_INCOME -> List.of(
-                    "<gold><bold>튜토리얼 7/10 · 수입</bold></gold>",
-                    "방금 구매로 <yellow>수입이 %d</yellow> 올랐습니다.".formatted(session.incomeGain),
-                    "현재 수입은 <yellow>%d</yellow>이며, 라운드가 끝날 때 그만큼 다이아를 받습니다.".formatted(session.currentIncome),
-                    "인컴 몹을 더 사면 다음 라운드부터 받을 다이아가 계속 늘어납니다."
+                    line("<gold><bold>튜토리얼 7/10 · 수입</bold></gold>"),
+                    line("방금 구매로 <yellow>수입이 %d</yellow> 올랐습니다.".formatted(session.incomeGain), HighlightTarget.INCOME),
+                    line("현재 수입은 <yellow>%d</yellow>이며, 라운드가 끝날 때 그만큼 다이아를 받습니다.".formatted(session.currentIncome)),
+                    line("인컴 몹을 더 사면 다음 라운드부터 받을 다이아가 계속 늘어납니다.")
             );
             case UPGRADE_EMERALD_PRODUCTION -> List.of(
-                    "<gold><bold>튜토리얼 8/10 · 인컴 업그레이드</bold></gold>",
-                    "관리 창의 <green>인컴 업그레이드</green>는 다이아를 써서 에메랄드/초를 올립니다.",
-                    "에메랄드가 빨리 차면 인컴 몹을 더 자주 사고, 수입도 더 빠르게 키울 수 있습니다.",
-                    "<white>과제:</white> 나침반을 우클릭하고 <green>인컴 업그레이드</green>를 누르세요. 현재 비용은 <aqua>%d 다이아</aqua>입니다."
-                            .formatted(nextProductionUpgradeCost(game, playerId))
+                    line("<gold><bold>튜토리얼 8/10 · 인컴 업그레이드</bold></gold>"),
+                    line("관리 창의 <green>인컴 업그레이드</green>는 다이아를 써서 에메랄드/초를 올립니다.", HighlightTarget.EMERALD_RATE),
+                    line("에메랄드가 빨리 차면 인컴 몹을 더 자주 사고, 수입도 더 빠르게 키울 수 있습니다."),
+                    line("<white>과제:</white> 나침반을 우클릭하고 <green>인컴 업그레이드</green>를 누르세요. 현재 비용은 <aqua>%d 다이아</aqua>입니다."
+                            .formatted(nextProductionUpgradeCost(game, playerId)), HighlightTarget.DIAMOND)
             );
-            case DEFEND_INCOME_MONSTER -> List.of(
+            case DEFEND_INCOME_MONSTER -> plain(
                     "<gold><bold>튜토리얼 9/10 · 인컴 몹 방어</bold></gold>",
                     "방금 산 인컴 몹이 일반 웨이브 몹과 함께 내 라인으로 들어옵니다.",
                     "앞줄 돼지가 버티는 동안 뒤의 늑구가 안전하게 공격하도록 배치를 확인하세요.",
                     "<white>과제:</white> <yellow>%d라운드</yellow>의 모든 몹을 막으세요.".formatted(game.currentRound())
             );
             case FINAL_DEFENSE -> List.of(
-                    "<gold><bold>튜토리얼 10/10 · 최종 방어선과 보스</bold></gold>",
-                    "라인에서 막지 못한 몹은 최종 방어선으로 이동합니다.",
-                    "남은 타워도 팀 보스 앞으로 모여 마지막 전투를 치릅니다.",
-                    "몹이 팀 보스의 체력을 0으로 만들면 팀이 탈락합니다.",
-                    "웨이브 보스는 일반 몹보다 훨씬 강합니다. 보스전에 쓸 다이아와 단일 대상 화력을 준비하세요.",
-                    "화면의 팀 보스 체력을 확인한 뒤 아래 완료 버튼을 누르세요."
+                    line("<gold><bold>튜토리얼 10/10 · 최종 방어선과 보스</bold></gold>"),
+                    line("라인에서 막지 못한 몹은 최종 방어선으로 이동합니다."),
+                    line("남은 타워도 팀 보스 앞으로 모여 마지막 전투를 치릅니다."),
+                    line("몹이 팀 보스의 체력을 0으로 만들면 팀이 탈락합니다.", HighlightTarget.BOSS_HEALTH),
+                    line("웨이브 보스는 일반 몹보다 훨씬 강합니다. 보스전에 쓸 다이아와 단일 대상 화력을 준비하세요."),
+                    line("화면의 팀 보스 체력을 확인한 뒤 아래 완료 버튼을 누르세요.", HighlightTarget.BOSS_HEALTH)
             );
-            case COMPLETE -> List.of(
-                    "<green><bold>튜토리얼 완료</bold></green>",
-                    "돼지·늑구 배치부터 타워 강화와 인컴 운영까지 직접 수행했습니다.",
-                    "현재 연습장을 계속 쓰거나 <yellow>/튜토리얼 종료</yellow>로 로비에 돌아가세요."
-            );
-            case FAILED -> List.of(
+            case COMPLETE -> plain("<green><bold>튜토리얼 완료</bold></green>");
+            case FAILED -> plain(
                     "<red><bold>튜토리얼 실패</bold></red>",
                     "팀 보스가 쓰러졌습니다. <yellow>/튜토리얼 다시</yellow>로 처음부터 시작하세요."
             );
         };
     }
 
-    private static List<String> firstDefenseRetryLines(int round) {
-        return List.of(
+    private static List<NarrationLine> firstDefenseRetryLines(int round) {
+        return plain(
                 "<red><bold>%d라운드 방어 실패</bold></red>".formatted(round),
                 "설치한 타워와 자원은 유지한 채 %d라운드 준비 단계로 돌아왔습니다.".formatted(round),
                 "남은 다이아로 돼지나 늑구 타워를 더 설치하세요.",
@@ -435,6 +466,21 @@ public final class TutorialService {
         return game.economyConfig().gasProduction().upgradeCost(count);
     }
 
+    private static List<NarrationLine> plain(String... lines) {
+        return java.util.Arrays.stream(lines).map(TutorialService::line).toList();
+    }
+
+    private static NarrationLine line(String text) {
+        return new NarrationLine(text, null);
+    }
+
+    private static NarrationLine line(String text, HighlightTarget highlightTarget) {
+        return new NarrationLine(text, highlightTarget);
+    }
+
+    private record NarrationLine(String text, HighlightTarget highlightTarget) {
+    }
+
     private static final class Session {
         private Stage stage = Stage.INTRO;
         private int defenseRound = 1;
@@ -443,9 +489,10 @@ public final class TutorialService {
         private long currentIncome;
         private GridPosition pigPosition;
         private GridPosition rejectedWolfPosition;
-        private List<String> narrationLines = List.of();
+        private List<NarrationLine> narrationLines = List.of();
         private int narrationIndex;
         private int narrationTicks;
+        private HighlightTarget highlightTarget = HighlightTarget.NONE;
         private boolean completionLinkSent;
         private boolean waveCountdownStarted;
         private ServerBossEvent bossBar;
