@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.tower.area;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +67,12 @@ public final class AreaEffectService implements AreaEffectApi {
                 .filter(SemionMonsterEntity.class::isInstance)
                 .map(SemionMonsterEntity.class::cast)
                 .toList();
+        if (request.maxTargets() != Integer.MAX_VALUE && candidates.size() > request.maxTargets()) {
+            candidates = candidates.stream()
+                    .sorted(Comparator.comparingDouble(monster -> monster.position().distanceToSqr(request.center())))
+                    .limit(request.maxTargets())
+                    .toList();
+        }
         return apply(request.source(), request.effectId(), request.center(), request.radius(), request.vfx(), candidates,
                 SemionMonsterEntity::position, action);
     }

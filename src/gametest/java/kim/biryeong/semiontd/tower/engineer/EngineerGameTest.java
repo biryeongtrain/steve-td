@@ -514,9 +514,9 @@ public final class EngineerGameTest {
             lane.addTower(gold);
             lane.addTower(wood);
             Vec3 center = Vec3.atCenterOf(new BlockPos(tntPosition.x(), tntPosition.y() + 1, tntPosition.z()));
-            for (int index = 0; index < 18; index++) {
-                double radius = index < 16 ? 1.0 + index * 0.08 : 3.4 + (index - 16) * 0.3;
-                double angle = index * Math.PI * 2.0 / 18.0;
+            for (int index = 0; index < 20; index++) {
+                double radius = 1.0 + index * 0.14;
+                double angle = index * Math.PI * 2.0 / 20.0;
                 SemionMonsterEntity target = spawnMonster(
                         context,
                         lane,
@@ -545,8 +545,8 @@ public final class EngineerGameTest {
             }
 
             for (int index = 0; index < targets.size(); index++) {
-                requireClose(376.0, targets.get(index).runtimeMonster().health(),
-                        "TNT target " + index + " health");
+                requireClose(index < 18 ? 376.0 : 1_000.0, targets.get(index).runtimeMonster().health(),
+                        "TNT nearest-target cap " + index + " health");
             }
             require(tnt.runtimeDetailLines().stream().anyMatch(line -> line.contains("+2/20기")),
                     "TNT details must show the current accumulated target bonus.");

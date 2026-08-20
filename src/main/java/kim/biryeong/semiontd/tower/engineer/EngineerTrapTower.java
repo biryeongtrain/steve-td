@@ -211,7 +211,7 @@ public final class EngineerTrapTower extends EntityBackedTower {
         if (fuseTicks >= 0) {
             showTntFuseVfx(source);
             if (--fuseTicks <= 0) {
-                explodeTnt(lane, source);
+                explodeTnt(source);
                 fuseTicks = -1;
             }
         }
@@ -390,20 +390,14 @@ public final class EngineerTrapTower extends EntityBackedTower {
         });
     }
 
-    private void explodeTnt(PlayerLane lane, SemionTowerEntity source) {
+    private void explodeTnt(SemionTowerEntity source) {
         double radius = ability("radius", tntRadius(tier));
-        long cap = (long) intAbility("maxTargets", tntMaxTargets(tier))
+        int cap = intAbility("maxTargets", tntMaxTargets(tier))
                 + EngineerBalance.tntExtraTargets(pressCount());
-        List<SemionMonsterEntity> selected = liveMonsters(lane).stream()
-                .filter(target -> target.position().distanceToSqr(source.position()) <= radius * radius)
-                .sorted(Comparator.comparingDouble(target -> target.position().distanceToSqr(source.position())))
-                .limit(cap)
-                .toList();
-        Set<UUID> ids = selected.stream().map(SemionMonsterEntity::getUUID).collect(java.util.stream.Collectors.toUnmodifiableSet());
-        MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
-                AreaEffectIds.tower(this, "tnt"), source, source.position(), radius, Set.of(),
-                target -> ids.contains(target.getUUID()), AreaVfxSpec.onTrigger(AreaVfxStyles.CORPSE_EXPLOSION)
-        );
+        MonsterAreaEffectRequest request = MonsterAreaEffectRequest.aroundTower(
+                AreaEffectIds.tower(this, "tnt"), source, radius,
+                AreaVfxSpec.onTrigger(AreaVfxStyles.CORPSE_EXPLOSION)
+        ).nearestTargets(cap);
         TowerAreaDamage.apply(
                 this, source, request,
                 ignored -> ability("damage", tntDamage(tier))

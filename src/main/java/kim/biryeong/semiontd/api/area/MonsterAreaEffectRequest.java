@@ -16,8 +16,21 @@ public record MonsterAreaEffectRequest(
         double radius,
         Set<UUID> excludedTargetIds,
         Predicate<SemionMonsterEntity> targetFilter,
-        AreaVfxSpec vfx
+        AreaVfxSpec vfx,
+        int maxTargets
 ) {
+    public MonsterAreaEffectRequest(
+            ResourceLocation effectId,
+            SemionTowerEntity source,
+            Vec3 center,
+            double radius,
+            Set<UUID> excludedTargetIds,
+            Predicate<SemionMonsterEntity> targetFilter,
+            AreaVfxSpec vfx
+    ) {
+        this(effectId, source, center, radius, excludedTargetIds, targetFilter, vfx, Integer.MAX_VALUE);
+    }
+
     public MonsterAreaEffectRequest {
         Objects.requireNonNull(effectId, "effectId");
         Objects.requireNonNull(source, "source");
@@ -28,6 +41,9 @@ public record MonsterAreaEffectRequest(
         excludedTargetIds = excludedTargetIds == null ? Set.of() : Set.copyOf(excludedTargetIds);
         targetFilter = targetFilter == null ? ignored -> true : targetFilter;
         vfx = vfx == null ? AreaVfxSpec.none() : vfx;
+        if (maxTargets <= 0) {
+            throw new IllegalArgumentException("maxTargets must be greater than zero");
+        }
     }
 
     public static MonsterAreaEffectRequest aroundTarget(
@@ -51,7 +67,12 @@ public record MonsterAreaEffectRequest(
     }
 
     public MonsterAreaEffectRequest withFilter(Predicate<SemionMonsterEntity> filter) {
-        return new MonsterAreaEffectRequest(effectId, source, center, radius, excludedTargetIds, filter, vfx);
+        return new MonsterAreaEffectRequest(effectId, source, center, radius, excludedTargetIds, filter, vfx, maxTargets);
+    }
+
+    public MonsterAreaEffectRequest nearestTargets(int limit) {
+        return new MonsterAreaEffectRequest(
+                effectId, source, center, radius, excludedTargetIds, targetFilter, vfx, limit);
     }
 
     public MonsterAreaEffectRequest including(UUID targetId) {
@@ -60,7 +81,7 @@ public record MonsterAreaEffectRequest(
         }
         java.util.HashSet<UUID> updated = new java.util.HashSet<>(excludedTargetIds);
         updated.remove(targetId);
-        return new MonsterAreaEffectRequest(effectId, source, center, radius, updated, targetFilter, vfx);
+        return new MonsterAreaEffectRequest(effectId, source, center, radius, updated, targetFilter, vfx, maxTargets);
     }
 
     private static void validateCenter(Vec3 center) {
