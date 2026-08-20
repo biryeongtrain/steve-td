@@ -315,7 +315,7 @@ final class GambleTowerTest {
             for (GambleBet bet : GambleBet.values()) {
                 TowerUpgradeOption option = ProductionTowerCatalog.upgrade(gamblerType, bet.upgradeId())
                         .orElseThrow();
-                assertEquals(bet == GambleBet.TWO_DICE ? 100 : 50, option.mineralCost());
+                assertEquals(bet == GambleBet.TWO_DICE ? 160 : 80, option.mineralCost());
                 assertFalse(gambler.upgradeCostAddsToSaleValue(option));
             }
         }
@@ -451,8 +451,8 @@ final class GambleTowerTest {
     void defaultsMergeMissingGambleValuesAndRejectInvalidOnes() throws Exception {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
         GambleTowers.all().forEach(type -> assertTrue(defaults.towers().containsKey(type.id())));
-        assertEquals(50, defaults.upgradeCost(GambleTowers.GAMBLER.id(), GambleBet.ODD.upgradeId(), -1));
-        assertEquals(100, defaults.upgradeCost(
+        assertEquals(80, defaults.upgradeCost(GambleTowers.GAMBLER.id(), GambleBet.ODD.upgradeId(), -1));
+        assertEquals(160, defaults.upgradeCost(
                 GambleTowers.GAMBLER.id(), GambleBet.TWO_DICE.upgradeId(), -1));
         TowerBalanceConfig partial = new TowerBalanceConfig(Map.of(), Map.of(), Map.of(
                 GambleBalance.GLOBAL_ID, Map.of("damagePerScore", 0.2))).withMissingDefaults(defaults);

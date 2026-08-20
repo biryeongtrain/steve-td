@@ -142,7 +142,7 @@ public final class PlantTowers {
     // 잔디 - 후방 지원. 두 갈래로 나뉩니다.
     // 민들레 계열: 웨이브 정산 다이아를 만드는 경제 라인. 어그로가 낮아 뒤에 섭니다.
     public static final TowerType T1_MEADOW_TOWER = combatTower(
-            "t1_meadow_tower", "민들레", 50, 200, 8.0, 4, 28, 30,
+            "t1_meadow_tower", "민들레", 50, 90, 11.0, 4, 28, 30,
             plantVisual(Blocks.DANDELION, 1.0), PlantSoil.MEADOW, 1,
             List.of(
                     "<gray>잔디 위에만 심는 후방 지원 타워입니다.</gray>",
@@ -153,7 +153,7 @@ public final class PlantTowers {
                     SOIL_POWER_LINE
             ));
     public static final TowerType T2_MEADOW_TOWER = combatTower(
-            "t2_meadow_tower", "데이지", 150, 380, 10.0, 10, 28, 35,
+            "t2_meadow_tower", "데이지", 150, 230, 13.0, 10, 28, 35,
             plantVisual(Blocks.OXEYE_DAISY, 1.15), PlantSoil.MEADOW, 2,
             List.of(
                     "<gray>잔디 위에만 심는 후방 지원 타워입니다.</gray>",
@@ -164,7 +164,7 @@ public final class PlantTowers {
                     SOIL_POWER_LINE
             ));
     public static final TowerType T3_MEADOW_TOWER = combatTower(
-            "t3_meadow_tower", "해바라기", 240, 700, 12.0, 20, 28, 40,
+            "t3_meadow_tower", "해바라기", 240, 400, 16.0, 20, 28, 40,
             plantVisual(Blocks.SUNFLOWER, 1.35), PlantSoil.MEADOW, 3,
             List.of(
                     "<gray>식물 빌더의 최종 경제 타워입니다.</gray>",
@@ -177,7 +177,7 @@ public final class PlantTowers {
 
     // 튤립 계열: 자기 자신을 중심으로 터지는 광역 딜러.
     public static final TowerType T1_MEADOW_NOVA_TOWER = combatTower(
-            "t1_meadow_nova_tower", "빨간 튤립", 65, 220, 5.0, 7.5, 26, 45,
+            "t1_meadow_nova_tower", "빨간 튤립", 65, 120, 5.0, 7.5, 26, 45,
             plantVisual(Blocks.RED_TULIP, 1.0), PlantSoil.MEADOW, 1,
             List.of(
                     "<gray>잔디 위에만 심는 광역 타워입니다.</gray>",
@@ -189,7 +189,7 @@ public final class PlantTowers {
                     SOIL_POWER_LINE
             ));
     public static final TowerType T2_MEADOW_NOVA_TOWER = combatTower(
-            "t2_meadow_nova_tower", "양귀비", 175, 440, 5.0, 19, 24, 52,
+            "t2_meadow_nova_tower", "양귀비", 175, 270, 5.0, 19, 24, 52,
             plantVisual(Blocks.POPPY, 1.15), PlantSoil.MEADOW, 2,
             List.of(
                     "<gray>잔디 위에만 심는 광역 타워입니다.</gray>",
@@ -201,7 +201,7 @@ public final class PlantTowers {
                     SOIL_POWER_LINE
             ));
     public static final TowerType T3_MEADOW_NOVA_TOWER = combatTower(
-            "t3_meadow_nova_tower", "횃불꽃", 275, 780, 7.0, 34, 20, 60,
+            "t3_meadow_nova_tower", "횃불꽃", 275, 450, 7.0, 34, 20, 60,
             plantVisual(Blocks.TORCHFLOWER, 1.35), PlantSoil.MEADOW, 3,
             List.of(
                     "<gray>식물 빌더의 최종 광역 타워입니다.</gray>",
@@ -248,7 +248,7 @@ public final class PlantTowers {
 
     // 사암 - 반사 탱커. 스스로 공격하지 않고 맞은 만큼 되돌려줍니다.
     public static final TowerType T1_DESERT_TOWER = combatTower(
-            "t1_desert_tower", "죽은 덤불", 50, 100, 0.0, 8, 22, 58,
+            "t1_desert_tower", "죽은 덤불", 50, 100, 0.0, 2, 22, 58,
             plantVisual(Blocks.DEAD_BUSH, 1.0), PlantSoil.DESERT, 1,
             List.of(
                     "<gray>사암 위에만 심는 반사 탱커입니다.</gray>",
@@ -257,7 +257,7 @@ public final class PlantTowers {
                     "<green>주변 사암 위의 적은 공격 속도가 느려집니다.</green>"
             ));
     public static final TowerType T2_DESERT_TOWER = combatTower(
-            "t2_desert_tower", "선인장", 190, 420, 0.0, 20, 22, 66,
+            "t2_desert_tower", "선인장", 190, 420, 0.0, 10, 22, 66,
             plantVisual(Blocks.CACTUS, 1.15), PlantSoil.DESERT, 2,
             List.of(
                     "<gray>사암 위에만 심는 반사 탱커입니다.</gray>",
@@ -265,7 +265,7 @@ public final class PlantTowers {
                     "<green>반사 비율과 얹히는 공격력이 늘어납니다.</green>"
             ));
     public static final TowerType T3_DESERT_TOWER = combatTower(
-            "t3_desert_tower", "꽃선인장", 300, 750, 0.0, 32, 20, 74,
+            "t3_desert_tower", "꽃선인장", 300, 750, 0.0, 20, 20, 74,
             stackedPlantVisual(Blocks.CACTUS, Blocks.CACTUS_FLOWER, 1.3), PlantSoil.DESERT, 3,
             List.of(
                     "<gray>식물 빌더의 최종 반사 탱커입니다.</gray>",
@@ -275,7 +275,7 @@ public final class PlantTowers {
 
     // 회백토 - 딜러. T2 에서 세 갈래로 갈라집니다.
     public static final TowerType T1_PODZOL_TOWER = combatTower(
-            "t1_podzol_tower", "고사리", 60, 80, 12.0, 9, 20, 25,
+            "t1_podzol_tower", "고사리", 60, 80, 16.0, 9, 20, 25,
             plantVisual(Blocks.FERN, 1.0), PlantSoil.PODZOL, 1,
             List.of(
                     "<gray>회백토 위에만 심는 딜러 타워입니다.</gray>",
@@ -286,7 +286,7 @@ public final class PlantTowers {
                     SOIL_POWER_LINE
             ));
     public static final TowerType T2_PODZOL_TOWER = combatTower(
-            "t2_podzol_tower", "큰 고사리", 170, 130, 14.0, 26, 18, 30,
+            "t2_podzol_tower", "큰 고사리", 170, 130, 18.0, 26, 18, 30,
             plantVisual(Blocks.LARGE_FERN, 1.2), PlantSoil.PODZOL, 2,
             List.of(
                     "<gray>회백토 위에만 심는 딜러 타워입니다.</gray>",
@@ -298,7 +298,7 @@ public final class PlantTowers {
                     "<yellow>세 갈래 최종 형태로 갈라집니다.</yellow>"
             ));
     public static final TowerType T3_PODZOL_LILAC_TOWER = combatTower(
-            "t3_podzol_lilac_tower", "라일락", 285, 210, 14.0, 34, 18, 35,
+            "t3_podzol_lilac_tower", "라일락", 285, 210, 18.0, 34, 18, 35,
             plantVisual(Blocks.LILAC, 1.35), PlantSoil.PODZOL, 3,
             List.of(
                     "<gray>회백토 최종 형태 중 광역형입니다.</gray>",
@@ -312,7 +312,7 @@ public final class PlantTowers {
                     "<gray>단일 피해는 세 형태 중 가장 낮습니다.</gray>"
             ));
     public static final TowerType T3_PODZOL_ROSE_TOWER = combatTower(
-            "t3_podzol_rose_tower", "장미 덤불", 285, 210, 16.0, 46, 16, 35,
+            "t3_podzol_rose_tower", "장미 덤불", 285, 210, 20.0, 46, 16, 35,
             plantVisual(Blocks.ROSE_BUSH, 1.35), PlantSoil.PODZOL, 3,
             List.of(
                     "<gray>회백토 최종 형태 중 단일 극딜형입니다.</gray>",

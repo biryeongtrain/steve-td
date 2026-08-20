@@ -89,21 +89,53 @@ final class PlayerMatchStatsAttributionTest {
         assertEquals(EconomyConfig.defaultConfig().startingDiamond() + 10, player.economy().diamond());
     }
 
+    /**
+     * 남의 레인을 청소해 주는 것은 도움이지 파밍이 아닙니다. 다이아는 전액 레인 주인에게 갑니다.
+     *
+     * <p>잡은 쪽이 빈손인 것은 아닙니다. 경험치는 그대로 들어가므로(마왕의 유일한 성장 수단)
+     * 도우러 갈 이유는 남고, 남의 레인을 파밍터로 쓸 이유만 사라집니다.
+     */
     @Test
-    void sameTeamCrossLaneWaveKillBeforeFinalDefenseKeepsFullReward() {
-        UUID playerId = UUID.nameUUIDFromBytes("cross-lane-early-killer".getBytes());
-        SemionPlayer player = player(playerId, TeamId.BLUE, 1);
+    void sameTeamCrossLaneWaveKillBeforeFinalDefensePaysAllOfItToTheLaneOwner() {
+        UUID killerId = UUID.nameUUIDFromBytes("cross-lane-early-killer".getBytes());
+        UUID ownerId = UUID.nameUUIDFromBytes("cross-lane-early-owner".getBytes());
+        SemionPlayer killer = player(killerId, TeamId.BLUE, 1);
+        SemionPlayer owner = player(ownerId, TeamId.BLUE, 2);
         Monster monster = naturalWaveMonster("blue-lane-two-early-wave", TeamId.BLUE, 2, 10L);
         monster.syncLaneProgress(0.89);
-        monster.recordLastHit(playerId, KillSourceKind.TOWER);
+        monster.recordLastHit(killerId, KillSourceKind.TOWER);
         monster.syncHealth(0.0);
 
-        new EconomyService(EconomyConfig.defaultConfig()).awardMonsterKillReward(monster, Map.of(playerId, player));
+        new EconomyService(EconomyConfig.defaultConfig())
+                .awardMonsterKillReward(monster, Map.of(killerId, killer, ownerId, owner));
 
-        PlayerMatchStatsSnapshot snapshot = player.matchStats().snapshot(player.economy().income());
-        assertEquals(0, snapshot.ownLaneDiamondGain());
-        assertEquals(10, snapshot.assistClearDiamondGain());
-        assertEquals(EconomyConfig.defaultConfig().startingDiamond() + 10, player.economy().diamond());
+        long starting = EconomyConfig.defaultConfig().startingDiamond();
+        assertEquals(starting, killer.economy().diamond(), "남의 레인 처치로는 다이아를 받지 않습니다");
+        assertEquals(starting + 10, owner.economy().diamond(), "전액이 레인 주인에게 갑니다");
+
+        PlayerMatchStatsSnapshot killerStats = killer.matchStats().snapshot(killer.economy().income());
+        assertEquals(0, killerStats.ownLaneDiamondGain());
+        assertEquals(0, killerStats.assistClearDiamondGain(), "전과에도 실제로 받은 몫만 남습니다");
+
+        PlayerMatchStatsSnapshot ownerStats = owner.matchStats().snapshot(owner.economy().income());
+        assertEquals(0, ownerStats.ownLaneDiamondGain(),
+                "받은 다이아를 처치 기여로 세면 가만히 있어도 레이팅이 오릅니다");
+    }
+
+    /** 주인이 자리에 없으면 갈 곳 없는 몫을 태우지 않고 잡은 사람이 다 가집니다. */
+    @Test
+    void crossLaneKillKeepsTheWholeRewardWhenTheLaneOwnerIsGone() {
+        UUID killerId = UUID.nameUUIDFromBytes("cross-lane-orphan-killer".getBytes());
+        SemionPlayer killer = player(killerId, TeamId.BLUE, 1);
+        Monster monster = naturalWaveMonster("blue-lane-two-orphan-wave", TeamId.BLUE, 2, 10L);
+        monster.syncLaneProgress(0.89);
+        monster.recordLastHit(killerId, KillSourceKind.TOWER);
+        monster.syncHealth(0.0);
+
+        new EconomyService(EconomyConfig.defaultConfig())
+                .awardMonsterKillReward(monster, Map.of(killerId, killer));
+
+        assertEquals(EconomyConfig.defaultConfig().startingDiamond() + 10, killer.economy().diamond());
     }
 
     @Test

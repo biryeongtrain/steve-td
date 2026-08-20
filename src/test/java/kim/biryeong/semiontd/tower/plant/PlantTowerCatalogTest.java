@@ -129,6 +129,9 @@ final class PlantTowerCatalogTest {
         assertEquals(4.0, defaults.ability(PlantTowers.T3_PODZOL_PITCHER_TOWER.id(), "splashRadius", -1), EPSILON);
         assertEquals(0.0, defaults.ability(PlantTowers.T3_PODZOL_ROSE_TOWER.id(), "splashRadius", 0.0), EPSILON);
         // 곡사 포대는 단일 극딜형보다 사거리가 확실히 길어야 역할이 갈립니다.
+        //
+        // 지금 딱 1.5 배입니다(20 → 30). 장미 덤불 사거리를 더 올리려면 물병 식물도 같이 올려야
+        // 하고, 안 그러면 "라인 전체를 덮는 곡사 포대" 라는 역할이 사라집니다.
         assertTrue(TowerBalanceRuntime.resolve(PlantTowers.T3_PODZOL_PITCHER_TOWER).range()
                 >= TowerBalanceRuntime.resolve(PlantTowers.T3_PODZOL_ROSE_TOWER).range() * 1.5);
     }
@@ -559,6 +562,128 @@ final class PlantTowerCatalogTest {
                 "T1 다이아당 체력 " + t1PerMineral + " 이 T2 보다 높으면 도배가 정답이 됩니다");
         assertTrue(t1PerMineral <= t3.maxHealth() / t3.mineralCost(),
                 "T1 다이아당 체력 " + t1PerMineral + " 이 T3 보다 높으면 도배가 정답이 됩니다");
+    }
+
+    /**
+     * 잔디를 겹쳐 두면 회복이 개수만큼 곱절로 늘던 것을 깎습니다.
+     *
+     * <p>같은 대상에 붙는 두 번째 회복부터가 감산 대상입니다. 겹치기를 아예 막지는 않습니다 -
+     * 잔디는 후방 지원 지형이고 여러 개 두는 것 자체는 정상적인 운영입니다.
+     */
+    @Test
+    void stackedMeadowHealsLoseHalfOfTheOverlap() {
+        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        double reduction = defaults.ability(PlantTowers.GLOBAL_CONFIG_ID, "meadowHealOverlapReduction", -1);
+        assertEquals(0.5, reduction, EPSILON);
+        assertPlantConfigRejected(defaults, PlantTowers.GLOBAL_CONFIG_ID, "meadowHealOverlapReduction", 1.01);
+        assertPlantConfigRejected(defaults, PlantTowers.GLOBAL_CONFIG_ID, "meadowHealOverlapReduction", -0.01);
+
+        // 겹침 판정 창은 펄스 간격을 그대로 씁니다. 잔디들의 펄스는 서로 맞춰져 있지 않아서
+        // "같은 펄스"라는 것이 없고, 창이 펄스보다 짧으면 감산이 그냥 새 버립니다.
+        assertTrue(defaults.ability(PlantTowers.GLOBAL_CONFIG_ID, "soilPulseIntervalTicks", -1) > 0.0);
+    }
+
+    /**
+     * 반사의 고정항이 도배 벽의 실제 화력이었습니다.
+     *
+     * <p>반사는 <b>때린 몹 하나</b>에게만 돌아가지만, 공식이 {@code 받은 피해 × 비율 + 타워 공격력}
+     * 이라 맞은 크기와 무관하게 매 타격마다 고정값이 나갑니다. 값싼 탱커를 스무 개 깔면 그만큼의
+     * 독립된 딜러가 되는 셈이라, 체력만 깎아서는 도배가 계속 통했습니다.
+     *
+     * <p>고정항을 아예 없애지는 않았습니다. 없애면 작은 공격에는 반사가 사실상 사라져 계열의
+     * 역할이 무너집니다. 티어가 오를수록 덜 깎이는 곡선으로 두어, 도배보다 올리는 쪽이 낫게
+     * 유지합니다.
+     */
+    @Test
+    void thornReflectIsSingleTargetAndItsFlatTermFavoursUpgrades() {
+        var t1 = TowerBalanceRuntime.resolve(PlantTowers.T1_DESERT_TOWER);
+        var t2 = TowerBalanceRuntime.resolve(PlantTowers.T2_DESERT_TOWER);
+        var t3 = TowerBalanceRuntime.resolve(PlantTowers.T3_DESERT_TOWER);
+
+        // 사암 계열은 스스로 공격하지 않습니다. 사거리가 0 이라 damage 는 반사에만 쓰입니다.
+        assertEquals(0.0, t1.range(), EPSILON);
+        assertEquals(0.0, t2.range(), EPSILON);
+        assertEquals(0.0, t3.range(), EPSILON);
+
+        assertTrue(t1.damage() > 0.0, "고정항이 0 이면 작은 공격에는 반사가 없는 것과 같습니다");
+        assertTrue(t1.damage() < t2.damage() && t2.damage() < t3.damage(),
+                "티어가 오르면 반사 고정항도 올라야 올릴 이유가 생깁니다");
+
+        // 다이아당 고정 반사가 T1 에서 가장 높으면 도배가 다시 정답이 됩니다.
+        double t1PerMineral = t1.damage() / t1.mineralCost();
+        assertTrue(t1PerMineral <= t2.damage() / t2.mineralCost(),
+                "T1 다이아당 고정 반사 " + t1PerMineral + " 이 T2 보다 높습니다");
+        assertTrue(t1PerMineral <= t3.damage() / t3.mineralCost(),
+                "T1 다이아당 고정 반사 " + t1PerMineral + " 이 T3 보다 높습니다");
+    }
+
+    /**
+     * 식물은 못 움직이므로 사거리가 곧 생존과 기여입니다.
+     *
+     * <p>민들레 계열은 어그로가 가장 낮아 뒤에 서는데, 사거리가 짧으면 뒤에 선 채로는 아무것도
+     * 못 합니다. 고사리 계열은 딜러인데 사거리가 짧으면 맞아 가며 쏴야 합니다. 둘 다 티어가
+     * 오를수록 길어지는 순서만은 깨지지 않아야 합니다.
+     */
+    @Test
+    void rootedLinesKeepTheirRangeOrderAcrossTiers() {
+        double dandelion = TowerBalanceRuntime.resolve(PlantTowers.T1_MEADOW_TOWER).range();
+        double daisy = TowerBalanceRuntime.resolve(PlantTowers.T2_MEADOW_TOWER).range();
+        double sunflower = TowerBalanceRuntime.resolve(PlantTowers.T3_MEADOW_TOWER).range();
+        assertTrue(dandelion < daisy && daisy < sunflower,
+                "민들레 계열 사거리 " + dandelion + " / " + daisy + " / " + sunflower);
+
+        double fern = TowerBalanceRuntime.resolve(PlantTowers.T1_PODZOL_TOWER).range();
+        double largeFern = TowerBalanceRuntime.resolve(PlantTowers.T2_PODZOL_TOWER).range();
+        assertTrue(fern < largeFern, "고사리 계열 사거리 " + fern + " -> " + largeFern);
+        for (TowerType finisher : List.of(
+                PlantTowers.T3_PODZOL_LILAC_TOWER,
+                PlantTowers.T3_PODZOL_ROSE_TOWER,
+                PlantTowers.T3_PODZOL_PITCHER_TOWER)) {
+            assertTrue(TowerBalanceRuntime.resolve(finisher).range() >= largeFern,
+                    finisher.id() + " 는 큰 고사리보다 사거리가 짧으면 안 됩니다");
+        }
+
+        // 자기 중심 광역인 튤립 계열은 붙어서 싸우는 역할이라 짧게 둡니다. 이쪽까지 같이
+        // 늘리면 근접 광역이라는 구분이 사라집니다.
+        assertTrue(TowerBalanceRuntime.resolve(PlantTowers.T3_MEADOW_NOVA_TOWER).range() < sunflower,
+                "횃불꽃이 해바라기보다 멀리 쏘면 근접 광역이라는 역할이 사라집니다");
+    }
+
+    /**
+     * 탱커가 계열 중에서 가장 단단해야 합니다.
+     *
+     * <p>잔디 계열은 다이아당 체력이 사암 탱커보다 높았습니다. 민들레는 탱커의 두 배였습니다.
+     * 뒤에서 회복과 정산을 담당하는 라인이 앞에서 맞아 주는 라인보다 단단하면, 탱커를 세울
+     * 이유가 없어집니다. 잔디는 서로 회복까지 하므로 실제 내구력은 기본 체력보다 더 높습니다.
+     */
+    @Test
+    void supportLinesAreLessDurablePerDiamondThanTheTankLine() {
+        for (int tier = 1; tier <= 3; tier++) {
+            double tank = healthPerDiamond(switch (tier) {
+                case 1 -> PlantTowers.T1_DESERT_TOWER;
+                case 2 -> PlantTowers.T2_DESERT_TOWER;
+                default -> PlantTowers.T3_DESERT_TOWER;
+            });
+            double economy = healthPerDiamond(switch (tier) {
+                case 1 -> PlantTowers.T1_MEADOW_TOWER;
+                case 2 -> PlantTowers.T2_MEADOW_TOWER;
+                default -> PlantTowers.T3_MEADOW_TOWER;
+            });
+            double nova = healthPerDiamond(switch (tier) {
+                case 1 -> PlantTowers.T1_MEADOW_NOVA_TOWER;
+                case 2 -> PlantTowers.T2_MEADOW_NOVA_TOWER;
+                default -> PlantTowers.T3_MEADOW_NOVA_TOWER;
+            });
+            assertTrue(economy < tank,
+                    "T" + tier + " 민들레 계열 " + economy + " 이 탱커 " + tank + " 보다 단단합니다");
+            assertTrue(nova < tank,
+                    "T" + tier + " 튤립 계열 " + nova + " 이 탱커 " + tank + " 보다 단단합니다");
+        }
+    }
+
+    private static double healthPerDiamond(TowerType type) {
+        var resolved = TowerBalanceRuntime.resolve(type);
+        return resolved.maxHealth() / resolved.mineralCost();
     }
 
     @Test

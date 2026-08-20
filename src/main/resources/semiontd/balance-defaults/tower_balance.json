@@ -2602,31 +2602,31 @@
     },
     "t1_meadow_tower": {
       "mineralCost": 50,
-      "maxHealth": 200.0,
-      "range": 8.0,
+      "maxHealth": 90.0,
+      "range": 11.0,
       "damage": 4.0,
       "attackIntervalTicks": 28,
       "aggroPriority": 30
     },
     "t2_meadow_tower": {
       "mineralCost": 150,
-      "maxHealth": 380.0,
-      "range": 10.0,
+      "maxHealth": 230.0,
+      "range": 13.0,
       "damage": 10.0,
       "attackIntervalTicks": 28,
       "aggroPriority": 35
     },
     "t3_meadow_tower": {
       "mineralCost": 240,
-      "maxHealth": 700.0,
-      "range": 12.0,
+      "maxHealth": 400.0,
+      "range": 16.0,
       "damage": 20.0,
       "attackIntervalTicks": 28,
       "aggroPriority": 40
     },
     "t1_meadow_nova_tower": {
       "mineralCost": 65,
-      "maxHealth": 220.0,
+      "maxHealth": 120.0,
       "range": 5.0,
       "damage": 7.5,
       "attackIntervalTicks": 26,
@@ -2634,7 +2634,7 @@
     },
     "t2_meadow_nova_tower": {
       "mineralCost": 175,
-      "maxHealth": 440.0,
+      "maxHealth": 270.0,
       "range": 5.0,
       "damage": 19.0,
       "attackIntervalTicks": 24,
@@ -2642,7 +2642,7 @@
     },
     "t3_meadow_nova_tower": {
       "mineralCost": 275,
-      "maxHealth": 780.0,
+      "maxHealth": 450.0,
       "range": 7.0,
       "damage": 34.0,
       "attackIntervalTicks": 20,
@@ -2676,7 +2676,7 @@
       "mineralCost": 50,
       "maxHealth": 100.0,
       "range": 0.0,
-      "damage": 8.0,
+      "damage": 2.0,
       "attackIntervalTicks": 22,
       "aggroPriority": 58
     },
@@ -2684,7 +2684,7 @@
       "mineralCost": 190,
       "maxHealth": 420.0,
       "range": 0.0,
-      "damage": 20.0,
+      "damage": 10.0,
       "attackIntervalTicks": 22,
       "aggroPriority": 66
     },
@@ -2692,14 +2692,14 @@
       "mineralCost": 300,
       "maxHealth": 750.0,
       "range": 0.0,
-      "damage": 32.0,
+      "damage": 20.0,
       "attackIntervalTicks": 20,
       "aggroPriority": 74
     },
     "t1_podzol_tower": {
       "mineralCost": 60,
       "maxHealth": 80.0,
-      "range": 12.0,
+      "range": 16.0,
       "damage": 9.0,
       "attackIntervalTicks": 20,
       "aggroPriority": 25
@@ -2707,7 +2707,7 @@
     "t2_podzol_tower": {
       "mineralCost": 170,
       "maxHealth": 130.0,
-      "range": 14.0,
+      "range": 18.0,
       "damage": 26.0,
       "attackIntervalTicks": 18,
       "aggroPriority": 30
@@ -2715,7 +2715,7 @@
     "t3_podzol_lilac_tower": {
       "mineralCost": 285,
       "maxHealth": 210.0,
-      "range": 14.0,
+      "range": 18.0,
       "damage": 34.0,
       "attackIntervalTicks": 18,
       "aggroPriority": 35
@@ -2723,7 +2723,7 @@
     "t3_podzol_rose_tower": {
       "mineralCost": 285,
       "maxHealth": 210.0,
-      "range": 16.0,
+      "range": 20.0,
       "damage": 46.0,
       "attackIntervalTicks": 16,
       "aggroPriority": 35
@@ -3717,15 +3717,15 @@
     "gamble_dice_t2->gamble_dice_t3": 200,
     "gamble_spectator_t1->gamble_spectator_t2": 100,
     "gamble_spectator_t2->gamble_spectator_t3": 200,
-    "gamble_gambler->bet_odd": 50,
-    "gamble_gambler->bet_even": 50,
-    "gamble_gambler->roll_two_dice": 100,
-    "gamble_king->bet_odd": 50,
-    "gamble_king->bet_even": 50,
-    "gamble_king->roll_two_dice": 100,
-    "gamble_dark_king->bet_odd": 50,
-    "gamble_dark_king->bet_even": 50,
-    "gamble_dark_king->roll_two_dice": 100
+    "gamble_gambler->bet_odd": 80,
+    "gamble_gambler->bet_even": 80,
+    "gamble_gambler->roll_two_dice": 160,
+    "gamble_king->bet_odd": 80,
+    "gamble_king->bet_even": 80,
+    "gamble_king->roll_two_dice": 160,
+    "gamble_dark_king->bet_odd": 80,
+    "gamble_dark_king->bet_even": 80,
+    "gamble_dark_king->roll_two_dice": 160
   },
   "abilities": {
     "villager_splash_t2": {
@@ -6009,7 +6009,8 @@
       "soilAuraMinRadius": 3.0,
       "environmentTickIntervalTicks": 20.0,
       "bloomDamagePerTile": 0.015,
-      "soilPulseIntervalTicks": 20.0
+      "soilPulseIntervalTicks": 20.0,
+      "meadowHealOverlapReduction": 0.5
     },
     "plant_soil_meadow": {
       "healPercentPerPulse": 0.012,
@@ -6280,7 +6281,7 @@
       "statAttackPerPoint": 0.04,
       "statDefensePerPoint": 0.02,
       "statDefenseCap": 0.6,
-      "statCooldownHalvingPoints": 40.0,
+      "statCooldownHalvingPoints": 60.0,
       "statSkillRangePerPoint": 0.03,
       "statMoveSpeedPerPoint": 0.03,
       "statMoveSpeedCap": 0.5

@@ -955,6 +955,28 @@ final class SemionConfigLoaderTest {
         assertEquals(0.5, configs.economy().killReward().crossLaneFinalDefenseWaveMultiplier(), 0.0001);
         assertEquals(0.95, configs.economy().killReward().finalDefenseProgressThreshold(), 0.0001);
         assertEquals(true, configs.economy().killReward().applyToIncomeUnits());
+        assertEquals(1.0, configs.economy().killReward().crossLaneOwnerShare(), 0.0001);
+        assertTrue(Files.readString(tempDir.resolve("economy.json")).contains("\"crossLaneOwnerShare\": 1.0"));
+    }
+
+    @Test
+    void loadPreservesKillRewardOwnerShareOverride() throws Exception {
+        Files.createDirectories(tempDir);
+        Files.writeString(tempDir.resolve("economy.json"), """
+                {
+                  "killReward": {
+                    "crossLaneWaveReductionEnabled": true,
+                    "crossLaneFinalDefenseWaveMultiplier": 0.25,
+                    "finalDefenseProgressThreshold": 0.9,
+                    "applyToIncomeUnits": false,
+                    "crossLaneOwnerShare": 0.35
+                  }
+                }
+                """);
+
+        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+
+        assertEquals(0.35, configs.economy().killReward().crossLaneOwnerShare(), 0.0001);
     }
 
     @Test

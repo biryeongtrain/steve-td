@@ -198,10 +198,29 @@ public final class DemonLordState {
      * demon lord grows, so losing it mid-match wipes the whole run - {@link DemonLordStates} hands
      * it back through here.
      */
-    void restoreProgression(int restoredLevel, double restoredExperience) {
+    void restoreProgression(
+            int restoredLevel,
+            double restoredExperience,
+            Map<DemonLordStat, Integer> restoredPoints,
+            int restoredUnspent
+    ) {
         level = Math.max(1, Math.min(maxLevel(), restoredLevel));
         experience = Math.max(0.0, restoredExperience);
+        statPoints.clear();
+        if (restoredPoints != null) {
+            restoredPoints.forEach((stat, spent) -> {
+                if (stat != null && spent != null && spent > 0) {
+                    statPoints.put(stat, spent);
+                }
+            });
+        }
+        unspentPoints = Math.max(0, restoredUnspent);
         health = Math.min(health, maxHealth());
+    }
+
+    /** 찍어 둔 스탯의 사본. 상태가 버려졌다 되살아날 때 넘겨받기 위한 것입니다. */
+    Map<DemonLordStat, Integer> statPointsView() {
+        return new EnumMap<>(statPoints);
     }
 
     public int maxLevel() {

@@ -1027,7 +1027,10 @@ public record TowerBalanceConfig(
                 // 지형 효과 범위는 사거리를 따라가되, 사거리를 2배로 늘린 뒤에도 장판이 과해지지 않게 상한을 둡니다.
                 "soilAuraMinRadius", 3.0,
                 "soilAuraMaxRadius", 6.0,
-                "environmentTickIntervalTicks", 20.0
+                "environmentTickIntervalTicks", 20.0,
+                // 한 대상을 여러 잔디가 함께 회복시킬 때, 두 번째부터 깎는 비율입니다. 겹치기
+                // 자체는 유효하되 잔디 개수만큼 선형으로 늘어나지는 않게 합니다.
+                "meadowHealOverlapReduction", 0.5
         ));
         // 잔디는 후방 지원 지형입니다. 자기 회복이 아니라 주변 아군을 회복시키고 성장 체력을 나눠 줍니다.
         putAbilities(abilities, PlantSoil.MEADOW.configId(), Map.of(
@@ -1543,7 +1546,8 @@ public record TowerBalanceConfig(
     }
 
     private void validatePlantAbilities() {
-        validateRatios(PlantTowers.GLOBAL_CONFIG_ID, "bloomDamagePerTile", "bloomDamageCap");
+        validateRatios(PlantTowers.GLOBAL_CONFIG_ID,
+                "bloomDamagePerTile", "bloomDamageCap", "meadowHealOverlapReduction");
         validateRatios(PlantSoil.MEADOW.configId(),
                 "healPercentPerPulse", "growthShareRatio");
         validateRatios(PlantSoil.MYCELIUM.configId(),
@@ -3784,7 +3788,7 @@ public record TowerBalanceConfig(
                 GambleTowers.GAMBLER, GambleTowers.KING, GambleTowers.DARK_KING)) {
             for (GambleBet bet : GambleBet.values()) {
                 putUpgrade(upgradeCosts, gambler, bet.upgradeId(),
-                        bet == GambleBet.TWO_DICE ? 100 : 50);
+                        bet == GambleBet.TWO_DICE ? 160 : 80);
             }
         }
     }
@@ -3889,13 +3893,13 @@ public record TowerBalanceConfig(
         global.put("statAttackPerPoint", 0.04);
         global.put("statDefensePerPoint", 0.02);
         global.put("statDefenseCap", 0.6);
-        // 쿨감은 이 포인트마다 절반이 되는 곱연산입니다. 40 이면 50%, 80 이면 25% 가 되고
+        // 쿨감은 이 포인트마다 절반이 되는 곱연산입니다. 60 이면 50%, 120 이면 25% 가 되고
         // 0 에는 닿지 않습니다. 선형이면 어느 지점에서 쿨타임이 사라져 버립니다.
         //
         // 다른 스탯보다 포인트를 많이 요구합니다. 쿨감은 모든 스킬에 한꺼번에 곱해지는 데다
         // 딜뿐 아니라 생존기와 이동기 회전율까지 같이 올려서, 같은 효율로 두면 다른 선택지가
         // 존재할 이유가 없어집니다.
-        global.put("statCooldownHalvingPoints", 40.0);
+        global.put("statCooldownHalvingPoints", 60.0);
         global.put("statSkillRangePerPoint", 0.03);
         global.put("statMoveSpeedPerPoint", 0.03);
         global.put("statMoveSpeedCap", 0.5);

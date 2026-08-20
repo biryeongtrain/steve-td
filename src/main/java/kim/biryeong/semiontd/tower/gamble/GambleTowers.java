@@ -48,7 +48,7 @@ public final class GambleTowers {
             .mineralCost(60).maxHealth(110).range(6.5).damage(10).attackIntervalTicks(13)
             .visual(GAMBLER_VISUAL)
             .description(List.of(
-                    "준비 시간에 홀수·짝수는 50 다이아, 주사위 두 개는 100 다이아를 내고 반복할 수 있습니다.",
+                    "준비 시간에 홀수·짝수는 80 다이아, 주사위 두 개는 160 다이아를 내고 반복할 수 있습니다.",
                     "주사위 눈에 따라 최대 체력·공격력·사거리 중 무작위 능력치가 오르거나 내려갑니다.",
                     "주사위 두 개의 합이 {ability.gamble_global.twoDiceCompoundMinSum:integer} 이상이면 서로 다른 능력치 두 개가 보상을 나눠 받습니다.",
                     "기본 공격은 반경 {ability.gamble_global.baseSplashRadius:blocks} 안의 적에게도 피해를 줍니다.",

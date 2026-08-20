@@ -23,6 +23,7 @@ import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.ProductionTower;
+import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
@@ -51,6 +52,10 @@ import net.minecraft.world.phys.Vec3;
 public class PlantCombatTower extends ProductionTower {
     private static final TowerDataKey<Integer> GROWTH_ROUNDS =
             TowerDataKey.of(plantId("growth_rounds"), Integer.class);
+
+    /** 이 타워에 잔디 회복이 마지막으로 들어온 게임 시각. 겹치기 감산 판정에만 씁니다. */
+    private static final TowerDataKey<Long> LAST_MEADOW_HEAL_TICK =
+            TowerDataKey.of(plantId("last_meadow_heal_tick"), Long.class);
 
     public PlantCombatTower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
         super(type, ownerPlayer, teamId, laneId, position);
@@ -423,8 +428,19 @@ public class PlantCombatTower extends ProductionTower {
         return Math.max(0.0, damageGrowthBonus() * soilValue(PlantSoil.PODZOL, "growthShareRatio"));
     }
 
+    /**
+     * 잔디 회복 한 번. 이미 다른 잔디가 이번 주기에 회복시킨 대상이면 절반만 들어갑니다.
+     *
+     * <p>잔디를 여러 개 겹쳐 두면 회복이 그대로 곱절이 됩니다. 한 대상에 붙는 두 번째부터를
+     * 깎아, 겹치기 자체는 유효하되 개수만큼 선형으로 늘어나지는 않게 합니다.
+     *
+     * <p>겹침 판정은 대상 타워에 마지막으로 회복이 들어온 시각을 적어 두고 봅니다. 잔디들의
+     * 펄스는 서로 맞춰져 있지 않아서 "같은 펄스"라는 게 없기 때문에, 펄스 간격만큼의 창을
+     * 두고 그 안에 겹치면 나중 것을 깎습니다.
+     */
     private boolean heal(AreaTowerTarget target, double percent) {
-        double amount = target.tower().currentMaxHealth() * percent;
+        Tower healed = target.tower();
+        double amount = healed.currentMaxHealth() * percent;
         if (amount <= 0.0) {
             return false;
         }
@@ -432,9 +448,17 @@ public class PlantCombatTower extends ProductionTower {
         if (entity == null) {
             return false;
         }
-        if (!entity.receiveHealing(amount)) {
+        long now = entity.level().getGameTime();
+        long window = Math.max(1, globalTicks("soilPulseIntervalTicks"));
+        Long lastHealedTick = healed.getDataOrDefault(LAST_MEADOW_HEAL_TICK, null);
+        boolean overlapping = lastHealedTick != null && now - lastHealedTick < window;
+        if (overlapping) {
+            amount *= Math.max(0.0, 1.0 - global("meadowHealOverlapReduction"));
+        }
+        if (amount <= 0.0 || !entity.receiveHealing(amount)) {
             return false;
         }
+        healed.setData(LAST_MEADOW_HEAL_TICK, now);
         entity.playHealingAnimation();
         return true;
     }
