@@ -99,6 +99,14 @@ final class SemionGameTeamLeaderTest {
     }
 
     @Test
+    void lateJoinAnnouncementColorsPlayerAndAquaTeam() {
+        assertEquals(
+                "<aqua>frosti</aqua>님이 <aqua>AQUA</aqua>에 참가하셨습니다!",
+                SemionGame.lateJoinAnnouncementMarkup(TeamId.AQUA, "frosti")
+        );
+    }
+
+    @Test
     void onlyOneLeaderTargetMayPointAtTheSameTeam() {
         SemionGame game = newGame();
         UUID red = addLeader(game, TeamId.RED);

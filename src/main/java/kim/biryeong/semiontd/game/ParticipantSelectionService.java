@@ -12,7 +12,9 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class ParticipantSelectionService {
-    private static final List<TeamId> TEAM_ORDER = List.of(TeamId.RED, TeamId.BLUE, TeamId.GREEN, TeamId.YELLOW, TeamId.PURPLE);
+    private static final List<TeamId> TEAM_ORDER = List.of(
+            TeamId.RED, TeamId.BLUE, TeamId.GREEN, TeamId.YELLOW, TeamId.PURPLE, TeamId.AQUA
+    );
     private static final int MAX_ACTIVE_PLAYERS = SemionTeam.MAX_PLAYERS * TEAM_ORDER.size();
 
     private ParticipantSelectionService() {

@@ -2451,6 +2451,7 @@ public final class SemionDialogService {
             case GREEN -> "green";
             case YELLOW -> "yellow";
             case PURPLE -> "light_purple";
+            case AQUA -> "aqua";
         };
         return "<" + color + ">" + teamId.name() + "</" + color + ">";
     }
@@ -2462,6 +2463,7 @@ public final class SemionDialogService {
             case GREEN -> ChatFormatting.GREEN;
             case YELLOW -> ChatFormatting.YELLOW;
             case PURPLE -> ChatFormatting.LIGHT_PURPLE;
+            case AQUA -> ChatFormatting.AQUA;
         };
     }
 

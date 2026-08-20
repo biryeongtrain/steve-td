@@ -142,6 +142,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
             case GREEN -> ChatFormatting.GREEN;
             case YELLOW -> ChatFormatting.YELLOW;
             case PURPLE -> ChatFormatting.LIGHT_PURPLE;
+            case AQUA -> ChatFormatting.AQUA;
         };
     }
 
