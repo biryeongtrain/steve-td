@@ -1,7 +1,10 @@
 package kim.biryeong.semiontd.tower.demonlord;
 
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -9,6 +12,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.BlockHitResult;
 
 /**
  * 마왕이 전투에 들어가며 치운 핫바가 전투 뒤에 돌아오는지 확인합니다.
@@ -66,6 +70,8 @@ public final class DemonLordHotbarGameTest {
     public void skillCardsSwallowTheirVanillaRightClick(GameTestHelper context) {
         ServerPlayer player = context.makeMockServerPlayerInLevel();
         try {
+            BlockHitResult blockHit = new BlockHitResult(
+                    player.position(), Direction.UP, BlockPos.containing(player.position()), false);
             for (DemonLordSkill skill : DemonLordSkill.values()) {
                 ItemStack card = DemonLordKitItems.mark(new ItemStack(skill.item()));
                 player.getInventory().setSelectedSlot(0);
@@ -74,10 +80,25 @@ public final class DemonLordHotbarGameTest {
                         .interact(player, player.level(), InteractionHand.MAIN_HAND);
                 require(result != InteractionResult.PASS,
                         skill.displayName() + " 카드가 바닐라 사용 동작으로 넘어갑니다: " + skill.item());
+                require(UseBlockCallback.EVENT.invoker()
+                                .interact(player, player.level(), InteractionHand.MAIN_HAND, blockHit)
+                                == InteractionResult.FAIL,
+                        skill.displayName() + " 카드가 블록 사용 동작으로 넘어갑니다: " + skill.item());
             }
+
+            // 마검은 우클릭 스킬의 입력 장치입니다. 블록을 보고 눌러도 시전 경로를 막으면 안 됩니다.
+            player.getInventory().setSelectedSlot(DemonLordSkill.BLADE_SLOT);
+            player.getInventory().setItem(
+                    DemonLordSkill.BLADE_SLOT,
+                    DemonLordKitItems.mark(new ItemStack(Items.NETHERITE_SWORD)));
+            require(UseBlockCallback.EVENT.invoker()
+                            .interact(player, player.level(), InteractionHand.MAIN_HAND, blockHit)
+                            != InteractionResult.FAIL,
+                    "블록을 보고 마검을 우클릭해도 스킬 시전 경로가 열려 있어야 합니다.");
 
             // 마검이 아닌 일반 아이템은 건드리지 않습니다. 마왕 장비가 아닌 것까지 먹으면
             // 다른 빌더의 도구가 통째로 죽습니다.
+            player.getInventory().setSelectedSlot(0);
             player.getInventory().setItem(0, new ItemStack(Items.COMPASS));
             require(UseItemCallback.EVENT.invoker()
                             .interact(player, player.level(), InteractionHand.MAIN_HAND) == InteractionResult.PASS,

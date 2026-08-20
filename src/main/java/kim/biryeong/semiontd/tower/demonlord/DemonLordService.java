@@ -148,9 +148,16 @@ public final class DemonLordService {
             if (world.isClientSide() || !(player instanceof ServerPlayer serverPlayer)) {
                 return InteractionResult.PASS;
             }
-            return DemonLordKitItems.isKitItem(serverPlayer.getItemInHand(hand))
-                    ? InteractionResult.FAIL
-                    : InteractionResult.PASS;
+            if (!DemonLordKitItems.isKitItem(serverPlayer.getItemInHand(hand))) {
+                return InteractionResult.PASS;
+            }
+            if (hand == InteractionHand.MAIN_HAND
+                    && serverPlayer.getInventory().getSelectedSlot() == DemonLordSkill.BLADE_SLOT) {
+                return handleKeyBinding(gameManager, serverPlayer, DemonLordBinding.RIGHT_CLICK)
+                        ? InteractionResult.SUCCESS
+                        : InteractionResult.PASS;
+            }
+            return InteractionResult.FAIL;
         });
         registerCombatHooks(gameManager);
     }
