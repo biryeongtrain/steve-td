@@ -349,6 +349,7 @@
 | `plant_soil_desert` | `environmentAttackSpeedReduction` | 사암 위 적의 공격 속도 감소입니다. |
 | `plant_soil_desert` | `environmentMaxHealthDamagePerSecond` | 사암 위 적이 초당 잃는 **최대 체력 비율**입니다. 펄스 간격을 바꿔도 초당 피해량은 유지됩니다. |
 | `plant_soil_meadow` | `supportRadius`, `healPercentPerPulse` | 잔디 지원 범위와 펄스마다 주변 아군을 회복시키는 최대 체력 비율입니다. |
+| `plant_global` | `meadowHealOverlapReduction` | 한 대상을 여러 잔디가 함께 회복시킬 때 **두 번째부터** 깎는 비율입니다(기본 50%). 겹치기 자체는 유효하되 잔디 개수만큼 회복이 선형으로 늘어나지 않게 합니다. 겹침 판정 창은 `soilPulseIntervalTicks` 를 그대로 씁니다 — 잔디들의 펄스는 서로 맞춰져 있지 않아 "같은 펄스"라는 것이 없기 때문입니다. |
 | `plant_soil_meadow` | `maxHealthGrowthPerRound`, `maxHealthGrowthCap` | 잔디 성장. 라운드당 최대 체력 증가와 누적 상한입니다. |
 | `plant_soil_meadow` | `growthShareRatio`, `supportDurationTicks` | 성장 체력 중 라인 전체에 나눠 주는 비율과 버프 지속 시간입니다. 잔디 타워별 몫을 **합산**해 라인 안 모든 타워에게 같은 값으로 겁니다. |
 | 튤립 계열 id | `novaRadius`, `novaDamageRatio` | 타워 자신을 중심으로 터지는 광역 반경과 피해 비율입니다. |

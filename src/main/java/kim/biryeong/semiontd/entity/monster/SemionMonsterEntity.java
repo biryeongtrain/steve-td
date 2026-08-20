@@ -165,6 +165,11 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
 
     @Override
     public void aiStep() {
+        if (isAlive() && level() instanceof ServerLevel serverLevel && getY() < serverLevel.getMinY()) {
+            setHealth(0.0F);
+            die(serverLevel.damageSources().fellOutOfWorld());
+            return;
+        }
         super.aiStep();
         tickIgnite();
         tickBeePoisons();

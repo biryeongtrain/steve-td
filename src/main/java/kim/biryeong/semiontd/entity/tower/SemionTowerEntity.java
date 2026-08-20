@@ -284,6 +284,14 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     @Override
     public void aiStep() {
+        if (isAlive() && level() instanceof ServerLevel serverLevel && getY() < serverLevel.getMinY()) {
+            if (runtimeTower != null) {
+                runtimeTower.syncHealth(0.0);
+            }
+            setHealth(0.0F);
+            die(serverLevel.damageSources().fellOutOfWorld());
+            return;
+        }
         super.aiStep();
         invulnerableTime = 0;
         double previousMaxHealthBonus = activeTimedEffectMagnitude(TimedEffectType.TOWER_MAX_HEALTH_BONUS);

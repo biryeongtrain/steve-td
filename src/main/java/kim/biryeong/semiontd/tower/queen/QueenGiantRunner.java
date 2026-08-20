@@ -28,7 +28,6 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.phys.Vec3;
 
 final class QueenGiantRunner {
-    static final double REQUIRED_EXECUTION_VISUAL_SHRINK = 0.30;
     private static final ResourceLocation EFFECT_ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "queen_giant_run");
     private static final ResourceLocation SPAWN_EFFECT_ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "queen_giant_spawn");
     private final Entity entity;
@@ -145,7 +144,7 @@ final class QueenGiantRunner {
 
     static boolean hasRequiredVisualShrink(Monster target) {
         return target != null
-                && target.visualScale() <= 1.0 - REQUIRED_EXECUTION_VISUAL_SHRINK + 1.0e-9;
+                && target.visualScale() <= 1.0 - QueenBalance.giantExecutionVisualShrink() + 1.0e-9;
     }
 
     private static List<Vec3> finalDefensePath(PlayerLane lane) {

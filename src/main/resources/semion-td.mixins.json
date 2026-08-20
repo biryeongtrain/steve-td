@@ -12,6 +12,7 @@
     "FlowingFluidMixin",
     "PlayerMixin",
     "PlayerListMixin",
+    "ServerAdvancementManagerMixin",
     "ServerboundInteractPacketMixin",
     "accessor.AxolotlAccessor",
     "accessor.CatAccessor",

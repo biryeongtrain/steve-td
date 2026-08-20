@@ -10,9 +10,12 @@ import org.junit.jupiter.api.Test;
 
 class SemionMusicServiceTest {
     @Test
-    void musicClockCompensatesForServerTickRate() {
-        assertEquals(1.0, SemionMusicService.musicTicksPerServerTick(20.0F));
-        assertEquals(0.5, SemionMusicService.musicTicksPerServerTick(40.0F));
+    void musicClockUsesMonotonicElapsedTime() {
+        long startedAtNanos = 1_000_000_000L;
+
+        assertEquals(0L, SemionMusicService.elapsedMusicTicks(startedAtNanos, startedAtNanos - 1L));
+        assertEquals(20L, SemionMusicService.elapsedMusicTicks(startedAtNanos, startedAtNanos + 1_000_000_000L));
+        assertEquals(40L, SemionMusicService.elapsedMusicTicks(startedAtNanos, startedAtNanos + 2_000_000_000L));
     }
 
     @Test

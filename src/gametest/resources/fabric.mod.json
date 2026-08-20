@@ -10,6 +10,8 @@
       "kim.biryeong.semiontd.gametest.SemionVillagerAdvGameTest",
       "kim.biryeong.semiontd.gametest.SemionEmeraldIncomeBoostGameTest",
       "kim.biryeong.semiontd.gametest.SemionSandboxGameTest",
+      "kim.biryeong.semiontd.gametest.SemionTutorialGameTest",
+      "kim.biryeong.semiontd.gametest.SemionAdvancementGameTest",
       "kim.biryeong.semiontd.gametest.SemionTraitSelectionGameTest",
       "kim.biryeong.semiontd.gametest.SemionWaveGameTest",
       "kim.biryeong.semiontd.gametest.PlantIntegrationGameTest",

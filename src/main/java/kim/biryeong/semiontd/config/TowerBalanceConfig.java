@@ -1027,7 +1027,10 @@ public record TowerBalanceConfig(
                 // 지형 효과 범위는 사거리를 따라가되, 사거리를 2배로 늘린 뒤에도 장판이 과해지지 않게 상한을 둡니다.
                 "soilAuraMinRadius", 3.0,
                 "soilAuraMaxRadius", 6.0,
-                "environmentTickIntervalTicks", 20.0
+                "environmentTickIntervalTicks", 20.0,
+                // 한 대상을 여러 잔디가 함께 회복시킬 때, 두 번째부터 깎는 비율입니다. 겹치기
+                // 자체는 유효하되 잔디 개수만큼 선형으로 늘어나지는 않게 합니다.
+                "meadowHealOverlapReduction", 0.5
         ));
         // 잔디는 후방 지원 지형입니다. 자기 회복이 아니라 주변 아군을 회복시키고 성장 체력을 나눠 줍니다.
         putAbilities(abilities, PlantSoil.MEADOW.configId(), Map.of(
@@ -1543,7 +1546,8 @@ public record TowerBalanceConfig(
     }
 
     private void validatePlantAbilities() {
-        validateRatios(PlantTowers.GLOBAL_CONFIG_ID, "bloomDamagePerTile", "bloomDamageCap");
+        validateRatios(PlantTowers.GLOBAL_CONFIG_ID,
+                "bloomDamagePerTile", "bloomDamageCap", "meadowHealOverlapReduction");
         validateRatios(PlantSoil.MEADOW.configId(),
                 "healPercentPerPulse", "growthShareRatio");
         validateRatios(PlantSoil.MYCELIUM.configId(),
@@ -2551,6 +2555,7 @@ public record TowerBalanceConfig(
         values.put("giantChargeTicks", 400.0);
         values.put("giantAccelerationRadius", 6.0);
         values.put("giantAccelerationMemoryTicks", 40.0);
+        values.put("giantExecutionVisualShrink", 0.20);
         values.put("giantInitialExecutionHealth", 5.0);
         values.put("giantExecutionGrowthRatio", 0.05);
         values.put("giantGrowthTargetCapMultiplier", 2.0);
@@ -2603,7 +2608,8 @@ public record TowerBalanceConfig(
         if (minimumStatScale <= 0.0 || minimumStatScale > 1.0) {
             throw new IllegalArgumentException("Queen minimumStatScale must be between 0 (exclusive) and 1.");
         }
-        for (String key : java.util.List.of("clubDamageReduction", "giantExecutionGrowthRatio", "giantSlow")) {
+        for (String key : java.util.List.of(
+                "clubDamageReduction", "giantExecutionVisualShrink", "giantExecutionGrowthRatio", "giantSlow")) {
             double value = values.getOrDefault(key, -1.0);
             if (value < 0.0 || value > 1.0) throw new IllegalArgumentException("Queen ratio must be between 0 and 1: " + key);
         }
@@ -3782,7 +3788,7 @@ public record TowerBalanceConfig(
                 GambleTowers.GAMBLER, GambleTowers.KING, GambleTowers.DARK_KING)) {
             for (GambleBet bet : GambleBet.values()) {
                 putUpgrade(upgradeCosts, gambler, bet.upgradeId(),
-                        bet == GambleBet.TWO_DICE ? 100 : 50);
+                        bet == GambleBet.TWO_DICE ? 160 : 80);
             }
         }
     }

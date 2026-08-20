@@ -131,16 +131,16 @@ final class EngineerTowerCatalogTest {
         assertEquals(10, defaults.abilityInt(EngineerBalance.GLOBAL_ID, "dispenserMaxPlateDistance", -1));
         assertEquals(0.01, defaults.ability(
                 EngineerBalance.GLOBAL_ID, "dispenserDamageBonusPerGolemPress", -1), 0.0001);
-        assertEquals(2.0, defaults.ability(
+        assertEquals(3.5, defaults.ability(
                 EngineerBalance.GLOBAL_ID, "dispenserDamageBonusCap", -1), 0.0001);
-        assertEquals(0.0005, defaults.ability(
+        assertEquals(0.001, defaults.ability(
                 EngineerBalance.GLOBAL_ID, "doorDamageReductionPerGolemPress", -1), 0.0001);
         assertEquals(0.40, defaults.ability(
                 EngineerBalance.GLOBAL_ID, "doorDamageReductionCap", -1), 0.0001);
         assertEquals(10, defaults.abilityInt(EngineerBalance.GLOBAL_ID, "golemPressesPerExtraTarget", -1));
         assertEquals(20, defaults.abilityInt(EngineerBalance.GLOBAL_ID, "tntExtraTargetCap", -1));
         assertEquals(10, defaults.abilityInt(EngineerBalance.GLOBAL_ID, "pistonExtraTargetCap", -1));
-        assertEquals(0.0005, defaults.ability(
+        assertEquals(0.001, defaults.ability(
                 EngineerBalance.GLOBAL_ID, "slimeSlowPerGolemPress", -1), 0.0001);
         assertEquals(0.80, defaults.ability(EngineerBalance.GLOBAL_ID, "slimeSlowCap", -1), 0.0001);
         assertEquals(0, defaults.abilityInt(EngineerTowers.REDSTONE_DUST.id(), TowerCapacity.CONFIG_KEY, -1));
@@ -207,11 +207,11 @@ final class EngineerTowerCatalogTest {
         assertEquals(1.10, EngineerBalance.dispenserPressDamageMultiplier(10), 0.0001);
         assertEquals(2.0, EngineerBalance.dispenserPressDamageMultiplier(100), 0.0001);
         assertEquals(3.0, EngineerBalance.dispenserPressDamageMultiplier(200), 0.0001);
-        assertEquals(3.0, EngineerBalance.dispenserPressDamageMultiplier(800), 0.0001);
+        assertEquals(4.5, EngineerBalance.dispenserPressDamageMultiplier(800), 0.0001);
 
         assertEquals(0.0, EngineerBalance.doorDamageReduction(0), 0.0001);
-        assertEquals(0.05, EngineerBalance.doorDamageReduction(100), 0.0001);
-        assertEquals(0.25, EngineerBalance.doorDamageReduction(500), 0.0001);
+        assertEquals(0.10, EngineerBalance.doorDamageReduction(100), 0.0001);
+        assertEquals(0.40, EngineerBalance.doorDamageReduction(500), 0.0001);
         assertEquals(0.40, EngineerBalance.doorDamageReduction(800), 0.0001);
         assertEquals(0, EngineerBalance.tntExtraTargets(9));
         assertEquals(1, EngineerBalance.tntExtraTargets(10));
@@ -223,7 +223,7 @@ final class EngineerTowerCatalogTest {
         assertEquals(10, EngineerBalance.pistonExtraTargets(100));
         assertEquals(10, EngineerBalance.pistonExtraTargets(800));
         assertEquals(0.55, EngineerBalance.slimeSlow(0.55, 0), 0.0001);
-        assertEquals(0.555, EngineerBalance.slimeSlow(0.55, 10), 0.0001);
+        assertEquals(0.56, EngineerBalance.slimeSlow(0.55, 10), 0.0001);
         assertEquals(0.80, EngineerBalance.slimeSlow(0.55, 500), 0.0001);
         assertEquals(0.80, EngineerBalance.slimeSlow(0.55, 800), 0.0001);
 

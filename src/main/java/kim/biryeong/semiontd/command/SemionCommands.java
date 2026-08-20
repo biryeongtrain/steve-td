@@ -457,6 +457,7 @@ public final class SemionCommands {
                                 IntegerArgumentType.getInteger(context, "amount")
                         ))));
         dispatcher.register(sandboxCommand("샌드박스", gameManager));
+        dispatcher.register(tutorialCommand(gameManager));
         dispatcher.register(literal("빌드")
                 .then(literal("기록")
                         .then(argument("title", StringArgumentType.greedyString())
@@ -1413,6 +1414,19 @@ public final class SemionCommands {
                 .then(sandboxCurrencyCommand("money", gameManager));
     }
 
+    private static LiteralArgumentBuilder<CommandSourceStack> tutorialCommand(SemionGameManager gameManager) {
+        return literal("튜토리얼")
+                .executes(context -> tutorial(context.getSource(), gameManager, false))
+                .then(literal("상태")
+                        .executes(context -> tutorialStatus(context.getSource(), gameManager)))
+                .then(literal("완료")
+                        .executes(context -> completeTutorial(context.getSource(), gameManager)))
+                .then(literal("다시")
+                        .executes(context -> tutorial(context.getSource(), gameManager, true)))
+                .then(literal("종료")
+                        .executes(context -> leaveTutorial(context.getSource(), gameManager)));
+    }
+
     private static int createGame(CommandSourceStack source, SemionGameManager gameManager) {
         try {
             gameManager.createGame(source.getServer());
@@ -1835,6 +1849,60 @@ public final class SemionCommands {
                 yield 0;
             }
         };
+    }
+
+    private static int tutorial(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            boolean restart
+    ) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        if (!restart && gameManager.showTutorial(source.getServer(), player.getUUID())) {
+            return 1;
+        }
+        SemionGameManager.TutorialStartResult result = gameManager.startTutorial(source.getServer(), player);
+        return switch (result) {
+            case STARTED -> 1;
+            case REPLACED -> {
+                success(source, restart ? "튜토리얼을 처음부터 다시 시작했습니다." : "기존 연습장을 종료하고 튜토리얼을 시작했습니다.");
+                yield 1;
+            }
+            case PLAYER_IN_MATCH -> {
+                failure(source, "현재 경기 참가자 또는 시작 대기자는 튜토리얼에 들어갈 수 없습니다.");
+                yield 0;
+            }
+            case FAILED -> {
+                failure(source, "튜토리얼 시작에 실패했습니다.");
+                yield 0;
+            }
+        };
+    }
+
+    private static int tutorialStatus(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        if (!gameManager.showTutorial(source.getServer(), player.getUUID())) {
+            failure(source, "진행 중인 튜토리얼이 없습니다. /튜토리얼로 시작하세요.");
+            return 0;
+        }
+        return 1;
+    }
+
+    private static int completeTutorial(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        if (!gameManager.completeTutorial(source.getServer(), player.getUUID())) {
+            failure(source, "최종 방어선과 보스 설명까지 진행한 뒤 완료할 수 있습니다.");
+            return 0;
+        }
+        return 1;
+    }
+
+    private static int leaveTutorial(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {
+        if (!gameManager.leaveTutorial(source.getServer(), source.getPlayerOrException())) {
+            failure(source, "진행 중인 튜토리얼이 없습니다.");
+            return 0;
+        }
+        success(source, "튜토리얼을 종료하고 로비로 이동했습니다.");
+        return 1;
     }
 
     private static int resetSandbox(CommandSourceStack source, SemionGameManager gameManager) throws CommandSyntaxException {

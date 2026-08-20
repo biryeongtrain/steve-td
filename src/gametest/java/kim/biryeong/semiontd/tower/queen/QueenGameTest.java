@@ -110,11 +110,11 @@ public final class QueenGameTest {
             require(monster.isAlive(), "Shrink must never kill its target directly.");
             require(queen.selectForcedAttackTarget(queenEntity, List.of(target, nearby)).orElseThrow() == target,
                     "The Queen must keep focusing a partially weakened target.");
-            for (int hit = 1; hit < 3; hit++) {
+            for (int hit = 1; hit < 2; hit++) {
                 queen.onAttackResolved(queenEntity, target, 0.0, 0.0, 0.0, false);
             }
             require(QueenGiantRunner.hasRequiredVisualShrink(monster),
-                    "Three early Queen attacks must make the target 30% smaller for Giant execution.");
+                    "Two early Queen attacks must make the target 20% smaller for Giant execution.");
             require(queen.selectForcedAttackTarget(queenEntity, List.of(target, nearby)).orElseThrow() == nearby,
                     "The Queen must switch targets after preparing one for execution.");
             SemionTowerEntity cardEntity = (SemionTowerEntity) context.getLevel().getEntity(card.entityId().orElseThrow());
@@ -174,7 +174,7 @@ public final class QueenGameTest {
             for (int tick = 0; tick < 80; tick++) queen.tick(lane);
             require(!monster.isAlive(), "The Giant must execute a contacted enemy below its threshold.");
             require(unweakenedMonster.isAlive(),
-                    "The Giant must not execute an enemy that is less than 30% smaller, even below its threshold.");
+                    "The Giant must not execute an enemy that is less than 20% smaller, even below its threshold.");
             requireClose(QueenBalance.giantInitialExecutionHealth()
                             + Math.max(QueenBalance.giantInitialExecutionHealth(), Math.min(16.0,
                                     QueenBalance.giantInitialExecutionHealth()

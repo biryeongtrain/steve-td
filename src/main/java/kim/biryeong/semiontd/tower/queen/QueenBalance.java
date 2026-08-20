@@ -25,6 +25,7 @@ public final class QueenBalance {
     public static int giantChargeTicks() {return abilityInt("giantChargeTicks", 400);}
     public static double giantAccelerationRadius() {return ability("giantAccelerationRadius", 6.0);}
     public static int giantAccelerationMemoryTicks() {return abilityInt("giantAccelerationMemoryTicks", 40);}
+    public static double giantExecutionVisualShrink() {return ability("giantExecutionVisualShrink", 0.20);}
     public static double giantInitialExecutionHealth() {return ability("giantInitialExecutionHealth", 5.0);}
     public static double giantExecutionGrowthRatio() {return ability("giantExecutionGrowthRatio", 0.05);}
     public static double giantGrowthTargetCapMultiplier() {return ability("giantGrowthTargetCapMultiplier", 2.0);}

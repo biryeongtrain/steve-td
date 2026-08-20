@@ -1102,7 +1102,7 @@ public final class SemionDialogService {
     public void showSummonShop(ServerPlayer player, SemionGame game, int page) {
         SemionPlayer semionPlayer = game.players().get(player.getUUID());
         long emerald = semionPlayer == null ? 0 : semionPlayer.economy().emerald();
-        boolean sandbox = game.isSandboxMode();
+        boolean freeSummons = game.summonsAreFree();
         List<SummonMonsterType> summons = sortedSummons(game.summonShop().all());
         int pageCount = pageCount(summons.size());
         int safePage = clampPage(page, pageCount);
@@ -1111,7 +1111,7 @@ public final class SemionDialogService {
         body.append("<gray>페이지</gray> <yellow>").append(safePage).append("</yellow><gray>/</gray><yellow>").append(pageCount).append("</yellow>");
         body.append(" <dark_gray>|</dark_gray> <gray>소환 후보</gray> <yellow>").append(summons.size()).append("</yellow>");
         body.append(" <dark_gray>|</dark_gray> <gray>상세 스탯은 버튼에 마우스를 올려 확인하세요.</gray>");
-        if (sandbox) {
+        if (freeSummons) {
             body.append("\n<green>샌드박스 소환은 무료이며 수입이 증가하지 않습니다.</green>");
         }
         appendSummonNavigation(body, "/semiontd summonui ", safePage, pageCount);
@@ -1120,11 +1120,11 @@ public final class SemionDialogService {
                 .skip((long) (safePage - 1) * SUMMON_PAGE_SIZE)
                 .limit(SUMMON_PAGE_SIZE)
                 .map(type -> {
-                    boolean affordable = sandbox || emerald >= type.gasCost();
+                    boolean affordable = freeSummons || emerald >= type.gasCost();
                     return actionButton(
                             summonButtonLabel(type, affordable),
                             "/semiontd summon " + type.id(),
-                            summonTooltip(type, affordable, sandbox),
+                            summonTooltip(type, affordable, freeSummons),
                             SUMMON_BUTTON_WIDTH
                     );
                 })

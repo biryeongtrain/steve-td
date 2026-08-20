@@ -26,6 +26,7 @@ public final class SemionMusicService {
     public static final long RESTART_GRACE_TICKS = 20L;
     public static final long MIN_INTER_TRACK_GAP_TICKS = 5L * 20L;
     public static final long MAX_INTER_TRACK_GAP_TICKS = 10L * 20L;
+    private static final long NANOS_PER_MUSIC_TICK = 50_000_000L;
 
     private SemionMusicLibrary library;
     private final LongSupplier interTrackGapTicks;
@@ -33,7 +34,7 @@ public final class SemionMusicService {
     private final Map<UUID, PlayerMusicState> playerStates = new HashMap<>();
     private final List<ScheduleSegment> schedule = new ArrayList<>();
     private final Set<Integer> playedTrackIndices = new HashSet<>();
-    private double musicTick;
+    private long musicStartedAtNanos;
     private boolean active;
 
     public SemionMusicService(SemionMusicLibrary library) {
@@ -74,7 +75,7 @@ public final class SemionMusicService {
         }
         library = Objects.requireNonNull(replacement, "replacement");
         active = false;
-        musicTick = 0L;
+        musicStartedAtNanos = 0L;
         schedule.clear();
         playedTrackIndices.clear();
     }
@@ -84,18 +85,19 @@ public final class SemionMusicService {
         if (targetPlayers.isEmpty()) {
             stopAll(server);
             active = false;
-            musicTick = 0L;
+            musicStartedAtNanos = 0L;
             schedule.clear();
             return;
         }
+        long now = System.nanoTime();
         if (!active) {
             active = true;
-            musicTick = 0L;
+            musicStartedAtNanos = now;
             playerStates.clear();
             schedule.clear();
         }
 
-        long currentTick = (long) musicTick;
+        long currentTick = elapsedMusicTicks(musicStartedAtNanos, now);
         for (UUID playerId : targetPlayers) {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             if (player != null) {
@@ -103,13 +105,10 @@ public final class SemionMusicService {
             }
         }
         stopPlayersOutsideTargets(server, targetPlayers);
-        musicTick += musicTicksPerServerTick(server.tickRateManager().tickrate());
     }
 
-    static double musicTicksPerServerTick(float serverTickRate) {
-        return Float.isFinite(serverTickRate) && serverTickRate > 0.0F
-                ? 20.0 / serverTickRate
-                : 1.0;
+    static long elapsedMusicTicks(long startedAtNanos, long nowNanos) {
+        return Math.max(0L, nowNanos - startedAtNanos) / NANOS_PER_MUSIC_TICK;
     }
 
     public void handlePlayerJoin(ServerPlayer player) {

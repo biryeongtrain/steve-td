@@ -159,7 +159,7 @@ public final class QueenTower extends ProductionTower {
                 "능력치 하한: 원본의 " + percentInteger(QueenBalance.minimumStatScale()),
                 "외형 하한: 원본의 " + percentInteger(QueenBalance.minimumVisualScale()),
                 "처형 조건: 원본보다 외형 "
-                        + percentInteger(QueenGiantRunner.REQUIRED_EXECUTION_VISUAL_SHRINK)
+                        + percentInteger(QueenBalance.giantExecutionVisualShrink())
                         + " 이상 축소 + 현재 체력 " + oneDecimal(state.executionHealth()) + " 이하",
                 "처형선 성장: 최소 " + oneDecimal(QueenBalance.giantInitialExecutionHealth()
                         * QueenBalance.giantExecutionGrowthRatio()) + " · 최대 현재 수치의 "

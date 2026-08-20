@@ -19,13 +19,13 @@ public final class EngineerBalance {
     public static final double DISPENSER_DAMAGE_PER_PLATE_BLOCK = 0.10;
     public static final int DISPENSER_MAX_PLATE_DISTANCE = 10;
     public static final double DISPENSER_DAMAGE_BONUS_PER_GOLEM_PRESS = 0.01;
-    public static final double DISPENSER_DAMAGE_BONUS_CAP = 2.0;
-    public static final double DOOR_DAMAGE_REDUCTION_PER_GOLEM_PRESS = 0.0005;
+    public static final double DISPENSER_DAMAGE_BONUS_CAP = 3.5;
+    public static final double DOOR_DAMAGE_REDUCTION_PER_GOLEM_PRESS = 0.001;
     public static final double DOOR_DAMAGE_REDUCTION_CAP = 0.40;
     public static final int GOLEM_PRESSES_PER_EXTRA_TARGET = 10;
     public static final int TNT_EXTRA_TARGET_CAP = 20;
     public static final int PISTON_EXTRA_TARGET_CAP = 10;
-    public static final double SLIME_SLOW_PER_GOLEM_PRESS = 0.0005;
+    public static final double SLIME_SLOW_PER_GOLEM_PRESS = 0.001;
     public static final double SLIME_SLOW_CAP = 0.80;
     public static final int ACTIVE_VFX_INTERVAL_TICKS = 20;
     public static final int TNT_FUSE_VFX_INTERVAL_TICKS = 10;

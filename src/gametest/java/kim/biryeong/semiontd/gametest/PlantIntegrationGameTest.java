@@ -379,6 +379,75 @@ public final class PlantIntegrationGameTest {
         }
     }
 
+    /**
+     * 잔디 둘이 같은 대상을 회복시키면 두 번째는 절반만 들어갑니다.
+     *
+     * <p>값만으로는 확인할 수 없는 부분입니다. 겹침 판정이 대상 타워에 적힌 시각을 보기 때문에,
+     * 실제로 두 타워를 세워 펄스를 돌려 봐야 감산이 걸리는지 알 수 있습니다.
+     */
+    /**
+     * 잔디 둘이 같은 대상을 회복시키면 두 번째는 절반만 들어갑니다.
+     *
+     * <p>값만으로는 확인할 수 없는 부분입니다. 겹침 판정이 대상 타워에 적힌 시각을 보기 때문에,
+     * 실제로 세워 놓고 펄스를 돌려 봐야 감산이 걸리는지 알 수 있습니다.
+     *
+     * <p>잔디는 자기 자신은 회복시키지 않으므로 회복하는 둘과 받는 하나, 셋이 필요합니다.
+     */
+    @GameTest
+    public void twoMeadowPlantsHealingOneTargetLoseHalfOfTheSecondHeal(GameTestHelper context) {
+        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        UUID owner = stableUuid("plant-heal-overlap-owner");
+        TeamLaneGroup group = new TeamLaneGroup(TeamId.RED, BossMonster.defaultBoss(TeamId.RED));
+        PlayerLane lane = testLane(context, owner);
+        group.addLane(lane);
+        try {
+            TowerBalanceRuntime.apply(defaults);
+            fillFloor(context);
+            lane.addTower(new PlantTerraformTower(
+                    TowerBalanceRuntime.resolve(PlantTowers.T1_OAK_SEED_TOWER),
+                    owner, TeamId.RED, 1, position(context, 3, 1, 3)));
+
+            PlantCombatTower healerOne = meadowPlant(context, owner, 2, 3);
+            PlantCombatTower healerTwo = meadowPlant(context, owner, 4, 3);
+            PlantCombatTower target = meadowPlant(context, owner, 3, 2);
+            lane.addTower(healerOne);
+            lane.addTower(healerTwo);
+            lane.addTower(target);
+
+            // 회복이 실제로 들어가려면 대상이 깎여 있어야 합니다.
+            SemionTowerEntity targetEntity = (SemionTowerEntity) context.getLevel()
+                    .getEntity(target.entityId().orElseThrow());
+            float wounded = (float) (target.currentMaxHealth() * 0.2);
+            target.syncHealth(wounded);
+            targetEntity.setHealth(wounded);
+
+            healerOne.tick(lane);
+            double afterFirst = targetEntity.getHealth();
+            double fullGain = afterFirst - wounded;
+            require(fullGain > 0.0, "The first meadow heal must land: gain=" + fullGain);
+
+            healerTwo.tick(lane);
+            double overlapGain = targetEntity.getHealth() - afterFirst;
+            double reduction = defaults.ability(PlantTowers.GLOBAL_CONFIG_ID, "meadowHealOverlapReduction", 0.5);
+            requireClose(fullGain * (1.0 - reduction), overlapGain,
+                    "The overlapping heal must be reduced: full=" + fullGain + " overlap=" + overlapGain);
+            context.succeed();
+        } catch (RuntimeException | Error failure) {
+            failure.printStackTrace();
+            context.fail(Component.literal("Plant heal overlap failed: " + failure.getMessage()));
+        } finally {
+            group.closeRuntime();
+            PlantSoilStates.clear(owner);
+            TowerBalanceRuntime.apply(defaults);
+        }
+    }
+
+    private static PlantCombatTower meadowPlant(GameTestHelper context, UUID owner, int x, int z) {
+        return new PlantCombatTower(
+                TowerBalanceRuntime.resolve(PlantTowers.T1_MEADOW_TOWER),
+                owner, TeamId.RED, 1, position(context, x, 1, z));
+    }
+
     @GameTest(maxTicks = 30)
     public void desertTerrainDamageBelongsToItsLivingTerraformer(GameTestHelper context) {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();

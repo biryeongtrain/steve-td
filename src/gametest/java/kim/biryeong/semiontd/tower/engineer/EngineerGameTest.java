@@ -606,10 +606,10 @@ public final class EngineerGameTest {
 
             lane.markWaveStarted(20);
             require(plate.pressPlate(lane), "The gold plate must power the dispenser through the circuit.");
-            recordPresses(owner, 200);
+            recordPresses(owner, 500);
             dispenser.tick(lane);
 
-            requireClose(771.85, target.runtimeMonster().health(),
+            requireClose(657.775, target.runtimeMonster().health(),
                     "The dispenser shot must multiply base, distance, plate, and capped match bonuses.");
             require(dispenser.runtimeDetailLines().stream().anyMatch(line -> line.contains("금 발판")),
                     "Dispenser details must show the activating plate grade.");
@@ -617,7 +617,7 @@ public final class EngineerGameTest {
                     "Dispenser details must show the gold plate damage bonus.");
             require(dispenser.runtimeDetailLines().stream().anyMatch(line -> line.contains("3/10칸")),
                     "Dispenser details must show the applied circuit distance.");
-            require(dispenser.runtimeDetailLines().stream().anyMatch(line -> line.contains("+200%/200%")),
+            require(dispenser.runtimeDetailLines().stream().anyMatch(line -> line.contains("+350%/350%")),
                     "Dispenser details must show the capped match damage bonus.");
             context.succeed();
         } catch (Throwable failure) {

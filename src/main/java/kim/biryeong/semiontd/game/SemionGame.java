@@ -103,6 +103,8 @@ public final class SemionGame {
     private final Map<UUID, Set<Integer>> clearedRoundsByPlayer = new java.util.HashMap<>();
     private final List<TeamEliminationRecord> eliminationOrder = new ArrayList<>();
     private boolean sandboxMode;
+    private boolean tutorialMode;
+    private boolean freeSandboxSummons;
     private boolean selfTargetIncomeSummons;
     private MatchId matchId = MatchId.newId();
     private long startedAtEpochMillis;
@@ -203,6 +205,14 @@ public final class SemionGame {
         return sandboxMode;
     }
 
+    public boolean isTutorialMode() {
+        return tutorialMode;
+    }
+
+    public boolean summonsAreFree() {
+        return freeSandboxSummons;
+    }
+
     public int phaseTicks() {
         return phaseTicks;
     }
@@ -244,13 +254,48 @@ public final class SemionGame {
 
     public void enableSandboxMode() {
         sandboxMode = true;
+        freeSandboxSummons = true;
         enableSelfTargetIncomeSummons();
+    }
+
+    public void enableTutorialMode() {
+        tutorialMode = true;
+        enableSelfTargetIncomeSummons();
+    }
+
+    public void keepTutorialPrepareOpen() {
+        if (tutorialMode && phase == RoundPhase.PREPARE_AND_SUMMON && remainingPrepareSeconds() <= 5) {
+            phaseTicks = 0;
+        }
+    }
+
+    public void startTutorialWaveCountdown() {
+        if (tutorialMode && phase == RoundPhase.PREPARE_AND_SUMMON) {
+            phaseTicks = DEFAULT_PREPARE_TICKS - 3 * 20;
+        }
+    }
+
+    public boolean hasClearedRound(UUID playerId, int round) {
+        return playerId != null && clearedRoundsByPlayer.getOrDefault(playerId, Set.of()).contains(round);
     }
 
     public boolean moveSandboxToRound(MinecraftServer server, int round) {
         if (!sandboxMode || !rosterLocked || phase == RoundPhase.WAITING || phase == RoundPhase.ENDED || round < 1) {
             return false;
         }
+        moveToRound(server, round);
+        return true;
+    }
+
+    public boolean restartTutorialRound(MinecraftServer server, int round) {
+        if (!tutorialMode || !rosterLocked || phase == RoundPhase.WAITING || phase == RoundPhase.ENDED || round < 1) {
+            return false;
+        }
+        moveToRound(server, round);
+        return true;
+    }
+
+    private void moveToRound(MinecraftServer server, int round) {
         for (SemionTeam team : livingTeams()) {
             team.laneGroup().disableMonsters();
         }
@@ -258,7 +303,6 @@ public final class SemionGame {
         finalDefenseForcedThisRound = false;
         currentRound = round;
         startPreparePhase(server);
-        return true;
     }
 
     public void disableWaveSpawnsForTeam(TeamId teamId) {
@@ -866,10 +910,10 @@ public final class SemionGame {
         if (!job.canUseSummon(jobContext, type.get())) {
             return SummonResult.failure(SummonResultType.SUMMON_NOT_ALLOWED_BY_JOB, summonId);
         }
-        long gasCost = sandboxMode
+        long gasCost = freeSandboxSummons
                 ? 0L
                 : Math.max(0, job.modifySummonGasCost(jobContext, type.get(), type.get().gasCost()));
-        long incomeGain = sandboxMode
+        long incomeGain = freeSandboxSummons
                 ? 0L
                 : Math.max(0, job.modifySummonIncomeGain(jobContext, type.get(), type.get().incomeGain()));
 
@@ -1526,7 +1570,7 @@ public final class SemionGame {
             } else {
                 SemionHotbarService.grantMatchTools(player);
             }
-            if (!sandboxMode && teams.get(activePlayer.teamId()).hasLeader(activePlayer.uuid())) {
+            if (!sandboxMode && !tutorialMode && teams.get(activePlayer.teamId()).hasLeader(activePlayer.uuid())) {
                 SemionHotbarService.grantLeaderTool(player);
             }
             setFlight(player, true);
@@ -1541,6 +1585,9 @@ public final class SemionGame {
     }
 
     private void sendTowerControlHint(MinecraftServer server) {
+        if (tutorialMode) {
+            return;
+        }
         for (SemionPlayer activePlayer : players.values()) {
             ServerPlayer player = server.getPlayerList().getPlayer(activePlayer.uuid());
             if (player != null) {
@@ -1636,7 +1683,7 @@ public final class SemionGame {
     }
 
     private void handleTeamEliminated(MinecraftServer server, SemionTeam team) {
-        if (sandboxMode) {
+        if (sandboxMode || tutorialMode) {
             notifySandboxTeamEliminated(server, team);
             return;
         }
@@ -1676,7 +1723,10 @@ public final class SemionGame {
         for (UUID memberId : team.memberIds()) {
             ServerPlayer player = server.getPlayerList().getPlayer(memberId);
             if (player != null) {
-                player.sendSystemMessage(SemionText.prefixedPlain("샌드박스 팀이 탈락했습니다. /semiontd sandbox reset으로 다시 시작할 수 있습니다."));
+                String message = tutorialMode
+                        ? "튜토리얼 보스가 쓰러졌습니다. /튜토리얼 다시로 재도전하세요."
+                        : "샌드박스 팀이 탈락했습니다. /semiontd sandbox reset으로 다시 시작할 수 있습니다.";
+                player.sendSystemMessage(SemionText.prefixedPlain(message));
             }
         }
     }

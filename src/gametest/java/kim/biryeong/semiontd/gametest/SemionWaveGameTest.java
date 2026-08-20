@@ -54,6 +54,68 @@ public final class SemionWaveGameTest {
     }
 
     @GameTest
+    public void fallingBelowWorldKillsTowerWaveAndIncomeMonstersImmediately(GameTestHelper context) {
+        PlayerLane lane = lane(context, "void-death");
+        BlockPos towerBlock = context.absolutePos(new BlockPos(1, 1, 2));
+        TestTower tower = new TestTower(
+                TestTowerTypes.TEST_DIRECT,
+                lane.ownerPlayer(),
+                TeamId.RED,
+                1,
+                GridPosition.from(towerBlock)
+        );
+        lane.addTower(tower);
+        lane.enqueueWave(
+                List.of(entry("void-wave", AttackKind.MELEE, 1, 0.0, 1.0, 2.5, 13)),
+                WaveSpawnMode.SEQUENTIAL,
+                1
+        );
+        Monster incomeMonster = new Monster(
+                "void-income",
+                TeamId.RED,
+                1,
+                java.util.Optional.of(UUID.nameUUIDFromBytes("void-income-owner".getBytes())),
+                java.util.Optional.of(TeamId.BLUE),
+                100.0,
+                0.0,
+                1.0,
+                AttackKind.MELEE,
+                "minecraft:husk",
+                0
+        );
+        lane.enqueueSummonedMonster(incomeMonster);
+        lane.tick(context.getLevel().getServer());
+
+        SemionTowerEntity towerEntity = (SemionTowerEntity) context.getLevel()
+                .getEntity(tower.entityId().orElseThrow());
+        Monster waveMonster = lane.activeMonsters().stream()
+                .filter(monster -> "void-wave".equals(monster.id()))
+                .findFirst()
+                .orElseThrow();
+        SemionMonsterEntity waveEntity = (SemionMonsterEntity) context.getLevel()
+                .getEntity(waveMonster.minecraftEntityId());
+        SemionMonsterEntity incomeEntity = (SemionMonsterEntity) context.getLevel()
+                .getEntity(incomeMonster.minecraftEntityId());
+        double voidY = context.getLevel().getMinY() - 1.0;
+        towerEntity.setPos(towerEntity.getX(), voidY, towerEntity.getZ());
+        waveEntity.setPos(waveEntity.getX(), voidY, waveEntity.getZ());
+        incomeEntity.setPos(incomeEntity.getX(), voidY, incomeEntity.getZ());
+
+        context.runAfterDelay(1, () -> {
+            if (towerEntity.isAlive() || tower.health() > 0.0) {
+                throw new AssertionError("A tower below the world must die immediately.");
+            }
+            if (waveEntity.isAlive() || waveMonster.health() > 0.0) {
+                throw new AssertionError("A wave monster below the world must die immediately.");
+            }
+            if (incomeEntity.isAlive() || incomeMonster.health() > 0.0) {
+                throw new AssertionError("An income monster below the world must die immediately.");
+            }
+            context.succeed();
+        });
+    }
+
+    @GameTest
     public void roundRobinWaveUsesConfiguredIntervalAndCombatStats(GameTestHelper context) {
         PlayerLane lane = lane(context, "wave-runtime");
         WaveMonsterEntry tank = entry("tank", AttackKind.MELEE, 2, 45.0, 0.9, 3.0, 20);

@@ -119,15 +119,15 @@ final class QueenTowerCatalogTest {
     }
 
     @Test
-    void giantExecutionRequiresThirtyPercentVisualShrinkAndTheHealthThreshold() {
+    void giantExecutionRequiresTwentyPercentVisualShrinkAndTheHealthThreshold() {
         Monster monster = new Monster("queen-execution-rule", TeamId.RED, 1, Optional.empty(), Optional.empty(),
                 80.0, 0.0, 20.0, AttackKind.MELEE, "minecraft:zombie", 0L);
         monster.syncHealth(4.0);
 
         assertFalse(QueenGiantRunner.canExecute(monster, 5.0));
-        monster.applyPermanentStatScale(0.71, 0.50);
+        monster.applyPermanentStatScale(0.81, 0.50);
         assertFalse(QueenGiantRunner.canExecute(monster, 5.0));
-        monster.applyPermanentStatScale(0.70 / 0.71, 0.50);
+        monster.applyPermanentStatScale(0.80 / 0.81, 0.50);
         assertTrue(QueenGiantRunner.canExecute(monster, 5.0));
         monster.syncHealth(6.0);
         assertFalse(QueenGiantRunner.canExecute(monster, 5.0));
@@ -189,6 +189,8 @@ final class QueenTowerCatalogTest {
         QueenTowers.all().forEach(type -> assertTrue(defaults.towers().containsKey(type.id())));
         assertEquals(0.98, defaults.ability(QueenBalance.GLOBAL_ID, "shrinkFactorPerPoint", -1), 0.0001);
         assertEquals(0.20, defaults.ability(QueenBalance.GLOBAL_ID, "minimumStatScale", -1), 0.0001);
+        assertEquals(0.20, defaults.ability(
+                QueenBalance.GLOBAL_ID, "giantExecutionVisualShrink", -1), 0.0001);
         assertEquals(7.0, defaults.ability(QueenBalance.GLOBAL_ID, "queenShrinkPoints", -1), 0.0001);
         TowerBalanceConfig merged = new TowerBalanceConfig(Map.of(), Map.of(), Map.of(
                 QueenBalance.GLOBAL_ID, Map.of("queenShrinkPoints", 4.0))).withMissingDefaults(defaults);
@@ -222,6 +224,7 @@ final class QueenTowerCatalogTest {
         assertInvalidAbility(defaults, "shrinkFactorPerPoint", 1.0);
         assertInvalidAbility(defaults, "minimumStatScale", 0.0);
         assertInvalidAbility(defaults, "minimumVisualScale", 1.1);
+        assertInvalidAbility(defaults, "giantExecutionVisualShrink", 1.1);
         assertInvalidAbility(defaults, "queenPokerHealthBonusCap", 0.0);
         assertInvalidAbility(defaults, "rangeVfxIntervalTicks", 20.5);
         assertInvalidAbility(defaults, "card.heart.aggro", 55.5);
