@@ -108,13 +108,14 @@ public final class SemionDialogService {
     private static final int JOB_STATISTICS_GAME_WIDTH = 120;
     private static final int JOB_STATISTICS_PLACEMENT_WIDTH = 120;
     private static final int PLAYER_STATUS_TEAM_WIDTH = 40;
-    private static final int PLAYER_STATUS_AVATAR_WIDTH = 16;
-    static final int PLAYER_STATUS_NAME_WIDTH = 104;
-    static final int PLAYER_STATUS_JOB_WIDTH = 52;
+    private static final int PLAYER_STATUS_AVATAR_WIDTH = 20;
+    private static final int PLAYER_STATUS_AVATAR_NAME_GAP = 4;
+    static final int PLAYER_STATUS_NAME_WIDTH = 112;
+    static final int PLAYER_STATUS_JOB_WIDTH = 56;
     static final int PLAYER_STATUS_BODY_JOB_SHIFT = 12;
     private static final int PLAYER_STATUS_DIAMOND_WIDTH = 56;
     private static final int PLAYER_STATUS_EMERALD_WIDTH = 52;
-    private static final int PLAYER_STATUS_INCOME_WIDTH = 40;
+    private static final int PLAYER_STATUS_INCOME_WIDTH = 44;
     private static final int PLAYER_STATUS_TOWER_WIDTH = 40;
     private static final int BUTTON_WIDTH = 180;
     private static final int COMPACT_BUTTON_WIDTH = 118;
@@ -2285,14 +2286,15 @@ public final class SemionDialogService {
         List<Component> labels = playerStatusHeaderLabels();
         Component header = playerStatusTableRow(
                 labels.get(0),
-                TextUncenterer.filler(PLAYER_STATUS_AVATAR_WIDTH),
-                labels.get(1),
+                centeredTableCell(
+                        labels.get(1),
+                        PLAYER_STATUS_AVATAR_WIDTH + PLAYER_STATUS_NAME_WIDTH
+                ),
                 labels.get(2),
                 labels.get(3),
                 labels.get(4),
                 labels.get(5),
                 labels.get(6),
-                PLAYER_STATUS_NAME_WIDTH,
                 PLAYER_STATUS_JOB_WIDTH
         );
         return playerStatusHeaderWithDivider(header, divider);
@@ -2318,14 +2320,18 @@ public final class SemionDialogService {
     }
 
     private static Component playerStatusBody(PlayerStatusRow row) {
-        Component avatarCell = Component.empty()
-                .append(avatarComponent(row.playerName(), AvatarVariant.COMPACT))
-                .append(TextUncenterer.filler(6));
+        Component name = playerStatusName(row);
+        Component playerCell = playerStatusPlayerCell(
+                avatarComponent(row.playerName(), AvatarVariant.COMPACT),
+                name,
+                PLAYER_STATUS_AVATAR_WIDTH + PLAYER_STATUS_NAME_WIDTH - PLAYER_STATUS_BODY_JOB_SHIFT,
+                AvatarVariant.COMPACT.imageSize,
+                TextUncenterer.width(name)
+        );
         return playerStatusTableRow(
                 Component.literal(row.teamId().name())
                         .withStyle(teamColor(row.teamId()), ChatFormatting.BOLD),
-                avatarCell,
-                playerStatusName(row),
+                playerCell,
                 Component.literal(row.jobName())
                         .withStyle(ChatFormatting.LIGHT_PURPLE),
                 Component.literal(Long.toString(row.diamond()))
@@ -2336,8 +2342,25 @@ public final class SemionDialogService {
                         .withStyle(ChatFormatting.YELLOW),
                 Component.literal(Integer.toString(row.towerCount()))
                         .withStyle(ChatFormatting.GOLD),
-                PLAYER_STATUS_NAME_WIDTH - PLAYER_STATUS_BODY_JOB_SHIFT,
                 PLAYER_STATUS_JOB_WIDTH + PLAYER_STATUS_BODY_JOB_SHIFT
+        );
+    }
+
+    static Component playerStatusPlayerCell(
+            Component avatar,
+            Component playerName,
+            int width,
+            int avatarWidth,
+            int playerNameWidth
+    ) {
+        Component value = Component.empty()
+                .append(avatar)
+                .append(Component.literal(" "))
+                .append(playerName);
+        return centeredTableCell(
+                value,
+                width,
+                avatarWidth + PLAYER_STATUS_AVATAR_NAME_GAP + playerNameWidth
         );
     }
 
@@ -2349,30 +2372,34 @@ public final class SemionDialogService {
 
     private static MutableComponent playerStatusTableRow(
             Component team,
-            Component avatarCell,
-            Component playerName,
+            Component playerCell,
             Component job,
             Component diamond,
             Component emerald,
             Component income,
             Component towerCount,
-            int playerNameWidth,
             int jobWidth
     ) {
         return Component.empty()
-                .append(leftAlignedTableCell(team, PLAYER_STATUS_TEAM_WIDTH))
-                .append(avatarCell)
-                .append(leftAlignedTableCell(playerName, playerNameWidth))
-                .append(leftAlignedTableCell(job, jobWidth))
-                .append(leftAlignedTableCell(diamond, PLAYER_STATUS_DIAMOND_WIDTH))
-                .append(leftAlignedTableCell(emerald, PLAYER_STATUS_EMERALD_WIDTH))
-                .append(leftAlignedTableCell(income, PLAYER_STATUS_INCOME_WIDTH))
-                .append(leftAlignedTableCell(towerCount, PLAYER_STATUS_TOWER_WIDTH));
+                .append(centeredTableCell(team, PLAYER_STATUS_TEAM_WIDTH))
+                .append(playerCell)
+                .append(centeredTableCell(job, jobWidth))
+                .append(centeredTableCell(diamond, PLAYER_STATUS_DIAMOND_WIDTH))
+                .append(centeredTableCell(emerald, PLAYER_STATUS_EMERALD_WIDTH))
+                .append(centeredTableCell(income, PLAYER_STATUS_INCOME_WIDTH))
+                .append(centeredTableCell(towerCount, PLAYER_STATUS_TOWER_WIDTH));
     }
 
-    private static Component leftAlignedTableCell(Component value, int width) {
-        Component padding = TextUncenterer.filler(Math.max(0, width - TextUncenterer.width(value)));
-        return Component.empty().append(value).append(padding);
+    static List<Integer> playerStatusColumnWidths() {
+        return List.of(
+                PLAYER_STATUS_TEAM_WIDTH,
+                PLAYER_STATUS_AVATAR_WIDTH + PLAYER_STATUS_NAME_WIDTH,
+                PLAYER_STATUS_JOB_WIDTH,
+                PLAYER_STATUS_DIAMOND_WIDTH,
+                PLAYER_STATUS_EMERALD_WIDTH,
+                PLAYER_STATUS_INCOME_WIDTH,
+                PLAYER_STATUS_TOWER_WIDTH
+        );
     }
 
     private static Component centeredTableCell(Component value, int width) {

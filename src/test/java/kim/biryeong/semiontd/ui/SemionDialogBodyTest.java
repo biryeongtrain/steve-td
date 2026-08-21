@@ -80,12 +80,37 @@ final class SemionDialogBodyTest {
         int bodyJobWidth = SemionDialogService.PLAYER_STATUS_JOB_WIDTH
                 + SemionDialogService.PLAYER_STATUS_BODY_JOB_SHIFT;
 
-        assertEquals(92, bodyNameWidth);
-        assertEquals(64, bodyJobWidth);
+        assertEquals(100, bodyNameWidth);
+        assertEquals(68, bodyJobWidth);
         assertEquals(
                 SemionDialogService.PLAYER_STATUS_NAME_WIDTH + SemionDialogService.PLAYER_STATUS_JOB_WIDTH,
                 bodyNameWidth + bodyJobWidth
         );
+    }
+
+    @Test
+    void playerStatusUsesCenteredFourHundredTwentyPixelTable() {
+        List<Integer> widths = SemionDialogService.playerStatusColumnWidths();
+
+        assertEquals(List.of(40, 132, 56, 56, 52, 44, 40), widths);
+        assertEquals(420, widths.stream().mapToInt(Integer::intValue).sum());
+    }
+
+    @Test
+    void playerStatusKeepsOneSpaceBetweenAvatarAndPlayerName() {
+        Component centered = SemionDialogService.playerStatusPlayerCell(
+                Component.literal("avatar"),
+                Component.literal("name"),
+                132,
+                10,
+                24
+        );
+        Component player = centered.getSiblings().get(1);
+
+        assertEquals(3, player.getSiblings().size());
+        assertEquals("avatar", player.getSiblings().getFirst().getString());
+        assertEquals(" ", player.getSiblings().get(1).getString());
+        assertEquals("name", player.getSiblings().getLast().getString());
     }
 
     @Test
