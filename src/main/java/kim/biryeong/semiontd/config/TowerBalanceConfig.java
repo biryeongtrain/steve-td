@@ -2510,6 +2510,11 @@ public record TowerBalanceConfig(
         values.put("commanderDamageBonus", FutureAgencyBalance.COMMANDER_DAMAGE);
         values.put("commanderMaxHealthBonus", FutureAgencyBalance.COMMANDER_HEALTH);
         values.put("commanderAttackSpeedBonus", FutureAgencyBalance.COMMANDER_ATTACK_SPEED);
+        values.put("survivorDamagePerCopy", FutureAgencyBalance.SURVIVOR_DAMAGE_PER_COPY);
+        values.put("escapeeSurvivorDamageMultiplier", FutureAgencyBalance.ESCAPEE_SURVIVOR_MULTIPLIER);
+        values.put("rebuilderSurvivorDamageMultiplier", FutureAgencyBalance.REBUILDER_SURVIVOR_MULTIPLIER);
+        values.put("commanderSurvivorDamageMultiplier", FutureAgencyBalance.COMMANDER_SURVIVOR_MULTIPLIER);
+        values.put("survivorDamageCap", FutureAgencyBalance.SURVIVOR_DAMAGE_CAP);
         values.put("damageReductionCap", FutureAgencyBalance.DAMAGE_REDUCTION_CAP);
         values.put("slowCap", FutureAgencyBalance.SLOW_CAP);
         values.put("suppressionDenseCap", FutureAgencyBalance.SUPPRESSION_DENSE_CAP);
@@ -2773,7 +2778,7 @@ public record TowerBalanceConfig(
         for (String key : java.util.List.of(
                 "rebuilderDamageBonus", "rebuilderMaxHealthBonus", "commanderDamageBonus",
                 "commanderMaxHealthBonus", "commanderAttackSpeedBonus", "damageReductionCap",
-                "slowCap", "suppressionDenseCap")) {
+                "slowCap", "suppressionDenseCap", "survivorDamagePerCopy")) {
             double value = values.getOrDefault(key, 0.0);
             if (value < 0.0 || value > 1.0) {
                 throw new IllegalArgumentException("Future agency ratio must be between 0 and 1: " + key);

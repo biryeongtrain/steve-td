@@ -93,13 +93,13 @@ public final class FutureAgencyTowers {
     private static List<String> agentDescription(FutureAgencyRole role, int grade) {
         String roleLine = switch (role) {
             case COMBAT -> "진행도가 가장 높은 적을 우선하는 <light_purple>장거리 단일 공격</light_purple> 요원입니다.";
-            case SUPPRESSION -> "공격 대상 주변을 함께 타격하고 이동속도를 낮추는 <light_purple>광역 제압</light_purple> 요원입니다.";
+            case SUPPRESSION -> "공격 대상 주변을 함께 타격하고 이동·공격속도를 낮추는 <light_purple>광역 제압</light_purple> 요원입니다.";
             case PROTECTION -> "높은 어그로와 등급별 피해 감소로 동료를 지키는 <light_purple>방호</light_purple> 요원입니다.";
         };
         return List.of(
                 "<light_purple>" + role.displayName() + " 요원</light_purple> <white>" + grade + "급</white>. " + roleLine,
                 "구원 전 생존하면 현재 위치·체력을 잇는 <aqua>연결 생존자</aqua>를 원본당 최대 1기 유지합니다.",
-                "설치 원본은 매 웨이브 원래 위치와 최대 체력으로 다시 출전하며, <red>세계 구원</red> 후에는 일반 중앙 방어 타워가 됩니다."
+                "설치 원본은 매 웨이브 원래 위치와 최대 체력으로 다시 출전하며, <red>세계 구원</red> 후에는 생존자와 함께 중앙 방어에 참가합니다."
         );
     }
 

@@ -127,16 +127,16 @@ public final class FutureAgencyAgentTower extends ProductionTower {
 
     @Override
     public void resetForRound(PlayerLane lane) {
-        boolean restoreCarry = carriedCopy && withdrawn && !FutureAgencyStates.state(ownerPlayer()).worldSaved()
-                && carriedPosition != null && carriedHealth > 0.0;
+        boolean restoreCarry = carriedCopy && carriedPosition != null && carriedHealth > 0.0;
         waveActive = false;
         withdrawn = false;
         restoringCarry = restoreCarry;
         super.resetForRound(lane);
         refreshPolicyHealth(false);
-        if (restoreCarry && lane == null) {
+        if (restoreCarry) {
             syncPosition(carriedPosition);
             syncHealth(carriedHealth);
+            onStateChanged(lane);
         }
         restoringCarry = false;
         carriedPosition = null;
@@ -222,7 +222,8 @@ public final class FutureAgencyAgentTower extends ProductionTower {
     public double modifyAttackDamage(SemionTowerEntity source, SemionMonsterEntity target, double damage) {
         FutureAgencyStates.PlayerState state = FutureAgencyStates.state(ownerPlayer());
         double bonus = FutureAgencyBalance.leaderDamage(state)
-                + FutureAgencyBalance.stacked(state, FutureAgencyPolicy.AGENCY_TACTICS);
+                + FutureAgencyBalance.stacked(state, FutureAgencyPolicy.AGENCY_TACTICS)
+                + FutureAgencyBalance.survivorDamage(state, lane, ownerPlayer());
         FutureAgencyRole role = FutureAgencyTowers.role(type());
         if (role == FutureAgencyRole.COMBAT) bonus += FutureAgencyBalance.stacked(state, FutureAgencyPolicy.PRECISION_FIRE);
         if (state.worldSaved() && deployedAtFinalDefense()) bonus += FutureAgencyBalance.stacked(state, FutureAgencyPolicy.CENTRAL_BATTLE);
@@ -293,7 +294,7 @@ public final class FutureAgencyAgentTower extends ProductionTower {
                 FutureAgencyBalance.agentAbility(type(), "suppressionSlow",
                         switch (grade) {case 5 -> .08; case 4 -> .12; case 3 -> .16; case 2 -> .20; default -> .25;})
                         + FutureAgencyBalance.stacked(state, FutureAgencyPolicy.RESTRAINT_ROUNDS));
-        applySlow(primary, slow);
+        applySuppression(primary, slow);
         Set<UUID> selected = targets(lane, primary.position(), radius).stream().filter(target -> target != primary)
                 .limit(Math.max(0, cap - 1L)).map(SemionMonsterEntity::getUUID)
                 .collect(java.util.stream.Collectors.toCollection(HashSet::new));
@@ -302,7 +303,7 @@ public final class FutureAgencyAgentTower extends ProductionTower {
                 AreaEffectIds.tower(this, "future_suppression"), source, primary, radius,
                 AreaVfxSpec.onTrigger(AreaVfxStyles.DEBUFF)).withFilter(target -> selected.contains(target.getUUID()));
         TowerAreaDamage.applyResolved(this, source, request, ignored -> outgoing * Math.min(1.0, ratio), true,
-                (target, amount, secondaryKilled) -> {applySlow(target, slow); TowerVfxService.showSecondaryAttack(source, target);});
+                (target, amount, secondaryKilled) -> {applySuppression(target, slow); TowerVfxService.showSecondaryAttack(source, target);});
     }
 
     public void refreshPolicyHealth(boolean healIncrease) {
@@ -332,7 +333,8 @@ public final class FutureAgencyAgentTower extends ProductionTower {
     boolean carriedCopy() {return carriedCopy;}
 
     private void carryIntoNextRound(PlayerLane lane) {
-        if (withdrawn || FutureAgencyStates.state(ownerPlayer()).worldSaved() || isDestroyed(lane)) return;
+        if (withdrawn || isDestroyed(lane)) return;
+        boolean worldSaved = FutureAgencyStates.state(ownerPlayer()).worldSaved();
         GridPosition survivalPosition = position();
         double heal = currentMaxHealth() * FutureAgencyBalance.stacked(
                 FutureAgencyStates.state(ownerPlayer()), FutureAgencyPolicy.EVAC_MEDICS);
@@ -348,14 +350,23 @@ public final class FutureAgencyAgentTower extends ProductionTower {
                 survivor = new FutureAgencyAgentTower(
                         type(), ownerPlayer(), teamId(), laneId(), originalPosition(), survivalPosition);
                 survivor.carriedCopy = true;
-                survivor.withdrawn = true;
+                survivor.withdrawn = !worldSaved;
                 survivor.carriedPosition = survivalPosition;
                 survivor.carriedHealth = survivalHealth;
                 lane.addTower(survivor);
+                if (worldSaved) {
+                    survivor.syncPosition(survivalPosition);
+                    survivor.syncHealth(survivalHealth);
+                    survivor.onStateChanged(lane);
+                }
             }
         } else {
             carriedPosition = survivalPosition;
             carriedHealth = survivalHealth;
+        }
+        if (worldSaved) {
+            showCarryVfx(lane);
+            return;
         }
         withdrawn = true;
         showCarryVfx(lane);
@@ -396,8 +407,9 @@ public final class FutureAgencyAgentTower extends ProductionTower {
         double x=a.x()-b.x(), y=a.y()-b.y(), z=a.z()-b.z(); return x*x+y*y+z*z;
     }
 
-    private static void applySlow(SemionMonsterEntity target, double slow) {
+    private static void applySuppression(SemionMonsterEntity target, double slow) {
         target.applyTimedEffect(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION, slow, 40);
+        target.applyTimedEffect(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION, slow, 40);
     }
 
     private static List<SemionMonsterEntity> targets(PlayerLane lane, Vec3 center, double radius) {
