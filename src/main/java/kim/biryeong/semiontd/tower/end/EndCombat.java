@@ -167,7 +167,7 @@ final class EndCombat {
     }
 
     private static void heal(SemionTowerEntity towerEntity, double amount) {
-        if (amount > 0.0) {towerEntity.receiveHealing(amount);}
+        if (amount > 0.0) {towerEntity.healTarget(towerEntity, amount);}
     }
 
     private static double cappedStackBonus(int stackCount, int everyValue, double perStep, double cap) {

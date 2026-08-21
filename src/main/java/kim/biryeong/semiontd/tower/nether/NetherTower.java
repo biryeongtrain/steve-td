@@ -526,7 +526,7 @@ public class NetherTower extends EntityBackedTower {
 
     private void heal(SemionTowerEntity towerEntity, double amount) {
         if (towerEntity != null && amount > 0.0) {
-            towerEntity.receiveHealing(amount);
+            towerEntity.healTarget(towerEntity, amount);
         }
     }
 

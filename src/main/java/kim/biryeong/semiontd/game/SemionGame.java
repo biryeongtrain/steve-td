@@ -76,6 +76,7 @@ public final class SemionGame {
     public static final int DEFAULT_PREPARE_TICKS = 25 * 20;
     public static final int DEFAULT_WAVE_FINAL_DEFENSE_TICKS = 90 * 20;
     static final int LEADER_TARGET_COOLDOWN_ROUNDS = 3;
+    private static final String DEMON_LORD_METRICS_ID = "semion-td:demon_lord";
 
     private EconomyConfig economyConfig;
     private WaveConfig waveConfig;
@@ -103,6 +104,8 @@ public final class SemionGame {
     private final Map<UUID, Integer> lastTeamMoneyReceivedRound = new java.util.HashMap<>();
     private final Map<UUID, Set<Integer>> attemptedRoundsByPlayer = new java.util.HashMap<>();
     private final Map<UUID, Set<Integer>> clearedRoundsByPlayer = new java.util.HashMap<>();
+    private final Map<UUID, Long> roundKillBaselines = new java.util.HashMap<>();
+    private final Map<UUID, List<PlayerRoundMetricsSnapshot>> roundMetricsByPlayer = new java.util.HashMap<>();
     private final List<TeamEliminationRecord> eliminationOrder = new ArrayList<>();
     private boolean sandboxMode;
     private boolean tutorialMode;
@@ -118,6 +121,7 @@ public final class SemionGame {
     private long tickCounter;
     private long activeMatchTicks;
     private int phaseTicks;
+    private int completedWaveDurationTicks;
     private boolean finalDefenseForcedThisRound;
     private boolean tutorialFinalDefenseExplanation;
     private boolean emeraldIncomeBoostAnnounced;
@@ -739,7 +743,8 @@ public final class SemionGame {
                         recordedRounds(clearedRoundsByPlayer, player.uuid()),
                         player.traitLoadoutSnapshot(),
                         finalTowerComposition(player),
-                        buildGuideService == null ? List.of() : buildGuideService.recordedActions(player.uuid())
+                        buildGuideService == null ? List.of() : buildGuideService.recordedActions(player.uuid()),
+                        roundMetricsByPlayer.getOrDefault(player.uuid(), List.of())
                 ))
                 .toList();
         return Optional.of(new MatchResult(
@@ -779,6 +784,8 @@ public final class SemionGame {
         eliminationOrder.clear();
         attemptedRoundsByPlayer.clear();
         clearedRoundsByPlayer.clear();
+        roundKillBaselines.clear();
+        roundMetricsByPlayer.clear();
         initialSpectatorIds.addAll(plan.spectatorIds());
         matchSpectatorIds.addAll(plan.spectatorIds());
 
@@ -911,6 +918,8 @@ public final class SemionGame {
         lastTeamMoneyReceivedRound.clear();
         attemptedRoundsByPlayer.clear();
         clearedRoundsByPlayer.clear();
+        roundKillBaselines.clear();
+        roundMetricsByPlayer.clear();
         eliminationOrder.clear();
         advancementService.clear();
         selectedRoundWave = null;
@@ -1187,6 +1196,7 @@ public final class SemionGame {
     private void startWavePhase() {
         phase = RoundPhase.LANE_WAVE;
         phaseTicks = 0;
+        completedWaveDurationTicks = 0;
         finalDefenseForcedThisRound = false;
         currentWaveTeamIds.clear();
         RoundWaveConfig roundWave = selectedRoundWave;
@@ -1194,6 +1204,10 @@ public final class SemionGame {
             currentWaveTeamIds.add(team.id());
             team.laneGroup().setCurrentRound(currentRound);
             for (PlayerLane lane : team.laneGroup().lanes()) {
+                SemionPlayer player = players.get(lane.ownerPlayer());
+                if (player != null) {
+                    roundKillBaselines.put(player.uuid(), player.matchStats().monsterKills());
+                }
                 if (roundWave != null && !waveSpawnDisabledTeams.contains(team.id())
                         && !roundWave.entriesForLane("lane_" + lane.laneId()).isEmpty()) {
                     recordBuilderRoundAttempt(lane.ownerPlayer(), currentRound);
@@ -1224,6 +1238,7 @@ public final class SemionGame {
         }
         if (currentWaveTeamIds.stream().allMatch(this::isCurrentWaveTeamResolved)) {
             clearTranscendenceEffects();
+            completedWaveDurationTicks = phaseTicks;
             phase = RoundPhase.ROUND_PAYOUT;
             phaseTicks = 0;
         }
@@ -1257,6 +1272,7 @@ public final class SemionGame {
         VillagerAdvStates.onWaveCleared(this, currentRound);
         notifyRoundEnded(currentRound);
         economyService.payRoundIncome(players.values(), teams);
+        recordRoundMetrics(currentRound, completedWaveDurationTicks);
         currentWaveTeamIds.clear();
         currentRound++;
         tickLeaderCooldowns();
@@ -1339,6 +1355,53 @@ public final class SemionGame {
         return rounds.stream().sorted().toList();
     }
 
+    private void recordRoundMetrics(int round, int waveDurationTicks) {
+        for (UUID playerId : List.copyOf(roundKillBaselines.keySet())) {
+            Long killBaseline = roundKillBaselines.remove(playerId);
+            SemionPlayer player = players.get(playerId);
+            SemionTeam team = player == null ? null : teams.get(player.teamId());
+            PlayerLane lane = team == null
+                    ? null
+                    : team.laneGroup().lane(player.laneId()).orElse(null);
+            if (killBaseline == null || player == null || lane == null) {
+                continue;
+            }
+
+            List<TowerRoundMetricsSnapshot> towerMetrics = lane.roundTowerMetrics();
+            List<TowerRoundMetricsSnapshot> builderTowerMetrics = towerMetrics.stream()
+                    .filter(metrics -> !DEMON_LORD_METRICS_ID.equals(metrics.towerTypeId()))
+                    .toList();
+            int firstCombatTick = towerMetrics.stream()
+                    .mapToInt(TowerRoundMetricsSnapshot::firstCombatTick)
+                    .filter(tick -> tick >= 0)
+                    .min()
+                    .orElse(-1);
+            int lastCombatTick = towerMetrics.stream()
+                    .mapToInt(TowerRoundMetricsSnapshot::lastCombatTick)
+                    .max()
+                    .orElse(-1);
+            PlayerEconomy economy = player.economy();
+            roundMetricsByPlayer.computeIfAbsent(playerId, ignored -> new ArrayList<>()).add(
+                    new PlayerRoundMetricsSnapshot(
+                            round,
+                            waveDurationTicks,
+                            firstCombatTick < 0 ? 0 : lastCombatTick - firstCombatTick + 1,
+                            builderTowerMetrics.stream().mapToInt(TowerRoundMetricsSnapshot::startCount).sum(),
+                            builderTowerMetrics.stream().mapToInt(TowerRoundMetricsSnapshot::endAliveCount).sum(),
+                            builderTowerMetrics.stream().mapToInt(TowerRoundMetricsSnapshot::deathCount).sum(),
+                            economy.emeraldProductionUpgradeCount(),
+                            economy.emeraldPerSec(),
+                            economy.income(),
+                            economy.emerald(),
+                            economy.diamond(),
+                            economy.towerLimitPurchaseCount(),
+                            player.matchStats().monsterKills() - killBaseline,
+                            towerMetrics
+                    )
+            );
+        }
+    }
+
     private List<TowerCompositionEntry> finalTowerComposition(SemionPlayer player) {
         SemionTeam team = teams.get(player.teamId());
         return team == null
@@ -1350,6 +1413,7 @@ public final class SemionGame {
         List<SemionTeam> living = livingTeams();
         if (living.size() <= 1 && phase != RoundPhase.WAITING) {
             recordBuilderRoundResults(currentRound);
+            recordRoundMetrics(currentRound, phase == RoundPhase.LANE_WAVE ? phaseTicks : 0);
             advancementService.onRoundCompleted(server, this, currentRound);
             if (endedAtEpochMillis == 0L) {
                 endedAtEpochMillis = System.currentTimeMillis();

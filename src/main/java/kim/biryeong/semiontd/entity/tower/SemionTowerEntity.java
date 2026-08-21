@@ -903,10 +903,18 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         return true;
     }
 
+    @Override
+    public boolean healTarget(HealingTarget target, double amount) {
+        if (runtimeTower == null || target == null) {
+            return false;
+        }
+        return runtimeTower.healTarget(target, amount);
+    }
+
     private void applyHealthOverTime(double regenerationPerSecond, double healthLossPerSecond) {
         double netPerSecond = Math.max(0.0, regenerationPerSecond) - Math.max(0.0, healthLossPerSecond);
         if (netPerSecond > 0.0) {
-            receiveHealing(netPerSecond / 20.0);
+            healTarget(this, netPerSecond / 20.0);
             return;
         }
         if (netPerSecond >= 0.0 || runtimeTower == null || runtimeTower.health() <= 1.0) {

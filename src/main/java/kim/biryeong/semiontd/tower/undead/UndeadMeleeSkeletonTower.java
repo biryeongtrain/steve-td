@@ -126,7 +126,7 @@ public class UndeadMeleeSkeletonTower extends SplashTower {
 
     private void heal(SemionTowerEntity towerEntity, double damageAmount) {
         if (towerEntity != null && damageAmount > 0.0) {
-            towerEntity.receiveHealing(damageAmount * lifeStealRatio());
+            towerEntity.healTarget(towerEntity, damageAmount * lifeStealRatio());
         }
     }
 

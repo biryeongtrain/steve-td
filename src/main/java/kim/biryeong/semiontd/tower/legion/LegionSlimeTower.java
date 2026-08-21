@@ -38,7 +38,9 @@ public class LegionSlimeTower extends IllusionSummonerTower {
             return;
         }
         regenTicks = 0;
-        syncHealth(health() + amount);
+        double before = health();
+        syncHealth(before + amount);
+        recordHealingDone(health() - before);
         onStateChanged(lane);
     }
 }

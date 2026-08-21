@@ -251,15 +251,17 @@ public final class QueenCardTower extends ProductionTower {
                 ? AreaEffectOutcome.APPLIED : AreaEffectOutcome.UNCHANGED).appliedCount() > 0;
     }
 
-    private static boolean heal(Tower tower, PlayerLane lane, double amount) {
+    private boolean heal(Tower tower, PlayerLane lane, double amount) {
         if (tower.health() <= 0.0 || tower.health() >= tower.currentMaxHealth()) return false;
         if (tower instanceof EntityBackedTower backed && backed.entityId().isPresent()
                 && lane.arenaWorld().getEntity(backed.entityId().getAsInt()) instanceof SemionTowerEntity entity) {
-            return entity.receiveHealing(amount);
+            return healTarget(entity, amount);
         }
         double before = tower.health();
         tower.syncHealth(before + amount);
-        return tower.health() > before;
+        double healed = Math.max(0.0, tower.health() - before);
+        recordHealingDone(healed);
+        return healed > 0.0;
     }
 
     private Optional<SemionTowerEntity> entity(PlayerLane lane) {
