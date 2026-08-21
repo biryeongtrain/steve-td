@@ -103,12 +103,19 @@ public final class SemionDialogService {
     private static final int TITLE_HEADER_WIDTH = 200;
     private static final int PLAYER_STATUS_WIDTH = 480;
     private static final int JOB_STATISTICS_WIDTH = 460;
+    private static final int JOB_STATISTICS_JOB_WIDTH = 80;
+    private static final int JOB_STATISTICS_SELECTION_WIDTH = 100;
+    private static final int JOB_STATISTICS_GAME_WIDTH = 120;
+    private static final int JOB_STATISTICS_PLACEMENT_WIDTH = 120;
+    private static final int PLAYER_STATUS_TEAM_WIDTH = 40;
     private static final int PLAYER_STATUS_AVATAR_WIDTH = 16;
-    private static final int PLAYER_STATUS_NAME_WIDTH = 112;
-    private static final int PLAYER_STATUS_NUMBER_WIDTH = 56;
-    private static final int PLAYER_STATUS_TOWER_WIDTH = 48;
-    private static final int PLAYER_STATUS_TOWER_JOB_GAP = 12;
-    private static final int PLAYER_STATUS_JOB_WIDTH = 108;
+    static final int PLAYER_STATUS_NAME_WIDTH = 104;
+    static final int PLAYER_STATUS_JOB_WIDTH = 52;
+    static final int PLAYER_STATUS_BODY_JOB_SHIFT = 12;
+    private static final int PLAYER_STATUS_DIAMOND_WIDTH = 56;
+    private static final int PLAYER_STATUS_EMERALD_WIDTH = 52;
+    private static final int PLAYER_STATUS_INCOME_WIDTH = 40;
+    private static final int PLAYER_STATUS_TOWER_WIDTH = 40;
     private static final int BUTTON_WIDTH = 180;
     private static final int COMPACT_BUTTON_WIDTH = 118;
     private static final int SUMMON_BUTTON_WIDTH = 82;
@@ -127,24 +134,14 @@ public final class SemionDialogService {
     private static final ConcurrentMap<SmallAvatarKey, Component> SMALL_AVATAR_CACHE = new ConcurrentHashMap<>();
     public void showGameStatus(ServerPlayer player, SemionGame game) {
         ArrayList<DialogBody> bodies = new ArrayList<>();
-        bodies.add(new HeaderMessage(miniMessage("<gradient:#facc15:#22d3ee><bold>플레이어 현황</bold></gradient>"), PLAYER_STATUS_WIDTH));
-        bodies.add(new PlainMessage(playerStatusHeader(), PLAYER_STATUS_WIDTH));
-        bodies.add(new PlainMessage(miniMessage("<dark_gray>──────────────────────────────────────────────────</dark_gray>"), PLAYER_STATUS_WIDTH));
-        TeamId currentTeam = null;
-        MutableComponent teamBody = null;
-        for (PlayerStatusRow row : playerStatusRows(game)) {
-            if (row.teamId() != currentTeam) {
-                if (teamBody != null) {
-                    bodies.add(new PlainMessage(teamBody, PLAYER_STATUS_WIDTH));
-                }
-                currentTeam = row.teamId();
-                teamBody = Component.empty().append(playerStatusTeamHeader(currentTeam));
-            }
-            teamBody.append("\n").append(playerStatusBody(row));
-        }
-        if (teamBody != null) {
-            bodies.add(new PlainMessage(teamBody, PLAYER_STATUS_WIDTH));
-        }
+        Component title = new HeaderMessage(
+                miniMessage("<gradient:#facc15:#22d3ee><bold>플레이어 현황</bold></gradient>"),
+                PLAYER_STATUS_WIDTH
+        ).asVanillaComponent();
+        bodies.add(new PlainMessage(
+                playerStatusDialogContents(title, playerStatusTable(playerStatusRows(game))),
+                PLAYER_STATUS_WIDTH
+        ));
         showActions(player, "세미온 TD 플레이어 현황", bodies, List.of(), 1);
     }
 
@@ -156,6 +153,7 @@ public final class SemionDialogService {
                 .map(semionPlayer -> {
                     PlayerEconomy economy = semionPlayer.economy();
                     SemionJob job = semionPlayer.job().orElse(JobRegistry.defaultJob());
+                    SemionTeam team = game.teams().get(semionPlayer.teamId());
                     return new PlayerStatusRow(
                             semionPlayer.uuid(),
                             semionPlayer.name(),
@@ -164,7 +162,8 @@ public final class SemionDialogService {
                             economy.emerald(),
                             economy.income(),
                             game.towerCapacityUsed(semionPlayer.uuid()),
-                            job.displayName().getString()
+                            job.displayName().getString(),
+                            team != null && team.hasLeader(semionPlayer.uuid())
                     );
                 })
                 .toList();
@@ -326,31 +325,63 @@ public final class SemionDialogService {
         }
 
         ArrayList<DialogBody> bodies = new ArrayList<>();
-        bodies.add(decoratedHeader(
-                miniMessage("<gradient:#67e8f9:#facc15><bold>직업 통계</bold></gradient>"),
-                JOB_STATISTICS_WIDTH
+        bodies.add(jobStatisticsHeader(
+                miniMessage("<gradient:#67e8f9:#facc15><bold>직업 통계</bold></gradient>")
         ));
         bodies.add(new PlainMessage(statisticsOverview(snapshot), JOB_STATISTICS_WIDTH));
-        if (state == JobStatisticsState.LOADING) {
-            bodies.add(new PlainMessage(
-                    Component.literal("재집계 중입니다. 마지막 정상 통계를 표시합니다.").withStyle(ChatFormatting.YELLOW),
-                    JOB_STATISTICS_WIDTH
-            ));
-        } else if (state == JobStatisticsState.FAILED) {
-            bodies.add(new PlainMessage(
-                    Component.literal("최근 갱신에 실패했습니다. 마지막 정상 통계를 표시합니다.").withStyle(ChatFormatting.RED),
-                    JOB_STATISTICS_WIDTH
-            ));
-        }
-        bodies.add(new HeaderMessage(Component.literal("직업별 요약").withStyle(ChatFormatting.YELLOW), JOB_STATISTICS_WIDTH));
+        appendJobStatisticsState(bodies, state);
+        bodies.add(jobStatisticsListHeader());
+        bodies.add(new PlainMessage(
+                Component.literal("살펴볼 빌더 분류를 선택하세요.").withStyle(ChatFormatting.GRAY),
+                JOB_STATISTICS_WIDTH
+        ));
 
+        List<ActionButton> actions = List.of(
+                actionButton(
+                        jobCategoryLabel("공식 빌더", JobRegistry.officialBuilders()),
+                        "/semiontd job stats official",
+                        "공식 빌더의 직업 통계를 표시합니다."
+                ),
+                actionButton(
+                        jobCategoryLabel("창작 빌더", JobRegistry.creativeBuilders()),
+                        "/semiontd job stats creative",
+                        "창작 빌더의 직업 통계를 표시합니다."
+                )
+        );
+        showActions(player, "세미온 TD 직업 통계", bodies, actions, 2);
+    }
+
+    public void showJobStatistics(
+            ServerPlayer player,
+            JobStatisticsSnapshot snapshot,
+            JobStatisticsState state,
+            boolean official
+    ) {
+        if (snapshot.participantAppearances() == 0L && state == JobStatisticsState.LOADING) {
+            show(player, "세미온 TD 직업 통계", "<yellow>직업 통계를 집계하고 있습니다.</yellow>");
+            return;
+        }
+        if (snapshot.participantAppearances() == 0L && state == JobStatisticsState.FAILED) {
+            show(player, "세미온 TD 직업 통계", "<red>직업 통계를 불러오지 못했습니다.</red>");
+            return;
+        }
+
+        String category = official ? "공식 빌더" : "창작 빌더";
+        ArrayList<DialogBody> bodies = new ArrayList<>();
+        bodies.add(jobStatisticsHeader(
+                miniMessage("<gradient:#67e8f9:#facc15><bold>" + category + " 통계</bold></gradient>")
+        ));
+        bodies.add(new PlainMessage(jobStatisticsCategoryOverview(snapshot), JOB_STATISTICS_WIDTH));
+        appendJobStatisticsState(bodies, state);
+
+        List<JobStatisticsRow> rows = jobStatisticsCategoryRows(snapshot, official);
+        bodies.add(new PlainMessage(jobStatisticsSummaryTable(snapshot, rows), JOB_STATISTICS_WIDTH));
         ArrayList<ActionButton> actions = new ArrayList<>();
-        for (JobStatisticsRow row : jobStatisticsRows(snapshot)) {
-            bodies.add(new PlainMessage(jobStatisticsSummaryLine(snapshot, row), JOB_STATISTICS_WIDTH));
-            bodies.add(new PlainMessage(jobStatisticsRoundMilestonesLine(row), JOB_STATISTICS_WIDTH));
+        for (JobStatisticsRow row : rows) {
             actions.add(jobStatisticsButton(row));
         }
-        showActions(player, "세미온 TD 직업 통계", bodies, actions, 3);
+        actions.add(actionButton("← 분류 선택", "/semiontd job stats", "빌더 분류 화면으로 돌아갑니다."));
+        showActions(player, "세미온 TD " + category + " 통계", bodies, actions, 3);
     }
 
     public void showJobStatisticsDetail(
@@ -390,6 +421,10 @@ public final class SemionDialogService {
             ));
         }
 
+        if (entry.appearances() > 0L) {
+            addStatisticsLine(bodies, "기록 기간", formatTime(entry.firstMatchAtEpochMillis())
+                    + " ~ " + formatTime(entry.lastMatchAtEpochMillis()));
+        }
         addStatisticsSection(bodies, "표본");
         addStatisticsLine(bodies, "선택", formatCount(entry.appearances()) + "회");
         addStatisticsLine(bodies, "선택률", formatPercent(snapshot.selectionRate(entry)));
@@ -398,10 +433,6 @@ public final class SemionDialogService {
         addStatisticsLine(bodies, "승률", formatPercent(entry.winRate()));
         addStatisticsLine(bodies, "평균 순위", formatAverage(entry.averagePlacement(), "위"));
         addStatisticsLine(bodies, "평균 최종 라운드", formatRound(entry.averageFinalRound()));
-        if (entry.appearances() > 0L) {
-            addStatisticsLine(bodies, "기록 기간", formatTime(entry.firstMatchAtEpochMillis())
-                    + " ~ " + formatTime(entry.lastMatchAtEpochMillis()));
-        }
 
         addStatisticsSection(bodies, "라운드 통과율");
         if (entry.appearances() == 0L) {
@@ -473,19 +504,20 @@ public final class SemionDialogService {
         return List.copyOf(rows);
     }
 
+    static List<JobStatisticsRow> jobStatisticsCategoryRows(JobStatisticsSnapshot snapshot, boolean official) {
+        java.util.Set<String> categoryIds = (official
+                ? JobRegistry.officialBuilders()
+                : JobRegistry.creativeBuilders()).stream()
+                .map(job -> job.id().toString())
+                .collect(java.util.stream.Collectors.toSet());
+        return jobStatisticsRows(snapshot).stream()
+                .filter(JobStatisticsRow::registered)
+                .filter(row -> categoryIds.contains(row.jobId()))
+                .toList();
+    }
+
     public void showTraitSelection(ServerPlayer player, TraitLoadout loadout, int secondsRemaining) {
-        String selectionTime = secondsRemaining < 0 ? "제한 없음" : secondsRemaining + "초";
-        String reopenHint = secondsRemaining < 0
-                ? "<gray>샌드박스에서는 /특성으로 언제든 다시 열 수 있습니다.</gray>"
-                : "<gray>창을 닫아도 제한 시간 안에는 /특성으로 다시 열 수 있습니다.</gray>";
-        String body = "<gradient:#67e8f9:#a78bfa><bold>특성 선택</bold></gradient>\n"
-                + "<gray>주특성 100%</gray> <yellow>" + traitName(loadout.primaryTraitId()) + "</yellow>"
-                + " <dark_gray>·</dark_gray> <aqua>" + traitEffectSummary(loadout.primaryTraitId(), TraitSlot.PRIMARY) + "</aqua>\n"
-                + "<gray>부특성 50%</gray> <yellow>" + traitName(loadout.secondaryTraitId()) + "</yellow>"
-                + " <dark_gray>·</dark_gray> <aqua>" + traitEffectSummary(loadout.secondaryTraitId(), TraitSlot.SECONDARY) + "</aqua>\n"
-                + "<gray>남은 시간</gray> <aqua>" + selectionTime + "</aqua>\n"
-                + "<gray>아래 버튼으로 주특성/부특성을 각각 선택하세요.</gray>\n"
-                + reopenHint;
+        String body = traitSelectionSummaryBody(loadout, secondsRemaining);
         ArrayList<ActionButton> actions = new ArrayList<>();
         actions.add(actionButton(
                 "주특성 선택/변경",
@@ -512,20 +544,7 @@ public final class SemionDialogService {
     }
 
     public void showTraitSelection(ServerPlayer player, TraitLoadout loadout, int secondsRemaining, TraitSlot slot) {
-        String selectionTime = secondsRemaining < 0 ? "제한 없음" : secondsRemaining + "초";
-        String reopenHint = secondsRemaining < 0
-                ? "<gray>샌드박스에서는 /특성으로 언제든 다시 열 수 있습니다.</gray>"
-                : "<gray>창을 닫아도 제한 시간 안에는 /특성으로 다시 열 수 있습니다.</gray>";
-        String body = "<gradient:#67e8f9:#a78bfa><bold>" + slot.displayName() + " 선택</bold></gradient>\n"
-                + "<gray>현재 " + slot.displayName() + "</gray> <yellow>" + traitName(loadout.traitId(slot)) + "</yellow> "
-                + "<gray>(" + Math.round(slot.effectScale() * 100.0D) + "%)</gray>"
-                + " <dark_gray>·</dark_gray> <aqua>" + traitEffectSummary(loadout.traitId(slot), slot) + "</aqua>\n"
-                + "<gray>주특성</gray> <yellow>" + traitName(loadout.primaryTraitId()) + "</yellow> <gray>(100%)</gray>\n"
-                + "<gray>부특성</gray> <yellow>" + traitName(loadout.secondaryTraitId()) + "</yellow> <gray>(50%)</gray>\n"
-                + "<gray>남은 시간</gray> <aqua>" + selectionTime + "</aqua>\n"
-                + "<gray>같은 non-none 특성은 주/부특성에 동시에 선택할 수 없습니다.</gray>\n"
-                + "<gray>버튼에 마우스를 올리면 효과와 설명이 표시됩니다.</gray>\n"
-                + reopenHint;
+        String body = traitSelectionSlotBody(loadout, secondsRemaining, slot);
         ArrayList<ActionButton> actions = new ArrayList<>();
         for (SemionTrait trait : TraitRegistry.all()) {
             actions.add(traitButton(trait, slot, loadout.traitId(slot).equals(trait.id())));
@@ -539,6 +558,93 @@ public final class SemionDialogService {
                 actionButton("뒤로", "/semiontd trait ui", "특성 선택 요약으로 돌아갑니다."),
                 TRAIT_COLUMNS
         );
+    }
+
+    static String traitSelectionSummaryBody(TraitLoadout loadout, int secondsRemaining) {
+        String reopenHint = secondsRemaining < 0
+                ? "샌드박스에서는 /특성으로 언제든 다시 열 수 있습니다."
+                : "창을 닫아도 제한 시간 안에는 /특성으로 다시 열 수 있습니다.";
+        return "<gradient:#67e8f9:#a78bfa><bold>특성 선택</bold></gradient>\n"
+                + traitSelectionTimeMarkup(secondsRemaining) + "\n"
+                + traitSelectionLoadoutLine("주특성 100%", loadout.primaryTraitId()) + "\n"
+                + traitSelectionLoadoutLine("부특성 50%", loadout.secondaryTraitId()) + "\n"
+                + "<divider>\n"
+                + traitSelectionSummaryAbilityLine("주특성 능력", loadout.primaryTraitId(), TraitSlot.PRIMARY) + "\n"
+                + traitSelectionSummaryAbilityLine("부특성 능력", loadout.secondaryTraitId(), TraitSlot.SECONDARY) + "\n"
+                + "<divider>\n"
+                + "<gray>아래 버튼으로 주특성/부특성을 각각 선택하세요.</gray>\n"
+                + "<gray>" + reopenHint + "</gray>\n"
+                + "<divider>";
+    }
+
+    static String traitSelectionSlotBody(TraitLoadout loadout, int secondsRemaining, TraitSlot slot) {
+        String reopenHint = secondsRemaining < 0
+                ? "샌드박스에서는 /특성으로 언제든 다시 열 수 있습니다."
+                : "창을 닫아도 제한 시간 안에는 /특성으로 다시 열 수 있습니다.";
+        var traitId = loadout.traitId(slot);
+        boolean noEffect = TraitLoadout.isNone(traitId);
+        String ability = noEffect
+                ? "효과 없음"
+                : traitEffectSummary(traitId, slot);
+        return "<gradient:#67e8f9:#a78bfa><bold>" + slot.displayName() + " 선택</bold></gradient>\n"
+                + traitSelectionTimeMarkup(secondsRemaining) + "\n"
+                + traitSelectionLoadoutLine(
+                        slot.displayName() + " " + Math.round(slot.effectScale() * 100.0D) + "%",
+                        traitId
+                ) + "\n"
+                + traitSelectionAbilityLine(ability, noEffect) + "\n"
+                + "<divider>\n"
+                + "<gray>같은 non-none 특성은 주/부특성에 동시에 선택할 수 없습니다.</gray>\n"
+                + "<gray>버튼에 마우스를 올리면 효과와 설명이 표시됩니다.</gray>\n"
+                + "<gray>" + reopenHint + "</gray>\n"
+                + "<divider>";
+    }
+
+    static String traitSelectionAbilityLine(String ability) {
+        return traitSelectionAbilityLine(ability, false);
+    }
+
+    static String traitSelectionAbilityLine(String ability, boolean noEffect) {
+        return traitSelectionAbilityLine("능력", ability, noEffect);
+    }
+
+    private static String traitSelectionSummaryAbilityLine(
+            String label,
+            net.minecraft.resources.ResourceLocation traitId,
+            TraitSlot slot
+    ) {
+        boolean noEffect = TraitLoadout.isNone(traitId);
+        String ability = noEffect ? "효과 없음" : traitEffectSummary(traitId, slot);
+        return traitSelectionAbilityLine(label, ability, noEffect);
+    }
+
+    static String traitSelectionAbilityLine(String label, String ability, boolean noEffect) {
+        String color = noEffect ? "yellow" : "green";
+        return "<white>" + label + "</white> <dark_gray>|</dark_gray> <" + color + ">"
+                + ability + "</" + color + ">";
+    }
+
+    static String traitSelectionTimeMarkup(int secondsRemaining) {
+        String color;
+        if (secondsRemaining >= 0 && secondsRemaining <= 5) {
+            color = "dark_red";
+        } else if (secondsRemaining >= 0 && secondsRemaining <= 15) {
+            color = "yellow";
+        } else {
+            color = "green";
+        }
+        String selectionTime = secondsRemaining < 0 ? "제한 없음" : secondsRemaining + "초";
+        return "<white>남은 시간</white> <" + color + ">" + selectionTime + "</" + color + ">";
+    }
+
+    private static String traitSelectionLoadoutLine(
+            String label,
+            net.minecraft.resources.ResourceLocation traitId
+    ) {
+        String color = TraitLoadout.isNone(traitId) ? "dark_red" : "yellow";
+        String name = TraitLoadout.isNone(traitId) ? "선택 안 함" : traitName(traitId);
+        return "<white>" + label + "</white> <dark_gray>|</dark_gray> <"
+                + color + ">" + name + "</" + color + ">";
     }
 
     public void showTowerControl(ServerPlayer player, SemionGame game) {
@@ -567,35 +673,34 @@ public final class SemionDialogService {
         int towerLimit = game.towerLimitForPlayer(player.getUUID());
         StringBuilder body = new StringBuilder();
         body.append("<gradient:#facc15:#22d3ee><bold>타워 관리</bold></gradient>\n");
-        body.append("<gray>라인</gray> <white>").append(semionPlayer.teamId()).append(" #").append(semionPlayer.laneId()).append("</white>\n");
-        body.append("<gray>다이아</gray> <aqua>").append(economy.diamond()).append("</aqua> ");
-        body.append("<gray>에메랄드</gray> <green>").append(economy.emerald()).append("</green>\n");
-        body.append("<gray>에메랄드/초</gray> <green>").append(economy.emeraldPerSec()).append("</green>");
-        body.append(" <dark_gray>|</dark_gray> <gray>다음 인컴 업글</gray> <gold>")
-                .append(nextGasUpgradeCost >= 0 ? nextGasUpgradeCost : "최대")
-                .append("</gold>\n");
-        body.append("<gray>타워 수</gray> <yellow>").append(towerCount).append("/").append(towerLimit).append("</yellow>");
-        body.append(" <dark_gray>|</dark_gray> <gray>다음 타워 수 구매</gray> <gold>")
-                .append(formatTowerLimitPurchaseCost(nextTowerLimitDiamondCost, nextTowerLimitEmeraldCost))
-                .append("</gold>\n\n");
-        body.append("<gray>보조 기능</gray>\n");
+        body.append(towerControlSummary(
+                semionPlayer.teamId(),
+                semionPlayer.laneId(),
+                economy,
+                nextGasUpgradeCost,
+                towerCount,
+                towerLimit,
+                nextTowerLimitDiamondCost,
+                nextTowerLimitEmeraldCost
+        ));
         body.append(commandLink("인컴 업그레이드", "/semiontd emeraldup", "green"));
         body.append("  ");
         body.append(commandLink("타워 수 +" + game.economyConfig().towerLimit().purchaseIncreaseAmount(), "/semiontd tower limitup", "yellow"));
         body.append("  ");
         body.append(commandLink("상태 보기", "/semiontd ui", "aqua"));
-        body.append("\n\n<dark_gray>────────────────────────</dark_gray>\n\n");
+        body.append("\n<divider>\n\n");
 
         Tower selectedTower = game.playerLane(player.getUUID())
                 .flatMap(lane -> TowerPlacementPositions.resolveGrid(lane, player.blockPosition())
                         .map(lane::towerAt))
                 .orElse(null);
         if (selectedTower != null) {
-            body.append("<yellow>현재 위치 타워</yellow> <white>").append(selectedTower.type().displayName()).append("</white>\n");
-            body.append("<gray>레벨</gray> <white>").append(selectedTower.level()).append("</white>");
-            body.append(" <gray>체력</gray> <red>").append(Math.round(selectedTower.health())).append("</red>");
-            body.append("<dark_gray>/</dark_gray><red>").append(Math.round(selectedTower.currentMaxHealth())).append("</red>");
-            body.append(" <gray>판매 환불</gray> <gold>").append(selectedTower.sellRefundAmount()).append("</gold>\n\n");
+            body.append(towerControlSelectedTowerSummary(
+                    selectedTower.type().displayName(),
+                    selectedTower.health(),
+                    selectedTower.currentMaxHealth(),
+                    selectedTower.sellRefundAmount()
+            ));
         }
 
         List<ProductionTowerCatalog.CatalogEntry> entries = ProductionTowerService.availableTowers(game, player.getUUID());
@@ -610,6 +715,7 @@ public final class SemionDialogService {
                 : ProductionTowerService.availableUpgrades(game, player.getUUID(), player.blockPosition());
         if (!upgrades.isEmpty()) {
             body.append("<gray>아래 버튼에서 업그레이드를 선택하세요.</gray>\n");
+            body.append("<white> </white>\n");
         } else if (selectedTower != null) {
             body.append("<gray>현재 위치 타워는 더 이상 업그레이드할 수 없습니다.</gray>\n");
         } else if (showGroupPicker) {
@@ -617,11 +723,7 @@ public final class SemionDialogService {
         } else if (entries.isEmpty()) {
             body.append("<red>사용할 수 있는 타워가 없습니다.</red>\n");
         } else {
-            if (group != null) {
-                body.append("<yellow>").append(group).append("</yellow> <gray>계열</gray> <dark_gray>|</dark_gray> ");
-            }
-            body.append("<gray>건설 후보</gray> <yellow>").append(entries.size()).append("</yellow>");
-            body.append(" <dark_gray>|</dark_gray> <gray>상세 스탯은 버튼에 마우스를 올려 확인하세요.</gray>\n");
+            body.append(towerConstructionCandidateSummary(group, entries.size()));
         }
         if (selectedTower == null && entries.stream()
                 .anyMatch(entry -> entry.type().id().equals(QueenTowers.RANDOM_CARD_SOLDIER.id()))) {
@@ -1108,12 +1210,7 @@ public final class SemionDialogService {
         int safePage = clampPage(page, pageCount);
         StringBuilder body = new StringBuilder();
         body.append("<gradient:#f472b6:#a78bfa><bold>견제 몹 소환</bold></gradient>\n");
-        body.append("<gray>페이지</gray> <yellow>").append(safePage).append("</yellow><gray>/</gray><yellow>").append(pageCount).append("</yellow>");
-        body.append(" <dark_gray>|</dark_gray> <gray>소환 후보</gray> <yellow>").append(summons.size()).append("</yellow>");
-        body.append(" <dark_gray>|</dark_gray> <gray>상세 스탯은 버튼에 마우스를 올려 확인하세요.</gray>");
-        if (freeSummons) {
-            body.append("\n<green>샌드박스 소환은 무료이며 수입이 증가하지 않습니다.</green>");
-        }
+        body.append(summonShopSummary(safePage, pageCount, summons.size(), freeSummons));
         appendSummonNavigation(body, "/semiontd summonui ", safePage, pageCount);
 
         ArrayList<ActionButton> actions = summons.stream()
@@ -1143,9 +1240,7 @@ public final class SemionDialogService {
         int safePage = clampPage(page, pageCount);
         StringBuilder body = new StringBuilder();
         body.append("<gradient:#f472b6:#a78bfa><bold>견제 몹 소환</bold></gradient>\n");
-        body.append("<gray>페이지</gray> <yellow>").append(safePage).append("</yellow><gray>/</gray><yellow>").append(pageCount).append("</yellow>");
-        body.append(" <dark_gray>|</dark_gray> <gray>소환 후보</gray> <yellow>").append(summons.size()).append("</yellow>");
-        body.append(" <dark_gray>|</dark_gray> <gray>상세 스탯은 버튼에 마우스를 올려 확인하세요.</gray>");
+        body.append(summonShopSummary(safePage, pageCount, summons.size(), true));
         appendSummonNavigation(body, "/semiontd-debug summonui ", safePage, pageCount);
 
         ArrayList<ActionButton> actions = summons.stream()
@@ -1194,12 +1289,22 @@ public final class SemionDialogService {
         return "/semiontd-internal build list " + publicPage + " " + myPage;
     }
 
-    private static void appendSummonNavigation(StringBuilder body, String commandPrefix, int page, int pageCount) {
-        if (pageCount <= 1) {
-            return;
+    static String summonShopSummary(int page, int pageCount, int summonCount, boolean sandbox) {
+        StringBuilder summary = new StringBuilder();
+        summary.append("<white>페이지</white> <yellow>").append(page)
+                .append("</yellow><white>/</white><yellow>").append(pageCount).append("</yellow>")
+                .append(" <dark_gray>|</dark_gray> <white>소환 후보</white> <yellow>")
+                .append(summonCount).append("</yellow>\n")
+                .append("<gray>상세 스탯은 버튼에 마우스를 올려 확인하세요.</gray>");
+        if (sandbox) {
+            summary.append("\n<green>샌드박스 소환은 무료이며 수입이 증가하지 않습니다.</green>");
         }
-        body.append("\n\n<dark_gray>────────────────────────</dark_gray>\n");
-        body.append("<gray>페이지 이동</gray> ");
+        return summary.toString();
+    }
+
+    static void appendSummonNavigation(StringBuilder body, String commandPrefix, int page, int pageCount) {
+        body.append("\n<divider>\n");
+        body.append("<white>페이지 이동</white> ");
         if (page > 1) {
             body.append(commandLink("이전", commandPrefix + (page - 1), "aqua"));
         } else {
@@ -1211,7 +1316,7 @@ public final class SemionDialogService {
         } else {
             body.append("<dark_gray>다음</dark_gray>");
         }
-        body.append("\n<dark_gray>────────────────────────</dark_gray>");
+        body.append("\n<divider>");
     }
 
     private static Optional<SemionTowerEntity> towerEntity(SemionGame game, Tower tower) {
@@ -1652,7 +1757,7 @@ public final class SemionDialogService {
         return actionButton(
                 traitButtonLabel(trait, selected),
                 traitSelectionCommand(trait, slot),
-                traitTooltip(trait, slot, selected),
+                traitTooltip(trait, slot),
                 TRAIT_BUTTON_WIDTH
         );
     }
@@ -1724,14 +1829,18 @@ public final class SemionDialogService {
                 .withStyle(selected ? ChatFormatting.GREEN : ChatFormatting.WHITE);
     }
 
-    private static Component traitTooltip(SemionTrait trait, TraitSlot slot, boolean selected) {
-        MutableComponent tooltip = Component.literal(slot.displayName() + " " + Math.round(slot.effectScale() * 100.0D) + "%")
-                .withStyle(selected ? ChatFormatting.GREEN : ChatFormatting.AQUA)
-                .append(Component.literal("\n").append(trait.displayName().copy().withStyle(ChatFormatting.YELLOW)))
-                .append(Component.literal("\n").append(trait.effectSummary(slot).copy().withStyle(ChatFormatting.GOLD)));
-        if (selected) {
-            tooltip.append(Component.literal("\n현재 선택된 특성입니다.").withStyle(ChatFormatting.GREEN));
-        }
+    static Component traitTooltip(SemionTrait trait, TraitSlot slot) {
+        MutableComponent tooltip = trait.displayName().copy()
+                .withStyle(ChatFormatting.YELLOW)
+                .append(Component.literal(" | ").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal(slot.displayName() + " " + Math.round(slot.effectScale() * 100.0D) + "%")
+                        .withStyle(ChatFormatting.WHITE))
+                .append(Component.literal("\n"))
+                .append(dividerComponent(160))
+                .append(Component.literal("\n"))
+                .append(trait.effectSummary(slot).copy().withStyle(ChatFormatting.GOLD))
+                .append(Component.literal("\n"))
+                .append(dividerComponent(160));
         for (Component line : trait.description()) {
             tooltip.append(Component.literal("\n").append(line.copy().withStyle(ChatFormatting.GRAY)));
         }
@@ -2070,11 +2179,46 @@ public final class SemionDialogService {
     }
 
     private static PlainMessage decoratedHeader(Component title, int width) {
-        Component side = Component.literal("──────").withStyle(ChatFormatting.DARK_GRAY);
+        return decoratedHeader(title, width, ChatFormatting.DARK_GRAY);
+    }
+
+    private static PlainMessage decoratedHeader(Component title, int width, ChatFormatting sideColor) {
+        Component side = Component.literal("──────").withStyle(sideColor);
         return new PlainMessage(
                 Component.empty().append(side).append(" ").append(title).append(" ").append(side),
                 width
         );
+    }
+
+    static HeaderMessage jobStatisticsHeader(Component title) {
+        return new HeaderMessage(title, JOB_STATISTICS_WIDTH);
+    }
+
+    static HeaderMessage jobStatisticsListHeader() {
+        return new HeaderMessage(
+                Component.literal("직업 목록").withStyle(ChatFormatting.YELLOW),
+                JOB_STATISTICS_WIDTH
+        );
+    }
+
+    static PlainMessage jobStatisticsDivider() {
+        return HeaderMessage.divider(JOB_STATISTICS_WIDTH);
+    }
+
+    private static void appendJobStatisticsState(List<DialogBody> bodies, JobStatisticsState state) {
+        if (state == JobStatisticsState.LOADING) {
+            bodies.add(new PlainMessage(
+                    Component.literal("재집계 중입니다. 마지막 정상 통계를 표시합니다.")
+                            .withStyle(ChatFormatting.YELLOW),
+                    JOB_STATISTICS_WIDTH
+            ));
+        } else if (state == JobStatisticsState.FAILED) {
+            bodies.add(new PlainMessage(
+                    Component.literal("최근 갱신에 실패했습니다. 마지막 정상 통계를 표시합니다.")
+                            .withStyle(ChatFormatting.RED),
+                    JOB_STATISTICS_WIDTH
+            ));
+        }
     }
 
     private static Component participantResultBody(
@@ -2100,40 +2244,148 @@ public final class SemionDialogService {
         return body;
     }
 
-    private static Component playerStatusHeader() {
-        return Component.empty()
-                .append(TextUncenterer.filler(PLAYER_STATUS_AVATAR_WIDTH))
-                .append(tableCell(Component.literal("플레이어").withStyle(ChatFormatting.GRAY), PLAYER_STATUS_NAME_WIDTH, false))
-                .append(tableCell(Component.literal("다이아").withStyle(ChatFormatting.GRAY), PLAYER_STATUS_NUMBER_WIDTH, true))
-                .append(tableCell(Component.literal("에메랄드").withStyle(ChatFormatting.GRAY), PLAYER_STATUS_NUMBER_WIDTH, true))
-                .append(tableCell(Component.literal("수입").withStyle(ChatFormatting.GRAY), PLAYER_STATUS_NUMBER_WIDTH, true))
-                .append(tableCell(Component.literal("타워").withStyle(ChatFormatting.GRAY), PLAYER_STATUS_TOWER_WIDTH, true))
-                .append(TextUncenterer.filler(PLAYER_STATUS_TOWER_JOB_GAP))
-                .append(tableCell(Component.literal("직업").withStyle(ChatFormatting.GRAY), PLAYER_STATUS_JOB_WIDTH, false));
+    static Component playerStatusTable(List<PlayerStatusRow> rows) {
+        StringBuilder body = new StringBuilder("\n");
+        body.append("<divider>\n");
+        Component divider = ((PlainMessage) actionDialogBodies(
+                body.toString(),
+                () -> dividerComponent(PLAYER_STATUS_WIDTH)
+        ).getFirst())
+                .contents()
+                .getSiblings()
+                .getLast();
+
+        MutableComponent table = playerStatusHeaderWithBodySpacing(playerStatusHeader(divider));
+
+        TeamId currentTeam = null;
+        for (PlayerStatusRow row : rows) {
+            if (currentTeam != null && row.teamId() != currentTeam) {
+                table.append("\n\n");
+            }
+            table.append("\n")
+                    .append(playerStatusBody(row));
+            currentTeam = row.teamId();
+        }
+
+        return table;
     }
 
-    private static Component playerStatusTeamHeader(TeamId teamId) {
-        return Component.literal(teamId.name() + " 팀").withStyle(teamColor(teamId), ChatFormatting.BOLD);
+    static MutableComponent playerStatusDialogContents(Component title, Component table) {
+        return Component.empty()
+                .append(title)
+                .append("\n")
+                .append(table);
+    }
+
+    static MutableComponent playerStatusHeaderWithBodySpacing(Component header) {
+        return header.copy().append("\n");
+    }
+
+    static Component playerStatusHeader(Component divider) {
+        List<Component> labels = playerStatusHeaderLabels();
+        Component header = playerStatusTableRow(
+                labels.get(0),
+                TextUncenterer.filler(PLAYER_STATUS_AVATAR_WIDTH),
+                labels.get(1),
+                labels.get(2),
+                labels.get(3),
+                labels.get(4),
+                labels.get(5),
+                labels.get(6),
+                PLAYER_STATUS_NAME_WIDTH,
+                PLAYER_STATUS_JOB_WIDTH
+        );
+        return playerStatusHeaderWithDivider(header, divider);
+    }
+
+    static List<Component> playerStatusHeaderLabels() {
+        return List.of(
+                Component.literal("팀").withStyle(ChatFormatting.WHITE),
+                Component.literal("플레이어").withStyle(ChatFormatting.WHITE),
+                Component.literal("직업").withStyle(ChatFormatting.LIGHT_PURPLE),
+                Component.literal("다이아").withStyle(ChatFormatting.AQUA),
+                Component.literal("에메랄드").withStyle(ChatFormatting.GREEN),
+                Component.literal("수입").withStyle(ChatFormatting.YELLOW),
+                Component.literal("타워").withStyle(ChatFormatting.GOLD)
+        );
+    }
+
+    static MutableComponent playerStatusHeaderWithDivider(Component header, Component divider) {
+        return Component.empty()
+                .append(header)
+                .append("\n")
+                .append(divider.copy());
     }
 
     private static Component playerStatusBody(PlayerStatusRow row) {
-        return Component.empty()
+        Component avatarCell = Component.empty()
                 .append(avatarComponent(row.playerName(), AvatarVariant.COMPACT))
-                .append(TextUncenterer.filler(6))
-                .append(tableCell(Component.literal(row.playerName()).withStyle(teamColor(row.teamId())), PLAYER_STATUS_NAME_WIDTH, false))
-                .append(tableCell(Component.literal(Long.toString(row.diamond())).withStyle(ChatFormatting.AQUA), PLAYER_STATUS_NUMBER_WIDTH, true))
-                .append(tableCell(Component.literal(Long.toString(row.emerald())).withStyle(ChatFormatting.GREEN), PLAYER_STATUS_NUMBER_WIDTH, true))
-                .append(tableCell(Component.literal(Long.toString(row.income())).withStyle(ChatFormatting.YELLOW), PLAYER_STATUS_NUMBER_WIDTH, true))
-                .append(tableCell(Component.literal(Integer.toString(row.towerCount())).withStyle(ChatFormatting.GOLD), PLAYER_STATUS_TOWER_WIDTH, true))
-                .append(TextUncenterer.filler(PLAYER_STATUS_TOWER_JOB_GAP))
-                .append(tableCell(Component.literal(row.jobName()).withStyle(ChatFormatting.LIGHT_PURPLE), PLAYER_STATUS_JOB_WIDTH, false));
+                .append(TextUncenterer.filler(6));
+        return playerStatusTableRow(
+                Component.literal(row.teamId().name())
+                        .withStyle(teamColor(row.teamId()), ChatFormatting.BOLD),
+                avatarCell,
+                playerStatusName(row),
+                Component.literal(row.jobName())
+                        .withStyle(ChatFormatting.LIGHT_PURPLE),
+                Component.literal(Long.toString(row.diamond()))
+                        .withStyle(ChatFormatting.AQUA),
+                Component.literal(Long.toString(row.emerald()))
+                        .withStyle(ChatFormatting.GREEN),
+                Component.literal(Long.toString(row.income()))
+                        .withStyle(ChatFormatting.YELLOW),
+                Component.literal(Integer.toString(row.towerCount()))
+                        .withStyle(ChatFormatting.GOLD),
+                PLAYER_STATUS_NAME_WIDTH - PLAYER_STATUS_BODY_JOB_SHIFT,
+                PLAYER_STATUS_JOB_WIDTH + PLAYER_STATUS_BODY_JOB_SHIFT
+        );
     }
 
-    private static Component tableCell(Component value, int width, boolean rightAligned) {
+    static Component playerStatusName(PlayerStatusRow row) {
+        MutableComponent name = Component.literal(row.playerName())
+                .withStyle(teamColor(row.teamId()));
+        return row.teamLeader() ? name.withStyle(ChatFormatting.BOLD) : name;
+    }
+
+    private static MutableComponent playerStatusTableRow(
+            Component team,
+            Component avatarCell,
+            Component playerName,
+            Component job,
+            Component diamond,
+            Component emerald,
+            Component income,
+            Component towerCount,
+            int playerNameWidth,
+            int jobWidth
+    ) {
+        return Component.empty()
+                .append(leftAlignedTableCell(team, PLAYER_STATUS_TEAM_WIDTH))
+                .append(avatarCell)
+                .append(leftAlignedTableCell(playerName, playerNameWidth))
+                .append(leftAlignedTableCell(job, jobWidth))
+                .append(leftAlignedTableCell(diamond, PLAYER_STATUS_DIAMOND_WIDTH))
+                .append(leftAlignedTableCell(emerald, PLAYER_STATUS_EMERALD_WIDTH))
+                .append(leftAlignedTableCell(income, PLAYER_STATUS_INCOME_WIDTH))
+                .append(leftAlignedTableCell(towerCount, PLAYER_STATUS_TOWER_WIDTH));
+    }
+
+    private static Component leftAlignedTableCell(Component value, int width) {
         Component padding = TextUncenterer.filler(Math.max(0, width - TextUncenterer.width(value)));
-        return rightAligned
-                ? Component.empty().append(padding).append(value)
-                : Component.empty().append(value).append(padding);
+        return Component.empty().append(value).append(padding);
+    }
+
+    private static Component centeredTableCell(Component value, int width) {
+        return centeredTableCell(value, width, TextUncenterer.width(value));
+    }
+
+    static Component centeredTableCell(Component value, int width, int valueWidth) {
+        int remainingWidth = Math.max(0, width - valueWidth);
+        int leftPaddingWidth = remainingWidth / 2;
+        return Component.empty()
+                .append(TextUncenterer.filler(leftPaddingWidth))
+                .append(value)
+                .append(TextUncenterer.filler(remainingWidth - leftPaddingWidth));
     }
 
     private static Component avatarComponent(String playerName, AvatarVariant variant) {
@@ -2235,37 +2487,97 @@ public final class SemionDialogService {
                 .append(Component.literal(formatTime(snapshot.generatedAtEpochMillis())).withStyle(ChatFormatting.WHITE));
     }
 
-    private static Component jobStatisticsSummaryLine(JobStatisticsSnapshot snapshot, JobStatisticsRow row) {
-        JobStatisticsEntry entry = row.entry();
-        MutableComponent line = Component.literal(row.displayName()).withStyle(ChatFormatting.AQUA);
-        if (!row.registered()) {
-            line.append(Component.literal(" [미등록]").withStyle(ChatFormatting.DARK_GRAY));
-        }
-        return line
-                .append(Component.literal("  선택 ").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal(formatCount(entry.appearances()) + "회").withStyle(ChatFormatting.WHITE))
-                .append(Component.literal(" (" + formatPercent(snapshot.selectionRate(entry)) + ")").withStyle(ChatFormatting.DARK_GRAY))
-                .append(Component.literal("  승률 ").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal(formatPercent(entry.winRate())).withStyle(ChatFormatting.GREEN))
-                .append(Component.literal("  평균 ").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal(formatAverage(entry.averagePlacement(), "위")).withStyle(ChatFormatting.WHITE))
-                .append(Component.literal(" / ").withStyle(ChatFormatting.DARK_GRAY))
-                .append(Component.literal(formatRound(entry.averageFinalRound())).withStyle(ChatFormatting.WHITE));
+    static Component jobStatisticsCategoryOverview(JobStatisticsSnapshot snapshot) {
+        String period = snapshot.participantAppearances() > 0L
+                ? formatTime(snapshot.firstMatchAtEpochMillis()) + " ~ " + formatTime(snapshot.lastMatchAtEpochMillis())
+                : "-";
+        return Component.literal("기록 기간 ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(period).withStyle(ChatFormatting.WHITE));
     }
 
-    private static Component jobStatisticsRoundMilestonesLine(JobStatisticsRow row) {
-        MutableComponent line = Component.literal("  통과 ").withStyle(ChatFormatting.DARK_GRAY);
-        int[] rounds = {10, 20, 30, 40};
-        for (int index = 0; index < rounds.length; index++) {
-            if (index > 0) {
-                line.append(Component.literal("   ").withStyle(ChatFormatting.DARK_GRAY));
-            }
-            int round = rounds[index];
-            line.append(Component.literal("R" + round + " ").withStyle(ChatFormatting.GRAY));
-            line.append(Component.literal(formatPercent(row.entry().roundPassRate(round)))
-                    .withStyle(ChatFormatting.AQUA));
+    static Component jobStatisticsSummaryHeader() {
+        List<Component> cells = jobStatisticsSummaryHeaderCells();
+        return jobStatisticsSummaryTableRow(cells.get(0), cells.get(1), cells.get(2), cells.get(3));
+    }
+
+    private static Component jobStatisticsSummaryTable(
+            JobStatisticsSnapshot snapshot,
+            List<JobStatisticsRow> rows
+    ) {
+        MutableComponent table = Component.empty()
+                .append(new HeaderMessage(
+                        Component.literal("직업별 요약").withStyle(ChatFormatting.YELLOW),
+                        JOB_STATISTICS_WIDTH
+                ).asVanillaComponent())
+                .append("\n")
+                .append(jobStatisticsSummaryHeader())
+                .append("\n")
+                .append(jobStatisticsDivider().contents().copy());
+        for (JobStatisticsRow row : rows) {
+            table.append("\n").append(jobStatisticsSummaryLine(snapshot, row));
         }
-        return line;
+        return table.append("\n").append(jobStatisticsDivider().contents().copy());
+    }
+
+    static List<Component> jobStatisticsSummaryHeaderCells() {
+        return List.of(
+                Component.literal("직업").withStyle(ChatFormatting.AQUA),
+                Component.literal("선택 ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("(선택률)").withStyle(ChatFormatting.DARK_GRAY)),
+                Component.literal("경기 ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("(승률)").withStyle(ChatFormatting.GREEN)),
+                Component.literal("순위 ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("(평균 라운드)").withStyle(ChatFormatting.DARK_GRAY))
+        );
+    }
+
+    static Component jobStatisticsSummaryLine(JobStatisticsSnapshot snapshot, JobStatisticsRow row) {
+        List<Component> cells = jobStatisticsSummaryCells(snapshot, row);
+        return jobStatisticsSummaryTableRow(cells.get(0), cells.get(1), cells.get(2), cells.get(3));
+    }
+
+    static List<Component> jobStatisticsSummaryCells(JobStatisticsSnapshot snapshot, JobStatisticsRow row) {
+        JobStatisticsEntry entry = row.entry();
+        MutableComponent job = Component.literal(row.displayName()).withStyle(ChatFormatting.AQUA);
+        if (!row.registered()) {
+            job.append(Component.literal(" [미등록]").withStyle(ChatFormatting.DARK_GRAY));
+        }
+        Component selection = Component.literal(formatCount(entry.appearances()) + "회")
+                .withStyle(ChatFormatting.WHITE)
+                .append(Component.literal(" (" + formatPercent(snapshot.selectionRate(entry)) + ")")
+                        .withStyle(ChatFormatting.DARK_GRAY));
+        Component game = Component.literal(formatCount(entry.wins()) + "승 "
+                        + formatCount(entry.appearances() - entry.wins()) + "패")
+                .withStyle(ChatFormatting.WHITE)
+                .append(Component.literal(" (" + formatPercent(entry.winRate()) + ")")
+                        .withStyle(ChatFormatting.GREEN));
+        Component placement = Component.literal(formatAverage(entry.averagePlacement(), "위"))
+                .withStyle(ChatFormatting.WHITE)
+                .append(Component.literal(" (" + formatRound(entry.averageFinalRound()) + ")")
+                        .withStyle(ChatFormatting.DARK_GRAY));
+        return List.of(job, selection, game, placement);
+    }
+
+    static List<Integer> jobStatisticsSummaryColumnWidths() {
+        return List.of(
+                JOB_STATISTICS_JOB_WIDTH,
+                JOB_STATISTICS_SELECTION_WIDTH,
+                JOB_STATISTICS_GAME_WIDTH,
+                JOB_STATISTICS_PLACEMENT_WIDTH
+        );
+    }
+
+    private static Component jobStatisticsSummaryTableRow(
+            Component job,
+            Component selection,
+            Component game,
+            Component placement
+    ) {
+        return Component.empty()
+                .append(centeredTableCell(job, JOB_STATISTICS_JOB_WIDTH))
+                .append(centeredTableCell(selection, JOB_STATISTICS_SELECTION_WIDTH))
+                .append(centeredTableCell(game, JOB_STATISTICS_GAME_WIDTH))
+                .append(centeredTableCell(placement, JOB_STATISTICS_PLACEMENT_WIDTH));
     }
 
     private static Component jobStatisticsRoundRangeLine(
@@ -2465,6 +2777,64 @@ public final class SemionDialogService {
         };
     }
 
+    static String towerControlSummary(
+            TeamId teamId,
+            int laneId,
+            PlayerEconomy economy,
+            long nextGasUpgradeCost,
+            int towerCount,
+            int towerLimit,
+            long nextTowerLimitDiamondCost,
+            long nextTowerLimitEmeraldCost
+    ) {
+        StringBuilder body = new StringBuilder();
+        body.append("<white>팀</white> ").append(teamMarkup(teamId))
+                .append(" <dark_gray>|</dark_gray> <white>라인</white> <yellow>#")
+                .append(laneId).append("</yellow>\n");
+        body.append(SemionHudTextService.diamondMarkup(economy.diamond()));
+        body.append(" <dark_gray>|</dark_gray> ")
+                .append(SemionHudTextService.emeraldMarkup(economy.emerald()))
+                .append("\n");
+        body.append("<white>인컴 업그레이드 비용</white> ");
+        if (nextGasUpgradeCost >= 0) {
+            body.append("<aqua>").append(nextGasUpgradeCost).append("</aqua>");
+        } else {
+            body.append("<white>최대</white>");
+        }
+        body.append(" <dark_gray>|</dark_gray> ")
+                .append(SemionHudTextService.emeraldRateMarkup(economy.emeraldPerSec()))
+                .append("\n");
+        body.append("<yellow>타워 수</yellow> <white>").append(towerCount).append("/").append(towerLimit).append("</white>");
+        body.append(" <dark_gray>|</dark_gray> <white>타워 확장 비용</white> ")
+                .append(formatTowerLimitPurchaseCost(nextTowerLimitDiamondCost, nextTowerLimitEmeraldCost))
+                .append("\n\n");
+        return body.toString();
+    }
+
+    static String towerConstructionCandidateSummary(String group, int entryCount) {
+        StringBuilder body = new StringBuilder("<white> </white>\n");
+        if (group != null) {
+            body.append("<yellow>").append(group).append("</yellow> <white>계열</white> <dark_gray>|</dark_gray> ");
+        }
+        body.append("<white>건설 후보</white> <yellow>").append(entryCount).append("</yellow>");
+        body.append(" <dark_gray>|</dark_gray> <gray>상세 스탯은 버튼에 마우스를 올려 확인하세요.</gray>\n");
+        body.append("<white> </white>\n");
+        return body.toString();
+    }
+
+    static String towerControlSelectedTowerSummary(
+            String displayName,
+            double health,
+            double maxHealth,
+            long sellRefundAmount
+    ) {
+        return "<white> </white>\n"
+                + "<white><bold>" + displayName + "</bold></white>\n"
+                + formatHealth(health, maxHealth, "") + "\n"
+                + formatSellPrice(sellRefundAmount, "") + "\n"
+                + "<white> </white>\n";
+    }
+
     private static long nextGasUpgradeCost(SemionGame game, PlayerEconomy economy) {
         var config = game.economyConfig().gasProduction();
         if (economy.emeraldProductionUpgradeCount() >= config.maxUpgradeCount()) {
@@ -2475,9 +2845,10 @@ public final class SemionDialogService {
 
     private static String formatTowerLimitPurchaseCost(long diamondCost, long emeraldCost) {
         if (diamondCost < 0 || emeraldCost < 0) {
-            return "최대";
+            return "<white>최대</white>";
         }
-        return diamondCost + " 다이아 + " + emeraldCost + " 에메랄드";
+        return "<aqua>" + diamondCost + " 다이아</aqua> <white>+</white> <green>"
+                + emeraldCost + " 에메랄드</green>";
     }
 
     private static String teamList(java.util.Set<TeamId> teams) {
@@ -2500,7 +2871,8 @@ public final class SemionDialogService {
             long emerald,
             long income,
             int towerCount,
-            String jobName
+            String jobName,
+            boolean teamLeader
     ) {
     }
 

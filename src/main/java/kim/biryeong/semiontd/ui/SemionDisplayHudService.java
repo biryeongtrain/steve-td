@@ -163,9 +163,9 @@ public final class SemionDisplayHudService {
         PlayerEconomy economy = player.economy();
         int currentTowers = game.towerCapacityUsed(player.uuid());
         int maxTowers = game.towerLimitForPlayer(player.uuid());
-        return "<aqua>◆ 다이아 " + economy.diamond() + "</aqua>"
-                + " <dark_gray>|</dark_gray> <green>⬢ 에메랄드 " + economy.emerald() + "</green>"
-                + " <dark_gray>|</dark_gray> <dark_green>↗</dark_green> <green>에메랄드/s " + economy.emeraldPerSec() + "</green>"
+        return SemionHudTextService.diamondMarkup(economy.diamond())
+                + " <dark_gray>|</dark_gray> " + SemionHudTextService.emeraldMarkup(economy.emerald())
+                + " <dark_gray>|</dark_gray> " + SemionHudTextService.emeraldRateMarkup(economy.emeraldPerSec())
                 + " <dark_gray>|</dark_gray> <gold>+ 수입 " + economy.income() + "</gold>"
                 + " <dark_gray>|</dark_gray> <gray>▣ 타워</gray> " + towerLimitText(currentTowers, maxTowers);
     }

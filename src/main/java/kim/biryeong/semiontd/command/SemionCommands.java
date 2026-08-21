@@ -275,6 +275,18 @@ public final class SemionCommands {
                                         ))))
                         .then(literal("stats")
                                 .executes(context -> jobStatisticsDialog(context.getSource(), gameManager))
+                                .then(literal("official")
+                                        .executes(context -> jobStatisticsDialog(
+                                                context.getSource(),
+                                                gameManager,
+                                                true
+                                        )))
+                                .then(literal("creative")
+                                        .executes(context -> jobStatisticsDialog(
+                                                context.getSource(),
+                                                gameManager,
+                                                false
+                                        )))
                                 .then(argument("id", ResourceLocationArgument.id())
                                         .executes(context -> jobStatisticsDetailDialog(
                                                 context.getSource(),
@@ -2636,6 +2648,20 @@ public final class SemionCommands {
                 source.getPlayerOrException(),
                 gameManager.jobStatisticsSnapshot(),
                 gameManager.jobStatisticsState()
+        );
+        return 1;
+    }
+
+    private static int jobStatisticsDialog(
+            CommandSourceStack source,
+            SemionGameManager gameManager,
+            boolean official
+    ) throws CommandSyntaxException {
+        gameManager.dialogService().showJobStatistics(
+                source.getPlayerOrException(),
+                gameManager.jobStatisticsSnapshot(),
+                gameManager.jobStatisticsState(),
+                official
         );
         return 1;
     }

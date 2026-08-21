@@ -94,115 +94,170 @@ public final class AdversaryIntegrationGameTest {
                     position(context, 25, 2, 3)
             );
             Monster ownedRival = rivalTower.createProxy(1);
-            recipientLane.enqueueSummonedMonster(monster);
-            recipientLane.enqueueSummonedMonster(ownedRival);
-            recipientLane.tick(context.getLevel().getServer());
-            recipientLane.tick(context.getLevel().getServer());
 
-            SemionTowerEntity recipientEntity = towerEntity(context, recipient);
-            SemionTowerEntity beaconEntity = towerEntity(context, beacon);
-            SemionMonsterEntity monsterEntity = monsterEntity(context, monster);
-            SemionMonsterEntity ownedRivalEntity = monsterEntity(context, ownedRival);
-            recipientEntity.setNoAi(true);
-            beaconEntity.setNoAi(true);
-            monsterEntity.setNoAi(true);
-            ownedRivalEntity.setNoAi(true);
-            lowest.syncHealth(30.0);
-            second.syncHealth(120.0);
-            third.syncHealth(240.0);
-            foreign.syncHealth(30.0);
+            context.runAfterDelay(2, () -> {
+                SemionMonsterEntity monsterEntity = null;
+                SemionMonsterEntity ownedRivalEntity = null;
+                try {
+                    TowerBalanceRuntime.apply(teamEffectTestConfig(defaults));
+                    AdversaryTeamEffects.registerTeam(BELL_OWNER, group);
+                    AdversaryTeamEffects.registerTeam(BEACON_OWNER, group);
+                    AdversaryTeamEffects.registerTeam(OMINOUS_OWNER, group);
+                    SemionTowerEntity recipientEntity = towerEntity(context, recipient);
+                    SemionTowerEntity beaconEntity = towerEntity(context, beacon);
+                    SemionTowerEntity ominousEntity = towerEntity(context, ominous);
+                    SemionTowerEntity lowestEntity = towerEntity(context, lowest);
+                    SemionTowerEntity secondEntity = towerEntity(context, second);
+                    SemionTowerEntity thirdEntity = towerEntity(context, third);
+                    SemionTowerEntity foreignEntity = towerEntity(context, foreign);
+                    recipientEntity.setNoAi(true);
+                    beaconEntity.setNoAi(true);
+                    ominousEntity.setNoAi(true);
+                    lowestEntity.setNoAi(true);
+                    secondEntity.setNoAi(true);
+                    thirdEntity.setNoAi(true);
+                    foreignEntity.setNoAi(true);
+                    monsterEntity = spawnMonster(
+                            context,
+                            recipientLane,
+                            monster,
+                            recipientLane.laneLayout().spawn()
+                    );
+                    ownedRivalEntity = spawnMonster(
+                            context,
+                            recipientLane,
+                            ownedRival,
+                            recipientLane.laneLayout().spawn().add(0.0, 0.0, 1.0)
+                    );
+                    monsterEntity.setNoAi(true);
+                    ownedRivalEntity.setNoAi(true);
+                    lowest.syncHealth(30.0);
+                    lowestEntity.setHealth(30.0F);
+                    second.syncHealth(120.0);
+                    secondEntity.setHealth(120.0F);
+                    third.syncHealth(240.0);
+                    thirdEntity.setHealth(240.0F);
+                    foreign.syncHealth(30.0);
+                    foreignEntity.setHealth(30.0F);
 
-            beacon.tick(sourceLane);
-            ominous.tick(recipientLane);
+                    beacon.tick(sourceLane);
+                    ominous.tick(recipientLane);
 
-            requireClose(
-                    72.0,
-                    lowest.health(),
-                    "Beacon must heal the lowest-health-ratio owned fox for fourteen percent max health."
-            );
-            requireClose(
-                    162.0,
-                    second.health(),
-                    "Beacon must heal up to two owned foxes."
-            );
-            requireClose(240.0, third.health(), "Beacon must stop after two targets.");
-            requireClose(30.0, foreign.health(), "Beacon must not heal another player's fox.");
-            requireClose(
-                    0.0,
-                    recipientEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_BONUS),
-                    "Beacon must no longer grant team-wide damage."
-            );
-            requireClose(
-                    0.0,
-                    recipientEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_ATTACK_SPEED_BONUS),
-                    "Beacon must no longer grant team-wide attack speed."
-            );
-            requireClose(
-                    0.0,
-                    recipientEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_MAX_HEALTH_BONUS),
-                    "Beacon must no longer grant team-wide max health."
-            );
-            requireClose(
-                    AdversaryBalance.OMINOUS_MONSTER_DAMAGE_REDUCTION,
-                    monsterEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION),
-                    "Ominous damage reduction must reach a monster targeting the team."
-            );
-            requireClose(
-                    AdversaryBalance.OMINOUS_MONSTER_ATTACK_SPEED_REDUCTION,
-                    monsterEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION),
-                    "Ominous attack speed reduction must reach a monster targeting the team."
-            );
-            requireClose(
-                    AdversaryBalance.OMINOUS_MONSTER_TOWER_DAMAGE_TAKEN_BONUS,
-                    monsterEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS),
-                    "Ominous vulnerability must reach a monster targeting the team."
-            );
-            requireClose(
-                    0.0,
-                    ownedRivalEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION),
-                    "Ominous damage reduction must not weaken an owned rival."
-            );
-            requireClose(
-                    0.0,
-                    ownedRivalEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION),
-                    "Ominous attack speed reduction must not weaken an owned rival."
-            );
-            requireClose(
-                    0.0,
-                    ownedRivalEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS),
-                    "Ominous vulnerability must not amplify damage against an owned rival."
-            );
-            require(monsterEntity.activeTimedEffectTicks(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION) == 4,
-                    "Team monster control must use the configured timed duration.");
-            recipientLane.killTower(ominous);
-            for (int tick = 0; tick < 4; tick++) {
-                recipientEntity.aiStep();
-                monsterEntity.aiStep();
-            }
+                    requireClose(
+                            72.0,
+                            lowest.health(),
+                            "Beacon must heal the lowest-health-ratio owned fox for fourteen percent max health."
+                    );
+                    requireClose(
+                            162.0,
+                            second.health(),
+                            "Beacon must heal up to two owned foxes."
+                    );
+                    requireClose(240.0, third.health(), "Beacon must stop after two targets.");
+                    requireClose(30.0, foreign.health(), "Beacon must not heal another player's fox.");
+                    requireClose(
+                            0.0,
+                            recipientEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_BONUS),
+                            "Beacon must no longer grant team-wide damage."
+                    );
+                    requireClose(
+                            0.0,
+                            recipientEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_ATTACK_SPEED_BONUS),
+                            "Beacon must no longer grant team-wide attack speed."
+                    );
+                    requireClose(
+                            0.0,
+                            recipientEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_MAX_HEALTH_BONUS),
+                            "Beacon must no longer grant team-wide max health."
+                    );
+                    require(context.getLevel().getEntity(monsterEntity.getId()) == monsterEntity,
+                            "The ordinary monster must be available in the world entity index.");
+                    require(context.getLevel().getEntity(ownedRivalEntity.getId()) == ownedRivalEntity,
+                            "The owned rival must be available in the world entity index.");
+                    AdversaryTeamEffects.clearAllForTesting();
+                    AdversaryTeamEffects.registerTeam(BELL_OWNER, group);
+                    AdversaryTeamEffects.registerTeam(BEACON_OWNER, group);
+                    AdversaryTeamEffects.registerTeam(OMINOUS_OWNER, group);
+                    AdversaryTeamEffects.tick(ominous, ominousEntity);
+                    requireClose(
+                            AdversaryBalance.OMINOUS_MONSTER_DAMAGE_REDUCTION,
+                            monsterEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION),
+                            "Ominous damage reduction must reach a monster targeting the team."
+                    );
+                    requireClose(
+                            AdversaryBalance.OMINOUS_MONSTER_ATTACK_SPEED_REDUCTION,
+                            monsterEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION),
+                            "Ominous attack speed reduction must reach a monster targeting the team."
+                    );
+                    requireClose(
+                            AdversaryBalance.OMINOUS_MONSTER_TOWER_DAMAGE_TAKEN_BONUS,
+                            monsterEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS),
+                            "Ominous vulnerability must reach a monster targeting the team."
+                    );
+                    requireClose(
+                            0.0,
+                            ownedRivalEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION),
+                            "Ominous damage reduction must not weaken an owned rival."
+                    );
+                    requireClose(
+                            0.0,
+                            ownedRivalEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION),
+                            "Ominous attack speed reduction must not weaken an owned rival."
+                    );
+                    requireClose(
+                            0.0,
+                            ownedRivalEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS),
+                            "Ominous vulnerability must not amplify damage against an owned rival."
+                    );
+                    require(monsterEntity.activeTimedEffectTicks(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION) == 4,
+                            "Team monster control must use the configured timed duration.");
+                    recipientLane.killTower(ominous);
+                    for (int tick = 0; tick < 4; tick++) {
+                        recipientEntity.aiStep();
+                        monsterEntity.aiStep();
+                    }
 
-            requireClose(
-                    0.0,
-                    monsterEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION),
-                    "Monster debuff must expire after the Ominous Hexer dies."
-            );
-            requireClose(
-                    0.0,
-                    monsterEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION),
-                    "Monster attack-speed debuff must expire after every source fox dies."
-            );
-            requireClose(
-                    0.0,
-                    monsterEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS),
-                    "Monster vulnerability must expire after every source fox dies."
-            );
-            require(monsterEntity.activeTimedEffectTicks(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION) == 0,
-                    "Expired monster control must have no remaining duration.");
-            context.succeed();
-        } finally {
+                    requireClose(
+                            0.0,
+                            monsterEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION),
+                            "Monster debuff must expire after the Ominous Hexer dies."
+                    );
+                    requireClose(
+                            0.0,
+                            monsterEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION),
+                            "Monster attack-speed debuff must expire after every source fox dies."
+                    );
+                    requireClose(
+                            0.0,
+                            monsterEntity.activeTimedEffectMagnitude(TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS),
+                            "Monster vulnerability must expire after every source fox dies."
+                    );
+                    require(monsterEntity.activeTimedEffectTicks(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION) == 0,
+                            "Expired monster control must have no remaining duration.");
+                    context.succeed();
+                } catch (Throwable failure) {
+                    context.fail(Component.literal("Adversary team effect GameTest failed: "
+                            + failure.getClass().getName() + ": " + failure.getMessage()));
+                } finally {
+                    if (monsterEntity != null) {
+                        monsterEntity.discard();
+                    }
+                    if (ownedRivalEntity != null) {
+                        ownedRivalEntity.discard();
+                    }
+                    group.closeRuntime();
+                    AdversaryTeamEffects.clearAllForTesting();
+                    AdversaryProgressStates.clearAllForTesting();
+                    TowerBalanceRuntime.apply(defaults);
+                }
+            });
+        } catch (Throwable failure) {
             group.closeRuntime();
             AdversaryTeamEffects.clearAllForTesting();
             AdversaryProgressStates.clearAllForTesting();
             TowerBalanceRuntime.apply(defaults);
+            context.fail(Component.literal("Adversary team effect GameTest setup failed: "
+                    + failure.getClass().getName() + ": " + failure.getMessage()));
         }
     }
 
@@ -498,15 +553,17 @@ public final class AdversaryIntegrationGameTest {
     }
 
     private static SemionTowerEntity towerEntity(GameTestHelper context, TestTower tower) {
-        return (SemionTowerEntity) context.getLevel().getEntity(tower.entityId().orElseThrow());
+        var entity = context.getLevel().getEntity(tower.entityId().orElseThrow());
+        require(entity instanceof SemionTowerEntity && !entity.isRemoved(),
+                "Test tower entity must be available in the world entity index.");
+        return (SemionTowerEntity) entity;
     }
 
     private static SemionTowerEntity towerEntity(GameTestHelper context, AdversaryFoxTower tower) {
-        return (SemionTowerEntity) context.getLevel().getEntity(tower.entityId().orElseThrow());
-    }
-
-    private static SemionMonsterEntity monsterEntity(GameTestHelper context, Monster monster) {
-        return (SemionMonsterEntity) context.getLevel().getEntity(monster.minecraftEntityId());
+        var entity = context.getLevel().getEntity(tower.entityId().orElseThrow());
+        require(entity instanceof SemionTowerEntity && !entity.isRemoved(),
+                "Adversary fox entity must be available in the world entity index.");
+        return (SemionTowerEntity) entity;
     }
 
     private static SemionMonsterEntity spawnMonster(
@@ -528,10 +585,19 @@ public final class AdversaryIntegrationGameTest {
                 "minecraft:zombie",
                 0L
         );
+        return spawnMonster(context, lane, monster, position);
+    }
+
+    private static SemionMonsterEntity spawnMonster(
+            GameTestHelper context,
+            PlayerLane lane,
+            Monster monster,
+            Vec3 position
+    ) {
         SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
         entity.configureFrom(monster, lane.laneLayout());
         entity.setPos(position);
-        context.getLevel().addFreshEntity(entity);
+        require(context.getLevel().addFreshEntity(entity), "Monster entity must spawn for the GameTest.");
         monster.markMinecraftEntitySpawned(entity.getId(), position.x, position.y, position.z);
         lane.activeMonsters().add(monster);
         return entity;

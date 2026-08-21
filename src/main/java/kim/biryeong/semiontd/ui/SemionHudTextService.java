@@ -212,22 +212,22 @@ public final class SemionHudTextService {
                 HighlightTarget.DIAMOND,
                 highlightTarget,
                 highlightOn,
-                "<aqua>◆ 다이아 " + economy.diamond() + "</aqua>",
+                diamondMarkup(economy.diamond()),
                 "◆ 다이아 " + economy.diamond()
         )
                 + " <dark_gray>|</dark_gray> " + highlightable(
                         HighlightTarget.EMERALD,
                         highlightTarget,
                         highlightOn,
-                        "<green>⬢ 에메랄드 " + economy.emerald() + "</green>",
+                        emeraldMarkup(economy.emerald()),
                         "⬢ 에메랄드 " + economy.emerald()
                 )
                 + " <dark_gray>|</dark_gray> " + highlightable(
                         HighlightTarget.EMERALD_RATE,
                         highlightTarget,
                         highlightOn,
-                        "<dark_green>↗</dark_green> <green>에메랄드/s " + economy.emeraldPerSec() + "</green>",
-                        "↗ 에메랄드/s " + economy.emeraldPerSec()
+                        emeraldRateMarkup(economy.emeraldPerSec()),
+                        "↗ 에메랄드/초 " + economy.emeraldPerSec()
                 )
                 + " <dark_gray>|</dark_gray> " + highlightable(
                         HighlightTarget.INCOME,
@@ -237,6 +237,18 @@ public final class SemionHudTextService {
                         "+ 수입 " + economy.income()
                 )
                 + " <dark_gray>|</dark_gray> <gray>▣ 타워</gray> " + towerLimitText(currentTowers, maxTowers);
+    }
+
+    static String diamondMarkup(long diamond) {
+        return "<aqua>◆ 다이아 " + diamond + "</aqua>";
+    }
+
+    static String emeraldMarkup(long emerald) {
+        return "<green>⬢ 에메랄드 " + emerald + "</green>";
+    }
+
+    static String emeraldRateMarkup(long emeraldPerSec) {
+        return "<dark_green>↗</dark_green> <green>에메랄드/초 " + emeraldPerSec + "</green>";
     }
 
     private static String lobbyMarkupFor(ServerPlayer viewer, SemionGame game, MatchMode matchMode, MinecraftServer server) {

@@ -34,7 +34,7 @@ final class SemionHudTextServiceTest {
         assertTrue(actionbar.contains("◆ 다이아 123"));
         assertTrue(actionbar.contains("⬢ 에메랄드 45"));
         assertTrue(actionbar.contains("+ 수입 67"));
-        assertTrue(actionbar.contains("에메랄드/s 8"));
+        assertTrue(actionbar.contains("에메랄드/초 8"));
         assertTrue(actionbar.contains("▣ 타워"));
     }
 
@@ -54,7 +54,7 @@ final class SemionHudTextServiceTest {
         assertTrue(SemionHudTextService.actionbarMarkupFor(player, game, HighlightTarget.EMERALD, true)
                 .contains("<white><bold>⬢ 에메랄드 45</bold></white>"));
         assertTrue(SemionHudTextService.actionbarMarkupFor(player, game, HighlightTarget.EMERALD_RATE, true)
-                .contains("<white><bold>↗ 에메랄드/s 8</bold></white>"));
+                .contains("<white><bold>↗ 에메랄드/초 8</bold></white>"));
         String incomeHighlight = SemionHudTextService.actionbarMarkupFor(player, game, HighlightTarget.INCOME, true);
         assertTrue(incomeHighlight.contains("<white><bold>+ 수입 67</bold></white>"));
         assertTrue(incomeHighlight.contains("<aqua>◆ 다이아 123</aqua>"));

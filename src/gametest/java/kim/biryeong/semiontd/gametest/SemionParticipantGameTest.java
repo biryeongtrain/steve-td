@@ -2691,6 +2691,8 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
         SemionDialogService dialogService = new SemionDialogService();
         dialogService.showJobStatistics(player, snapshot, JobStatisticsState.READY);
+        dialogService.showJobStatistics(player, snapshot, JobStatisticsState.READY, true);
+        dialogService.showJobStatistics(player, snapshot, JobStatisticsState.READY, false);
         dialogService.showJobStatisticsDetail(
                 player,
                 snapshot,
@@ -6576,6 +6578,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertTrue(context, tower.deployedAtFinalDefense(), "Tower should enter final defense before reset validation.")) {
             return;
         }
+        var staleMoveControl = towerEntity.getMoveControl();
         towerEntity.getMoveControl().setWantedPosition(towerEntity.getX() + 4.0, towerEntity.getY(), towerEntity.getZ(), 1.0);
 
         game.teams().get(TeamId.RED).resetForRound();
@@ -6614,6 +6617,13 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         SemionTowerEntity resetEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(tower.entityId().getAsInt());
+        if (!assertTrue(
+                context,
+                resetEntity.getMoveControl() != staleMoveControl,
+                "Round reset should replace the movement controller that owns the stale destination."
+        )) {
+            return;
+        }
         context.runAfterDelay(1, () -> {
             if (!assertClose(context, originalPosition.getX() + 0.5, resetEntity.getX(),
                     "Round reset should clear stale movement and keep the tower hitbox on its visual X anchor.")) {

@@ -101,21 +101,21 @@ public final class AdversaryRivalGameTest {
             Monster proxy = lane.activeMonsters().getFirst();
             require(proxy.mineralReward() == 0L, "Rival proxy must never award minerals.");
             require(proxy.hasMinecraftEntity(), "Rival proxy should have a live Minecraft entity.");
-            require(context.getLevel().getEntity(proxy.minecraftEntityId()) instanceof SemionMonsterEntity,
-                    "Rival proxy entity should use the shared Semion monster runtime.");
+            SemionMonsterEntity proxyEntity = requireProxyEntity(context, proxy);
             Vec3 expected = new Vec3(
                     rivalPosition.x() + 0.5,
                     rivalPosition.y() + 1.0,
                     rivalPosition.z() + 0.5
             );
-            require(context.getLevel().getEntity(proxy.minecraftEntityId()).position().distanceToSqr(expected) < 0.01,
+            require(proxyEntity.position().distanceToSqr(expected) < 0.01,
                     "Rival proxy should spawn at its installed slot.");
 
             lane.forceFinalDefense();
             require(proxy.inFinalDefenseCombat(),
                     "A converted rival must enter final-defense combat.");
-            require(context.getLevel().getEntity(proxy.minecraftEntityId()).position()
-                            .distanceToSqr(expected) > 1.0,
+            require(!proxyEntity.isRemoved(),
+                    "The live rival proxy must not be removed during final-defense transfer.");
+            require(proxyEntity.position().distanceToSqr(expected) > 1.0,
                     "The live rival proxy must leave its installed slot for final defense.");
             require(fox.deployedAtFinalDefense(),
                     "The fox must move to final defense with its rival proxy.");
@@ -142,11 +142,13 @@ public final class AdversaryRivalGameTest {
 
             lane.markWaveStarted(2);
             Monster nextProxy = lane.activeMonsters().getFirst();
+            SemionMonsterEntity nextProxyEntity = requireProxyEntity(context, nextProxy);
             lane.forceFinalDefense();
             require(nextProxy.inFinalDefenseCombat(),
                     "A restored rival must enter final-defense combat again next round.");
-            require(context.getLevel().getEntity(nextProxy.minecraftEntityId()).position()
-                            .distanceToSqr(expected) > 1.0,
+            require(!nextProxyEntity.isRemoved(),
+                    "The restored rival proxy must remain live during final-defense transfer.");
+            require(nextProxyEntity.position().distanceToSqr(expected) > 1.0,
                     "The restored rival proxy must move again instead of remaining in the lane.");
             context.succeed();
         } finally {
@@ -275,6 +277,13 @@ public final class AdversaryRivalGameTest {
 
     private static UUID stableUuid(String seed) {
         return UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static SemionMonsterEntity requireProxyEntity(GameTestHelper context, Monster proxy) {
+        var entity = context.getLevel().getEntity(proxy.minecraftEntityId());
+        require(entity instanceof SemionMonsterEntity && !entity.isRemoved(),
+                "Rival proxy entity should use the shared live Semion monster runtime.");
+        return (SemionMonsterEntity) entity;
     }
 
     private static void requireClose(double expected, double actual, String message) {

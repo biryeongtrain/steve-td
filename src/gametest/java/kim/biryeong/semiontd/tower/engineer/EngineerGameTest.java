@@ -30,6 +30,7 @@ import net.minecraft.world.level.block.DispenserBlock;
 import net.minecraft.world.level.block.piston.PistonBaseBlock;
 import net.minecraft.world.level.block.RepeaterBlock;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
@@ -527,42 +528,67 @@ public final class EngineerGameTest {
                 targets.add(target);
             }
 
-            lane.markWaveStarted(20);
-            require(gold.pressPlate(lane), "The gold plate must ignite the TNT.");
-            tnt.tick(lane);
-            context.getLevel().setBlock(
-                    gold.circuitPosition(),
-                    context.getLevel().getBlockState(gold.circuitPosition())
-                            .setValue(BlockStateProperties.POWER, 0),
-                    3
-            );
-            tnt.tick(lane);
-            require(wood.pressPlate(lane), "A later wood pulse must be accepted while the fuse is running.");
-            tnt.tick(lane);
-            recordPresses(owner, 20);
-            for (int tick = 0; tick < EngineerBalance.tntFuseTicks(); tick++) {
-                tnt.tick(lane);
-            }
+            context.runAfterDelay(2, () -> {
+                try {
+                    AABB targetArea = new AABB(
+                            center.x - 5.0, center.y - 2.0, center.z - 5.0,
+                            center.x + 5.0, center.y + 2.0, center.z + 5.0
+                    );
+                    List<SemionMonsterEntity> indexedTargets = context.getLevel()
+                            .getEntitiesOfClass(SemionMonsterEntity.class, targetArea);
+                    require(indexedTargets.containsAll(targets),
+                            "All TNT targets must be available in the world entity index before the explosion.");
+                    targets.forEach(target -> {
+                        target.runtimeMonster().syncHealth(1_000.0);
+                        target.setHealth(1_000.0F);
+                    });
 
-            for (int index = 0; index < targets.size(); index++) {
-                requireClose(index < 18 ? 376.0 : 1_000.0, targets.get(index).runtimeMonster().health(),
-                        "TNT nearest-target cap " + index + " health");
-            }
-            require(tnt.runtimeDetailLines().stream().anyMatch(line -> line.contains("+2/20기")),
-                    "TNT details must show the current accumulated target bonus.");
-            require(tnt.runtimeDetailLines().stream().anyMatch(line -> line.contains("금 발판")),
-                    "TNT details must preserve the ignition plate grade.");
-            require(tnt.runtimeDetailLines().stream().anyMatch(line -> line.contains("+30%")),
-                    "TNT details must show the gold plate damage bonus.");
-            context.succeed();
+                    lane.markWaveStarted(20);
+                    require(gold.pressPlate(lane), "The gold plate must ignite the TNT.");
+                    tnt.tick(lane);
+                    context.getLevel().setBlock(
+                            gold.circuitPosition(),
+                            context.getLevel().getBlockState(gold.circuitPosition())
+                                    .setValue(BlockStateProperties.POWER, 0),
+                            3
+                    );
+                    tnt.tick(lane);
+                    require(wood.pressPlate(lane), "A later wood pulse must be accepted while the fuse is running.");
+                    tnt.tick(lane);
+                    recordPresses(owner, 20);
+                    for (int tick = 0; tick < EngineerBalance.tntFuseTicks(); tick++) {
+                        tnt.tick(lane);
+                    }
+
+                    for (int index = 0; index < targets.size(); index++) {
+                        requireClose(index < 18 ? 376.0 : 1_000.0,
+                                targets.get(index).runtimeMonster().health(),
+                                "TNT nearest-target cap " + index + " health");
+                    }
+                    require(tnt.runtimeDetailLines().stream().anyMatch(line -> line.contains("+2/20기")),
+                            "TNT details must show the current accumulated target bonus.");
+                    require(tnt.runtimeDetailLines().stream().anyMatch(line -> line.contains("금 발판")),
+                            "TNT details must preserve the ignition plate grade.");
+                    require(tnt.runtimeDetailLines().stream().anyMatch(line -> line.contains("+30%")),
+                            "TNT details must show the gold plate damage bonus.");
+                    context.succeed();
+                } catch (Throwable failure) {
+                    context.fail(Component.literal("Engineer TNT cap GameTest failed: "
+                            + failure.getClass().getName() + ": " + failure.getMessage()));
+                } finally {
+                    targets.forEach(SemionMonsterEntity::discard);
+                    lane.clearTowers();
+                    AreaEffectLaneIndex.unregister(lane);
+                    EngineerPressStates.clear(owner);
+                }
+            });
         } catch (Throwable failure) {
-            context.fail(Component.literal("Engineer TNT cap GameTest failed: "
-                    + failure.getClass().getName() + ": " + failure.getMessage()));
-        } finally {
             targets.forEach(SemionMonsterEntity::discard);
             lane.clearTowers();
             AreaEffectLaneIndex.unregister(lane);
             EngineerPressStates.clear(owner);
+            context.fail(Component.literal("Engineer TNT cap GameTest setup failed: "
+                    + failure.getClass().getName() + ": " + failure.getMessage()));
         }
     }
 

@@ -55,6 +55,7 @@ import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.Pose;
 import com.faboslav.friendsandfoes.common.entity.MoobloomEntity;
+import net.minecraft.world.entity.ai.control.MoveControl;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.level.Level;
@@ -517,6 +518,18 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
             moveTarget = laneLayout.clampToFinalDefenseTowerArea(targetPosition);
         }
         moveToward(moveTarget, speedModifier);
+    }
+
+    public void resetMovementTo(Vec3 position) {
+        getNavigation().stop();
+        moveControl = new MoveControl(this);
+        setDeltaMovement(Vec3.ZERO);
+        setSpeed(0.0F);
+        setXxa(0.0F);
+        setYya(0.0F);
+        setZza(0.0F);
+        recordCurrentAttackTarget(null);
+        teleportTo(position.x, position.y, position.z);
     }
 
     public boolean damageTarget(SemionMonsterEntity target, double baseDamage) {return damageTargetResult(target, baseDamage).killed();}
