@@ -414,7 +414,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest(maxTicks = 700)
-    public void lateParticipantReceivesCatchUpAndSkipsRequestedRoundWave(GameTestHelper context) {
+    public void lateParticipantJoiningAfterWaveStartsWaitsUntilNextRound(GameTestHelper context) {
         EconomyConfig economy = EconomyConfig.defaultConfig();
         WaveConfig waves = WaveConfig.defaultConfig();
         GameArena arena = SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(BlockPos.ZERO));
@@ -439,6 +439,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
         PlayerTeam aquaScoreboardTeam = context.getLevel().getServer().getScoreboard().getPlayerTeam("semion_aqua");
         if (!assertTrue(context, aquaScoreboardTeam != null && aquaScoreboardTeam.getColor() == ChatFormatting.AQUA, "AQUA should create an aqua scoreboard team.")) {
+            return;
+        }
+
+        tickGame(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS);
+        if (!assertEquals(context, RoundPhase.LANE_WAVE, game.phase(), "Round one wave should start before the late participant joins.")) {
             return;
         }
 
@@ -472,16 +477,20 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
 
-        for (int tick = 0; tick < SemionGame.DEFAULT_PREPARE_TICKS; tick++) {
-            game.tick(context.getLevel().getServer());
-        }
         if (!assertTrue(context, !game.hasAttemptedRound(latePlayer.getUUID(), 1), "Requested round wave should be skipped.")) {
+            return;
+        }
+        tickGame(game, context.getLevel().getServer(), 1);
+        if (!assertTrue(context, redLane(game, 2).clearedThisRound(), "A late lane added during wave phase should resolve without receiving the current wave.")) {
             return;
         }
         game.teams().values().stream()
                 .filter(team -> team.active() && !team.eliminated())
                 .forEach(team -> team.laneGroup().disableMonsters());
-        tickGame(game, context.getLevel().getServer(), 3);
+        tickGame(game, context.getLevel().getServer(), 2);
+        if (!assertEquals(context, 2, game.currentRound(), "Late participant should wait through the current payout and enter round two preparation.")) {
+            return;
+        }
         tickGame(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS);
         if (!assertTrue(context, game.hasAttemptedRound(latePlayer.getUUID(), 2), "Late participant should receive the next round wave normally.")) {
             return;

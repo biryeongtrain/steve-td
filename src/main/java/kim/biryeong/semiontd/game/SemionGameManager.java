@@ -1985,7 +1985,11 @@ public final class SemionGameManager {
                 } catch (ArenaLoadException exception) {
                     SemionTd.LOGGER.warn("Failed to send late-joining player {} to lobby.", player.getGameProfile().getName(), exception);
                 }
-                player.sendSystemMessage(SemionText.prefixedPlain("이미 게임이 진행중입니다! /semiontd spectate 를 이용해 관전하거나 /샌드박스 start 로 연습모드를 플레이해보세요!"));
+                String lateJoinHint = activeGame.matchMode() == MatchMode.NORMAL && activeGame.currentRound() <= LATE_JOIN_MAX_ROUND
+                        ? " 5라운드까지는 /중도참여로 경기에 참가할 수 있습니다."
+                        : "";
+                player.sendSystemMessage(SemionText.prefixedPlain("이미 게임이 진행중입니다!" + lateJoinHint
+                        + " /semiontd spectate 를 이용해 관전하거나 /샌드박스 start 로 연습모드를 플레이해보세요!"));
                 return;
             }
 
