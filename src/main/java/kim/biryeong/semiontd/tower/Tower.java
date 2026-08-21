@@ -5,6 +5,7 @@ import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.KillSourceKind;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
+import kim.biryeong.semiontd.entity.healing.HealingTarget;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.entity.visual.EntityVisual;
@@ -39,6 +40,7 @@ public abstract class Tower {
     private double roundPhysicalDamageDealt;
     private double roundMagicDamageDealt;
     private double roundDamageTaken;
+    private TowerRoundMetricsTracker roundMetricsTracker;
     private boolean waveStartedAfterPlacement;
     private int cooldownTicks;
     private int level = 1;
@@ -248,6 +250,7 @@ public abstract class Tower {
         this.roundPhysicalDamageDealt = previousTower.roundPhysicalDamageDealt();
         this.roundMagicDamageDealt = previousTower.roundMagicDamageDealt();
         this.roundDamageTaken = previousTower.roundDamageTaken();
+        this.roundMetricsTracker = previousTower.roundMetricsTracker;
         this.waveStartedAfterPlacement = previousTower.waveStartedAfterPlacement();
     }
 
@@ -296,11 +299,16 @@ public abstract class Tower {
     }
 
     public void markWaveStarted(int currentRound) {
+        markWaveStarted(currentRound, true);
+    }
+
+    public void markWaveStarted(int currentRound, boolean presentAtWaveStart) {
         this.currentRound = Math.max(1, currentRound);
         this.roundCombatType = type;
         this.roundPhysicalDamageDealt = 0.0;
         this.roundMagicDamageDealt = 0.0;
         this.roundDamageTaken = 0.0;
+        this.roundMetricsTracker = new TowerRoundMetricsTracker(type.id(), presentAtWaveStart);
         if (placedRound > 0 && currentRound >= placedRound) {
             waveStartedAfterPlacement = true;
         }
@@ -330,6 +338,10 @@ public abstract class Tower {
         return roundDamageTaken;
     }
 
+    public TowerRoundMetricsTracker roundMetricsTracker() {
+        return roundMetricsTracker;
+    }
+
     public void recordDamageDealt(double amount) {
         recordDamageDealt(amount, DamageType.PHYSICAL);
     }
@@ -340,6 +352,9 @@ public abstract class Tower {
                 roundMagicDamageDealt += amount;
             } else {
                 roundPhysicalDamageDealt += amount;
+            }
+            if (roundMetricsTracker != null) {
+                roundMetricsTracker.recordDamageDealt(amount, damageType);
             }
         }
     }
@@ -357,6 +372,30 @@ public abstract class Tower {
     public void recordDamageTaken(double amount) {
         if (Double.isFinite(amount) && amount > 0.0) {
             roundDamageTaken += amount;
+            if (roundMetricsTracker != null) {
+                roundMetricsTracker.recordDamageTaken(amount);
+            }
+        }
+    }
+
+    public boolean healTarget(HealingTarget target, double amount) {
+        if (target == null) {
+            return false;
+        }
+        double healed = target.receiveHealingAmount(amount);
+        recordHealingDone(healed);
+        return healed > 0.0;
+    }
+
+    public void recordHealingDone(double amount) {
+        if (roundMetricsTracker != null) {
+            roundMetricsTracker.recordHealingDone(amount);
+        }
+    }
+
+    public void recordKill() {
+        if (roundMetricsTracker != null) {
+            roundMetricsTracker.recordKill();
         }
     }
 
@@ -569,6 +608,9 @@ public abstract class Tower {
         double currentHealth = runtimeMonster == null ? target.getHealth() : runtimeMonster.health();
         double dealtDamage = Math.max(0.0, previousHealth - currentHealth);
         recordDamageDealt(target, dealtDamage, resolvedDamageType);
+        if (killed && dealtDamage > 0.0 && countsDamageInRoundStatistics(target)) {
+            recordKill();
+        }
         if (dealtDamage > 0.0 && resolvedDamageType == DamageType.MAGIC) {
             TowerVfxService.showMagicHit(towerEntity, target);
         }
@@ -738,6 +780,9 @@ public abstract class Tower {
 
     public void syncHealth(double health) {
         this.health = Math.max(0.0, Math.min(currentMaxHealth(), health));
+        if (roundMetricsTracker != null) {
+            roundMetricsTracker.updateAlive(this.health > 0.0);
+        }
     }
 
     public void syncPosition(GridPosition position) {

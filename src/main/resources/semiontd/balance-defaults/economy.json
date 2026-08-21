@@ -33,8 +33,7 @@
     "crossLaneWaveReductionEnabled": true,
     "crossLaneFinalDefenseWaveMultiplier": 0.25,
     "finalDefenseProgressThreshold": 0.9,
-    "applyToIncomeUnits": false,
-    "crossLaneOwnerShare": 1.0
+    "applyToIncomeUnits": false
   },
   "teamTransfer": {
     "enabled": true,

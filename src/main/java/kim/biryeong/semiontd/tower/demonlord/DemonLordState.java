@@ -6,7 +6,9 @@ import java.util.UUID;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.Monster;
+import kim.biryeong.semiontd.game.TowerRoundMetricsSnapshot;
 import kim.biryeong.semiontd.tower.LogarithmicScaling;
+import kim.biryeong.semiontd.tower.TowerRoundMetricsTracker;
 import kim.biryeong.semiontd.tower.TowerType;
 import net.minecraft.world.phys.Vec3;
 
@@ -43,6 +45,8 @@ public final class DemonLordState {
     private HellfireZone zone;
     private double roundPhysicalDamageDealt;
     private double roundMagicDamageDealt;
+    private TowerRoundMetricsTracker roundMetricsTracker;
+    private int roundMetricsTick;
 
     public DemonLordState(UUID playerId) {
         this.playerId = playerId;
@@ -159,7 +163,12 @@ public final class DemonLordState {
         if (remaining <= 0.0) {
             return false;
         }
+        double before = health;
         health = Math.max(0.0, health - remaining);
+        if (roundMetricsTracker != null) {
+            roundMetricsTracker.recordDamageTaken(before - health);
+            roundMetricsTracker.updateAlive(health > 0.0);
+        }
         return health <= 0.0;
     }
 
@@ -167,7 +176,11 @@ public final class DemonLordState {
         if (amount <= 0.0) {
             return;
         }
+        double before = health;
         health = Math.min(maxHealth(), health + amount);
+        if (roundMetricsTracker != null) {
+            roundMetricsTracker.recordHealingDone(health - before);
+        }
     }
 
     /** Barriers do not stack; recasting refreshes to the larger of the two shields. */
@@ -295,6 +308,37 @@ public final class DemonLordState {
             roundMagicDamageDealt += amount;
         } else {
             roundPhysicalDamageDealt += amount;
+        }
+        if (roundMetricsTracker != null) {
+            roundMetricsTracker.recordDamageDealt(amount, damageType);
+        }
+    }
+
+    public void recordKill() {
+        if (roundMetricsTracker != null) {
+            roundMetricsTracker.recordKill();
+        }
+    }
+
+    public void tickRoundMetrics() {
+        if (roundMetricsTracker == null) {
+            return;
+        }
+        roundMetricsTracker.setCurrentTick(roundMetricsTick++);
+        roundMetricsTracker.recordSurvivalTick(inCombat && health > 0.0);
+    }
+
+    public TowerRoundMetricsTracker roundMetricsTracker() {
+        return roundMetricsTracker;
+    }
+
+    public TowerRoundMetricsSnapshot roundMetrics() {
+        return roundMetricsTracker == null ? null : roundMetricsTracker.snapshot();
+    }
+
+    public void removeRoundMetrics() {
+        if (roundMetricsTracker != null) {
+            roundMetricsTracker.markRemoved();
         }
     }
 
@@ -426,6 +470,8 @@ public final class DemonLordState {
         cooldownReadyTick.clear();
         roundPhysicalDamageDealt = 0.0;
         roundMagicDamageDealt = 0.0;
+        roundMetricsTracker = new TowerRoundMetricsTracker("semion-td:demon_lord", true);
+        roundMetricsTick = 0;
         loadoutDirty = true;
     }
 
@@ -440,6 +486,9 @@ public final class DemonLordState {
         inCombat = false;
         centralDefense = false;
         health = 0.0;
+        if (roundMetricsTracker != null) {
+            roundMetricsTracker.updateAlive(false);
+        }
         clearShield();
         clearPendingSkills();
         loadoutDirty = true;

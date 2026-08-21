@@ -294,9 +294,6 @@ public final class SemionConfigLoader {
                     "initialPurchaseEmeraldCost",
                     "purchaseEmeraldCostIncrease"
             );
-            boolean killRewardMissing = !hasObjectProperty(json, "killReward");
-            boolean killRewardOwnerShareMissing = killRewardMissing
-                    || !hasNestedObjectProperty(json, "killReward", "crossLaneOwnerShare");
             boolean teamTransferMissing = !hasObjectProperty(json, "teamTransfer");
             boolean teamTransferEnabledMissing = teamTransferMissing
                     || !hasNestedObjectProperty(json, "teamTransfer", "enabled");
@@ -322,17 +319,7 @@ public final class SemionConfigLoader {
                     emeraldIncomeBoostEnabledMissing,
                     emeraldIncomeBoostStartRoundMissing
             );
-            EconomyConfig.KillRewardConfig killReward = value.killReward();
-            if (killRewardOwnerShareMissing) {
-                killReward = new EconomyConfig.KillRewardConfig(
-                        killReward.crossLaneWaveReductionEnabled(),
-                        killReward.crossLaneFinalDefenseWaveMultiplier(),
-                        killReward.finalDefenseProgressThreshold(),
-                        killReward.applyToIncomeUnits(),
-                        defaults.killReward().crossLaneOwnerShare()
-                );
-            }
-            if (towerLimitPurchaseMissing || killRewardOwnerShareMissing || teamTransferMissing || teamTransferEnabledMissing
+            if (towerLimitPurchaseMissing || teamTransferMissing || teamTransferEnabledMissing
                     || teamTransferCooldownMissing || teamTransferMaxMissing || emeraldIncomeBoostMissing
                     || emeraldIncomeBoostEnabledMissing || emeraldIncomeBoostStartRoundMissing) {
                 value = new EconomyConfig(
@@ -342,12 +329,12 @@ public final class SemionConfigLoader {
                         value.emeraldCap(),
                         value.emeraldProduction(),
                         towerLimitPurchaseMissing ? value.towerLimit().withDefaultPurchaseSettings() : value.towerLimit(),
-                        killReward,
+                        value.killReward(),
                         teamTransfer,
                         emeraldIncomeBoost
                 );
             }
-            if (towerLimitMissing || towerLimitPurchaseMissing || killRewardOwnerShareMissing || teamTransferMissing
+            if (towerLimitMissing || towerLimitPurchaseMissing || teamTransferMissing
                     || teamTransferEnabledMissing || teamTransferCooldownMissing || teamTransferMaxMissing
                     || emeraldIncomeBoostMissing || emeraldIncomeBoostEnabledMissing || emeraldIncomeBoostStartRoundMissing) {
                 write(path, value, logger);

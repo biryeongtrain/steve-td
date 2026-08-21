@@ -240,7 +240,7 @@ public final class ResonanceTower extends EntityBackedTower {
 
     private boolean protectTower(SemionTowerEntity towerEntity, double healAmount, double reduction, int ticks) {
         boolean changed = false;
-        if (healAmount > 0.0 && towerEntity.receiveHealing(healAmount)) {
+        if (healAmount > 0.0 && healTarget(towerEntity, healAmount)) {
             towerEntity.playHealingAnimation();
             changed = true;
         }

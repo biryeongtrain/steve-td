@@ -1576,9 +1576,10 @@ public final class AdversaryFoxTower extends EntityBackedTower {
         double before = health();
         SemionTowerEntity entity = towerEntity(currentLane);
         if (entity != null) {
-            entity.receiveHealing(amount);
+            entity.healTarget(entity, amount);
         } else {
             syncHealth(before + amount);
+            recordHealingDone(health() - before);
         }
         rivalHealingThisWave += Math.max(0.0, health() - before);
     }

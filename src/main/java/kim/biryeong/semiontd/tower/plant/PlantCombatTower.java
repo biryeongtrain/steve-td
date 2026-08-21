@@ -455,7 +455,7 @@ public class PlantCombatTower extends ProductionTower {
         if (overlapping) {
             amount *= Math.max(0.0, 1.0 - global("meadowHealOverlapReduction"));
         }
-        if (amount <= 0.0 || !entity.receiveHealing(amount)) {
+        if (amount <= 0.0 || !healTarget(entity, amount)) {
             return false;
         }
         healed.setData(LAST_MEADOW_HEAL_TICK, now);

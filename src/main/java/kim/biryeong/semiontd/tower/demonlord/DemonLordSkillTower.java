@@ -9,6 +9,7 @@ import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
+import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.tower.ProductionTower;
 import kim.biryeong.semiontd.tower.TowerType;
 
@@ -84,6 +85,11 @@ public class DemonLordSkillTower extends ProductionTower {
 
     @Override
     public boolean drawsAggro() {
+        return false;
+    }
+
+    @Override
+    protected boolean countsDamageInRoundStatistics(SemionMonsterEntity target) {
         return false;
     }
 

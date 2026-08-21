@@ -66,6 +66,7 @@ public final class AcquireLaneDefenseTargetGoal extends Goal {
      * 찾았을 때만 도는 차선책이라, 그 레인에 지킬 타워가 있으면 그쪽이 먼저입니다.
      */
     private LivingEntity findDemonLordTarget() {
+        double targetRange = monster.defenseTargetSearchRange();
         return monster.level().getEntities(monster, monster.defenseSearchBox(), entity -> {
                     if (!(entity instanceof ServerPlayer player) || !player.isAlive()) {
                         return false;
@@ -75,6 +76,7 @@ public final class AcquireLaneDefenseTargetGoal extends Goal {
                 }).stream()
                 .filter(LivingEntity.class::isInstance)
                 .map(LivingEntity.class::cast)
+                .filter(entity -> monster.distanceToSqr(entity) <= targetRange * targetRange)
                 .min(Comparator.comparingDouble(monster::distanceToSqr))
                 .orElse(null);
     }

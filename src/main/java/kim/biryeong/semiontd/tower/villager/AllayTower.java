@@ -144,7 +144,7 @@ public class AllayTower extends SupportTower {
     private boolean heal(Tower target, PlayerLane lane, double amount) {
         Optional<SemionTowerEntity> targetEntity = towerEntity(target, lane);
         if (targetEntity.isPresent()) {
-            boolean healed = targetEntity.get().receiveHealing(amount);
+            boolean healed = healTarget(targetEntity.get(), amount);
             if (healed) {
                 targetEntity.get().playHealingAnimation();
             }
@@ -153,7 +153,9 @@ public class AllayTower extends SupportTower {
         if (target.health() > 0.0 && target.health() < target.currentMaxHealth()) {
             double before = target.health();
             target.syncHealth(before + amount);
-            return target.health() > before;
+            double healed = Math.max(0.0, target.health() - before);
+            recordHealingDone(healed);
+            return healed > 0.0;
         }
         return Boolean.FALSE;
     }

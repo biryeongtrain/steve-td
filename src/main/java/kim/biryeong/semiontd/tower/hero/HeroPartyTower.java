@@ -144,7 +144,7 @@ public abstract class HeroPartyTower extends ProductionTower {
             return 0.0;
         }
         double previous = target.getHealth();
-        target.receiveHealing(amount * HeroPartyBalance.partyHealingMultiplier(state().adventurePoints()));
+        healTarget(target, amount * HeroPartyBalance.partyHealingMultiplier(state().adventurePoints()));
         return Math.max(0.0, target.getHealth() - previous);
     }
 

@@ -144,7 +144,7 @@ public final class AdversaryTeamEffects {
         for (int index = 0; index < Math.min(profile.targetCount(), candidates.size()); index++) {
             HealCandidate candidate = candidates.get(index);
             double amount = candidate.fox().currentMaxHealth() * profile.maxHealthRatio();
-            if (candidate.entity().receiveHealing(amount)) {
+            if (source.healTarget(candidate.entity(), amount)) {
                 AdversaryVfx.showFoxHealing(source, candidate.entity());
             }
         }

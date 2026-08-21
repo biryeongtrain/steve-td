@@ -75,7 +75,7 @@ public class UndeadHuskTower extends UndeadTowerSupport {
         );
         int hitCount = TowerAreaDamage.apply(this, towerEntity, request, towerEntity::attackDamageAmount, true).appliedCount();
         if (hitCount > 0) {
-            towerEntity.receiveHealing(value("thornHealPerHit") * hitCount);
+            towerEntity.healTarget(towerEntity, value("thornHealPerHit") * hitCount);
             thornCooldownTicks = thornCooldownTicks();
         }
     }

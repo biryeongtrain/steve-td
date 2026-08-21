@@ -70,6 +70,7 @@ final class SemionConfigLoaderTest {
                 assertEquals(bundled, written, fileName);
             }
         }
+        assertFalse(Files.readString(tempDir.resolve("economy.json")).contains("crossLaneOwnerShare"));
 
         Path cosmetics = tempDir.resolve("cosmetics.json");
         BundledBalanceDefaults.copyIfMissing("cosmetics.json", cosmetics);
@@ -957,12 +958,11 @@ final class SemionConfigLoaderTest {
         assertEquals(0.5, configs.economy().killReward().crossLaneFinalDefenseWaveMultiplier(), 0.0001);
         assertEquals(0.95, configs.economy().killReward().finalDefenseProgressThreshold(), 0.0001);
         assertEquals(true, configs.economy().killReward().applyToIncomeUnits());
-        assertEquals(1.0, configs.economy().killReward().crossLaneOwnerShare(), 0.0001);
-        assertTrue(Files.readString(tempDir.resolve("economy.json")).contains("\"crossLaneOwnerShare\": 1.0"));
+        assertFalse(Files.readString(tempDir.resolve("economy.json")).contains("crossLaneOwnerShare"));
     }
 
     @Test
-    void loadPreservesKillRewardOwnerShareOverride() throws Exception {
+    void loadIgnoresRemovedKillRewardOwnerShare() throws Exception {
         Files.createDirectories(tempDir);
         Files.writeString(tempDir.resolve("economy.json"), """
                 {
@@ -978,7 +978,8 @@ final class SemionConfigLoaderTest {
 
         LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
 
-        assertEquals(0.35, configs.economy().killReward().crossLaneOwnerShare(), 0.0001);
+        assertEquals(0.25, configs.economy().killReward().crossLaneFinalDefenseWaveMultiplier(), 0.0001);
+        assertEquals(0.9, configs.economy().killReward().finalDefenseProgressThreshold(), 0.0001);
     }
 
     @Test

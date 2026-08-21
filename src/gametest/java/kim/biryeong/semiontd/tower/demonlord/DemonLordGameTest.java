@@ -13,6 +13,7 @@ import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.KillSourceKind;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
+import kim.biryeong.semiontd.entity.monster.goal.AcquireLaneDefenseTargetGoal;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
@@ -208,6 +209,40 @@ public final class DemonLordGameTest {
         } finally {
             targets.forEach(target -> target.entity().discard());
             lane.clearTowers();
+            DemonLordStates.clear(player.getUUID());
+            player.discard();
+        }
+    }
+
+    @GameTest
+    public void demonLordDrawsAggroOnlyInsideDefenseRange(GameTestHelper context) {
+        ServerPlayer player = context.makeMockServerPlayerInLevel();
+        PlayerLane lane = testLane(context, player.getUUID());
+        prepareFloor(context);
+        SpawnedTarget target = spawnTarget(context, lane, new BlockPos(1, 2, 1), 2, 100.0, 0.0);
+        try {
+            DemonLordState state = DemonLordStates.getOrCreate(player.getUUID());
+            state.setLaneId(1);
+            state.enterCombat();
+            state.enterCentralDefense();
+            target.runtime().enterFinalDefenseCombat();
+            Vec3 center = Vec3.atCenterOf(context.absolutePos(new BlockPos(10, 2, 10)));
+            player.teleportTo(center.x, center.y, center.z);
+
+            AcquireLaneDefenseTargetGoal goal = new AcquireLaneDefenseTargetGoal(target.entity());
+            require(!goal.canUse(), "A distant final-defense monster must keep following its lane path.");
+
+            Vec3 nearby = Vec3.atCenterOf(context.absolutePos(new BlockPos(6, 2, 6)));
+            target.entity().setPos(nearby.x, nearby.y, nearby.z);
+            require(goal.canUse(), "A monster inside defense range must be able to target the demon lord.");
+            goal.start();
+            require(target.entity().getTarget() == player,
+                    "The nearby final-defense monster must acquire the demon lord.");
+            context.succeed();
+        } catch (Throwable failure) {
+            context.fail(Component.literal("Demon lord aggro-range GameTest failed: " + failure.getMessage()));
+        } finally {
+            target.entity().discard();
             DemonLordStates.clear(player.getUUID());
             player.discard();
         }
