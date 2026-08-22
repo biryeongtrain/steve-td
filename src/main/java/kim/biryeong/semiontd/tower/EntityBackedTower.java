@@ -1,5 +1,6 @@
 package kim.biryeong.semiontd.tower;
 
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
@@ -36,6 +37,23 @@ public abstract class EntityBackedTower extends Tower {
 
     public OptionalInt entityId() {
         return entityId >= 0 ? OptionalInt.of(entityId) : OptionalInt.empty();
+    }
+
+    public final Optional<SemionTowerEntity> runtimeEntity(PlayerLane lane) {
+        if (entityId < 0 || lane == null || lane.arenaWorld() == null) {
+            return Optional.empty();
+        }
+        var currentEntity = lane.arenaWorld().getEntity(entityId);
+        if (currentEntity instanceof SemionTowerEntity towerEntity && !towerEntity.isRemoved()) {
+            return Optional.of(towerEntity);
+        }
+        if (entity != null
+                && entity.getId() == entityId
+                && entity.level() == lane.arenaWorld()
+                && !entity.isRemoved()) {
+            return Optional.of(entity);
+        }
+        return Optional.empty();
     }
 
     @Override
@@ -123,14 +141,7 @@ public abstract class EntityBackedTower extends Tower {
             return super.isDestroyed(lane);
         }
 
-        var currentEntity = lane.arenaWorld().getEntity(entityId);
-        if (!(currentEntity instanceof SemionTowerEntity)
-                && entity != null
-                && entity.getId() == entityId
-                && entity.level() == lane.arenaWorld()
-                && !entity.isRemoved()) {
-            currentEntity = entity;
-        }
+        var currentEntity = runtimeEntity(lane).orElse(null);
         if (currentEntity instanceof SemionTowerEntity towerEntity) {
             syncHealth(towerEntity.getHealth());
             syncPosition(GridPosition.from(BlockPos.containing(

@@ -2833,6 +2833,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertTrue(context, game.start(context.getLevel().getServer(), plan), "Dialog test game should start.")) {
             return;
         }
+        dialogService.showLeaderTargetControl(player, game);
         dialogService.showTowerControl(player, game);
         dialogService.showSummonShop(player, game);
         dialogService.showSummonShop(player, game, 2);
@@ -11773,10 +11774,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertEquals(context, 0.0, sacrifice.health(), "Warlock should absorb an allied tower after siege true damage.")) {
             return;
         }
-        if (!assertTrue(
+        if (!assertClose(
                 context,
-                core.health() > 0.0 && coreEntity.getHealth() > 0.0F,
-                "Warlock sacrifice healing must survive the siege ability's fixed-damage application."
+                31.875,
+                core.health(),
+                "Base warlock should heal only the absorbed max-health increase plus the flat absorption heal."
         )) {
             return;
         }
@@ -12115,10 +12117,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     public void rangedWarlockAwakensWithoutSacrificeRequirementAndResetsNextRound(GameTestHelper context) {
         UUID playerId = stableUuid("warlock-ranged-awakening-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, WarlockTowerJob.ID);
-        for (int kill = 0; kill < 1199; kill++) {
+        for (int kill = 0; kill < 1249; kill++) {
             WarlockAwakeningProgress.recordKill(playerId);
         }
-        if (!assertEquals(context, 1199L, WarlockAwakeningProgress.snapshot(playerId).kills(), "Warlock awakening progress should remain locked before the configured kill requirement.")) {
+        if (!assertEquals(context, 1249L, WarlockAwakeningProgress.snapshot(playerId).kills(), "Warlock awakening progress should remain locked before the configured kill requirement.")) {
             return;
         }
         PlayerLane lane = redLane(game, 1);
@@ -12136,7 +12138,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         coreEntity.setHealth(40.0F);
 
         String lockedDetails = String.join("\n", core.runtimeDetailLines()).replaceAll("<[^>]+>", "");
-        if (!assertTrue(context, lockedDetails.contains("각성 해금: 1199/1200킬"), "Ranged awakening should stay locked before the kill requirement.")) {
+        if (!assertTrue(context, lockedDetails.contains("각성 해금: 1249/1250킬"), "Ranged awakening should stay locked before the kill requirement.")) {
             return;
         }
         Monster creditedKill = new Monster(
@@ -12155,12 +12157,12 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         creditedKill.recordLastHit(playerId, KillSourceKind.TOWER);
         creditedKill.syncHealth(0.0);
         new EconomyService(game.economyConfig(), game).awardMonsterKillReward(creditedKill, game.players());
-        if (!assertEquals(context, 1200L, WarlockAwakeningProgress.snapshot(playerId).kills(), "The credited 1200th kill should unlock awakening.")) {
+        if (!assertEquals(context, 1250L, WarlockAwakeningProgress.snapshot(playerId).kills(), "The credited 1250th kill should unlock awakening.")) {
             return;
         }
 
         String awakenedDetails = String.join("\n", core.runtimeDetailLines()).replaceAll("<[^>]+>", "");
-        if (!assertTrue(context, awakenedDetails.contains("각성 상태: 각성 완료"), "The 1200th kill should immediately awaken a ranged warlock that already satisfies the combat conditions.")) {
+        if (!assertTrue(context, awakenedDetails.contains("각성 상태: 각성 완료"), "The 1250th kill should immediately awaken a ranged warlock that already satisfies the combat conditions.")) {
             return;
         }
         if (!assertTrue(context, awakenedDetails.contains("라운드 흡수: 0기"), "Ranged awakening should not require sacrifices.")) {
@@ -12173,6 +12175,9 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertTrue(context, awakenedDetails.contains("재생: +40 HP/s"), "Ranged awakening should expose its regeneration in the tower UI.")) {
+            return;
+        }
+        if (!assertTrue(context, awakenedDetails.indexOf("디버프 저항:") < awakenedDetails.indexOf("재생:"), "Ranged awakening regeneration should appear below debuff resistance.")) {
             return;
         }
 
@@ -12191,7 +12196,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     public void rangedWarlockUsesPostSacrificeHealthForAwakening(GameTestHelper context) {
         UUID playerId = stableUuid("warlock-post-sacrifice-awakening-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, WarlockTowerJob.ID);
-        for (int kill = 0; kill < 1200; kill++) {
+        for (int kill = 0; kill < 1250; kill++) {
             WarlockAwakeningProgress.recordKill(playerId);
         }
         PlayerLane lane = redLane(game, 1);
@@ -12239,7 +12244,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     public void meleeWarlockAwakeningCreatesRoundBurstAndResetsNextRound(GameTestHelper context) {
         UUID playerId = stableUuid("warlock-melee-awakening-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, WarlockTowerJob.ID);
-        for (int kill = 0; kill < 1200; kill++) {
+        for (int kill = 0; kill < 1250; kill++) {
             WarlockAwakeningProgress.recordKill(playerId);
         }
         PlayerLane lane = redLane(game, 1);
@@ -12282,6 +12287,18 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertClose(context, 1.30, core.adjustMovementSpeed(1.0), "Melee awakening should add thirty percent movement speed.")) {
+            return;
+        }
+        if (!assertTrue(context, awakenedDetails.contains("피해: 75"), "Melee awakening should expose its attack damage bonus in the tower UI.")) {
+            return;
+        }
+        if (!assertTrue(context, awakenedDetails.contains("이동 속도: +30%"), "Melee awakening should expose its movement speed bonus in the tower UI.")) {
+            return;
+        }
+        if (!assertTrue(context,
+                awakenedDetails.indexOf("디버프 저항:") < awakenedDetails.indexOf("피해: 75")
+                        && awakenedDetails.indexOf("피해: 75") < awakenedDetails.indexOf("이동 속도: +30%"),
+                "Melee awakening bonuses should appear below debuff resistance in damage and movement-speed order.")) {
             return;
         }
 
@@ -12385,7 +12402,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
         if (!assertClose(
                 context,
-                0.05,
+                0.10,
                 monster.activeTimedEffectMagnitude(TimedEffectType.MONSTER_TOWER_DAMAGE_TAKEN_BONUS),
                 "Sacrifice tower death should apply configured monster damage-taken bonus."
         )) {

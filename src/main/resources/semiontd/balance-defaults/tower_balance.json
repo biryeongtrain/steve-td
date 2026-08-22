@@ -4219,12 +4219,11 @@
       "absorptionHeal": 30.0,
       "minInterval": 5.0,
       "speedCap": 15.0,
-      "awakeningKills": 1200.0,
+      "awakeningKills": 1250.0,
       "awakeningThreshold": 0.4
     },
     "base_warlock_tower": {
       "sacrificeRadius": 6.0,
-      "fatalHeal": 0.35,
       "permanentHealth": 0.025,
       "permanentDamage": 0.05
     },
@@ -4235,11 +4234,12 @@
       "healthThreshold": 2000.0,
       "healthScale": 500.0,
       "permanentDamage": 0.05,
-      "damageThreshold": 145.0,
+      "damageThreshold": 150.0,
       "damageScale": 20.0,
       "lifeEvery": 10.0,
       "lifeStep": 0.005,
-      "lifeCap": 0.08,
+      "lifeCap": 0.07,
+      "incomeDebuffResistance": 0.05,
       "splashEvery": 2.0,
       "splashStep": 0.1,
       "splashCap": 8.0,
@@ -4264,7 +4264,8 @@
       "damageThreshold": 200.0,
       "damageScale": 20.0,
       "lifeStep": 0.01,
-      "lifeCap": 0.14,
+      "lifeCap": 0.13,
+      "incomeDebuffResistance": 0.05,
       "speedStep": 1.0,
       "splashStep": 0.25,
       "splashCap": 2.0,
@@ -4281,7 +4282,7 @@
       "awakeningMoveSpeed": 0.3
     },
     "t2_slave": {
-      "towerDamageTakenBonus": 0.05,
+      "towerDamageTakenBonus": 0.1,
       "deathEffectRadius": 20.0,
       "deathEffectDurationTicks": 72000.0
     },
@@ -4291,7 +4292,7 @@
       "deathEffectDurationTicks": 72000.0
     },
     "t2_ranged_slave": {
-      "attackSpeedReduction": 0.05,
+      "attackSpeedReduction": 0.1,
       "deathEffectRadius": 20.0,
       "deathEffectDurationTicks": 72000.0
     },
@@ -5051,8 +5052,8 @@
       "healthScale": 500.0,
       "roundDamageRatio": 0.66,
       "permanentDamageRatio": 0.04,
-      "damageThreshold": 140.0,
-      "damageScale": 20.0,
+      "damageThreshold": 150.0,
+      "damageScale": 25.0,
       "lifeStealStacks": 30.0,
       "lifeStealStep": 0.01,
       "lifeStealCap": 0.1,

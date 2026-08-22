@@ -52,9 +52,6 @@ class EndTowerCatalogTest {
                 config.abilities().get(EndTower.CONFIG_ID).keySet()
         );
         assertEquals(expectedAbilityKeys, actualAbilityKeys);
-        assertEquals(-1.0, config.ability(EndTower.CONFIG_ID, "hatchDelayTicks", -1.0), 0.0001);
-        assertEquals(-1.0, config.ability(EndTower.CONFIG_ID, "regenerationTicks", -1.0), 0.0001);
-        assertEquals(-1.0, config.ability(EndTower.CONFIG_ID, "attackDamageCap", -1.0), 0.0001);
         assertEquals(2000.0, config.ability(EndTower.CONFIG_ID, "dragonEvolution", -1.0), 0.0001);
         assertEquals(100.0, config.ability(EndTower.CONFIG_ID, "phantomScaleHealth", -1.0), 0.0001);
         assertEquals(0.2, config.ability(EndTower.CONFIG_ID, "phantomScaleStep", -1.0), 0.0001);
@@ -69,8 +66,8 @@ class EndTowerCatalogTest {
         assertEquals(500.0, config.ability(EndTower.CONFIG_ID, "healthScale", -1.0), 0.0001);
         assertEquals(0.66, config.ability(EndTower.CONFIG_ID, "roundDamageRatio", -1.0), 0.0001);
         assertEquals(0.04, config.ability(EndTower.CONFIG_ID, "permanentDamageRatio", -1.0), 0.0001);
-        assertEquals(140.0, config.ability(EndTower.CONFIG_ID, "damageThreshold", -1.0), 0.0001);
-        assertEquals(20.0, config.ability(EndTower.CONFIG_ID, "damageScale", -1.0), 0.0001);
+        assertEquals(150.0, config.ability(EndTower.CONFIG_ID, "damageThreshold", -1.0), 0.0001);
+        assertEquals(25.0, config.ability(EndTower.CONFIG_ID, "damageScale", -1.0), 0.0001);
         assertEquals(30.0, config.ability(EndTower.CONFIG_ID, "lifeStealStacks", -1.0), 0.0001);
         assertEquals(0.01, config.ability(EndTower.CONFIG_ID, "lifeStealStep", -1.0), 0.0001);
         assertEquals(0.10, config.ability(EndTower.CONFIG_ID, "lifeStealCap", -1.0), 0.0001);

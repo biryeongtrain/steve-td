@@ -21,6 +21,7 @@ public final class TowerDescriptionTemplate {
     private static final String ATTACK_DAMAGE_COLOR = "#ec8d34";
     private static final String MAGIC_DAMAGE_COLOR = "#796CFF";
     private static final String ATTACK_SPEED_COLOR = "#ffe78d";
+    private static final String MOVEMENT_SPEED_COLOR = "#F1E7D4";
     private static final String ATTACK_RANGE_COLOR = "#f0e6d2";
     private static final String RESISTANCE_COLOR = "#53DFFF";
     private static final String AGGRO_PRIORITY_COLOR = "#a80000";
@@ -151,6 +152,7 @@ public final class TowerDescriptionTemplate {
             case "aggro", "priority" -> formatAggroPriority(value, "");
             case "attack_range", "range" -> formatAttackRange(value, "");
             case "attack_speed", "as" -> formatAttackSpeed(value, "");
+            case "movement_speed", "move_speed" -> formatMovementSpeed(value, "");
             case "sell_price", "sell" -> formatSellPrice(value, "");
             case "number", "num", "" -> formatNumber(value);
             default -> throw new IllegalArgumentException("Unknown tower description format: " + format);
@@ -233,6 +235,10 @@ public final class TowerDescriptionTemplate {
         return "<" + ATTACK_SPEED_COLOR + ">" + text + "</" + ATTACK_SPEED_COLOR + ">";
     }
 
+    public static String movementSpeedText(String text) {
+        return "<" + MOVEMENT_SPEED_COLOR + ">" + text + "</" + MOVEMENT_SPEED_COLOR + ">";
+    }
+
     public static String attackRangeText(String text) {
         return "<" + ATTACK_RANGE_COLOR + ">" + text + "</" + ATTACK_RANGE_COLOR + ">";
     }
@@ -261,6 +267,10 @@ public final class TowerDescriptionTemplate {
         return styledProgressStat(DAMAGE_REDUCTION_COLOR, "\uD83D\uDEE1", "피해 감소", "+" + format(value, "percent"), progress);
     }
 
+    public static String formatIncomeDebuffResistance(double value, String progress) {
+        return styledProgressStat(RESISTANCE_COLOR, "\uD83D\uDEE1", "디버프 저항", "+" + format(value, "percent"), progress);
+    }
+
     public static String formatAttackDamage(double value, String progress) {
         return styledProgressStat(ATTACK_DAMAGE_COLOR, "\uD83E\uDE93", "피해", formatNumber(value), progress);
     }
@@ -283,6 +293,10 @@ public final class TowerDescriptionTemplate {
 
     public static String formatAttackSpeedReduction(int ticks, String progress) {
         return styledProgressStat(ATTACK_SPEED_COLOR, "\u26A1", "공격 속도", "-" + ticks + "틱", progress);
+    }
+
+    public static String formatMovementSpeed(double value, String progress) {
+        return styledProgressStat(MOVEMENT_SPEED_COLOR, "\uD83D\uDC5F", "이동 속도", "+" + format(value, "percent"), progress);
     }
 
     public static String formatSplashRange(double value, String progress) {

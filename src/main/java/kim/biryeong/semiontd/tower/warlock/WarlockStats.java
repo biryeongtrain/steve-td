@@ -11,9 +11,7 @@ final class WarlockStats {
 
     List<String> create(WarlockTower tower) {
         WarlockAwakeningProgress.Snapshot awakeningProgress = WarlockAwakeningProgress.snapshot(tower.ownerPlayer());
-        boolean showAwakening =
-                WarlockConfig.AWAKENING_ENABLED
-                        && WarlockTowers.isWarlockCore(tower.type());
+        boolean showAwakening = WarlockTowers.isWarlockCore(tower.type());
 
         return WarlockStatsView.core(
                 new WarlockStatsView.CoreStats(
@@ -27,12 +25,14 @@ final class WarlockStats {
                                 awakeningProgress.unlocked(),
                                 tower.currentHealthRatio(),
                                 Math.max(0.0, WarlockConfig.RUNTIME.value(WarlockConfig.Ability.AWAKENING_THRESHOLD)),
-                                tower.onlyCoreTowerAlive()
+                                tower.onlyCoreTowerAlive(),
+                                tower.regenerationPerSecond(),
+                                tower.awakeningDamageBonus(),
+                                tower.awakeningMovementSpeedBonus()
                         ),
                         tower.is(WarlockTowers.RANGED_WARLOCK_TOWER),
                         tower.is(WarlockTowers.MELEE_WARLOCK_TOWER),
                         new WarlockStatsView.CombatStats(
-                                tower.rawDamageBonus(),
                                 tower.effectiveDamageBonus(),
                                 tower.attackIntervalReduction(),
                                 tower.maximumAttackIntervalReduction(),
@@ -42,14 +42,11 @@ final class WarlockStats {
                         ),
                         new WarlockStatsView.DefenseStats(
                                 tower.additionalHealth(),
-                                tower.rawHealthBonus(),
-                                tower.effectiveHealthBonus(),
-                                tower.regenerationPerSecond(),
-                                tower.maximumRegenerationPerSecond(),
                                 combat.lifeStealRatio(tower),
                                 combat.maximumLifeSteal(tower),
                                 tower.damageReduction(),
-                                tower.maximumDamageReduction()
+                                tower.maximumDamageReduction(),
+                                tower.incomeDebuffResistance()
                         )
                 )
         );

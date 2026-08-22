@@ -448,8 +448,7 @@ final class SemionConfigLoaderTest {
                       "sacrificeRadius": 25.0,
                       "minInterval": 5.0,
                       "speedCap": 15.0,
-                      "awakeningThreshold": 0.4,
-                      "damageSoftCap": 180.0
+                      "awakeningThreshold": 0.4
                     },
                     "ranged_warlock_tower": {
                       "petHealth": 0.05,
@@ -475,11 +474,9 @@ final class SemionConfigLoaderTest {
         assertFalse(global.containsKey("damageScale"));
         assertFalse(global.containsKey("healthThreshold"));
         assertFalse(global.containsKey("healthScale"));
-        assertEquals(180.0, global.get("damageSoftCap"));
-        assertEquals(1200.0, global.get("awakeningKills"));
+        assertEquals(1250.0, global.get("awakeningKills"));
         assertEquals(30.0, global.get("absorptionHeal"));
-        assertFalse(global.containsKey("awakeningAbsorptions"));
-        assertEquals(145.0, configs.towerBalance().ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "damageThreshold", -1.0));
+        assertEquals(150.0, configs.towerBalance().ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "damageThreshold", -1.0));
         assertEquals(20.0, configs.towerBalance().ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "damageScale", -1.0));
         assertEquals(2000.0, configs.towerBalance().ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "healthThreshold", -1.0));
         assertEquals(500.0, configs.towerBalance().ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "healthScale", -1.0));
@@ -490,6 +487,8 @@ final class SemionConfigLoaderTest {
         assertEquals(500.0, configs.towerBalance().ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "healthScale", -1.0));
         assertEquals(0.25, configs.towerBalance().ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "petHealthCap", -1.0));
         assertEquals(0.25, configs.towerBalance().ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "petDamageCap", -1.0));
+        assertEquals(0.05, configs.towerBalance().ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "incomeDebuffResistance", -1.0));
+        assertEquals(0.05, configs.towerBalance().ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "incomeDebuffResistance", -1.0));
         assertEquals(600.0, configs.towerBalance().ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "awakeningHeal", -1.0));
 
         String written = Files.readString(tempDir.resolve("tower_balance.json"));
@@ -501,14 +500,12 @@ final class SemionConfigLoaderTest {
         assertFalse(writtenGlobal.has("damageScale"));
         assertFalse(writtenGlobal.has("healthThreshold"));
         assertFalse(writtenGlobal.has("healthScale"));
-        assertTrue(written.contains("\"damageThreshold\": 145.0"));
-        assertTrue(written.contains("\"damageThreshold\": 200.0"));
+        assertTrue(written.contains("\"damageThreshold\": 150.0"));
         assertTrue(written.contains("\"healthThreshold\": 3000.0"));
-        assertTrue(written.contains("\"awakeningKills\": 1200.0"));
+        assertTrue(written.contains("\"awakeningKills\": 1250.0"));
         assertTrue(written.contains("\"absorptionHeal\": 30.0"));
         assertTrue(written.contains("\"awakeningHeal\": 600.0"));
         assertTrue(written.contains("\"splashEvery\": 2.0"));
-        assertTrue(written.contains("\"damageSoftCap\": 180.0"));
         assertTrue(written.contains("\"petHealthCap\": 0.25"));
         assertTrue(written.contains("\"petDamageCap\": 0.25"));
     }

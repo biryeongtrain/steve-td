@@ -662,13 +662,7 @@ public final class PlayerLane {
         if (arenaWorld == null || !(tower instanceof EntityBackedTower entityBackedTower)) {
             return null;
         }
-        return entityBackedTower.entityId()
-                .stream()
-                .mapToObj(arenaWorld::getEntity)
-                .filter(SemionTowerEntity.class::isInstance)
-                .map(SemionTowerEntity.class::cast)
-                .findFirst()
-                .orElse(null);
+        return entityBackedTower.runtimeEntity(this).orElse(null);
     }
 
     public List<DefenderEntity> forceFinalDefense() {

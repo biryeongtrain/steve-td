@@ -15,6 +15,7 @@ public enum BuilderPalette {
     RESONANCE(0xEC6FA8, 0x65D6E8, "minecraft:cherry_leaves", "minecraft:electric_spark"),
     ILLAGER(0x78909C, 0xC3423F, "minecraft:ash", "minecraft:damage_indicator"),
     NETHER(0xF57C00, 0x8AAA45, "minecraft:flame", "minecraft:smoke"),
+    END(0xB52CFF, 0x6F2DBD, "minecraft:portal", "minecraft:dragon_breath"),
     OCEAN(0x2196F3, 0x80DEEA, "minecraft:nautilus", "minecraft:splash"),
     ANCIENT_CITY(0x0B4F57, 0x63E6E2, "minecraft:sculk_soul", "minecraft:electric_spark"),
     ADVERSARY(0xF28C28, 0xFFD166, "minecraft:crit", "minecraft:wax_on"),

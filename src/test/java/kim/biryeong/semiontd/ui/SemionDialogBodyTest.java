@@ -21,6 +21,7 @@ import kim.biryeong.semiontd.map.GameArena;
 import kim.biryeong.semiontd.statistics.JobStatisticsEntry;
 import kim.biryeong.semiontd.statistics.JobStatisticsSnapshot;
 import kim.biryeong.semiontd.statistics.JobStatisticsTotals;
+import kim.biryeong.semiontd.statistics.TraitCombinationStatisticsEntry;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
 import kim.biryeong.semiontd.tower.futureagency.FutureAgencyLeaderTower;
 import kim.biryeong.semiontd.tower.futureagency.FutureAgencyPolicy;
@@ -155,7 +156,7 @@ final class SemionDialogBodyTest {
         assertEquals(List.of(
                         ChatFormatting.WHITE.getColor(),
                         ChatFormatting.WHITE.getColor(),
-                        ChatFormatting.LIGHT_PURPLE.getColor(),
+                        ChatFormatting.WHITE.getColor(),
                         ChatFormatting.AQUA.getColor(),
                         ChatFormatting.GREEN.getColor(),
                         ChatFormatting.YELLOW.getColor(),
@@ -165,13 +166,35 @@ final class SemionDialogBodyTest {
     }
 
     @Test
+    void playerStatusJobBodyUsesWhite() {
+        Component job = SemionDialogService.playerStatusJob("화이트직업");
+
+        assertEquals("화이트직업", job.getString());
+        assertEquals(ChatFormatting.WHITE.getColor(), job.getStyle().getColor().getValue());
+    }
+
+    @Test
+    void playerStatusLeavesOneBlankLineBetweenTeams() {
+        var table = Component.literal("red");
+        SemionDialogService.appendPlayerStatusTeamSpacing(table);
+        table.append("\n").append("blue");
+
+        assertEquals("red\n\nblue", table.getString());
+    }
+
+    @Test
     void jobStatisticsHeaderAndDividerUseRenderedWhiteLines() {
         HeaderMessage header = SemionDialogService.jobStatisticsHeader(Component.literal("직업 통계"));
+        HeaderMessage detailHeader = SemionDialogService.jobStatisticsDetailHeader(Component.literal("주민 빌더 통계"));
         PlainMessage divider = SemionDialogService.jobStatisticsDivider();
+        PlainMessage detailDivider = SemionDialogService.jobStatisticsDetailDivider();
 
         assertEquals("직업 통계", header.contents().getString());
+        assertEquals(460, header.width());
+        assertEquals(420, detailHeader.width());
         assertFalse(header.contents().getString().contains("──────"));
         assertEquals(ChatFormatting.WHITE.getColor(), divider.contents().getStyle().getColor().getValue());
+        assertEquals(ChatFormatting.WHITE.getColor(), detailDivider.contents().getStyle().getColor().getValue());
         assertTrue(divider.contents().getStyle().isStrikethrough());
         assertEquals("직업 목록", SemionDialogService.jobStatisticsListHeader().contents().getString());
     }
@@ -272,6 +295,111 @@ final class SemionDialogBodyTest {
                 centered.getSiblings().getFirst().getString());
         assertEquals(SemionUiFont.space(remainingWidth - leftPaddingWidth).getString(),
                 centered.getSiblings().getLast().getString());
+    }
+
+    @Test
+    void jobStatisticsDetailUsesCenteredRequestedTablesThroughRoundForty() {
+        List<Long> roundPasses = java.util.stream.LongStream.rangeClosed(1, 40).boxed().toList();
+        List<Long> roundAttempts = java.util.Collections.nCopies(40, 100L);
+        JobStatisticsEntry entry = new JobStatisticsEntry(
+                VillagerTowerJob.ID.toString(),
+                10L,
+                3L,
+                10L,
+                20L,
+                300L,
+                new JobStatisticsTotals(
+                        1_000L, 500L, 100L, 200L,
+                        1_000.0, 100.0, 800.0, 400.0,
+                        300L, 200L, 2_000L, 250.0, 600.0
+                ),
+                1_000L,
+                2_000L,
+                3_000L,
+                roundPasses,
+                roundAttempts
+        );
+        JobStatisticsSnapshot snapshot = new JobStatisticsSnapshot(
+                3_000L, 10L, 10L, 1_000L, 2_000L, List.of(entry)
+        );
+
+        assertEquals(
+                List.of("선택(%)", "승리(%)", "평균 순위(R)"),
+                SemionDialogService.jobStatisticsSampleHeaderCells().stream().map(Component::getString).toList()
+        );
+        assertEquals(
+                List.of("10회(100.0%)", "3승(30.0%)", "2.0위(R30.0)"),
+                SemionDialogService.jobStatisticsSampleCells(snapshot, entry).stream()
+                        .map(Component::getString).toList()
+        );
+
+        List<List<String>> roundRows = SemionDialogService.jobStatisticsRoundRows(entry).stream()
+                .map(row -> row.stream().map(Component::getString).toList())
+                .toList();
+        assertEquals(10, roundRows.size());
+        assertEquals(List.of("R1 1.0%", "R11 11.0%", "R21 21.0%", "R31 31.0%"), roundRows.getFirst());
+        assertEquals(List.of("R10 10.0%", "R20 20.0%", "R30 30.0%", "R40 40.0%"), roundRows.getLast());
+
+        int renderedWidth = SemionDialogService.jobStatisticsRoundColumnWidths().stream()
+                .mapToInt(Integer::intValue)
+                .sum() + 10 * 3;
+        assertEquals(380, renderedWidth);
+
+        for (int columnCount : List.of(2, 3, 4, 5, 6)) {
+            List<Integer> widths = SemionDialogService.statisticsEqualColumnWidths(columnCount);
+            assertEquals(380, widths.stream().mapToInt(Integer::intValue).sum());
+            assertTrue(widths.stream().mapToInt(Integer::intValue).max().orElseThrow()
+                    - widths.stream().mapToInt(Integer::intValue).min().orElseThrow() <= 1);
+        }
+        assertEquals(List.of(76, 76, 76, 76, 76),
+                SemionDialogService.statisticsEqualColumnWidths(5));
+        assertEquals(List.of(64, 64, 63, 63, 63, 63),
+                SemionDialogService.statisticsEqualColumnWidths(6));
+    }
+
+    @Test
+    void jobStatisticsDetailUsesRequestedMetricAndTraitHeaders() {
+        assertEquals(
+                List.of("특성", "선택(%)", "승리(%)", "평균 순위(R)"),
+                SemionDialogService.jobStatisticsTraitHeaderCells().stream().map(Component::getString).toList()
+        );
+        assertEquals(
+                List.of("평균 처치", "평균 획득 다이아"),
+                SemionDialogService.jobStatisticsCombatHeaderCells().stream().map(Component::getString).toList()
+        );
+        assertEquals(
+                List.of("평균 소환", "최종(생산)", "보낸 위협", "받은 위협", "성공 위협(%)"),
+                SemionDialogService.jobStatisticsIncomeHeaderCells().stream().map(Component::getString).toList()
+        );
+        assertEquals(
+                List.of("라인 위협", "누수 위협", "방어율", "라인 다이아", "지원 다이아", "정리 위협"),
+                SemionDialogService.jobStatisticsDefenseHeaderCells().stream().map(Component::getString).toList()
+        );
+
+    }
+
+    @Test
+    void jobStatisticsTraitLabelsHideEveryVersion() {
+        TraitCombinationStatisticsEntry combination = new TraitCombinationStatisticsEntry(
+                VillagerTowerJob.ID.toString(),
+                "semion-td:unknown_primary",
+                1,
+                "semion-td:unknown_secondary",
+                9,
+                1L,
+                0L,
+                1L,
+                1L,
+                10L,
+                null,
+                null,
+                List.of()
+        );
+
+        assertEquals(
+                "semion-td:unknown_primary·semion-td:unknown_secondary",
+                SemionDialogService.jobStatisticsTraitLabel(combination)
+        );
     }
 
     @Test
@@ -478,8 +606,8 @@ final class SemionDialogBodyTest {
         assertEquals(
                 "<white>팀</white> <red>RED</red> <dark_gray>|</dark_gray> <white>라인</white> <yellow>#2</yellow>\n"
                         + "<aqua>◆ 다이아 120</aqua> <dark_gray>|</dark_gray> <green>⬢ 에메랄드 50</green>\n"
-                        + "<white>인컴 업그레이드 비용</white> <aqua>75</aqua> <dark_gray>|</dark_gray> <dark_green>↗</dark_green> <green>에메랄드/초 3</green>\n"
-                        + "<yellow>타워 수</yellow> <white>4/6</white> <dark_gray>|</dark_gray> <white>타워 확장 비용</white> <aqua>200 다이아</aqua> <white>+</white> <green>5 에메랄드</green>\n\n",
+                        + "<gold>인컴 업그레이드 비용</gold> <aqua>75</aqua> <dark_gray>|</dark_gray> <dark_green>↗</dark_green> <green>에메랄드/초 3</green>\n"
+                        + "<gold>타워 수</gold> <yellow>4/6</yellow> <dark_gray>|</dark_gray> <gold>타워 확장 비용</gold> <aqua>◆ 200</aqua> <white>+</white> <green>⬢ 5</green>\n\n",
                 SemionDialogService.towerControlSummary(TeamId.RED, 2, economy, 75, 4, 6, 200, 5)
         );
     }

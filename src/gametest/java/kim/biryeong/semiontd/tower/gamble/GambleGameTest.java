@@ -390,7 +390,8 @@ public final class GambleGameTest {
             kingCandidate.setData(GamblerTower.STATE, kingState);
             darkCandidate.setData(GamblerTower.STATE, darkState);
             TowerUpgradeOption bet = ProductionTowerCatalog.upgrade(
-                    GambleTowers.GAMBLER, GambleBet.ODD.upgradeId()).orElseThrow();
+                    GambleTowers.GAMBLER, GambleBet.ODD.upgradeId()).orElseThrow(() ->
+                    new IllegalStateException("The gambler odd-bet upgrade is missing after catalog reload."));
 
             kingCandidate.onUpgradeCompleted(lane, kingCandidate, bet);
             darkCandidate.onUpgradeCompleted(lane, darkCandidate, bet);
@@ -630,7 +631,9 @@ public final class GambleGameTest {
     }
 
     private static SemionTowerEntity entity(PlayerLane lane, Tower tower) {
-        return GambleRoundEffects.towerEntity(tower, lane).orElseThrow();
+        return GambleRoundEffects.towerEntity(tower, lane).orElseThrow(() ->
+                new IllegalStateException("The runtime entity is missing for tower " + tower.type().id()
+                        + " at " + tower.position() + "."));
     }
 
     private static PlayerLane testLane(GameTestHelper context, UUID owner) {

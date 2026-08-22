@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.Blocks;
 import static kim.biryeong.semiontd.tower.description.TowerDescriptionTemplate.*;
 import static kim.biryeong.semiontd.tower.end.EndConfig.Ability.*;
 import static kim.biryeong.semiontd.tower.end.EndFormatting.endText;
+import static kim.biryeong.semiontd.tower.catalog.ProductionTowerDefinitions.tower;
 import static kim.biryeong.semiontd.util.EntityTypeUtil.byId;
 
 public final class EndTowers {
@@ -25,82 +26,13 @@ public final class EndTowers {
     public static final EntityVisual PHANTOM_VISUAL = EntityVisual.builder(byId(EntityType.PHANTOM)).build();
     public static final EntityVisual DRAGON_VISUAL = EntityVisual.builder(byId(EntityType.ENDER_DRAGON)).build();
 
-    public static final TowerType BASE_END_TOWER = TowerType.builder("base_ender_dragon", "엔더 드래곤")
-            .mineralCost(0)
-            .maxHealth(200.0)
-            .range(5.0)
-            .damage(10.0)
-            .attackIntervalTicks(15)
-            .aggroPriority(100)
-            .visual(DRAGON_EGG_VISUAL)
-            .description(dragonDescription())
-            .build();
-
-    public static final TowerType T1_SHULKER_TOWER = TowerType.builder("t1_shulker_tower", "셜커")
-            .mineralCost(50)
-            .maxHealth(100)
-            .range(0)
-            .damage(5)
-            .attackIntervalTicks(20)
-            .aggroPriority(10)
-            .visual(EntityVisual.vanilla(byId(EntityType.SHULKER)))
-            .description(shulkerLineDescription("낮은", "셜커"))
-            .build();
-
-    public static final TowerType T2_SHULKER_TOWER = TowerType.builder("t2_shulker_tower", "견고한 셜커")
-            .mineralCost(100)
-            .maxHealth(150)
-            .range(0)
-            .damage(5)
-            .attackIntervalTicks(20)
-            .aggroPriority(10)
-            .visual(ShulkerVisual.builder().color(DyeColor.PURPLE).build())
-            .description(shulkerLineDescription("보통인", "견고한 셜커"))
-            .build();
-
-    public static final TowerType T3_SHULKER_TOWER = TowerType.builder("t3_shulker_tower", "완강한 셜커")
-            .mineralCost(150)
-            .maxHealth(200)
-            .range(0)
-            .damage(5)
-            .attackIntervalTicks(20)
-            .aggroPriority(10)
-            .visual(ShulkerVisual.builder().color(DyeColor.BLACK).build())
-            .description(shulkerLineDescription("높은", "완강한 셜커"))
-            .build();
-
-    public static final TowerType T1_ENDERMITE_TOWER = TowerType.builder("t1_endermite_tower", "엔더마이트")
-            .mineralCost(50)
-            .maxHealth(50)
-            .range(0)
-            .damage(10)
-            .attackIntervalTicks(20)
-            .aggroPriority(10)
-            .visual(EntityVisual.vanilla(byId(EntityType.ENDERMITE)))
-            .description(endCrystalLineDescription("낮은", "엔더마이트"))
-            .build();
-
-    public static final TowerType T2_ENDERMAN_TOWER = TowerType.builder("t2_enderman_tower", "엔더맨")
-            .mineralCost(100)
-            .maxHealth(50)
-            .range(0)
-            .damage(15)
-            .attackIntervalTicks(20)
-            .aggroPriority(10)
-            .visual(EntityVisual.vanilla(byId(EntityType.ENDERMAN)))
-            .description(endCrystalLineDescription("보통인", "엔더맨"))
-            .build();
-
-    public static final TowerType T3_END_CRYSTAL_TOWER = TowerType.builder("t3_end_crystal_tower", "엔드 수정")
-            .mineralCost(150)
-            .maxHealth(50)
-            .range(0)
-            .damage(20)
-            .attackIntervalTicks(20)
-            .aggroPriority(10)
-            .visual(EntityVisual.vanilla(byId(EntityType.END_CRYSTAL)))
-            .description(endCrystalLineDescription("높은", "엔드 수정"))
-            .build();
+    public static final TowerType BASE_END_TOWER = tower("base_ender_dragon", "엔더 드래곤", 0, 200, 5, 10, 15, 100, DRAGON_EGG_VISUAL, dragonDescription());
+    public static final TowerType T1_SHULKER_TOWER = tower("t1_shulker_tower", "셜커", 50, 100, 0, 5, 20, 10, byId(EntityType.SHULKER), shulkerLineDescription("낮은", "셜커"));
+    public static final TowerType T2_SHULKER_TOWER = tower("t2_shulker_tower", "견고한 셜커", 100, 150, 0, 5, 20, 10, ShulkerVisual.builder().color(DyeColor.PURPLE).build(), shulkerLineDescription("보통인", "견고한 셜커"));
+    public static final TowerType T3_SHULKER_TOWER = tower("t3_shulker_tower", "완강한 셜커", 150, 200, 0, 5, 20, 10, ShulkerVisual.builder().color(DyeColor.BLACK).build(), shulkerLineDescription("높은", "완강한 셜커"));
+    public static final TowerType T1_ENDERMITE_TOWER = tower("t1_endermite_tower", "엔더마이트", 50, 50, 0, 10, 20, 10, byId(EntityType.ENDERMITE), endCrystalLineDescription("낮은", "엔더마이트"));
+    public static final TowerType T2_ENDERMAN_TOWER = tower("t2_enderman_tower", "엔더맨", 100, 50, 0, 15, 20, 10, byId(EntityType.ENDERMAN), endCrystalLineDescription("보통인", "엔더맨"));
+    public static final TowerType T3_END_CRYSTAL_TOWER = tower("t3_end_crystal_tower", "엔드 수정", 150, 50, 0, 20, 20, 10, byId(EntityType.END_CRYSTAL), endCrystalLineDescription("높은", "엔드 수정"));
 
     private static final List<TowerType> ALL = List.of(
             BASE_END_TOWER,

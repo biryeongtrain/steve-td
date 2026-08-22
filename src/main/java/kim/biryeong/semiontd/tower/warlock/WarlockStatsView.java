@@ -28,22 +28,33 @@ final class WarlockStatsView {
                 lines.add(awakeningConditionLine(stats.awakening()));
             }
         }
-        lines.add(formatPermanentHealth(defense.additionalHealth(), scalingProgress(defense.rawAbsorbedHealth(), defense.effectiveAbsorbedHealth())));
-        if (defense.maximumRegenerationPerSecond() > 0.0) {
-            lines.add(formatRegeneration(defense.regenerationPerSecond(), ""));
-        } if (ranged || melee) {
+        lines.add(formatPermanentHealth(defense.additionalHealth(), ""));
+        if (ranged || melee) {
             lines.add(formatLifeSteal(defense.lifeSteal(), stackProgress(ranged ? stats.totalSacrifices() : stats.roundSacrifices(), lifeStealEvery, defense.lifeSteal(), defense.maximumLifeSteal())));
             lines.add(formatDamageReduction(defense.damageReduction(), stackProgress(ranged ? stats.roundSacrifices() : stats.totalSacrifices(), damageReductionEvery, defense.damageReduction(), defense.maximumDamageReduction())));
-        } lines.add(formatPermanentDamage(
-                combat.effectiveAttackDamage(),
-                damageProgress(combat.rawAttackDamage(), combat.effectiveAttackDamage())
-        ));
+        }
+        lines.add(formatPermanentDamage(combat.effectiveAttackDamage(), ""));
         if (melee) {
             lines.add(formatAttackSpeedReduction(combat.attackIntervalReductionTicks(), stackProgress(stats.roundSacrifices(), 1, combat.attackIntervalReductionTicks(), combat.maximumAttackIntervalReductionTicks())));
         } else if (ranged) {
             lines.add(formatAttackSpeedReduction(combat.attackIntervalReductionTicks(), maxOnlyProgress(combat.attackIntervalReductionTicks(), combat.maximumAttackIntervalReductionTicks())));
         } if (combat.showAttackRange()) {
             lines.add(formatSplashRange(combat.splashRadius(), stackProgress(ranged ? stats.totalSacrifices() : stats.roundSacrifices(), splashEvery, combat.splashRadius(), combat.maximumSplashRadius())));
+        }
+        if (ranged || melee) {
+            lines.add(formatIncomeDebuffResistance(defense.incomeDebuffResistance(), ""));
+        }
+        if (stats.awakened() && ranged && stats.awakening().regenerationPerSecond() > 0.0) {
+            lines.add(formatRegeneration(stats.awakening().regenerationPerSecond(), ""));
+        }
+        if (stats.awakened() && melee) {
+            if (stats.awakening().attackDamageBonus() > 0.0) {
+                lines.add(attackDamageText("🪓 추가 피해") + "<white>: </white>"
+                        + attackDamageText(formatNumber(stats.awakening().attackDamageBonus())));
+            }
+            if (stats.awakening().movementSpeedBonus() > 0.0) {
+                lines.add(formatMovementSpeed(stats.awakening().movementSpeedBonus(), ""));
+            }
         }
         return lines;
     }
@@ -78,16 +89,6 @@ final class WarlockStatsView {
         return maximumValue > 0.0 && currentValue >= maximumValue - 0.0001 ? "(MAX)" : "";
     }
 
-    private static String damageProgress(double rawDamage, double effectiveDamage) {
-        return scalingProgress(rawDamage, effectiveDamage);
-    }
-
-    private static String scalingProgress(double rawValue, double effectiveValue) {
-        return rawValue > effectiveValue + 0.0001
-                ? "(누적 " + formatNumber(rawValue) + ")"
-                : "";
-    }
-
     record CoreStats(
             int totalSacrifices,
             int roundSacrifices,
@@ -107,12 +108,14 @@ final class WarlockStatsView {
             boolean unlocked,
             double currentHealthRatio,
             double healthThreshold,
-            boolean onlyCoreAlive
+            boolean onlyCoreAlive,
+            double regenerationPerSecond,
+            double attackDamageBonus,
+            double movementSpeedBonus
     ) {
     }
 
     record CombatStats(
-            double rawAttackDamage,
             double effectiveAttackDamage,
             int attackIntervalReductionTicks,
             int maximumAttackIntervalReductionTicks,
@@ -124,14 +127,11 @@ final class WarlockStatsView {
 
     record DefenseStats(
             double additionalHealth,
-            double rawAbsorbedHealth,
-            double effectiveAbsorbedHealth,
-            double regenerationPerSecond,
-            double maximumRegenerationPerSecond,
             double lifeSteal,
             double maximumLifeSteal,
             double damageReduction,
-            double maximumDamageReduction
+            double maximumDamageReduction,
+            double incomeDebuffResistance
     ) {
     }
 }

@@ -329,13 +329,19 @@ public final class FutureAgencyGameTest {
         FutureAgencyStates.clear(owner);
         FutureAgencyStates.PlayerState state = FutureAgencyStates.state(owner);
         state.reconstruct();
-        for (int round = 1; round <= 10; round++) {
+        int round = 1;
+        while (state.policySelections() < 10
+                || state.stacks(FutureAgencyPolicy.CENTRAL_BATTLE) == 0) {
             state.openRound(round);
-            require(state.choose(state.offers().getFirst()), "A policy must be selectable each preparation.");
-            if (round == 5) state.promoteCommander();
+            FutureAgencyPolicy policy = state.offers().contains(FutureAgencyPolicy.CENTRAL_BATTLE)
+                    ? FutureAgencyPolicy.CENTRAL_BATTLE
+                    : state.offers().getFirst();
+            require(state.choose(policy), "A policy must be selectable each preparation.");
+            if (state.policySelections() == 5) state.promoteCommander();
+            round++;
         }
         state.saveWorld();
-        require(state.worldSaved(), "The tenth policy must allow world salvation.");
+        require(state.worldSaved(), "At least ten policies must allow world salvation.");
         PlayerLane lane = testLane(context, owner);
         GridPosition origin = floor(context, 8, 2, 3);
         GridPosition carry = floor(context, 8, 2, 8);
@@ -362,8 +368,11 @@ public final class FutureAgencyGameTest {
             lane.moveTowersToFinalDefense();
             require(original.deployedAtFinalDefense() && survivor.deployedAtFinalDefense(),
                     "Saved originals and survivors must move to final defense together.");
+            double finalDefenseDamageWithSurvivor = original.modifyAttackDamage(null, null, 100.0);
             towerEntity(lane, survivor).setHealth(0.0f);
-            require(close(original.modifyAttackDamage(null, null, 100.0), damageWithoutSurvivor),
+            double finalDefenseDamageWithoutSurvivor = original.modifyAttackDamage(null, null, 100.0);
+            double survivorDamage = 100.0 * FutureAgencyBalance.survivorDamage(state, 1);
+            require(close(finalDefenseDamageWithSurvivor - finalDefenseDamageWithoutSurvivor, survivorDamage),
                     "A dead survivor must stop contributing damage during final defense.");
             lane.resetForRound();
             require(original.position().equals(origin), "Saved agents must reset to their installed position.");

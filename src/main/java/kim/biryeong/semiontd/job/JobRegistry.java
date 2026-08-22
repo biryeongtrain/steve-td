@@ -22,6 +22,7 @@ public final class JobRegistry {
             ResonanceTowerJob.ID,
             IllagerTowerJob.ID,
             NetherTowerJob.ID,
+            EndTowerJob.ID,
             OceanTowerJob.ID,
             AncientCityTowerJob.ID,
             HeroPartyTowerJob.ID,

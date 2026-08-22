@@ -63,13 +63,13 @@ class JobRegistryTest {
                 ResonanceTowerJob.ID,
                 IllagerTowerJob.ID,
                 NetherTowerJob.ID,
+                EndTowerJob.ID,
                 OceanTowerJob.ID,
                 AncientCityTowerJob.ID,
                 HeroPartyTowerJob.ID,
                 SuccubusTowerJob.ID
         ), JobRegistry.officialBuilders().stream().map(SemionJob::id).toList());
         assertEquals(List.of(
-                EndTowerJob.ID,
                 AdversaryTowerJob.ID,
                 MageTowerJob.ID,
                 EngineerTowerJob.ID,

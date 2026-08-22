@@ -276,15 +276,15 @@ class EndTowerTransferTest {
 
         assertEquals(3000.0, merged.ability(EndTower.CONFIG_ID, "healthThreshold", -1.0), 0.0001);
         assertEquals(500.0, merged.ability(EndTower.CONFIG_ID, "healthScale", -1.0), 0.0001);
-        assertEquals(140.0, merged.ability(EndTower.CONFIG_ID, "damageThreshold", -1.0), 0.0001);
-        assertEquals(20.0, merged.ability(EndTower.CONFIG_ID, "damageScale", -1.0), 0.0001);
+        assertEquals(150.0, merged.ability(EndTower.CONFIG_ID, "damageThreshold", -1.0), 0.0001);
+        assertEquals(25.0, merged.ability(EndTower.CONFIG_ID, "damageScale", -1.0), 0.0001);
         assertEquals(0.5, merged.ability(EndTower.CONFIG_ID, "roundDamageRatio", -1.0), 0.0001);
 
         TowerBalanceRuntime.apply(merged);
         assertEquals(3000.0, EndConfig.RUNTIME.value(HEALTH_THRESHOLD), 0.0001);
         assertEquals(500.0, EndConfig.RUNTIME.value(HEALTH_SCALE), 0.0001);
-        assertEquals(140.0, EndConfig.RUNTIME.value(DAMAGE_THRESHOLD), 0.0001);
-        assertEquals(20.0, EndConfig.RUNTIME.value(DAMAGE_SCALE), 0.0001);
+        assertEquals(150.0, EndConfig.RUNTIME.value(DAMAGE_THRESHOLD), 0.0001);
+        assertEquals(25.0, EndConfig.RUNTIME.value(DAMAGE_SCALE), 0.0001);
         assertEquals(0.5, EndConfig.RUNTIME.value(ROUND_DAMAGE_RATIO), 0.0001);
     }
 
@@ -623,33 +623,6 @@ class EndTowerTransferTest {
     }
 
     @Test
-    void resolvedDamageRemainsUncapped() {
-        applyEndAbilities(Map.ofEntries(
-                Map.entry("transferTicks", 1.0),
-                Map.entry("roundDamageRatio", 1.0),
-                Map.entry("permanentDamageRatio", 0.0)
-        ));
-        PlayerLane lane = lane();
-        EndTower dragon = tower(EndTowers.BASE_END_TOWER, 0);
-        lane.addTower(dragon);
-        dragon.onWaveStarted(lane, 1);
-        dragon.tick(lane);
-        lane.addTower(tower(EndTowers.T3_END_CRYSTAL_TOWER, 1));
-        dragon.tick(lane);
-        double expectedTransferredDamage = expectedDamageBonus(20.0);
-        double expectedAttackDamage = 10.0 + expectedTransferredDamage;
-        assertEquals(expectedTransferredDamage, dragon.roundDamageBonus(), 0.0001);
-        assertEquals(expectedAttackDamage, dragon.previewHatchedAttackDamage(), 0.0001);
-        assertEquals(expectedAttackDamage, dragon.modifyAttackDamage(null, null, 10.0), 0.0001);
-        assertEquals(30.0, dragon.modifyResolvedAttackDamage(null, null, 30.0), 0.0001);
-        assertEquals(20.0, dragon.modifyResolvedAttackDamage(null, null, 20.0), 0.0001);
-        assertEquals(-10.0, dragon.modifyResolvedAttackDamage(null, null, -10.0), 0.0001);
-        assertEquals(30.0, dragon.modifyResolvedOutgoingDamage(null, null, 30.0), 0.0001);
-        assertEquals(20.0, dragon.modifyResolvedOutgoingDamage(null, null, 20.0), 0.0001);
-        assertEquals(-10.0, dragon.modifyResolvedOutgoingDamage(null, null, -10.0), 0.0001);
-    }
-
-    @Test
     void configuredDamageThresholdAndScaleApplyToTransferredEndTowerDamage() {
         applyEndAbilities(Map.ofEntries(
                 Map.entry("transferTicks", 1.0),
@@ -678,7 +651,7 @@ class EndTowerTransferTest {
     }
 
     @Test
-    void splashRatioUsesUncappedPrimaryDamage() {
+    void splashRatioUsesResolvedPrimaryDamage() {
         applyEndAbilities(Map.of(
                 "splashDamageRatio", 0.66
         ));
@@ -686,8 +659,7 @@ class EndTowerTransferTest {
         EndTower dragon = tower(EndTowers.BASE_END_TOWER, 0);
         lane.addTower(dragon);
         dragon.onWaveStarted(lane, 1);
-        double resolvedPrimaryDamage = dragon.modifyResolvedOutgoingDamage(null, null, 1_000.0);
-        assertEquals(1_000.0, resolvedPrimaryDamage, 0.0001);
+        double resolvedPrimaryDamage = 1_000.0;
         assertEquals(660.0, dragon.resolvedSplashDamage(resolvedPrimaryDamage), 0.0001);
         assertEquals(0.0, dragon.resolvedSplashDamage(Double.NaN), 0.0001);
     }

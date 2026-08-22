@@ -30,17 +30,17 @@ class WarlockAwakeningProgressTest {
     void awakeningUnlocksExactlyAtConfiguredKillThreshold() {
         UUID owner = UUID.randomUUID();
 
-        for (int kill = 1; kill < 1200; kill++) {
+        for (int kill = 1; kill < 1250; kill++) {
             assertFalse(WarlockAwakeningProgress.recordKill(owner));
         }
         WarlockAwakeningProgress.Snapshot locked = WarlockAwakeningProgress.snapshot(owner);
-        assertEquals(1199L, locked.kills());
-        assertEquals(1200L, locked.requiredKills());
+        assertEquals(1249L, locked.kills());
+        assertEquals(1250L, locked.requiredKills());
         assertFalse(locked.unlocked());
 
         assertTrue(WarlockAwakeningProgress.recordKill(owner));
         WarlockAwakeningProgress.Snapshot unlocked = WarlockAwakeningProgress.snapshot(owner);
-        assertEquals(1200L, unlocked.kills());
+        assertEquals(1250L, unlocked.kills());
         assertTrue(unlocked.unlocked());
         assertFalse(WarlockAwakeningProgress.recordKill(owner));
     }

@@ -3,7 +3,6 @@ package kim.biryeong.semiontd.tower.warlock;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 final class WarlockConfig {
     static final WarlockConfig RUNTIME = new WarlockConfig();
-    static final boolean AWAKENING_ENABLED = true;
 
     private WarlockConfig() {
     }
@@ -24,7 +23,6 @@ final class WarlockConfig {
         AWAKENING_KILLS(Scope.GLOBAL, "awakeningKills"),
         AWAKENING_THRESHOLD(Scope.GLOBAL, "awakeningThreshold"),
         BASE_RADIUS(Scope.BASE, "sacrificeRadius"),
-        BASE_HEAL(Scope.BASE, "fatalHeal"),
         BASE_PERMANENT_HEALTH(Scope.BASE, "permanentHealth"),
         BASE_PERMANENT_DAMAGE(Scope.BASE, "permanentDamage"),
         RANGED_THRESHOLD(Scope.RANGED, "threshold"),
@@ -38,6 +36,7 @@ final class WarlockConfig {
         RANGED_LIFE_EVERY(Scope.RANGED, "lifeEvery"),
         RANGED_LIFE_STEP(Scope.RANGED, "lifeStep"),
         RANGED_LIFE_CAP(Scope.RANGED, "lifeCap"),
+        RANGED_INCOME_DEBUFF_RESISTANCE(Scope.RANGED, "incomeDebuffResistance"),
         RANGED_SPLASH_EVERY(Scope.RANGED, "splashEvery"),
         RANGED_SPLASH_STEP(Scope.RANGED, "splashStep"),
         RANGED_SPLASH_CAP(Scope.RANGED, "splashCap"),
@@ -61,6 +60,7 @@ final class WarlockConfig {
         MELEE_DAMAGE_SCALE(Scope.MELEE, "damageScale"),
         MELEE_LIFE_STEP(Scope.MELEE, "lifeStep"),
         MELEE_LIFE_CAP(Scope.MELEE, "lifeCap"),
+        MELEE_INCOME_DEBUFF_RESISTANCE(Scope.MELEE, "incomeDebuffResistance"),
         MELEE_SPEED_STEP(Scope.MELEE, "speedStep"),
         MELEE_SPLASH_STEP(Scope.MELEE, "splashStep"),
         MELEE_SPLASH_CAP(Scope.MELEE, "splashCap"),

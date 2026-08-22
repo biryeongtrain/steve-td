@@ -71,6 +71,6 @@ public final class WarlockTowerJob extends SemionJob {
     }
 
     private static int awakeningKills() {
-        return TowerBalanceRuntime.abilityInt(WarlockTowers.CONFIG_ID, "awakeningKills", 1200);
+        return TowerBalanceRuntime.abilityInt(WarlockTowers.CONFIG_ID, "awakeningKills", 1250);
     }
 }

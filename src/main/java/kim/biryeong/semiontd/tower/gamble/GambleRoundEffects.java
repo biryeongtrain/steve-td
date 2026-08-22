@@ -141,12 +141,10 @@ public final class GambleRoundEffects {
     }
 
     static java.util.Optional<SemionTowerEntity> towerEntity(Tower tower, PlayerLane lane) {
-        if (!(tower instanceof EntityBackedTower backed) || backed.entityId().isEmpty()
-                || lane == null || lane.arenaWorld() == null) {
+        if (!(tower instanceof EntityBackedTower backed)) {
             return java.util.Optional.empty();
         }
-        return java.util.Optional.ofNullable(lane.arenaWorld().getEntity(backed.entityId().getAsInt()))
-                .filter(SemionTowerEntity.class::isInstance).map(SemionTowerEntity.class::cast);
+        return backed.runtimeEntity(lane);
     }
 
     private static void clearSource(SemionTowerEntity entity, ResourceLocation sourceId) {
