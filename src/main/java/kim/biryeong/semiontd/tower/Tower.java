@@ -383,6 +383,12 @@ public abstract class Tower {
         if (target == null) {
             return false;
         }
+        if (target instanceof SemionTowerEntity targetEntity
+                && targetEntity.runtimeTower() != null
+                && targetEntity.runtimeTower() != this
+                && !targetEntity.runtimeTower().canReceiveAllyHealing()) {
+            return false;
+        }
         double healed = target.receiveHealingAmount(amount);
         recordHealingDone(healed);
         return healed > 0.0;
@@ -737,6 +743,17 @@ public abstract class Tower {
             double magnitude,
             int durationTicks
     ) {
+    }
+
+    /**
+     * Whether allies may heal this tower.
+     *
+     * <p>Defaults to true. Towers that trade the support network for something else — the 개발자
+     * family's 부호 반전 defect, for example — refuse healing here so the heal goals skip them
+     * instead of wasting a cast.
+     */
+    public boolean canReceiveAllyHealing() {
+        return true;
     }
 
     public List<String> runtimeDetailLines() {

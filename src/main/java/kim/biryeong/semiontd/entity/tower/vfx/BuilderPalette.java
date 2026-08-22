@@ -29,6 +29,7 @@ public enum BuilderPalette {
     THUNDER(0x38BDF8, 0xFACC15, "minecraft:electric_spark", "minecraft:end_rod"),
     DEMON_LORD(0x7B1FA2, 0xFF1744, "minecraft:soul_fire_flame", "minecraft:damage_indicator"),
     GAMBLE(0xF9C74F, 0x9B5DE5, "minecraft:crit", "minecraft:witch"),
+    DEVELOPER(0x22C55E, 0x2DD4BF, "minecraft:electric_spark", "minecraft:wax_on"),
     SUCCUBUS(0x6D28D9, 0xF0ABFC, "minecraft:witch", "minecraft:portal"),
     BODY(0xE53935, 0xF48FB1, "minecraft:damage_indicator", "minecraft:cherry_leaves"),
     DEFAULT(0xE0E0E0, 0xFFFFFF, "minecraft:end_rod", "minecraft:crit");

@@ -39,6 +39,7 @@ import kim.biryeong.semiontd.tower.ancientcity.AncientCityTowers;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
 import kim.biryeong.semiontd.tower.army.ArmyTowers;
 import kim.biryeong.semiontd.tower.body.BodyTowers;
+import kim.biryeong.semiontd.tower.developer.DeveloperTowers;
 import kim.biryeong.semiontd.tower.engineer.EngineerTowers;
 import kim.biryeong.semiontd.tower.futureagency.FutureAgencyTowers;
 import kim.biryeong.semiontd.tower.gamble.GambleTowers;
@@ -624,6 +625,9 @@ public final class TowerVfxService {
         }
         if (GambleTowers.isGambleTower(type)) {
             return BuilderPalette.GAMBLE;
+        }
+        if (DeveloperTowers.isDeveloperTower(type)) {
+            return BuilderPalette.DEVELOPER;
         }
         if (SuccubusTowers.isSuccubusTower(type)) {
             return BuilderPalette.SUCCUBUS;

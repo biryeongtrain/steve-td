@@ -882,7 +882,10 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     @Override
     public boolean canReceiveHealing() {
-        return runtimeTower != null && runtimeTower.health() > 0.0 && runtimeTower.health() < runtimeTower.currentMaxHealth();
+        return runtimeTower != null
+                && runtimeTower.canReceiveAllyHealing()
+                && runtimeTower.health() > 0.0
+                && runtimeTower.health() < runtimeTower.currentMaxHealth();
     }
 
     @Override

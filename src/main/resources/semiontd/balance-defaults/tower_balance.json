@@ -3344,6 +3344,102 @@
       "attackIntervalTicks": 20,
       "aggroPriority": -20
     },
+    "developer_alpha": {
+      "mineralCost": 35,
+      "maxHealth": 110.0,
+      "range": 6.0,
+      "damage": 12.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 25
+    },
+    "developer_beta": {
+      "mineralCost": 130,
+      "maxHealth": 150.0,
+      "range": 6.8,
+      "damage": 22.4,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 30
+    },
+    "developer_test_build": {
+      "mineralCost": 120,
+      "maxHealth": 220.0,
+      "range": 5.5,
+      "damage": 7.2,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 45
+    },
+    "developer_release": {
+      "mineralCost": 290,
+      "maxHealth": 200.0,
+      "range": 7.3,
+      "damage": 29.6,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 35
+    },
+    "developer_lts": {
+      "mineralCost": 280,
+      "maxHealth": 200.0,
+      "range": 6.8,
+      "damage": 24.0,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 35
+    },
+    "developer_workbench": {
+      "mineralCost": 40,
+      "maxHealth": 70.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -80
+    },
+    "developer_deploy_server": {
+      "mineralCost": 120,
+      "maxHealth": 100.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -80
+    },
+    "developer_ops_center": {
+      "mineralCost": 280,
+      "maxHealth": 140.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -80
+    },
+    "developer_tester": {
+      "mineralCost": 40,
+      "maxHealth": 70.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -80
+    },
+    "developer_debugger": {
+      "mineralCost": 110,
+      "maxHealth": 100.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -80
+    },
+    "developer_dev": {
+      "mineralCost": 250,
+      "maxHealth": 140.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -80
+    },
+    "developer_profiler": {
+      "mineralCost": 90,
+      "maxHealth": 100.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": -80
+    },
     "succubus_dream_dust_t1": {
       "mineralCost": 45,
       "maxHealth": 65.0,
@@ -3959,6 +4055,16 @@
     "gamble_dark_king->bet_odd": 80,
     "gamble_dark_king->bet_even": 80,
     "gamble_dark_king->roll_two_dice": 160,
+    "developer_alpha->developer_beta": 95,
+    "developer_alpha->developer_test_build": 85,
+    "developer_beta->developer_release": 160,
+    "developer_beta->developer_lts": 150,
+    "developer_test_build->developer_release": 170,
+    "developer_test_build->developer_lts": 160,
+    "developer_workbench->developer_deploy_server": 80,
+    "developer_deploy_server->developer_ops_center": 160,
+    "developer_tester->developer_debugger": 70,
+    "developer_debugger->developer_dev": 140,
     "succubus_dream_dust_t1->succubus_dream_dust_t2": 100,
     "succubus_dream_dust_t2->succubus_dream_dust_t3": 210,
     "succubus_sleepwalker_t1->succubus_sleepwalker_t2": 110,
@@ -7003,6 +7109,128 @@
       "minimumRoll": 1.0,
       "supportPowerMultiplier": 3.5,
       "faceSixDiamondReward": 35.0
+    },
+    "developer_global": {
+      "patchAttack": 0.16,
+      "patchRange": 0.09,
+      "patchInterval": 0.12,
+      "patchHealth": 0.13,
+      "patchAggro": 8.0,
+      "patchDiminishing": 0.88,
+      "testBuildAuraBonus": 0.25,
+      "testBuildAuraRadius": 5.0,
+      "maxBugsPerTower": 4.0,
+      "maxInstability": 5.0,
+      "instabilityStallChance": 0.09,
+      "instabilityStallTicks": 60.0,
+      "maintenanceDamageBonus": 0.3,
+      "maintenancePerRound": 1.0,
+      "debugRemovalsPerRound": 1.0,
+      "reproducePerRound": 1.0,
+      "optimizationsPerMatch": 3.0,
+      "versionPinSlots": 2.0,
+      "rangeOptimizationCost": 0.5,
+      "rangeOptimizationGain": 0.6,
+      "durabilityOptimizationCost": 0.6,
+      "durabilityOptimizationGain": 0.35,
+      "judgementOptimizationCost": 0.0,
+      "judgementOptimizationGain": 0.5,
+      "fire_rateOptimizationCost": 0.75,
+      "fire_rateOptimizationGain": 1.5,
+      "accuracyOptimizationCost": 0.3,
+      "accuracyOptimizationGain": 0.9,
+      "attackOptimizationCost": 0.5,
+      "attackOptimizationGain": 1.2,
+      "slotOptimizationCost": 0.0,
+      "slotOptimizationGain": 0.3,
+      "primitiveBugPrimary": 2.0,
+      "primitiveBugSecondary": 0.5,
+      "boundaryBugPrimary": 0.85,
+      "boundaryBugSecondary": 2.0,
+      "floating_pointBugPrimary": 0.4,
+      "floating_pointBugSecondary": 0.0,
+      "integer_overflowBugPrimary": 3.0,
+      "integer_overflowBugSecondary": 0.1,
+      "timeoutBugPrimary": 0.3,
+      "timeoutBugSecondary": 0.8,
+      "buffer_overrunBugPrimary": 0.6,
+      "buffer_overrunBugSecondary": 0.4,
+      "aggro_inversionBugPrimary": 0.0,
+      "aggro_inversionBugSecondary": 0.0,
+      "reverse_sortBugPrimary": 0.0,
+      "reverse_sortBugSecondary": 0.0,
+      "infinite_loopBugPrimary": 0.0,
+      "infinite_loopBugSecondary": 0.0,
+      "hardcodedBugPrimary": 2.0,
+      "hardcodedBugSecondary": 0.6,
+      "overkillBugPrimary": 40.0,
+      "overkillBugSecondary": 0.5,
+      "aggro_stormBugPrimary": 80.0,
+      "aggro_stormBugSecondary": 0.0,
+      "stealthBugPrimary": 40.0,
+      "stealthBugSecondary": 0.3,
+      "zombie_processBugPrimary": 100.0,
+      "zombie_processBugSecondary": 0.5,
+      "exception_handlingBugPrimary": 0.3,
+      "exception_handlingBugSecondary": 0.5,
+      "garbage_collectionBugPrimary": 0.25,
+      "garbage_collectionBugSecondary": 0.0,
+      "sign_flipBugPrimary": 0.25,
+      "sign_flipBugSecondary": 0.0,
+      "memory_leakBugPrimary": 0.06,
+      "memory_leakBugSecondary": 0.6,
+      "cache_missBugPrimary": 10.0,
+      "cache_missBugSecondary": 0.0,
+      "lazy_loadingBugPrimary": 0.5,
+      "lazy_loadingBugSecondary": 1.3,
+      "first_missBugPrimary": 0.0,
+      "first_missBugSecondary": 0.0,
+      "null_pointerBugPrimary": 0.15,
+      "null_pointerBugSecondary": 0.0,
+      "price_tagBugPrimary": 1.0,
+      "price_tagBugSecondary": 0.0,
+      "rollback_failureBugPrimary": 0.0,
+      "rollback_failureBugSecondary": 0.0,
+      "read_onlyBugPrimary": 0.2,
+      "read_onlyBugSecondary": 0.0,
+      "basePatchSlots": 1.0,
+      "patchSlotsPerTowers": 4.0
+    },
+    "developer_alpha": {
+      "patchScale": 0.85,
+      "hotfixScale": 1.0,
+      "bugChance": 0.35
+    },
+    "developer_beta": {
+      "patchScale": 1.0,
+      "hotfixScale": 1.0,
+      "bugChance": 0.2
+    },
+    "developer_test_build": {
+      "patchScale": 1.0,
+      "hotfixScale": 1.0,
+      "bugChance": 0.2
+    },
+    "developer_release": {
+      "patchScale": 1.4,
+      "hotfixScale": 0.5,
+      "bugChance": 0.0
+    },
+    "developer_lts": {
+      "patchScale": 1.0,
+      "hotfixScale": 1.5,
+      "bugChance": 0.0
+    },
+    "developer_workbench": {
+      "patchSlots": 2.0
+    },
+    "developer_deploy_server": {
+      "patchSlots": 3.0,
+      "hotfixesPerRound": 1.0
+    },
+    "developer_ops_center": {
+      "patchSlots": 6.0,
+      "hotfixesPerRound": 2.0
     },
     "succubus_global": {
       "maxStacks": 10.0,

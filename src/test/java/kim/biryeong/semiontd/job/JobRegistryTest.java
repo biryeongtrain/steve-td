@@ -45,7 +45,7 @@ class JobRegistryTest {
         JobRegistry.configureAvailability(disabled);
 
         assertTrue(JobRegistry.find(NetherTowerJob.ID).isPresent());
-        assertEquals(28, JobRegistry.all().size());
+        assertEquals(29, JobRegistry.all().size());
         assertTrue(JobRegistry.officialBuilders().stream().anyMatch(job -> job.id().equals(NetherTowerJob.ID)));
         assertTrue(JobRegistry.isEnabled(JobRegistry.defaultJob()));
         assertFalse(JobRegistry.isEnabled(NetherTowerJob.ID));
@@ -82,9 +82,10 @@ class JobRegistryTest {
                 ThunderTowerJob.ID,
                 DemonLordTowerJob.ID,
                 GambleTowerJob.ID,
-                BodyTowerJob.ID
+                BodyTowerJob.ID,
+                DeveloperTowerJob.ID
         ), JobRegistry.creativeBuilders().stream().map(SemionJob::id).toList());
-        assertEquals(28, JobRegistry.all().size());
+        assertEquals(29, JobRegistry.all().size());
         assertTrue(JobRegistry.officialBuilders().stream().noneMatch(JobRegistry.defaultJob()::equals));
         assertTrue(JobRegistry.creativeBuilders().stream().noneMatch(JobRegistry.defaultJob()::equals));
     }
@@ -97,7 +98,7 @@ class JobRegistryTest {
         ).toList();
         Set<String> optionalLabels = Set.of("주의 ", "연계 ", "성장 ");
 
-        assertEquals(27, builders.size());
+        assertEquals(28, builders.size());
         for (SemionJob builder : builders) {
             List<String> lines = builder.description().stream().map(line -> line.getString()).toList();
             assertTrue(lines.size() >= 2 && lines.size() <= 3, builder.id() + " 설명은 2~3줄이어야 합니다.");

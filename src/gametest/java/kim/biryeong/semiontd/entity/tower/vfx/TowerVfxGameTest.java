@@ -13,6 +13,8 @@ import kim.biryeong.semiontd.api.area.AreaEffectOutcome;
 import kim.biryeong.semiontd.api.area.AreaVfxSpec;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
+import kim.biryeong.semiontd.config.TowerBalanceConfig;
+import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
@@ -29,6 +31,12 @@ import kim.biryeong.semiontd.tower.body.BodyTowers;
 import kim.biryeong.semiontd.tower.engineer.EngineerTowers;
 import kim.biryeong.semiontd.tower.demonlord.DemonLordSkill;
 import kim.biryeong.semiontd.tower.demonlord.DemonLordTowers;
+import kim.biryeong.semiontd.tower.developer.DeveloperTowers;
+import kim.biryeong.semiontd.tower.developer.DeveloperOptimization;
+import kim.biryeong.semiontd.tower.developer.DeveloperPatch;
+import kim.biryeong.semiontd.tower.developer.DeveloperPatchService;
+import kim.biryeong.semiontd.tower.developer.DeveloperStates;
+import kim.biryeong.semiontd.tower.developer.DeveloperTower;
 import kim.biryeong.semiontd.tower.futureagency.FutureAgencyTowers;
 import kim.biryeong.semiontd.tower.gamble.GambleTowers;
 import kim.biryeong.semiontd.tower.hero.HeroPartyTowers;
@@ -98,9 +106,49 @@ public final class TowerVfxGameTest {
         assertPalette(GambleTowers.DICE_T1, BuilderPalette.GAMBLE);
         assertPalette(GambleTowers.GAMBLER, BuilderPalette.GAMBLE);
         assertPalette(GambleTowers.SPECTATOR_T3, BuilderPalette.GAMBLE);
+        for (TowerType type : DeveloperTowers.all()) {
+            assertPalette(type, BuilderPalette.DEVELOPER);
+        }
         assertPalette(BodyTowers.HEART_T1, BuilderPalette.BODY);
         assertPalette(SuccubusTowers.SUCCUBUS, BuilderPalette.SUCCUBUS);
         context.succeed();
+    }
+
+    @GameTest
+    public void developerStateChangesReuseSharedBuffDebuffAndPulseVfx(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        UUID owner = UUID.nameUUIDFromBytes("developer-state-vfx".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        TestDeveloperTower runtimeTower = new TestDeveloperTower(DeveloperTowers.RELEASE, owner);
+        SemionTowerEntity tower = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
+        tower.setPos(2.0, 2.0, 2.0);
+        tower.configure(runtimeTower, null);
+        runtimeTower.bind(tower);
+        List<AreaEffectVfxEvent> observed = new ArrayList<>();
+        TowerVfxService.setAreaEffectTestObserver(observed::add);
+        try {
+            DeveloperStates.openRound(owner, 1, new DeveloperStates.Capacity(
+                    1, 1, false, false, 0, false, 0));
+            if (!DeveloperPatchService.applyPatch(null, runtimeTower, DeveloperPatch.ATTACK, false).success()
+                    || !DeveloperPatchService.applyPatch(null, runtimeTower, DeveloperPatch.RANGE, true).success()
+                    || !DeveloperPatchService.applyOptimization(
+                    null, runtimeTower, DeveloperOptimization.JUDGEMENT).success()) {
+                context.fail(net.minecraft.network.chat.Component.literal(
+                        "Expected developer state changes to succeed."));
+                return;
+            }
+            DeveloperPatchService.applyPatch(null, runtimeTower, DeveloperPatch.HEALTH, false);
+
+            List<ResourceLocation> styles = observed.stream().map(event -> event.visual().styleId()).toList();
+            if (!styles.equals(List.of(AreaVfxStyles.BUFF, AreaVfxStyles.DEBUFF, AreaVfxStyles.PULSE))) {
+                context.fail(net.minecraft.network.chat.Component.literal(
+                        "Successful developer changes must emit shared styles only: " + styles));
+                return;
+            }
+            context.succeed();
+        } finally {
+            DeveloperStates.clear(owner);
+            TowerVfxService.setAreaEffectTestObserver(null);
+        }
     }
 
     @GameTest
@@ -284,6 +332,19 @@ public final class TowerVfxGameTest {
         var dispatcher = context.getLevel().getServer().getCommands().getDispatcher();
         for (String effect : List.of("heartbeat", "eye_laser")) {
             String command = "semiontd-debug vfx body " + effect;
+            var parsed = dispatcher.parse(command, context.getLevel().getServer().createCommandSourceStack());
+            if (parsed.getContext().getNodes().isEmpty() || parsed.getReader().canRead()) {
+                throw new AssertionError("Expected /" + command + " to parse completely");
+            }
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void developerDebugCommandsParse(GameTestHelper context) {
+        var dispatcher = context.getLevel().getServer().getCommands().getDispatcher();
+        for (String effect : List.of("attack", "patch", "hotfix", "reproduce", "maintenance", "pin")) {
+            String command = "semiontd-debug vfx developer " + effect;
             var parsed = dispatcher.parse(command, context.getLevel().getServer().createCommandSourceStack());
             if (parsed.getContext().getNodes().isEmpty() || parsed.getReader().canRead()) {
                 throw new AssertionError("Expected /" + command + " to parse completely");
@@ -693,6 +754,16 @@ public final class TowerVfxGameTest {
         @Override
         public boolean execute(PlayerLane lane) {
             return false;
+        }
+    }
+
+    private static final class TestDeveloperTower extends DeveloperTower {
+        private TestDeveloperTower(TowerType type, UUID owner) {
+            super(type, owner, TeamId.RED, 1, new GridPosition(2, 2, 2));
+        }
+
+        private void bind(SemionTowerEntity entity) {
+            configureEntityAfterSpawn(entity, null);
         }
     }
 }

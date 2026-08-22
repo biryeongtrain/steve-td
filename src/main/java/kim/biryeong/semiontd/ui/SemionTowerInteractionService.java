@@ -7,6 +7,7 @@ import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerPlacementPositions;
 import kim.biryeong.semiontd.tower.engineer.EngineerGolemTower;
+import kim.biryeong.semiontd.tower.developer.DeveloperPatchService;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.core.BlockPos;
@@ -51,6 +52,9 @@ public final class SemionTowerInteractionService {
         if (tower == null) {
             return InteractionResult.PASS;
         }
+        if (DeveloperPatchService.handlePendingReproduction(game, serverPlayer, tower)) {
+            return InteractionResult.SUCCESS;
+        }
 
         gameManager.dialogService().showTowerDetails(
                 serverPlayer,
@@ -84,6 +88,9 @@ public final class SemionTowerInteractionService {
                 .orElse(null);
         if (tower == null) {
             return InteractionResult.PASS;
+        }
+        if (DeveloperPatchService.handlePendingReproduction(game, serverPlayer, tower)) {
+            return InteractionResult.SUCCESS;
         }
         gameManager.dialogService().showTowerDetails(
                 serverPlayer, game, tower, gameManager.buildGuideService(), null

@@ -44,6 +44,8 @@ import kim.biryeong.semiontd.tower.TowerCapacity;
 import kim.biryeong.semiontd.tower.TowerPlacementPositions;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
+import kim.biryeong.semiontd.tower.developer.DeveloperTower;
+import kim.biryeong.semiontd.tower.developer.DeveloperTowers;
 import kim.biryeong.semiontd.tower.end.EndTower;
 import kim.biryeong.semiontd.tower.end.EndTowerState;
 import kim.biryeong.semiontd.tower.futureagency.FutureAgencyLeaderTower;
@@ -908,6 +910,17 @@ public final class SemionDialogService {
                 actions.add(actionButton("용사 상점", "/semiontd hero shop", "장비를 구매·강화·교체합니다."));
                 actions.add(actionButton("현재 퀘스트", "/semiontd hero quest", "현재 웨이브 퀘스트를 확인합니다."));
                 actions.add(actionButton("파티 현황", "/semiontd hero party", "확정된 동료와 성장치를 확인합니다."));
+            }
+            if (tower instanceof DeveloperTower && DeveloperTowers.isGrowthTower(tower.type())) {
+                actions.add(actionButton(
+                        "패치 콘솔",
+                        "/semiontd developer console "
+                                + managementPosition.x() + " "
+                                + managementPosition.y() + " "
+                                + managementPosition.z(),
+                        Component.literal("정식 패치·핫픽스·긴급 점검·최적화·재현·버전 고정을 이 타워에 적용합니다."),
+                        BUTTON_WIDTH
+                ));
             }
             if (tower.canBeSold()) {
                 actions.add(actionButton(
