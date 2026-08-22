@@ -301,9 +301,9 @@ public final class AtlantisIntegrationGameTest {
                 dolphin.onAttackResolved(dolphinEntity, carrierEntity, 1.0, 1.0, 1.0, false);
             }
 
-            requireClose(904.0, carrier.health(), "The pressure carrier must be included in the burst.");
-            requireClose(904.0, nearby.health(), "A nearby target must take the same pressure burst.");
-            requireClose(192.0, dolphin.roundMagicDamageDealt(),
+            requireClose(920.0, carrier.health(), "The pressure carrier must be included in the burst.");
+            requireClose(920.0, nearby.health(), "A nearby target must take the same pressure burst.");
+            requireClose(160.0, dolphin.roundMagicDamageDealt(),
                     "Both pressure hits must be attributed as magic damage.");
             require(OWNER.equals(carrier.lastHitPlayerId().orElse(null))
                             && carrier.lastHitSourceKind() == KillSourceKind.TOWER,

@@ -237,7 +237,9 @@ public class WarlockTower extends EntityBackedTower {
             return;
         }
         regenerationTicks %= intervalTicks;
-        syncHealth(health() + amount);
+        double before = health();
+        syncHealth(before + amount);
+        recordHealingDone(health() - before);
         onStateChanged(lane);
     }
 

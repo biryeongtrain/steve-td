@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.tower.queen;
 
 import kim.biryeong.semiontd.SemionTd;
+import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.monster.MonsterDataKey;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import net.minecraft.resources.ResourceLocation;
@@ -8,6 +9,8 @@ import net.minecraft.resources.ResourceLocation;
 public final class QueenShrink {
     private static final MonsterDataKey<Double> POINTS = new MonsterDataKey<>(
             ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "queen_shrink_points"), Double.class);
+    private static final ResourceLocation SHRINK_DEBUFF_SOURCE =
+            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "queen_shrink_debuff");
 
     private QueenShrink() {}
 
@@ -16,11 +19,15 @@ public final class QueenShrink {
                 || !Double.isFinite(points) || points <= 0.0) return false;
         double currentScale = target.runtimeMonster().permanentStatScale();
         double minimumScale = QueenBalance.minimumStatScale();
-        if (currentScale <= minimumScale) return false;
+        if (currentScale <= minimumScale) {
+            syncDebuffs(target);
+            return false;
+        }
         double requestedFactor = Math.pow(QueenBalance.shrinkFactorPerPoint(), points);
         double factor = Math.max(minimumScale, currentScale * requestedFactor) / currentScale;
         if (factor >= 1.0) return false;
         target.applyPermanentStatScale(factor, QueenBalance.minimumVisualScale());
+        syncDebuffs(target);
         double appliedPoints = Math.min(points, Math.log(factor) / Math.log(QueenBalance.shrinkFactorPerPoint()));
         target.runtimeMonster().setData(POINTS, points(target) + appliedPoints);
         return true;
@@ -29,5 +36,13 @@ public final class QueenShrink {
     public static double points(SemionMonsterEntity target) {
         return target == null || target.runtimeMonster() == null
                 ? 0.0 : target.runtimeMonster().getData(POINTS).orElse(0.0);
+    }
+
+    private static void syncDebuffs(SemionMonsterEntity target) {
+        double movementReduction = 1.0 - target.runtimeMonster().permanentStatScale();
+        target.setPersistentEffect(
+                TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION, SHRINK_DEBUFF_SOURCE, movementReduction);
+        target.setPersistentEffect(
+                TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION, SHRINK_DEBUFF_SOURCE, movementReduction * 0.5);
     }
 }

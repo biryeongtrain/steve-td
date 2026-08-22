@@ -2,8 +2,6 @@ package kim.biryeong.semiontd.tower.demonlord;
 
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import eu.pb4.sgui.api.gui.SimpleGui;
-import kim.biryeong.semiontd.config.TowerBalanceRuntime;
-import kim.biryeong.semiontd.game.PlayerEconomy;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -21,12 +19,10 @@ public final class DemonLordStatGui extends SimpleGui {
     private static final int FIRST_STAT_SLOT = 10;
 
     private final ServerPlayer owner;
-    private final PlayerEconomy economy;
 
-    public DemonLordStatGui(ServerPlayer owner, PlayerEconomy economy) {
+    public DemonLordStatGui(ServerPlayer owner) {
         super(MenuType.GENERIC_9x3, owner, false);
         this.owner = owner;
-        this.economy = economy;
         setTitle(Component.literal("스탯 포인트 분배"));
         setLockPlayerInventory(true);
         refresh();
@@ -53,22 +49,20 @@ public final class DemonLordStatGui extends SimpleGui {
 
         int slot = FIRST_STAT_SLOT;
         for (DemonLordStat stat : DemonLordStat.values()) {
-            int diamondCost = statDiamondCost();
-            boolean affordable = state.unspentPoints() > 0
-                    && economy != null && economy.diamond() >= diamondCost;
+            boolean affordable = state.unspentPoints() > 0;
             GuiElementBuilder builder = new GuiElementBuilder(stat.icon())
                     .setName(Component.literal(stat.displayName() + "  " + state.points(stat) + "포인트")
                             .withStyle(ChatFormatting.YELLOW))
                     .addLoreLineRaw(Component.literal(stat.description()).withStyle(ChatFormatting.GRAY))
                     .addLoreLineRaw(Component.literal("현재 " + currentEffect(state, stat))
                             .withStyle(ChatFormatting.GREEN))
-                    .addLoreLineRaw(Component.literal("비용: 1포인트 + " + diamondCost + "다이아")
+                    .addLoreLineRaw(Component.literal("비용: 1포인트")
                             .withStyle(ChatFormatting.AQUA))
-                    .addLoreLineRaw(Component.literal(affordable ? "클릭: 투자" : unavailableReason(state, diamondCost))
+                    .addLoreLineRaw(Component.literal(affordable ? "클릭: 투자" : "남은 포인트가 없습니다.")
                             .withStyle(affordable ? ChatFormatting.WHITE : ChatFormatting.DARK_GRAY));
             if (affordable) {
                 builder.setCallback((clicked, type, action) -> {
-                    if (tryAllocate(state, stat, economy)) {
+                    if (tryAllocate(state, stat)) {
                         state.markLoadoutDirty();
                         refresh();
                     }
@@ -82,27 +76,8 @@ public final class DemonLordStatGui extends SimpleGui {
                 .setCallback((clicked, type, action) -> close()));
     }
 
-    static boolean tryAllocate(DemonLordState state, DemonLordStat stat, PlayerEconomy economy) {
-        int cost = statDiamondCost();
-        if (state == null || stat == null || economy == null || state.unspentPoints() <= 0
-                || !economy.spendDiamond(cost)) {
-            return false;
-        }
-        if (state.allocate(stat)) {
-            return true;
-        }
-        economy.addDiamond(cost);
-        return false;
-    }
-
-    static int statDiamondCost() {
-        return TowerBalanceRuntime.abilityInt(DemonLordTowers.GLOBAL_CONFIG_ID, "statDiamondCost", 50);
-    }
-
-    private String unavailableReason(DemonLordState state, int diamondCost) {
-        return state.unspentPoints() <= 0
-                ? "남은 포인트가 없습니다."
-                : "다이아가 " + diamondCost + "개 필요합니다.";
+    static boolean tryAllocate(DemonLordState state, DemonLordStat stat) {
+        return state != null && stat != null && state.allocate(stat);
     }
 
     /** 지금 이 스탯이 실제로 주고 있는 값입니다. 포인트 숫자만으로는 체감이 안 옵니다. */

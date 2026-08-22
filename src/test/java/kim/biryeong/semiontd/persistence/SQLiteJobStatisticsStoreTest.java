@@ -20,9 +20,11 @@ import kim.biryeong.semiontd.game.MatchParticipantResult;
 import kim.biryeong.semiontd.game.MatchResult;
 import kim.biryeong.semiontd.game.MatchResultGroup;
 import kim.biryeong.semiontd.game.PlayerMatchStatsSnapshot;
+import kim.biryeong.semiontd.game.PlayerRoundMetricsSnapshot;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.game.TeamMatchResult;
 import kim.biryeong.semiontd.game.TowerCompositionEntry;
+import kim.biryeong.semiontd.game.TowerRoundMetricsSnapshot;
 import kim.biryeong.semiontd.statistics.JobStatisticsEntry;
 import kim.biryeong.semiontd.statistics.JobStatisticsSnapshot;
 import kim.biryeong.semiontd.statistics.TraitCombinationStatisticsEntry;
@@ -331,6 +333,7 @@ final class SQLiteJobStatisticsStoreTest {
         json.getAsJsonArray("participants").get(0).getAsJsonObject().remove("traitLoadout");
         json.getAsJsonArray("participants").get(0).getAsJsonObject().remove("finalTowerComposition");
         json.getAsJsonArray("participants").get(0).getAsJsonObject().remove("buildActions");
+        json.getAsJsonArray("participants").get(0).getAsJsonObject().remove("roundMetrics");
         json.remove("catalogVersion");
 
         MatchResult legacy = gson.fromJson(json, MatchResult.class);
@@ -341,6 +344,7 @@ final class SQLiteJobStatisticsStoreTest {
         assertEquals(TraitLoadoutSnapshot.none(), legacy.participants().getFirst().traitLoadout());
         assertEquals(List.of(), legacy.participants().getFirst().finalTowerComposition());
         assertEquals(List.of(), legacy.participants().getFirst().buildActions());
+        assertEquals(List.of(), legacy.participants().getFirst().roundMetrics());
         assertNull(legacy.catalogVersion());
 
         JobStatisticsSnapshot snapshot = new SQLiteJobStatisticsStore(tempDir.resolve("job-statistics.db"))
@@ -348,6 +352,72 @@ final class SQLiteJobStatisticsStoreTest {
         assertEquals(0L, snapshot.eligibleMatchCount());
         assertEquals(0L, snapshot.participantAppearances());
         assertTrue(snapshot.jobs().isEmpty());
+    }
+
+    @Test
+    void storesRoundCombatMetricsAndReplacesThemDuringRescan() throws Exception {
+        Path history = tempDir.resolve("round-metrics-history.json");
+        Path database = tempDir.resolve("round-metrics-statistics.db");
+        FileMatchResultRepository repository = new FileMatchResultRepository(history);
+        SQLiteJobStatisticsStore store = new SQLiteJobStatisticsStore(database);
+
+        repository.saveMatchResult(singlePlayerMetricsResult(31L, MatchMode.NORMAL, 120.0));
+        store.rebuildFromHistory(null, history);
+        repository.saveMatchResult(singlePlayerMetricsResult(31L, MatchMode.NORMAL, 240.0));
+        store.rebuildFromHistory(null, history);
+
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database.toAbsolutePath());
+             var statement = connection.createStatement()) {
+            try (var result = statement.executeQuery("""
+                    SELECT wave_duration_ticks, combat_ticks, tower_count_start, tower_count_end,
+                           emerald_production_upgrade_count, emerald_per_second, income,
+                           emerald_balance, diamond_balance, tower_limit_purchase_count, monster_kills
+                    FROM job_stat_participant_round_metrics
+                    """)) {
+                assertTrue(result.next());
+                assertEquals(200, result.getInt(1));
+                assertEquals(21, result.getInt(2));
+                assertEquals(2, result.getInt(3));
+                assertEquals(1, result.getInt(4));
+                assertEquals(3, result.getInt(5));
+                assertEquals(8L, result.getLong(6));
+                assertEquals(90L, result.getLong(7));
+                assertEquals(40L, result.getLong(8));
+                assertEquals(600L, result.getLong(9));
+                assertEquals(2, result.getInt(10));
+                assertEquals(7L, result.getLong(11));
+                assertTrue(!result.next());
+            }
+            try (var result = statement.executeQuery("""
+                    SELECT sample_count, start_count, end_alive_count, death_count,
+                           physical_damage_dealt, magic_damage_dealt, damage_taken,
+                           healing_done, kill_count, first_combat_tick, last_combat_tick, survival_ticks
+                    FROM job_stat_participant_round_tower_metrics
+                    """)) {
+                assertTrue(result.next());
+                assertEquals(2, result.getInt(1));
+                assertEquals(2, result.getInt(2));
+                assertEquals(1, result.getInt(3));
+                assertEquals(1, result.getInt(4));
+                assertEquals(240.0, result.getDouble(5), 0.0001);
+                assertEquals(30.0, result.getDouble(6), 0.0001);
+                assertEquals(45.0, result.getDouble(7), 0.0001);
+                assertEquals(20.0, result.getDouble(8), 0.0001);
+                assertEquals(4L, result.getLong(9));
+                assertEquals(10, result.getInt(10));
+                assertEquals(30, result.getInt(11));
+                assertEquals(300L, result.getLong(12));
+                assertTrue(!result.next());
+            }
+        }
+
+        new SQLiteJobStatisticsStore(database).ingest(singlePlayerMetricsResult(32L, MatchMode.TEST, 999.0));
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database.toAbsolutePath());
+             var statement = connection.createStatement();
+             var result = statement.executeQuery("SELECT COUNT(*) FROM job_stat_participant_round_metrics")) {
+            assertTrue(result.next());
+            assertEquals(1, result.getInt(1));
+        }
     }
 
     private static MatchResult singlePlayerResult(long id, MatchMode mode, String jobId) {
@@ -373,6 +443,61 @@ final class SQLiteJobStatisticsStoreTest {
                 Set.of(TeamId.RED),
                 List.of(teamResult(TeamId.RED, 1, true, -1)),
                 finalRound,
+                mode
+        );
+    }
+
+    private static MatchResult singlePlayerMetricsResult(long id, MatchMode mode, double physicalDamage) {
+        MatchParticipantResult base = participant(
+                "metrics-" + id,
+                TeamId.RED,
+                true,
+                VILLAGER,
+                PlayerMatchStatsSnapshot.empty(),
+                List.of(1),
+                List.of(1)
+        );
+        TowerRoundMetricsSnapshot tower = new TowerRoundMetricsSnapshot(
+                "semion-td:test_tower",
+                2,
+                2,
+                1,
+                1,
+                physicalDamage,
+                30.0,
+                45.0,
+                20.0,
+                4,
+                10,
+                30,
+                300
+        );
+        PlayerRoundMetricsSnapshot round = new PlayerRoundMetricsSnapshot(
+                1, 200, 21, 2, 1, 1, 3, 8, 90, 40, 600, 2, 7, List.of(tower)
+        );
+        MatchParticipantResult participant = new MatchParticipantResult(
+                base.playerId(),
+                base.playerName(),
+                base.teamId(),
+                base.winner(),
+                base.stats(),
+                base.jobId(),
+                base.attemptedRounds(),
+                base.clearedRounds(),
+                base.traitLoadout(),
+                base.finalTowerComposition(),
+                base.buildActions(),
+                List.of(round)
+        );
+        return new MatchResult(
+                new MatchId(id),
+                id * 1_000L,
+                id * 1_000L + 500L,
+                List.of(participant),
+                Set.of(),
+                Set.of(TeamId.RED),
+                List.of(teamResult(TeamId.RED, 1, true, -1)),
+                1,
                 mode
         );
     }

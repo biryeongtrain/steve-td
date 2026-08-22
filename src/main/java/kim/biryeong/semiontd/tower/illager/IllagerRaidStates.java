@@ -55,15 +55,29 @@ public final class IllagerRaidStates {
     public static double attackSpeedBonus(UUID playerId) {
         return get(playerId)
                 .filter(IllagerRaidState::active)
-                .map(state -> state.roundStartTowerCount() * ability("attackSpeedPercentPerTower", 0.02))
+                .map(state -> attackSpeedBonusForTowerCount(state.roundStartTowerCount()))
                 .orElse(0.0);
     }
 
     public static double damageBonus(UUID playerId) {
         return get(playerId)
                 .filter(IllagerRaidState::active)
-                .map(state -> state.roundStartTowerCount() * ability("damagePercentPerTower", 0.05))
+                .map(state -> damageBonusForTowerCount(state.roundStartTowerCount()))
                 .orElse(0.0);
+    }
+
+    static double attackSpeedBonusForTowerCount(int towerCount) {
+        return Math.min(
+                ability("attackSpeedBonusCap", 0.20),
+                Math.max(0, towerCount) * ability("attackSpeedPercentPerTower", 0.02)
+        );
+    }
+
+    static double damageBonusForTowerCount(int towerCount) {
+        return Math.min(
+                ability("damageBonusCap", 0.60),
+                Math.max(0, towerCount) * ability("damagePercentPerTower", 0.06)
+        );
     }
 
     public static void onMonsterKilled(Map<UUID, SemionPlayer> players, Monster monster) {

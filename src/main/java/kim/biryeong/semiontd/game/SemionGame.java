@@ -76,6 +76,7 @@ public final class SemionGame {
     public static final int DEFAULT_PREPARE_TICKS = 25 * 20;
     public static final int DEFAULT_WAVE_FINAL_DEFENSE_TICKS = 90 * 20;
     static final int LEADER_TARGET_COOLDOWN_ROUNDS = 3;
+    private static final String DEMON_LORD_METRICS_ID = "semion-td:demon_lord";
 
     private EconomyConfig economyConfig;
     private WaveConfig waveConfig;
@@ -103,6 +104,9 @@ public final class SemionGame {
     private final Map<UUID, Integer> lastTeamMoneyReceivedRound = new java.util.HashMap<>();
     private final Map<UUID, Set<Integer>> attemptedRoundsByPlayer = new java.util.HashMap<>();
     private final Map<UUID, Set<Integer>> clearedRoundsByPlayer = new java.util.HashMap<>();
+    private final Map<UUID, Integer> skippedWaveThroughRound = new java.util.HashMap<>();
+    private final Map<UUID, Long> roundKillBaselines = new java.util.HashMap<>();
+    private final Map<UUID, List<PlayerRoundMetricsSnapshot>> roundMetricsByPlayer = new java.util.HashMap<>();
     private final List<TeamEliminationRecord> eliminationOrder = new ArrayList<>();
     private boolean sandboxMode;
     private boolean tutorialMode;
@@ -118,9 +122,11 @@ public final class SemionGame {
     private long tickCounter;
     private long activeMatchTicks;
     private int phaseTicks;
+    private int completedWaveDurationTicks;
     private boolean finalDefenseForcedThisRound;
     private boolean tutorialFinalDefenseExplanation;
     private boolean emeraldIncomeBoostAnnounced;
+    private boolean lateJoinDisabledAnnounced;
     private String catalogVersion;
     private RoundWaveConfig selectedRoundWave;
 
@@ -739,7 +745,8 @@ public final class SemionGame {
                         recordedRounds(clearedRoundsByPlayer, player.uuid()),
                         player.traitLoadoutSnapshot(),
                         finalTowerComposition(player),
-                        buildGuideService == null ? List.of() : buildGuideService.recordedActions(player.uuid())
+                        buildGuideService == null ? List.of() : buildGuideService.recordedActions(player.uuid()),
+                        roundMetricsByPlayer.getOrDefault(player.uuid(), List.of())
                 ))
                 .toList();
         return Optional.of(new MatchResult(
@@ -779,6 +786,10 @@ public final class SemionGame {
         eliminationOrder.clear();
         attemptedRoundsByPlayer.clear();
         clearedRoundsByPlayer.clear();
+        skippedWaveThroughRound.clear();
+        lateJoinDisabledAnnounced = false;
+        roundKillBaselines.clear();
+        roundMetricsByPlayer.clear();
         initialSpectatorIds.addAll(plan.spectatorIds());
         matchSpectatorIds.addAll(plan.spectatorIds());
 
@@ -911,6 +922,9 @@ public final class SemionGame {
         lastTeamMoneyReceivedRound.clear();
         attemptedRoundsByPlayer.clear();
         clearedRoundsByPlayer.clear();
+        skippedWaveThroughRound.clear();
+        roundKillBaselines.clear();
+        roundMetricsByPlayer.clear();
         eliminationOrder.clear();
         advancementService.clear();
         selectedRoundWave = null;
@@ -1127,6 +1141,60 @@ public final class SemionGame {
         return true;
     }
 
+    public boolean addLateParticipant(
+            MinecraftServer server,
+            ServerPlayer player,
+            AssignedParticipant participant,
+            TraitLoadout traitLoadout,
+            SemionJob job,
+            int requestedRound
+    ) {
+        if (server == null || player == null || participant == null || job == null
+                || !rosterLocked || phase == RoundPhase.WAITING || phase == RoundPhase.ENDED
+                || requestedRound < 1 || requestedRound > 5
+                || !player.getUUID().equals(participant.uuid())) {
+            return false;
+        }
+        TraitSelectionSnapshot snapshot = new TraitSelectionSnapshot(Map.of(
+                participant.uuid(), traitLoadout == null ? TraitLoadout.none() : traitLoadout
+        ));
+        if (!activateParticipant(participant, snapshot, job)) {
+            return false;
+        }
+
+        SemionPlayer latePlayer = players.get(participant.uuid());
+        latePlayer.economy().addDiamond(lateJoinCatchUpDiamond(
+                waveConfig,
+                requestedRound,
+                participant.laneId(),
+                economyConfig.startingIncome()
+        ));
+        if (requestedRound >= currentRound) {
+            skippedWaveThroughRound.put(participant.uuid(), requestedRound);
+        }
+        initialSpectatorIds.remove(participant.uuid());
+        matchSpectatorIds.remove(participant.uuid());
+        VanillaTeamBridge.assignPlayer(server, player, participant.teamId());
+        placeActivePlayer(player, latePlayer);
+        job.onMatchStarted(new JobContext(this, latePlayer));
+        server.getPlayerList().broadcastSystemMessage(
+                SemionText.prefixedMini(lateJoinAnnouncementMarkup(participant.teamId(), participant.name())),
+                false
+        );
+        return true;
+    }
+
+    static long lateJoinCatchUpDiamond(WaveConfig waveConfig, int requestedRound, int laneId, long startingIncome) {
+        long reward = Math.max(0, startingIncome) * 5L;
+        for (int round = 1; round <= Math.min(5, Math.max(0, requestedRound)); round++) {
+            reward += waveConfig.configForRound(round).stream()
+                    .flatMap(config -> config.entriesForLane("lane_" + laneId).stream())
+                    .mapToLong(entry -> entry.mineralReward() * (long) entry.count())
+                    .sum();
+        }
+        return reward;
+    }
+
     public boolean canSpectateTeam(TeamId targetTeam) {
         return spectatorArenaForActiveTeam(targetTeam).isPresent();
     }
@@ -1187,6 +1255,7 @@ public final class SemionGame {
     private void startWavePhase() {
         phase = RoundPhase.LANE_WAVE;
         phaseTicks = 0;
+        completedWaveDurationTicks = 0;
         finalDefenseForcedThisRound = false;
         currentWaveTeamIds.clear();
         RoundWaveConfig roundWave = selectedRoundWave;
@@ -1194,11 +1263,18 @@ public final class SemionGame {
             currentWaveTeamIds.add(team.id());
             team.laneGroup().setCurrentRound(currentRound);
             for (PlayerLane lane : team.laneGroup().lanes()) {
-                if (roundWave != null && !waveSpawnDisabledTeams.contains(team.id())
+                boolean skipWave = skippedWaveThroughRound.getOrDefault(lane.ownerPlayer(), 0) >= currentRound;
+                SemionPlayer player = players.get(lane.ownerPlayer());
+                if (!skipWave && player != null) {
+                    roundKillBaselines.put(player.uuid(), player.matchStats().monsterKills());
+                }
+                if (!skipWave && roundWave != null && !waveSpawnDisabledTeams.contains(team.id())
                         && !roundWave.entriesForLane("lane_" + lane.laneId()).isEmpty()) {
                     recordBuilderRoundAttempt(lane.ownerPlayer(), currentRound);
                 }
-                lane.markWaveStarted(currentRound);
+                if (!skipWave) {
+                    lane.markWaveStarted(currentRound);
+                }
             }
             enqueueWave(team, roundWave);
         }
@@ -1224,6 +1300,7 @@ public final class SemionGame {
         }
         if (currentWaveTeamIds.stream().allMatch(this::isCurrentWaveTeamResolved)) {
             clearTranscendenceEffects();
+            completedWaveDurationTicks = phaseTicks;
             phase = RoundPhase.ROUND_PAYOUT;
             phaseTicks = 0;
         }
@@ -1257,6 +1334,7 @@ public final class SemionGame {
         VillagerAdvStates.onWaveCleared(this, currentRound);
         notifyRoundEnded(currentRound);
         economyService.payRoundIncome(players.values(), teams);
+        recordRoundMetrics(currentRound, completedWaveDurationTicks);
         currentWaveTeamIds.clear();
         currentRound++;
         tickLeaderCooldowns();
@@ -1266,6 +1344,7 @@ public final class SemionGame {
     private void startPreparePhase(MinecraftServer server) {
         phase = RoundPhase.PREPARE_AND_SUMMON;
         phaseTicks = 0;
+        skippedWaveThroughRound.entrySet().removeIf(entry -> entry.getValue() < currentRound);
         selectedRoundWave = waveConfig.selectForRound(currentRound, random).orElse(null);
         for (SemionTeam team : livingTeams()) {
             team.resetForRound();
@@ -1273,6 +1352,13 @@ public final class SemionGame {
         advancementService.onRoundStarted(server, this);
         prepareActivePlayers(server);
         notifyRoundStarted(currentRound);
+        if (!sandboxMode && !tutorialMode && !lateJoinDisabledAnnounced && currentRound > 5) {
+            lateJoinDisabledAnnounced = true;
+            server.getPlayerList().broadcastSystemMessage(
+                    SemionText.prefixedPlain("5라운드가 지나 중도 참여가 비활성화되었습니다."),
+                    false
+            );
+        }
         announceEmeraldIncomeBoostIfNeeded(server);
         if (buildGuideService != null) {
             buildGuideService.onPreparePhaseStarted(server, this, currentRound);
@@ -1300,6 +1386,9 @@ public final class SemionGame {
         }
 
         for (PlayerLane lane : team.laneGroup().lanes()) {
+            if (skippedWaveThroughRound.getOrDefault(lane.ownerPlayer(), 0) >= currentRound) {
+                continue;
+            }
             String laneKey = "lane_" + lane.laneId();
             lane.enqueueWave(round.entriesForLane(laneKey), round.spawnMode(), round.spawnIntervalTicks());
         }
@@ -1339,6 +1428,53 @@ public final class SemionGame {
         return rounds.stream().sorted().toList();
     }
 
+    private void recordRoundMetrics(int round, int waveDurationTicks) {
+        for (UUID playerId : List.copyOf(roundKillBaselines.keySet())) {
+            Long killBaseline = roundKillBaselines.remove(playerId);
+            SemionPlayer player = players.get(playerId);
+            SemionTeam team = player == null ? null : teams.get(player.teamId());
+            PlayerLane lane = team == null
+                    ? null
+                    : team.laneGroup().lane(player.laneId()).orElse(null);
+            if (killBaseline == null || player == null || lane == null) {
+                continue;
+            }
+
+            List<TowerRoundMetricsSnapshot> towerMetrics = lane.roundTowerMetrics();
+            List<TowerRoundMetricsSnapshot> builderTowerMetrics = towerMetrics.stream()
+                    .filter(metrics -> !DEMON_LORD_METRICS_ID.equals(metrics.towerTypeId()))
+                    .toList();
+            int firstCombatTick = towerMetrics.stream()
+                    .mapToInt(TowerRoundMetricsSnapshot::firstCombatTick)
+                    .filter(tick -> tick >= 0)
+                    .min()
+                    .orElse(-1);
+            int lastCombatTick = towerMetrics.stream()
+                    .mapToInt(TowerRoundMetricsSnapshot::lastCombatTick)
+                    .max()
+                    .orElse(-1);
+            PlayerEconomy economy = player.economy();
+            roundMetricsByPlayer.computeIfAbsent(playerId, ignored -> new ArrayList<>()).add(
+                    new PlayerRoundMetricsSnapshot(
+                            round,
+                            waveDurationTicks,
+                            firstCombatTick < 0 ? 0 : lastCombatTick - firstCombatTick + 1,
+                            builderTowerMetrics.stream().mapToInt(TowerRoundMetricsSnapshot::startCount).sum(),
+                            builderTowerMetrics.stream().mapToInt(TowerRoundMetricsSnapshot::endAliveCount).sum(),
+                            builderTowerMetrics.stream().mapToInt(TowerRoundMetricsSnapshot::deathCount).sum(),
+                            economy.emeraldProductionUpgradeCount(),
+                            economy.emeraldPerSec(),
+                            economy.income(),
+                            economy.emerald(),
+                            economy.diamond(),
+                            economy.towerLimitPurchaseCount(),
+                            player.matchStats().monsterKills() - killBaseline,
+                            towerMetrics
+                    )
+            );
+        }
+    }
+
     private List<TowerCompositionEntry> finalTowerComposition(SemionPlayer player) {
         SemionTeam team = teams.get(player.teamId());
         return team == null
@@ -1350,6 +1486,7 @@ public final class SemionGame {
         List<SemionTeam> living = livingTeams();
         if (living.size() <= 1 && phase != RoundPhase.WAITING) {
             recordBuilderRoundResults(currentRound);
+            recordRoundMetrics(currentRound, phase == RoundPhase.LANE_WAVE ? phaseTicks : 0);
             advancementService.onRoundCompleted(server, this, currentRound);
             if (endedAtEpochMillis == 0L) {
                 endedAtEpochMillis = System.currentTimeMillis();
@@ -1449,6 +1586,11 @@ public final class SemionGame {
         return "<white>" + teamId.name() + " 팀장: </white>" + teamColoredNameMarkup(teamId, playerName);
     }
 
+    static String lateJoinAnnouncementMarkup(TeamId teamId, String playerName) {
+        return teamColoredNameMarkup(teamId, playerName)
+                + "님이 " + teamColoredNameMarkup(teamId, teamId.name()) + "에 참가하셨습니다!";
+    }
+
     private static String teamColoredNameMarkup(TeamId teamId, String playerName) {
         String color = switch (teamId) {
             case RED -> "red";
@@ -1456,6 +1598,7 @@ public final class SemionGame {
             case GREEN -> "green";
             case YELLOW -> "yellow";
             case PURPLE -> "light_purple";
+            case AQUA -> "aqua";
         };
         return "<" + color + ">" + MiniMessage.miniMessage().escapeTags(playerName) + "</" + color + ">";
     }
@@ -1549,6 +1692,14 @@ public final class SemionGame {
     }
 
     private boolean activateParticipant(AssignedParticipant participant, TraitSelectionSnapshot traitSnapshot) {
+        return activateParticipant(participant, traitSnapshot, selectedJobOrDefault(participant.uuid()));
+    }
+
+    private boolean activateParticipant(
+            AssignedParticipant participant,
+            TraitSelectionSnapshot traitSnapshot,
+            SemionJob job
+    ) {
         if (players.containsKey(participant.uuid())) {
             return false;
         }
@@ -1575,7 +1726,6 @@ public final class SemionGame {
                 participant.laneId(),
                 new PlayerEconomy(economyConfig)
         );
-        SemionJob job = selectedJobOrDefault(participant.uuid());
         player.assignJob(job);
         player.assignTraitLoadout(traitSnapshot.loadoutOrDefault(participant.uuid()));
         applyJobStartingEconomy(player, job);

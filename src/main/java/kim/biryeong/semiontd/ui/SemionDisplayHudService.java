@@ -386,6 +386,7 @@ public final class SemionDisplayHudService {
             case GREEN -> "green";
             case YELLOW -> "yellow";
             case PURPLE -> "light_purple";
+            case AQUA -> "aqua";
         };
     }
 }

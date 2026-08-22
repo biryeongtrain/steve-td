@@ -110,7 +110,7 @@ public final class HeroPartyStates {
             return ActionResult.NOT_OWNED;
         }
         refreshParty(game, playerId);
-        HeroPlayerVisuals.refreshOwner(playerId);
+        FakePlayerTowerVisuals.refreshOwner(playerId);
         return ActionResult.SUCCESS;
     }
 
@@ -130,7 +130,7 @@ public final class HeroPartyStates {
         }
         state.upgradeArmor();
         refreshParty(game, playerId);
-        HeroPlayerVisuals.refreshOwner(playerId);
+        FakePlayerTowerVisuals.refreshOwner(playerId);
         return ActionResult.SUCCESS;
     }
 
@@ -142,7 +142,7 @@ public final class HeroPartyStates {
             return ActionResult.HERO_REQUIRED;
         }
         state(playerId).toggleArmorVisibility();
-        HeroPlayerVisuals.refreshOwner(playerId);
+        FakePlayerTowerVisuals.refreshOwner(playerId);
         return ActionResult.SUCCESS;
     }
 

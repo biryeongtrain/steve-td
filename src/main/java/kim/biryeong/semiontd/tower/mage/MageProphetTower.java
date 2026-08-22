@@ -85,7 +85,7 @@ public final class MageProphetTower extends ProductionTower {
         if (target == null || source == null) {
             return;
         }
-        DamageResult result = damageTargetResult(
+        DamageResult result = damageResolvedTargetResult(
                 source, target, Math.max(1.0, target.runtimeMonster().maxHealth() * 1_000_000.0), DamageType.TRUE
         );
         if (result.killed()) {

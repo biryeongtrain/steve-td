@@ -107,6 +107,12 @@ public final class QueenGameTest {
             requireClose(80.0 * factor, monster.maxHealth(), "Queen shrink must reduce max health.");
             requireClose(40.0 * factor, monster.health(), "Queen shrink must preserve current health ratio.");
             requireClose(20.0 * factor, monster.attackDamage(), "Queen shrink must reduce attack damage.");
+            requireClose(1.0 - factor,
+                    target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION),
+                    "Queen shrink must reduce movement speed by the accumulated stat loss.");
+            requireClose((1.0 - factor) * 0.5,
+                    target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION),
+                    "Queen shrink must reduce attack speed by half the movement-speed reduction.");
             require(monster.isAlive(), "Shrink must never kill its target directly.");
             require(queen.selectForcedAttackTarget(queenEntity, List.of(target, nearby)).orElseThrow() == target,
                     "The Queen must keep focusing a partially weakened target.");
@@ -147,6 +153,12 @@ public final class QueenGameTest {
             requireClose(16.0, monster.maxHealth(), "Queen shrink must stop at the configured stat floor.");
             requireClose(8.0, monster.health(), "The shrink floor must preserve the current health ratio.");
             requireClose(4.0, monster.attackDamage(), "Queen shrink must stop at the configured attack floor.");
+            requireClose(0.80,
+                    target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION),
+                    "Movement reduction must track the final stat scale.");
+            requireClose(0.40,
+                    target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION),
+                    "Attack-speed reduction must remain half the movement reduction.");
             requireClose(0.50, monster.visualScale(), "Queen shrink must preserve the separate visual floor.");
             double appliedPoints = QueenShrink.points(target);
             requireClose(Math.log(QueenBalance.minimumStatScale()) / Math.log(QueenBalance.shrinkFactorPerPoint()),
@@ -187,10 +199,11 @@ public final class QueenGameTest {
             require(queen.roundPhysicalDamageDealt() > 0.0,
                     "Giant TRUE damage must be included in tower damage statistics.");
             require(nearbyMonster.isAlive(), "Enemies above the execution threshold must survive the Giant.");
-            requireClose(QueenBalance.giantSlow(),
+            requireClose(QueenBalance.giantSlow() + 1.0 - nearbyMonster.permanentStatScale(),
                     nearby.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION),
                     "Survivors must receive the configured movement slow.");
-            requireClose(QueenBalance.giantSlow(),
+            requireClose(QueenBalance.giantSlow()
+                            + (1.0 - nearbyMonster.permanentStatScale()) * 0.5,
                     nearby.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION),
                     "Survivors must receive the configured attack-speed slow.");
 

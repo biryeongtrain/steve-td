@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.tower.hero;
 
 import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
 import com.mojang.datafixers.util.Pair;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -12,7 +13,9 @@ import java.util.Set;
 import java.util.UUID;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.mixin.accessor.PlayerInfoUpdatePacketAccessor;
+import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.succubus.SuccubusTowers;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
@@ -35,15 +38,17 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 
-public final class HeroPlayerVisuals {
+public final class FakePlayerTowerVisuals {
+    static final String SUCCUBUS_TEXTURE_VALUE = "ewogICJ0aW1lc3RhbXAiIDogMTc4NzI5OTU3OTMyNCwKICAicHJvZmlsZUlkIiA6ICI1MzE4YWJhNDJiMTk0ODNiODFiMWY2N2Y1ODVjNDdkNSIsCiAgInByb2ZpbGVOYW1lIiA6ICJocHllZiIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9kOTA1ODkzNzlmNDAyZTkwZmM2ZTQ0OTYwOGNjNjVjYjFlYzRlODk2Zjc1ZGU1MmMwYjE3MWQ2YjY4NGVmMDRmIiwKICAgICAgIm1ldGFkYXRhIiA6IHsKICAgICAgICAibW9kZWwiIDogInNsaW0iCiAgICAgIH0KICAgIH0KICB9Cn0=";
+    static final String SUCCUBUS_TEXTURE_SIGNATURE = "B4/+wtiHS8FUBBiTS46yCQPb568wY+oU9PYQ0Ri5kv1r3rPfWV+/EYEuDHLRTpzwGP6Dmr7GHV5WCHfdCyZ/MqaZx/Qht85Liy9cDCzqVOvJUhaiHAZucKvl2ziAbgQWy9sLBjFNZyEgTi+j1ZZhPzLUfhrD4OT5N9K3uHMKU2/ATa6YXSTupFBPPGwKa4139B8Q1Pd6URc+PSomiZvorVWdw8/rQMd0BnrEg5INwiQ386XuwtmbOeQS93LjFHqv815J8PtF69MB3rHvnTVRYAquqqTOgd7wUYD0aoYOdN8WwPgibLKkKesWd4TWNyY6WlKhNvlZ6RKsp1rIWnGjPyObbNuU125DzdeoayfjxvOqs1X3v7VClypYKayhQTzr+Yo0NAWSaCMdbipW2kHWB/j8na+6fGyJSqhSl2L187TuNEBBc29Rym4D1AtImJvrd5iT54vt9C1jUjAOHfq+xTgYJIyUg3BTGFNUd3qghpKBT853snuopIvRiFZp65naAmfYtOw3DNEvx51OcHVkmRjcAtScfg9QGwEBfvCwH1/p4Bsel5IpUFatnI8S+JrrLY6Pq7Wcc2zZFGWhpwWbBolvtqPgxjLqmnjyEVf3KEBZ7a8uW/d+57M+DlW7htnqII3uZbMP69bOJWlLvx//Hx/lCbDe+aOu2NTYCq34Z1w=";
     private static final double TRACKING_DISTANCE_SQR = 128.0 * 128.0;
     private static final float COMBAT_PITCH_CORRECTION = 37.5F;
-    private static final Map<HeroPartyTower, Visual> VISUALS = new IdentityHashMap<>();
+    private static final Map<EntityBackedTower, Visual> VISUALS = new IdentityHashMap<>();
 
-    private HeroPlayerVisuals() {
+    private FakePlayerTowerVisuals() {
     }
 
-    public static synchronized void attach(SemionTowerEntity anchor, HeroPartyTower tower) {
+    public static synchronized void attach(SemionTowerEntity anchor, EntityBackedTower tower) {
         if (anchor == null || tower == null || !(anchor.level() instanceof ServerLevel level)) {
             return;
         }
@@ -61,14 +66,14 @@ public final class HeroPlayerVisuals {
         visual.tick(true);
     }
 
-    public static synchronized void tick(HeroPartyTower tower) {
+    public static synchronized void tick(EntityBackedTower tower) {
         Visual visual = VISUALS.get(tower);
         if (visual != null) {
             visual.tick(false);
         }
     }
 
-    public static synchronized void refresh(HeroPartyTower tower) {
+    public static synchronized void refresh(EntityBackedTower tower) {
         Visual visual = VISUALS.get(tower);
         if (visual == null) {
             return;
@@ -106,7 +111,7 @@ public final class HeroPlayerVisuals {
         }
     }
 
-    public static synchronized void playAttack(HeroPartyTower tower) {
+    public static synchronized void playAttack(EntityBackedTower tower) {
         Visual visual = VISUALS.get(tower);
         if (visual == null) {
             return;
@@ -118,7 +123,7 @@ public final class HeroPlayerVisuals {
         visual.viewers().forEach(viewer -> viewer.connection.send(packet));
     }
 
-    public static synchronized void remove(HeroPartyTower tower) {
+    public static synchronized void remove(EntityBackedTower tower) {
         Visual visual = VISUALS.remove(tower);
         if (visual != null) {
             visual.remove();
@@ -149,7 +154,10 @@ public final class HeroPlayerVisuals {
                 .orElse(null);
     }
 
-    private static GameProfile profile(ServerLevel level, HeroPartyTower tower) {
+    private static GameProfile profile(ServerLevel level, EntityBackedTower tower) {
+        if (SuccubusTowers.isSuccubus(tower.type())) {
+            return succubusProfile(tower.ownerPlayer());
+        }
         if (HeroPartyTowers.isHero(tower.type())) {
             ServerPlayer owner = level.getServer().getPlayerList().getPlayer(tower.ownerPlayer());
             if (owner != null) {
@@ -170,6 +178,14 @@ public final class HeroPlayerVisuals {
         }
         UUID uuid = UUID.nameUUIDFromBytes("semion-td:hero-party:unknown".getBytes(StandardCharsets.UTF_8));
         return new GameProfile(uuid, "용사 타워");
+    }
+
+    static GameProfile succubusProfile(UUID ownerId) {
+        UUID visualId = UUID.nameUUIDFromBytes(("semion-td:succubus:" + ownerId).getBytes(StandardCharsets.UTF_8));
+        GameProfile profile = new GameProfile(visualId, displayProfileName(SuccubusTowers.SUCCUBUS));
+        profile.getProperties().put("textures", new Property(
+                "textures", SUCCUBUS_TEXTURE_VALUE, SUCCUBUS_TEXTURE_SIGNATURE));
+        return profile;
     }
 
     static UUID companionProfileId(HeroCompanionRole role) {
@@ -196,7 +212,7 @@ public final class HeroPlayerVisuals {
         );
     }
 
-    private static void equip(ServerPlayer player, HeroPartyTower tower) {
+    private static void equip(ServerPlayer player, EntityBackedTower tower) {
         ItemStack mainHand = mainHand(tower);
         player.setItemSlot(EquipmentSlot.MAINHAND, mainHand);
         int armor = displayedArmorLevel(tower);
@@ -206,7 +222,7 @@ public final class HeroPlayerVisuals {
         player.setItemSlot(EquipmentSlot.FEET, armorStack(armor, EquipmentSlot.FEET));
     }
 
-    static int displayedArmorLevel(HeroPartyTower tower) {
+    static int displayedArmorLevel(EntityBackedTower tower) {
         if (!(tower instanceof HeroTower)) {
             return 0;
         }
@@ -214,7 +230,10 @@ public final class HeroPlayerVisuals {
         return state.armorVisible() ? state.armorLevel() : 0;
     }
 
-    private static ItemStack mainHand(HeroPartyTower tower) {
+    private static ItemStack mainHand(EntityBackedTower tower) {
+        if (SuccubusTowers.isSuccubus(tower.type())) {
+            return Items.AMETHYST_SHARD.getDefaultInstance();
+        }
         if (tower instanceof HeroTower) {
             return HeroPartyStates.state(tower.ownerPlayer()).equippedWeapon().item().getDefaultInstance();
         }
@@ -283,7 +302,7 @@ public final class HeroPlayerVisuals {
 
     private static final class Visual {
         private final SemionTowerEntity anchor;
-        private final HeroPartyTower tower;
+        private final EntityBackedTower tower;
         private final ServerPlayer fakePlayer;
         private final Set<UUID> trackingViewers = new java.util.HashSet<>();
         private int ticks;
@@ -293,7 +312,7 @@ public final class HeroPlayerVisuals {
         private float lastYaw = Float.NaN;
         private float lastPitch = Float.NaN;
 
-        private Visual(SemionTowerEntity anchor, HeroPartyTower tower, ServerPlayer fakePlayer) {
+        private Visual(SemionTowerEntity anchor, EntityBackedTower tower, ServerPlayer fakePlayer) {
             this.anchor = anchor;
             this.tower = tower;
             this.fakePlayer = fakePlayer;
@@ -329,7 +348,7 @@ public final class HeroPlayerVisuals {
             double y = anchor.getY();
             double z = anchor.getZ();
             float yaw = anchor.getYHeadRot();
-            float pitch = correctedPitch(anchor.getXRot(), anchor.currentAttackTarget() != null);
+            float pitch = visualPitch(tower.type(), anchor.getXRot(), anchor.currentAttackTarget() != null);
             if (forceMove || ticks % 2 == 0 && (x != lastX || y != lastY || z != lastZ
                     || yaw != lastYaw || pitch != lastPitch)) {
                 fakePlayer.snapTo(x, y, z, yaw, pitch);
@@ -412,5 +431,9 @@ public final class HeroPlayerVisuals {
 
     static float correctedPitch(float pitch, boolean hasTarget) {
         return hasTarget ? Mth.clamp(pitch + COMBAT_PITCH_CORRECTION, -90.0F, 90.0F) : pitch;
+    }
+
+    static float visualPitch(TowerType type, float pitch, boolean hasTarget) {
+        return SuccubusTowers.isSuccubus(type) ? 0.0F : correctedPitch(pitch, hasTarget);
     }
 }

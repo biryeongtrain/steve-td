@@ -60,6 +60,11 @@ public final class HeroTower extends HeroPartyTower {
     }
 
     @Override
+    protected double armorEffectRatio() {
+        return 1.0;
+    }
+
+    @Override
     public int aggroPriority() {
         return HeroPartyBalance.weaponAggroPriority(weapon());
     }
@@ -97,13 +102,11 @@ public final class HeroTower extends HeroPartyTower {
 
     @Override
     public double modifyIncomingDamage(SemionTowerEntity towerEntity, DamageSource damageSource, double damageAmount) {
-        double armorReduction = HeroPartyBalance.armorReduction(state().armorLevel());
         double guardReduction = towerEntity == null
                 ? 0.0
                 : towerEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_REDUCTION);
         double beforeGuard = guardReduction >= 0.95 ? damageAmount : damageAmount / Math.max(0.05, 1.0 - guardReduction);
-        double resolved = super.modifyIncomingDamage(towerEntity, damageSource, damageAmount)
-                * (1.0 - armorReduction);
+        double resolved = super.modifyIncomingDamage(towerEntity, damageSource, damageAmount);
         if (weapon() == HeroWeapon.SWORD && state().weaponLevel(HeroWeapon.SWORD) >= 3) {
             state().recordSpecial(
                     HeroQuestKind.SWORD_DAMAGE_PREVENTED,
@@ -113,11 +116,6 @@ public final class HeroTower extends HeroPartyTower {
             );
         }
         return resolved;
-    }
-
-    @Override
-    protected double bonusFlatHealth() {
-        return HeroPartyBalance.armorHealth(state().armorLevel());
     }
 
     @Override
@@ -137,7 +135,7 @@ public final class HeroTower extends HeroPartyTower {
             double dealtDamage,
             boolean killedTarget
     ) {
-        HeroPlayerVisuals.playAttack(this);
+        FakePlayerTowerVisuals.playAttack(this);
         HeroWeapon weapon = weapon();
         int level = state().weaponLevel(weapon);
         int attackNumber = ++attackCount;
@@ -292,7 +290,9 @@ public final class HeroTower extends HeroPartyTower {
                 .limit(ratios.length)
                 .toList();
         for (int index = 0; index < candidates.size(); index++) {
-            DamageResult result = damageTargetResult(source, candidates.get(index), damage * ratios[index]);
+            DamageResult result = damageBasicAttackTargetResult(
+                    source, candidates.get(index), damage * ratios[index], primaryDamageType()
+            );
             if (result.killed()) {
                 onKill(source, candidates.get(index), damage * ratios[index]);
             }
@@ -323,11 +323,11 @@ public final class HeroTower extends HeroPartyTower {
                 radius,
                 AreaVfxSpec.onTrigger(AreaVfxStyles.SPLASH)
         );
-        TowerAreaDamage.apply(
+        TowerAreaDamage.applyResolved(
                 this,
                 source,
                 request,
-                ignored -> damage,
+                target -> resolveBasicAttackOutgoingDamage(source, target, damage),
                 true,
                 (target, dealt, killed) -> {
                     state().recordWeaponAttack(weapon, dealt, killed, onlineOwner(source));

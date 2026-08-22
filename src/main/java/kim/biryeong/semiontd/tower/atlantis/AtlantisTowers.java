@@ -197,6 +197,6 @@ public final class AtlantisTowers {
     }
 
     private static String waterPressureRule() {
-        return "<gray>수압으로 몬스터가 죽으면 주변으로 수압이 이어집니다. 한 몬스터는 같은 연쇄에서 한 번만 터집니다.</gray>";
+        return "<gray>수압 피해는 공격력의 최대 {ability.atlantis_global.waterPressureDamageCap:number}배이며, 몬스터가 죽으면 주변으로 이어집니다. 한 몬스터는 같은 연쇄에서 한 번만 터집니다.</gray>";
     }
 }

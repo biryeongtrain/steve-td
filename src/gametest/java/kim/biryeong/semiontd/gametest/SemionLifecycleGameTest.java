@@ -627,6 +627,38 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
             if (!assertTrue(context, redEconomy.diamond() > diamondBeforePayout, "Round payout should add diamond income.")) {
                 return;
             }
+            if (!assertTrue(context, game.killBoss(TeamId.BLUE), "BLUE boss kill should finish the metrics match.")) {
+                return;
+            }
+            MatchParticipantResult redResult = game.matchResult().orElseThrow().participants().stream()
+                    .filter(participant -> participant.playerId().equals(redId))
+                    .findFirst()
+                    .orElseThrow();
+            var roundMetrics = redResult.roundMetrics().getFirst();
+            if (!assertEquals(context, 1, roundMetrics.round(), "Round metrics should keep the completed round number.")) {
+                return;
+            }
+            if (!assertEquals(context, 1, roundMetrics.waveDurationTicks(), "Round metrics should keep full wave time.")) {
+                return;
+            }
+            if (!assertEquals(context, 1, roundMetrics.towerCountAtStart(), "Round metrics should count starting towers.")) {
+                return;
+            }
+            if (!assertEquals(context, 1, roundMetrics.towerCountAtEnd(), "Round metrics should count surviving towers.")) {
+                return;
+            }
+            if (!assertEquals(context, redEconomy.emeraldProductionUpgradeCount(),
+                    roundMetrics.emeraldProductionUpgradeCount(), "Round metrics should snapshot emerald upgrade level.")) {
+                return;
+            }
+            if (!assertEquals(context, redEconomy.emeraldPerSec(), roundMetrics.emeraldPerSecond(),
+                    "Round metrics should snapshot emerald production.")) {
+                return;
+            }
+            if (!assertEquals(context, redEconomy.diamond(), roundMetrics.diamond(),
+                    "Round metrics should snapshot diamond after payout.")) {
+                return;
+            }
             context.succeed();
         } catch (Exception exception) {
             context.fail(Component.literal("Actual arena playable loop should work: " + exception.getMessage()));

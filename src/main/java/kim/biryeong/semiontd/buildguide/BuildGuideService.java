@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.game.GridPosition;
+import kim.biryeong.semiontd.game.MatchParticipantResult;
+import kim.biryeong.semiontd.game.MatchResult;
 import kim.biryeong.semiontd.game.PlayerEconomy;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.SemionGame;
@@ -46,7 +48,11 @@ public final class BuildGuideService {
     }
 
     public void configure(Path storePath) {
-        this.store = new BuildGuideStore(storePath);
+        configure(storePath, null);
+    }
+
+    public void configure(Path storePath, Path legacyJsonPath) {
+        this.store = new BuildGuideStore(storePath, legacyJsonPath);
         this.trackedCodes.clear();
     }
 
@@ -99,6 +105,41 @@ public final class BuildGuideService {
                 recording.actions()
         );
         return Optional.of(store.put(guide));
+    }
+
+    public int publishMatchBuilds(MatchResult matchResult) {
+        if (matchResult == null) {
+            return 0;
+        }
+        int published = 0;
+        for (MatchParticipantResult participant : matchResult.participants()) {
+            if (participant.buildActions().isEmpty()
+                    || store.findAutomatic(matchResult.matchId(), participant.playerId()).isPresent()) {
+                continue;
+            }
+            BuildGuide guide = new BuildGuide(
+                    nextCode(),
+                    "경기 #" + matchResult.matchId() + " · " + participant.playerName(),
+                    participant.playerId(),
+                    participant.playerName(),
+                    participant.jobId(),
+                    participant.traitLoadout(),
+                    matchResult.finalRound(),
+                    matchResult.endedAtEpochMillis(),
+                    BuildGuide.VISIBILITY_PUBLIC,
+                    participant.buildActions()
+            );
+            store.putAutomatic(matchResult.matchId(), guide);
+            published++;
+        }
+        return published;
+    }
+
+    public Optional<BuildGuide> automaticGuide(MatchResult matchResult, UUID playerId) {
+        if (matchResult == null) {
+            return Optional.empty();
+        }
+        return store.findAutomatic(matchResult.matchId(), playerId);
     }
 
     public BuildGuide saveDebugGuide(UUID playerId, String playerName, String jobId, int finalRound, List<BuildAction> actions) {

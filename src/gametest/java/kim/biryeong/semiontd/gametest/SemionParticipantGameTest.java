@@ -133,6 +133,7 @@ import kim.biryeong.semiontd.job.InsectTowerJob;
 import kim.biryeong.semiontd.job.VillagerTowerJob;
 import kim.biryeong.semiontd.job.WarlockTowerJob;
 import kim.biryeong.semiontd.map.ArenaLayout;
+import kim.biryeong.semiontd.map.GameArena;
 import kim.biryeong.semiontd.music.SemionMusicLibrary;
 import kim.biryeong.semiontd.music.SemionMusicResourcePack;
 import kim.biryeong.semiontd.music.SemionMusicService;
@@ -239,7 +240,9 @@ import kim.biryeong.semiontd.trait.BuiltInTraits;
 import kim.biryeong.semiontd.trait.TraitEffects;
 import kim.biryeong.semiontd.trait.TraitLoadout;
 import kim.biryeong.semiontd.trait.TraitSelectionConfig;
+import kim.biryeong.semiontd.trait.TraitSelectionSession;
 import kim.biryeong.semiontd.trait.TraitSelectionSnapshot;
+import kim.biryeong.semiontd.trait.TraitSlot;
 import kim.biryeong.semiontd.ui.SemionDialogService;
 import kim.biryeong.semiontd.ui.SemionDisplayHudService;
 import kim.biryeong.semiontd.ui.SemionHudTextService;
@@ -258,6 +261,7 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
@@ -277,6 +281,224 @@ import xyz.nucleoid.map_templates.BlockBounds;
 import xyz.nucleoid.map_templates.MapTemplate;
 
 public final class SemionParticipantGameTest implements CustomTestMethodInvoker {
+    @GameTest(maxTicks = 700)
+    public void lateJoinReservationsChooseLeastTeamAndReassignEliminatedTeam(GameTestHelper context) {
+        MinecraftServer server = context.getLevel().getServer();
+        ServerPlayer firstLatePlayer = context.makeMockServerPlayerInLevel();
+        ServerPlayer secondLatePlayer = context.makeMockServerPlayerInLevel();
+        ServerPlayer reassignedPlayer = context.makeMockServerPlayerInLevel();
+        SemionGame game = new SemionGame(
+                EconomyConfig.defaultConfig(),
+                new WaveConfig(List.of(), 20, null),
+                SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(BlockPos.ZERO))
+        );
+        SemionGameManager manager = new SemionGameManager();
+        manager.configureTraits(new TraitSelectionConfig(true, 45));
+        setField(manager, "activeGame", game);
+        ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                MatchMode.NORMAL,
+                List.of(
+                        new AssignedParticipant(stableUuid("late-reserve-red-1"), "red-1", TeamId.RED, 1),
+                        new AssignedParticipant(stableUuid("late-reserve-red-2"), "red-2", TeamId.RED, 2),
+                        new AssignedParticipant(stableUuid("late-reserve-blue"), "blue", TeamId.BLUE, 1),
+                        new AssignedParticipant(stableUuid("late-reserve-green"), "green", TeamId.GREEN, 1)
+                ),
+                Set.of(firstLatePlayer.getUUID(), secondLatePlayer.getUUID(), reassignedPlayer.getUUID()),
+                4
+        );
+
+        try {
+            if (!assertTrue(context, game.start(server, plan), "Game should start for late-join reservation test.")) {
+                return;
+            }
+            if (!assertEquals(context, SemionGameManager.LateJoinResult.SELECTION_STARTED, manager.requestLateJoin(server, firstLatePlayer), "First reservation should start trait selection.")) {
+                return;
+            }
+            if (!assertEquals(context, SemionGameManager.LateJoinResult.SELECTION_STARTED, manager.requestLateJoin(server, secondLatePlayer), "Second reservation should include the first reservation when balancing teams.")) {
+                return;
+            }
+            selectNoTraits(manager, server, firstLatePlayer.getUUID());
+            selectNoTraits(manager, server, secondLatePlayer.getUUID());
+            SemionPlayer first = game.players().get(firstLatePlayer.getUUID());
+            SemionPlayer second = game.players().get(secondLatePlayer.getUUID());
+            if (!assertEquals(context, TeamId.BLUE, first.teamId(), "Team-order tie break should reserve BLUE first.")) {
+                return;
+            }
+            if (!assertEquals(context, 2, first.laneId(), "First reservation should use the lowest empty BLUE lane.")) {
+                return;
+            }
+            if (!assertEquals(context, TeamId.GREEN, second.teamId(), "Concurrent reservations should move the next player to GREEN.")) {
+                return;
+            }
+            if (!assertTrue(context, !game.isMatchSpectator(firstLatePlayer.getUUID()), "A joined spectator should leave the spectator set.")) {
+                return;
+            }
+
+            if (!assertEquals(context, SemionGameManager.LateJoinResult.SELECTION_STARTED, manager.requestLateJoin(server, reassignedPlayer), "Third reservation should start trait selection.")) {
+                return;
+            }
+            if (!assertTrue(context, game.killBoss(TeamId.RED), "Reserved RED team should be eliminable while traits are open.")) {
+                return;
+            }
+            selectNoTraits(manager, server, reassignedPlayer.getUUID());
+            if (!assertEquals(context, TeamId.BLUE, game.players().get(reassignedPlayer.getUUID()).teamId(), "An eliminated reserved team should be replaced by the next least-populated living team.")) {
+                return;
+            }
+            context.succeed();
+        } finally {
+            manager.shutdown();
+        }
+    }
+
+    @GameTest(maxTicks = 700)
+    public void lateJoinTimeoutAndRoundFiveRequestCompleteAfterRoundSix(GameTestHelper context) {
+        MinecraftServer server = context.getLevel().getServer();
+        ServerPlayer timeoutPlayer = context.makeMockServerPlayerInLevel();
+        ServerPlayer roundFivePlayer = context.makeMockServerPlayerInLevel();
+        ServerPlayer roundSixPlayer = context.makeMockServerPlayerInLevel();
+        SemionGame game = new SemionGame(
+                EconomyConfig.defaultConfig(),
+                new WaveConfig(List.of(), 20, null),
+                SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(BlockPos.ZERO))
+        );
+        SemionGameManager manager = new SemionGameManager();
+        manager.configureTraits(new TraitSelectionConfig(true, 45));
+        setField(manager, "activeGame", game);
+        ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                MatchMode.NORMAL,
+                List.of(
+                        new AssignedParticipant(stableUuid("late-timeout-red"), "red", TeamId.RED, 1),
+                        new AssignedParticipant(stableUuid("late-timeout-blue"), "blue", TeamId.BLUE, 1)
+                ),
+                Set.of(timeoutPlayer.getUUID(), roundFivePlayer.getUUID(), roundSixPlayer.getUUID()),
+                2
+        );
+
+        try {
+            if (!assertTrue(context, game.start(server, plan), "Game should start for late-join timeout test.")) {
+                return;
+            }
+            if (!assertEquals(context, SemionGameManager.LateJoinResult.SELECTION_STARTED, manager.requestLateJoin(server, timeoutPlayer), "Timeout player should start trait selection.")) {
+                return;
+            }
+            if (!assertEquals(context, TraitSelectionSession.SelectionResult.SELECTED, manager.selectTrait(server, timeoutPlayer.getUUID(), TraitSlot.PRIMARY, BuiltInTraits.STRENGTH_IN_NUMBERS_ID), "Partial trait selection should be accepted.")) {
+                return;
+            }
+            for (int tick = 0; tick < 30 * 20; tick++) {
+                manager.tick(server);
+            }
+            TraitLoadout timedOutLoadout = game.players().get(timeoutPlayer.getUUID()).traitLoadout();
+            if (!assertEquals(context, BuiltInTraits.STRENGTH_IN_NUMBERS_ID, timedOutLoadout.primaryTraitId(), "Timeout should preserve the selected primary trait.")) {
+                return;
+            }
+            if (!assertEquals(context, BuiltInTraits.NONE_ID, timedOutLoadout.secondaryTraitId(), "Timeout should fill the missing secondary trait with none.")) {
+                return;
+            }
+
+            setField(game, "currentRound", 5);
+            if (!assertEquals(context, SemionGameManager.LateJoinResult.SELECTION_STARTED, manager.requestLateJoin(server, roundFivePlayer), "Round five request should be accepted.")) {
+                return;
+            }
+            setField(game, "currentRound", 6);
+            selectNoTraits(manager, server, roundFivePlayer.getUUID());
+            if (!assertTrue(context, game.isActiveParticipant(roundFivePlayer.getUUID()), "Round five reservation should finish after round six begins.")) {
+                return;
+            }
+            if (!assertEquals(context, SemionGameManager.LateJoinResult.TOO_LATE, manager.requestLateJoin(server, roundSixPlayer), "A new round six request should be rejected.")) {
+                return;
+            }
+            context.succeed();
+        } finally {
+            manager.shutdown();
+        }
+    }
+
+    @GameTest(maxTicks = 700)
+    public void lateParticipantJoiningAfterWaveStartsWaitsUntilNextRound(GameTestHelper context) {
+        EconomyConfig economy = EconomyConfig.defaultConfig();
+        WaveConfig waves = WaveConfig.defaultConfig();
+        GameArena arena = SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(BlockPos.ZERO));
+        if (!assertTrue(context, arena.teamArena(TeamId.AQUA).isPresent(), "AQUA should receive a runtime arena.")) {
+            return;
+        }
+        SemionGame game = new SemionGame(economy, waves, arena);
+        ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                MatchMode.NORMAL,
+                List.of(
+                        new AssignedParticipant(stableUuid("late-join-red"), "red", TeamId.RED, 1),
+                        new AssignedParticipant(stableUuid("late-join-aqua"), "aqua", TeamId.AQUA, 1)
+                ),
+                Set.of(),
+                2
+        );
+        if (!assertTrue(context, game.start(context.getLevel().getServer(), plan, TraitSelectionSnapshot.empty()), "Game should start.")) {
+            return;
+        }
+        if (!assertTrue(context, game.teams().get(TeamId.AQUA).laneGroup().hasBossEntity(), "AQUA should create its team boss.")) {
+            return;
+        }
+        PlayerTeam aquaScoreboardTeam = context.getLevel().getServer().getScoreboard().getPlayerTeam("semion_aqua");
+        if (!assertTrue(context, aquaScoreboardTeam != null && aquaScoreboardTeam.getColor() == ChatFormatting.AQUA, "AQUA should create an aqua scoreboard team.")) {
+            return;
+        }
+
+        tickGame(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS);
+        if (!assertEquals(context, RoundPhase.LANE_WAVE, game.phase(), "Round one wave should start before the late participant joins.")) {
+            return;
+        }
+
+        ServerPlayer latePlayer = context.makeMockServerPlayerInLevel();
+        AssignedParticipant lateParticipant = new AssignedParticipant(
+                latePlayer.getUUID(),
+                latePlayer.getGameProfile().getName(),
+                TeamId.RED,
+                2
+        );
+        if (!assertTrue(context, game.addLateParticipant(
+                context.getLevel().getServer(),
+                latePlayer,
+                lateParticipant,
+                TraitLoadout.none(),
+                JobRegistry.defaultJob(),
+                1
+        ), "Late participant should join the active game.")) {
+            return;
+        }
+
+        long roundOneReward = waves.configForRound(1).orElseThrow().entriesForLane("lane_2").stream()
+                .mapToLong(entry -> entry.mineralReward() * (long) entry.count())
+                .sum();
+        if (!assertEquals(
+                context,
+                economy.startingDiamond() + roundOneReward + economy.startingIncome() * 5L,
+                game.players().get(latePlayer.getUUID()).economy().diamond(),
+                "Late participant should receive configured catch-up diamond."
+        )) {
+            return;
+        }
+
+        if (!assertTrue(context, !game.hasAttemptedRound(latePlayer.getUUID(), 1), "Requested round wave should be skipped.")) {
+            return;
+        }
+        tickGame(game, context.getLevel().getServer(), 1);
+        if (!assertTrue(context, redLane(game, 2).clearedThisRound(), "A late lane added during wave phase should resolve without receiving the current wave.")) {
+            return;
+        }
+        game.teams().values().stream()
+                .filter(team -> team.active() && !team.eliminated())
+                .forEach(team -> team.laneGroup().disableMonsters());
+        tickGame(game, context.getLevel().getServer(), 2);
+        if (!assertEquals(context, 2, game.currentRound(), "Late participant should wait through the current payout and enter round two preparation.")) {
+            return;
+        }
+        tickGame(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS);
+        if (!assertTrue(context, game.hasAttemptedRound(latePlayer.getUUID(), 2), "Late participant should receive the next round wave normally.")) {
+            return;
+        }
+        game.close();
+        context.succeed();
+    }
+
     @GameTest
     public void teleportTransitionPreservesYawAndPitch(GameTestHelper context) {
         TeleportTransition transition = PlayerTeleportTransitions.preservingRotation(
@@ -760,8 +982,8 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
-    public void participantSelectionCapsActivePlayersAtTwentyFive(GameTestHelper context) {
-        List<StartCandidate> candidates = java.util.stream.IntStream.rangeClosed(1, 26)
+    public void participantSelectionCapsActivePlayersAtThirty(GameTestHelper context) {
+        List<StartCandidate> candidates = java.util.stream.IntStream.rangeClosed(1, 31)
                 .mapToObj(index -> candidate("overflow-cap-" + index))
                 .toList();
         Set<UUID> readyPlayerIds = candidates.stream()
@@ -770,18 +992,18 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
         Optional<ParticipantSelectionPlan> plan = ParticipantSelectionService.selectReady(candidates, readyPlayerIds, MatchMode.NORMAL);
 
-        if (!assertPresent(context, plan, "Expected normal mode to select from 26 ready players.")) {
+        if (!assertPresent(context, plan, "Expected normal mode to select from 31 ready players.")) {
             return;
         }
 
         ParticipantSelectionPlan value = plan.get();
-        if (!assertEquals(context, 25, value.activePlayerCount(), "Only 25 players should enter the match.")) {
+        if (!assertEquals(context, 30, value.activePlayerCount(), "Only 30 players should enter the match.")) {
             return;
         }
-        if (!assertEquals(context, 1, value.spectatorCount(), "Ready players above 25 should become spectators.")) {
+        if (!assertEquals(context, 1, value.spectatorCount(), "Ready players above 30 should become spectators.")) {
             return;
         }
-        if (!assertTeamSizes(context, value, Map.of(TeamId.RED, 5, TeamId.BLUE, 5, TeamId.GREEN, 5, TeamId.YELLOW, 5, TeamId.PURPLE, 5))) {
+        if (!assertTeamSizes(context, value, Map.of(TeamId.RED, 5, TeamId.BLUE, 5, TeamId.GREEN, 5, TeamId.YELLOW, 5, TeamId.PURPLE, 5, TeamId.AQUA, 5))) {
             return;
         }
         context.succeed();
@@ -789,18 +1011,18 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
     @GameTest
     public void participantSelectionPrioritizesPreviousSpectators(GameTestHelper context) {
-        List<StartCandidate> candidates = java.util.stream.IntStream.rangeClosed(1, 30)
+        List<StartCandidate> candidates = java.util.stream.IntStream.rangeClosed(1, 35)
                 .mapToObj(index -> candidate("priority-overflow-" + index))
                 .toList();
         Set<UUID> readyPlayerIds = candidates.stream()
                 .map(StartCandidate::uuid)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
         Set<UUID> previousSpectatorIds = Set.of(
-                stableUuid("priority-overflow-21"),
-                stableUuid("priority-overflow-22"),
-                stableUuid("priority-overflow-23"),
-                stableUuid("priority-overflow-24"),
-                stableUuid("priority-overflow-25")
+                stableUuid("priority-overflow-31"),
+                stableUuid("priority-overflow-32"),
+                stableUuid("priority-overflow-33"),
+                stableUuid("priority-overflow-34"),
+                stableUuid("priority-overflow-35")
         );
 
         Optional<ParticipantSelectionPlan> plan = ParticipantSelectionService.selectReady(
@@ -815,10 +1037,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
 
         ParticipantSelectionPlan value = plan.get();
-        if (!assertEquals(context, 25, value.activePlayerCount(), "Only 25 players should enter the match.")) {
+        if (!assertEquals(context, 30, value.activePlayerCount(), "Only 30 players should enter the match.")) {
             return;
         }
-        if (!assertEquals(context, 5, value.spectatorCount(), "Ready players above 25 should become spectators.")) {
+        if (!assertEquals(context, 5, value.spectatorCount(), "Ready players above 30 should become spectators.")) {
             return;
         }
         if (!assertTrue(
@@ -910,7 +1132,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     @GameTest
     public void gameReadyRosterAllowsPlayersAboveActiveCap(GameTestHelper context) {
         SemionGame game = new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(), testArena(context));
-        List<StartCandidate> candidates = java.util.stream.IntStream.rangeClosed(1, 30)
+        List<StartCandidate> candidates = java.util.stream.IntStream.rangeClosed(1, 35)
                 .mapToObj(index -> candidate("ready-roster-over-cap-" + index))
                 .toList();
 
@@ -919,7 +1141,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 return;
             }
         }
-        if (!assertEquals(context, 30, game.readyPlayerCount(), "Ready roster should keep every ready player, even above active cap.")) {
+        if (!assertEquals(context, 35, game.readyPlayerCount(), "Ready roster should keep every ready player, even above active cap.")) {
             return;
         }
 
@@ -933,10 +1155,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
 
         ParticipantSelectionPlan value = plan.get();
-        if (!assertEquals(context, 25, value.activePlayerCount(), "Only 25 ready players should enter the match as active players.")) {
+        if (!assertEquals(context, 30, value.activePlayerCount(), "Only 30 ready players should enter the match as active players.")) {
             return;
         }
-        if (!assertEquals(context, 5, value.spectatorCount(), "Ready players above 25 should be assigned as spectators at start selection.")) {
+        if (!assertEquals(context, 5, value.spectatorCount(), "Ready players above 30 should be assigned as spectators at start selection.")) {
             return;
         }
         context.succeed();
@@ -1689,7 +1911,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             if (!assertTrue(context, statusLines.stream().anyMatch(line -> line.contains("lobbyLoaded=true")), "Status should report loaded lobby.")) {
                 return;
             }
-            if (!assertTrue(context, statusLines.stream().anyMatch(line -> line.contains("arenaLoaded=5/5")), "Status should report loaded arenas.")) {
+            if (!assertTrue(context, statusLines.stream().anyMatch(line -> line.contains("arenaLoaded=6/6")), "Status should report loaded arenas.")) {
                 return;
             }
 
@@ -2691,8 +2913,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         }
         SemionDialogService dialogService = new SemionDialogService();
         dialogService.showJobStatistics(player, snapshot, JobStatisticsState.READY);
-        dialogService.showJobStatistics(player, snapshot, JobStatisticsState.READY, true);
-        dialogService.showJobStatistics(player, snapshot, JobStatisticsState.READY, false);
         dialogService.showJobStatisticsDetail(
                 player,
                 snapshot,
@@ -6578,7 +6798,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertTrue(context, tower.deployedAtFinalDefense(), "Tower should enter final defense before reset validation.")) {
             return;
         }
-        var staleMoveControl = towerEntity.getMoveControl();
         towerEntity.getMoveControl().setWantedPosition(towerEntity.getX() + 4.0, towerEntity.getY(), towerEntity.getZ(), 1.0);
 
         game.teams().get(TeamId.RED).resetForRound();
@@ -6617,13 +6836,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         SemionTowerEntity resetEntity = (SemionTowerEntity) lane.arenaWorld().getEntity(tower.entityId().getAsInt());
-        if (!assertTrue(
-                context,
-                resetEntity.getMoveControl() != staleMoveControl,
-                "Round reset should replace the movement controller that owns the stale destination."
-        )) {
-            return;
-        }
         context.runAfterDelay(1, () -> {
             if (!assertClose(context, originalPosition.getX() + 0.5, resetEntity.getX(),
                     "Round reset should clear stale movement and keep the tower hitbox on its visual X anchor.")) {
@@ -10264,7 +10476,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertPresent(context, JobRegistry.find(DemonLordTowerJob.ID), "Built-in reload should register the demon lord tower job.")) {
             return;
         }
-        if (!assertEquals(context, 113L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose every production starter family.")) {
+        if (!assertEquals(context, 118L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose every production starter family.")) {
             return;
         }
         context.succeed();
@@ -10498,10 +10710,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
 
         tower.tick(lane);
 
-        if (!assertClose(context, 0.32, towerEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_BONUS), "Illager raid damage bonus should be exposed as a tower timed effect.")) {
+        if (!assertClose(context, 0.24, towerEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_BONUS), "Illager raid damage bonus should be exposed as a tower timed effect.")) {
             return;
         }
-        if (!assertClose(context, 0.12, towerEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_ATTACK_SPEED_BONUS), "Illager raid attack speed bonus should be exposed as a tower timed effect.")) {
+        if (!assertClose(context, 0.08, towerEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_ATTACK_SPEED_BONUS), "Illager raid attack speed bonus should be exposed as a tower timed effect.")) {
             return;
         }
         if (!assertClose(context, 0.35, towerEntity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_REDUCTION), "Illager raid damage reduction should be exposed as a tower timed effect.")) {
@@ -11065,6 +11277,31 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         if (!assertEquals(context, buffDurationTicks, targetEntity.activeTimedEffectTicks(TimedEffectType.TOWER_DAMAGE_REDUCTION), "Goat should refresh its damage reduction every configured pulse interval.")) {
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void blockTowerSelectionStaysInsideTheResolvedTeamWorld(GameTestHelper context) {
+        UUID redId = stableUuid("tower-selection-red");
+        UUID blueId = stableUuid("tower-selection-blue");
+        SemionGame game = startedTwoPlayerGame(context, redId, blueId);
+        PlayerLane redLane = game.teams().get(TeamId.RED).laneGroup().lane(1).orElseThrow();
+        PlayerLane blueLane = game.teams().get(TeamId.BLUE).laneGroup().lane(1).orElseThrow();
+        BlockPos blockPosition = towerPlacementPos(redLane);
+        GridPosition position = GridPosition.from(blockPosition);
+        TestTower redTower = new TestTower(TestTowerTypes.TEST_DIRECT, redId, TeamId.RED, 1, position);
+        TestTower blueTower = new TestTower(TestTowerTypes.TEST_DIRECT, blueId, TeamId.BLUE, 1, position);
+        redLane.addTower(redTower);
+        blueLane.addTower(blueTower);
+
+        if (!assertEquals(
+                context,
+                blueTower,
+                SemionTowerInteractionService.resolveTowerAt(game.teams().get(TeamId.BLUE), blockPosition),
+                "Block selection should resolve the tower from the current world's team only."
+        )) {
             return;
         }
         context.succeed();
@@ -13136,6 +13373,11 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         for (int i = 0; i < ticks; i++) {
             game.tick(server);
         }
+    }
+
+    private static void selectNoTraits(SemionGameManager manager, MinecraftServer server, UUID playerId) {
+        manager.selectTrait(server, playerId, TraitSlot.PRIMARY, BuiltInTraits.NONE_ID);
+        manager.selectTrait(server, playerId, TraitSlot.SECONDARY, BuiltInTraits.NONE_ID);
     }
 
     private static void tickLaneWithGlobalCloneQueue(PlayerLane lane, MinecraftServer server) {

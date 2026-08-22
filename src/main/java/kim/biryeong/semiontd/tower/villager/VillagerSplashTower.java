@@ -68,7 +68,7 @@ public class VillagerSplashTower extends SplashTower {
             int every = Math.max(1, TowerBalanceRuntime.abilityInt(type().id(), "extraAttackEvery"));
             if (!killedTarget && attackAttempt >= every) { // skip if target is dead. but stack attack attempt value
                 attackAttempt -= every + 1; // remove stack. it will stack 1 because calls itself
-                boolean killed = damageTarget(towerEntity, target, damageAmount); // damage main target
+                boolean killed = damageBasicAttackTargetResult(towerEntity, target, damageAmount).killed(); // damage main target
                 TowerVfxService.showSecondaryAttack(towerEntity, target);
                 this.onAttack(towerEntity, target, damageAmount, killed); // splash and trigger addition attack if has more stack
                 if (killed) {

@@ -29,7 +29,9 @@ import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.tower.TowerRoundMetricsTracker;
 import kim.biryeong.semiontd.tower.demonlord.DemonLordService;
+import kim.biryeong.semiontd.tower.succubus.SuccubusDreams;
 import kim.biryeong.semiontd.tower.plant.PlantSoilEnvironment;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
 import kim.biryeong.semiontd.tower.resonance.ResonanceService;
@@ -61,6 +63,8 @@ public final class PlayerLane {
     private final List<Tower> towers = new ArrayList<>();
     private final List<Tower> towerView = Collections.unmodifiableList(towers);
     private final Set<Tower> towerMembership = Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Set<TowerRoundMetricsTracker> roundTowerTrackers =
+            Collections.newSetFromMap(new IdentityHashMap<>());
     private final List<DefenderEntity> defenderEntities = new ArrayList<>();
     private boolean clearedThisRound;
     private boolean leakedThisRound;
@@ -72,6 +76,8 @@ public final class PlayerLane {
     private TeamLaneGroup teamLaneGroup;
     private TraitLoadout traitLoadout = TraitLoadout.none();
     private boolean transcendenceTriggeredThisRound;
+    private int trackedRound;
+    private int trackedRoundTick;
 
     public PlayerLane(
             TeamId teamId,
@@ -205,10 +211,14 @@ public final class PlayerLane {
         // markWaveStarted 의 짝: 여기서 전투를 풀지 않으면 준비 단계까지 스킬 핫바가 유지됩니다.
         DemonLordService.endRound(ownerPlayer);
         clearTranscendence();
+        SuccubusDreams.clearLane(this);
         clearedThisRound = false;
         leakedThisRound = false;
         towersMovedToFinalDefense = false;
         laneDefenseBroken = false;
+        trackedRound = 0;
+        trackedRoundTick = 0;
+        roundTowerTrackers.clear();
         for (DefenderEntity defenderEntity : defenderEntities) {
             defenderEntity.remove();
         }
@@ -275,6 +285,7 @@ public final class PlayerLane {
         tower.attachToLane(this, traitLoadout);
         towers.add(tower);
         towerMembership.add(tower);
+        trackTowerDuringWave(tower, false);
         tower.onPlaced(this);
         syncStaticTraitEffects(tower);
     }
@@ -303,6 +314,12 @@ public final class PlayerLane {
         if (existing == replacement) {return true;}
         if (towerMembership.contains(replacement)) {return false;}
 
+        TowerRoundMetricsTracker previousTracker = existing.roundMetricsTracker();
+        trackTowerDuringWave(replacement, false);
+        if (previousTracker != null && previousTracker != replacement.roundMetricsTracker()) {
+            previousTracker.markRemoved();
+        }
+
         existing.onRemoved(this);
         existing.detachFromLane(this);
         replacement.attachToLane(this, traitLoadout);
@@ -319,6 +336,9 @@ public final class PlayerLane {
             return false;
         }
         towerMembership.remove(tower);
+        if (tower.roundMetricsTracker() != null) {
+            tower.roundMetricsTracker().markRemoved();
+        }
         tower.onRemoved(this);
         tower.detachFromLane(this);
         return true;
@@ -351,8 +371,12 @@ public final class PlayerLane {
 
     public void markWaveStarted(int currentRound) {
         clearTranscendence();
+        trackedRound = Math.max(1, currentRound);
+        trackedRoundTick = 0;
+        roundTowerTrackers.clear();
         for (Tower tower : towers) {
             tower.markWaveStarted(currentRound);
+            roundTowerTrackers.add(tower.roundMetricsTracker());
             tower.onWaveStarted(this, currentRound);
             syncStaticTraitEffects(tower);
         }
@@ -362,6 +386,10 @@ public final class PlayerLane {
         // 마왕은 여기서 전투 상태가 됩니다. 라운드 시작(준비 단계)에 걸면 상점을 열 수 없는
         // 채로 준비 시간을 보내게 되고, 스스로 물러난 뒤 웨이브가 시작돼도 복귀하지 못합니다.
         DemonLordService.beginWave(ownerPlayer);
+        TowerRoundMetricsTracker demonLordTracker = DemonLordService.roundMetricsTracker(ownerPlayer);
+        if (demonLordTracker != null) {
+            roundTowerTrackers.add(demonLordTracker);
+        }
     }
 
     public void addDefenderEntity(DefenderEntity defenderEntity) {
@@ -383,10 +411,12 @@ public final class PlayerLane {
             MonsterScalingConfig monsterScalingConfig,
             int roundElapsedTicks
     ) {
+        updateRoundTowerTrackers(roundElapsedTicks);
         spawnQueuedWaveMonster(players);
         spawnQueuedMonster(summonedMonsterSpawnQueue, players, false);
 
         applyTranscendenceIfReady(roundElapsedTicks);
+        SuccubusDreams.tick(this);
         tickTowers();
         PlantSoilEnvironment.tick(this);
         DemonLordService.tick(this, players);
@@ -433,11 +463,54 @@ public final class PlayerLane {
 
     public void clearTowers() {
         for (Tower tower : towers) {
+            if (tower.roundMetricsTracker() != null) {
+                tower.roundMetricsTracker().markRemoved();
+            }
             tower.onRemoved(this);
             tower.detachFromLane(this);
         }
         towers.clear();
         towerMembership.clear();
+    }
+
+    public List<TowerRoundMetricsSnapshot> roundTowerMetrics() {
+        Map<String, TowerRoundMetricsSnapshot> byType = new LinkedHashMap<>();
+        for (TowerRoundMetricsTracker tracker : roundTowerTrackers) {
+            TowerRoundMetricsSnapshot snapshot = tracker.snapshot();
+            byType.merge(snapshot.towerTypeId(), snapshot, TowerRoundMetricsSnapshot::merge);
+        }
+        return byType.values().stream()
+                .sorted(Comparator.comparing(TowerRoundMetricsSnapshot::towerTypeId))
+                .toList();
+    }
+
+    private void trackTowerDuringWave(Tower tower, boolean presentAtWaveStart) {
+        if (trackedRound <= 0 || tower == null) {
+            return;
+        }
+        if (tower.roundMetricsTracker() == null || tower.currentRound() != trackedRound) {
+            tower.markWaveStarted(trackedRound, presentAtWaveStart);
+        }
+        tower.roundMetricsTracker().setCurrentTick(trackedRoundTick);
+        roundTowerTrackers.add(tower.roundMetricsTracker());
+    }
+
+    private void updateRoundTowerTrackers(int roundElapsedTicks) {
+        if (trackedRound <= 0) {
+            return;
+        }
+        trackedRoundTick = Math.max(0, roundElapsedTicks);
+        for (TowerRoundMetricsTracker tracker : roundTowerTrackers) {
+            tracker.setCurrentTick(trackedRoundTick);
+        }
+        for (Tower tower : towers) {
+            TowerRoundMetricsTracker tracker = tower.roundMetricsTracker();
+            if (tracker != null) {
+                tracker.setCurrentTick(trackedRoundTick);
+                tracker.recordSurvivalTick(tower.health() > 0.0);
+                roundTowerTrackers.add(tracker);
+            }
+        }
     }
 
     private void applyOpeningAttackSpeed() {

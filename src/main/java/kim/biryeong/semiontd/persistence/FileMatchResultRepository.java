@@ -42,6 +42,12 @@ public final class FileMatchResultRepository implements MatchResultRepository {
         return Optional.ofNullable(matchResults.get(matchId));
     }
 
+    @Override
+    public synchronized Map<MatchId, MatchResult> findAllMatchResults() {
+        ensureLoaded();
+        return Map.copyOf(matchResults);
+    }
+
     private void ensureLoaded() {
         if (loaded) {
             return;

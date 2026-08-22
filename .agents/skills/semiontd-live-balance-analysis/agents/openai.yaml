@@ -1,0 +1,4 @@
+interface:
+  display_name: "SemionTD Live Balance Analysis"
+  short_description: "라이브 경기 지표로 빌더와 타워 밸런스를 분석"
+  default_prompt: "Use $semiontd-live-balance-analysis to analyze current SemionTD live data and propose the smallest evidence-backed builder balance change."

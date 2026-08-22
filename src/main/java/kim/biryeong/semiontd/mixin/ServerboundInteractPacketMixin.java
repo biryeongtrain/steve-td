@@ -1,6 +1,6 @@
 package kim.biryeong.semiontd.mixin;
 
-import kim.biryeong.semiontd.tower.hero.HeroPlayerVisuals;
+import kim.biryeong.semiontd.tower.hero.FakePlayerTowerVisuals;
 import net.minecraft.network.protocol.game.ServerboundInteractPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -23,7 +23,7 @@ public abstract class ServerboundInteractPacketMixin {
             CallbackInfoReturnable<Entity> callback
     ) {
         if (callback.getReturnValue() == null) {
-            callback.setReturnValue(HeroPlayerVisuals.resolveInteractionAnchor(level, entityId));
+            callback.setReturnValue(FakePlayerTowerVisuals.resolveInteractionAnchor(level, entityId));
         }
     }
 }

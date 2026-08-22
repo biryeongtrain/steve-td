@@ -67,7 +67,9 @@ public class RabbitTower extends AnimalStackTower {
         if (!isT3OrLeader() || !atMaxStacks() || killedTarget || towerEntity == null || target == null || !target.isAlive()) {
             return;
         }
-        boolean killed = damageTarget(towerEntity, target, damageAmount * value("extraAttackDamageRatio"));
+        boolean killed = damageBasicAttackTargetResult(
+                towerEntity, target, damageAmount * value("extraAttackDamageRatio")
+        ).killed();
         TowerVfxService.showSecondaryAttack(towerEntity, target);
         if (killed) {
             onKill(towerEntity, target, damageAmount);

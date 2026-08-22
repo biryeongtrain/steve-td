@@ -84,18 +84,18 @@ final class ParticipantSelectionServiceTest {
 
     @Test
     void previousSpectatorPriorityIsAppliedBeforeEloActiveCutoff() {
-        List<StartCandidate> candidates = java.util.stream.IntStream.rangeClosed(1, 30)
-                .mapToObj(index -> candidate("candidate-" + index, index <= 25 ? 2000 : 1000))
+        List<StartCandidate> candidates = java.util.stream.IntStream.rangeClosed(1, 35)
+                .mapToObj(index -> candidate("candidate-" + index, index <= 30 ? 2000 : 1000))
                 .toList();
         Set<UUID> readyPlayerIds = candidates.stream()
                 .map(StartCandidate::uuid)
                 .collect(Collectors.toUnmodifiableSet());
         Set<UUID> priorityPlayerIds = Set.of(
-                stableUuid("candidate-26"),
-                stableUuid("candidate-27"),
-                stableUuid("candidate-28"),
-                stableUuid("candidate-29"),
-                stableUuid("candidate-30")
+                stableUuid("candidate-31"),
+                stableUuid("candidate-32"),
+                stableUuid("candidate-33"),
+                stableUuid("candidate-34"),
+                stableUuid("candidate-35")
         );
 
         Optional<ParticipantSelectionPlan> plan = ParticipantSelectionService.selectReady(
@@ -110,6 +110,38 @@ final class ParticipantSelectionServiceTest {
                 .map(AssignedParticipant::uuid)
                 .collect(Collectors.toUnmodifiableSet());
         assertTrue(activeIds.containsAll(priorityPlayerIds));
+    }
+
+    @Test
+    void twentyFourPlayersUseSixTeamsOfFour() {
+        ParticipantSelectionPlan plan = planFor(24);
+
+        assertEquals(6, plan.activeTeamCount());
+        assertEquals(Set.of(4), Set.copyOf(plan.teamSizes().values()));
+        assertEquals(4, plan.teamSizes().get(TeamId.AQUA));
+    }
+
+    @Test
+    void thirtyPlayersUseSixTeamsOfFive() {
+        ParticipantSelectionPlan plan = planFor(30);
+
+        assertEquals(30, plan.activePlayerCount());
+        assertEquals(6, plan.activeTeamCount());
+        assertEquals(Set.of(5), Set.copyOf(plan.teamSizes().values()));
+        assertEquals(5, plan.teamSizes().get(TeamId.AQUA));
+    }
+
+    private static ParticipantSelectionPlan planFor(int playerCount) {
+        List<StartCandidate> candidates = java.util.stream.IntStream.rangeClosed(1, playerCount)
+                .mapToObj(index -> candidate("six-team-" + index, 1500))
+                .toList();
+        return ParticipantSelectionService.select(
+                candidates,
+                MatchMode.NORMAL,
+                Set.of(),
+                false,
+                new Random(0)
+        ).orElseThrow();
     }
 
     private static int eloFor(UUID playerId, StartCandidate... candidates) {

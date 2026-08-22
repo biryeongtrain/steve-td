@@ -23,6 +23,7 @@ public final class AncientCityTowerCatalogs {
         register(AncientCityTowers.WARDEN_T1, 1);
         register(AncientCityTowers.WARDEN_T2, 2);
         register(AncientCityTowers.WARDEN_T3, 3);
+        register(AncientCityTowers.WARDEN_T4, 4);
 
         link(AncientCityTowers.CATALYST_T1, AncientCityTowers.CATALYST_T2);
         link(AncientCityTowers.CATALYST_T2, AncientCityTowers.CATALYST_T3);
@@ -32,6 +33,7 @@ public final class AncientCityTowerCatalogs {
         link(AncientCityTowers.SHRIEKER_T2, AncientCityTowers.SHRIEKER_T3);
         link(AncientCityTowers.WARDEN_T1, AncientCityTowers.WARDEN_T2);
         link(AncientCityTowers.WARDEN_T2, AncientCityTowers.WARDEN_T3);
+        link(AncientCityTowers.WARDEN_T3, AncientCityTowers.WARDEN_T4);
 
         if (JobRegistry.find(AncientCityTowerJob.ID).isEmpty()) {
             JobRegistry.registerIfAbsent(new AncientCityTowerJob());

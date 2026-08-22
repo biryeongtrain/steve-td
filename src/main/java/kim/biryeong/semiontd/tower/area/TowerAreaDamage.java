@@ -35,7 +35,11 @@ public final class TowerAreaDamage {
     }
 
     public static AreaEffectResult<SemionMonsterEntity> applyResolved(Tower tower, SemionTowerEntity source, MonsterAreaEffectRequest request, ToDoubleFunction<SemionMonsterEntity> damage, boolean propagateKills, AfterDamage afterDamage) {
-        return apply(tower, source, request, damage, propagateKills, afterDamage, true, false, DamageType.PHYSICAL);
+        return applyResolved(tower, source, request, damage, propagateKills, afterDamage, DamageType.PHYSICAL);
+    }
+
+    public static AreaEffectResult<SemionMonsterEntity> applyResolved(Tower tower, SemionTowerEntity source, MonsterAreaEffectRequest request, ToDoubleFunction<SemionMonsterEntity> damage, boolean propagateKills, AfterDamage afterDamage, DamageType damageType) {
+        return apply(tower, source, request, damage, propagateKills, afterDamage, true, false, damageType);
     }
 
     private static AreaEffectResult<SemionMonsterEntity> apply(Tower tower, SemionTowerEntity source, MonsterAreaEffectRequest request, ToDoubleFunction<SemionMonsterEntity> damage, boolean propagateKills, AfterDamage afterDamage, boolean resolvedOutgoingDamage, boolean igniteOnHit, DamageType damageType) {
@@ -46,7 +50,7 @@ public final class TowerAreaDamage {
             }
             Tower.DamageResult damageResult;
             if (resolvedOutgoingDamage) {
-                damageResult = tower.damageResolvedTargetResult(source, target, amount);
+                damageResult = tower.damageResolvedTargetResult(source, target, amount, damageType);
             } else if (igniteOnHit) {
                 damageResult = source.damageBasicAttackSecondaryTargetResult(target, amount);
             } else {

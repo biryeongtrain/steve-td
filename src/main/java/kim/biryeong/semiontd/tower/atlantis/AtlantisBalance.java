@@ -16,7 +16,7 @@ public final class AtlantisBalance {
     public static final double MAX_SLOW = 0.45;
     public static final double MAX_ZONE_ALLY_DAMAGE_REDUCTION = 0.35;
     public static final double WATER_PRESSURE_DAMAGE_RATIO = 0.16;
-    public static final double WATER_PRESSURE_DAMAGE_CAP = 2.5;
+    public static final double WATER_PRESSURE_DAMAGE_CAP = 2.0;
     public static final double WATER_PRESSURE_RADIUS = 3.0;
     public static final double ZONE_STACK_MULTIPLIER = 2.0;
     public static final int MAX_ZONE_COUNT = 6;

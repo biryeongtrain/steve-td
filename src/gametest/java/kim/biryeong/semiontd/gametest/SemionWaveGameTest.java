@@ -10,6 +10,7 @@ import kim.biryeong.semiontd.entity.SemionEntityTypes;
 import kim.biryeong.semiontd.entity.boss.BossMonster;
 import kim.biryeong.semiontd.entity.boss.SemionBossEntity;
 import kim.biryeong.semiontd.entity.monster.Monster;
+import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.MonsterDimensions;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.monster.goal.AcquireLaneDefenseTargetGoal;
@@ -21,6 +22,7 @@ import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamLaneGroup;
 import kim.biryeong.semiontd.game.TeamId;
+import kim.biryeong.semiontd.game.TowerRoundMetricsSnapshot;
 import kim.biryeong.semiontd.map.GameArena;
 import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.test.tower.TestTower;
@@ -49,6 +51,64 @@ public final class SemionWaveGameTest {
                 || SemionEntityTypes.BOSS.canSerialize()
                 || SemionEntityTypes.TOWER.canSerialize()) {
             throw new AssertionError("Runtime-only Semion entities must not be serialized with chunks.");
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void roundTowerMetricsAggregateUpgradesDynamicTowersAndElimination(GameTestHelper context) {
+        PlayerLane lane = lane(context, "round-tower-metrics");
+        GridPosition firstPosition = GridPosition.from(context.absolutePos(new BlockPos(1, 1, 2)));
+        GridPosition secondPosition = GridPosition.from(context.absolutePos(new BlockPos(2, 1, 2)));
+        TestTower first = new TestTower(TestTowerTypes.TEST_DIRECT, lane.ownerPlayer(), TeamId.RED, 1, firstPosition);
+        TestTower second = new TestTower(TestTowerTypes.TEST_DIRECT, lane.ownerPlayer(), TeamId.RED, 1, secondPosition);
+        lane.addTower(first);
+        lane.addTower(second);
+        lane.markWaveStarted(1);
+
+        first.roundMetricsTracker().setCurrentTick(5);
+        first.recordDamageDealt(100.0, DamageType.PHYSICAL);
+        first.recordDamageTaken(25.0);
+        first.recordHealingDone(15.0);
+        first.recordKill();
+        TestTower upgraded = new TestTower(TestTowerTypes.TEST_SNIPER, lane.ownerPlayer(), TeamId.RED, 1, firstPosition);
+        upgraded.copyFrom(first, 50);
+        if (!lane.replaceTower(first, upgraded)) {
+            throw new AssertionError("Upgrade replacement should succeed.");
+        }
+        upgraded.roundMetricsTracker().setCurrentTick(15);
+        upgraded.recordDamageDealt(50.0, DamageType.PHYSICAL);
+        upgraded.syncHealth(0.0);
+
+        TestTower dynamic = new TestTower(
+                TestTowerTypes.TEST_SNIPER,
+                lane.ownerPlayer(),
+                TeamId.RED,
+                1,
+                GridPosition.from(context.absolutePos(new BlockPos(3, 1, 2)))
+        );
+        lane.addTower(dynamic);
+        dynamic.roundMetricsTracker().setCurrentTick(20);
+        dynamic.recordDamageDealt(40.0, DamageType.MAGIC);
+        lane.removeTower(second);
+        lane.clearTowers();
+
+        List<TowerRoundMetricsSnapshot> metrics = lane.roundTowerMetrics();
+        TowerRoundMetricsSnapshot direct = metrics.stream()
+                .filter(snapshot -> snapshot.towerTypeId().equals(TestTowerTypes.TEST_DIRECT.id()))
+                .findFirst()
+                .orElseThrow();
+        TowerRoundMetricsSnapshot sniper = metrics.stream()
+                .filter(snapshot -> snapshot.towerTypeId().equals(TestTowerTypes.TEST_SNIPER.id()))
+                .findFirst()
+                .orElseThrow();
+        if (direct.sampleCount() != 2 || direct.startCount() != 2 || direct.deathCount() != 1
+                || direct.endAliveCount() != 0 || direct.physicalDamageDealt() != 150.0
+                || direct.damageTaken() != 25.0 || direct.healingDone() != 15.0 || direct.killCount() != 1) {
+            throw new AssertionError("Upgraded and removed tower metrics were not preserved: " + direct);
+        }
+        if (sniper.sampleCount() != 1 || sniper.startCount() != 0 || sniper.magicDamageDealt() != 40.0) {
+            throw new AssertionError("Dynamic tower participation was not preserved: " + sniper);
         }
         context.succeed();
     }

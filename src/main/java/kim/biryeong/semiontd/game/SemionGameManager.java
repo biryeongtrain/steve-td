@@ -41,6 +41,7 @@ import kim.biryeong.semiontd.config.WebIntegrationConfig;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.AnimalTowerJob;
+import kim.biryeong.semiontd.job.SemionJob;
 import kim.biryeong.semiontd.map.ArenaLoadException;
 import kim.biryeong.semiontd.map.GameArena;
 import kim.biryeong.semiontd.map.GameArenaLoader;
@@ -83,7 +84,7 @@ import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.tower.engineer.EngineerRedstoneBossBarService;
 import kim.biryeong.semiontd.tower.hero.HeroCompanionRole;
 import kim.biryeong.semiontd.tower.hero.HeroCompanionSkins;
-import kim.biryeong.semiontd.tower.hero.HeroPlayerVisuals;
+import kim.biryeong.semiontd.tower.hero.FakePlayerTowerVisuals;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidBossBarService;
 import kim.biryeong.semiontd.tower.legion.IllusionCloneSpawnQueue;
 import kim.biryeong.semiontd.tower.mage.MageManaBossBarService;
@@ -104,8 +105,6 @@ import kim.biryeong.semiontd.ui.SemionText;
 import kim.biryeong.semiontd.util.Scheduler;
 import kim.biryeong.semiontd.web.WebCatalogExporter;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -118,6 +117,8 @@ public final class SemionGameManager {
     public static final int START_COUNTDOWN_TICKS = 15 * 20;
     public static final int MATCH_RESULT_DELAY_TICKS = 5 * 20;
     public static final int MATCH_RESULT_DIALOG_AFTER_LOBBY_DELAY_TICKS = 2 * 20;
+    static final int LATE_JOIN_SELECTION_TICKS = 30 * 20;
+    static final int LATE_JOIN_MAX_ROUND = 5;
     static final int RATING_RETRY_DELAY_TICKS = 20;
     private static final float NORMAL_TICK_RATE = 20.0F;
     static final int COMBAT_SPEED_ENTRY_DELAY_TICKS = 2 * 20;
@@ -177,6 +178,7 @@ public final class SemionGameManager {
     private ParticipantSelectionPlan pendingStartPlan;
     private TraitSelectionSnapshot pendingStartTraitSnapshot = TraitSelectionSnapshot.empty();
     private TraitSelectionSession pendingTraitSelection;
+    private final Map<UUID, PendingLateJoin> pendingLateJoins = new LinkedHashMap<>();
     private final Map<TeamId, UUID> midLanePreferences = new EnumMap<>(TeamId.class);
     private int startCountdownTicks;
     private int nextStartCountdownAnnouncementSecond;
@@ -204,6 +206,25 @@ public final class SemionGameManager {
         NO_PENDING_START,
         NOT_PARTICIPANT,
         NO_MID_LANE
+    }
+
+    public enum LateJoinResult {
+        SELECTION_STARTED,
+        JOINED,
+        NO_ACTIVE_GAME,
+        INVALID_GAME,
+        TOO_LATE,
+        ALREADY_PARTICIPANT,
+        ALREADY_PENDING,
+        NO_SLOT,
+        FAILED
+    }
+
+    private record PendingLateJoin(
+            int requestedRound,
+            AssignedParticipant assignment,
+            TraitSelectionSession traitSelection
+    ) {
     }
 
     public enum SandboxStartResult {
@@ -432,6 +453,7 @@ public final class SemionGameManager {
         Path ratingProfilePath = this.configDir == null ? null : this.configDir.resolve("ratings.json");
         Path ratingEventPath = this.configDir == null ? null : this.configDir.resolve("rating-events.json");
         Path sqlitePath = resolveSqlitePath(this.configDir, this.persistenceConfig);
+        Path buildGuideDatabasePath = resolveConfiguredSqlitePath(this.configDir, this.persistenceConfig);
         Path appliedMatchesPath = progressionStorePath == null
                 ? null
                 : progressionStorePath.resolveSibling("progression-applied-matches.json");
@@ -456,7 +478,16 @@ public final class SemionGameManager {
                 matchResultPath,
                 this.configDir == null ? null : this.configDir.resolve("job-statistics.db")
         );
-        this.buildGuideService.configure(this.configDir == null ? null : this.configDir.resolve("build_guides.json"));
+        this.buildGuideService.configure(
+                buildGuideDatabasePath,
+                this.configDir == null ? null : this.configDir.resolve("build_guides.json")
+        );
+        int backfilledBuilds = this.matchResultRepository.findAllMatchResults().values().stream()
+                .mapToInt(this.buildGuideService::publishMatchBuilds)
+                .sum();
+        if (backfilledBuilds > 0) {
+            SemionTd.LOGGER.info("Backfilled {} Semion TD match build guide(s).", backfilledBuilds);
+        }
         ProductionTowerCatalogs.reloadBuiltIns(this.towerBalanceConfig);
         IncomeSummons.reloadBuiltIns(this.summonConfig);
         if (webIntegrationConfig.enabled()) {
@@ -473,6 +504,13 @@ public final class SemionGameManager {
 
     private static Path resolveSqlitePath(Path configDir, SemionPersistenceConfig persistenceConfig) {
         if (configDir == null || persistenceConfig.backend() != SemionPersistenceBackendType.SQLITE) {
+            return null;
+        }
+        return resolveConfiguredSqlitePath(configDir, persistenceConfig);
+    }
+
+    private static Path resolveConfiguredSqlitePath(Path configDir, SemionPersistenceConfig persistenceConfig) {
+        if (configDir == null) {
             return null;
         }
         Path configured = Path.of(persistenceConfig.sqlitePath());
@@ -863,7 +901,7 @@ public final class SemionGameManager {
             return false;
         }
         HeroCompanionSkins.set(playerId, role, skin);
-        HeroPlayerVisuals.refreshSkin(playerId, role);
+        FakePlayerTowerVisuals.refreshSkin(playerId, role);
         return true;
     }
 
@@ -1592,6 +1630,145 @@ public final class SemionGameManager {
         return pendingTraitSelection == null ? 0 : pendingTraitSelection.remainingSeconds();
     }
 
+    public int traitSelectionSecondsRemaining(UUID playerId) {
+        PendingLateJoin lateJoin = pendingLateJoins.get(playerId);
+        return lateJoin == null ? traitSelectionSecondsRemaining() : lateJoin.traitSelection().remainingSeconds();
+    }
+
+    public LateJoinResult requestLateJoin(MinecraftServer server, ServerPlayer player) {
+        SemionGame game = activeGame;
+        if (server == null || player == null || game == null) {
+            return LateJoinResult.NO_ACTIVE_GAME;
+        }
+        if (!game.rosterLocked() || game.matchMode() != MatchMode.NORMAL
+                || game.phase() == RoundPhase.WAITING || game.phase() == RoundPhase.ENDED) {
+            return LateJoinResult.INVALID_GAME;
+        }
+        if (game.currentRound() > LATE_JOIN_MAX_ROUND) {
+            return LateJoinResult.TOO_LATE;
+        }
+        UUID playerId = player.getUUID();
+        if (game.isActiveParticipant(playerId)) {
+            return LateJoinResult.ALREADY_PARTICIPANT;
+        }
+        if (pendingLateJoins.containsKey(playerId)) {
+            return LateJoinResult.ALREADY_PENDING;
+        }
+        Optional<AssignedParticipant> assignment = findLateJoinAssignment(
+                playerId,
+                player.getGameProfile().getName()
+        );
+        if (assignment.isEmpty()) {
+            return LateJoinResult.NO_SLOT;
+        }
+
+        boolean leftPractice = stopSandbox(server, playerId) | stopTutorial(server, playerId) | releaseSandboxSpectator(playerId);
+        if (leftPractice) {
+            returnPlayerToLobby(server, player);
+        }
+        ParticipantSelectionPlan plan = new ParticipantSelectionPlan(
+                game.matchMode(),
+                List.of(assignment.get()),
+                Set.of(),
+                1
+        );
+        TraitSelectionSession selection = new TraitSelectionSession(plan, Map.of(), LATE_JOIN_SELECTION_TICKS);
+        pendingLateJoins.put(playerId, new PendingLateJoin(game.currentRound(), assignment.get(), selection));
+        if (!traitsEnabled() || !hasSelectableTraits()) {
+            return finishLateJoin(server, playerId, false) ? LateJoinResult.JOINED : LateJoinResult.FAILED;
+        }
+        dialogService.showTraitSelection(player, TraitLoadout.none(), selection.remainingSeconds());
+        player.sendSystemMessage(SemionText.prefixedPlain("30초 안에 주특성과 부특성을 선택하세요. 미선택 슬롯은 '선택 안 함'으로 적용됩니다."));
+        return LateJoinResult.SELECTION_STARTED;
+    }
+
+    private Optional<AssignedParticipant> findLateJoinAssignment(UUID playerId, String playerName) {
+        SemionGame game = activeGame;
+        if (game == null) {
+            return Optional.empty();
+        }
+        SemionTeam selectedTeam = null;
+        int selectedSize = Integer.MAX_VALUE;
+        for (TeamId teamId : TeamId.values()) {
+            SemionTeam team = game.teams().get(teamId);
+            if (team == null || !team.active() || team.eliminated()) {
+                continue;
+            }
+            int reserved = (int) pendingLateJoins.values().stream()
+                    .filter(pending -> pending.assignment().teamId() == teamId)
+                    .count();
+            int size = team.memberIds().size() + reserved;
+            if (size < SemionTeam.MAX_PLAYERS && size < selectedSize) {
+                selectedTeam = team;
+                selectedSize = size;
+            }
+        }
+        if (selectedTeam == null) {
+            return Optional.empty();
+        }
+
+        Set<Integer> usedLanes = selectedTeam.laneGroup().lanes().stream()
+                .map(PlayerLane::laneId)
+                .collect(Collectors.toSet());
+        TeamId selectedTeamId = selectedTeam.id();
+        pendingLateJoins.values().stream()
+                .map(PendingLateJoin::assignment)
+                .filter(assignment -> assignment.teamId() == selectedTeamId)
+                .map(AssignedParticipant::laneId)
+                .forEach(usedLanes::add);
+        for (int laneId = 1; laneId <= SemionTeam.MAX_PLAYERS; laneId++) {
+            if (!usedLanes.contains(laneId)) {
+                return Optional.of(new AssignedParticipant(playerId, playerName, selectedTeamId, laneId));
+            }
+        }
+        return Optional.empty();
+    }
+
+    private boolean finishLateJoin(MinecraftServer server, UUID playerId, boolean timeout) {
+        PendingLateJoin pending = pendingLateJoins.remove(playerId);
+        SemionGame game = activeGame;
+        ServerPlayer player = server == null ? null : server.getPlayerList().getPlayer(playerId);
+        if (pending == null || game == null || player == null || game.phase() == RoundPhase.ENDED) {
+            return false;
+        }
+
+        AssignedParticipant assignment = pending.assignment();
+        SemionTeam team = game.teams().get(assignment.teamId());
+        boolean slotAvailable = team != null && team.active() && !team.eliminated()
+                && team.memberIds().size() < SemionTeam.MAX_PLAYERS
+                && team.laneGroup().lane(assignment.laneId()).isEmpty();
+        if (!slotAvailable) {
+            assignment = findLateJoinAssignment(playerId, player.getGameProfile().getName()).orElse(null);
+        }
+        if (assignment == null) {
+            player.sendSystemMessage(SemionText.prefixedError("참가할 수 있는 팀에 빈자리가 없어 중도 참여가 취소되었습니다."));
+            return false;
+        }
+
+        SemionJob job = profile(server, playerId, player.getGameProfile().getName())
+                .selectedJobResource()
+                .flatMap(JobRegistry::find)
+                .filter(JobRegistry::isEnabled)
+                .orElse(JobRegistry.defaultJob());
+        boolean joined = game.addLateParticipant(
+                server,
+                player,
+                assignment,
+                pending.traitSelection().loadoutOrDefault(playerId),
+                job,
+                pending.requestedRound()
+        );
+        if (!joined) {
+            player.sendSystemMessage(SemionText.prefixedError("중도 참여 처리에 실패했습니다."));
+            return false;
+        }
+        if (timeout) {
+            player.sendSystemMessage(SemionText.prefixedPlain("특성 선택 시간이 종료되어 미선택 슬롯은 '선택 안 함'으로 적용되었습니다."));
+        }
+        sidebarHudService.refreshNow(server, game, matchMode, practiceViewerIds());
+        return true;
+    }
+
     public int startCountdownSecondsRemaining() {
         if (pendingTraitSelection != null) {
             return pendingTraitSelection.remainingSeconds();
@@ -1686,6 +1863,14 @@ public final class SemionGameManager {
         if (sandbox != null) {
             return sandbox.selectTrait(playerId, slot, traitId);
         }
+        PendingLateJoin lateJoin = pendingLateJoins.get(playerId);
+        if (lateJoin != null) {
+            TraitSelectionSession.SelectionResult result = lateJoin.traitSelection().select(playerId, slot, traitId);
+            if (result == TraitSelectionSession.SelectionResult.SELECTED && lateJoin.traitSelection().complete()) {
+                finishLateJoin(server, playerId, false);
+            }
+            return result;
+        }
         if (activeGame == null) {
             return TraitSelectionSession.SelectionResult.NOT_PARTICIPANT;
         }
@@ -1706,6 +1891,10 @@ public final class SemionGameManager {
         SemionGame sandbox = sandboxGames.get(playerId);
         if (sandbox != null) {
             return sandbox.selectedTraitLoadoutOrDefault(playerId);
+        }
+        PendingLateJoin lateJoin = pendingLateJoins.get(playerId);
+        if (lateJoin != null) {
+            return lateJoin.traitSelection().loadoutOrDefault(playerId);
         }
         if (pendingTraitSelection != null) {
             return pendingTraitSelection.loadoutOrDefault(playerId);
@@ -1741,6 +1930,7 @@ public final class SemionGameManager {
         if (activeGame == null) {
             clearStartCountdown();
             clearTraitSelection();
+            pendingLateJoins.clear();
             Set<UUID> practiceViewerIds = practiceViewerIds();
             illagerRaidBossBarService.clearExcept(practiceViewerIds);
             villagerAdvReputationBossBarService.clearExcept(practiceViewerIds);
@@ -1749,6 +1939,8 @@ public final class SemionGameManager {
             queenBossBarService.clearExcept(practiceViewerIds);
             return;
         }
+
+        tickLateJoins(server);
 
         if (pendingFinishedGame != null) {
             if (pendingFinishDelayTicks > 0) {
@@ -1808,7 +2000,11 @@ public final class SemionGameManager {
                 } catch (ArenaLoadException exception) {
                     SemionTd.LOGGER.warn("Failed to send late-joining player {} to lobby.", player.getGameProfile().getName(), exception);
                 }
-                player.sendSystemMessage(SemionText.prefixedPlain("이미 게임이 진행중입니다! /semiontd spectate 를 이용해 관전하거나 /샌드박스 start 로 연습모드를 플레이해보세요!"));
+                String lateJoinHint = activeGame.matchMode() == MatchMode.NORMAL && activeGame.currentRound() <= LATE_JOIN_MAX_ROUND
+                        ? " 5라운드까지는 /중도참여로 경기에 참가할 수 있습니다."
+                        : "";
+                player.sendSystemMessage(SemionText.prefixedPlain("이미 게임이 진행중입니다!" + lateJoinHint
+                        + " /semiontd spectate 를 이용해 관전하거나 /샌드박스 start 로 연습모드를 플레이해보세요!"));
                 return;
             }
 
@@ -1841,6 +2037,7 @@ public final class SemionGameManager {
         }
         UUID playerId = player.getUUID();
         MinecraftServer server = player.getServer();
+        pendingLateJoins.remove(playerId);
         if (activeGame != null && activeGame.canConfigureRoster()) {
             activeGame.markNotReady(playerId);
             ParticipantSelectionPlan pendingPlan = pendingStartPlan != null
@@ -1887,6 +2084,7 @@ public final class SemionGameManager {
         clearRatingProfileCache();
         clearStartCountdown();
         clearTraitSelection();
+        pendingLateJoins.clear();
         pendingFinishedGame = null;
         pendingFinishDelayTicks = 0;
         clearPendingMatchResultDialog();
@@ -2108,6 +2306,29 @@ public final class SemionGameManager {
         }
     }
 
+    private void tickLateJoins(MinecraftServer server) {
+        if (pendingLateJoins.isEmpty()) {
+            return;
+        }
+        if (activeGame == null || activeGame.phase() == RoundPhase.ENDED) {
+            pendingLateJoins.clear();
+            return;
+        }
+        for (UUID playerId : List.copyOf(pendingLateJoins.keySet())) {
+            PendingLateJoin pending = pendingLateJoins.get(playerId);
+            if (pending == null) {
+                continue;
+            }
+            if (server.getPlayerList().getPlayer(playerId) == null) {
+                pendingLateJoins.remove(playerId);
+            } else if (pending.traitSelection().complete()) {
+                finishLateJoin(server, playerId, false);
+            } else if (pending.traitSelection().tick()) {
+                finishLateJoin(server, playerId, true);
+            }
+        }
+    }
+
     private static boolean hasSelectableTraits() {
         return TraitRegistry.all().stream().anyMatch(trait -> !TraitLoadout.isNone(trait.id()));
     }
@@ -2269,6 +2490,7 @@ public final class SemionGameManager {
             activeGame = null;
             clearStartCountdown();
             clearTraitSelection();
+            pendingLateJoins.clear();
             clearRatingProfileCache();
         }
         if (pendingFinishedGame == game) {
@@ -2333,6 +2555,7 @@ public final class SemionGameManager {
         if (result.isPresent()) {
             lastMatchResult = result.get();
             matchResultRepository.saveMatchResult(result.get());
+            buildGuideService.publishMatchBuilds(result.get());
             jobStatisticsService.record(result.get());
             ratingResult = applyRatingOrQueueRetry(server, result.get());
             finalizeBuildGuideRecording(finishedGame, result);
@@ -2470,10 +2693,6 @@ public final class SemionGameManager {
 
         for (MatchParticipantResult participant : matchResult.participants()) {
             ServerPlayer player = server.getPlayerList().getPlayer(participant.playerId());
-            if (player != null) {
-                player.sendSystemMessage(buildGuideSavePrompt());
-            }
-
             MatchProgressionReward reward = rewards.get(participant.playerId());
             if (reward == null) {
                 continue;
@@ -2489,14 +2708,6 @@ public final class SemionGameManager {
                             + " <gray>보유</gray> <aqua>" + reward.profile().cosmeticCurrency() + "</aqua>"
             ));
         }
-    }
-
-    private static Component buildGuideSavePrompt() {
-        return SemionText.prefixed(Component.empty()
-                .append(Component.literal("이번 게임 빌드를 저장하시겠어요? ").withStyle(ChatFormatting.YELLOW))
-                .append(Component.literal("저장하시려면 ").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal("/빌드 기록 <제목>").withStyle(ChatFormatting.AQUA))
-                .append(Component.literal(" 를 입력해서 저장해주세요!").withStyle(ChatFormatting.GRAY)));
     }
 
     private void showMatchResultDialogs(

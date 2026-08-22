@@ -312,8 +312,12 @@ public final class EndTower extends EntityBackedTower {
     private void healTransferredHealth(PlayerLane lane, double amount) {
         if (amount <= 0.0) {return;}
         Optional<SemionTowerEntity> entity = towerEntity(lane);
-        if (entity.isPresent()) {entity.get().receiveHealing(amount);}
-        else {syncHealth(health() + amount);}
+        if (entity.isPresent()) {healTarget(entity.get(), amount);}
+        else {
+            double before = health();
+            syncHealth(before + amount);
+            recordHealingDone(health() - before);
+        }
     }
 
     private void switchToPhantom(PlayerLane lane) {

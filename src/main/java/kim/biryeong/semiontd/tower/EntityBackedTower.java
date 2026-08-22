@@ -101,7 +101,14 @@ public abstract class EntityBackedTower extends Tower {
         } else if (lane != null && lane.arenaWorld() != null) {
             entityId().ifPresent(id -> {
                 if (lane.arenaWorld().getEntity(id) instanceof SemionTowerEntity towerEntity) {
-                    towerEntity.resetMovementTo(new Vec3(anchorX(), anchorY(), anchorZ()));
+                    towerEntity.getNavigation().stop();
+                    towerEntity.getMoveControl().setWantedPosition(anchorX(), anchorY(), anchorZ(), 0.0);
+                    towerEntity.setDeltaMovement(Vec3.ZERO);
+                    towerEntity.recordCurrentAttackTarget(null);
+                    towerEntity.teleportTo(anchorX(), anchorY(), anchorZ());
+                    // A direct MoveControl request can survive Navigation#stop. Consume the
+                    // zero-distance request now so it cannot move the tower on the next tick.
+                    towerEntity.getMoveControl().tick();
                 }
             });
         }

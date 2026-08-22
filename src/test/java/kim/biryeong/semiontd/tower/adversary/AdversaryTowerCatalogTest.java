@@ -356,8 +356,8 @@ class AdversaryTowerCatalogTest {
         assertEquals(0.20, global.get("baseRivalKillHealRatio"), 0.0001);
         assertEquals(0.30, global.get("enhancedRivalKillHealRatio"), 0.0001);
         assertEquals(2.00, global.get("rivalKillHealCapRatioPerWave"), 0.0001);
-        assertEquals(0.04, global.get("focusFireDamageReductionPerExtraAttacker"), 0.0001);
-        assertEquals(0.45, global.get("focusFireDamageReductionCap"), 0.0001);
+        assertEquals(0.05, global.get("focusFireDamageReductionPerExtraAttacker"), 0.0001);
+        assertEquals(0.55, global.get("focusFireDamageReductionCap"), 0.0001);
         assertEquals(0.10, global.get("fireworkSecondary6Ratio"), 0.0001);
         assertEquals(0.08, global.get("fireworkSecondary7Ratio"), 0.0001);
         assertEquals(0.05, global.get("fireworkSecondary8Ratio"), 0.0001);
@@ -398,7 +398,7 @@ class AdversaryTowerCatalogTest {
                 0.0
         ), 0.0001);
         assertEquals(0.20, merged.ability(AdversaryBalance.GLOBAL_CONFIG_ID, "baseRivalKillHealRatio", 0.0), 0.0001);
-        assertEquals(0.45, merged.ability(AdversaryBalance.GLOBAL_CONFIG_ID, "focusFireDamageReductionCap", 0.0), 0.0001);
+        assertEquals(0.55, merged.ability(AdversaryBalance.GLOBAL_CONFIG_ID, "focusFireDamageReductionCap", 0.0), 0.0001);
         assertEquals(0.14, merged.ability(AdversaryBalance.GLOBAL_CONFIG_ID, "beaconHealMaxHealthRatio", 0.0), 0.0001);
         assertEquals(0.05, merged.ability(AdversaryBalance.GLOBAL_CONFIG_ID, "fireworkSecondary8Ratio", 0.0), 0.0001);
         assertEquals(650.0, merged.ability(

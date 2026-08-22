@@ -3,6 +3,7 @@ package kim.biryeong.semiontd.entity.monster.goal;
 import java.util.EnumSet;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.visual.SemionAnimationState;
+import kim.biryeong.semiontd.tower.succubus.SuccubusDreams;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 
@@ -29,6 +30,11 @@ public final class MonsterAttackTargetGoal extends Goal {
 
     @Override
     public void tick() {
+        if (SuccubusDreams.isAsleep(monster)) {
+            monster.getNavigation().stop();
+            monster.playAnimation(SemionAnimationState.IDLE);
+            return;
+        }
         if (cooldownTicks > 0) {
             cooldownTicks--;
         }

@@ -21,6 +21,7 @@ import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 final class FutureAgencyTowerCatalogTest {
@@ -30,6 +31,11 @@ final class FutureAgencyTowerCatalogTest {
     static void bootstrapMinecraftRegistries() {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
+    }
+
+    @BeforeEach
+    void loadDefaults() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
     }
 
     @AfterEach
@@ -93,6 +99,49 @@ final class FutureAgencyTowerCatalogTest {
     }
 
     @Test
+    void cleanLaneRewardOffersThreePoliciesTwiceWithoutImmediateRepeats() {
+        FutureAgencyStates.PlayerState state = FutureAgencyStates.state(OWNER);
+        state.reconstruct();
+        state.setNextSelectionLimit(2);
+        state.openRound(8);
+        var firstOffers = state.offers();
+
+        assertEquals(1, state.selectionNumber());
+        assertEquals(2, state.selectionLimit());
+        assertTrue(state.choose(firstOffers.getFirst()));
+        var secondOffers = state.offers();
+        assertEquals(3, secondOffers.size());
+        assertTrue(java.util.Collections.disjoint(firstOffers, secondOffers));
+        assertEquals(2, state.selectionNumber());
+        assertTrue(state.choose(secondOffers.getFirst()));
+        assertTrue(state.selectedThisRound());
+        assertTrue(state.offers().isEmpty());
+        assertEquals(2, state.policySelections());
+    }
+
+    @Test
+    void secondPolicyRollFallsBackToPreviouslyShownCandidatesWhenPoolIsSmall() {
+        FutureAgencyStates.PlayerState state = FutureAgencyStates.state(OWNER);
+        state.reconstruct();
+        int round = 1;
+        while (java.util.Arrays.stream(FutureAgencyPolicy.values())
+                .filter(policy -> state.stacks(policy) < policy.maxStacks()).count() > 3) {
+            state.openRound(round++);
+            assertTrue(state.choose(state.offers().getFirst()));
+        }
+        state.setNextSelectionLimit(2);
+        state.openRound(round);
+        var firstOffers = state.offers();
+        FutureAgencyPolicy chosen = firstOffers.getFirst();
+
+        assertEquals(3, firstOffers.size());
+        assertTrue(state.choose(chosen));
+        assertEquals(2, state.offers().size());
+        assertFalse(state.offers().contains(chosen));
+        assertTrue(firstOffers.containsAll(state.offers()));
+    }
+
+    @Test
     void reconstructionCommanderAndWorldSaveArePermanentStateTransitions() {
         FutureAgencyStates.PlayerState state = FutureAgencyStates.state(OWNER);
         assertFalse(state.reconstructed());
@@ -108,7 +157,9 @@ final class FutureAgencyTowerCatalogTest {
         state.saveWorld();
         assertTrue(state.worldSaved());
         state.openRound(99);
-        assertTrue(state.offers().isEmpty());
+        assertEquals(3, state.offers().size());
+        assertTrue(state.choose(state.offers().getFirst()));
+        assertEquals(11, state.policySelections());
     }
 
     @Test
@@ -117,8 +168,18 @@ final class FutureAgencyTowerCatalogTest {
         FutureAgencyTowers.all().forEach(type -> assertTrue(defaults.towers().containsKey(type.id())));
         assertEquals(0.65, defaults.ability(FutureAgencyBalance.GLOBAL_ID,
                 "damageReductionCap", -1), 0.0001);
-        assertEquals(0.06, defaults.ability(FutureAgencyBalance.GLOBAL_ID,
+        assertEquals(0.10, defaults.ability(FutureAgencyBalance.GLOBAL_ID,
                 "policy.agency_tactics", -1), 0.0001);
+        assertEquals(0.07, defaults.ability(FutureAgencyBalance.GLOBAL_ID,
+                "survivorDamagePerCopy", -1), 0.0001);
+        assertEquals(2.5, defaults.ability(FutureAgencyBalance.GLOBAL_ID,
+                "survivorDamageCap", -1), 0.0001);
+        assertEquals(0.07, FutureAgencyPolicy.REACTION_TRAINING.defaultValue(), 0.0001);
+        assertEquals(0.15, FutureAgencyPolicy.PRECISION_FIRE.defaultValue(), 0.0001);
+        assertEquals(0.12, FutureAgencyPolicy.FAST_RELOAD.defaultValue(), 0.0001);
+        assertEquals(0.50, FutureAgencyPolicy.AREA_SUPPRESSION.defaultValue(), 0.0001);
+        assertEquals(2.0, FutureAgencyPolicy.MULTI_TARGET.defaultValue(), 0.0001);
+        assertEquals(0.30, FutureAgencyBalance.SUPPRESSION_DENSE_CAP, 0.0001);
 
         TowerBalanceConfig merged = new TowerBalanceConfig(Map.of(), Map.of(), Map.of(
                 FutureAgencyBalance.GLOBAL_ID, Map.of("policy.agency_tactics", 0.04)))
@@ -130,6 +191,8 @@ final class FutureAgencyTowerCatalogTest {
                 "policy.agency_tactics", -1), 0.0001);
         assertEquals(0.65, merged.ability(FutureAgencyBalance.GLOBAL_ID,
                 "damageReductionCap", -1), 0.0001);
+        assertEquals(2.5, merged.ability(FutureAgencyBalance.GLOBAL_ID,
+                "survivorDamageCap", -1), 0.0001);
 
         LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>(defaults.abilities());
         LinkedHashMap<String, Double> invalidGlobal = new LinkedHashMap<>(
@@ -147,6 +210,8 @@ final class FutureAgencyTowerCatalogTest {
                 "damageReduction", 0.70);
         assertInvalidAbility(defaults, FutureAgencyBalance.GLOBAL_ID,
                 "policy.precision_fire", 1.01);
+        assertInvalidAbility(defaults, FutureAgencyBalance.GLOBAL_ID,
+                "survivorDamagePerCopy", 1.01);
     }
 
     @Test
@@ -167,18 +232,21 @@ final class FutureAgencyTowerCatalogTest {
     @Test
     void futureAgencyDefaultsMatchDpsAndDefenseTargets() {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        assertHealthProgression(defaults, FutureAgencyRole.COMBAT, 80, 125, 190, 285, 390);
+        assertHealthProgression(defaults, FutureAgencyRole.SUPPRESSION, 95, 145, 215, 320, 420);
+        assertHealthProgression(defaults, FutureAgencyRole.PROTECTION, 190, 300, 450, 640, 780);
         assertTower(defaults, FutureAgencyTowers.COMMANDER, 1000, 32, 14);
-        assertTower(defaults, FutureAgencyTowers.agent(FutureAgencyRole.COMBAT, 1), 650, 48, 10);
-        assertTower(defaults, FutureAgencyTowers.agent(FutureAgencyRole.SUPPRESSION, 1), 700, 38, 13);
-        assertTower(defaults, FutureAgencyTowers.agent(FutureAgencyRole.PROTECTION, 1), 1300, 32, 14);
+        assertTower(defaults, FutureAgencyTowers.agent(FutureAgencyRole.COMBAT, 1), 390, 48, 10);
+        assertTower(defaults, FutureAgencyTowers.agent(FutureAgencyRole.SUPPRESSION, 1), 420, 38, 13);
+        assertTower(defaults, FutureAgencyTowers.agent(FutureAgencyRole.PROTECTION, 1), 780, 32, 14);
 
         double combatDps = 48.0 * 20.0 / 10.0;
         assertEquals(96.0, combatDps, 0.0001);
         assertEquals(192.0, combatDps * 2.0, 0.0001);
         double tenAttackPolicies = combatDps * 2.0
-                * (1.0 + 0.12 + 3 * 0.06 + 3 * 0.10 + 0.20)
-                * (1.0 + 0.08 + 3 * 0.07);
-        assertTrue(tenAttackPolicies <= 450.0, "Ten offensive policies must keep the pair below 450 DPS");
+                * (1.0 + 0.12 + 3 * 0.10 + 3 * 0.15 + 0.20)
+                * (1.0 + 0.08 + 3 * 0.12);
+        assertEquals(572.31, tenAttackPolicies, 0.01);
 
         double suppressionDps = 38.0 * 20.0 / 13.0;
         assertEquals(58.46, suppressionDps, 0.01);
@@ -186,6 +254,22 @@ final class FutureAgencyTowerCatalogTest {
         assertEquals(198.77, suppressionDps * (1.0 + 4.0 * 0.60), 0.01);
         assertEquals(0.65, defaults.ability(FutureAgencyBalance.GLOBAL_ID,
                 "damageReductionCap", -1), 0.0001);
+    }
+
+    @Test
+    void survivorDamageScalesByAgencyStageAndCapsAtTwoHundredFiftyPercent() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        FutureAgencyStates.PlayerState state = FutureAgencyStates.state(OWNER);
+        assertEquals(0.07, FutureAgencyBalance.survivorDamage(state, 1), 0.0001);
+        state.reconstruct();
+        assertEquals(0.14, FutureAgencyBalance.survivorDamage(state, 1), 0.0001);
+        for (int round = 1; round <= 5; round++) {
+            state.openRound(round);
+            assertTrue(state.choose(state.offers().getFirst()));
+        }
+        state.promoteCommander();
+        assertEquals(0.21, FutureAgencyBalance.survivorDamage(state, 1), 0.0001);
+        assertEquals(2.5, FutureAgencyBalance.survivorDamage(state, 100), 0.0001);
     }
 
     @Test
@@ -219,6 +303,14 @@ final class FutureAgencyTowerCatalogTest {
         assertEquals(health, stats.maxHealth(), 0.0001);
         assertEquals(damage, stats.damage(), 0.0001);
         assertEquals(interval, stats.attackIntervalTicks());
+    }
+
+    private static void assertHealthProgression(TowerBalanceConfig config, FutureAgencyRole role,
+                                                double... expected) {
+        for (int index = 0; index < expected.length; index++) {
+            assertEquals(expected[index], config.towers().get(
+                    FutureAgencyTowers.agent(role, 5 - index).id()).maxHealth(), 0.0001);
+        }
     }
 
     private static void assertInvalidAbility(TowerBalanceConfig defaults, String configId,

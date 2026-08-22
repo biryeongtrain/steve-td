@@ -42,8 +42,8 @@ public final class AdversaryBalance {
     public static final double BASE_RIVAL_KILL_HEAL_RATIO = 0.20;
     public static final double ENHANCED_RIVAL_KILL_HEAL_RATIO = 0.30;
     public static final double RIVAL_KILL_HEAL_CAP_RATIO_PER_WAVE = 2.00;
-    public static final double FOCUS_FIRE_DAMAGE_REDUCTION_PER_EXTRA_ATTACKER = 0.04;
-    public static final double FOCUS_FIRE_DAMAGE_REDUCTION_CAP = 0.45;
+    public static final double FOCUS_FIRE_DAMAGE_REDUCTION_PER_EXTRA_ATTACKER = 0.05;
+    public static final double FOCUS_FIRE_DAMAGE_REDUCTION_CAP = 0.55;
 
     public static final int BREEZE_EXTRA_TARGETS = 4;
     public static final double BREEZE_EXTRA_TARGET_DAMAGE_RATIO = 0.60;

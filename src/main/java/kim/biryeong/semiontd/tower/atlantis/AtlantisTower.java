@@ -249,7 +249,7 @@ public class AtlantisTower extends ProductionTower {
             if (target == null) {
                 continue;
             }
-            if (regen > 0.0 && tower.health() < tower.currentMaxHealth() && target.receiveHealing(regen)) {
+            if (regen > 0.0 && tower.health() < tower.currentMaxHealth() && healTarget(target, regen)) {
                 target.playHealingAnimation();
                 acted = true;
             }

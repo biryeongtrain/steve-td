@@ -17,11 +17,12 @@ public record MatchParticipantResult(
         List<Integer> clearedRounds,
         TraitLoadoutSnapshot traitLoadout,
         List<TowerCompositionEntry> finalTowerComposition,
-        List<BuildAction> buildActions
+        List<BuildAction> buildActions,
+        List<PlayerRoundMetricsSnapshot> roundMetrics
 ) {
     public MatchParticipantResult(UUID playerId, String playerName, TeamId teamId, boolean winner) {
         this(playerId, playerName, teamId, winner, PlayerMatchStatsSnapshot.empty(), null, List.of(), List.of(),
-                TraitLoadoutSnapshot.none(), List.of(), List.of());
+                TraitLoadoutSnapshot.none(), List.of(), List.of(), List.of());
     }
 
     public MatchParticipantResult(
@@ -32,7 +33,7 @@ public record MatchParticipantResult(
             PlayerMatchStatsSnapshot stats
     ) {
         this(playerId, playerName, teamId, winner, stats, null, List.of(), List.of(),
-                TraitLoadoutSnapshot.none(), List.of(), List.of());
+                TraitLoadoutSnapshot.none(), List.of(), List.of(), List.of());
     }
 
     public MatchParticipantResult(
@@ -44,7 +45,7 @@ public record MatchParticipantResult(
             String jobId
     ) {
         this(playerId, playerName, teamId, winner, stats, jobId, List.of(), List.of(),
-                TraitLoadoutSnapshot.none(), List.of(), List.of());
+                TraitLoadoutSnapshot.none(), List.of(), List.of(), List.of());
     }
 
     public MatchParticipantResult(
@@ -58,7 +59,7 @@ public record MatchParticipantResult(
             List<Integer> clearedRounds
     ) {
         this(playerId, playerName, teamId, winner, stats, jobId, attemptedRounds, clearedRounds,
-                TraitLoadoutSnapshot.none(), List.of(), List.of());
+                TraitLoadoutSnapshot.none(), List.of(), List.of(), List.of());
     }
 
     public MatchParticipantResult(
@@ -74,7 +75,24 @@ public record MatchParticipantResult(
             List<TowerCompositionEntry> finalTowerComposition
     ) {
         this(playerId, playerName, teamId, winner, stats, jobId, attemptedRounds, clearedRounds,
-                traitLoadout, finalTowerComposition, List.of());
+                traitLoadout, finalTowerComposition, List.of(), List.of());
+    }
+
+    public MatchParticipantResult(
+            UUID playerId,
+            String playerName,
+            TeamId teamId,
+            boolean winner,
+            PlayerMatchStatsSnapshot stats,
+            String jobId,
+            List<Integer> attemptedRounds,
+            List<Integer> clearedRounds,
+            TraitLoadoutSnapshot traitLoadout,
+            List<TowerCompositionEntry> finalTowerComposition,
+            List<BuildAction> buildActions
+    ) {
+        this(playerId, playerName, teamId, winner, stats, jobId, attemptedRounds, clearedRounds,
+                traitLoadout, finalTowerComposition, buildActions, List.of());
     }
 
     public MatchParticipantResult {
@@ -98,6 +116,12 @@ public record MatchParticipantResult(
         buildActions = buildActions == null
                 ? List.of()
                 : buildActions.stream().filter(Objects::nonNull).toList();
+        roundMetrics = roundMetrics == null
+                ? List.of()
+                : roundMetrics.stream()
+                .filter(Objects::nonNull)
+                .sorted(java.util.Comparator.comparingInt(PlayerRoundMetricsSnapshot::round))
+                .toList();
     }
 
     private static List<Integer> normalizeRounds(List<Integer> rounds) {

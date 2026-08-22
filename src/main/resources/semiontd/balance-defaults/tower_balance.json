@@ -1256,6 +1256,14 @@
       "attackIntervalTicks": 16,
       "aggroPriority": 0
     },
+    "ancient_city_warden_t4": {
+      "mineralCost": 650,
+      "maxHealth": 240.0,
+      "range": 9.5,
+      "damage": 18.0,
+      "attackIntervalTicks": 14,
+      "aggroPriority": 0
+    },
     "adversary_fox": {
       "mineralCost": 100,
       "maxHealth": 300.0,
@@ -2074,7 +2082,7 @@
     },
     "future_agent_combat_g5": {
       "mineralCost": 50,
-      "maxHealth": 85.0,
+      "maxHealth": 80.0,
       "range": 7.0,
       "damage": 8.0,
       "attackIntervalTicks": 16,
@@ -2082,7 +2090,7 @@
     },
     "future_agent_combat_g4": {
       "mineralCost": 0,
-      "maxHealth": 140.0,
+      "maxHealth": 125.0,
       "range": 7.5,
       "damage": 13.0,
       "attackIntervalTicks": 15,
@@ -2090,7 +2098,7 @@
     },
     "future_agent_combat_g3": {
       "mineralCost": 0,
-      "maxHealth": 230.0,
+      "maxHealth": 190.0,
       "range": 8.0,
       "damage": 21.0,
       "attackIntervalTicks": 13,
@@ -2098,7 +2106,7 @@
     },
     "future_agent_combat_g2": {
       "mineralCost": 0,
-      "maxHealth": 380.0,
+      "maxHealth": 285.0,
       "range": 8.5,
       "damage": 33.0,
       "attackIntervalTicks": 11,
@@ -2106,7 +2114,7 @@
     },
     "future_agent_combat_g1": {
       "mineralCost": 0,
-      "maxHealth": 650.0,
+      "maxHealth": 390.0,
       "range": 9.0,
       "damage": 48.0,
       "attackIntervalTicks": 10,
@@ -2114,7 +2122,7 @@
     },
     "future_agent_suppression_g5": {
       "mineralCost": 50,
-      "maxHealth": 100.0,
+      "maxHealth": 95.0,
       "range": 6.0,
       "damage": 6.0,
       "attackIntervalTicks": 20,
@@ -2122,7 +2130,7 @@
     },
     "future_agent_suppression_g4": {
       "mineralCost": 0,
-      "maxHealth": 160.0,
+      "maxHealth": 145.0,
       "range": 6.5,
       "damage": 10.0,
       "attackIntervalTicks": 18,
@@ -2130,7 +2138,7 @@
     },
     "future_agent_suppression_g3": {
       "mineralCost": 0,
-      "maxHealth": 260.0,
+      "maxHealth": 215.0,
       "range": 7.0,
       "damage": 16.0,
       "attackIntervalTicks": 16,
@@ -2138,7 +2146,7 @@
     },
     "future_agent_suppression_g2": {
       "mineralCost": 0,
-      "maxHealth": 430.0,
+      "maxHealth": 320.0,
       "range": 7.5,
       "damage": 25.0,
       "attackIntervalTicks": 14,
@@ -2146,7 +2154,7 @@
     },
     "future_agent_suppression_g1": {
       "mineralCost": 0,
-      "maxHealth": 700.0,
+      "maxHealth": 420.0,
       "range": 8.0,
       "damage": 38.0,
       "attackIntervalTicks": 13,
@@ -2154,7 +2162,7 @@
     },
     "future_agent_protection_g5": {
       "mineralCost": 50,
-      "maxHealth": 200.0,
+      "maxHealth": 190.0,
       "range": 2.5,
       "damage": 5.0,
       "attackIntervalTicks": 22,
@@ -2162,7 +2170,7 @@
     },
     "future_agent_protection_g4": {
       "mineralCost": 0,
-      "maxHealth": 330.0,
+      "maxHealth": 300.0,
       "range": 2.7,
       "damage": 8.0,
       "attackIntervalTicks": 20,
@@ -2170,7 +2178,7 @@
     },
     "future_agent_protection_g3": {
       "mineralCost": 0,
-      "maxHealth": 540.0,
+      "maxHealth": 450.0,
       "range": 3.0,
       "damage": 13.0,
       "attackIntervalTicks": 18,
@@ -2178,7 +2186,7 @@
     },
     "future_agent_protection_g2": {
       "mineralCost": 0,
-      "maxHealth": 850.0,
+      "maxHealth": 640.0,
       "range": 3.2,
       "damage": 21.0,
       "attackIntervalTicks": 16,
@@ -2186,7 +2194,7 @@
     },
     "future_agent_protection_g1": {
       "mineralCost": 0,
-      "maxHealth": 1300.0,
+      "maxHealth": 780.0,
       "range": 3.5,
       "damage": 32.0,
       "attackIntervalTicks": 14,
@@ -3335,6 +3343,110 @@
       "damage": 0.0,
       "attackIntervalTicks": 20,
       "aggroPriority": -20
+    },
+    "succubus_dream_dust_t1": {
+      "mineralCost": 45,
+      "maxHealth": 65.0,
+      "range": 7.0,
+      "damage": 7.0,
+      "attackIntervalTicks": 14,
+      "aggroPriority": 0
+    },
+    "succubus_dream_dust_t2": {
+      "mineralCost": 100,
+      "maxHealth": 105.0,
+      "range": 8.0,
+      "damage": 13.0,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 0
+    },
+    "succubus_dream_dust_t3": {
+      "mineralCost": 210,
+      "maxHealth": 155.0,
+      "range": 9.0,
+      "damage": 23.0,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 0
+    },
+    "succubus_sleepwalker_t1": {
+      "mineralCost": 50,
+      "maxHealth": 190.0,
+      "range": 2.5,
+      "damage": 4.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 80
+    },
+    "succubus_sleepwalker_t2": {
+      "mineralCost": 110,
+      "maxHealth": 340.0,
+      "range": 2.7,
+      "damage": 8.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": 90
+    },
+    "succubus_sleepwalker_t3": {
+      "mineralCost": 230,
+      "maxHealth": 620.0,
+      "range": 3.0,
+      "damage": 14.0,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 100
+    },
+    "succubus_lullaby_t1": {
+      "mineralCost": 55,
+      "maxHealth": 75.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 120,
+      "aggroPriority": -5
+    },
+    "succubus_lullaby_t2": {
+      "mineralCost": 120,
+      "maxHealth": 115.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 100,
+      "aggroPriority": -5
+    },
+    "succubus_lullaby_t3": {
+      "mineralCost": 240,
+      "maxHealth": 170.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 80,
+      "aggroPriority": -5
+    },
+    "succubus_nightmare_t1": {
+      "mineralCost": 65,
+      "maxHealth": 70.0,
+      "range": 8.0,
+      "damage": 14.0,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 0
+    },
+    "succubus_nightmare_t2": {
+      "mineralCost": 135,
+      "maxHealth": 110.0,
+      "range": 9.0,
+      "damage": 26.0,
+      "attackIntervalTicks": 14,
+      "aggroPriority": 0
+    },
+    "succubus_nightmare_t3": {
+      "mineralCost": 270,
+      "maxHealth": 160.0,
+      "range": 10.0,
+      "damage": 46.0,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 0
+    },
+    "succubus": {
+      "mineralCost": 120,
+      "maxHealth": 160.0,
+      "range": 8.0,
+      "damage": 18.0,
+      "attackIntervalTicks": 16,
+      "aggroPriority": 20
     }
   },
   "upgradeCosts": {
@@ -3446,6 +3558,7 @@
     "ancient_city_shrieker_t2->ancient_city_shrieker_t3": 220,
     "ancient_city_warden_t1->ancient_city_warden_t2": 160,
     "ancient_city_warden_t2->ancient_city_warden_t3": 300,
+    "ancient_city_warden_t3->ancient_city_warden_t4": 650,
     "adversary_fox->adversary_fox_form_breeze": 200,
     "adversary_fox_form_breeze->adversary_fox_form_golden_fang": 400,
     "adversary_fox_form_breeze->adversary_fox_form_shield_bearer": 400,
@@ -3725,7 +3838,15 @@
     "gamble_king->roll_two_dice": 160,
     "gamble_dark_king->bet_odd": 80,
     "gamble_dark_king->bet_even": 80,
-    "gamble_dark_king->roll_two_dice": 160
+    "gamble_dark_king->roll_two_dice": 160,
+    "succubus_dream_dust_t1->succubus_dream_dust_t2": 100,
+    "succubus_dream_dust_t2->succubus_dream_dust_t3": 210,
+    "succubus_sleepwalker_t1->succubus_sleepwalker_t2": 110,
+    "succubus_sleepwalker_t2->succubus_sleepwalker_t3": 230,
+    "succubus_lullaby_t1->succubus_lullaby_t2": 120,
+    "succubus_lullaby_t2->succubus_lullaby_t3": 240,
+    "succubus_nightmare_t1->succubus_nightmare_t2": 135,
+    "succubus_nightmare_t2->succubus_nightmare_t3": 270
   },
   "abilities": {
     "villager_splash_t2": {
@@ -4471,8 +4592,10 @@
     },
     "illager_raid": {
       "timedEffectDurationTicks": 40.0,
-      "damagePercentPerTower": 0.08,
-      "attackSpeedPercentPerTower": 0.03,
+      "damagePercentPerTower": 0.06,
+      "attackSpeedPercentPerTower": 0.02,
+      "damageBonusCap": 0.6,
+      "attackSpeedBonusCap": 0.2,
       "illagerTowerDeathGauge": 25.0,
       "markedKillBonusGauge": 10.0,
       "incomeKillGauge": 6.0,
@@ -5055,6 +5178,13 @@
       "sculkExtraTargets": 2.0,
       "secondaryDamageRatio": 0.75
     },
+    "ancient_city_warden_t4": {
+      "magicDamage": 68.0,
+      "magicCooldownTicks": 46.0,
+      "targetCount": 5.0,
+      "sculkExtraTargets": 2.0,
+      "secondaryDamageRatio": 0.75
+    },
     "adversary_global": {
       "maxFoxTowers": 4.0,
       "evolvedSplashDamageRatio": 0.5,
@@ -5063,8 +5193,8 @@
       "baseRivalKillHealRatio": 0.2,
       "enhancedRivalKillHealRatio": 0.3,
       "rivalKillHealCapRatioPerWave": 2.0,
-      "focusFireDamageReductionPerExtraAttacker": 0.04,
-      "focusFireDamageReductionCap": 0.45,
+      "focusFireDamageReductionPerExtraAttacker": 0.05,
+      "focusFireDamageReductionCap": 0.55,
       "sculkSelfDamageFloorRatio": 0.4,
       "baseSplashDamageRatio": 0.5,
       "bellHealIntervalTicks": 60.0,
@@ -5462,14 +5592,19 @@
       "commanderDamageBonus": 0.12,
       "commanderMaxHealthBonus": 0.12,
       "commanderAttackSpeedBonus": 0.08,
+      "survivorDamagePerCopy": 0.07,
+      "escapeeSurvivorDamageMultiplier": 1.0,
+      "rebuilderSurvivorDamageMultiplier": 2.0,
+      "commanderSurvivorDamageMultiplier": 3.0,
+      "survivorDamageCap": 2.5,
       "damageReductionCap": 0.65,
       "slowCap": 0.6,
-      "suppressionDenseCap": 0.18,
+      "suppressionDenseCap": 0.3,
       "suppressionDenseRadius": 2.5,
       "escortRadius": 2.5,
-      "policy.agency_tactics": 0.06,
-      "policy.composite_armor": 0.08,
-      "policy.reaction_training": 0.05,
+      "policy.agency_tactics": 0.1,
+      "policy.composite_armor": 0.1,
+      "policy.reaction_training": 0.07,
       "policy.forward_deployment": 0.1,
       "policy.evac_medics": 0.08,
       "policy.wave_analysis": 0.08,
@@ -5482,14 +5617,14 @@
       "policy.siege_department": 0.15,
       "policy.swarm_department": 0.15,
       "policy.professional_agents": 0.08,
-      "policy.precision_fire": 0.1,
-      "policy.fast_reload": 0.07,
+      "policy.precision_fire": 0.15,
+      "policy.fast_reload": 0.12,
       "policy.long_range_optics": 1.0,
       "policy.execution_authority": 0.2,
       "policy.high_value_target": 0.15,
-      "policy.area_suppression": 0.3,
+      "policy.area_suppression": 0.5,
       "policy.restraint_rounds": 0.05,
-      "policy.multi_target": 1.0,
+      "policy.multi_target": 2.0,
       "policy.dispersion_warhead": 0.075,
       "policy.dense_control": 0.015,
       "policy.ceramic_plates": 0.15,
@@ -5910,7 +6045,7 @@
       "maxSlow": 0.45,
       "maxZoneAllyDamageReduction": 0.35,
       "waterPressureDamageRatio": 0.16,
-      "waterPressureDamageCap": 2.5,
+      "waterPressureDamageCap": 2.0,
       "waterPressureRadius": 3.0,
       "zoneStackMultiplier": 2.0,
       "maxZoneCount": 6.0,
@@ -6207,12 +6342,15 @@
       "powerDraw": 6.0
     },
     "thunder_squirrel_t2": {
-      "powerDraw": 14.0
+      "powerDraw": 14.0,
+      "chainTargets": 2.0,
+      "chainRadius": 3.0,
+      "chainDamageRatio": 0.35
     },
     "thunder_squirrel_t3": {
       "powerDraw": 24.0,
-      "chainTargets": 3.0,
-      "chainRadius": 3.5,
+      "chainTargets": 4.0,
+      "chainRadius": 4.0,
       "chainDamageRatio": 0.48
     },
     "thunder_surge_t2": {
@@ -6294,7 +6432,6 @@
       "bladeAttackIntervalTicks": 12.0,
       "passiveExperiencePerRound": 6.0,
       "statPointsPerLevel": 3.0,
-      "statDiamondCost": 50.0,
       "statHealthPerPoint": 40.0,
       "statAttackPerPoint": 0.04,
       "statDefensePerPoint": 0.02,
@@ -6736,7 +6873,53 @@
       "minimumRoll": 1.0,
       "supportPowerMultiplier": 3.5,
       "faceSixDiamondReward": 35.0
-    }
+    },
+    "succubus_global": {
+      "maxStacks": 10.0,
+      "stackDurationTicks": 240.0,
+      "sleepDurationTicks": 100.0,
+      "towerSleepDurationTicks": 40.0,
+      "awakenedImmunityTicks": 60.0,
+      "spreadStacks": 2.0,
+      "spreadRadius": 2.5,
+      "allyDamagePerStack": 0.07,
+      "allyAttackSpeedPerStack": 0.035,
+      "enemyAttackSpeedPerStack": 0.05,
+      "enemyMoveSpeedPerStack": 0.05,
+      "succubusAmplification": 0.5,
+      "monsterWakeDamageThreshold": 0.4,
+      "towerWakeDamageThreshold": 0.1,
+      "monsterWakeBonusDamage": 0.2,
+      "towerWakeBonusDamage": 0.1,
+      "executionSleepCount": 3.0,
+      "absorbAttackRatio": 0.03,
+      "absorbMaxHealthRatio": 0.01
+    },
+    "succubus_dream_dust_t1": {"stackEvery": 3.0},
+    "succubus_dream_dust_t2": {"stackEvery": 2.0},
+    "succubus_dream_dust_t3": {"stackEvery": 1.0},
+    "succubus_sleepwalker_t1": {
+      "counterCooldownTicks": 60.0,
+      "counterStacks": 1.0,
+      "dreamDamageReduction": 0.1
+    },
+    "succubus_sleepwalker_t2": {
+      "counterCooldownTicks": 40.0,
+      "counterStacks": 2.0,
+      "dreamDamageReduction": 0.15
+    },
+    "succubus_sleepwalker_t3": {
+      "counterCooldownTicks": 30.0,
+      "counterStacks": 3.0,
+      "dreamDamageReduction": 0.2
+    },
+    "succubus_lullaby_t1": {"pulseIntervalTicks": 120.0, "radius": 4.5, "allyMaxTargets": 2.0, "enemyMaxTargets": 3.0},
+    "succubus_lullaby_t2": {"pulseIntervalTicks": 100.0, "radius": 5.0, "allyMaxTargets": 3.0, "enemyMaxTargets": 5.0},
+    "succubus_lullaby_t3": {"pulseIntervalTicks": 80.0, "radius": 5.5, "allyMaxTargets": 4.0, "enemyMaxTargets": 7.0},
+    "succubus_nightmare_t1": {"minimumStacks": 5.0, "sleepingDamageBonus": 0.0},
+    "succubus_nightmare_t2": {"minimumStacks": 3.0, "sleepingDamageBonus": 0.25},
+    "succubus_nightmare_t3": {"minimumStacks": 0.0, "sleepingDamageBonus": 0.5}
+
   },
   "illusionCloneQueue": {
     "spreadTicks": 200,

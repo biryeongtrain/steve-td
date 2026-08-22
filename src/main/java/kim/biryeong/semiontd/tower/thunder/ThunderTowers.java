@@ -146,6 +146,7 @@ public final class ThunderTowers {
             squirrel(1.1),
             List.of(
                     "<gray> 전기를 다루기 시작한 주력 딜러입니다. </gray>",
+                    "<light_purple> 공격이 주변 적 {ability.chainTargets:integer}명에게 <yellow>{ability.chainDamageRatio:percent}</yellow> 피해로 전이됩니다. </light_purple>",
                     "<aqua> 전력 <yellow>{ability.powerDraw:integer}</yellow>를 소비합니다. </aqua>",
                     "<green> 전력이 남을수록 공격력이 오릅니다. </green>"
             )
@@ -156,7 +157,7 @@ public final class ThunderTowers {
             squirrel(1.35),
             List.of(
                     "<gray> 계열 최종 딜러입니다. 단일 화력과 광역을 함께 냅니다. </gray>",
-                    "<light_purple> 공격이 주변 적 {ability.chainTargets:integer}명에게 <yellow>{ability.chainDamageRatio:percent}</yellow> 피해로 전이됩니다. </light_purple>",
+                    "<light_purple> 공격이 반경 {ability.chainRadius:blocks} 안의 주변 적 {ability.chainTargets:integer}명에게 <yellow>{ability.chainDamageRatio:percent}</yellow> 피해로 전이됩니다. </light_purple>",
                     "<aqua> 전력 <yellow>{ability.powerDraw:integer}</yellow>를 소비합니다. </aqua>"
             )
     );

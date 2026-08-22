@@ -44,6 +44,8 @@ import kim.biryeong.semiontd.tower.legion.LegionTowers;
 import kim.biryeong.semiontd.tower.mage.MageBalance;
 import kim.biryeong.semiontd.tower.mage.MageSpell;
 import kim.biryeong.semiontd.tower.mage.MageTowers;
+import kim.biryeong.semiontd.tower.succubus.SuccubusBalance;
+import kim.biryeong.semiontd.tower.succubus.SuccubusTowers;
 import kim.biryeong.semiontd.tower.nether.NetherTower;
 import kim.biryeong.semiontd.tower.nether.NetherTowers;
 import kim.biryeong.semiontd.tower.ocean.OceanTower;
@@ -242,6 +244,7 @@ public record TowerBalanceConfig(
         addThunderTowers(towers);
         addDemonLordTowers(towers);
         addGambleTowers(towers);
+        addSuccubusTowers(towers);
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
         putUpgrade(upgradeCosts, VillagerTowers.T1_SPLASH_TOWER, "villager_splash_t2", 110);
@@ -325,6 +328,7 @@ public record TowerBalanceConfig(
         putThunderUpgrades(upgradeCosts);
         putDemonLordUpgrades(upgradeCosts);
         putGambleUpgrades(upgradeCosts);
+        putSuccubusUpgrades(upgradeCosts);
 
         LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>();
         putAbilities(abilities, IllagerRaidStates.RAID_CONFIG_ID, Map.of(
@@ -334,7 +338,9 @@ public record TowerBalanceConfig(
                 "markedKillBonusGauge", 7.0,
                 "illagerTowerDeathGauge", 20.0,
                 "attackSpeedPercentPerTower", 0.02,
-                "damagePercentPerTower", 0.05,
+                "damagePercentPerTower", 0.06,
+                "attackSpeedBonusCap", 0.20,
+                "damageBonusCap", 0.60,
                 "timedEffectDurationTicks", 40.0
         ));
         putAbilities(abilities, IllagerTowers.T1_VINDICATOR.id(), Map.of(
@@ -895,6 +901,7 @@ public record TowerBalanceConfig(
         putThunderAbilities(abilities);
         putDemonLordAbilities(abilities);
         putGambleAbilities(abilities);
+        putSuccubusAbilities(abilities);
 
         TowerBalanceConfig fallback = new TowerBalanceConfig(
                 towers,
@@ -904,6 +911,84 @@ public record TowerBalanceConfig(
                 VillagerAdvConfig.defaultConfig()
         );
         return fallback;
+    }
+
+    private static void addSuccubusTowers(Map<String, TowerStats> towers) {
+        SuccubusTowers.all().forEach(type -> addTower(towers, type));
+    }
+
+    private static void putSuccubusUpgrades(Map<String, Long> upgrades) {
+        putUpgrade(upgrades, SuccubusTowers.DREAM_DUST_T1, SuccubusTowers.DREAM_DUST_T2.id(), 100);
+        putUpgrade(upgrades, SuccubusTowers.DREAM_DUST_T2, SuccubusTowers.DREAM_DUST_T3.id(), 210);
+        putUpgrade(upgrades, SuccubusTowers.SLEEPWALKER_T1, SuccubusTowers.SLEEPWALKER_T2.id(), 110);
+        putUpgrade(upgrades, SuccubusTowers.SLEEPWALKER_T2, SuccubusTowers.SLEEPWALKER_T3.id(), 230);
+        putUpgrade(upgrades, SuccubusTowers.LULLABY_T1, SuccubusTowers.LULLABY_T2.id(), 120);
+        putUpgrade(upgrades, SuccubusTowers.LULLABY_T2, SuccubusTowers.LULLABY_T3.id(), 240);
+        putUpgrade(upgrades, SuccubusTowers.NIGHTMARE_T1, SuccubusTowers.NIGHTMARE_T2.id(), 135);
+        putUpgrade(upgrades, SuccubusTowers.NIGHTMARE_T2, SuccubusTowers.NIGHTMARE_T3.id(), 270);
+    }
+
+    private static void putSuccubusAbilities(Map<String, Map<String, Double>> abilities) {
+        putAbilities(abilities, SuccubusBalance.CONFIG_ID, Map.ofEntries(
+                Map.entry("maxStacks", (double) SuccubusBalance.MAX_STACKS),
+                Map.entry("stackDurationTicks", (double) SuccubusBalance.STACK_DURATION_TICKS),
+                Map.entry("sleepDurationTicks", (double) SuccubusBalance.SLEEP_DURATION_TICKS),
+                Map.entry("towerSleepDurationTicks", (double) SuccubusBalance.TOWER_SLEEP_DURATION_TICKS),
+                Map.entry("awakenedImmunityTicks", (double) SuccubusBalance.AWAKENED_IMMUNITY_TICKS),
+                Map.entry("spreadStacks", (double) SuccubusBalance.SPREAD_STACKS),
+                Map.entry("spreadRadius", SuccubusBalance.SPREAD_RADIUS),
+                Map.entry("allyDamagePerStack", SuccubusBalance.ALLY_DAMAGE_PER_STACK),
+                Map.entry("allyAttackSpeedPerStack", SuccubusBalance.ALLY_ATTACK_SPEED_PER_STACK),
+                Map.entry("enemyAttackSpeedPerStack", SuccubusBalance.ENEMY_ATTACK_SPEED_PER_STACK),
+                Map.entry("enemyMoveSpeedPerStack", SuccubusBalance.ENEMY_MOVE_SPEED_PER_STACK),
+                Map.entry("succubusAmplification", SuccubusBalance.SUCCUBUS_AMPLIFICATION),
+                Map.entry("monsterWakeDamageThreshold", SuccubusBalance.MONSTER_WAKE_DAMAGE_THRESHOLD),
+                Map.entry("towerWakeDamageThreshold", SuccubusBalance.TOWER_WAKE_DAMAGE_THRESHOLD),
+                Map.entry("monsterWakeBonusDamage", SuccubusBalance.MONSTER_WAKE_BONUS_DAMAGE),
+                Map.entry("towerWakeBonusDamage", SuccubusBalance.TOWER_WAKE_BONUS_DAMAGE),
+                Map.entry("executionSleepCount", (double) SuccubusBalance.EXECUTION_SLEEP_COUNT),
+                Map.entry("absorbAttackRatio", SuccubusBalance.ABSORB_ATTACK_RATIO),
+                Map.entry("absorbMaxHealthRatio", SuccubusBalance.ABSORB_MAX_HEALTH_RATIO)
+        ));
+        putAbilities(abilities, SuccubusTowers.DREAM_DUST_T1.id(), Map.of("stackEvery", 3.0));
+        putAbilities(abilities, SuccubusTowers.DREAM_DUST_T2.id(), Map.of("stackEvery", 2.0));
+        putAbilities(abilities, SuccubusTowers.DREAM_DUST_T3.id(), Map.of("stackEvery", 1.0));
+        putSleepwalker(abilities, SuccubusTowers.SLEEPWALKER_T1, 60, 1, 0.10);
+        putSleepwalker(abilities, SuccubusTowers.SLEEPWALKER_T2, 40, 2, 0.15);
+        putSleepwalker(abilities, SuccubusTowers.SLEEPWALKER_T3, 30, 3, 0.20);
+        putLullaby(abilities, SuccubusTowers.LULLABY_T1, 120, 4.5, 2, 3);
+        putLullaby(abilities, SuccubusTowers.LULLABY_T2, 100, 5.0, 3, 5);
+        putLullaby(abilities, SuccubusTowers.LULLABY_T3, 80, 5.5, 4, 7);
+        putNightmare(abilities, SuccubusTowers.NIGHTMARE_T1, 5, 0.0);
+        putNightmare(abilities, SuccubusTowers.NIGHTMARE_T2, 3, 0.25);
+        putNightmare(abilities, SuccubusTowers.NIGHTMARE_T3, 0, 0.50);
+    }
+
+    private static void putSleepwalker(Map<String, Map<String, Double>> abilities, TowerType type,
+                                       int cooldownTicks, int counterStacks, double reduction) {
+        putAbilities(abilities, type.id(), Map.of(
+                "counterCooldownTicks", (double) cooldownTicks,
+                "counterStacks", (double) counterStacks,
+                "dreamDamageReduction", reduction
+        ));
+    }
+
+    private static void putLullaby(Map<String, Map<String, Double>> abilities, TowerType type,
+                                   int intervalTicks, double radius, int allyMaxTargets, int enemyMaxTargets) {
+        putAbilities(abilities, type.id(), Map.of(
+                "pulseIntervalTicks", (double) intervalTicks,
+                "radius", radius,
+                "allyMaxTargets", (double) allyMaxTargets,
+                "enemyMaxTargets", (double) enemyMaxTargets
+        ));
+    }
+
+    private static void putNightmare(Map<String, Map<String, Double>> abilities, TowerType type,
+                                     int minimumStacks, double sleepingDamageBonus) {
+        putAbilities(abilities, type.id(), Map.of(
+                "minimumStacks", (double) minimumStacks,
+                "sleepingDamageBonus", sleepingDamageBonus
+        ));
     }
 
     private static void addPlantTowers(LinkedHashMap<String, TowerStats> towers) {
@@ -1249,6 +1334,9 @@ public record TowerBalanceConfig(
         validateIntegralAbility(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "lifeEvery");
         validateIntegralAbility(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "splashEvery");
         validateIntegralAbility(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "defenseEvery");
+        validateRatios(IllagerRaidStates.RAID_CONFIG_ID,
+                "attackSpeedPercentPerTower", "damagePercentPerTower",
+                "attackSpeedBonusCap", "damageBonusCap");
         validateMageBalance();
         validateEngineerBalance();
         validateInsectBalance();
@@ -1261,6 +1349,31 @@ public record TowerBalanceConfig(
         validateThunderAbilities();
         validateDemonLordAbilities();
         validateGambleAbilities();
+        validateSuccubusAbilities();
+    }
+
+    private void validateSuccubusAbilities() {
+        String global = SuccubusBalance.CONFIG_ID;
+        validatePositive(global, "maxStacks", "stackDurationTicks", "sleepDurationTicks", "towerSleepDurationTicks",
+                "awakenedImmunityTicks", "spreadStacks", "spreadRadius", "executionSleepCount");
+        validateIntegral(global, false, "maxStacks", "stackDurationTicks", "sleepDurationTicks", "towerSleepDurationTicks",
+                "awakenedImmunityTicks", "spreadStacks", "executionSleepCount");
+        validateRatios(global, "allyDamagePerStack", "allyAttackSpeedPerStack",
+                "enemyAttackSpeedPerStack", "enemyMoveSpeedPerStack", "succubusAmplification",
+                "monsterWakeDamageThreshold", "towerWakeDamageThreshold",
+                "monsterWakeBonusDamage", "towerWakeBonusDamage",
+                "absorbAttackRatio", "absorbMaxHealthRatio");
+        for (TowerType type : List.of(SuccubusTowers.SLEEPWALKER_T1, SuccubusTowers.SLEEPWALKER_T2,
+                SuccubusTowers.SLEEPWALKER_T3)) {
+            validateRatios(type.id(), "dreamDamageReduction");
+            validatePositive(type.id(), "counterCooldownTicks", "counterStacks");
+            validateIntegral(type.id(), false, "counterCooldownTicks", "counterStacks");
+        }
+        for (TowerType type : List.of(SuccubusTowers.LULLABY_T1, SuccubusTowers.LULLABY_T2,
+                SuccubusTowers.LULLABY_T3)) {
+            validatePositive(type.id(), "pulseIntervalTicks", "radius", "allyMaxTargets", "enemyMaxTargets");
+            validateIntegral(type.id(), false, "pulseIntervalTicks", "allyMaxTargets", "enemyMaxTargets");
+        }
     }
 
     private void validateGambleAbilities() {
@@ -1328,11 +1441,10 @@ public record TowerBalanceConfig(
         String global = DemonLordTowers.GLOBAL_CONFIG_ID;
         validatePositive(global,
                 "baseMaxHealth", "experienceBase", "experienceGrowth", "bladeAttackIntervalTicks",
-                "healthBonusThreshold", "healthBonusScale", "damageBonusThreshold", "damageBonusScale",
-                "statDiamondCost");
+                "healthBonusThreshold", "healthBonusScale", "damageBonusThreshold", "damageBonusScale");
         validateAtLeast(global, 0.0,
                 "maxHealthPerLevel", "experiencePerMaxHealth", "damagePerLevel", "bladeDamage");
-        validateIntegral(global, false, "maxLevel", "bladeAttackIntervalTicks", "statDiamondCost");
+        validateIntegral(global, false, "maxLevel", "bladeAttackIntervalTicks");
         validateAtLeast(global, 1.0, "experienceGrowth");
 
         for (DemonLordSkill skill : DemonLordSkill.values()) {
@@ -1439,8 +1551,10 @@ public record TowerBalanceConfig(
             throw new IllegalArgumentException("Thunder storm minimum output must not exceed its maximum output.");
         }
         validatePositive(ThunderTowers.ARMADILLO_EARTH.id(), "dischargeDamage", "dischargeRadius");
-        validatePositive(ThunderTowers.SQUIRREL_T3.id(), "chainRadius", "chainDamageRatio");
-        validateIntegral(ThunderTowers.SQUIRREL_T3.id(), false, "chainTargets");
+        for (TowerType type : List.of(ThunderTowers.SQUIRREL_T2, ThunderTowers.SQUIRREL_T3)) {
+            validatePositive(type.id(), "chainRadius", "chainDamageRatio");
+            validateIntegral(type.id(), false, "chainTargets");
+        }
     }
 
     private void validateAtlantisAbilities() {
@@ -1968,12 +2082,17 @@ public record TowerBalanceConfig(
         ));
 
         putAbilities(abilities, ThunderTowers.SQUIRREL_T1.id(), Map.of("powerDraw", 6.0));
-        putAbilities(abilities, ThunderTowers.SQUIRREL_T2.id(), Map.of("powerDraw", 14.0));
+        putAbilities(abilities, ThunderTowers.SQUIRREL_T2.id(), Map.of(
+                "powerDraw", 14.0,
+                "chainTargets", 2.0,
+                "chainRadius", 3.0,
+                "chainDamageRatio", 0.35
+        ));
         // 뇌신: 광역 담당. 직선 관통은 실전에서 거의 발동하지 않아 인접 전이로 대체했다.
         putAbilities(abilities, ThunderTowers.SQUIRREL_T3.id(), Map.of(
                 "powerDraw", 24.0,
-                "chainTargets", 3.0,
-                "chainRadius", 3.5,
+                "chainTargets", 4.0,
+                "chainRadius", 4.0,
                 "chainDamageRatio", 0.48
         ));
         // 폭주: 단일 대상 담당. 여유 전력을 그대로 화력으로 환산한다.
@@ -2155,6 +2274,7 @@ public record TowerBalanceConfig(
         putUpgrade(upgrades, AncientCityTowers.SHRIEKER_T2, AncientCityTowers.SHRIEKER_T3.id(), 220);
         putUpgrade(upgrades, AncientCityTowers.WARDEN_T1, AncientCityTowers.WARDEN_T2.id(), 160);
         putUpgrade(upgrades, AncientCityTowers.WARDEN_T2, AncientCityTowers.WARDEN_T3.id(), 300);
+        putUpgrade(upgrades, AncientCityTowers.WARDEN_T3, AncientCityTowers.WARDEN_T4.id(), 650);
     }
 
     private static void putAdversaryUpgrades(Map<String, Long> upgrades) {
@@ -2510,6 +2630,11 @@ public record TowerBalanceConfig(
         values.put("commanderDamageBonus", FutureAgencyBalance.COMMANDER_DAMAGE);
         values.put("commanderMaxHealthBonus", FutureAgencyBalance.COMMANDER_HEALTH);
         values.put("commanderAttackSpeedBonus", FutureAgencyBalance.COMMANDER_ATTACK_SPEED);
+        values.put("survivorDamagePerCopy", FutureAgencyBalance.SURVIVOR_DAMAGE_PER_COPY);
+        values.put("escapeeSurvivorDamageMultiplier", FutureAgencyBalance.ESCAPEE_SURVIVOR_MULTIPLIER);
+        values.put("rebuilderSurvivorDamageMultiplier", FutureAgencyBalance.REBUILDER_SURVIVOR_MULTIPLIER);
+        values.put("commanderSurvivorDamageMultiplier", FutureAgencyBalance.COMMANDER_SURVIVOR_MULTIPLIER);
+        values.put("survivorDamageCap", FutureAgencyBalance.SURVIVOR_DAMAGE_CAP);
         values.put("damageReductionCap", FutureAgencyBalance.DAMAGE_REDUCTION_CAP);
         values.put("slowCap", FutureAgencyBalance.SLOW_CAP);
         values.put("suppressionDenseCap", FutureAgencyBalance.SUPPRESSION_DENSE_CAP);
@@ -2773,7 +2898,7 @@ public record TowerBalanceConfig(
         for (String key : java.util.List.of(
                 "rebuilderDamageBonus", "rebuilderMaxHealthBonus", "commanderDamageBonus",
                 "commanderMaxHealthBonus", "commanderAttackSpeedBonus", "damageReductionCap",
-                "slowCap", "suppressionDenseCap")) {
+                "slowCap", "suppressionDenseCap", "survivorDamagePerCopy")) {
             double value = values.getOrDefault(key, 0.0);
             if (value < 0.0 || value > 1.0) {
                 throw new IllegalArgumentException("Future agency ratio must be between 0 and 1: " + key);
@@ -3308,9 +3433,10 @@ public record TowerBalanceConfig(
         putShriekerAbilities(abilities, AncientCityTowers.SHRIEKER_T1, 4, 60, 2.0, 0.10, 40);
         putShriekerAbilities(abilities, AncientCityTowers.SHRIEKER_T2, 8, 50, 2.5, 0.15, 50);
         putShriekerAbilities(abilities, AncientCityTowers.SHRIEKER_T3, 34, 40, 3.0, 0.20, 60);
-        putWardenAbilities(abilities, AncientCityTowers.WARDEN_T1, 10, 60, 2);
-        putWardenAbilities(abilities, AncientCityTowers.WARDEN_T2, 16, 50, 3);
-        putWardenAbilities(abilities, AncientCityTowers.WARDEN_T3, 55, 40, 4);
+        putWardenAbilities(abilities, AncientCityTowers.WARDEN_T1, 10, 60, 2, 1, 0.40);
+        putWardenAbilities(abilities, AncientCityTowers.WARDEN_T2, 16, 50, 3, 1, 0.50);
+        putWardenAbilities(abilities, AncientCityTowers.WARDEN_T3, 55, 50, 4, 2, 0.75);
+        putWardenAbilities(abilities, AncientCityTowers.WARDEN_T4, 68, 46, 5, 2, 0.75);
     }
 
     private static void putCatalystAbilities(
@@ -3368,14 +3494,16 @@ public record TowerBalanceConfig(
             TowerType type,
             double damage,
             double cooldown,
-            double targets
+            double targets,
+            double extraTargets,
+            double secondaryDamageRatio
     ) {
         putAbilities(abilities, type.id(), Map.of(
                 "magicDamage", damage,
                 "magicCooldownTicks", cooldown,
                 "targetCount", targets,
-                "sculkExtraTargets", 1.0,
-                "secondaryDamageRatio", 0.25
+                "sculkExtraTargets", extraTargets,
+                "secondaryDamageRatio", secondaryDamageRatio
         ));
     }
 
@@ -3887,7 +4015,8 @@ public record TowerBalanceConfig(
         global.put("experiencePerMaxHealth", 0.02);
         global.put("experienceBase", 12.0);
         global.put("experienceGrowth", 1.25);
-        // 스킬과 평타 모두에 곱해지는 유일한 성장 배율입니다. 만렙에서 2.45배가 됩니다.
+        // 스킬과 평타 모두에 곱해집니다. 레벨 보너스만 로그 소프트캡을 적용하고,
+        // 공격력 포인트는 DemonLordState 에서 제한 없이 더합니다.
         global.put("damagePerLevel", 0.05);
         global.put("healthBonusThreshold", 500.0);
         global.put("healthBonusScale", 500.0);
@@ -3900,7 +4029,6 @@ public record TowerBalanceConfig(
         global.put("passiveExperiencePerRound", 6.0);
         // 스탯 포인트. 레벨업마다 받아 원하는 능력치에 넣습니다.
         global.put("statPointsPerLevel", 3.0);
-        global.put("statDiamondCost", 50.0);
         global.put("statHealthPerPoint", 40.0);
         global.put("statAttackPerPoint", 0.04);
         global.put("statDefensePerPoint", 0.02);

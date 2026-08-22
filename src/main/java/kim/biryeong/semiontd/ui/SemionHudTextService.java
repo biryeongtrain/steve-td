@@ -699,6 +699,7 @@ public final class SemionHudTextService {
             case GREEN -> "green";
             case YELLOW -> "yellow";
             case PURPLE -> "light_purple";
+            case AQUA -> "aqua";
         };
     }
 }

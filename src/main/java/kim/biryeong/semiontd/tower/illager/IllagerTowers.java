@@ -337,6 +337,6 @@ public final class IllagerTowers {
     }
 
     private static String commonRaidLine() {
-        return "<green>습격 공통: 라운드 시작 시 살아있던 우민 타워 1기당 공격속도 {ability.illager_raid.attackSpeedPercentPerTower:percent}, 공격력 {ability.illager_raid.damagePercentPerTower:percent} 증가.</green>";
+        return "<green>습격 공통: 라운드 시작 시 살아있던 우민 타워 1기당 공격속도 {ability.illager_raid.attackSpeedPercentPerTower:percent}, 공격력 {ability.illager_raid.damagePercentPerTower:percent} 증가. 최대 공격속도 {ability.illager_raid.attackSpeedBonusCap:percent}, 공격력 {ability.illager_raid.damageBonusCap:percent}.</green>";
     }
 }

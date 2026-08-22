@@ -19,6 +19,7 @@ import kim.biryeong.semiontd.tower.insect.InsectTowerCatalogs;
 import kim.biryeong.semiontd.tower.hero.HeroPartyTowerCatalogs;
 import kim.biryeong.semiontd.tower.legion.LegionTowerCatalogs;
 import kim.biryeong.semiontd.tower.mage.MageTowerCatalogs;
+import kim.biryeong.semiontd.tower.succubus.SuccubusTowerCatalogs;
 import kim.biryeong.semiontd.tower.nether.NetherTowerCatalogs;
 import kim.biryeong.semiontd.tower.ocean.OceanTowerCatalogs;
 import kim.biryeong.semiontd.tower.queen.QueenTowerCatalogs;
@@ -62,6 +63,7 @@ public final class ProductionTowerCatalogs {
             ThunderTowerCatalogs.register();
             DemonLordTowerCatalogs.register();
             GambleTowerCatalogs.register();
+            SuccubusTowerCatalogs.register();
         }
     }
 }

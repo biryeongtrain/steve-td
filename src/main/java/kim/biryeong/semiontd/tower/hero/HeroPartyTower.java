@@ -41,18 +41,18 @@ public abstract class HeroPartyTower extends ProductionTower {
     @Override
     protected void configureEntityAfterSpawn(SemionTowerEntity entity, PlayerLane lane) {
         entity.setCustomNameVisible(false);
-        HeroPlayerVisuals.attach(entity, this);
+        FakePlayerTowerVisuals.attach(entity, this);
     }
 
     @Override
     public void onStateChanged(PlayerLane lane) {
         super.onStateChanged(lane);
-        HeroPlayerVisuals.refresh(this);
+        FakePlayerTowerVisuals.refresh(this);
     }
 
     @Override
     public void onRemoved(PlayerLane lane) {
-        HeroPlayerVisuals.remove(this);
+        FakePlayerTowerVisuals.remove(this);
         super.onRemoved(lane);
         if (currentLane == lane) {
             currentLane = null;
@@ -62,13 +62,13 @@ public abstract class HeroPartyTower extends ProductionTower {
     @Override
     public void onDeath(PlayerLane lane) {
         HeroPartyStates.state(ownerPlayer()).recordPartyDeath();
-        HeroPlayerVisuals.remove(this);
+        FakePlayerTowerVisuals.remove(this);
     }
 
     @Override
     public void tick(PlayerLane lane) {
         super.tick(lane);
-        HeroPlayerVisuals.tick(this);
+        FakePlayerTowerVisuals.tick(this);
     }
 
     @Override
@@ -87,7 +87,9 @@ public abstract class HeroPartyTower extends ProductionTower {
             DamageSource damageSource,
             double damageAmount
     ) {
-        return damageAmount * (1.0 - focusFireDamageReduction(focusFireAttackerCount(towerEntity)));
+        return damageAmount
+                * (1.0 - focusFireDamageReduction(focusFireAttackerCount(towerEntity)))
+                * (1.0 - HeroPartyBalance.armorReduction(state().armorLevel()) * armorEffectRatio());
     }
 
     @Override
@@ -97,7 +99,9 @@ public abstract class HeroPartyTower extends ProductionTower {
         return List.of(
                 "모험 점수: " + state.adventurePoints(),
                 "파티 공격/회복: +" + oneDecimal((HeroPartyBalance.partyDamageMultiplier(state.adventurePoints()) - 1.0) * 100.0) + "%",
-                "파티 최대 체력: +" + oneDecimal((HeroPartyBalance.partyHealthMultiplier(state.adventurePoints()) - 1.0) * 100.0) + "%",
+                "파티 최대 체력: +" + oneDecimal((HeroPartyBalance.partyHealthMultiplier(state.adventurePoints()) - 1.0) * 100.0)
+                        + "% (갑옷 포함)",
+                "동료 갑옷 공유: " + oneDecimal(HeroPartyBalance.COMPANION_ARMOR_SHARE * 100.0) + "%",
                 "집중 방어: " + focusFireAttackers + "기 / 피해 감소 "
                         + oneDecimal(focusFireDamageReduction(focusFireAttackers) * 100.0) + "% (최대 "
                         + oneDecimal(HeroPartyBalance.focusFireReductionCap() * 100.0) + "%)"
@@ -114,13 +118,17 @@ public abstract class HeroPartyTower extends ProductionTower {
     }
 
     protected double bonusFlatHealth() {
-        return 0.0;
+        return HeroPartyBalance.armorHealth(state().armorLevel()) * armorEffectRatio();
+    }
+
+    protected double armorEffectRatio() {
+        return HeroPartyBalance.COMPANION_ARMOR_SHARE;
     }
 
     @Override
     public double effectBaseMaxHealth() {
-        return type().maxHealth() * HeroPartyBalance.partyHealthMultiplier(state().adventurePoints())
-                + Math.max(0.0, bonusFlatHealth());
+        return (type().maxHealth() + Math.max(0.0, bonusFlatHealth()))
+                * HeroPartyBalance.partyHealthMultiplier(state().adventurePoints());
     }
 
     protected final List<SemionTowerEntity> partyEntities(SemionTowerEntity source) {
@@ -144,7 +152,7 @@ public abstract class HeroPartyTower extends ProductionTower {
             return 0.0;
         }
         double previous = target.getHealth();
-        target.receiveHealing(amount * HeroPartyBalance.partyHealingMultiplier(state().adventurePoints()));
+        healTarget(target, amount * HeroPartyBalance.partyHealingMultiplier(state().adventurePoints()));
         return Math.max(0.0, target.getHealth() - previous);
     }
 

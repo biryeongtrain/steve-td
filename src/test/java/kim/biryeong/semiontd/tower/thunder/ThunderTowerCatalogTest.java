@@ -157,6 +157,11 @@ class ThunderTowerCatalogTest {
         assertEquals(20, defaults.abilityTicks(ThunderBalance.CONFIG_ID, "stunTicks", -1));
         assertEquals(50, defaults.abilityTicks(ThunderBalance.CONFIG_ID, "stunImmunityTicks", -1));
         assertEquals(0.22, defaults.ability(ThunderBalance.CONFIG_ID, "surplusDamageBonus", -1), 0.0001);
+        assertEquals(2, defaults.abilityInt(ThunderTowers.SQUIRREL_T2.id(), "chainTargets", -1));
+        assertEquals(3.0, defaults.ability(ThunderTowers.SQUIRREL_T2.id(), "chainRadius", -1), 0.0001);
+        assertEquals(0.35, defaults.ability(ThunderTowers.SQUIRREL_T2.id(), "chainDamageRatio", -1), 0.0001);
+        assertEquals(4, defaults.abilityInt(ThunderTowers.SQUIRREL_T3.id(), "chainTargets", -1));
+        assertEquals(4.0, defaults.ability(ThunderTowers.SQUIRREL_T3.id(), "chainRadius", -1), 0.0001);
 
         TowerBalanceConfig partial = new TowerBalanceConfig(
                 Map.of(), Map.of(), Map.of(ThunderBalance.CONFIG_ID, Map.of("stunTicks", 18.0))

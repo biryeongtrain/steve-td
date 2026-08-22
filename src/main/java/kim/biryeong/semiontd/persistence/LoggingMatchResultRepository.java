@@ -43,6 +43,11 @@ public final class LoggingMatchResultRepository implements MatchResultRepository
         return Optional.ofNullable(saved.get(matchId));
     }
 
+    @Override
+    public synchronized Map<MatchId, MatchResult> findAllMatchResults() {
+        return Map.copyOf(saved);
+    }
+
     private void append(String payload) {
         if (logPath == null) {
             SemionTd.LOGGER.error("Persistence log fallback: {}", payload);

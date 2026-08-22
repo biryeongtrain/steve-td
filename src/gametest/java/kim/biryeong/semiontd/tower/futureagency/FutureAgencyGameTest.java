@@ -2,11 +2,25 @@ package kim.biryeong.semiontd.tower.futureagency;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import kim.biryeong.semiontd.config.EconomyConfig;
+import kim.biryeong.semiontd.config.WaveConfig;
+import kim.biryeong.semiontd.effect.TimedEffectType;
+import kim.biryeong.semiontd.entity.SemionEntityTypes;
+import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.GridPosition;
+import kim.biryeong.semiontd.game.AssignedParticipant;
+import kim.biryeong.semiontd.game.MatchMode;
+import kim.biryeong.semiontd.game.ParticipantSelectionPlan;
 import kim.biryeong.semiontd.game.PlayerLane;
+import kim.biryeong.semiontd.game.RoundPhase;
+import kim.biryeong.semiontd.game.SemionGame;
 import kim.biryeong.semiontd.game.TeamId;
+import kim.biryeong.semiontd.gametest.SyntheticArenaFactory;
+import kim.biryeong.semiontd.job.FutureAgencyTowerJob;
+import kim.biryeong.semiontd.job.JobContext;
 import kim.biryeong.semiontd.map.LaneRegionLayout;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
@@ -16,6 +30,70 @@ import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
 public final class FutureAgencyGameTest {
+    @GameTest
+    public void cleanLaneRecordGrantsTwoPolicyChoicesNextRound(GameTestHelper context) {
+        UUID owner = UUID.nameUUIDFromBytes("future-agency-clean-lane".getBytes(StandardCharsets.UTF_8));
+        UUID opponent = UUID.nameUUIDFromBytes("future-agency-clean-lane-opponent".getBytes(StandardCharsets.UTF_8));
+        SemionGame game = new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(),
+                SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(BlockPos.ZERO)));
+        try {
+            require(game.selectJob(owner, FutureAgencyTowerJob.ID), "Future Agency job selection must succeed.");
+            require(game.selectJob(opponent, FutureAgencyTowerJob.ID), "Opponent job selection must succeed.");
+            require(game.start(context.getLevel().getServer(), new ParticipantSelectionPlan(
+                    MatchMode.NORMAL, List.of(
+                            new AssignedParticipant(owner, "future-agency-tester", TeamId.RED, 1),
+                            new AssignedParticipant(opponent, "future-agency-opponent", TeamId.BLUE, 1)),
+                    Set.of(), 2)), "Future Agency test game must start.");
+            FutureAgencyStates.PlayerState state = FutureAgencyStates.state(owner);
+            state.reconstruct();
+            tickUntil(game, context, RoundPhase.LANE_WAVE, SemionGame.DEFAULT_PREPARE_TICKS + 5);
+            game.playerLane(owner).orElseThrow().disableMonsters();
+            game.playerLane(opponent).orElseThrow().disableMonsters();
+            tickUntil(game, context, RoundPhase.PREPARE_AND_SUMMON, 100);
+
+            require(game.hasClearedRound(owner, 1), "A clean lane must be recorded for round one.");
+            require(game.currentRound() == 2 && state.selectionLimit() == 2 && state.offers().size() == 3,
+                    "The next preparation must offer three policies for the first of two choices.");
+            List<FutureAgencyPolicy> firstOffers = state.offers();
+            require(state.choose(firstOffers.getFirst()), "The first clean-lane policy choice must succeed.");
+            require(state.offers().size() == 3 && java.util.Collections.disjoint(firstOffers, state.offers()),
+                    "The second choice must prefer three policies not shown in the first choice.");
+
+            new FutureAgencyTowerJob().onRoundEnded(new JobContext(game, game.players().get(owner)), 99);
+            state.openRound(99);
+            require(state.selectionLimit() == 1, "A round without a clean-lane record must keep one policy choice.");
+            context.succeed();
+        } finally {
+            game.close();
+            FutureAgencyStates.clear(owner);
+            FutureAgencyStates.clear(opponent);
+        }
+    }
+
+    @GameTest
+    public void suppressionReducesMoveAndAttackSpeedTogether(GameTestHelper context) {
+        UUID owner = UUID.nameUUIDFromBytes("future-agency-suppression".getBytes(StandardCharsets.UTF_8));
+        FutureAgencyStates.clear(owner);
+        FutureAgencyStates.state(owner).reconstruct();
+        PlayerLane lane = testLane(context, owner);
+        GridPosition origin = floor(context, 2, 2, 2);
+        prepareFloor(context, origin);
+        try {
+            FutureAgencyAgentTower suppression = agent(owner, FutureAgencyRole.SUPPRESSION, origin);
+            lane.addTower(suppression);
+            SemionMonsterEntity target = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
+            suppression.onAttackResolved(null, target, 1.0, 1.0, 1.0, false);
+            require(close(target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION), 0.08),
+                    "Suppression must apply its grade movement-speed reduction.");
+            require(close(target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION), 0.08),
+                    "Suppression must apply the same attack-speed reduction.");
+            context.succeed();
+        } finally {
+            lane.clearTowers();
+            FutureAgencyStates.clear(owner);
+        }
+    }
+
     @GameTest
     public void survivorsStayCapped(GameTestHelper context) {
         UUID owner = UUID.nameUUIDFromBytes("future-agency-carry".getBytes(StandardCharsets.UTF_8));
@@ -246,7 +324,7 @@ public final class FutureAgencyGameTest {
     }
 
     @GameTest
-    public void worldSaveStopsNewCarryAndUsesNormalFinalDefenseReset(GameTestHelper context) {
+    public void worldSaveKeepsCarryThroughFinalDefenseReset(GameTestHelper context) {
         UUID owner = UUID.nameUUIDFromBytes("future-agency-world-save".getBytes(StandardCharsets.UTF_8));
         FutureAgencyStates.clear(owner);
         FutureAgencyStates.PlayerState state = FutureAgencyStates.state(owner);
@@ -260,18 +338,38 @@ public final class FutureAgencyGameTest {
         require(state.worldSaved(), "The tenth policy must allow world salvation.");
         PlayerLane lane = testLane(context, owner);
         GridPosition origin = floor(context, 8, 2, 3);
-        prepareFloor(context, origin);
+        GridPosition carry = floor(context, 8, 2, 8);
+        GridPosition leaderOrigin = floor(context, 6, 2, 3);
+        prepareFloor(context, origin, carry, leaderOrigin);
         FutureAgencyAgentTower original = agent(owner, FutureAgencyRole.COMBAT, origin);
         try {
             lane.addTower(original);
             lane.markWaveStarted(11);
+            moveAndDamage(original, lane, carry, 40.0);
+            double damageWithoutSurvivor = original.modifyAttackDamage(null, null, 100.0);
             original.onLaneCleared(lane);
-            require(carried(lane).isEmpty(), "World salvation must stop creating survivors.");
+            require(carried(lane).size() == 1, "World salvation must keep creating survivors.");
+            FutureAgencyAgentTower survivor = carried(lane).getFirst();
+            double survivorSnapshotHealth = survivor.health();
+            require(close(original.modifyAttackDamage(null, null, 100.0), damageWithoutSurvivor + 21.0),
+                    "A commander with one survivor must add 21% survivor damage.");
+            FutureAgencyLeaderTower leader = new FutureAgencyLeaderTower(
+                    FutureAgencyTowers.COMMANDER, owner, TeamId.RED, 1, leaderOrigin, leaderOrigin);
+            lane.addTower(leader);
+            require(close(leader.modifyAttackDamage(null, null, 100.0), 121.0),
+                    "The survivor bonus must also apply to the future-agency leader.");
             require(original.participatesInFinalDefense(), "Saved agents must participate in final defense.");
             lane.moveTowersToFinalDefense();
-            require(original.deployedAtFinalDefense(), "Saved agents must move to final defense normally.");
+            require(original.deployedAtFinalDefense() && survivor.deployedAtFinalDefense(),
+                    "Saved originals and survivors must move to final defense together.");
+            towerEntity(lane, survivor).setHealth(0.0f);
+            require(close(original.modifyAttackDamage(null, null, 100.0), damageWithoutSurvivor),
+                    "A dead survivor must stop contributing damage during final defense.");
             lane.resetForRound();
             require(original.position().equals(origin), "Saved agents must reset to their installed position.");
+            require(carried(lane).size() == 1 && carried(lane).getFirst().position().equals(carry)
+                            && close(carried(lane).getFirst().health(), survivorSnapshotHealth),
+                    "A final-defense death must restore the line-clear survivor snapshot next round.");
             context.succeed();
         } finally {
             lane.clearTowers();
@@ -307,6 +405,13 @@ public final class FutureAgencyGameTest {
         agent.syncHealth(health);
         agent.onStateChanged(lane);
         towerEntity(lane, agent).setHealth((float) health);
+    }
+
+    private static void tickUntil(SemionGame game, GameTestHelper context, RoundPhase phase, int limit) {
+        for (int tick = 0; tick < limit && game.phase() != phase; tick++) {
+            game.tick(context.getLevel().getServer());
+        }
+        require(game.phase() == phase, "Game must reach " + phase + ".");
     }
 
     private static SemionTowerEntity towerEntity(GameTestHelper context, FutureAgencyAgentTower tower) {

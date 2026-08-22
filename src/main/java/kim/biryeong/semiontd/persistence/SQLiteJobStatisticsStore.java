@@ -26,10 +26,12 @@ import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.game.MatchParticipantResult;
 import kim.biryeong.semiontd.game.MatchResult;
 import kim.biryeong.semiontd.game.MatchMode;
+import kim.biryeong.semiontd.game.PlayerRoundMetricsSnapshot;
 import kim.biryeong.semiontd.game.PlayerMatchStatsSnapshot;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.game.TeamMatchResult;
 import kim.biryeong.semiontd.game.TowerCompositionEntry;
+import kim.biryeong.semiontd.game.TowerRoundMetricsSnapshot;
 import kim.biryeong.semiontd.statistics.JobStatisticsEntry;
 import kim.biryeong.semiontd.statistics.JobStatisticsSnapshot;
 import kim.biryeong.semiontd.statistics.JobStatisticsTotals;
@@ -125,6 +127,30 @@ public final class SQLiteJobStatisticsStore {
             DELETE FROM job_stat_participant_towers
             WHERE match_id = ? AND player_id = ?
             """;
+    private static final String INSERT_PARTICIPANT_ROUND_METRICS = """
+            INSERT OR REPLACE INTO job_stat_participant_round_metrics (
+                match_id, player_id, round_number, wave_duration_ticks, combat_ticks,
+                tower_count_start, tower_count_end, tower_death_count,
+                emerald_production_upgrade_count, emerald_per_second, income,
+                emerald_balance, diamond_balance, tower_limit_purchase_count, monster_kills
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
+    private static final String DELETE_PARTICIPANT_ROUND_METRICS = """
+            DELETE FROM job_stat_participant_round_metrics
+            WHERE match_id = ? AND player_id = ?
+            """;
+    private static final String INSERT_PARTICIPANT_ROUND_TOWER_METRICS = """
+            INSERT OR REPLACE INTO job_stat_participant_round_tower_metrics (
+                match_id, player_id, round_number, tower_type_id,
+                sample_count, start_count, end_alive_count, death_count,
+                physical_damage_dealt, magic_damage_dealt, damage_taken, healing_done,
+                kill_count, first_combat_tick, last_combat_tick, survival_ticks
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
+    private static final String DELETE_PARTICIPANT_ROUND_TOWER_METRICS = """
+            DELETE FROM job_stat_participant_round_tower_metrics
+            WHERE match_id = ? AND player_id = ?
+            """;
 
     private final Path path;
 
@@ -141,13 +167,24 @@ public final class SQLiteJobStatisticsStore {
                  PreparedStatement deleteRounds = connection.prepareStatement(DELETE_PARTICIPANT_ROUNDS);
                  PreparedStatement insertRound = connection.prepareStatement(INSERT_PARTICIPANT_ROUND);
                  PreparedStatement deleteTowers = connection.prepareStatement(DELETE_PARTICIPANT_TOWERS);
-                 PreparedStatement insertTower = connection.prepareStatement(INSERT_PARTICIPANT_TOWER)) {
+                 PreparedStatement insertTower = connection.prepareStatement(INSERT_PARTICIPANT_TOWER);
+                 PreparedStatement deleteRoundMetrics = connection.prepareStatement(DELETE_PARTICIPANT_ROUND_METRICS);
+                 PreparedStatement insertRoundMetrics = connection.prepareStatement(INSERT_PARTICIPANT_ROUND_METRICS);
+                 PreparedStatement deleteRoundTowerMetrics = connection.prepareStatement(DELETE_PARTICIPANT_ROUND_TOWER_METRICS);
+                 PreparedStatement insertRoundTowerMetrics = connection.prepareStatement(INSERT_PARTICIPANT_ROUND_TOWER_METRICS)) {
                 for (MatchResult matchResult : history) {
                     for (ParticipantFact fact : participantFacts(matchResult)) {
                         bindFact(insert, fact);
                         insert.executeUpdate();
                         replaceParticipantRounds(deleteRounds, insertRound, fact);
                         replaceParticipantTowers(deleteTowers, insertTower, fact);
+                        replaceParticipantRoundMetrics(
+                                deleteRoundMetrics,
+                                insertRoundMetrics,
+                                deleteRoundTowerMetrics,
+                                insertRoundTowerMetrics,
+                                fact
+                        );
                     }
                 }
                 connection.commit();
@@ -176,7 +213,9 @@ public final class SQLiteJobStatisticsStore {
                  PreparedStatement aggregate = connection.prepareStatement(UPSERT_AGGREGATE);
                  PreparedStatement insertRound = connection.prepareStatement(INSERT_PARTICIPANT_ROUND);
                  PreparedStatement roundAggregate = connection.prepareStatement(UPSERT_ROUND_AGGREGATE);
-                 PreparedStatement insertTower = connection.prepareStatement(INSERT_PARTICIPANT_TOWER)) {
+                 PreparedStatement insertTower = connection.prepareStatement(INSERT_PARTICIPANT_TOWER);
+                 PreparedStatement insertRoundMetrics = connection.prepareStatement(INSERT_PARTICIPANT_ROUND_METRICS);
+                 PreparedStatement insertRoundTowerMetrics = connection.prepareStatement(INSERT_PARTICIPANT_ROUND_TOWER_METRICS)) {
                 for (ParticipantFact fact : facts) {
                     bindFact(insert, fact);
                     if (insert.executeUpdate() == 0) {
@@ -187,6 +226,7 @@ public final class SQLiteJobStatisticsStore {
                     insertParticipantRounds(insertRound, fact);
                     incrementRoundAggregates(roundAggregate, fact);
                     insertParticipantTowers(insertTower, fact);
+                    insertParticipantRoundMetrics(insertRoundMetrics, insertRoundTowerMetrics, fact);
                 }
                 connection.commit();
             } catch (SQLException exception) {
@@ -370,6 +410,53 @@ public final class SQLiteJobStatisticsStore {
                     """);
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_towers_type "
                     + "ON job_stat_participant_towers (tower_type_id, tier)");
+            statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS job_stat_participant_round_metrics (
+                        match_id INTEGER NOT NULL,
+                        player_id TEXT NOT NULL,
+                        round_number INTEGER NOT NULL,
+                        wave_duration_ticks INTEGER NOT NULL,
+                        combat_ticks INTEGER NOT NULL,
+                        tower_count_start INTEGER NOT NULL,
+                        tower_count_end INTEGER NOT NULL,
+                        tower_death_count INTEGER NOT NULL,
+                        emerald_production_upgrade_count INTEGER NOT NULL,
+                        emerald_per_second INTEGER NOT NULL,
+                        income INTEGER NOT NULL,
+                        emerald_balance INTEGER NOT NULL,
+                        diamond_balance INTEGER NOT NULL,
+                        tower_limit_purchase_count INTEGER NOT NULL,
+                        monster_kills INTEGER NOT NULL,
+                        PRIMARY KEY (match_id, player_id, round_number)
+                    )
+                    """);
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_round_metrics_round "
+                    + "ON job_stat_participant_round_metrics (round_number)");
+            statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS job_stat_participant_round_tower_metrics (
+                        match_id INTEGER NOT NULL,
+                        player_id TEXT NOT NULL,
+                        round_number INTEGER NOT NULL,
+                        tower_type_id TEXT NOT NULL,
+                        sample_count INTEGER NOT NULL,
+                        start_count INTEGER NOT NULL,
+                        end_alive_count INTEGER NOT NULL,
+                        death_count INTEGER NOT NULL,
+                        physical_damage_dealt REAL NOT NULL,
+                        magic_damage_dealt REAL NOT NULL,
+                        damage_taken REAL NOT NULL,
+                        healing_done REAL NOT NULL,
+                        kill_count INTEGER NOT NULL,
+                        first_combat_tick INTEGER NOT NULL,
+                        last_combat_tick INTEGER NOT NULL,
+                        survival_ticks INTEGER NOT NULL,
+                        PRIMARY KEY (match_id, player_id, round_number, tower_type_id)
+                    )
+                    """);
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_round_tower_metrics_type_round "
+                    + "ON job_stat_participant_round_tower_metrics (tower_type_id, round_number)");
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_round_tower_metrics_round "
+                    + "ON job_stat_participant_round_tower_metrics (round_number)");
             ensureColumn(
                     connection,
                     "job_round_statistics",
@@ -555,6 +642,7 @@ public final class SQLiteJobStatisticsStore {
                     roundOutcomes,
                     participant.traitLoadout(),
                     participant.finalTowerComposition(),
+                    participant.roundMetrics(),
                     matchResult.catalogVersion()
             ));
         }
@@ -696,6 +784,67 @@ public final class SQLiteJobStatisticsStore {
             statement.setInt(4, tower.tier());
             statement.setInt(5, tower.count());
             statement.executeUpdate();
+        }
+    }
+
+    private static void replaceParticipantRoundMetrics(
+            PreparedStatement deleteRoundStatement,
+            PreparedStatement insertRoundStatement,
+            PreparedStatement deleteTowerStatement,
+            PreparedStatement insertTowerStatement,
+            ParticipantFact fact
+    ) throws SQLException {
+        deleteTowerStatement.setLong(1, fact.matchId());
+        deleteTowerStatement.setString(2, fact.playerId());
+        deleteTowerStatement.executeUpdate();
+        deleteRoundStatement.setLong(1, fact.matchId());
+        deleteRoundStatement.setString(2, fact.playerId());
+        deleteRoundStatement.executeUpdate();
+        insertParticipantRoundMetrics(insertRoundStatement, insertTowerStatement, fact);
+    }
+
+    private static void insertParticipantRoundMetrics(
+            PreparedStatement roundStatement,
+            PreparedStatement towerStatement,
+            ParticipantFact fact
+    ) throws SQLException {
+        for (PlayerRoundMetricsSnapshot round : fact.roundMetrics()) {
+            roundStatement.setLong(1, fact.matchId());
+            roundStatement.setString(2, fact.playerId());
+            roundStatement.setInt(3, round.round());
+            roundStatement.setInt(4, round.waveDurationTicks());
+            roundStatement.setInt(5, round.combatTicks());
+            roundStatement.setInt(6, round.towerCountAtStart());
+            roundStatement.setInt(7, round.towerCountAtEnd());
+            roundStatement.setInt(8, round.towerDeathCount());
+            roundStatement.setInt(9, round.emeraldProductionUpgradeCount());
+            roundStatement.setLong(10, round.emeraldPerSecond());
+            roundStatement.setLong(11, round.income());
+            roundStatement.setLong(12, round.emerald());
+            roundStatement.setLong(13, round.diamond());
+            roundStatement.setInt(14, round.towerLimitPurchaseCount());
+            roundStatement.setLong(15, round.monsterKills());
+            roundStatement.executeUpdate();
+
+            for (TowerRoundMetricsSnapshot tower : round.towerMetrics()) {
+                towerStatement.setLong(1, fact.matchId());
+                towerStatement.setString(2, fact.playerId());
+                towerStatement.setInt(3, round.round());
+                towerStatement.setString(4, tower.towerTypeId());
+                towerStatement.setInt(5, tower.sampleCount());
+                towerStatement.setInt(6, tower.startCount());
+                towerStatement.setInt(7, tower.endAliveCount());
+                towerStatement.setInt(8, tower.deathCount());
+                towerStatement.setDouble(9, tower.physicalDamageDealt());
+                towerStatement.setDouble(10, tower.magicDamageDealt());
+                towerStatement.setDouble(11, tower.damageTaken());
+                towerStatement.setDouble(12, tower.healingDone());
+                towerStatement.setLong(13, tower.killCount());
+                towerStatement.setInt(14, tower.firstCombatTick());
+                towerStatement.setInt(15, tower.lastCombatTick());
+                towerStatement.setLong(16, tower.survivalTicks());
+                towerStatement.executeUpdate();
+            }
         }
     }
 
@@ -933,11 +1082,13 @@ public final class SQLiteJobStatisticsStore {
             List<RoundOutcome> roundOutcomes,
             TraitLoadoutSnapshot traitLoadout,
             List<TowerCompositionEntry> finalTowerComposition,
+            List<PlayerRoundMetricsSnapshot> roundMetrics,
             String catalogVersion
     ) {
         private ParticipantFact {
             traitLoadout = traitLoadout == null ? TraitLoadoutSnapshot.none() : traitLoadout;
             finalTowerComposition = finalTowerComposition == null ? List.of() : List.copyOf(finalTowerComposition);
+            roundMetrics = roundMetrics == null ? List.of() : List.copyOf(roundMetrics);
         }
     }
 

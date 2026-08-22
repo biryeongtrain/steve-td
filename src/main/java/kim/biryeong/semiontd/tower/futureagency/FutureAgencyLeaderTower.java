@@ -101,8 +101,9 @@ public final class FutureAgencyLeaderTower extends ProductionTower {
             case COMMANDER -> "기관 최고 지휘자";
         } + "</white>");
         if (state.worldSaved()) lines.add("<red>세계 구원</red> <green>완료</green>");
-        else if (!state.offers().isEmpty()) {
-            lines.add("<gold>이번 정책</gold> " + state.offers().stream()
+        if (!state.offers().isEmpty()) {
+            lines.add("<gold>이번 정책 " + state.selectionNumber() + "/" + state.selectionLimit() + "</gold> "
+                    + state.offers().stream()
                     .map(FutureAgencyPolicy::displayName).collect(java.util.stream.Collectors.joining(" / ")));
         } else if (state.reconstructed()) lines.add("<gold>이번 정책</gold> <gray>선택 완료</gray>");
         List<String> selectedPolicies = state.policyStacks().entrySet().stream()
@@ -124,6 +125,14 @@ public final class FutureAgencyLeaderTower extends ProductionTower {
     public void tick(PlayerLane lane) {
         laneForDetails = lane;
         super.tick(lane);
+    }
+
+    @Override
+    public double modifyAttackDamage(SemionTowerEntity source,
+                                     kim.biryeong.semiontd.entity.monster.SemionMonsterEntity target,
+                                     double damage) {
+        return damage * (1.0 + FutureAgencyBalance.survivorDamage(
+                FutureAgencyStates.state(ownerPlayer()), laneForDetails, ownerPlayer()));
     }
 
     private boolean canSaveWorld(FutureAgencyStates.PlayerState state, PlayerLane lane) {

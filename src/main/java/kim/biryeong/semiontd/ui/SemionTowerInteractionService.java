@@ -2,12 +2,15 @@ package kim.biryeong.semiontd.ui;
 
 import kim.biryeong.semiontd.game.SemionGame;
 import kim.biryeong.semiontd.game.SemionGameManager;
+import kim.biryeong.semiontd.game.SemionTeam;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerPlacementPositions;
 import kim.biryeong.semiontd.tower.engineer.EngineerGolemTower;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -73,13 +76,11 @@ public final class SemionTowerInteractionService {
         if (game == null) {
             return InteractionResult.PASS;
         }
-        Tower tower = game.teams().values().stream()
-                .flatMap(team -> team.laneGroup().lanes().stream())
-                .map(lane -> TowerPlacementPositions.resolveGrid(lane, hitResult.getBlockPos())
-                        .map(lane::towerAt)
-                        .orElse(null))
-                .filter(java.util.Objects::nonNull)
-                .findFirst()
+        if (!(world instanceof ServerLevel serverWorld)) {
+            return InteractionResult.PASS;
+        }
+        Tower tower = game.teamForWorld(serverWorld)
+                .map(team -> resolveTowerAt(team, hitResult.getBlockPos()))
                 .orElse(null);
         if (tower == null) {
             return InteractionResult.PASS;
@@ -88,6 +89,16 @@ public final class SemionTowerInteractionService {
                 serverPlayer, game, tower, gameManager.buildGuideService(), null
         );
         return InteractionResult.SUCCESS;
+    }
+
+    public static Tower resolveTowerAt(SemionTeam team, BlockPos position) {
+        return team.laneGroup().lanes().stream()
+                .map(lane -> TowerPlacementPositions.resolveGrid(lane, position)
+                        .map(lane::towerAt)
+                        .orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .orElse(null);
     }
 
     static SemionTowerEntity resolveTowerEntity(Level world, Entity entity) {

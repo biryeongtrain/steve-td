@@ -17,12 +17,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.game.GridPosition;
-import kim.biryeong.semiontd.game.PlayerEconomy;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.job.DemonLordTowerJob;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
@@ -63,6 +61,11 @@ final class DemonLordTowerCatalogTest {
         for (TowerType type : DemonLordTowers.all()) {
             assertTrue(job.canUseTower(null, type), "Job should allow " + type.id());
         }
+        String description = job.description().stream()
+                .map(component -> component.getString())
+                .reduce("", String::concat);
+        assertTrue(description.contains("무료"));
+        assertFalse(description.contains("다이아"));
         assertFalse(job.canUseTower(null, ProductionTowerCatalog.all().stream()
                 .map(ProductionTowerCatalog.CatalogEntry::type)
                 .filter(type -> !DemonLordTowers.isDemonLordTower(type))
@@ -300,7 +303,7 @@ final class DemonLordTowerCatalogTest {
     }
 
     @Test
-    void logarithmicGrowthStartsOnlyAfterTheConfiguredThresholds() {
+    void levelGrowthKeepsItsSoftCapWhileStatPointsRemainLinear() {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
         LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>(defaults.abilities());
         LinkedHashMap<String, Double> global = new LinkedHashMap<>(abilities.get(DemonLordTowers.GLOBAL_CONFIG_ID));
@@ -321,23 +324,30 @@ final class DemonLordTowerCatalogTest {
         state.addExperience(1.0);
         assertTrue(state.maxHealth() > 950.0 && state.maxHealth() < 1_050.0);
         assertTrue(state.damageMultiplier() > 1.5 && state.damageMultiplier() < 1.6);
+
+        double healthBeforePoints = state.maxHealth();
+        double damageBeforePoints = state.damageMultiplier();
+        assertTrue(state.allocate(DemonLordStat.MAX_HEALTH));
+        assertTrue(state.allocate(DemonLordStat.ATTACK));
+        assertEquals(healthBeforePoints + 40.0, state.maxHealth(), EPSILON);
+        assertEquals(damageBeforePoints + 0.04, state.damageMultiplier(), EPSILON);
     }
 
     @Test
-    void statAllocationSpendsFiftyDiamondsAtomically() {
+    void statAllocationOnlySpendsAnUnallocatedPoint() {
         DemonLordState state = new DemonLordState(UUID.randomUUID());
         state.addExperience(state.experienceForNextLevel());
-        PlayerEconomy economy = new PlayerEconomy(EconomyConfig.defaultConfig());
-        economy.overrideStartingValues(50, 0, 0, 0);
 
-        assertTrue(DemonLordStatGui.tryAllocate(state, DemonLordStat.ATTACK, economy));
-        assertEquals(0, economy.diamond());
+        assertTrue(DemonLordStatGui.tryAllocate(state, DemonLordStat.ATTACK));
         assertEquals(1, state.points(DemonLordStat.ATTACK));
-        int remainingPoints = state.unspentPoints();
+        while (state.unspentPoints() > 0) {
+            assertTrue(DemonLordStatGui.tryAllocate(state, DemonLordStat.ATTACK));
+        }
+        int allocatedAttack = state.points(DemonLordStat.ATTACK);
 
-        assertFalse(DemonLordStatGui.tryAllocate(state, DemonLordStat.DEFENSE, economy));
-        assertEquals(0, economy.diamond());
-        assertEquals(remainingPoints, state.unspentPoints());
+        assertFalse(DemonLordStatGui.tryAllocate(state, DemonLordStat.DEFENSE));
+        assertEquals(allocatedAttack, state.points(DemonLordStat.ATTACK));
+        assertEquals(0, state.unspentPoints());
         assertEquals(0, state.points(DemonLordStat.DEFENSE));
     }
 
@@ -496,7 +506,7 @@ final class DemonLordTowerCatalogTest {
         assertEquals(500.0, defaults.ability(DemonLordTowers.GLOBAL_CONFIG_ID, "healthBonusScale", -1), EPSILON);
         assertEquals(0.5, defaults.ability(DemonLordTowers.GLOBAL_CONFIG_ID, "damageBonusThreshold", -1), EPSILON);
         assertEquals(0.5, defaults.ability(DemonLordTowers.GLOBAL_CONFIG_ID, "damageBonusScale", -1), EPSILON);
-        assertEquals(50.0, defaults.ability(DemonLordTowers.GLOBAL_CONFIG_ID, "statDiamondCost", -1), EPSILON);
+        assertFalse(defaults.abilities().get(DemonLordTowers.GLOBAL_CONFIG_ID).containsKey("statDiamondCost"));
         assertEquals(34.0, defaults.ability(DemonLordSkill.WAVE_OF_MALICE.towerId(1), "damage", -1), EPSILON);
         assertEquals(98.0, defaults.ability(DemonLordSkill.GRIP_OF_DOOM.towerId(1), "damage", -1), EPSILON);
         assertEquals(30.0, defaults.ability(DemonLordSkill.GRIP_OF_DOOM.towerId(1), "areaDamage", -1), EPSILON);
@@ -563,7 +573,6 @@ final class DemonLordTowerCatalogTest {
         assertInvalidAbility(DemonLordTowers.GLOBAL_CONFIG_ID, "experienceGrowth", 0.99);
         assertInvalidAbility(DemonLordSkill.WAVE_OF_MALICE.towerId(1), "range", 0.0);
         assertInvalidAbility(DemonLordSkill.WAVE_OF_MALICE.towerId(1), "coneDegrees", 361.0);
-        assertInvalidAbility(DemonLordTowers.GLOBAL_CONFIG_ID, "statDiamondCost", 1.5);
         assertInvalidAbility(DemonLordTowers.GLOBAL_CONFIG_ID, "healthBonusThreshold", 0.0);
         assertInvalidAbility(DemonLordSkill.SKY_BREAKER.towerId(1), "stunTicks", 1.5);
         assertInvalidAbility(DemonLordSkill.GRIP_OF_DOOM.towerId(1), "executeHealthRatio", 1.0);

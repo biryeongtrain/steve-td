@@ -28,6 +28,7 @@
       "kim.biryeong.semiontd.tower.demonlord.DemonLordHotbarGameTest",
       "kim.biryeong.semiontd.tower.atlantis.AtlantisIntegrationGameTest",
       "kim.biryeong.semiontd.tower.gamble.GambleGameTest",
+      "kim.biryeong.semiontd.tower.succubus.SuccubusGameTest",
       "kim.biryeong.semiontd.entity.tower.vfx.TowerVfxGameTest",
       "kim.biryeong.semiontd.game.RatingProfileCacheGameTest"
     ]

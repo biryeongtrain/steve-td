@@ -11,7 +11,10 @@ import java.util.UUID;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.game.GridPosition;
+import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
+import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.adversary.AdversaryFoxTower;
 import kim.biryeong.semiontd.tower.adversary.AdversaryTowers;
 import kim.biryeong.semiontd.tower.adversary.FoxForm;
@@ -19,6 +22,7 @@ import kim.biryeong.semiontd.tower.animal.AnimalTowers;
 import kim.biryeong.semiontd.tower.animal.PigTower;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityTower;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityTowers;
+import kim.biryeong.semiontd.tower.succubus.SuccubusTowers;
 import net.minecraft.SharedConstants;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.Bootstrap;
@@ -139,6 +143,42 @@ class TowerRuntimeDetailsTest {
                         SemionDialogService.currentTowerPrimaryDamage(sculkCore, null)
                 )
         );
+    }
+
+    @Test
+    void allSuccubusMagicBasicAttackDetailsIncludeTowerModifiersButConfiguredSpellsDoNot() {
+        Tower configuredSpell = new ModifiedMagicTower(AncientCityTowers.SENSOR_T1);
+
+        for (TowerType type : SuccubusTowers.all()) {
+            Tower succubusTower = new ModifiedMagicTower(type);
+            assertEquals(
+                    type.damage() + 12.1,
+                    SemionDialogService.currentTowerPrimaryDamage(succubusTower, null),
+                    0.0001,
+                    type.id()
+            );
+        }
+        assertEquals(5.0, SemionDialogService.currentTowerPrimaryDamage(configuredSpell, null), 0.0001);
+    }
+
+    private static final class ModifiedMagicTower extends Tower {
+        private ModifiedMagicTower(TowerType type) {
+            super(type, OWNER, TeamId.RED, 1, POSITION);
+        }
+
+        @Override
+        public double modifyAttackDamage(
+                kim.biryeong.semiontd.entity.tower.SemionTowerEntity towerEntity,
+                kim.biryeong.semiontd.entity.monster.SemionMonsterEntity target,
+                double damageAmount
+        ) {
+            return damageAmount + 12.1;
+        }
+
+        @Override
+        protected boolean execute(PlayerLane lane) {
+            return false;
+        }
     }
 
     private static boolean containsStrikethrough(Component component) {

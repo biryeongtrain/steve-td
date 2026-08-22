@@ -88,7 +88,14 @@ public class LaneClearCatTower extends EntityBackedTower {
                 null,
                 AreaVfxSpec.onTrigger(AreaVfxStyles.CORPSE_EXPLOSION)
         );
-        TowerAreaDamage.apply(this, towerEntity, request, monster -> damageAmount, false);
+        TowerAreaDamage.applyResolved(
+                this,
+                towerEntity,
+                request,
+                monster -> resolveBasicAttackOutgoingDamage(towerEntity, monster, damageAmount),
+                false,
+                (monster, damage, killed) -> {}
+        );
     }
 
     private void incrementDeathStack() {

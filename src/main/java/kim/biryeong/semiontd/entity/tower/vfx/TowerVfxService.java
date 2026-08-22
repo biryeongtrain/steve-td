@@ -46,6 +46,7 @@ import kim.biryeong.semiontd.tower.illager.IllagerTowers;
 import kim.biryeong.semiontd.tower.insect.InsectTowers;
 import kim.biryeong.semiontd.tower.legion.LegionTowers;
 import kim.biryeong.semiontd.tower.mage.MageTowers;
+import kim.biryeong.semiontd.tower.succubus.SuccubusTowers;
 import kim.biryeong.semiontd.tower.nether.NetherTowers;
 import kim.biryeong.semiontd.tower.ocean.OceanTowers;
 import kim.biryeong.semiontd.tower.plant.PlantTowers;
@@ -581,6 +582,9 @@ public final class TowerVfxService {
         if (GambleTowers.isGambleTower(type)) {
             return BuilderPalette.GAMBLE;
         }
+        if (SuccubusTowers.isSuccubusTower(type)) {
+            return BuilderPalette.SUCCUBUS;
+        }
         return BuilderPalette.DEFAULT;
     }
 
@@ -669,6 +673,11 @@ public final class TowerVfxService {
             observer.accept(event);
         }
         enqueue(new AreaEvent(context, event));
+    }
+
+    public static void showAreaEffectDebug(ServerPlayer player, AreaVfxContext visual) {
+        if (player == null || visual == null || areaVfxStyles == null) return;
+        areaVfxStyles.find(visual.styleId()).ifPresent(planner -> planner.plan(visual, new DebugPlannerOutput(player)));
     }
 
     static void setAreaEffectTestObserver(Consumer<AreaEffectVfxEvent> observer) {
@@ -1644,6 +1653,57 @@ public final class TowerVfxService {
     }
 
     private record ParticlePoint(ParticleOptions particle, Vec3 position) {
+    }
+
+    private static final class DebugPlannerOutput implements AreaVfxOutput {
+        private final ServerPlayer player;
+
+        private DebugPlannerOutput(ServerPlayer player) {
+            this.player = player;
+        }
+
+        @Override
+        public void line(AreaVfxParticle particle, Vec3 start, Vec3 end, int points, boolean essential) {
+            send(collector -> collector.drawLine(
+                    particle.vanilla(), 0, vector(start), new Vector3f(), vector(end.subtract(start)), new Vector3f(), points
+            ));
+        }
+
+        @Override
+        public void circle(AreaVfxParticle particle, Vec3 center, double radius, int points, boolean essential) {
+            send(collector -> collector.drawEllipse(
+                    particle.vanilla(), 0, vector(center), (float) radius, (float) radius,
+                    new Vector3f(HORIZONTAL_ROTATION_X, 0.0F, 0.0F), points
+            ));
+        }
+
+        @Override
+        public void sphere(AreaVfxParticle particle, Vec3 center, double radius, int points, boolean essential) {
+            send(collector -> collector.drawEllipsoid(
+                    particle.vanilla(), 0, vector(center), (float) radius, (float) radius, (float) radius,
+                    new Vector3f(), points
+            ));
+        }
+
+        @Override
+        public void trail(AreaVfxParticle particle, Vec3 start, Vec3 control, Vec3 end, int points, boolean essential) {
+            send(collector -> collector.drawBezier(
+                    particle.vanilla(), 0, new Vector3f(),
+                    new QuadraticBezierCurve(vector(start), vector(end), vector(control)), new Vector3f(), points
+            ));
+        }
+
+        private void send(Consumer<CollectingApelRenderer> draw) {
+            CollectingApelRenderer collector = new CollectingApelRenderer();
+            draw.accept(collector);
+            for (ParticlePoint point : collector.points) {
+                player.connection.send(new ClientboundLevelParticlesPacket(
+                        point.particle(), false, false,
+                        point.position().x, point.position().y, point.position().z,
+                        0.0F, 0.0F, 0.0F, 0.0F, 1
+                ));
+            }
+        }
     }
 
     private static final class PlannerOutput implements AreaVfxOutput {

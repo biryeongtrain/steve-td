@@ -320,7 +320,7 @@ public final class OceanTower extends EntityBackedTower {
             return false;
         }
         targets.forEach(target -> {
-            if (target.receiveHealing(healAmount)) {
+            if (healTarget(target, healAmount)) {
                 target.playHealingAnimation();
             }
         });

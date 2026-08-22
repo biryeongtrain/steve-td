@@ -30,7 +30,7 @@ public final class AreaAllyHealGoal<T extends PathfinderMob & HealingTarget> ext
         int healedTargets = 0;
         AABB searchBox = caster.getBoundingBox().inflate(radius);
         for (T candidate : caster.level().getEntitiesOfClass(targetClass, searchBox, this::canHeal)) {
-            if (caster.distanceToSqr(candidate) > radiusSqr || !candidate.receiveHealing(healAmount)) {
+            if (caster.distanceToSqr(candidate) > radiusSqr || !caster.healTarget(candidate, healAmount)) {
                 continue;
             }
 

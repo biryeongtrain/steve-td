@@ -142,6 +142,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
             case GREEN -> ChatFormatting.GREEN;
             case YELLOW -> ChatFormatting.YELLOW;
             case PURPLE -> ChatFormatting.LIGHT_PURPLE;
+            case AQUA -> ChatFormatting.AQUA;
         };
     }
 
@@ -476,6 +477,10 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         return timedEffects.hasSource(type, sourceId);
     }
 
+    public boolean setPersistentEffect(TimedEffectType type, ResourceLocation sourceId, double magnitude) {
+        return timedEffects.setPersistent(type, sourceId, magnitude);
+    }
+
     public double movementSpeedMultiplier() {
         double baseMultiplier = runtimeMonster == null ? 1.0 : runtimeMonster.movementSpeedMultiplier();
         double speedBonus = timedEffects.magnitude(TimedEffectType.MONSTER_MOVE_SPEED_BONUS);
@@ -544,6 +549,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
             if (state.sourceTower() != null) {
                 state.sourceTower().recordDamageDealt(this, dealtDamage, DamageType.MAGIC);
                 if (killed) {
+                    state.sourceTower().recordKill();
                     state.sourceTower().onIgniteKill(this);
                 }
             }
@@ -591,10 +597,13 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
             return;
         }
         double previousHealth = runtimeMonster.health();
-        applyRuntimeDamage(damageSources().onFire(), damageAmount, DamageType.MAGIC);
+        boolean killed = applyRuntimeDamage(damageSources().onFire(), damageAmount, DamageType.MAGIC);
         double dealtDamage = Math.max(0.0, previousHealth - runtimeMonster.health());
         if (dealtDamage > 0.0) {
             poison.sourceTower().recordDamageDealt(this, dealtDamage, DamageType.MAGIC);
+            if (killed) {
+                poison.sourceTower().recordKill();
+            }
             runtimeMonster.recordLastHit(poison.sourcePlayer(), KillSourceKind.TOWER);
         }
     }

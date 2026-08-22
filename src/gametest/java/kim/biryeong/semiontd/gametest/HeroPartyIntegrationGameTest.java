@@ -38,7 +38,7 @@ import kim.biryeong.semiontd.tower.hero.HeroQuestKind;
 import kim.biryeong.semiontd.tower.hero.HeroPartyState;
 import kim.biryeong.semiontd.tower.hero.HeroPartyStates;
 import kim.biryeong.semiontd.tower.hero.HeroPartyTowers;
-import kim.biryeong.semiontd.tower.hero.HeroPlayerVisuals;
+import kim.biryeong.semiontd.tower.hero.FakePlayerTowerVisuals;
 import kim.biryeong.semiontd.tower.hero.HeroTower;
 import kim.biryeong.semiontd.tower.hero.HeroWeapon;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
@@ -129,13 +129,13 @@ public final class HeroPartyIntegrationGameTest {
                 return;
             }
             ServerPlayer heroFakePlayer = activeFakePlayers().stream()
-                    .filter(fakePlayer -> HeroPlayerVisuals.resolveInteractionAnchor(
+                    .filter(fakePlayer -> FakePlayerTowerVisuals.resolveInteractionAnchor(
                             context.getLevel(), fakePlayer.getId()) instanceof SemionTowerEntity entity
                             && entity.runtimeTower() != null
                             && HeroPartyTowers.isHero(entity.runtimeTower().type()))
                     .findFirst()
                     .orElseThrow();
-            var heroAnchor = HeroPlayerVisuals.resolveInteractionAnchor(
+            var heroAnchor = FakePlayerTowerVisuals.resolveInteractionAnchor(
                     context.getLevel(), heroFakePlayer.getId()
             );
             heroAnchor.setYHeadRot(73.0F);
@@ -174,7 +174,7 @@ public final class HeroPartyIntegrationGameTest {
                     ""
             );
             HeroCompanionSkins.set(ownerId, HeroCompanionRole.KNIGHT, knightSkin);
-            HeroPlayerVisuals.refreshSkin(ownerId, HeroCompanionRole.KNIGHT);
+            FakePlayerTowerVisuals.refreshSkin(ownerId, HeroCompanionRole.KNIGHT);
             Set<UUID> skinnedVisualIds = activeVisualProfileIds();
             if (!equals(context, 2, skinnedVisualIds.size(), "Changing a skin should replace one visual without adding another.")) {
                 return;
@@ -982,7 +982,7 @@ public final class HeroPartyIntegrationGameTest {
     @SuppressWarnings("unchecked")
     private static Set<UUID> activeVisualProfileIds() {
         try {
-            var method = HeroPlayerVisuals.class.getDeclaredMethod("activeProfileIdsForTesting");
+            var method = FakePlayerTowerVisuals.class.getDeclaredMethod("activeProfileIdsForTesting");
             method.setAccessible(true);
             return (Set<UUID>) method.invoke(null);
         } catch (ReflectiveOperationException exception) {
@@ -993,7 +993,7 @@ public final class HeroPartyIntegrationGameTest {
     @SuppressWarnings("unchecked")
     private static List<ServerPlayer> activeFakePlayers() {
         try {
-            var method = HeroPlayerVisuals.class.getDeclaredMethod("activeFakePlayersForTesting");
+            var method = FakePlayerTowerVisuals.class.getDeclaredMethod("activeFakePlayersForTesting");
             method.setAccessible(true);
             return (List<ServerPlayer>) method.invoke(null);
         } catch (ReflectiveOperationException exception) {

@@ -3,6 +3,7 @@ package kim.biryeong.semiontd.entity.tower;
 import de.tomalbrc.bil.api.AnimatedEntity;
 import de.tomalbrc.bil.api.AnimatedEntityHolder;
 import de.tomalbrc.bil.core.holder.entity.living.LivingEntityHolder;
+import com.mojang.datafixers.util.Pair;
 import eu.pb4.polymer.core.api.entity.PolymerEntityUtils;
 import eu.pb4.polymer.virtualentity.api.ElementHolder;
 import eu.pb4.polymer.virtualentity.api.attachment.EntityAttachment;
@@ -36,6 +37,7 @@ import kim.biryeong.semiontd.tower.end.EndTower;
 import kim.biryeong.semiontd.tower.end.EndTowerState;
 import kim.biryeong.semiontd.tower.end.EndTowers;
 import kim.biryeong.semiontd.tower.ocean.OceanWaterTower;
+import kim.biryeong.semiontd.tower.succubus.SuccubusDreams;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
 import kim.biryeong.semiontd.trait.TraitEffects;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -50,15 +52,16 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.Pose;
 import com.faboslav.friendsandfoes.common.entity.MoobloomEntity;
-import net.minecraft.world.entity.ai.control.MoveControl;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
@@ -520,23 +523,11 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         moveToward(moveTarget, speedModifier);
     }
 
-    public void resetMovementTo(Vec3 position) {
-        getNavigation().stop();
-        moveControl = new MoveControl(this);
-        setDeltaMovement(Vec3.ZERO);
-        setSpeed(0.0F);
-        setXxa(0.0F);
-        setYya(0.0F);
-        setZza(0.0F);
-        recordCurrentAttackTarget(null);
-        teleportTo(position.x, position.y, position.z);
-    }
-
     public boolean damageTarget(SemionMonsterEntity target, double baseDamage) {return damageTargetResult(target, baseDamage).killed();}
 
     public Tower.DamageResult damageTargetResult(SemionMonsterEntity target, double baseDamage) {
         if (runtimeTower == null || target == null) {return Tower.DamageResult.NONE;}
-        return runtimeTower.damageTargetResult(this, target, baseDamage);
+        return runtimeTower.damageBasicAttackTargetResult(this, target, baseDamage);
     }
 
     public Tower.DamageResult damageBasicAttackSecondaryTargetResult(SemionMonsterEntity target, double baseDamage) {
@@ -916,10 +907,18 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         return true;
     }
 
+    @Override
+    public boolean healTarget(HealingTarget target, double amount) {
+        if (runtimeTower == null || target == null) {
+            return false;
+        }
+        return runtimeTower.healTarget(target, amount);
+    }
+
     private void applyHealthOverTime(double regenerationPerSecond, double healthLossPerSecond) {
         double netPerSecond = Math.max(0.0, regenerationPerSecond) - Math.max(0.0, healthLossPerSecond);
         if (netPerSecond > 0.0) {
-            receiveHealing(netPerSecond / 20.0);
+            healTarget(this, netPerSecond / 20.0);
             return;
         }
         if (netPerSecond >= 0.0 || runtimeTower == null || runtimeTower.health() <= 1.0) {
@@ -941,6 +940,21 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
             return EntityType.ARMOR_STAND;
         }
         return polymerEntityType;
+    }
+
+    @Override
+    public List<Pair<EquipmentSlot, ItemStack>> getPolymerVisibleEquipment(
+            List<Pair<EquipmentSlot, ItemStack>> items,
+            ServerPlayer player
+    ) {
+        if (polymerEntityType != EntityType.ALLAY) {
+            return items;
+        }
+        return items.stream()
+                .map(item -> item.getFirst() == EquipmentSlot.MAINHAND || item.getFirst() == EquipmentSlot.OFFHAND
+                        ? Pair.of(item.getFirst(), ItemStack.EMPTY)
+                        : item)
+                .toList();
     }
 
     @Override
@@ -1054,6 +1068,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
             runtimeTower.syncHealth(currentHealth);
             runtimeTower.recordDamageTaken(Math.max(0.0, previousHealth - currentHealth));
             runtimeTower.onDamaged(this, damageSource, damageAmount, previousHealth, currentHealth);
+            SuccubusDreams.onTowerDamaged(this, damageSource, previousHealth, currentHealth);
         }
     }
 

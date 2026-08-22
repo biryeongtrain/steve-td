@@ -61,6 +61,8 @@ final class AncientCityTowerCatalogTest {
                 AncientCityTowers.SHRIEKER_T1.id(),
                 AncientCityTowers.WARDEN_T1.id()
         ), starters.stream().map(TowerType::id).toList());
+        assertEquals(13, AncientCityTowers.all().size());
+        assertEquals(4, AncientCityTowers.tier(AncientCityTowers.WARDEN_T4));
     }
 
     @Test
@@ -73,8 +75,9 @@ final class AncientCityTowerCatalogTest {
         assertUpgrade(AncientCityTowers.SHRIEKER_T2, AncientCityTowers.SHRIEKER_T3, 220);
         assertUpgrade(AncientCityTowers.WARDEN_T1, AncientCityTowers.WARDEN_T2, 160);
         assertUpgrade(AncientCityTowers.WARDEN_T2, AncientCityTowers.WARDEN_T3, 300);
+        assertUpgrade(AncientCityTowers.WARDEN_T3, AncientCityTowers.WARDEN_T4, 650);
 
-        var runtime = ProductionTowerCatalog.find(AncientCityTowers.WARDEN_T3.id()).orElseThrow()
+        var runtime = ProductionTowerCatalog.find(AncientCityTowers.WARDEN_T4.id()).orElseThrow()
                 .create(UUID.nameUUIDFromBytes("ancient-runtime".getBytes(StandardCharsets.UTF_8)),
                         TeamId.RED, 1, new GridPosition(0, 64, 0));
         assertInstanceOf(AncientCityTower.class, runtime);
@@ -109,6 +112,14 @@ final class AncientCityTowerCatalogTest {
         assertEquals(0.30, defaults.ability(AncientCityTowers.SENSOR_T3.id(), "markDamageBonus", -1), EPSILON);
         assertEquals(2.25, defaults.ability(AncientCityTowers.SHRIEKER_T3.id(), "magicRadius", -1), EPSILON);
         assertEquals(0.75, defaults.ability(AncientCityTowers.WARDEN_T3.id(), "secondaryDamageRatio", -1), EPSILON);
+        assertEquals(650, defaults.towers().get(AncientCityTowers.WARDEN_T4.id()).mineralCost());
+        assertEquals(240.0, defaults.towers().get(AncientCityTowers.WARDEN_T4.id()).maxHealth(), EPSILON);
+        assertEquals(9.5, defaults.towers().get(AncientCityTowers.WARDEN_T4.id()).range(), EPSILON);
+        assertEquals(68.0, defaults.ability(AncientCityTowers.WARDEN_T4.id(), "magicDamage", -1), EPSILON);
+        assertEquals(46, defaults.abilityTicks(AncientCityTowers.WARDEN_T4.id(), "magicCooldownTicks", -1));
+        assertEquals(5, defaults.abilityInt(AncientCityTowers.WARDEN_T4.id(), "targetCount", -1));
+        assertEquals(2, defaults.abilityInt(AncientCityTowers.WARDEN_T4.id(), "sculkExtraTargets", -1));
+        assertEquals(0.75, defaults.ability(AncientCityTowers.WARDEN_T4.id(), "secondaryDamageRatio", -1), EPSILON);
 
         TowerBalanceConfig merged = new TowerBalanceConfig(
                 Map.of(), Map.of(), Map.of(AncientCityStates.CONFIG_ID, Map.of("maxSculk", 40.0))
@@ -118,6 +129,7 @@ final class AncientCityTowerCatalogTest {
         assertEquals(2.25, merged.ability(AncientCityStates.CONFIG_ID, "resonanceDamageCap", -1), EPSILON);
         assertEquals(1.75, merged.ability(AncientCityStates.CONFIG_ID, "incomeMagicDamageMultiplier", -1), EPSILON);
         assertTrue(merged.towers().containsKey(AncientCityTowers.WARDEN_T3.id()));
+        assertTrue(merged.towers().containsKey(AncientCityTowers.WARDEN_T4.id()));
     }
 
     @Test

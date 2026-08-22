@@ -32,13 +32,10 @@ public final class DemonLordTowerJob extends SemionJob {
 
     @Override
     public List<Component> description() {
-        int statDiamondCost = TowerBalanceRuntime.abilityInt(
-                DemonLordTowers.GLOBAL_CONFIG_ID, "statDiamondCost", 50);
         return List.of(
                 SemionText.mini("<gray>시작 타워 대신 마왕이 직접 레인을 지킵니다. 같은 스킬 제단은 하나만 지을 수 있고 타워 한도를 2~4칸 차지합니다.</gray>"),
                 SemionText.mini("<gray>운영 단계에서는 먼저 지은 7개 스킬이 <aqua>1~5번, F, Q</aqua>에 배정됩니다. 5번은 우클릭, 나머지는 키 입력으로 사용하며 마검은 9번에 고정됩니다. 스킬 10종의 총 코스트는 32입니다.</gray>"),
-                SemionText.mini("<green>성장 처치로 레벨과 스탯 포인트를 얻고, 포인트 투자마다 "
-                        + statDiamondCost + "다이아를 소모합니다. 체력이 0이 되면 해당 라운드 전투에서 제외됩니다.</green>")
+                SemionText.mini("<green>성장 처치로 레벨과 스탯 포인트를 얻고, 포인트는 무료로 분배합니다. 체력이 0이 되면 해당 라운드 전투에서 제외됩니다.</green>")
         );
     }
 

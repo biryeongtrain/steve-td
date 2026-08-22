@@ -8,6 +8,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import kim.biryeong.semiontd.game.MatchId;
 import kim.biryeong.semiontd.game.MatchResult;
@@ -50,6 +52,24 @@ public final class SQLiteMatchResultRepository implements MatchResultRepository 
             }
         } catch (SQLException exception) {
             throw new PersistenceException("Failed to load match result from SQLite " + path, exception);
+        }
+    }
+
+    @Override
+    public synchronized Map<MatchId, MatchResult> findAllMatchResults() {
+        Map<MatchId, MatchResult> resultsById = new LinkedHashMap<>();
+        try (Connection connection = SQLiteSupport.connect(path);
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT match_id, payload FROM match_results ORDER BY match_id"
+             );
+             ResultSet results = statement.executeQuery()) {
+            while (results.next()) {
+                MatchId matchId = new MatchId(results.getLong("match_id"));
+                resultsById.put(matchId, GSON.fromJson(results.getString("payload"), MatchResult.class));
+            }
+            return Map.copyOf(resultsById);
+        } catch (SQLException exception) {
+            throw new PersistenceException("Failed to load match results from SQLite " + path, exception);
         }
     }
 

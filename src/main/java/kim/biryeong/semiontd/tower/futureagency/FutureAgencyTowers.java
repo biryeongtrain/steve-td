@@ -55,13 +55,13 @@ public final class FutureAgencyTowers {
     private static Map<FutureAgencyRole, List<TowerType>> buildAgents() {
         EnumMap<FutureAgencyRole, List<TowerType>> result = new EnumMap<>(FutureAgencyRole.class);
         result.put(FutureAgencyRole.COMBAT, line(FutureAgencyRole.COMBAT,
-                new double[]{85,140,230,380,650}, new double[]{7,7.5,8,8.5,9},
+                new double[]{80,125,190,285,390}, new double[]{7,7.5,8,8.5,9},
                 new double[]{8,13,21,33,48}, new int[]{16,15,13,11,10}, new int[]{20,25,30,35,40}));
         result.put(FutureAgencyRole.SUPPRESSION, line(FutureAgencyRole.SUPPRESSION,
-                new double[]{100,160,260,430,700}, new double[]{6,6.5,7,7.5,8},
+                new double[]{95,145,215,320,420}, new double[]{6,6.5,7,7.5,8},
                 new double[]{6,10,16,25,38}, new int[]{20,18,16,14,13}, new int[]{10,15,20,25,30}));
         result.put(FutureAgencyRole.PROTECTION, line(FutureAgencyRole.PROTECTION,
-                new double[]{200,330,540,850,1300}, new double[]{2.5,2.7,3,3.2,3.5},
+                new double[]{190,300,450,640,780}, new double[]{2.5,2.7,3,3.2,3.5},
                 new double[]{5,8,13,21,32}, new int[]{22,20,18,16,14}, new int[]{70,85,100,115,130}));
         return Map.copyOf(result);
     }
@@ -93,13 +93,13 @@ public final class FutureAgencyTowers {
     private static List<String> agentDescription(FutureAgencyRole role, int grade) {
         String roleLine = switch (role) {
             case COMBAT -> "진행도가 가장 높은 적을 우선하는 <light_purple>장거리 단일 공격</light_purple> 요원입니다.";
-            case SUPPRESSION -> "공격 대상 주변을 함께 타격하고 이동속도를 낮추는 <light_purple>광역 제압</light_purple> 요원입니다.";
+            case SUPPRESSION -> "공격 대상 주변을 함께 타격하고 이동·공격속도를 낮추는 <light_purple>광역 제압</light_purple> 요원입니다.";
             case PROTECTION -> "높은 어그로와 등급별 피해 감소로 동료를 지키는 <light_purple>방호</light_purple> 요원입니다.";
         };
         return List.of(
                 "<light_purple>" + role.displayName() + " 요원</light_purple> <white>" + grade + "급</white>. " + roleLine,
                 "구원 전 생존하면 현재 위치·체력을 잇는 <aqua>연결 생존자</aqua>를 원본당 최대 1기 유지합니다.",
-                "설치 원본은 매 웨이브 원래 위치와 최대 체력으로 다시 출전하며, <red>세계 구원</red> 후에는 일반 중앙 방어 타워가 됩니다."
+                "설치 원본은 매 웨이브 원래 위치와 최대 체력으로 다시 출전하며, <red>세계 구원</red> 후에는 생존자와 함께 중앙 방어에 참가합니다."
         );
     }
 

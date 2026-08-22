@@ -15,9 +15,12 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import kim.biryeong.semiontd.buildguide.BuildGuide;
@@ -53,6 +56,8 @@ import kim.biryeong.semiontd.tower.hero.HeroPartyBalance;
 import kim.biryeong.semiontd.tower.hero.HeroPartyState;
 import kim.biryeong.semiontd.tower.hero.HeroPartyStates;
 import kim.biryeong.semiontd.tower.hero.HeroPartyTowers;
+import kim.biryeong.semiontd.tower.succubus.SuccubusDreams;
+import kim.biryeong.semiontd.tower.succubus.SuccubusTowers;
 import kim.biryeong.semiontd.tower.hero.HeroTower;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import kim.biryeong.semiontd.trait.SemionTrait;
@@ -133,6 +138,12 @@ public final class SemionDialogService {
             .ofPattern("yyyy-MM-dd HH:mm")
             .withZone(ZoneId.systemDefault());
     private static final ConcurrentMap<SmallAvatarKey, Component> SMALL_AVATAR_CACHE = new ConcurrentHashMap<>();
+    private static final Set<String> AVATAR_LOAD_REQUESTS = ConcurrentHashMap.newKeySet();
+    private static final ExecutorService AVATAR_LOADER = Executors.newFixedThreadPool(
+            2,
+            Thread.ofPlatform().daemon().name("semiontd-avatar-loader-", 0).factory()
+    );
+
     public void showGameStatus(ServerPlayer player, SemionGame game) {
         ArrayList<DialogBody> bodies = new ArrayList<>();
         Component title = new HeaderMessage(
@@ -1187,11 +1198,7 @@ public final class SemionDialogService {
         }
         body.append("\n<gray>견제 유닛을 보낼 팀을 선택하세요.</gray>");
 
-        ArrayList<ActionButton> actions = game.teams().values().stream()
-                .filter(candidate -> candidate.active() && !candidate.eliminated())
-                .filter(candidate -> candidate.id() != semionPlayer.teamId())
-                .sorted(Comparator.comparing(SemionTeam::id))
-                .limit(TEAM_TARGET_COLUMNS)
+        ArrayList<ActionButton> actions = leaderTargetCandidates(game, semionPlayer.teamId()).stream()
                 .map(candidate -> actionButton(
                         teamButtonLabel(candidate.id()),
                         "/semiontd leader target " + candidate.id().name().toLowerCase(java.util.Locale.ROOT),
@@ -1200,6 +1207,14 @@ public final class SemionDialogService {
                 ))
                 .collect(Collectors.toCollection(ArrayList::new));
         showActions(player, "세미온 TD 팀장", body.toString(), actions, TEAM_TARGET_COLUMNS);
+    }
+
+    static List<SemionTeam> leaderTargetCandidates(SemionGame game, TeamId ownTeamId) {
+        return game.teams().values().stream()
+                .filter(candidate -> candidate.active() && !candidate.eliminated())
+                .filter(candidate -> candidate.id() != ownTeamId)
+                .sorted(Comparator.comparing(SemionTeam::id))
+                .toList();
     }
 
     public void showSummonShop(ServerPlayer player, SemionGame game, int page) {
@@ -1394,6 +1409,7 @@ public final class SemionDialogService {
             lines.add("경험치 " + oneDecimal(VillagerAdvStates.experience(tower))
                     + "/" + oneDecimal(TowerBalanceRuntime.villagerAdv().resolvedExperienceMax()));
         }
+        lines.addAll(SuccubusDreams.detailLines(tower));
         lines.addAll(tower.runtimeDetailLines());
         return lines;
     }
@@ -1435,14 +1451,14 @@ public final class SemionDialogService {
             return 0.0;
         }
         double baseDamage = towerPrimaryDamage(tower);
-        if (tower.primaryDamageType() == DamageType.MAGIC) {
+        if (tower.primaryDamageType() == DamageType.MAGIC && !SuccubusTowers.isSuccubusTower(tower.type())) {
             return towerEntity == null
                     ? baseDamage
                     : tower.resolveOutgoingDamage(towerEntity, null, baseDamage);
         }
         return towerEntity == null
                 ? tower.modifyAttackDamage(null, null, baseDamage)
-                : tower.resolveOutgoingDamage(towerEntity, null, towerEntity.attackDamageAmount(null));
+                : tower.resolveBasicAttackOutgoingDamage(towerEntity, null, towerEntity.attackDamageAmount(null));
     }
 
     private static double primaryDamage(TowerType type, DamageType damageType) {
@@ -2322,7 +2338,7 @@ public final class SemionDialogService {
     private static Component playerStatusBody(PlayerStatusRow row) {
         Component name = playerStatusName(row);
         Component playerCell = playerStatusPlayerCell(
-                avatarComponent(row.playerName(), AvatarVariant.COMPACT),
+                playerStatusAvatar(row.playerName()),
                 name,
                 PLAYER_STATUS_AVATAR_WIDTH + PLAYER_STATUS_NAME_WIDTH - PLAYER_STATUS_BODY_JOB_SHIFT,
                 AvatarVariant.COMPACT.imageSize,
@@ -2422,19 +2438,34 @@ public final class SemionDialogService {
             return cached;
         }
 
-        try {
-            Optional<BufferedImage> skin = SkinLoader.load(playerName);
-            if (skin.isPresent()) {
-                Component avatar = AvatarRenderer.asTextComponent(avatarImage(skin.get(), variant), variant.yOffset());
-                SMALL_AVATAR_CACHE.putIfAbsent(key, avatar);
-                return avatar;
-            }
-        } catch (RuntimeException exception) {
-            // Fall back to the bundled Steve skin below.
-        }
-
+        loadAvatar(playerName);
         SmallAvatarKey defaultKey = new SmallAvatarKey("Steve", variant);
         return SMALL_AVATAR_CACHE.computeIfAbsent(defaultKey, SemionDialogService::defaultSmallAvatar);
+    }
+
+    static Component playerStatusAvatar(String playerName) {
+        return avatarComponent(playerName, AvatarVariant.COMPACT);
+    }
+
+    private static void loadAvatar(String playerName) {
+        if (!AVATAR_LOAD_REQUESTS.add(playerName)) {
+            return;
+        }
+        AVATAR_LOADER.execute(() -> {
+            try {
+                SkinLoader.load(playerName).ifPresent(skin -> {
+                    for (AvatarVariant variant : AvatarVariant.values()) {
+                        SmallAvatarKey key = new SmallAvatarKey(playerName, variant);
+                        SMALL_AVATAR_CACHE.put(key, AvatarRenderer.asTextComponent(
+                                avatarImage(skin, variant),
+                                variant.yOffset()
+                        ));
+                    }
+                });
+            } catch (RuntimeException ignored) {
+                // Keep the bundled Steve fallback.
+            }
+        });
     }
 
     private static Component defaultSmallAvatar(SmallAvatarKey key) {
@@ -2790,6 +2821,7 @@ public final class SemionDialogService {
             case GREEN -> "green";
             case YELLOW -> "yellow";
             case PURPLE -> "light_purple";
+            case AQUA -> "aqua";
         };
         return "<" + color + ">" + teamId.name() + "</" + color + ">";
     }
@@ -2801,6 +2833,7 @@ public final class SemionDialogService {
             case GREEN -> ChatFormatting.GREEN;
             case YELLOW -> ChatFormatting.YELLOW;
             case PURPLE -> ChatFormatting.LIGHT_PURPLE;
+            case AQUA -> ChatFormatting.AQUA;
         };
     }
 

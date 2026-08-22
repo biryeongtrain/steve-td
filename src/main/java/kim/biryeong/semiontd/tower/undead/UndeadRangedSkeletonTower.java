@@ -51,7 +51,7 @@ public class UndeadRangedSkeletonTower extends EntityBackedTower {
     public void onAttack(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount, boolean killedTarget) {
         heal(towerEntity, damageAmount);
         for (SemionMonsterEntity extraTarget : pickExtraTargets(towerEntity, target, extraTargetCount())) {
-            boolean killed = damageTarget(towerEntity, extraTarget, damageAmount);
+            boolean killed = damageBasicAttackTargetResult(towerEntity, extraTarget, damageAmount).killed();
             TowerVfxService.showSecondaryAttack(towerEntity, extraTarget);
             heal(towerEntity, damageAmount);
             if (killed) {
@@ -113,7 +113,7 @@ public class UndeadRangedSkeletonTower extends EntityBackedTower {
 
     private void heal(SemionTowerEntity towerEntity, double damageAmount) {
         if (towerEntity != null && damageAmount > 0.0) {
-            towerEntity.receiveHealing(damageAmount * lifeStealRatio());
+            towerEntity.healTarget(towerEntity, damageAmount * lifeStealRatio());
         }
     }
 

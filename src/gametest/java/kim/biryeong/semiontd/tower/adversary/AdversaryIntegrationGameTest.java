@@ -444,8 +444,8 @@ public final class AdversaryIntegrationGameTest {
                             .sum(),
                     "An evolved single-target form must deal fifty percent splash.");
             fox.setForm(FoxForm.BASE, lane);
-            requireClose(88.0, fox.modifyIncomingDamage(source, null, 100.0),
-                    "Four attackers targeting the fox must reduce incoming damage by twelve percent.");
+            requireClose(85.0, fox.modifyIncomingDamage(source, null, 100.0),
+                    "Four attackers targeting the fox must reduce incoming damage by fifteen percent.");
             context.succeed();
         } catch (RuntimeException | Error failure) {
             failure.printStackTrace();

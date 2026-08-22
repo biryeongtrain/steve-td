@@ -17,6 +17,7 @@ import kim.biryeong.semiontd.game.SemionGameManager;
 import kim.biryeong.semiontd.game.SemionPlayer;
 import kim.biryeong.semiontd.job.DemonLordTowerJob;
 import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.tower.TowerRoundMetricsTracker;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.ui.SemionHotbarService;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
@@ -128,7 +129,7 @@ public final class DemonLordService {
                         .map(game -> game.players().get(serverPlayer.getUUID()))
                         .orElse(null);
                 if (semionPlayer != null) {
-                    new DemonLordStatGui(serverPlayer, semionPlayer.economy()).open();
+                    new DemonLordStatGui(serverPlayer).open();
                     return InteractionResult.SUCCESS;
                 }
             }
@@ -260,6 +261,8 @@ public final class DemonLordService {
             return;
         }
 
+        state.tickRoundMetrics();
+
         if (state.consumePendingSpawn()) {
             moveToLaneCentre(player, lane);
         }
@@ -375,6 +378,11 @@ public final class DemonLordService {
         }
     }
 
+    public static TowerRoundMetricsTracker roundMetricsTracker(UUID playerId) {
+        DemonLordState state = DemonLordStates.get(playerId);
+        return state == null ? null : state.roundMetricsTracker();
+    }
+
     /**
      * 라운드가 끝나면 전투를 해제합니다.
      *
@@ -390,6 +398,10 @@ public final class DemonLordService {
     }
 
     public static void clearPlayerState(UUID playerId) {
+        DemonLordState state = DemonLordStates.get(playerId);
+        if (state != null) {
+            state.removeRoundMetrics();
+        }
         clearBossBar(playerId);
         PRE_COMBAT_HOTBAR.remove(playerId);
         DemonLordStates.clear(playerId);
@@ -976,6 +988,13 @@ public final class DemonLordService {
         if (source != null) {
             Tower.DamageResult result = altar.damageTargetResult(source, monsterEntity, amount, type);
             if (result.dealtDamage() > 0.0) {
+                DemonLordState state = attacker == null ? null : DemonLordStates.get(attacker.getUUID());
+                if (state != null) {
+                    state.recordDamageDealt(result.dealtDamage(), type);
+                    if (result.killed()) {
+                        state.recordKill();
+                    }
+                }
                 // 제단은 쏘지 않습니다. showAttack 을 쓰면 건축 구역의 제단에서 몹까지 직선이
                 // 뻗어 나가, 아무것도 하지 않는 기둥이 공격한 것처럼 보입니다. 타격 표시와
                 // 처치 연출만 남기고 궤적은 뺍니다.
@@ -992,6 +1011,9 @@ public final class DemonLordService {
             DemonLordState state = DemonLordStates.get(attacker.getUUID());
             if (state != null) {
                 state.recordDamageDealt(dealtDamage, type);
+                if (killed) {
+                    state.recordKill();
+                }
             }
         }
         return new Tower.DamageResult(killed, dealtDamage, amount);

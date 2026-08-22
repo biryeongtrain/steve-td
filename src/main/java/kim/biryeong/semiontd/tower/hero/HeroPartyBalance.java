@@ -11,6 +11,7 @@ public final class HeroPartyBalance {
     public static final int WEAPON_ATTACK_INTERVAL_REDUCTION_PER_LEVEL = 1;
     public static final double FOCUS_FIRE_REDUCTION_PER_EXTRA_ATTACKER = 0.08;
     public static final double FOCUS_FIRE_REDUCTION_CAP = 0.40;
+    public static final double COMPANION_ARMOR_SHARE = 0.50;
 
     private static final long[] WEAPON_UPGRADE_COSTS = {0, 80, 140, 220, 320, 450};
     private static final double[] WEAPON_MULTIPLIERS = {1.0, 1.15, 1.32, 1.50, 1.72, 2.0};

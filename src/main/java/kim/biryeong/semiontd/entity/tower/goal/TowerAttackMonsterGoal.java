@@ -8,6 +8,7 @@ import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.visual.SemionAnimationState;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
+import kim.biryeong.semiontd.tower.succubus.SuccubusDreams;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -39,6 +40,13 @@ public final class TowerAttackMonsterGoal extends Goal {
 
     @Override
     public void tick() {
+        if (SuccubusDreams.isAsleep(tower)) {
+            cachedTarget = null;
+            tower.recordCurrentAttackTarget(null);
+            tower.getNavigation().stop();
+            tower.playAnimation(SemionAnimationState.IDLE);
+            return;
+        }
         if (tower.attackRange() <= 0.0) {
             cachedTarget = null;
             targetSearchCooldownTicks = 0;

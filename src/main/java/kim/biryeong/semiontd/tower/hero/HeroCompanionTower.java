@@ -154,7 +154,7 @@ public final class HeroCompanionTower extends HeroPartyTower {
             double dealtDamage,
             boolean killedTarget
     ) {
-        HeroPlayerVisuals.playAttack(this);
+        FakePlayerTowerVisuals.playAttack(this);
         HeroCompanionRole role = role().orElse(null);
         state().recordCompanionAttack(role, dealtDamage, killedTarget, isBoss(target), onlineOwner(towerEntity));
         if (role == HeroCompanionRole.ROGUE && executeAttackPending && dealtDamage > 0.0) {
@@ -317,7 +317,9 @@ public final class HeroCompanionTower extends HeroPartyTower {
             double primaryMultiplier = archerTargetMultiplier(primary);
             double secondaryDamage = attemptedDamage / Math.max(0.01, primaryMultiplier)
                     * ratio * archerTargetMultiplier(secondary);
-            DamageResult result = damageTargetResult(source, secondary, secondaryDamage);
+            DamageResult result = damageBasicAttackTargetResult(
+                    source, secondary, secondaryDamage, primaryDamageType()
+            );
             state().recordCompanionAttack(
                     HeroCompanionRole.ARCHER,
                     result.dealtDamage(),
@@ -379,11 +381,11 @@ public final class HeroCompanionTower extends HeroPartyTower {
                 AreaVfxSpec.onTrigger(empowered ? AreaVfxStyles.PULSE : AreaVfxStyles.SPLASH)
         );
         double splashDamage = attemptedDamage * ratio;
-        TowerAreaDamage.apply(
+        TowerAreaDamage.applyResolved(
                 this,
                 source,
                 request,
-                ignored -> splashDamage,
+                secondary -> resolveBasicAttackOutgoingDamage(source, secondary, splashDamage),
                 true,
                 (secondary, damage, killed) -> {
                     if (slow > 0.0 && slowTicks > 0 && secondary.isAlive()) {
@@ -408,7 +410,7 @@ public final class HeroCompanionTower extends HeroPartyTower {
             return;
         }
         double comboDamage = attemptedDamage * ratio;
-        DamageResult result = damageTargetResult(source, target, comboDamage);
+        DamageResult result = damageBasicAttackTargetResult(source, target, comboDamage, primaryDamageType());
         state().recordCompanionAttack(
                 HeroCompanionRole.ROGUE,
                 result.dealtDamage(),

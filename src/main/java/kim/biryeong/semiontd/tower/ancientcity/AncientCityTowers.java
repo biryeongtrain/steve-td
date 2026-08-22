@@ -77,16 +77,21 @@ public final class AncientCityTowers {
             EntityVisual.builder(byId(EntityType.WARDEN)).scale(0.33).build(),
             wardenDescription("최종")
     );
+    public static final TowerType WARDEN_T4 = magicTower(
+            "ancient_city_warden_t4", "심층 워든 타워", 650, 240.0, 9.5, 18.0, 14, 0,
+            EntityVisual.builder(byId(EntityType.WARDEN)).scale(0.38).build(),
+            wardenDescription("초월")
+    );
 
     private static final Set<String> CATALYST_IDS = ids(CATALYST_T1, CATALYST_T2, CATALYST_T3);
     private static final Set<String> SENSOR_IDS = ids(SENSOR_T1, SENSOR_T2, SENSOR_T3);
     private static final Set<String> SHRIEKER_IDS = ids(SHRIEKER_T1, SHRIEKER_T2, SHRIEKER_T3);
-    private static final Set<String> WARDEN_IDS = ids(WARDEN_T1, WARDEN_T2, WARDEN_T3);
+    private static final Set<String> WARDEN_IDS = ids(WARDEN_T1, WARDEN_T2, WARDEN_T3, WARDEN_T4);
     private static final List<TowerType> ALL = List.of(
             CATALYST_T1, CATALYST_T2, CATALYST_T3,
             SENSOR_T1, SENSOR_T2, SENSOR_T3,
             SHRIEKER_T1, SHRIEKER_T2, SHRIEKER_T3,
-            WARDEN_T1, WARDEN_T2, WARDEN_T3
+            WARDEN_T1, WARDEN_T2, WARDEN_T3, WARDEN_T4
     );
 
     static {
@@ -125,7 +130,7 @@ public final class AncientCityTowers {
         if (type == null) {
             return 1;
         }
-        return type.id().endsWith("_t3") ? 3 : type.id().endsWith("_t2") ? 2 : 1;
+        return type.id().endsWith("_t4") ? 4 : type.id().endsWith("_t3") ? 3 : type.id().endsWith("_t2") ? 2 : 1;
     }
 
     private static TowerType magicTower(

@@ -347,9 +347,9 @@ class AdversaryCombatContractTest {
                 () -> assertEquals(5.0,
                         AdversaryFoxTower.rivalKillHealingAmount(345.0, 350.0, 0.0, true), 0.0001),
                 () -> assertEquals(0.0, AdversaryFoxTower.focusFireDamageReduction(1), 0.0001),
-                () -> assertEquals(0.12, AdversaryFoxTower.focusFireDamageReduction(4), 0.0001),
-                () -> assertEquals(0.40, AdversaryFoxTower.focusFireDamageReduction(11), 0.0001),
-                () -> assertEquals(0.45, AdversaryFoxTower.focusFireDamageReduction(100), 0.0001)
+                () -> assertEquals(0.15, AdversaryFoxTower.focusFireDamageReduction(4), 0.0001),
+                () -> assertEquals(0.50, AdversaryFoxTower.focusFireDamageReduction(11), 0.0001),
+                () -> assertEquals(0.55, AdversaryFoxTower.focusFireDamageReduction(100), 0.0001)
         );
     }
 

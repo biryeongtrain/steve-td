@@ -30,6 +30,7 @@ import kim.biryeong.semiontd.tower.area.AreaVfxStyleRegistryImpl;
 import kim.biryeong.semiontd.tower.area.BuiltinAreaVfxStyles;
 import kim.biryeong.semiontd.tower.atlantis.AtlantisVfx;
 import kim.biryeong.semiontd.tower.plant.PlantVfx;
+import kim.biryeong.semiontd.tower.succubus.SuccubusVfx;
 import kim.biryeong.semiontd.tower.thunder.ThunderVfx;
 import kim.biryeong.semiontd.tip.SemionTipService;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
@@ -108,6 +109,7 @@ public class SemionTd implements ModInitializer {
         AtlantisVfx.register(areaVfxStyles);
         PlantVfx.register(areaVfxStyles);
         ThunderVfx.register(areaVfxStyles);
+        SuccubusVfx.register(areaVfxStyles);
         SemionTdApi.initializeInternal(new AreaEffectService(gameManager), areaVfxStyles);
         TowerVfxService.initialize(configs.vfx(), gameManager, areaVfxStyles);
         ServerLifecycleEvents.SERVER_STARTING.register(server -> areaVfxStyles.freeze());

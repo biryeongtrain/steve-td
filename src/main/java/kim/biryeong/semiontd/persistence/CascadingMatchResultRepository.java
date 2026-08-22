@@ -1,6 +1,8 @@
 package kim.biryeong.semiontd.persistence;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import kim.biryeong.semiontd.SemionTd;
@@ -46,5 +48,19 @@ public final class CascadingMatchResultRepository implements MatchResultReposito
             }
         }
         return Optional.empty();
+    }
+
+    @Override
+    public synchronized Map<MatchId, MatchResult> findAllMatchResults() {
+        Map<MatchId, MatchResult> results = new LinkedHashMap<>();
+        for (MatchResultRepository repository : repositories) {
+            try {
+                repository.findAllMatchResults().forEach(results::putIfAbsent);
+            } catch (RuntimeException exception) {
+                SemionTd.LOGGER.warn("Match result repository {} failed while listing history.",
+                        repository.getClass().getSimpleName(), exception);
+            }
+        }
+        return Map.copyOf(results);
     }
 }

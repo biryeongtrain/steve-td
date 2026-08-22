@@ -122,7 +122,7 @@ class AtlantisTowerCatalogTest {
         assertEquals(12, defaults.towers().get(AtlantisTowers.DOLPHIN_T3.id()).attackIntervalTicks());
 
         assertEquals(0.16, defaults.ability(AtlantisBalance.CONFIG_ID, "waterPressureDamageRatio", -1.0));
-        assertEquals(2.5, defaults.ability(AtlantisBalance.CONFIG_ID, "waterPressureDamageCap", -1.0));
+        assertEquals(2.0, defaults.ability(AtlantisBalance.CONFIG_ID, "waterPressureDamageCap", -1.0));
         assertEquals(3.0, defaults.ability(AtlantisBalance.CONFIG_ID, "waterPressureRadius", -1.0));
         assertEquals(2.0, defaults.ability(AtlantisBalance.CONFIG_ID, "zoneStackMultiplier", -1.0));
         assertEquals(40, defaults.abilityTicks(AtlantisBalance.CONFIG_ID, "zoneVfxIntervalTicks", -1));
@@ -138,15 +138,15 @@ class AtlantisTowerCatalogTest {
 
     @Test
     void tierThreeEffectiveDpsIncludesTheCarrierAndSplashTargets() {
-        assertEquals(106.7, effectiveDps(1, false, false), 0.2);
-        assertEquals(186.7, effectiveDps(3, false, false), 0.2);
-        assertEquals(266.7, effectiveDps(5, false, false), 0.2);
-        assertEquals(146.7, effectiveDps(1, true, false), 0.2);
-        assertEquals(306.7, effectiveDps(3, true, false), 0.2);
-        assertEquals(466.7, effectiveDps(5, true, false), 0.2);
-        assertEquals(163.6, effectiveDps(1, true, true), 0.2);
-        assertEquals(345.5, effectiveDps(3, true, true), 0.2);
-        assertEquals(527.3, effectiveDps(5, true, true), 0.2);
+        assertEquals(100.0, effectiveDps(1, false, false), 0.2);
+        assertEquals(166.7, effectiveDps(3, false, false), 0.2);
+        assertEquals(233.3, effectiveDps(5, false, false), 0.2);
+        assertEquals(133.3, effectiveDps(1, true, false), 0.2);
+        assertEquals(266.7, effectiveDps(3, true, false), 0.2);
+        assertEquals(400.0, effectiveDps(5, true, false), 0.2);
+        assertEquals(145.5, effectiveDps(1, true, true), 0.2);
+        assertEquals(290.9, effectiveDps(3, true, true), 0.2);
+        assertEquals(436.4, effectiveDps(5, true, true), 0.2);
     }
 
     @Test

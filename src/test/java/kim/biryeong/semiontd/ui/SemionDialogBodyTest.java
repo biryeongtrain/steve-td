@@ -3,15 +3,21 @@ package kim.biryeong.semiontd.ui;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.EconomyConfig;
+import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.game.PlayerEconomy;
+import kim.biryeong.semiontd.game.SemionGame;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.VillagerTowerJob;
+import kim.biryeong.semiontd.map.GameArena;
 import kim.biryeong.semiontd.statistics.JobStatisticsEntry;
 import kim.biryeong.semiontd.statistics.JobStatisticsSnapshot;
 import kim.biryeong.semiontd.statistics.JobStatisticsTotals;
@@ -111,6 +117,14 @@ final class SemionDialogBodyTest {
         assertEquals("avatar", player.getSiblings().getFirst().getString());
         assertEquals(" ", player.getSiblings().get(1).getString());
         assertEquals("name", player.getSiblings().getLast().getString());
+    }
+
+    @Test
+    void playerStatusDoesNotWaitForRemoteAvatarLoading() {
+        assertTimeoutPreemptively(
+                Duration.ofMillis(500),
+                () -> SemionDialogService.playerStatusAvatar("no-such-player")
+        );
     }
 
     @Test
@@ -505,6 +519,23 @@ final class SemionDialogBodyTest {
                 0,
                 "빌더",
                 teamLeader
+        );
+    }
+
+    @Test
+    void leaderTargetCandidatesIncludeAquaBeyondTheFourColumnLayout() {
+        SemionGame game = new SemionGame(
+                EconomyConfig.defaultConfig(),
+                WaveConfig.defaultConfig(),
+                new GameArena(Map.of())
+        );
+        game.teams().values().forEach(team -> team.activate());
+
+        assertEquals(
+                List.of(TeamId.BLUE, TeamId.GREEN, TeamId.YELLOW, TeamId.PURPLE, TeamId.AQUA),
+                SemionDialogService.leaderTargetCandidates(game, TeamId.RED).stream()
+                        .map(team -> team.id())
+                        .toList()
         );
     }
 
