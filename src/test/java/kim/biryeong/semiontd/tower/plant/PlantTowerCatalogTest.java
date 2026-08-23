@@ -27,6 +27,8 @@ import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordState;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordStates;
 import kim.biryeong.semiontd.tower.ocean.OceanTowers;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
@@ -226,6 +228,46 @@ final class PlantTowerCatalogTest {
             // 어그로는 다릅니다. 지뢰는 밟고 지나가는 함정이지 물어뜯을 몸이 아닙니다.
             // 자세한 이유는 minesAreTrapsNotBodiesToChewOn 을 봅니다.
             assertEquals(!(tower instanceof PlantMineTower), tower.drawsAggro(), type.id());
+        }
+    }
+
+    /**
+     * 마왕도 잔디 회복을 받습니다.
+     *
+     * <p>마왕 체력은 보스바 전용 풀이라 타워 회복 경로가 닿지 않습니다. 그대로 두면 지원 지형이
+     * 자기 팀 마왕만 못 살립니다. 겹침 규칙은 타워와 같아야 합니다 - 창이 열려 있는 동안 들어온
+     * 회복은 깎이되 창을 밀지 않습니다.
+     */
+    @Test
+    void demonLordTakesMeadowSupportHealingWithTheSameOverlapRule() {
+        UUID playerId = UUID.randomUUID();
+        try {
+            DemonLordState state = DemonLordStates.getOrCreate(playerId);
+            state.enterCombat();
+            double max = state.maxHealth();
+            state.applyDamage(max * 0.5);
+            double wounded = state.health();
+
+            long window = 20L;
+            double amount = max * 0.02;
+
+            double first = state.receiveSupportHeal(amount, 100L, window, 0.5);
+            assertEquals(amount, first, EPSILON, "창이 닫혀 있으면 온전히 들어갑니다");
+
+            double overlapped = state.receiveSupportHeal(amount, 105L, window, 0.5);
+            assertEquals(amount * 0.5, overlapped, EPSILON, "창이 열려 있으면 절반만 들어갑니다");
+
+            // 깎인 회복이 창을 밀면 온전한 회복이 두 번 다시 오지 않습니다.
+            double nextWindow = state.receiveSupportHeal(amount, 120L, window, 0.5);
+            assertEquals(amount, nextWindow, EPSILON, "창이 지나면 다시 온전히 들어갑니다");
+            assertEquals(wounded + amount * 2.5, state.health(), EPSILON);
+
+            // 전투 밖에서는 받지 않습니다. 다음 웨이브에 어차피 다시 채워지는 잔값입니다.
+            state.standDown();
+            assertEquals(0.0, state.receiveSupportHeal(amount, 200L, window, 0.5), EPSILON);
+        } finally {
+            DemonLordStates.clear(playerId);
+            DemonLordStates.resetProgression(playerId);
         }
     }
 

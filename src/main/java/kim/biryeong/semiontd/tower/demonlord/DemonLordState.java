@@ -25,6 +25,9 @@ public final class DemonLordState {
     private final UUID playerId;
     private final Map<DemonLordSkill, Long> cooldownReadyTick = new EnumMap<>(DemonLordSkill.class);
     private final Map<DemonLordStat, Integer> statPoints = new EnumMap<>(DemonLordStat.class);
+
+    /** 마지막으로 지원 회복 창이 열린 시각. 겹침 감산 판정에만 씁니다. */
+    private Long lastSupportHealTick;
     private int unspentPoints;
 
     private int level = 1;
@@ -169,6 +172,40 @@ public final class DemonLordState {
             roundMetricsTracker.updateAlive(health > 0.0);
         }
         return health <= 0.0;
+    }
+
+    /**
+     * 아군 지원 회복 한 번. 실제로 채운 양을 돌려줍니다.
+     *
+     * <p>마왕 체력은 보스바 전용 풀이라 타워 회복 경로({@code receiveHealing})가 닿지 않습니다.
+     * 지원 계열이 마왕만 못 살리는 그림을 없애려고 별도 입구를 둡니다.
+     *
+     * <p>겹침 창은 타워와 같은 규칙입니다 - 창이 닫혀 있으면 온전히 들어가고 그때 창이 열리며,
+     * 열려 있는 동안 들어온 회복은 깎이되 창을 밀지 않습니다. 창을 밀면 회복원이 둘만 돼도
+     * 온전한 회복이 두 번 다시 오지 않습니다.
+     *
+     * <p>전투 중이 아니면 받지 않습니다. 전투 밖의 체력 값은 다음 웨이브에 어차피 다시 채워지는
+     * 잔값이라, 여기서 올려 봐야 아무 의미가 없습니다.
+     */
+    public double receiveSupportHeal(double amount, long gameTime, long windowTicks, double overlapReduction) {
+        if (!inCombat || amount <= 0.0 || health <= 0.0) {
+            return 0.0;
+        }
+        boolean overlapping = lastSupportHealTick != null
+                && gameTime - lastSupportHealTick < Math.max(1L, windowTicks);
+        double effective = overlapping
+                ? amount * Math.max(0.0, 1.0 - overlapReduction)
+                : amount;
+        if (effective <= 0.0) {
+            return 0.0;
+        }
+        double before = health;
+        heal(effective);
+        double healed = health - before;
+        if (healed > 0.0 && !overlapping) {
+            lastSupportHealTick = gameTime;
+        }
+        return healed;
     }
 
     public void heal(double amount) {

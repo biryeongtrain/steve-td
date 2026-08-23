@@ -25,12 +25,16 @@ import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.ProductionTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerDataKey;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordState;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordStates;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -399,6 +403,35 @@ public class PlantCombatTower extends ProductionTower {
         );
         SemionTdApi.areaEffects().applyToTowers(request, target ->
                 heal(target, healPercent) ? AreaEffectOutcome.APPLIED : AreaEffectOutcome.UNCHANGED);
+        healDemonLords(source, radius, healPercent);
+    }
+
+    /**
+     * 반경 안에서 싸우고 있는 마왕도 함께 회복시킵니다.
+     *
+     * <p>마왕 체력은 보스바 전용 풀이라 타워 회복 경로가 닿지 않습니다. 그대로 두면 지원 지형이
+     * 자기 팀 마왕만 못 살리는 그림이 됩니다.
+     *
+     * <p>타워 광역 API 는 타워만 대상으로 삼아서 여기서는 직접 훑습니다. 마왕은 타워가 아니라
+     * 플레이어이고, 플레이어를 대상으로 하는 공용 광역 경로가 아직 없습니다. 팀 아레나는 팀마다
+     * 월드가 따로라 이 탐색이 상대 팀까지 닿지는 않습니다.
+     */
+    private void healDemonLords(SemionTowerEntity source, double radius, double healPercent) {
+        Vec3 center = source.position();
+        AABB box = source.getBoundingBox().inflate(radius);
+        long now = source.level().getGameTime();
+        long window = Math.max(1, globalTicks("soilPulseIntervalTicks"));
+        double reduction = global("meadowHealOverlapReduction");
+        double radiusSqr = radius * radius;
+        for (ServerPlayer player : source.level().getEntitiesOfClass(ServerPlayer.class, box,
+                candidate -> candidate.isAlive() && candidate.position().distanceToSqr(center) <= radiusSqr)) {
+            DemonLordState state = DemonLordStates.get(player.getUUID());
+            if (state == null) {
+                continue;
+            }
+            // 받는 쪽 최대 체력 기준인 것은 타워와 같습니다.
+            state.receiveSupportHeal(state.maxHealth() * healPercent, now, window, reduction);
+        }
     }
 
     /**
