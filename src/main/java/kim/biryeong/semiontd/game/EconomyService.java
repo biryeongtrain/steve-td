@@ -10,7 +10,9 @@ import kim.biryeong.semiontd.entity.monster.KillSourceKind;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.MonsterOrigin;
 import kim.biryeong.semiontd.job.JobContext;
+import kim.biryeong.semiontd.job.PirateTowerJob;
 import kim.biryeong.semiontd.summon.SummonMonsterType;
+import kim.biryeong.semiontd.tower.pirate.PirateStates;
 
 public final class EconomyService {
     private EconomyConfig economyConfig;
@@ -51,9 +53,14 @@ public final class EconomyService {
     }
 
     public void payRoundIncome(Collection<SemionPlayer> players, Map<TeamId, SemionTeam> teams) {
+        if (game != null) {
+            payRoundIncome(game.currentRound(), players, teams);
+            return;
+        }
         for (SemionPlayer player : players) {
             if (isEconomyEligible(player, teams)) {
                 player.economy().payIncome();
+                PirateStates.grantFerrymanIncome(player);
             }
         }
     }
@@ -63,9 +70,10 @@ public final class EconomyService {
             if (isEconomyEligible(player, teams)) {
                 if (game != null && !game.augmentsEnabled()) {
                     player.economy().payIncome();
-                } else {
-                    AugmentEconomyService.payRoundIncome(player, currentRound);
+                } else if (!AugmentEconomyService.payRoundIncome(player, currentRound)) {
+                    continue;
                 }
+                PirateStates.grantFerrymanIncome(player);
             }
         }
     }
@@ -74,7 +82,14 @@ public final class EconomyService {
         if (player == null || team == null || team.eliminated()) {
             return false;
         }
-        return player.economy().upgradeGasProduction(economyConfig.gasProduction());
+        long beforeDiamond = player.economy().diamond();
+        long beforeEmerald = player.economy().emerald();
+        boolean upgraded = player.economy().upgradeGasProduction(economyConfig.gasProduction());
+        if (upgraded) {
+            PirateStates.recordDiamondSpend(player, Math.max(0, beforeDiamond - player.economy().diamond()));
+            PirateStates.recordEmeraldSpend(player, Math.max(0, beforeEmerald - player.economy().emerald()));
+        }
+        return upgraded;
     }
 
     public boolean spendForSummon(SemionPlayer player, SummonMonsterType type) {
@@ -82,7 +97,10 @@ public final class EconomyService {
     }
 
     public boolean spendForSummon(SemionPlayer player, long gasCost) {
-        return player != null && player.economy().spendGas(Math.max(0, gasCost));
+        long amount = Math.max(0, gasCost);
+        boolean spent = player != null && player.economy().spendGas(amount);
+        if (spent) PirateStates.recordEmeraldSpend(player, amount);
+        return spent;
     }
 
     public void refundSummon(SemionPlayer player, SummonMonsterType type, int currentRound) {
@@ -116,6 +134,9 @@ public final class EconomyService {
     public boolean transferDiamond(SemionPlayer sender, SemionPlayer receiver, long amount) {
         long boundedAmount = Math.max(0, amount);
         if (sender == null || receiver == null || boundedAmount <= 0) {
+            return false;
+        }
+        if (isPirate(sender) || isPirate(receiver)) {
             return false;
         }
         if (!sender.economy().spendDiamond(boundedAmount)) {
@@ -153,6 +174,7 @@ public final class EconomyService {
                         .orElse(monster.mineralReward());
         long finalReward = adjustedKillReward(player, monster, reward);
         player.economy().addDiamond(finalReward);
+        PirateStates.grantFerrymanIncome(player);
         if (player.teamId() == monster.targetTeam() && player.laneId() == monster.targetLaneId()) {
             player.matchStats().recordOwnLaneMonsterKill(finalReward, monster.attributionThreat());
         } else {
@@ -187,5 +209,9 @@ public final class EconomyService {
     private boolean isEconomyEligible(SemionPlayer player, Map<TeamId, SemionTeam> teams) {
         SemionTeam team = teams.get(player.teamId());
         return team != null && team.active() && !team.eliminated();
+    }
+
+    private static boolean isPirate(SemionPlayer player) {
+        return player != null && player.job().filter(PirateTowerJob.class::isInstance).isPresent();
     }
 }

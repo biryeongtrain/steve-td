@@ -35,6 +35,12 @@ class AugmentTowerCatalogTest {
             assertFalse(tower.receivesTraitEffects());
             assertFalse(tower.triggersNearbyDeathEffects());
             assertFalse(tower.canChaseTargets());
+            double healthBefore = tower.currentMaxHealth();
+            tower.addPermanentMaxHealthBonus(100, null);
+            tower.addPermanentFlatDamageBonus(50, null);
+            assertEquals(0, tower.permanentMaxHealthBonus(), "Pirate growth must not bypass neutral tower buff immunity");
+            assertEquals(0, tower.permanentFlatDamageBonus());
+            assertEquals(healthBefore, tower.currentMaxHealth());
             assertEquals(!AugmentTowers.isFreeCall(type), tower.canBeSold());
             assertEquals(AugmentTowers.slots(type), TowerCapacity.slotCost(type));
             assertEquals(AugmentTowers.slots(type), TowerCapacity.slotCost(tower));

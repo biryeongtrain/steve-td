@@ -16,6 +16,7 @@ import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.config.SummonConfig;
 import kim.biryeong.semiontd.job.AdversaryTowerJob;
 import kim.biryeong.semiontd.job.EndTowerJob;
+import kim.biryeong.semiontd.job.PirateTowerJob;
 import kim.biryeong.semiontd.job.WarlockTowerJob;
 import kim.biryeong.semiontd.summon.IncomeSummons;
 import kim.biryeong.semiontd.summon.SummonRegistry;
@@ -25,6 +26,7 @@ import kim.biryeong.semiontd.tower.adversary.AdversaryBalance;
 import kim.biryeong.semiontd.tower.adversary.AdversaryTowers;
 import kim.biryeong.semiontd.tower.augment.AugmentTowers;
 import kim.biryeong.semiontd.tower.end.EndTowers;
+import kim.biryeong.semiontd.tower.pirate.PirateTowers;
 import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
 import kim.biryeong.semiontd.trait.TraitRegistry;
 import net.minecraft.SharedConstants;
@@ -177,6 +179,26 @@ final class WebCatalogExporterTest {
         assertEquals(initial, WebCatalogExporter.snapshot(1, waves, economy, new SummonConfig(reversed)).versionHash());
         reversed.remove(reversed.keySet().iterator().next());
         assertNotEquals(initial, WebCatalogExporter.snapshot(1, waves, economy, new SummonConfig(reversed)).versionHash());
+    }
+
+    @Test
+    void pirateExportsAsCreativeWithExclusiveJobTowerOwnership() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        IncomeSummons.reloadBuiltIns(SummonConfig.defaultConfig());
+        var document = WebCatalogExporter.snapshot(1L);
+        assertEquals(14, document.builders().stream().filter(builder -> "OFFICIAL".equals(builder.builderOrigin())).count());
+        assertEquals(17, document.builders().stream().filter(builder -> "CREATIVE".equals(builder.builderOrigin())).count());
+        assertEquals("semion-td:pirate", PirateTowerJob.ID.toString());
+        var pirate = document.builders().stream().filter(builder -> builder.id().equals(PirateTowerJob.ID.toString()))
+                .findFirst().orElseThrow();
+        assertEquals("CREATIVE", pirate.builderOrigin());
+        Set<String> expected = PirateTowers.all().stream().map(type -> type.id())
+                .collect(java.util.stream.Collectors.toSet());
+        assertEquals(expected, Set.copyOf(pirate.towerIds()));
+        var owned = document.towers().stream().filter(tower -> pirate.id().equals(tower.builderId())).toList();
+        assertEquals(expected, owned.stream().map(WebCatalogExporter.TowerEntry::id)
+                .collect(java.util.stream.Collectors.toSet()));
+        assertTrue(owned.stream().allMatch(tower -> "JOB".equals(tower.availability()) && tower.augmentId() == null));
     }
 
     @Test

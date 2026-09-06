@@ -28,6 +28,10 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
 
 public abstract class Tower {
+    private static final TowerDataKey<Double> PERMANENT_MAX_HEALTH_BONUS = TowerDataKey.of(
+            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("semion-td", "tower/permanent_max_health_bonus"), Double.class);
+    private static final TowerDataKey<Double> PERMANENT_FLAT_DAMAGE_BONUS = TowerDataKey.of(
+            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("semion-td", "tower/permanent_flat_damage_bonus"), Double.class);
     private TowerType type;
     private final UUID ownerPlayer;
     private final TeamId teamId;
@@ -153,7 +157,40 @@ public abstract class Tower {
     }
 
     public double effectBaseMaxHealth() {
-        return type.maxHealth();
+        return type.maxHealth() + permanentMaxHealthBonus();
+    }
+
+    public double permanentMaxHealthBonus() {
+        return Math.max(0.0, getDataOrDefault(PERMANENT_MAX_HEALTH_BONUS, 0.0));
+    }
+
+    public double permanentFlatDamageBonus() {
+        return Math.max(0.0, getDataOrDefault(PERMANENT_FLAT_DAMAGE_BONUS, 0.0));
+    }
+
+    public void addPermanentMaxHealthBonus(double amount, PlayerLane lane) {
+        if (isAugmentTower() || !Double.isFinite(amount) || amount <= 0.0) {
+            return;
+        }
+        setData(PERMANENT_MAX_HEALTH_BONUS, getDataOrDefault(PERMANENT_MAX_HEALTH_BONUS, 0.0) + amount);
+        syncMaxHealth(effectBaseMaxHealth(), true);
+        onStateChanged(lane);
+    }
+
+    public void addPermanentFlatDamageBonus(double amount, PlayerLane lane) {
+        if (isAugmentTower() || !Double.isFinite(amount) || amount <= 0.0) {
+            return;
+        }
+        setData(PERMANENT_FLAT_DAMAGE_BONUS, getDataOrDefault(PERMANENT_FLAT_DAMAGE_BONUS, 0.0) + amount);
+        onStateChanged(lane);
+    }
+
+    /** Clears per-instance permanent bonuses when this tower is sold. */
+    public void clearPermanentStatBonuses(PlayerLane lane) {
+        removeData(PERMANENT_MAX_HEALTH_BONUS);
+        removeData(PERMANENT_FLAT_DAMAGE_BONUS);
+        syncMaxHealth(effectBaseMaxHealth(), false);
+        onStateChanged(lane);
     }
 
     public void syncMaxHealth(double maxHealth, boolean healIncrease) {
@@ -567,6 +604,11 @@ public abstract class Tower {
 
     public double modifyAttackDamage(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
         return damageAmount;
+    }
+
+    /** Lets a tower amplify a beneficial timed effect before it is stored and shown in its detail UI. */
+    public double adjustIncomingTimedEffectMagnitude(TimedEffectType type, double magnitude) {
+        return magnitude;
     }
 
     public double sacrificeAttackDamage() {

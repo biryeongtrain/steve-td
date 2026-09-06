@@ -49,6 +49,7 @@ import kim.biryeong.semiontd.tower.mage.MageSpell;
 import kim.biryeong.semiontd.tower.mage.MageTowers;
 import kim.biryeong.semiontd.tower.pet.PetBalance;
 import kim.biryeong.semiontd.tower.pet.PetTowers;
+import kim.biryeong.semiontd.tower.pirate.PirateTowers;
 import kim.biryeong.semiontd.tower.succubus.SuccubusBalance;
 import kim.biryeong.semiontd.tower.succubus.SuccubusTowers;
 import kim.biryeong.semiontd.tower.nether.NetherTower;
@@ -259,6 +260,7 @@ public record TowerBalanceConfig(
         addFrostTowers(towers);
         addPetTowers(towers);
         kim.biryeong.semiontd.tower.augment.AugmentTowers.all().forEach(type -> addTower(towers, type));
+        addPirateTowers(towers);
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
         putUpgrade(upgradeCosts, VillagerTowers.T1_SPLASH_TOWER, "villager_splash_t2", 110);
@@ -347,6 +349,7 @@ public record TowerBalanceConfig(
         putBodyUpgrades(upgradeCosts);
         putFrostUpgrades(upgradeCosts);
         putPetUpgrades(upgradeCosts);
+        putPirateUpgrades(upgradeCosts);
 
         LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>();
         putAbilities(abilities, IllagerRaidStates.RAID_CONFIG_ID, Map.of(
@@ -924,6 +927,7 @@ public record TowerBalanceConfig(
         putBodyAbilities(abilities);
         putFrostAbilities(abilities);
         putPetAbilities(abilities);
+        putPirateAbilities(abilities);
 
         TowerBalanceConfig fallback = new TowerBalanceConfig(
                 towers,
@@ -939,6 +943,10 @@ public record TowerBalanceConfig(
         PetTowers.all().forEach(type -> addTower(towers, type));
     }
 
+    private static void addPirateTowers(Map<String, TowerStats> towers) {
+        PirateTowers.all().forEach(type -> addTower(towers, type));
+    }
+
     private static void putPetUpgrades(Map<String, Long> upgrades) {
         putUpgrade(upgrades, PetTowers.BUTLER_T1, PetTowers.BUTLER_T2.id(), 220);
         putUpgrade(upgrades, PetTowers.TRAINER_T1, PetTowers.TRAINER_T2.id(), 200);
@@ -949,6 +957,27 @@ public record TowerBalanceConfig(
         putUpgrade(upgrades, PetTowers.CAT_T2, PetTowers.CAT_T3.id(), 260);
         putUpgrade(upgrades, PetTowers.BIRD_T1, PetTowers.BIRD_T2.id(), 125);
         putUpgrade(upgrades, PetTowers.BIRD_T2, PetTowers.BIRD_T3.id(), 270);
+    }
+
+    private static void putPirateUpgrades(Map<String, Long> upgrades) {
+        putUpgrade(upgrades, PirateTowers.ADMIRAL, PirateTowers.GOLDEN_ADMIRAL.id(), 2000);
+        putUpgrade(upgrades, PirateTowers.DECKHAND, PirateTowers.LOOKOUT_DECKHAND.id(), 175);
+        putUpgrade(upgrades, PirateTowers.LOOKOUT_DECKHAND, PirateTowers.SOUL_REAVER_DECKHAND.id(), 575);
+        putUpgrade(upgrades, PirateTowers.FERRYMAN, PirateTowers.VETERAN_FERRYMAN.id(), 500);
+        putUpgrade(upgrades, PirateTowers.VETERAN_FERRYMAN, PirateTowers.LEGENDARY_FERRYMAN.id(), 800);
+        putUpgrade(upgrades, PirateTowers.FERRYMAN, PirateTowers.BOAT_SINGER.id(), 400);
+        putUpgrade(upgrades, PirateTowers.BOAT_SINGER, PirateTowers.SWEET_BOAT_SINGER.id(), 1600);
+        putUpgrade(upgrades, PirateTowers.SWORDSMAN, PirateTowers.IRON_SWORDSMAN.id(), 1200);
+        putUpgrade(upgrades, PirateTowers.PARROT, PirateTowers.ONE_EYED_PARROT.id(), 1500);
+        putUpgrade(upgrades, PirateTowers.ONE_EYED_PARROT, PirateTowers.CAPABLANCA.id(), 3000);
+        putUpgrade(upgrades, PirateTowers.HELMSMAN, PirateTowers.GUIDE.id(), 1300);
+        putUpgrade(upgrades, PirateTowers.HELMSMAN, PirateTowers.NAVIGATOR.id(), 1500);
+        putUpgrade(upgrades, PirateTowers.NAVIGATOR, PirateTowers.FIRST_NAVIGATOR.id(), 2200);
+        putUpgrade(upgrades, PirateTowers.SHABBY_CHEST, PirateTowers.DEEP_CHEST.id(), 100);
+        putUpgrade(upgrades, PirateTowers.SHABBY_CHEST, PirateTowers.EMPIRE_CHEST.id(), 150);
+        putUpgrade(upgrades, PirateTowers.DEEP_CHEST, PirateTowers.FANTASY_CHEST.id(), 350);
+        putUpgrade(upgrades, PirateTowers.DROPPED_ANCHOR, PirateTowers.DEEP_ANCHOR.id(), 600);
+        putUpgrade(upgrades, PirateTowers.DEEP_ANCHOR, PirateTowers.ANCIENT_ANCHOR.id(), 1200);
     }
 
     private static void putPetAbilities(Map<String, Map<String, Double>> abilities) {
@@ -976,6 +1005,42 @@ public record TowerBalanceConfig(
         putPetBirdAbilities(abilities, PetTowers.BIRD_T1, 100.0, 70.0, 0.50);
         putPetBirdAbilities(abilities, PetTowers.BIRD_T2, 200.0, 160.0, 0.75);
         putPetBirdAbilities(abilities, PetTowers.BIRD_T3, 320.0, 0.0, 1.00);
+    }
+
+    private static void putPirateAbilities(Map<String, Map<String, Double>> abilities) {
+        putAbilities(abilities, PirateTowers.ADMIRAL.id(), Map.ofEntries(
+                Map.entry("spendThreshold", 200.0), Map.entry("paybackLow", 50.0),
+                Map.entry("paybackHigh", 75.0), Map.entry("maxHealthBonusLow", 2.0),
+                Map.entry("maxHealthBonusHigh", 4.0), Map.entry("damageBonus", 0.5),
+                Map.entry("effectCount", 1.0)));
+        putAbilities(abilities, PirateTowers.GOLDEN_ADMIRAL.id(), Map.of("effectCount", 2.0));
+        putAbilities(abilities, PirateTowers.DECKHAND.id(), Map.of("incomeMin", 1.0, "incomeMax", 3.0, "openingDamageBonus", 0.5, "openingDamageTicks", 120.0));
+        putAbilities(abilities, PirateTowers.LOOKOUT_DECKHAND.id(), Map.of("incomeMin", 2.0, "incomeMax", 3.0, "splashRadius", 1.5, "splashRatio", 0.5, "openingDamageBonus", 0.5, "openingDamageTicks", 120.0));
+        putAbilities(abilities, PirateTowers.SOUL_REAVER_DECKHAND.id(), Map.ofEntries(
+                Map.entry("incomeMin", 3.0), Map.entry("incomeMax", 5.0), Map.entry("splashRadius", 2.0),
+                Map.entry("splashRatio", 0.6), Map.entry("deathHaste", 0.4), Map.entry("deathHasteRadius", 5.0),
+                Map.entry("deathHasteTicks", 60.0), Map.entry("openingDamageBonus", 0.5), Map.entry("openingDamageTicks", 120.0)));
+        putAbilities(abilities, PirateTowers.FERRYMAN.id(), Map.of("incomeBonus", 2.0));
+        putAbilities(abilities, PirateTowers.VETERAN_FERRYMAN.id(), Map.of("incomeBonus", 3.0));
+        putAbilities(abilities, PirateTowers.LEGENDARY_FERRYMAN.id(), Map.of("incomeBonus", 4.0));
+        putAbilities(abilities, PirateTowers.BOAT_SINGER.id(), Map.of("chestRoundReduction", 1.0));
+        putAbilities(abilities, PirateTowers.SWEET_BOAT_SINGER.id(), Map.of("chestRoundReduction", 2.0));
+        putAbilities(abilities, PirateTowers.SWORDSMAN.id(), Map.of("positiveBuffMultiplier", 1.5));
+        putAbilities(abilities, PirateTowers.IRON_SWORDSMAN.id(), Map.of("positiveBuffMultiplier", 2.0, "firstAttackMultiplier", 2.0, "firstAttackSlow", 0.8, "firstAttackSlowTicks", 40.0));
+        putAbilities(abilities, PirateTowers.PARROT.id(), Map.of("damagePerHundredDiamond", 0.02, "damageBonusCap", 5.0, "openingAttackCount", 3.0, "openingRangeBonus", 10.0, "openingDamageMultiplier", 2.5));
+        putAbilities(abilities, PirateTowers.ONE_EYED_PARROT.id(), Map.of("damagePerHundredDiamond", 0.035, "damageBonusCap", 5.0, "openingAttackCount", 3.0, "openingRangeBonus", 10.0, "openingDamageMultiplier", 2.5));
+        putAbilities(abilities, PirateTowers.CAPABLANCA.id(), Map.of("damagePerHundredDiamond", 0.05, "damageBonusCap", 5.0, "speedPerHundredEmerald", 0.05, "speedBonusCap", 1.0, "openingAttackCount", 3.0, "openingRangeBonus", 10.0, "openingDamageMultiplier", 2.5));
+        putAbilities(abilities, PirateTowers.HELMSMAN.id(), Map.of("spendStep", 100.0, "healthPerStep", 2.0, "damagePerStep", 0.5));
+        putAbilities(abilities, PirateTowers.GUIDE.id(), Map.of("spendStep", 100.0, "healthPerStep", 3.0, "lostHealthThreshold", 1200.0, "lostHealthRatio", 0.035));
+        putAbilities(abilities, PirateTowers.NAVIGATOR.id(), Map.of("spendStep", 75.0, "healthPerStep", 3.0, "damagePerStep", 0.5));
+        putAbilities(abilities, PirateTowers.FIRST_NAVIGATOR.id(), Map.of("spendStep", 50.0, "healthPerStep", 5.0, "damagePerStep", 0.5, "splashRadius", 2.0, "splashRatio", 0.8));
+        putAbilities(abilities, PirateTowers.SHABBY_CHEST.id(), Map.of("rounds", 5.0, "cashout", 90.0, "saleHealthBonus", 5.0));
+        putAbilities(abilities, PirateTowers.EMPIRE_CHEST.id(), Map.of("rounds", 5.0, "cashout", 200.0, "saleDamageBonus", 1.0));
+        putAbilities(abilities, PirateTowers.DEEP_CHEST.id(), Map.of("rounds", 5.0, "cashout", 250.0, "saleHealthBonus", 10.0));
+        putAbilities(abilities, PirateTowers.FANTASY_CHEST.id(), Map.of("rounds", 5.0, "cashout", 600.0, "saleHealthBonus", 10.0));
+        putAbilities(abilities, PirateTowers.DROPPED_ANCHOR.id(), Map.of("radius", 2.0, "damageReduction", 0.01, "durationTicks", 80.0, "saleBonus", 0.001, "saleBonusCap", 0.1, "maxStacks", 2.0));
+        putAbilities(abilities, PirateTowers.DEEP_ANCHOR.id(), Map.of("radius", 2.0, "damageReduction", 0.02, "durationTicks", 140.0, "saleBonus", 0.001, "saleBonusCap", 0.1, "maxStacks", 2.0));
+        putAbilities(abilities, PirateTowers.ANCIENT_ANCHOR.id(), Map.of("radius", 2.0, "damageReduction", 0.05, "durationTicks", 240.0, "saleBonus", 0.001, "saleBonusCap", 0.1, "maxStacks", 2.0));
     }
 
     private static void putPetOwnerAbilities(

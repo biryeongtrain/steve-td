@@ -52,6 +52,7 @@ import kim.biryeong.semiontd.tower.adversary.AdversaryTeamEffects;
 import kim.biryeong.semiontd.tower.mage.MageStates;
 import kim.biryeong.semiontd.tower.hero.HeroPartyStates;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
+import kim.biryeong.semiontd.tower.pirate.PirateStates;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityStates;
 import kim.biryeong.semiontd.tower.army.ArmyStates;
 import kim.biryeong.semiontd.tower.atlantis.AtlantisPressure;
@@ -498,7 +499,15 @@ public final class SemionGame {
 
     public boolean purchaseTowerLimit(UUID playerId) {
         SemionPlayer player = players.get(playerId);
-        return player != null && player.economy().purchaseTowerLimit(economyConfig.towerLimit());
+        if (player == null) return false;
+        long beforeDiamond = player.economy().diamond();
+        long beforeEmerald = player.economy().emerald();
+        boolean purchased = player.economy().purchaseTowerLimit(economyConfig.towerLimit());
+        if (purchased) {
+            PirateStates.recordDiamondSpend(player, Math.max(0, beforeDiamond - player.economy().diamond()));
+            PirateStates.recordEmeraldSpend(player, Math.max(0, beforeEmerald - player.economy().emerald()));
+        }
+        return purchased;
     }
 
     public TeamMoneyTransferResult requestTeamMoney(UUID requesterId, long amount) {

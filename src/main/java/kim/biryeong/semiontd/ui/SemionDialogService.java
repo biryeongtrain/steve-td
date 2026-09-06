@@ -62,6 +62,7 @@ import kim.biryeong.semiontd.tower.hero.HeroPartyTowers;
 import kim.biryeong.semiontd.tower.succubus.SuccubusDreams;
 import kim.biryeong.semiontd.tower.succubus.SuccubusTowers;
 import kim.biryeong.semiontd.tower.hero.HeroTower;
+import kim.biryeong.semiontd.tower.pirate.PirateTowers;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import kim.biryeong.semiontd.trait.SemionTrait;
 import kim.biryeong.semiontd.trait.TraitLoadout;
@@ -1547,7 +1548,7 @@ public final class SemionDialogService {
             return;
         }
         body.append("<yellow>⭐ 고유 능력</yellow>\n");
-        for (String line : lines) {body.append("<dark_gray>-</dark_gray> <green>").append(line).append("</green>\n");
+        for (String line : lines) {body.append("<dark_gray>-</dark_gray> <green>").append(PirateTowers.isPirateTower(tower.type()) ? PirateTowers.highlightAbilityNumbers(line) : line).append("</green>\n");
         }
     }
 
@@ -1978,7 +1979,7 @@ public final class SemionDialogService {
         tooltip.append(dividerComponent(160)).append(Component.literal("\n"));
         tooltip.append(mutableMiniMessage(formatHealth(type.maxHealth(), "") + "\n" + formatTowerTypePrimaryDamage(type) + "\n" + formatAttackSpeed(attacksPerSecond, type.attackIntervalTicks(), "") + "\n" + formatAttackRange(type.range(), "") + " <dark_gray>|</dark_gray> " + formatAggroPriority(type.aggroPriority(), "") + "\n"));
         tooltip.append(dividerComponent(160));
-        appendTowerDescription(tooltip, type.description().stream().limit(2).toList());
+        appendTowerDescription(tooltip, PirateTowers.isPirateTower(type) ? type.description() : type.description().stream().limit(2).toList());
         return tooltip;
     }
 
@@ -2158,7 +2159,11 @@ public final class SemionDialogService {
     private static void appendTowerDescription(StringBuilder body, List<String> description) {
         for (String line : description) {
             if (line != null && !line.isBlank()) {
-                body.append("<dark_gray>-</dark_gray> <gray>").append(line).append("</gray>\n");
+                if (line.startsWith(" ▶ ")) {
+                    body.append("<gray>").append(line).append("</gray>\n");
+                } else {
+                    body.append("<dark_gray>-</dark_gray> <gray>").append(line).append("</gray>\n");
+                }
             }
         }
     }
@@ -2169,7 +2174,7 @@ public final class SemionDialogService {
         }
         for (String line : description) {
             if (line != null && !line.isBlank()) {
-                tooltip.append(Component.literal("\n- ").withStyle(ChatFormatting.DARK_GRAY));
+                tooltip.append(Component.literal(line.startsWith(" ▶ ") ? "\n" : "\n- ").withStyle(ChatFormatting.DARK_GRAY));
                 tooltip.append(miniMessage("<gray>" + line + "</gray>"));
             }
         }

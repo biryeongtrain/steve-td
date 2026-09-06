@@ -8,10 +8,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Stream;
 import kim.biryeong.semiontd.config.JobAvailabilityConfig;
+import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
+import kim.biryeong.semiontd.game.PlayerEconomy;
+import kim.biryeong.semiontd.game.SemionPlayer;
+import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.insect.InsectTowers;
 import kim.biryeong.semiontd.tower.ocean.OceanTowers;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
@@ -45,7 +50,7 @@ class JobRegistryTest {
         JobRegistry.configureAvailability(disabled);
 
         assertTrue(JobRegistry.find(NetherTowerJob.ID).isPresent());
-        assertEquals(31, JobRegistry.all().size());
+        assertEquals(32, JobRegistry.all().size());
         assertTrue(JobRegistry.officialBuilders().stream().anyMatch(job -> job.id().equals(NetherTowerJob.ID)));
         assertTrue(JobRegistry.isEnabled(JobRegistry.defaultJob()));
         assertFalse(JobRegistry.isEnabled(NetherTowerJob.ID));
@@ -85,11 +90,16 @@ class JobRegistryTest {
                 BodyTowerJob.ID,
                 PetTowerJob.ID,
                 DeveloperTowerJob.ID,
-                FrostTowerJob.ID
+                FrostTowerJob.ID,
+                PirateTowerJob.ID
         ), JobRegistry.creativeBuilders().stream().map(SemionJob::id).toList());
-        assertEquals(31, JobRegistry.all().size());
+        assertEquals(32, JobRegistry.all().size());
         assertTrue(JobRegistry.officialBuilders().stream().noneMatch(JobRegistry.defaultJob()::equals));
         assertTrue(JobRegistry.creativeBuilders().stream().noneMatch(JobRegistry.defaultJob()::equals));
+        var player = new SemionPlayer(UUID.randomUUID(), "pirate-origin-test", TeamId.RED, 0,
+                new PlayerEconomy(EconomyConfig.defaultConfig()));
+        player.assignJob(JobRegistry.find(PirateTowerJob.ID).orElseThrow());
+        assertEquals("CREATIVE", player.builderOrigin());
     }
 
     @Test
@@ -100,7 +110,7 @@ class JobRegistryTest {
         ).toList();
         Set<String> optionalLabels = Set.of("주의 ", "연계 ", "성장 ");
 
-        assertEquals(30, builders.size());
+        assertEquals(31, builders.size());
         for (SemionJob builder : builders) {
             List<String> lines = builder.description().stream().map(line -> line.getString()).toList();
             int maximumLines = FrostTowerJob.ID.equals(builder.id()) ? 4 : 3;

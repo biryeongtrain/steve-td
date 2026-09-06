@@ -28,6 +28,8 @@ import kim.biryeong.semiontd.tower.ocean.OceanTowers;
 import kim.biryeong.semiontd.tower.ocean.OceanWaterTower;
 import kim.biryeong.semiontd.tower.plant.PlantSoilStates;
 import kim.biryeong.semiontd.tower.plant.PlantTowers;
+import kim.biryeong.semiontd.tower.pirate.PirateStates;
+import kim.biryeong.semiontd.tower.pirate.PirateTower;
 import net.minecraft.core.BlockPos;
 
 public final class ProductionTowerService {
@@ -94,7 +96,6 @@ public final class ProductionTowerService {
         if (!laneContext.player.economy().spendMineral(mineralCost)) {
             return TowerPlacementResult.NOT_ENOUGH_MINERAL;
         }
-
         Tower tower = entry.get().create(
                 laneContext.player.uuid(),
                 laneContext.player.teamId(),
@@ -104,6 +105,7 @@ public final class ProductionTowerService {
         tower.recordPlacementEconomy(mineralCost, game.currentRound());
         laneContext.lane.addTower(tower);
         AugmentTowerService.onPlaced(game, laneContext.player, tower);
+        PirateStates.recordDiamondSpend(laneContext.player, mineralCost);
         VillagerAdvStates.refreshTowerEffects(laneContext.player, laneContext.lane, tower);
         game.recordTowerPlacement(playerId, towerType.id(), position, mineralCost);
         return TowerPlacementResult.SUCCESS;
@@ -143,7 +145,10 @@ public final class ProductionTowerService {
         if (!laneContext.lane.removeTower(tower)) {
             return SaleResult.failure(TowerSellResult.NO_TOWER_AT_POSITION);
         }
+        tower.clearPermanentStatBonuses(laneContext.lane);
         laneContext.player.economy().addMineral(refund);
+        PirateStates.grantFerrymanSaleIncome(laneContext.player, tower.paidMineralCost(), refund);
+        PirateTower.notifyTowerSold(laneContext.lane, tower);
         tower.onSold(laneContext.lane);
         game.recordTowerSale(playerId, tower.type().id(), position, refund);
         return SaleResult.success(refund);
@@ -279,7 +284,6 @@ public final class ProductionTowerService {
         if (!laneContext.player.economy().spendMineral(mineralCost)) {
             return TowerUpgradeResult.NOT_ENOUGH_MINERAL;
         }
-
         Tower upgradedTower = targetEntry.get().create(
                 tower.ownerPlayer(),
                 tower.teamId(),
@@ -298,6 +302,7 @@ public final class ProductionTowerService {
             laneContext.player.economy().addMineral(mineralCost);
             return TowerUpgradeResult.UPGRADE_REQUIREMENTS_NOT_MET;
         }
+        PirateStates.recordDiamondSpend(laneContext.player, mineralCost);
         upgradedTower.onUpgradeApplied(laneContext.lane, upgrade);
         VillagerAdvStates.refreshTowerEffects(laneContext.player, laneContext.lane, upgradedTower);
         upgradedTower.onUpgradeCompleted(laneContext.lane, tower, upgrade);

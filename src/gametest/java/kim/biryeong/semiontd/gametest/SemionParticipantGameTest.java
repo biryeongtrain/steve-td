@@ -217,6 +217,7 @@ import kim.biryeong.semiontd.tower.undead.UndeadTowerCatalogs;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
 import kim.biryeong.semiontd.tower.undead.UndeadZombieTower;
 import kim.biryeong.semiontd.tower.legion.BeeTower;
+import kim.biryeong.semiontd.tower.pirate.PirateTowers;
 import kim.biryeong.semiontd.tower.legion.IllusionCloneSpawnQueue;
 import kim.biryeong.semiontd.tower.legion.IllusionProfile;
 import kim.biryeong.semiontd.tower.legion.IllusionRuntimeTower;
@@ -4623,9 +4624,10 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     public void productionTowerCatalogUsesVanillaMobVisuals(GameTestHelper context) {
         if (!assertTrue(
                 context,
-                ProductionTowerCatalog.all().stream()
-                        .noneMatch(entry -> "minecraft:armor_stand".equals(entry.type().entityTypeId())),
-                "Production tower catalog should not render towers as armor stands."
+                ProductionTowerCatalog.all().stream().noneMatch(entry ->
+                        "minecraft:armor_stand".equals(entry.type().entityTypeId())
+                                && !PirateTowers.isPlayerVisual(entry.type())),
+                "Only intentionally skinned pirate player towers may use armor stands."
         )) {
             return;
         }
@@ -10503,7 +10505,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertPresent(context, JobRegistry.find(FrostTowerJob.ID), "Built-in reload should register the frost tower job.")) {
             return;
         }
-        if (!assertEquals(context, 140L, ProductionTowerCatalog.all().stream()
+        if (!assertEquals(context, 148L, ProductionTowerCatalog.all().stream()
                 .filter(entry -> entry.availability() == ProductionTowerCatalog.Availability.JOB)
                 .filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should preserve every job starter family independently of augment towers.")) {
             return;

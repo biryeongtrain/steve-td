@@ -41,6 +41,7 @@ import kim.biryeong.semiontd.tower.end.EndTower;
 import kim.biryeong.semiontd.tower.end.EndTowerState;
 import kim.biryeong.semiontd.tower.end.EndTowers;
 import kim.biryeong.semiontd.tower.ocean.OceanWaterTower;
+import kim.biryeong.semiontd.tower.pirate.PirateTowers;
 import kim.biryeong.semiontd.tower.succubus.SuccubusDreams;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
 import kim.biryeong.semiontd.trait.TraitEffects;
@@ -386,7 +387,8 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     }
 
     public double attackDamageAmount(SemionMonsterEntity target) {
-        double damageAmount = attackDamage * (1.0 + timedEffects.magnitude(TimedEffectType.TOWER_DAMAGE_BONUS))
+        double baseDamage = attackDamage + (runtimeTower == null ? 0.0 : runtimeTower.permanentFlatDamageBonus());
+        double damageAmount = baseDamage * (1.0 + timedEffects.magnitude(TimedEffectType.TOWER_DAMAGE_BONUS))
                 + timedEffects.magnitude(TimedEffectType.TOWER_FLAT_DAMAGE_BONUS)
                 - timedEffects.magnitude(TimedEffectType.TOWER_FLAT_DAMAGE_REDUCTION);
         if (runtimeTower != null) {
@@ -622,6 +624,9 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     public void applyTimedEffect(TimedEffectType type, double magnitude, int durationTicks) {
         if (rejectsExternalEffect(type)) return;
+        if (runtimeTower != null) {
+            magnitude = runtimeTower.adjustIncomingTimedEffectMagnitude(type, magnitude);
+        }
         double previousMagnitude = type == null ? 0.0 : activeTimedEffectMagnitude(type);
         int previousTicks = type == null ? 0 : activeTimedEffectTicks(type);
         timedEffects.apply(type, magnitude, durationTicks);
@@ -638,6 +643,9 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     public boolean applyTimedEffect(TimedEffectType type, ResourceLocation sourceId, double magnitude, int durationTicks) {
         if (rejectsExternalEffect(type)) return false;
+        if (runtimeTower != null) {
+            magnitude = runtimeTower.adjustIncomingTimedEffectMagnitude(type, magnitude);
+        }
         double previousMagnitude = type == null ? 0.0 : activeTimedEffectMagnitude(type);
         int previousTicks = type == null ? 0 : activeTimedEffectTicks(type);
         boolean applied = timedEffects.apply(type, sourceId, magnitude, durationTicks);
@@ -656,6 +664,9 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     public boolean refreshTimedEffect(TimedEffectType type, ResourceLocation sourceId, double magnitude, int durationTicks) {
         if (rejectsExternalEffect(type)) return false;
+        if (runtimeTower != null) {
+            magnitude = runtimeTower.adjustIncomingTimedEffectMagnitude(type, magnitude);
+        }
         double previousMagnitude = type == null ? 0.0 : activeTimedEffectMagnitude(type);
         int previousTicks = type == null ? 0 : activeTimedEffectTicks(type);
         boolean refreshed = timedEffects.refresh(type, sourceId, magnitude, durationTicks);
@@ -1008,7 +1019,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         if (usesMoobloomOverlayVisual()) {
             return;
         }
-        if (usesBlockDisplayOverlayVisual()) {
+        if (usesFakePlayerOverlayVisual() || usesBlockDisplayOverlayVisual()) {
             applyInvisibleArmorStandProxyData(data);
             return;
         }
@@ -1133,6 +1144,12 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     private boolean usesBlockDisplayOverlayVisual() {
         return blockbenchModelId == null && BlockDisplayVisual.matches(visual);
+    }
+
+    private boolean usesFakePlayerOverlayVisual() {
+        return blockbenchModelId == null
+                && runtimeTower != null
+                && PirateTowers.isPlayerVisual(runtimeTower.type());
     }
 
     private boolean usesOneBlockEndCoreHitbox() {

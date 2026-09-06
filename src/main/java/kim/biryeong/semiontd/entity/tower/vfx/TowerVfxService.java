@@ -54,6 +54,7 @@ import kim.biryeong.semiontd.tower.succubus.SuccubusTowers;
 import kim.biryeong.semiontd.tower.nether.NetherTowers;
 import kim.biryeong.semiontd.tower.ocean.OceanTowers;
 import kim.biryeong.semiontd.tower.pet.PetTowers;
+import kim.biryeong.semiontd.tower.pirate.PirateTowers;
 import kim.biryeong.semiontd.tower.plant.PlantTowers;
 import kim.biryeong.semiontd.tower.queen.QueenTowers;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
@@ -698,6 +699,9 @@ public final class TowerVfxService {
         }
         if (PetTowers.isPetTower(type)) {
             return BuilderPalette.PET;
+        }
+        if (PirateTowers.isPirateTower(type)) {
+            return BuilderPalette.PIRATE;
         }
         return BuilderPalette.DEFAULT;
     }
