@@ -47,6 +47,11 @@ public final class LaneFollowGoal extends Goal {
 
     @Override
     public void tick() {
+        if (monster.isStunned()) {
+            monster.getNavigation().stop();
+            monster.playAnimation(SemionAnimationState.IDLE);
+            return;
+        }
         List<Vec3> points = monster.pathPoints();
         if (points.isEmpty()) {
             monster.playAnimation(SemionAnimationState.IDLE);

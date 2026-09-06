@@ -1,0 +1,1679 @@
+[
+  {
+    "status": "INTERNAL_OBSERVATION_ONLY",
+    "fixtureRevision": 2,
+    "round": 5,
+    "stage": "COUNT_AND_HEALER_H0",
+    "augmentGroup": "NONE",
+    "equalBudget": 270,
+    "equalSlots": 6,
+    "priorHistoryRounds": 0,
+    "endpointTick": 291,
+    "wallSeconds": 0.500442208,
+    "towerBalanceSha256": "a9807b405f2622bb84990816827849d289f64f8063758543c3b7f89427bede47",
+    "waveDefinitionSha256": "68545756d002d716b2515818b5376a6c90255d42e1b470938aaa2f4159e5eec6",
+    "limits": [
+      "ZERO_PRIOR_COMBAT_GROWTH_OR_ECONOMY_HISTORY",
+      "INJECTED_STARTING_BUDGET_NOT_PROVEN_ROUND_AFFORDABILITY",
+      "ONE_FIXED_COMPOSITION_PER_BUILDER_AND_ROUND",
+      "NOT_AN_OFFICIAL_BUILDER_MEDIAN",
+      "NONE_AUGMENT_BASELINE_ONLY",
+      "INCOME_AND_REINVESTMENT_UNMEASURED",
+      "NO_FULL_MATCH_OR_TEAM_FINAL_DEFENSE",
+      "NO_NETWORK_CLIENTS_OR_GUI",
+      "INERT_INVULNERABLE_BOSS_ENDPOINTS",
+      "PREVIOUS_FIXTURE_REVISION_NOT_COMPARABLE",
+      "UNSEEDED_ENTITY_AI_SINGLE_OBSERVATION_NOT_MATCH_SAMPLES"
+    ],
+    "lanes": [
+      {
+        "board": "official_animal",
+        "jobId": "semion-td:animal_towers",
+        "team": "RED",
+        "slots": 6,
+        "initialBudget": 270,
+        "actualInvestment": 270,
+        "purchases": [
+          {
+            "slot": 0,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "t1_pig_tower",
+            "paidDiamonds": 40
+          },
+          {
+            "slot": 1,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "t1_pig_tower",
+            "paidDiamonds": 40
+          },
+          {
+            "slot": 2,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "t1_pig_tower",
+            "paidDiamonds": 40
+          },
+          {
+            "slot": 3,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "t1_wolf_tower",
+            "paidDiamonds": 50
+          },
+          {
+            "slot": 4,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "t1_wolf_tower",
+            "paidDiamonds": 50
+          },
+          {
+            "slot": 5,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "t1_wolf_tower",
+            "paidDiamonds": 50
+          }
+        ],
+        "templateId": null,
+        "expectedSpawns": 22,
+        "observedSpawns": 22,
+        "spawnCompleteTick": 22,
+        "observedHealers": 0,
+        "initialNaturalHealth": 352,
+        "aliveMonsters": 0,
+        "leaks": 0,
+        "leakedThreat": 0,
+        "rewardedKills": 22,
+        "laneCleared": true,
+        "perfectClear": true,
+        "clearTick": 291,
+        "endpointTick": 291,
+        "censored": false,
+        "combatTicksObserved": 277,
+        "survivingTowers": 6,
+        "towerHealthRemaining": 387,
+        "towerSurvival": [
+          {
+            "slot": 0,
+            "typeId": "t1_pig_tower",
+            "paidDiamonds": 40,
+            "alive": true,
+            "health": 81,
+            "maxHealth": 100
+          },
+          {
+            "slot": 1,
+            "typeId": "t1_pig_tower",
+            "paidDiamonds": 40,
+            "alive": true,
+            "health": 81,
+            "maxHealth": 100
+          },
+          {
+            "slot": 2,
+            "typeId": "t1_pig_tower",
+            "paidDiamonds": 40,
+            "alive": true,
+            "health": 75,
+            "maxHealth": 100
+          },
+          {
+            "slot": 3,
+            "typeId": "t1_wolf_tower",
+            "paidDiamonds": 50,
+            "alive": true,
+            "health": 50,
+            "maxHealth": 50
+          },
+          {
+            "slot": 4,
+            "typeId": "t1_wolf_tower",
+            "paidDiamonds": 50,
+            "alive": true,
+            "health": 50,
+            "maxHealth": 50
+          },
+          {
+            "slot": 5,
+            "typeId": "t1_wolf_tower",
+            "paidDiamonds": 50,
+            "alive": true,
+            "health": 50,
+            "maxHealth": 50
+          }
+        ],
+        "combatMetrics": [
+          {
+            "towerTypeId": "t1_pig_tower",
+            "sampleCount": 3,
+            "startCount": 3,
+            "endAliveCount": 3,
+            "deathCount": 0,
+            "physicalDamageDealt": 165,
+            "magicDamageDealt": 0,
+            "damageTaken": 63,
+            "healingDone": 0,
+            "killCount": 10,
+            "firstCombatTick": 14,
+            "lastCombatTick": 290,
+            "survivalTicks": 873,
+            "waveStartMaxHealth": 300,
+            "enemyHpDamage": 63,
+            "augmentSpecialDamageDealt": 0
+          },
+          {
+            "towerTypeId": "t1_wolf_tower",
+            "sampleCount": 3,
+            "startCount": 3,
+            "endAliveCount": 3,
+            "deathCount": 0,
+            "physicalDamageDealt": 187,
+            "magicDamageDealt": 0,
+            "damageTaken": 0,
+            "healingDone": 0,
+            "killCount": 12,
+            "firstCombatTick": 31,
+            "lastCombatTick": 276,
+            "survivalTicks": 873,
+            "waveStartMaxHealth": 150,
+            "enemyHpDamage": 0,
+            "augmentSpecialDamageDealt": 0
+          }
+        ],
+        "healing": {
+          "attempts": 0,
+          "successfulCasts": 0,
+          "noEligibleTarget": 0,
+          "insufficientInjury": 0,
+          "zeroEffectiveHealing": 0,
+          "eligibleTargets": 0,
+          "recoverableInjury": 0,
+          "requestedHealing": 0,
+          "healingReduction": 0,
+          "overhealing": 0,
+          "effectiveHealing": 0
+        },
+        "naturalSupport": {
+          "healingAttempts": 0,
+          "requestedHealing": 0,
+          "effectiveHealing": 0,
+          "overhealing": 0,
+          "physicalShieldGranted": 0,
+          "physicalShieldAbsorbed": 0,
+          "physicalShieldExpired": 0,
+          "magicShieldGranted": 0,
+          "magicShieldAbsorbed": 0,
+          "magicShieldExpired": 0
+        },
+        "healingRatio": null,
+        "endingDiamonds": 100,
+        "endpointReason": "ALL_MONSTERS_CREDITED_OR_LEAKED",
+        "exclusiveOutcomes": {
+          "CREDITED_KILL": 22
+        },
+        "leakedAndRewarded": 0,
+        "entityAudit": {
+          "monsters": 22,
+          "towers": 6,
+          "invalid": 0
+        }
+      },
+      {
+        "board": "creative_frost",
+        "jobId": "semion-td:frost",
+        "team": "BLUE",
+        "slots": 6,
+        "initialBudget": 270,
+        "actualInvestment": 270,
+        "purchases": [
+          {
+            "slot": 0,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "frost_ice_vanguard",
+            "paidDiamonds": 40
+          },
+          {
+            "slot": 1,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "frost_ice_vanguard",
+            "paidDiamonds": 40
+          },
+          {
+            "slot": 2,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "frost_ice_vanguard",
+            "paidDiamonds": 40
+          },
+          {
+            "slot": 3,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "frost_ice_vanguard",
+            "paidDiamonds": 40
+          },
+          {
+            "slot": 4,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "frost_ice_breaker_t1",
+            "paidDiamonds": 55
+          },
+          {
+            "slot": 5,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "frost_frozen_dumpling_t1",
+            "paidDiamonds": 55
+          }
+        ],
+        "templateId": null,
+        "expectedSpawns": 22,
+        "observedSpawns": 22,
+        "spawnCompleteTick": 22,
+        "observedHealers": 0,
+        "initialNaturalHealth": 352,
+        "aliveMonsters": 0,
+        "leaks": 0,
+        "leakedThreat": 0,
+        "rewardedKills": 22,
+        "laneCleared": true,
+        "perfectClear": true,
+        "clearTick": 232,
+        "endpointTick": 232,
+        "censored": false,
+        "combatTicksObserved": 217,
+        "survivingTowers": 6,
+        "towerHealthRemaining": 414.8751449584961,
+        "towerSurvival": [
+          {
+            "slot": 0,
+            "typeId": "frost_ice_vanguard",
+            "paidDiamonds": 40,
+            "alive": true,
+            "health": 68.12503814697266,
+            "maxHealth": 80
+          },
+          {
+            "slot": 1,
+            "typeId": "frost_ice_vanguard",
+            "paidDiamonds": 40,
+            "alive": true,
+            "health": 56.25007629394531,
+            "maxHealth": 80
+          },
+          {
+            "slot": 2,
+            "typeId": "frost_ice_vanguard",
+            "paidDiamonds": 40,
+            "alive": true,
+            "health": 70.50003051757812,
+            "maxHealth": 80
+          },
+          {
+            "slot": 3,
+            "typeId": "frost_ice_vanguard",
+            "paidDiamonds": 40,
+            "alive": true,
+            "health": 80,
+            "maxHealth": 80
+          },
+          {
+            "slot": 4,
+            "typeId": "frost_ice_breaker_t1",
+            "paidDiamonds": 55,
+            "alive": true,
+            "health": 70,
+            "maxHealth": 70
+          },
+          {
+            "slot": 5,
+            "typeId": "frost_frozen_dumpling_t1",
+            "paidDiamonds": 55,
+            "alive": true,
+            "health": 70,
+            "maxHealth": 70
+          }
+        ],
+        "combatMetrics": [
+          {
+            "towerTypeId": "frost_frozen_dumpling_t1",
+            "sampleCount": 1,
+            "startCount": 1,
+            "endAliveCount": 1,
+            "deathCount": 0,
+            "physicalDamageDealt": 39,
+            "magicDamageDealt": 0,
+            "damageTaken": 0,
+            "healingDone": 0,
+            "killCount": 7,
+            "firstCombatTick": 34,
+            "lastCombatTick": 194,
+            "survivalTicks": 232,
+            "waveStartMaxHealth": 70,
+            "enemyHpDamage": 0,
+            "augmentSpecialDamageDealt": 0
+          },
+          {
+            "towerTypeId": "frost_ice_breaker_t1",
+            "sampleCount": 1,
+            "startCount": 1,
+            "endAliveCount": 1,
+            "deathCount": 0,
+            "physicalDamageDealt": 238,
+            "magicDamageDealt": 0,
+            "damageTaken": 0,
+            "healingDone": 0,
+            "killCount": 8,
+            "firstCombatTick": 29,
+            "lastCombatTick": 231,
+            "survivalTicks": 232,
+            "waveStartMaxHealth": 70,
+            "enemyHpDamage": 0,
+            "augmentSpecialDamageDealt": 0
+          },
+          {
+            "towerTypeId": "frost_ice_vanguard",
+            "sampleCount": 4,
+            "startCount": 4,
+            "endAliveCount": 4,
+            "deathCount": 0,
+            "physicalDamageDealt": 75,
+            "magicDamageDealt": 0,
+            "damageTaken": 45.124855041503906,
+            "healingDone": 0,
+            "killCount": 7,
+            "firstCombatTick": 15,
+            "lastCombatTick": 228,
+            "survivalTicks": 928,
+            "waveStartMaxHealth": 320,
+            "enemyHpDamage": 45.124855041503906,
+            "augmentSpecialDamageDealt": 0
+          }
+        ],
+        "healing": {
+          "attempts": 0,
+          "successfulCasts": 0,
+          "noEligibleTarget": 0,
+          "insufficientInjury": 0,
+          "zeroEffectiveHealing": 0,
+          "eligibleTargets": 0,
+          "recoverableInjury": 0,
+          "requestedHealing": 0,
+          "healingReduction": 0,
+          "overhealing": 0,
+          "effectiveHealing": 0
+        },
+        "naturalSupport": {
+          "healingAttempts": 0,
+          "requestedHealing": 0,
+          "effectiveHealing": 0,
+          "overhealing": 0,
+          "physicalShieldGranted": 0,
+          "physicalShieldAbsorbed": 0,
+          "physicalShieldExpired": 0,
+          "magicShieldGranted": 0,
+          "magicShieldAbsorbed": 0,
+          "magicShieldExpired": 0
+        },
+        "healingRatio": null,
+        "endingDiamonds": 100,
+        "endpointReason": "ALL_MONSTERS_CREDITED_OR_LEAKED",
+        "exclusiveOutcomes": {
+          "CREDITED_KILL": 22
+        },
+        "leakedAndRewarded": 0,
+        "entityAudit": {
+          "monsters": 22,
+          "towers": 6,
+          "invalid": 0
+        }
+      }
+    ],
+    "creativeMinusOfficial": {
+      "direction": "CREATIVE_MINUS_OFFICIAL",
+      "leaks": 0,
+      "survivingTowers": 0,
+      "clearTicks": -59
+    }
+  },
+  {
+    "status": "INTERNAL_OBSERVATION_ONLY",
+    "fixtureRevision": 2,
+    "round": 16,
+    "stage": "COUNT_AND_HEALER_H0",
+    "augmentGroup": "NONE",
+    "equalBudget": 1740,
+    "equalSlots": 6,
+    "priorHistoryRounds": 0,
+    "endpointTick": 1800,
+    "wallSeconds": 1.553152333,
+    "towerBalanceSha256": "a9807b405f2622bb84990816827849d289f64f8063758543c3b7f89427bede47",
+    "waveDefinitionSha256": "4facf71d11ca0f728497baed79d33d15e16b33525a0ada83b422096890144e11",
+    "limits": [
+      "ZERO_PRIOR_COMBAT_GROWTH_OR_ECONOMY_HISTORY",
+      "INJECTED_STARTING_BUDGET_NOT_PROVEN_ROUND_AFFORDABILITY",
+      "ONE_FIXED_COMPOSITION_PER_BUILDER_AND_ROUND",
+      "NOT_AN_OFFICIAL_BUILDER_MEDIAN",
+      "NONE_AUGMENT_BASELINE_ONLY",
+      "INCOME_AND_REINVESTMENT_UNMEASURED",
+      "NO_FULL_MATCH_OR_TEAM_FINAL_DEFENSE",
+      "NO_NETWORK_CLIENTS_OR_GUI",
+      "INERT_INVULNERABLE_BOSS_ENDPOINTS",
+      "PREVIOUS_FIXTURE_REVISION_NOT_COMPARABLE",
+      "UNSEEDED_ENTITY_AI_SINGLE_OBSERVATION_NOT_MATCH_SAMPLES"
+    ],
+    "lanes": [
+      {
+        "board": "official_villager",
+        "jobId": "semion-td:villager_towers",
+        "team": "RED",
+        "slots": 6,
+        "initialBudget": 1740,
+        "actualInvestment": 1740,
+        "purchases": [
+          {
+            "slot": 0,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "t1_golem_tower",
+            "paidDiamonds": 50
+          },
+          {
+            "slot": 0,
+            "operation": "UPGRADE",
+            "fromType": "t1_golem_tower",
+            "toType": "t2_golem_tower",
+            "paidDiamonds": 100
+          },
+          {
+            "slot": 0,
+            "operation": "UPGRADE",
+            "fromType": "t2_golem_tower",
+            "toType": "t3_golem_tower",
+            "paidDiamonds": 200
+          },
+          {
+            "slot": 1,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "t1_golem_tower",
+            "paidDiamonds": 50
+          },
+          {
+            "slot": 1,
+            "operation": "UPGRADE",
+            "fromType": "t1_golem_tower",
+            "toType": "t2_golem_tower",
+            "paidDiamonds": 100
+          },
+          {
+            "slot": 1,
+            "operation": "UPGRADE",
+            "fromType": "t2_golem_tower",
+            "toType": "t3_golem_tower",
+            "paidDiamonds": 200
+          },
+          {
+            "slot": 2,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "t1_golem_tower",
+            "paidDiamonds": 50
+          },
+          {
+            "slot": 2,
+            "operation": "UPGRADE",
+            "fromType": "t1_golem_tower",
+            "toType": "t2_golem_tower",
+            "paidDiamonds": 100
+          },
+          {
+            "slot": 2,
+            "operation": "UPGRADE",
+            "fromType": "t2_golem_tower",
+            "toType": "t3_golem_tower",
+            "paidDiamonds": 200
+          },
+          {
+            "slot": 3,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "villager_splash_t1",
+            "paidDiamonds": 50
+          },
+          {
+            "slot": 3,
+            "operation": "UPGRADE",
+            "fromType": "villager_splash_t1",
+            "toType": "villager_splash_t2",
+            "paidDiamonds": 80
+          },
+          {
+            "slot": 4,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "villager_splash_t1",
+            "paidDiamonds": 50
+          },
+          {
+            "slot": 4,
+            "operation": "UPGRADE",
+            "fromType": "villager_splash_t1",
+            "toType": "villager_splash_t2",
+            "paidDiamonds": 80
+          },
+          {
+            "slot": 4,
+            "operation": "UPGRADE",
+            "fromType": "villager_splash_t2",
+            "toType": "villager_splash_t3",
+            "paidDiamonds": 150
+          },
+          {
+            "slot": 5,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "villager_splash_t1",
+            "paidDiamonds": 50
+          },
+          {
+            "slot": 5,
+            "operation": "UPGRADE",
+            "fromType": "villager_splash_t1",
+            "toType": "villager_splash_t2",
+            "paidDiamonds": 80
+          },
+          {
+            "slot": 5,
+            "operation": "UPGRADE",
+            "fromType": "villager_splash_t2",
+            "toType": "villager_splash_t3",
+            "paidDiamonds": 150
+          }
+        ],
+        "templateId": null,
+        "expectedSpawns": 72,
+        "observedSpawns": 72,
+        "spawnCompleteTick": 72,
+        "observedHealers": 1,
+        "initialNaturalHealth": 5400,
+        "aliveMonsters": 48,
+        "leaks": 44,
+        "leakedThreat": 3553.396899389405,
+        "rewardedKills": 24,
+        "laneCleared": false,
+        "perfectClear": false,
+        "clearTick": null,
+        "endpointTick": 1800,
+        "censored": true,
+        "combatTicksObserved": 169,
+        "survivingTowers": 0,
+        "towerHealthRemaining": 0,
+        "towerSurvival": [
+          {
+            "slot": 0,
+            "typeId": "t3_golem_tower",
+            "paidDiamonds": 350,
+            "alive": false,
+            "health": 0,
+            "maxHealth": 400
+          },
+          {
+            "slot": 1,
+            "typeId": "t3_golem_tower",
+            "paidDiamonds": 350,
+            "alive": false,
+            "health": 0,
+            "maxHealth": 400
+          },
+          {
+            "slot": 2,
+            "typeId": "t3_golem_tower",
+            "paidDiamonds": 350,
+            "alive": false,
+            "health": 0,
+            "maxHealth": 400
+          },
+          {
+            "slot": 3,
+            "typeId": "villager_splash_t2",
+            "paidDiamonds": 130,
+            "alive": false,
+            "health": 0,
+            "maxHealth": 60
+          },
+          {
+            "slot": 4,
+            "typeId": "villager_splash_t3",
+            "paidDiamonds": 280,
+            "alive": false,
+            "health": 0,
+            "maxHealth": 80
+          },
+          {
+            "slot": 5,
+            "typeId": "villager_splash_t3",
+            "paidDiamonds": 280,
+            "alive": false,
+            "health": 0,
+            "maxHealth": 80
+          }
+        ],
+        "combatMetrics": [
+          {
+            "towerTypeId": "t3_golem_tower",
+            "sampleCount": 3,
+            "startCount": 3,
+            "endAliveCount": 0,
+            "deathCount": 3,
+            "physicalDamageDealt": 1072.3918620237503,
+            "magicDamageDealt": 0,
+            "damageTaken": 1200,
+            "healingDone": 0,
+            "killCount": 9,
+            "firstCombatTick": 16,
+            "lastCombatTick": 145,
+            "survivalTicks": 378,
+            "waveStartMaxHealth": 1200,
+            "enemyHpDamage": 1200,
+            "augmentSpecialDamageDealt": 0
+          },
+          {
+            "towerTypeId": "villager_splash_t2",
+            "sampleCount": 1,
+            "startCount": 1,
+            "endAliveCount": 0,
+            "deathCount": 1,
+            "physicalDamageDealt": 249.3689279972927,
+            "magicDamageDealt": 0,
+            "damageTaken": 60,
+            "healingDone": 0,
+            "killCount": 3,
+            "firstCombatTick": 15,
+            "lastCombatTick": 183,
+            "survivalTicks": 183,
+            "waveStartMaxHealth": 60,
+            "enemyHpDamage": 60,
+            "augmentSpecialDamageDealt": 0
+          },
+          {
+            "towerTypeId": "villager_splash_t3",
+            "sampleCount": 2,
+            "startCount": 2,
+            "endAliveCount": 0,
+            "deathCount": 2,
+            "physicalDamageDealt": 1669.7969468758379,
+            "magicDamageDealt": 0,
+            "damageTaken": 160,
+            "healingDone": 0,
+            "killCount": 12,
+            "firstCombatTick": 16,
+            "lastCombatTick": 174,
+            "survivalTicks": 341,
+            "waveStartMaxHealth": 160,
+            "enemyHpDamage": 160,
+            "augmentSpecialDamageDealt": 0
+          }
+        ],
+        "healing": {
+          "attempts": 3,
+          "successfulCasts": 2,
+          "noEligibleTarget": 1,
+          "insufficientInjury": 0,
+          "zeroEffectiveHealing": 0,
+          "eligibleTargets": 34,
+          "recoverableInjury": 418.0097197173237,
+          "requestedHealing": 480,
+          "healingReduction": 0,
+          "overhealing": 61.99028028267628,
+          "effectiveHealing": 418.0097197173237
+        },
+        "naturalSupport": {
+          "healingAttempts": 6,
+          "requestedHealing": 480,
+          "effectiveHealing": 418.0097197173237,
+          "overhealing": 61.99028028267629,
+          "physicalShieldGranted": 0,
+          "physicalShieldAbsorbed": 0,
+          "physicalShieldExpired": 0,
+          "magicShieldGranted": 0,
+          "magicShieldAbsorbed": 0,
+          "magicShieldExpired": 0
+        },
+        "healingRatio": 0.07740920735505995,
+        "endingDiamonds": 100,
+        "endpointReason": "TIME_LIMIT",
+        "exclusiveOutcomes": {
+          "ALIVE_UNRESOLVED": 4,
+          "CREDITED_KILL": 24,
+          "LEAKED": 44
+        },
+        "leakedAndRewarded": 0,
+        "entityAudit": {
+          "monsters": 72,
+          "towers": 6,
+          "invalid": 0
+        }
+      },
+      {
+        "board": "creative_frost",
+        "jobId": "semion-td:frost",
+        "team": "BLUE",
+        "slots": 6,
+        "initialBudget": 1740,
+        "actualInvestment": 1740,
+        "purchases": [
+          {
+            "slot": 0,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "frost_ice_vanguard",
+            "paidDiamonds": 40
+          },
+          {
+            "slot": 0,
+            "operation": "UPGRADE",
+            "fromType": "frost_ice_vanguard",
+            "toType": "frost_sturdy_ice_vanguard",
+            "paidDiamonds": 90
+          },
+          {
+            "slot": 1,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "frost_ice_vanguard",
+            "paidDiamonds": 40
+          },
+          {
+            "slot": 1,
+            "operation": "UPGRADE",
+            "fromType": "frost_ice_vanguard",
+            "toType": "frost_sturdy_ice_vanguard",
+            "paidDiamonds": 90
+          },
+          {
+            "slot": 1,
+            "operation": "UPGRADE",
+            "fromType": "frost_sturdy_ice_vanguard",
+            "toType": "frost_dongtae",
+            "paidDiamonds": 170
+          },
+          {
+            "slot": 2,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "frost_ice_vanguard",
+            "paidDiamonds": 40
+          },
+          {
+            "slot": 2,
+            "operation": "UPGRADE",
+            "fromType": "frost_ice_vanguard",
+            "toType": "frost_sturdy_ice_vanguard",
+            "paidDiamonds": 90
+          },
+          {
+            "slot": 2,
+            "operation": "UPGRADE",
+            "fromType": "frost_sturdy_ice_vanguard",
+            "toType": "frost_dongtae",
+            "paidDiamonds": 170
+          },
+          {
+            "slot": 3,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "frost_ice_vanguard",
+            "paidDiamonds": 40
+          },
+          {
+            "slot": 3,
+            "operation": "UPGRADE",
+            "fromType": "frost_ice_vanguard",
+            "toType": "frost_sturdy_ice_vanguard",
+            "paidDiamonds": 90
+          },
+          {
+            "slot": 3,
+            "operation": "UPGRADE",
+            "fromType": "frost_sturdy_ice_vanguard",
+            "toType": "frost_dongtae",
+            "paidDiamonds": 170
+          },
+          {
+            "slot": 4,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "frost_ice_breaker_t1",
+            "paidDiamonds": 55
+          },
+          {
+            "slot": 4,
+            "operation": "UPGRADE",
+            "fromType": "frost_ice_breaker_t1",
+            "toType": "frost_ice_breaker_t2",
+            "paidDiamonds": 100
+          },
+          {
+            "slot": 4,
+            "operation": "UPGRADE",
+            "fromType": "frost_ice_breaker_t2",
+            "toType": "frost_ice_breaker_t3",
+            "paidDiamonds": 200
+          },
+          {
+            "slot": 5,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "frost_ice_breaker_t1",
+            "paidDiamonds": 55
+          },
+          {
+            "slot": 5,
+            "operation": "UPGRADE",
+            "fromType": "frost_ice_breaker_t1",
+            "toType": "frost_ice_breaker_t2",
+            "paidDiamonds": 100
+          },
+          {
+            "slot": 5,
+            "operation": "UPGRADE",
+            "fromType": "frost_ice_breaker_t2",
+            "toType": "frost_ice_breaker_t3",
+            "paidDiamonds": 200
+          }
+        ],
+        "templateId": null,
+        "expectedSpawns": 72,
+        "observedSpawns": 72,
+        "spawnCompleteTick": 72,
+        "observedHealers": 1,
+        "initialNaturalHealth": 5400,
+        "aliveMonsters": 0,
+        "leaks": 0,
+        "leakedThreat": 0,
+        "rewardedKills": 72,
+        "laneCleared": true,
+        "perfectClear": true,
+        "clearTick": 307,
+        "endpointTick": 307,
+        "censored": false,
+        "combatTicksObserved": 292,
+        "survivingTowers": 4,
+        "towerHealthRemaining": 283.800087928772,
+        "towerSurvival": [
+          {
+            "slot": 0,
+            "typeId": "frost_sturdy_ice_vanguard",
+            "paidDiamonds": 130,
+            "alive": false,
+            "health": 0,
+            "maxHealth": 180
+          },
+          {
+            "slot": 1,
+            "typeId": "frost_dongtae",
+            "paidDiamonds": 300,
+            "alive": true,
+            "health": 9.000008583068848,
+            "maxHealth": 400
+          },
+          {
+            "slot": 2,
+            "typeId": "frost_dongtae",
+            "paidDiamonds": 300,
+            "alive": false,
+            "health": 0,
+            "maxHealth": 400
+          },
+          {
+            "slot": 3,
+            "typeId": "frost_dongtae",
+            "paidDiamonds": 300,
+            "alive": true,
+            "health": 134.80007934570312,
+            "maxHealth": 400
+          },
+          {
+            "slot": 4,
+            "typeId": "frost_ice_breaker_t3",
+            "paidDiamonds": 355,
+            "alive": true,
+            "health": 70,
+            "maxHealth": 70
+          },
+          {
+            "slot": 5,
+            "typeId": "frost_ice_breaker_t3",
+            "paidDiamonds": 355,
+            "alive": true,
+            "health": 70,
+            "maxHealth": 70
+          }
+        ],
+        "combatMetrics": [
+          {
+            "towerTypeId": "frost_dongtae",
+            "sampleCount": 3,
+            "startCount": 3,
+            "endAliveCount": 2,
+            "deathCount": 1,
+            "physicalDamageDealt": 224.38655922440228,
+            "magicDamageDealt": 0,
+            "damageTaken": 1056.199912071228,
+            "healingDone": 0,
+            "killCount": 6,
+            "firstCombatTick": 15,
+            "lastCombatTick": 304,
+            "survivalTicks": 738,
+            "waveStartMaxHealth": 1200,
+            "enemyHpDamage": 1056.199912071228,
+            "augmentSpecialDamageDealt": 0
+          },
+          {
+            "towerTypeId": "frost_ice_breaker_t3",
+            "sampleCount": 2,
+            "startCount": 2,
+            "endAliveCount": 2,
+            "deathCount": 0,
+            "physicalDamageDealt": 5375.9663692434,
+            "magicDamageDealt": 0,
+            "damageTaken": 0,
+            "healingDone": 0,
+            "killCount": 66,
+            "firstCombatTick": 15,
+            "lastCombatTick": 306,
+            "survivalTicks": 614,
+            "waveStartMaxHealth": 140,
+            "enemyHpDamage": 0,
+            "augmentSpecialDamageDealt": 0
+          },
+          {
+            "towerTypeId": "frost_sturdy_ice_vanguard",
+            "sampleCount": 1,
+            "startCount": 1,
+            "endAliveCount": 0,
+            "deathCount": 1,
+            "physicalDamageDealt": 25.10150044130627,
+            "magicDamageDealt": 0,
+            "damageTaken": 180,
+            "healingDone": 0,
+            "killCount": 0,
+            "firstCombatTick": 19,
+            "lastCombatTick": 119,
+            "survivalTicks": 119,
+            "waveStartMaxHealth": 180,
+            "enemyHpDamage": 180,
+            "augmentSpecialDamageDealt": 0
+          }
+        ],
+        "healing": {
+          "attempts": 5,
+          "successfulCasts": 1,
+          "noEligibleTarget": 3,
+          "insufficientInjury": 1,
+          "zeroEffectiveHealing": 0,
+          "eligibleTargets": 26,
+          "recoverableInjury": 341.9594095369829,
+          "requestedHealing": 240,
+          "healingReduction": 0,
+          "overhealing": 14.545447609641315,
+          "effectiveHealing": 225.45455239035869
+        },
+        "naturalSupport": {
+          "healingAttempts": 3,
+          "requestedHealing": 240,
+          "effectiveHealing": 225.45455239035869,
+          "overhealing": 14.545447609641315,
+          "physicalShieldGranted": 0,
+          "physicalShieldAbsorbed": 0,
+          "physicalShieldExpired": 0,
+          "magicShieldGranted": 0,
+          "magicShieldAbsorbed": 0,
+          "magicShieldExpired": 0
+        },
+        "healingRatio": 0.04175084303525161,
+        "endingDiamonds": 300,
+        "endpointReason": "ALL_MONSTERS_CREDITED_OR_LEAKED",
+        "exclusiveOutcomes": {
+          "CREDITED_KILL": 72
+        },
+        "leakedAndRewarded": 0,
+        "entityAudit": {
+          "monsters": 72,
+          "towers": 6,
+          "invalid": 0
+        }
+      }
+    ],
+    "creativeMinusOfficial": {
+      "direction": "CREATIVE_MINUS_OFFICIAL",
+      "leaks": -44,
+      "survivingTowers": 4,
+      "clearTicks": null
+    }
+  },
+  {
+    "status": "INTERNAL_OBSERVATION_ONLY",
+    "fixtureRevision": 2,
+    "round": 16,
+    "stage": "COUNT_AND_HEALER_H0",
+    "augmentGroup": "NONE",
+    "equalBudget": 1740,
+    "equalSlots": 6,
+    "priorHistoryRounds": 0,
+    "endpointTick": 1800,
+    "wallSeconds": 0.832228833,
+    "towerBalanceSha256": "a9807b405f2622bb84990816827849d289f64f8063758543c3b7f89427bede47",
+    "waveDefinitionSha256": "4facf71d11ca0f728497baed79d33d15e16b33525a0ada83b422096890144e11",
+    "limits": [
+      "ZERO_PRIOR_COMBAT_GROWTH_OR_ECONOMY_HISTORY",
+      "INJECTED_STARTING_BUDGET_NOT_PROVEN_ROUND_AFFORDABILITY",
+      "ONE_FIXED_COMPOSITION_PER_BUILDER_AND_ROUND",
+      "NOT_AN_OFFICIAL_BUILDER_MEDIAN",
+      "NONE_AUGMENT_BASELINE_ONLY",
+      "INCOME_AND_REINVESTMENT_UNMEASURED",
+      "NO_FULL_MATCH_OR_TEAM_FINAL_DEFENSE",
+      "NO_NETWORK_CLIENTS_OR_GUI",
+      "INERT_INVULNERABLE_BOSS_ENDPOINTS",
+      "PREVIOUS_FIXTURE_REVISION_NOT_COMPARABLE",
+      "UNSEEDED_ENTITY_AI_SINGLE_OBSERVATION_NOT_MATCH_SAMPLES"
+    ],
+    "lanes": [
+      {
+        "board": "official_animal",
+        "jobId": "semion-td:animal_towers",
+        "team": "RED",
+        "slots": 6,
+        "initialBudget": 1740,
+        "actualInvestment": 1740,
+        "purchases": [
+          {
+            "slot": 0,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "t1_pig_tower",
+            "paidDiamonds": 40
+          },
+          {
+            "slot": 0,
+            "operation": "UPGRADE",
+            "fromType": "t1_pig_tower",
+            "toType": "t2_pig_tower",
+            "paidDiamonds": 95
+          },
+          {
+            "slot": 0,
+            "operation": "UPGRADE",
+            "fromType": "t2_pig_tower",
+            "toType": "t3_pig_tower",
+            "paidDiamonds": 150
+          },
+          {
+            "slot": 1,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "t1_fox_tower",
+            "paidDiamonds": 60
+          },
+          {
+            "slot": 1,
+            "operation": "UPGRADE",
+            "fromType": "t1_fox_tower",
+            "toType": "t2_fox_tower",
+            "paidDiamonds": 150
+          },
+          {
+            "slot": 2,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "t1_pig_tower",
+            "paidDiamonds": 40
+          },
+          {
+            "slot": 2,
+            "operation": "UPGRADE",
+            "fromType": "t1_pig_tower",
+            "toType": "t2_pig_tower",
+            "paidDiamonds": 95
+          },
+          {
+            "slot": 2,
+            "operation": "UPGRADE",
+            "fromType": "t2_pig_tower",
+            "toType": "t3_pig_tower",
+            "paidDiamonds": 150
+          },
+          {
+            "slot": 3,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "t1_wolf_tower",
+            "paidDiamonds": 50
+          },
+          {
+            "slot": 3,
+            "operation": "UPGRADE",
+            "fromType": "t1_wolf_tower",
+            "toType": "t2_wolf_dps_tower",
+            "paidDiamonds": 90
+          },
+          {
+            "slot": 3,
+            "operation": "UPGRADE",
+            "fromType": "t2_wolf_dps_tower",
+            "toType": "t3_wolf_dps_tower",
+            "paidDiamonds": 180
+          },
+          {
+            "slot": 4,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "t1_wolf_tower",
+            "paidDiamonds": 50
+          },
+          {
+            "slot": 4,
+            "operation": "UPGRADE",
+            "fromType": "t1_wolf_tower",
+            "toType": "t2_wolf_dps_tower",
+            "paidDiamonds": 90
+          },
+          {
+            "slot": 4,
+            "operation": "UPGRADE",
+            "fromType": "t2_wolf_dps_tower",
+            "toType": "t3_wolf_dps_tower",
+            "paidDiamonds": 180
+          },
+          {
+            "slot": 5,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "t1_wolf_tower",
+            "paidDiamonds": 50
+          },
+          {
+            "slot": 5,
+            "operation": "UPGRADE",
+            "fromType": "t1_wolf_tower",
+            "toType": "t2_wolf_dps_tower",
+            "paidDiamonds": 90
+          },
+          {
+            "slot": 5,
+            "operation": "UPGRADE",
+            "fromType": "t2_wolf_dps_tower",
+            "toType": "t3_wolf_dps_tower",
+            "paidDiamonds": 180
+          }
+        ],
+        "templateId": null,
+        "expectedSpawns": 72,
+        "observedSpawns": 72,
+        "spawnCompleteTick": 72,
+        "observedHealers": 1,
+        "initialNaturalHealth": 5400,
+        "aliveMonsters": 44,
+        "leaks": 42,
+        "leakedThreat": 3387.6872639069115,
+        "rewardedKills": 28,
+        "laneCleared": false,
+        "perfectClear": false,
+        "clearTick": null,
+        "endpointTick": 1800,
+        "censored": true,
+        "combatTicksObserved": 165,
+        "survivingTowers": 0,
+        "towerHealthRemaining": 0,
+        "towerSurvival": [
+          {
+            "slot": 0,
+            "typeId": "t3_pig_tower",
+            "paidDiamonds": 285,
+            "alive": false,
+            "health": 0,
+            "maxHealth": 490
+          },
+          {
+            "slot": 1,
+            "typeId": "t2_fox_tower",
+            "paidDiamonds": 210,
+            "alive": false,
+            "health": 0,
+            "maxHealth": 60
+          },
+          {
+            "slot": 2,
+            "typeId": "t3_pig_tower",
+            "paidDiamonds": 285,
+            "alive": false,
+            "health": 0,
+            "maxHealth": 490
+          },
+          {
+            "slot": 3,
+            "typeId": "t3_wolf_dps_tower",
+            "paidDiamonds": 320,
+            "alive": false,
+            "health": 0,
+            "maxHealth": 90
+          },
+          {
+            "slot": 4,
+            "typeId": "t3_wolf_dps_tower",
+            "paidDiamonds": 320,
+            "alive": false,
+            "health": 0,
+            "maxHealth": 90
+          },
+          {
+            "slot": 5,
+            "typeId": "t3_wolf_dps_tower",
+            "paidDiamonds": 320,
+            "alive": false,
+            "health": 0,
+            "maxHealth": 90
+          }
+        ],
+        "combatMetrics": [
+          {
+            "towerTypeId": "t2_fox_tower",
+            "sampleCount": 1,
+            "startCount": 1,
+            "endAliveCount": 0,
+            "deathCount": 1,
+            "physicalDamageDealt": 64.909086747603,
+            "magicDamageDealt": 0,
+            "damageTaken": 60,
+            "healingDone": 0,
+            "killCount": 1,
+            "firstCombatTick": 15,
+            "lastCombatTick": 134,
+            "survivalTicks": 134,
+            "waveStartMaxHealth": 60,
+            "enemyHpDamage": 60,
+            "augmentSpecialDamageDealt": 0
+          },
+          {
+            "towerTypeId": "t3_pig_tower",
+            "sampleCount": 2,
+            "startCount": 2,
+            "endAliveCount": 0,
+            "deathCount": 2,
+            "physicalDamageDealt": 159.38217122683145,
+            "magicDamageDealt": 0,
+            "damageTaken": 980,
+            "healingDone": 0,
+            "killCount": 1,
+            "firstCombatTick": 16,
+            "lastCombatTick": 126,
+            "survivalTicks": 238,
+            "waveStartMaxHealth": 980,
+            "enemyHpDamage": 980,
+            "augmentSpecialDamageDealt": 0
+          },
+          {
+            "towerTypeId": "t3_wolf_dps_tower",
+            "sampleCount": 3,
+            "startCount": 3,
+            "endAliveCount": 0,
+            "deathCount": 3,
+            "physicalDamageDealt": 3203.1579707526357,
+            "magicDamageDealt": 0,
+            "damageTaken": 270,
+            "healingDone": 0,
+            "killCount": 26,
+            "firstCombatTick": 17,
+            "lastCombatTick": 179,
+            "survivalTicks": 508,
+            "waveStartMaxHealth": 270,
+            "enemyHpDamage": 270,
+            "augmentSpecialDamageDealt": 0
+          }
+        ],
+        "healing": {
+          "attempts": 3,
+          "successfulCasts": 2,
+          "noEligibleTarget": 1,
+          "insufficientInjury": 0,
+          "zeroEffectiveHealing": 0,
+          "eligibleTargets": 16,
+          "recoverableInjury": 480,
+          "requestedHealing": 480,
+          "healingReduction": 0,
+          "overhealing": 0,
+          "effectiveHealing": 480
+        },
+        "naturalSupport": {
+          "healingAttempts": 6,
+          "requestedHealing": 480,
+          "effectiveHealing": 480,
+          "overhealing": 0,
+          "physicalShieldGranted": 0,
+          "physicalShieldAbsorbed": 0,
+          "physicalShieldExpired": 0,
+          "magicShieldGranted": 0,
+          "magicShieldAbsorbed": 0,
+          "magicShieldExpired": 0
+        },
+        "healingRatio": 0.08888888888888889,
+        "endingDiamonds": 116,
+        "endpointReason": "TIME_LIMIT",
+        "exclusiveOutcomes": {
+          "ALIVE_UNRESOLVED": 2,
+          "CREDITED_KILL": 28,
+          "LEAKED": 42
+        },
+        "leakedAndRewarded": 0,
+        "entityAudit": {
+          "monsters": 72,
+          "towers": 6,
+          "invalid": 0
+        }
+      },
+      {
+        "board": "creative_frost",
+        "jobId": "semion-td:frost",
+        "team": "BLUE",
+        "slots": 6,
+        "initialBudget": 1740,
+        "actualInvestment": 1740,
+        "purchases": [
+          {
+            "slot": 0,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "frost_ice_vanguard",
+            "paidDiamonds": 40
+          },
+          {
+            "slot": 0,
+            "operation": "UPGRADE",
+            "fromType": "frost_ice_vanguard",
+            "toType": "frost_sturdy_ice_vanguard",
+            "paidDiamonds": 90
+          },
+          {
+            "slot": 1,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "frost_ice_vanguard",
+            "paidDiamonds": 40
+          },
+          {
+            "slot": 1,
+            "operation": "UPGRADE",
+            "fromType": "frost_ice_vanguard",
+            "toType": "frost_sturdy_ice_vanguard",
+            "paidDiamonds": 90
+          },
+          {
+            "slot": 1,
+            "operation": "UPGRADE",
+            "fromType": "frost_sturdy_ice_vanguard",
+            "toType": "frost_dongtae",
+            "paidDiamonds": 170
+          },
+          {
+            "slot": 2,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "frost_ice_vanguard",
+            "paidDiamonds": 40
+          },
+          {
+            "slot": 2,
+            "operation": "UPGRADE",
+            "fromType": "frost_ice_vanguard",
+            "toType": "frost_sturdy_ice_vanguard",
+            "paidDiamonds": 90
+          },
+          {
+            "slot": 2,
+            "operation": "UPGRADE",
+            "fromType": "frost_sturdy_ice_vanguard",
+            "toType": "frost_dongtae",
+            "paidDiamonds": 170
+          },
+          {
+            "slot": 3,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "frost_ice_vanguard",
+            "paidDiamonds": 40
+          },
+          {
+            "slot": 3,
+            "operation": "UPGRADE",
+            "fromType": "frost_ice_vanguard",
+            "toType": "frost_sturdy_ice_vanguard",
+            "paidDiamonds": 90
+          },
+          {
+            "slot": 3,
+            "operation": "UPGRADE",
+            "fromType": "frost_sturdy_ice_vanguard",
+            "toType": "frost_dongtae",
+            "paidDiamonds": 170
+          },
+          {
+            "slot": 4,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "frost_ice_breaker_t1",
+            "paidDiamonds": 55
+          },
+          {
+            "slot": 4,
+            "operation": "UPGRADE",
+            "fromType": "frost_ice_breaker_t1",
+            "toType": "frost_ice_breaker_t2",
+            "paidDiamonds": 100
+          },
+          {
+            "slot": 4,
+            "operation": "UPGRADE",
+            "fromType": "frost_ice_breaker_t2",
+            "toType": "frost_ice_breaker_t3",
+            "paidDiamonds": 200
+          },
+          {
+            "slot": 5,
+            "operation": "PLACE",
+            "fromType": null,
+            "toType": "frost_ice_breaker_t1",
+            "paidDiamonds": 55
+          },
+          {
+            "slot": 5,
+            "operation": "UPGRADE",
+            "fromType": "frost_ice_breaker_t1",
+            "toType": "frost_ice_breaker_t2",
+            "paidDiamonds": 100
+          },
+          {
+            "slot": 5,
+            "operation": "UPGRADE",
+            "fromType": "frost_ice_breaker_t2",
+            "toType": "frost_ice_breaker_t3",
+            "paidDiamonds": 200
+          }
+        ],
+        "templateId": null,
+        "expectedSpawns": 72,
+        "observedSpawns": 72,
+        "spawnCompleteTick": 72,
+        "observedHealers": 1,
+        "initialNaturalHealth": 5400,
+        "aliveMonsters": 0,
+        "leaks": 0,
+        "leakedThreat": 0,
+        "rewardedKills": 72,
+        "laneCleared": true,
+        "perfectClear": true,
+        "clearTick": 307,
+        "endpointTick": 307,
+        "censored": false,
+        "combatTicksObserved": 292,
+        "survivingTowers": 4,
+        "towerHealthRemaining": 283.800087928772,
+        "towerSurvival": [
+          {
+            "slot": 0,
+            "typeId": "frost_sturdy_ice_vanguard",
+            "paidDiamonds": 130,
+            "alive": false,
+            "health": 0,
+            "maxHealth": 180
+          },
+          {
+            "slot": 1,
+            "typeId": "frost_dongtae",
+            "paidDiamonds": 300,
+            "alive": true,
+            "health": 9.000008583068848,
+            "maxHealth": 400
+          },
+          {
+            "slot": 2,
+            "typeId": "frost_dongtae",
+            "paidDiamonds": 300,
+            "alive": false,
+            "health": 0,
+            "maxHealth": 400
+          },
+          {
+            "slot": 3,
+            "typeId": "frost_dongtae",
+            "paidDiamonds": 300,
+            "alive": true,
+            "health": 134.80007934570312,
+            "maxHealth": 400
+          },
+          {
+            "slot": 4,
+            "typeId": "frost_ice_breaker_t3",
+            "paidDiamonds": 355,
+            "alive": true,
+            "health": 70,
+            "maxHealth": 70
+          },
+          {
+            "slot": 5,
+            "typeId": "frost_ice_breaker_t3",
+            "paidDiamonds": 355,
+            "alive": true,
+            "health": 70,
+            "maxHealth": 70
+          }
+        ],
+        "combatMetrics": [
+          {
+            "towerTypeId": "frost_dongtae",
+            "sampleCount": 3,
+            "startCount": 3,
+            "endAliveCount": 2,
+            "deathCount": 1,
+            "physicalDamageDealt": 224.38655922440228,
+            "magicDamageDealt": 0,
+            "damageTaken": 1056.199912071228,
+            "healingDone": 0,
+            "killCount": 6,
+            "firstCombatTick": 15,
+            "lastCombatTick": 304,
+            "survivalTicks": 738,
+            "waveStartMaxHealth": 1200,
+            "enemyHpDamage": 1056.199912071228,
+            "augmentSpecialDamageDealt": 0
+          },
+          {
+            "towerTypeId": "frost_ice_breaker_t3",
+            "sampleCount": 2,
+            "startCount": 2,
+            "endAliveCount": 2,
+            "deathCount": 0,
+            "physicalDamageDealt": 5375.9663692434,
+            "magicDamageDealt": 0,
+            "damageTaken": 0,
+            "healingDone": 0,
+            "killCount": 66,
+            "firstCombatTick": 15,
+            "lastCombatTick": 306,
+            "survivalTicks": 614,
+            "waveStartMaxHealth": 140,
+            "enemyHpDamage": 0,
+            "augmentSpecialDamageDealt": 0
+          },
+          {
+            "towerTypeId": "frost_sturdy_ice_vanguard",
+            "sampleCount": 1,
+            "startCount": 1,
+            "endAliveCount": 0,
+            "deathCount": 1,
+            "physicalDamageDealt": 25.10150044130627,
+            "magicDamageDealt": 0,
+            "damageTaken": 180,
+            "healingDone": 0,
+            "killCount": 0,
+            "firstCombatTick": 19,
+            "lastCombatTick": 119,
+            "survivalTicks": 119,
+            "waveStartMaxHealth": 180,
+            "enemyHpDamage": 180,
+            "augmentSpecialDamageDealt": 0
+          }
+        ],
+        "healing": {
+          "attempts": 5,
+          "successfulCasts": 1,
+          "noEligibleTarget": 3,
+          "insufficientInjury": 1,
+          "zeroEffectiveHealing": 0,
+          "eligibleTargets": 26,
+          "recoverableInjury": 341.9594095369829,
+          "requestedHealing": 240,
+          "healingReduction": 0,
+          "overhealing": 14.545447609641315,
+          "effectiveHealing": 225.45455239035869
+        },
+        "naturalSupport": {
+          "healingAttempts": 3,
+          "requestedHealing": 240,
+          "effectiveHealing": 225.45455239035869,
+          "overhealing": 14.545447609641315,
+          "physicalShieldGranted": 0,
+          "physicalShieldAbsorbed": 0,
+          "physicalShieldExpired": 0,
+          "magicShieldGranted": 0,
+          "magicShieldAbsorbed": 0,
+          "magicShieldExpired": 0
+        },
+        "healingRatio": 0.04175084303525161,
+        "endingDiamonds": 300,
+        "endpointReason": "ALL_MONSTERS_CREDITED_OR_LEAKED",
+        "exclusiveOutcomes": {
+          "CREDITED_KILL": 72
+        },
+        "leakedAndRewarded": 0,
+        "entityAudit": {
+          "monsters": 72,
+          "towers": 6,
+          "invalid": 0
+        }
+      }
+    ],
+    "creativeMinusOfficial": {
+      "direction": "CREATIVE_MINUS_OFFICIAL",
+      "leaks": -42,
+      "survivingTowers": 4,
+      "clearTicks": null
+    }
+  }
+]

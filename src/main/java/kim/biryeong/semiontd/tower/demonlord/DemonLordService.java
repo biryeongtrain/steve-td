@@ -975,7 +975,7 @@ public final class DemonLordService {
             return Tower.DamageResult.NONE;
         }
         Monster monster = monsterEntity.runtimeMonster();
-        if (monster == null || !monster.isAlive()) {
+        if (monster == null || monster.isRemoved() || monster.health() <= 0.0) {
             return Tower.DamageResult.NONE;
         }
         if (attacker != null) {

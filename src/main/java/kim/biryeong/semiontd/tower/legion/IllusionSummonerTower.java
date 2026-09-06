@@ -124,6 +124,9 @@ public abstract class IllusionSummonerTower extends SummonerTower {
     }
 
     final void spawnQueuedClone(PlayerLane lane, Tower sourceTower, IllusionProfile profile, Vec3 offset) {
+        if (sourceTower.isAugmentTower()) {
+            return;
+        }
         Vec3 spawnPosition = new Vec3(
                 sourceTower.position().x() + 0.5 + offset.x,
                 sourceTower.position().y() + 1.0 + offset.y,

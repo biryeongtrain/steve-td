@@ -33,7 +33,7 @@ public class PigTower extends AnimalStackTower {
     }
 
     @Override
-    public double currentMaxHealth() {
+    protected double builderCurrentMaxHealth() {
         double value = applyTraitMaxHealth(maxHealth() + currentStacks() * value("healthPerStack"));
         return hasLeaderAura() ? value * (1.0 + leaderValue("leaderMaxHealthBonus")) : value;
     }

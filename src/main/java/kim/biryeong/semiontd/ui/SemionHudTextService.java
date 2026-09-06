@@ -226,8 +226,8 @@ public final class SemionHudTextService {
                         HighlightTarget.EMERALD_RATE,
                         highlightTarget,
                         highlightOn,
-                        emeraldRateMarkup(economy.emeraldPerSec()),
-                        "↗ 에메랄드/초 " + economy.emeraldPerSec()
+                        game.isAugmentSelectionActive() ? "<yellow>에메랄드 생산 중단</yellow>" : emeraldRateMarkup(economy.emeraldPerSec()),
+                        game.isAugmentSelectionActive() ? "에메랄드 생산 중단" : "↗ 에메랄드/초 " + economy.emeraldPerSec()
                 )
                 + " <dark_gray>|</dark_gray> " + highlightable(
                         HighlightTarget.INCOME,
@@ -236,7 +236,17 @@ public final class SemionHudTextService {
                         "<gold>+ 수입 " + economy.income() + "</gold>",
                         "+ 수입 " + economy.income()
                 )
-                + " <dark_gray>|</dark_gray> <gray>▣ 타워</gray> " + towerLimitText(currentTowers, maxTowers);
+                + " <dark_gray>|</dark_gray> <gray>▣ 타워</gray> " + towerLimitText(currentTowers, maxTowers)
+                + augmentHintMarkup(game, player);
+    }
+
+    private static String augmentHintMarkup(SemionGame game, SemionPlayer player) {
+        String hint = kim.biryeong.semiontd.augment.AugmentService.hudHint(game, player);
+        if (game.isAugmentSelectionActive()) {
+            hint = "선택 시간 " + game.remainingAugmentSelectionSeconds() + "초 · 이후 준비 25초"
+                    + (hint.isEmpty() ? "" : " · " + hint);
+        }
+        return hint.isEmpty() ? "" : " <dark_gray>|</dark_gray> <light_purple>" + hint + "</light_purple>";
     }
 
     static String diamondMarkup(long diamond) {

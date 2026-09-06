@@ -205,8 +205,8 @@ public final class FutureAgencyAgentTower extends ProductionTower {
     }
 
     @Override
-    public int aggroPriority() {
-        int base = super.aggroPriority();
+    protected int builderAggroPriority() {
+        int base = super.builderAggroPriority();
         return FutureAgencyTowers.role(type()) == FutureAgencyRole.PROTECTION
                 ? base + (int) Math.round(FutureAgencyBalance.stacked(
                 FutureAgencyStates.state(ownerPlayer()), FutureAgencyPolicy.FORCED_TAUNT)) : base;

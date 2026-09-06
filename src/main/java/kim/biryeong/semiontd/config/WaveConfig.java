@@ -1,21 +1,33 @@
 package kim.biryeong.semiontd.config;
 
 import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 
 public record WaveConfig(
         List<RoundWaveConfig> rounds,
         int infiniteFromRound,
         RoundWaveConfig infinite,
-        List<RoundWaveConfig> infiniteTemplates
+        List<RoundWaveConfig> infiniteTemplates,
+        Map<String, Double> infiniteCountMultipliers,
+        boolean season3CountsEnabled,
+        boolean round16HealingEnabled,
+        Set<String> healingTemplates
 ) {
     public WaveConfig(List<RoundWaveConfig> rounds, int infiniteFromRound, RoundWaveConfig infinite) {
         this(rounds, infiniteFromRound, infinite, List.of());
+    }
+
+    public WaveConfig(List<RoundWaveConfig> rounds, int infiniteFromRound, RoundWaveConfig infinite,
+            List<RoundWaveConfig> infiniteTemplates) {
+        this(rounds, infiniteFromRound, infinite, infiniteTemplates, Map.of(), false, false, Set.of());
     }
 
     public WaveConfig {
@@ -29,6 +41,8 @@ public record WaveConfig(
         if (infiniteFromRound < 1) {
             infiniteFromRound = 20;
         }
+        infiniteCountMultipliers = infiniteCountMultipliers == null ? Map.of() : Map.copyOf(infiniteCountMultipliers);
+        healingTemplates = healingTemplates == null ? Set.of() : Set.copyOf(healingTemplates);
     }
 
     public static WaveConfig defaultConfig() {
@@ -91,11 +105,15 @@ public record WaveConfig(
                 monster("infinite_zombified_piglin_rush", 140.0, 7.0, 10.0, AttackKind.MELEE, "minecraft:zombified_piglin", 1, 25, 5, 1.3, 2.5, 10),
                 monster("infinite_blaze_ranged", 113.33, 4.0, 18.0, AttackKind.RANGED, "minecraft:blaze", 1, 15, 0, 0.95, 9.0, 16)
         );
+        animalStampede = withHealer(animalStampede, "animal_stampede");
+        overworldAssault = withHealer(overworldAssault, "overworld_assault");
+        zombifiedLegion = withHealer(zombifiedLegion, "zombified_legion");
         WaveConfig fallback = new WaveConfig(
-                rounds,
+                rounds.stream().map(round -> round.round() == 16 ? withHealer(round, null) : round).toList(),
                 20,
                 animalStampede,
-                List.of(animalStampede, overworldAssault, zombifiedLegion)
+                List.of(animalStampede, overworldAssault, zombifiedLegion),
+                Map.of("20", 1.20, "25", 1.30), false, false, Set.of()
         );
         return BundledBalanceDefaults.load("wave.json", WaveConfig.class, fallback);
     }
@@ -128,11 +146,13 @@ public record WaveConfig(
         return rounds.stream()
                 .filter(config -> config.round() == round)
                 .findFirst()
+                .map(config -> prepareComposition(config, round))
                 .map(List::of)
                 .orElseGet(List::of);
     }
 
     private RoundWaveConfig scaleInfiniteRound(RoundWaveConfig template, int round) {
+        template = prepareComposition(template, round);
         int elapsedRounds = Math.max(0, round - infiniteFromRound);
         double healthMultiplier = 1.0 + elapsedRounds * 0.40;
         double attackDamageMultiplier = 1.0 + elapsedRounds * 0.03;
@@ -145,7 +165,8 @@ public record WaveConfig(
                             .toList()
             );
         }
-        return new RoundWaveConfig(round, template.spawnMode(), template.spawnIntervalTicks(), scaledLanes);
+        return new RoundWaveConfig(round, template.spawnMode(), template.spawnIntervalTicks(), scaledLanes,
+                template.templateId(), template.mineralRewardBudget());
     }
 
     private static WaveMonsterEntry scaleInfiniteEntry(
@@ -167,8 +188,180 @@ public record WaveConfig(
                 entry.targetPriority(),
                 entry.movementSpeedMultiplier(),
                 entry.attackRange(),
-                entry.attackIntervalTicks()
+                entry.attackIntervalTicks(),
+                entry.healing() == null ? null : entry.healing().scale(healthMultiplier)
         );
+    }
+
+    /** Changes only the internal test stage; the immutable source quantities remain the baseline. */
+    public WaveConfig withSeason3Stages(boolean counts, boolean round16Healing, Set<String> lateHealingTemplates) {
+        return new WaveConfig(rounds, infiniteFromRound, infinite, infiniteTemplates, infiniteCountMultipliers,
+                counts, round16Healing, lateHealingTemplates);
+    }
+
+    public void validate() {
+        Set<String> templateIds = new HashSet<>();
+        for (RoundWaveConfig template : infiniteTemplates) {
+            if (template.templateId() != null && !template.templateId().isBlank() && !templateIds.add(template.templateId())) {
+                throw new IllegalArgumentException("Infinite wave templateId values must be unique.");
+            }
+        }
+        if (!templateIds.containsAll(healingTemplates)) {
+            throw new IllegalArgumentException("Unknown healing wave template.");
+        }
+        if (round16HealingEnabled) {
+            requireHealer(rounds.stream().filter(round -> round.round() == 16).findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Round 16 healing requires a round 16 wave.")));
+        }
+        for (RoundWaveConfig template : infiniteTemplates) {
+            if (template.templateId() != null && healingTemplates.contains(template.templateId())) {
+                requireHealer(template);
+            }
+        }
+        for (Map.Entry<String, Double> entry : infiniteCountMultipliers.entrySet()) {
+            int round;
+            try {
+                round = Integer.parseInt(entry.getKey());
+            } catch (NumberFormatException exception) {
+                throw new IllegalArgumentException("Wave multiplier keys must be round numbers.", exception);
+            }
+            if (round < infiniteFromRound || !Double.isFinite(entry.getValue()) || entry.getValue() < 1.0 || entry.getValue() > 1.5) {
+                throw new IllegalArgumentException("Infinite count multipliers must start in infinite rounds and be within [1, 1.5].");
+            }
+        }
+        List<RoundWaveConfig> all = new ArrayList<>(rounds);
+        all.addAll(infiniteTemplates);
+        if (infinite != null) {all.add(infinite);}
+        for (RoundWaveConfig round : all) {
+            if (round.mineralRewardBudget() == null && countMultiplier(round.round()) != 1.0) {
+                inferredSharedBudget(round);
+            }
+            for (Map.Entry<String, List<WaveMonsterEntry>> lane : round.lanes().entrySet()) {
+                List<WaveMonsterEntry> entries = lane.getValue();
+                int healers = entries.stream().filter(entry -> entry.healing() != null).mapToInt(WaveMonsterEntry::count).sum();
+                long healerEntries = entries.stream().filter(entry -> entry.healing() != null).count();
+                if (healerEntries > 1 || healerEntries > 0 && healers != 1 || healers > 0 && round.round() < 16) {
+                    throw new IllegalArgumentException("A wave may contain one healer, only after round 15.");
+                }
+                if (healers > 0 && (replacementId(round) == null || entries.stream().noneMatch(entry -> entry.id().equals(replacementId(round))))) {
+                    throw new IllegalArgumentException("Healing wave requires its declared combat replacement.");
+                }
+                round.rewardBudgetForLane(lane.getKey());
+            }
+        }
+    }
+
+    private static void requireHealer(RoundWaveConfig wave) {
+        if (wave.lanes().isEmpty() || wave.lanes().values().stream()
+                .anyMatch(entries -> entries.stream().noneMatch(entry -> entry.healing() != null && entry.count() == 1))) {
+            throw new IllegalArgumentException("An enabled healing wave must contain its healer definition.");
+        }
+    }
+
+    private RoundWaveConfig prepareComposition(RoundWaveConfig template, int round) {
+        boolean healingEnabled = round == 16 ? round16HealingEnabled
+                : template.templateId() != null && healingTemplates.contains(template.templateId());
+        double multiplier = countMultiplier(round);
+        Map<String, List<WaveMonsterEntry>> lanes = new LinkedHashMap<>();
+        for (Map.Entry<String, List<WaveMonsterEntry>> lane : template.lanes().entrySet()) {
+            List<WaveMonsterEntry> combat = new ArrayList<>();
+            WaveMonsterEntry healer = lane.getValue().stream().filter(entry -> entry.healing() != null).findFirst().orElse(null);
+            for (WaveMonsterEntry entry : lane.getValue()) {
+                if (entry.healing() != null) {continue;}
+                int restoredCount = entry.count() + (healer != null && entry.id().equals(replacementId(template)) ? healer.count() : 0);
+                combat.add(entry.withCount(restoredCount));
+            }
+            combat = apportionCounts(combat, multiplier);
+            if (healingEnabled && healer != null) {
+                for (int i = 0; i < combat.size(); i++) {
+                    WaveMonsterEntry entry = combat.get(i);
+                    if (entry.id().equals(replacementId(template))) {
+                        combat.set(i, entry.withCount(entry.count() - 1));
+                    }
+                }
+                combat.add(healer.withCount(1));
+            }
+            lanes.put(lane.getKey(), List.copyOf(combat));
+        }
+        Long budget = template.mineralRewardBudget();
+        if (budget == null && multiplier != 1.0) {
+            budget = inferredSharedBudget(template);
+        }
+        return new RoundWaveConfig(round, template.spawnMode(), template.spawnIntervalTicks(), lanes, template.templateId(), budget);
+    }
+
+    private static long inferredSharedBudget(RoundWaveConfig template) {
+        // ponytail: staged counts use one shared budget; add per-lane budgets when heterogeneous staged waves are needed.
+        List<Long> budgets = template.lanes().keySet().stream().map(template::rewardBudgetForLane).distinct().toList();
+        if (budgets.size() > 1) {
+            throw new IllegalArgumentException("A count stage requires an explicit common mineralRewardBudget when lane rewards differ.");
+        }
+        return budgets.isEmpty() ? 0 : budgets.getFirst();
+    }
+
+    private double countMultiplier(int round) {
+        if (!season3CountsEnabled || round < 5 || round == 15) {return 1.0;}
+        if (round < 15) {return 1.10;}
+        if (round < infiniteFromRound) {return 1.20;}
+        return infiniteCountMultipliers.entrySet().stream()
+                .filter(entry -> Integer.parseInt(entry.getKey()) <= round)
+                .max(Comparator.comparingInt(entry -> Integer.parseInt(entry.getKey())))
+                .map(Map.Entry::getValue).orElse(1.0);
+    }
+
+    static List<WaveMonsterEntry> apportionCounts(List<WaveMonsterEntry> entries, double multiplier) {
+        int total = entries.stream().mapToInt(WaveMonsterEntry::count).sum();
+        if (total == 0 || multiplier == 1.0) {return new ArrayList<>(entries);}
+        int target = Math.toIntExact(Math.round(total * multiplier));
+        List<WaveMonsterEntry> result = new ArrayList<>();
+        List<Integer> order = new ArrayList<>();
+        int assigned = 0;
+        for (int i = 0; i < entries.size(); i++) {
+            int count = (int) ((long) entries.get(i).count() * target / total);
+            result.add(entries.get(i).withCount(count));
+            assigned += count;
+            order.add(i);
+        }
+        order.sort(Comparator.<Integer>comparingLong(i -> (long) entries.get(i).count() * target % total).reversed());
+        for (int i = 0; i < target - assigned; i++) {
+            int index = order.get(i);
+            result.set(index, result.get(index).withCount(result.get(index).count() + 1));
+        }
+        return result;
+    }
+
+    private static String replacementId(RoundWaveConfig template) {
+        if (template.round() == 16) {return "hoglin_tank_16";}
+        if (template.templateId() == null) {return null;}
+        return switch (template.templateId()) {
+            case "animal_stampede" -> "infinite_llama_ranged";
+            case "overworld_assault" -> "infinite_spider_rush";
+            case "zombified_legion" -> "infinite_zombified_piglin_rush";
+            default -> null;
+        };
+    }
+
+    private static RoundWaveConfig withHealer(RoundWaveConfig original, String templateId) {
+        RoundWaveConfig identified = new RoundWaveConfig(original.round(), original.spawnMode(), original.spawnIntervalTicks(),
+                original.lanes(), templateId, original.rewardBudgetForLane(RoundWaveConfig.DEFAULT_LANE_KEY));
+        Map<String, List<WaveMonsterEntry>> lanes = new LinkedHashMap<>();
+        for (Map.Entry<String, List<WaveMonsterEntry>> lane : original.lanes().entrySet()) {
+            List<WaveMonsterEntry> entries = new ArrayList<>();
+            WaveMonsterEntry healer = null;
+            for (WaveMonsterEntry entry : lane.getValue()) {
+                if (entry.id().equals(replacementId(identified))) {
+                    entries.add(entry.withCount(entry.count() - 1));
+                    healer = new WaveMonsterEntry(original.round() == 16 ? "wave_healer_allay_16" : "wave_healer_allay_infinite",
+                            entry.health(), entry.armor(), 2, AttackKind.RANGED, "minecraft:allay", null, null,
+                            entry.mineralReward(), 1, 0, 0.85, 6, 13,
+                            new WaveHealingConfig(6, original.round() == 16 ? 80 : 160, 3, 160, 20, 2));
+                } else {entries.add(entry);}
+            }
+            if (healer != null) {entries.add(healer);}
+            lanes.put(lane.getKey(), List.copyOf(entries));
+        }
+        return new RoundWaveConfig(original.round(), original.spawnMode(), original.spawnIntervalTicks(), lanes,
+                templateId, identified.mineralRewardBudget());
     }
 
     private static RoundWaveConfig round(int round, WaveMonsterEntry... entries) {

@@ -110,6 +110,7 @@ final class WarlockSacrificeController {
                 && tower != null
                 && rule != null
                 && tower != warlock
+                && !tower.isAugmentTower()
                 && tower.health() > 0.0
                 && !WarlockTowers.isWarlockCore(tower.type())
                 && warlock.path().acceptsSacrificeTower(tower.type())

@@ -65,7 +65,7 @@ public final class HeroTower extends HeroPartyTower {
     }
 
     @Override
-    public int aggroPriority() {
+    protected int builderAggroPriority() {
         return HeroPartyBalance.weaponAggroPriority(weapon());
     }
 

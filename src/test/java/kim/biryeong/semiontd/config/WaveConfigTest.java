@@ -3,12 +3,15 @@ package kim.biryeong.semiontd.config;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import kim.biryeong.semiontd.entity.monster.MonsterDimensions;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
@@ -201,7 +204,7 @@ final class WaveConfigTest {
                         .toList());
         assertEquals("minecraft:warden", config.configForRound(15).orElseThrow().entriesForLane("lane_1").getFirst().entityType());
 
-        for (RoundWaveConfig template : config.infiniteTemplates()) {
+        for (RoundWaveConfig template : config.candidatesForRound(20)) {
             List<WaveMonsterEntry> entries = template.entriesForLane("lane_1");
             assertEquals(55, totalCount(entries));
             assertEquals(10_450.0, totalHealth(entries), 0.1);
@@ -216,7 +219,7 @@ final class WaveConfigTest {
                         List.of("minecraft:husk", "minecraft:spider", "minecraft:pillager"),
                         List.of("minecraft:piglin_brute", "minecraft:zombified_piglin", "minecraft:blaze")
                 ),
-                config.infiniteTemplates().stream()
+                config.candidatesForRound(20).stream()
                         .map(template -> template.entriesForLane("lane_1").stream().map(WaveMonsterEntry::entityType).toList())
                         .toList()
         );
@@ -233,6 +236,115 @@ final class WaveConfigTest {
 
     private static WaveMonsterEntry entry(String id, double health) {
         return new WaveMonsterEntry(id, health, 0.0, 1.0, AttackKind.MELEE, "minecraft:zombie", null, 1);
+    }
+
+    @Test
+    void season3StagesPreserveBaselineAndApplyCountsWithoutCompounding() {
+        WaveConfig baseline = WaveConfig.defaultConfig();
+        baseline.validate();
+        WaveConfig canary = baseline.withSeason3Stages(false, true, Set.of());
+        WaveConfig h0 = baseline.withSeason3Stages(true, true, Set.of("overworld_assault"));
+        int[] expected = {12, 14, 18, 16, 22, 39, 33, 44, 44, 28, 39, 44, 55, 39, 4, 72, 120, 96, 96};
+        for (int round = 1; round <= 19; round++) {
+            RoundWaveConfig actual = h0.configForRound(round).orElseThrow();
+            assertEquals(expected[round - 1], totalCount(actual.entriesForLane("lane_1")));
+            assertEquals(baseline.configForRound(round).orElseThrow().rewardBudgetForLane("lane_1"), actual.rewardBudgetForLane("lane_1"));
+            assertEquals(round == 16 ? 1 : 0, actual.entriesForLane("lane_1").stream().filter(e -> e.healing() != null).count());
+        }
+        assertEquals(60, totalCount(canary.configForRound(16).orElseThrow().entriesForLane("lane_1")));
+        assertEquals(4500, totalHealth(canary.configForRound(16).orElseThrow().entriesForLane("lane_1")), 0.001);
+        assertEquals(5400, totalHealth(h0.configForRound(16).orElseThrow().entriesForLane("lane_1")), 0.001);
+        assertEquals(66, totalCount(h0.configForRound(20).orElseThrow().entriesForLane("lane_1")));
+        assertEquals(72, totalCount(h0.configForRound(25).orElseThrow().entriesForLane("lane_1")));
+        assertEquals(55, totalCount(baseline.configForRound(25).orElseThrow().entriesForLane("lane_1")));
+        assertEquals(55, h0.configForRound(25).orElseThrow().rewardBudgetForLane("lane_1"));
+        WaveConfig promoted = new WaveConfig(baseline.rounds(), 20, baseline.infinite(), baseline.infiniteTemplates(),
+                Map.of("20", 1.2, "25", 1.4), true, true, Set.of("overworld_assault"));
+        assertEquals(77, totalCount(promoted.configForRound(25).orElseThrow().entriesForLane("lane_1")));
+        assertEquals(77, totalCount(promoted.configForRound(25).orElseThrow().entriesForLane("lane_1")));
+    }
+
+    @Test
+    void infiniteHealerScalesOnceAndKeepsTemplateAndBudget() {
+        WaveConfig config = WaveConfig.defaultConfig().withSeason3Stages(true, true, Set.of("overworld_assault"));
+        RoundWaveConfig scaled = config.candidatesForRound(25).stream()
+                .filter(wave -> "overworld_assault".equals(wave.templateId())).findFirst().orElseThrow();
+        WaveMonsterEntry healer = scaled.entriesForLane("lane_1").stream().filter(e -> e.healing() != null).findFirst().orElseThrow();
+        assertEquals(450, healer.health());
+        assertEquals(480, healer.healing().amount());
+        assertEquals(2.3, healer.attackDamage(), 0.001);
+        assertEquals(55, scaled.mineralRewardBudget());
+        assertEquals(72, totalCount(scaled.entriesForLane("lane_1")));
+        assertEquals(config.selectForRound(27, new Random(12)), config.selectForRound(27, new Random(12)));
+    }
+
+    @Test
+    void invalidStageAndHealingConfigurationsAreRejected() {
+        WaveConfig baseline = WaveConfig.defaultConfig();
+        assertThrows(IllegalArgumentException.class, () -> baseline.withSeason3Stages(true, true, Set.of("unknown")).validate());
+        assertThrows(IllegalArgumentException.class, () -> new WaveConfig(baseline.rounds(), 20, baseline.infinite(),
+                baseline.infiniteTemplates(), Map.of("19", 1.2), true, false, Set.of()).validate());
+        assertThrows(IllegalArgumentException.class, () -> new WaveConfig(baseline.rounds(), 20, baseline.infinite(),
+                baseline.infiniteTemplates(), Map.of("25", 1.51), true, false, Set.of()).validate());
+        assertThrows(IllegalArgumentException.class, () -> new WaveHealingConfig(6, Double.NaN, 3, 160, 20, 2));
+        assertThrows(IllegalArgumentException.class, () -> new WaveHealingConfig(6, 80, 0, 160, 20, 2));
+    }
+
+    @Test
+    void legacyAnonymousTemplatesKeepCustomNumbersAndInvalidReloadKeepsPreviousWave() throws Exception {
+        String legacy = """
+                {
+                  "rounds": [],
+                  "infiniteFromRound": 20,
+                  "infiniteTemplates": [
+                    {"round": 20, "lanes": {"default": [
+                      {"id": "custom_legacy", "health": 77, "entityType": "minecraft:husk", "count": 7, "mineralReward": 9}
+                    ]}}
+                  ]
+                }
+                """;
+        Path path = tempDir.resolve("wave.json");
+        Files.writeString(path, legacy);
+        WaveConfig original = SemionConfigLoader.loadWaves(tempDir, null, LoggerFactory.getLogger("test"));
+        WaveMonsterEntry custom = original.configForRound(20).orElseThrow().entriesForLane("lane_1").getFirst();
+        assertEquals("custom_legacy", custom.id());
+        assertEquals(77, custom.health());
+        assertEquals(7, custom.count());
+        assertEquals(63, original.configForRound(20).orElseThrow().rewardBudgetForLane("lane_1"));
+        assertEquals(legacy, Files.readString(path));
+
+        String invalid = legacy.replace("\"rounds\": []", "\"round16HealingEnabled\": true, \"rounds\": []");
+        Files.writeString(path, invalid);
+        assertSame(original, SemionConfigLoader.loadWaves(tempDir, original, LoggerFactory.getLogger("test")));
+        assertEquals(invalid, Files.readString(path));
+        Files.writeString(path, "null");
+        assertSame(original, SemionConfigLoader.loadWaves(tempDir, original, LoggerFactory.getLogger("test")));
+        Files.delete(path);
+        assertSame(original, SemionConfigLoader.loadWaves(tempDir, original, LoggerFactory.getLogger("test")));
+    }
+
+    @Test
+    void enabledHealerCannotSilentlyAcceptAnOldTemplateWithoutHealingDefinition() {
+        RoundWaveConfig old = new RoundWaveConfig(20, WaveSpawnMode.ROUND_ROBIN, 1,
+                Map.of("default", List.of(entry("custom_old", 100))), "overworld_assault", 55L);
+        WaveConfig config = new WaveConfig(List.of(), 20, old, List.of(old));
+        assertThrows(IllegalArgumentException.class, () -> config.withSeason3Stages(false, false, Set.of("overworld_assault")).validate());
+        assertThrows(IllegalArgumentException.class, () -> new WaveConfig(List.of(), 20, old, List.of(old, old)).validate());
+    }
+
+    @Test
+    void countStagesInferNamedLaneBudgetsAndRejectAmbiguousLegacyLaneBudgets() {
+        WaveMonsterEntry entry = new WaveMonsterEntry("named_lane", 20, 0, 1, AttackKind.MELEE, "minecraft:husk", null, 9, 10);
+        RoundWaveConfig named = new RoundWaveConfig(5, Map.of("lane_1", List.of(entry)));
+        WaveConfig config = new WaveConfig(List.of(named), 20, null).withSeason3Stages(true, false, Set.of());
+        config.validate();
+        assertEquals(11, totalCount(config.configForRound(5).orElseThrow().entriesForLane("lane_1")));
+        assertEquals(90, config.configForRound(5).orElseThrow().rewardBudgetForLane("lane_1"));
+
+        RoundWaveConfig heterogeneous = new RoundWaveConfig(5, Map.of("lane_1", List.of(entry), "lane_2", List.of(entry.withCount(20))));
+        WaveConfig legacy = new WaveConfig(List.of(heterogeneous), 20, null);
+        legacy.validate();
+        assertThrows(IllegalArgumentException.class, () -> legacy.withSeason3Stages(true, false, Set.of()).validate());
     }
 
     private static void assertCombatStats(WaveMonsterEntry entry, double health, double armor, double attackDamage) {

@@ -85,6 +85,7 @@ public class SemionTd implements ModInitializer {
         gameManager.configureWebIntegration(configs.webIntegration());
         gameManager.configureCombatSpeed(configs.combatSpeed());
         gameManager.configureJobAvailability(configs.jobAvailability());
+        gameManager.configureAugments(configs.augments());
         gameManager.configure(
                 configs.economy(),
                 configs.waves(),

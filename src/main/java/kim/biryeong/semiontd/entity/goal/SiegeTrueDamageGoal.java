@@ -11,6 +11,7 @@ public final class SiegeTrueDamageGoal extends CooldownAbilityGoal {
     private final SemionMonsterEntity caster;
     private final double bonusDamage;
     private final double progressThreshold;
+    private final boolean ignoreReductions;
 
     public SiegeTrueDamageGoal(
             SemionMonsterEntity caster,
@@ -19,10 +20,16 @@ public final class SiegeTrueDamageGoal extends CooldownAbilityGoal {
             int retryDelayTicks,
             double progressThreshold
     ) {
+        this(caster, bonusDamage, cooldownTicks, retryDelayTicks, progressThreshold, true);
+    }
+
+    public SiegeTrueDamageGoal(SemionMonsterEntity caster, double bonusDamage, int cooldownTicks,
+            int retryDelayTicks, double progressThreshold, boolean ignoreReductions) {
         super(caster, cooldownTicks, retryDelayTicks);
         this.caster = caster;
         this.bonusDamage = Math.max(0.0, bonusDamage);
         this.progressThreshold = Math.max(0.0, Math.min(1.0, progressThreshold));
+        this.ignoreReductions = ignoreReductions;
     }
 
     @Override
@@ -42,6 +49,11 @@ public final class SiegeTrueDamageGoal extends CooldownAbilityGoal {
 
         float previousHealth = target.getHealth();
         caster.playAnimation(SemionAnimationState.ATTACK);
+        if (!ignoreReductions) {
+            // The Warden canary uses the ordinary physical-hit path, including all defenses.
+            target.hurt(caster.damageSources().mobAttack(caster), (float) bonusDamage);
+            return true;
+        }
         if (target instanceof SemionTowerEntity tower) {
             tower.hurtIgnoringReductions(caster.damageSources().mobAttack(caster), bonusDamage);
             return true;

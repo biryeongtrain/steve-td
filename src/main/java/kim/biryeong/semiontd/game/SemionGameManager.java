@@ -104,6 +104,7 @@ import kim.biryeong.semiontd.ui.SemionSidebarHudService;
 import kim.biryeong.semiontd.ui.SemionText;
 import kim.biryeong.semiontd.util.Scheduler;
 import kim.biryeong.semiontd.web.WebCatalogExporter;
+import kim.biryeong.semiontd.augment.AugmentConfig;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -143,6 +144,7 @@ public final class SemionGameManager {
     private TraitSelectionConfig traitSelectionConfig = TraitSelectionConfig.defaultConfig();
     private WebIntegrationConfig webIntegrationConfig = WebIntegrationConfig.defaultConfig();
     private CombatSpeedConfig combatSpeedConfig = CombatSpeedConfig.defaultConfig();
+    private AugmentConfig augmentConfig = AugmentConfig.defaults();
     private Path configDir;
     private Path progressionStorePath;
     private ProgressionService progressionService = new ProgressionService(progressionConfig, null);
@@ -196,6 +198,7 @@ public final class SemionGameManager {
         NO_ACTIVE_GAME,
         NOT_WAITING,
         ALREADY_PENDING,
+        AUGMENT_TRAIT_CONFLICT,
         PRELOAD_FAILED
     }
 
@@ -492,7 +495,7 @@ public final class SemionGameManager {
         IncomeSummons.reloadBuiltIns(this.summonConfig);
         if (webIntegrationConfig.enabled()) {
             try {
-                WebCatalogExporter.export(this.configDir);
+                WebCatalogExporter.export(this.configDir, this.waveConfig, this.economyConfig, this.summonConfig, this.augmentConfig);
             } catch (IOException | RuntimeException exception) {
                 WebCatalogExporter.clearCurrentVersion();
                 SemionTd.LOGGER.warn("Failed to export the Semion TD web catalog.", exception);
@@ -664,13 +667,16 @@ public final class SemionGameManager {
                 configDir,
                 SemionTd.LOGGER,
                 TowerBalanceRuntime.current(),
-                jobAvailabilityConfig
+                jobAvailabilityConfig,
+                augmentConfig,
+                waveConfig
         );
         configureJobAvailability(configs.jobAvailability());
         TraitBalanceRuntime.apply(configs.traitBalance());
         TowerVfxService.configure(configs.vfx());
         configureTips(configs.tips());
         configureTraits(configs.traits());
+        configureAugments(configs.augments());
         configureWebIntegration(configs.webIntegration());
         configureCombatSpeed(configs.combatSpeed());
         configure(
@@ -804,6 +810,13 @@ public final class SemionGameManager {
         this.traitSelectionConfig = traitSelectionConfig == null
                 ? TraitSelectionConfig.defaultConfig()
                 : traitSelectionConfig;
+    }
+
+    public void configureAugments(AugmentConfig config) {
+        this.augmentConfig = java.util.Objects.requireNonNull(config, "config");
+        if (activeGame != null && !activeGame.rosterLocked()) {
+            activeGame.configureAugments(config);
+        }
     }
 
     public TipConfig tipConfig() {
@@ -1084,6 +1097,7 @@ public final class SemionGameManager {
         GameArena arena = GameArenaLoader.load(server, mapConfig);
         resetCombatSpeedState();
         activeGame = new SemionGame(economyConfig, waveConfig, leaderTargetingConfig, incomeLaneRoutingConfig, monsterScalingConfig, arena, buildGuideService);
+        activeGame.configureAugments(augmentConfig);
         applyPersistedJobSelections(server, activeGame);
         lastMatchResult = null;
         VanillaTeamBridge.ensureTeams(server);
@@ -1822,6 +1836,9 @@ public final class SemionGameManager {
         if (!activeGame.canConfigureRoster()) {
             return StartCountdownResult.NOT_WAITING;
         }
+        if (plan.mode() == MatchMode.NORMAL && augmentConfig.enabled() && traitsEnabled()) {
+            return StartCountdownResult.AUGMENT_TRAIT_CONFLICT;
+        }
         if (!activeGame.preloadWorldsForStart(plan)) {
             return StartCountdownResult.PRELOAD_FAILED;
         }
@@ -1991,6 +2008,9 @@ public final class SemionGameManager {
         Scheduler.INSTANCE.submit((s) -> {
             if (activeGame != null && activeGame.rosterLocked()) {
                 if (activeGame.restorePlayerPlacement(s, player)) {
+                    if (activeGame.augmentsEnabled()) {
+                        activeGame.augmentService().reopen(activeGame, player);
+                    }
                     return;
                 }
 

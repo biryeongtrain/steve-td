@@ -2,6 +2,7 @@ package kim.biryeong.semiontd.config;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import kim.biryeong.semiontd.augment.AugmentConfig;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -12,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import kim.biryeong.semiontd.config.SemionConfigLoader.LoadedConfigs;
-import kim.biryeong.semiontd.rating.RatingConfig;
 import kim.biryeong.semiontd.tower.army.ArmyBalance;
 import kim.biryeong.semiontd.tower.demonlord.DemonLordTowers;
 import kim.biryeong.semiontd.tower.end.EndTowers;
@@ -21,7 +21,6 @@ import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
 import kim.biryeong.semiontd.tower.illager.IllagerTowers;
 import kim.biryeong.semiontd.tower.legion.LegionTowers;
 import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
-import kim.biryeong.semiontd.trait.TraitSelectionConfig;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.resources.ResourceLocation;
@@ -34,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 final class SemionConfigLoaderTest {
     private static final List<String> BUNDLED_BALANCE_FILES = List.of(
+            "augment_balance.json",
             "economy.json",
             "income_lane_routing.json",
             "leader_targeting.json",
@@ -122,6 +122,94 @@ final class SemionConfigLoaderTest {
     }
 
     @Test
+    void invalidAugmentReloadRetainsLastGoodWithoutOverwritingInvalidFile() throws Exception {
+        AugmentConfig lastGood = AugmentConfig.fromJson(JsonParser.parseString("""
+                {"enabled": true, "parameters": {"tactical_designation_1": {"damageBonus": 0.31}}}
+                """).getAsJsonObject());
+        String previousVersion = lastGood.version();
+        Path path = tempDir.resolve("augment_balance.json");
+        for (String invalid : List.of(
+                "{broken-json", "null", "[]", "{\"enabled\": \"true\"}",
+                "{\"rarityWeights\": {\"PPP\": 100}}",
+                "{\"parameters\": {\"tactical_designation_1\": {\"damageReduction\": 1.01}}}")) {
+            Files.writeString(path, invalid);
+            AugmentConfig loaded = SemionConfigLoader.loadOrCreateAugments(path, lastGood, LoggerFactory.getLogger("test"));
+            assertSame(lastGood, loaded, invalid);
+            assertEquals(previousVersion, loaded.version());
+            assertEquals(invalid, Files.readString(path));
+        }
+    }
+
+    @Test
+    void partialAugmentConfigBackfillsDefaultsWithoutChangingSuppliedValues() throws Exception {
+        Path path = tempDir.resolve("augment_balance.json");
+        Files.writeString(path, """
+                {"enabled": true, "parameters": {"tactical_designation_1": {"damageBonus": 0.31}}}
+                """);
+        AugmentConfig loaded = SemionConfigLoader.loadOrCreateAugments(path, AugmentConfig.defaults(), LoggerFactory.getLogger("test"));
+        assertTrue(loaded.enabled());
+        assertFalse(loaded.publicPoolEnabled());
+        assertEquals(0.31, loaded.parameter("tactical_designation_1", "damageBonus", -1));
+        assertEquals(AugmentConfig.defaults().parameter("tactical_designation_1", "damageReduction", -1),
+                loaded.parameter("tactical_designation_1", "damageReduction", -1));
+        assertEquals(AugmentConfig.defaults().parameters().keySet(), loaded.parameters().keySet());
+        assertEquals(AugmentConfig.defaults().rarityWeights(), loaded.rarityWeights());
+        assertEquals(loaded.toJson(), JsonParser.parseString(Files.readString(path)));
+        String firstWrite = Files.readString(path);
+        AugmentConfig reloaded = SemionConfigLoader.loadOrCreateAugments(path, loaded, LoggerFactory.getLogger("test"));
+        assertEquals(loaded, reloaded);
+        assertEquals(loaded.version(), reloaded.version());
+        assertEquals(firstWrite, Files.readString(path));
+    }
+
+    @Test
+    void combinedReloadPreservesBothSnapshotsWhenAugmentAndWaveFilesAreInvalid() throws Exception {
+        LoadedConfigs initial = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+        AugmentConfig lastAugments = AugmentConfig.fromJson(JsonParser.parseString("{\"enabled\": true}").getAsJsonObject());
+        WaveConfig lastWaves = initial.waves().withSeason3Stages(false, true, Set.of());
+        Files.writeString(tempDir.resolve("augment_balance.json"), "{\"publicPoolEnabled\": \"invalid\"}");
+        Files.writeString(tempDir.resolve("wave.json"), "{\"round16HealingEnabled\": true, \"rounds\": []}");
+        LoadedConfigs loaded = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"),
+                initial.towerBalance(), initial.jobAvailability(), lastAugments, lastWaves);
+        assertSame(lastAugments, loaded.augments());
+        assertSame(lastWaves, loaded.waves());
+        assertTrue(loaded.augments().enabled());
+        assertTrue(loaded.waves().round16HealingEnabled());
+    }
+
+    @Test
+    void disabledStagesPreserveHeterogeneousLegacyLaneDefinitions() throws Exception {
+        Path legacyPath = tempDir.resolve("waves.json");
+        String legacy = """
+                {
+                  "rounds": [{"round": 5, "lanes": {
+                    "lane_1": [{"id": "custom_one", "health": 31, "entityType": "minecraft:husk", "count": 10, "mineralReward": 3}],
+                    "lane_2": [{"id": "custom_two", "health": 62, "entityType": "minecraft:skeleton", "count": 20, "mineralReward": 7}]
+                  }}],
+                  "infiniteFromRound": 20,
+                  "infiniteTemplates": [{"round": 20, "lanes": {
+                    "default": [{"id": "anonymous_template", "health": 91, "entityType": "minecraft:husk", "count": 4}]
+                  }}]
+                }
+                """;
+        Files.writeString(legacyPath, legacy);
+        WaveConfig loaded = SemionConfigLoader.loadWaves(tempDir, null, LoggerFactory.getLogger("test"));
+        assertFalse(loaded.season3CountsEnabled());
+        assertFalse(loaded.round16HealingEnabled());
+        assertTrue(loaded.healingTemplates().isEmpty());
+        RoundWaveConfig round = loaded.configForRound(5).orElseThrow();
+        assertEquals(30, round.rewardBudgetForLane("lane_1"));
+        assertEquals(140, round.rewardBudgetForLane("lane_2"));
+        assertEquals(10, round.entriesForLane("lane_1").getFirst().count());
+        assertEquals(20, round.entriesForLane("lane_2").getFirst().count());
+        assertEquals(31, round.entriesForLane("lane_1").getFirst().health());
+        assertEquals(62, round.entriesForLane("lane_2").getFirst().health());
+        assertEquals("anonymous_template", loaded.configForRound(20).orElseThrow().entriesForLane("lane_1").getFirst().id());
+        assertEquals(legacy, Files.readString(legacyPath));
+        assertFalse(Files.exists(tempDir.resolve("wave.json")));
+    }
+
+    @Test
     void jobAvailabilityPreservesUnknownValidIds() throws Exception {
         Files.createDirectories(tempDir);
         Files.writeString(tempDir.resolve("jobs.json"), """
@@ -190,14 +278,6 @@ final class SemionConfigLoaderTest {
     }
 
     @Test
-    void loadCreatesTraitConfigFileWithEnabledDefaults() {
-        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
-
-        assertTrue(Files.exists(tempDir.resolve("traits.json")));
-        assertEquals(TraitSelectionConfig.defaultConfig(), configs.traits());
-    }
-
-    @Test
     void loadReadsTraitConfigOverrides() throws Exception {
         Files.createDirectories(tempDir);
         Files.writeString(tempDir.resolve("traits.json"), """
@@ -211,15 +291,6 @@ final class SemionConfigLoaderTest {
 
         assertEquals(false, configs.traits().enabled());
         assertEquals(30, configs.traits().selectionDurationSeconds());
-    }
-
-    @Test
-    void loadCreatesTraitBalanceConfigWithDefaults() {
-        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
-
-        assertTrue(Files.exists(tempDir.resolve("trait_balance.json")));
-        assertEquals(0.25, configs.traitBalance().value("opening_salvo", "attackSpeedBonus", -1.0));
-        assertEquals(15.0, configs.traitBalance().value("opening_salvo", "durationSeconds", -1.0));
     }
 
     @Test
@@ -246,14 +317,6 @@ final class SemionConfigLoaderTest {
         String written = Files.readString(tempDir.resolve("trait_balance.json"));
         assertTrue(written.contains("durationSeconds"));
         assertTrue(written.contains("mobilization_grant"));
-    }
-
-    @Test
-    void loadCreatesRatingConfigFileWithDefaults() {
-        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
-
-        assertTrue(Files.exists(tempDir.resolve("rating.json")));
-        assertEquals(RatingConfig.defaultConfig(), configs.rating());
     }
 
     @Test
@@ -983,15 +1046,6 @@ final class SemionConfigLoaderTest {
     }
 
     @Test
-    void loadCreatesLeaderTargetingConfigFileWithDefaults() {
-        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
-
-        assertTrue(Files.exists(tempDir.resolve("leader_targeting.json")));
-        assertEquals(1, configs.leaderTargeting().maxTargetingTeamsPerTarget());
-        assertEquals(1, configs.leaderTargeting().activeTargetRounds());
-    }
-
-    @Test
     void loadReadsLeaderTargetingConfigOverrides() throws Exception {
         Files.createDirectories(tempDir);
         Files.writeString(tempDir.resolve("leader_targeting.json"), """
@@ -1005,16 +1059,6 @@ final class SemionConfigLoaderTest {
 
         assertEquals(1, configs.leaderTargeting().maxTargetingTeamsPerTarget());
         assertEquals(4, configs.leaderTargeting().activeTargetRounds());
-    }
-
-    @Test
-    void loadCreatesIncomeLaneRoutingConfigFileWithDefaults() {
-        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
-
-        assertTrue(Files.exists(tempDir.resolve("income_lane_routing.json")));
-        assertEquals(IncomeLaneRoutingConfig.defaultConfig(), configs.incomeLaneRouting());
-        assertEquals(true, configs.incomeLaneRouting().enabled());
-        assertEquals(IncomeLaneRoutingConfig.Mode.LEAST_THREAT_PRESSURE, configs.incomeLaneRouting().mode());
     }
 
     @Test
@@ -1090,14 +1134,6 @@ final class SemionConfigLoaderTest {
         assertEquals(2.0, configs.incomeLaneRouting().queuedThreatWeight(), 0.0001);
         assertEquals(0.25, configs.incomeLaneRouting().nextRoundQueuedThreatWeight(), 0.0001);
         assertEquals(IncomeLaneRoutingConfig.TieBreakMode.RANDOM, configs.incomeLaneRouting().tieBreakMode());
-    }
-
-    @Test
-    void loadCreatesMonsterScalingConfigFileWithDefaults() {
-        LoadedConfigs configs = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
-
-        assertTrue(Files.exists(tempDir.resolve("monster_scaling.json")));
-        assertEquals(MonsterScalingConfig.defaultConfig(), configs.monsterScaling());
     }
 
     @Test

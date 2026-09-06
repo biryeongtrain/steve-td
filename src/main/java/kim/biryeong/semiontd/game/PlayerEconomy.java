@@ -7,6 +7,7 @@ public final class PlayerEconomy {
     private long emerald;
     private long income;
     private long emeraldPerSec;
+    private long augmentEmeraldPerSec;
     private int emeraldProductionUpgradeCount;
     private int towerLimitPurchaseCount;
 
@@ -45,11 +46,21 @@ public final class PlayerEconomy {
     }
 
     public long emeraldPerSec() {
-        return emeraldPerSec;
+        return emeraldPerSec + augmentEmeraldPerSec;
     }
 
     public long gasPerSec() {
-        return emeraldPerSec;
+        return emeraldPerSec();
+    }
+
+    public long augmentEmeraldPerSec() {
+        return augmentEmeraldPerSec;
+    }
+
+    public void addAugmentEmeraldProduction(long amount) {
+        if (amount > 0) {
+            augmentEmeraldPerSec = Math.addExact(augmentEmeraldPerSec, amount);
+        }
     }
 
     public int emeraldProductionUpgradeCount() {

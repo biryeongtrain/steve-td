@@ -17,6 +17,11 @@ public final class SemionTitleService {
         showTitle(player, emeraldIncomeBoostActivatedMarkup());
     }
 
+    public static void showAugmentRarity(ServerPlayer player, String markup) {
+        player.connection.send(new ClientboundSetTitlesAnimationPacket(0, 20, 0));
+        player.connection.send(new ClientboundSetTitleTextPacket(SemionText.mini(markup)));
+    }
+
     public static String emeraldIncomeBoostActivatedMarkup() {
         return EMERALD_INCOME_BOOST_ACTIVATED_MARKUP;
     }

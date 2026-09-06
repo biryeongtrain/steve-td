@@ -8,6 +8,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Set;
+import kim.biryeong.semiontd.augment.AugmentConfig;
+import kim.biryeong.semiontd.config.EconomyConfig;
+import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.config.SummonConfig;
@@ -20,6 +23,7 @@ import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.tower.adversary.AdversaryBalance;
 import kim.biryeong.semiontd.tower.adversary.AdversaryTowers;
+import kim.biryeong.semiontd.tower.augment.AugmentTowers;
 import kim.biryeong.semiontd.tower.end.EndTowers;
 import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
 import kim.biryeong.semiontd.trait.TraitRegistry;
@@ -61,7 +65,9 @@ final class WebCatalogExporterTest {
         assertEquals(SummonRegistry.all().size(), first.summons().size());
         assertTrue(first.traits().stream().allMatch(trait -> !trait.displayName().equals(trait.id())));
         assertTrue(first.summons().stream().allMatch(summon -> !summon.displayName().equals(summon.id())));
-        assertTrue(first.towers().stream().allMatch(tower -> tower.builderId() != null));
+        assertTrue(first.towers().stream().allMatch(tower -> "AUGMENT".equals(tower.availability())
+                ? tower.builderId() == null && tower.augmentId() != null
+                : tower.builderId() != null && tower.augmentId() == null));
         assertTrue(first.builders().stream().flatMap(entry -> entry.description().stream())
                 .noneMatch(WebCatalogExporterTest::hasUnresolvedPlaceholder));
         assertTrue(first.towers().stream().flatMap(entry -> entry.description().stream())
@@ -107,6 +113,73 @@ final class WebCatalogExporterTest {
     }
 
     @Test
+    void exportsAllAugmentsAndChangesVersionWhenOfferRulesChange() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        SummonConfig summons = SummonConfig.defaultConfig();
+        IncomeSummons.reloadBuiltIns(summons);
+        WaveConfig waves = WaveConfig.defaultConfig();
+        EconomyConfig economy = EconomyConfig.defaultConfig();
+        AugmentConfig config = AugmentConfig.defaults();
+        var document = WebCatalogExporter.snapshot(1, waves, economy, summons, config);
+        assertEquals(44, document.augments().size());
+        assertEquals(35, document.augments().stream().filter(augment -> !augment.reserve()).count());
+        assertEquals(9, document.augments().stream().filter(WebCatalogExporter.AugmentEntry::reserve).count());
+        assertEquals(config.version(), document.augmentVersion());
+        assertTrue(document.augments().stream().allMatch(augment -> augment.description() != null
+                && !augment.description().isBlank()));
+        assertTrue(document.towers().stream().filter(tower -> "AUGMENT".equals(tower.availability()))
+                .allMatch(tower -> document.augments().stream().anyMatch(augment -> augment.id().equals(tower.augmentId()))));
+
+        var changedRules = config.toJson();
+        changedRules.addProperty("publicPoolEnabled", !config.publicPoolEnabled());
+        var changed = WebCatalogExporter.snapshot(1, waves, economy, summons, AugmentConfig.fromJson(changedRules));
+        assertNotEquals(document.augmentVersion(), changed.augmentVersion());
+        assertNotEquals(document.versionHash(), changed.versionHash());
+    }
+
+    @Test
+    void exportsNeutralAugmentTowersWithoutInventingBuilderOwnership() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        IncomeSummons.reloadBuiltIns(SummonConfig.defaultConfig());
+        var document = WebCatalogExporter.snapshot(1);
+        Set<String> expected = AugmentTowers.all().stream().map(type -> type.id())
+                .collect(java.util.stream.Collectors.toSet());
+        var neutral = document.towers().stream().filter(tower -> "AUGMENT".equals(tower.availability())).toList();
+        assertEquals(expected, neutral.stream().map(WebCatalogExporter.TowerEntry::id)
+                .collect(java.util.stream.Collectors.toSet()));
+        assertTrue(neutral.stream().allMatch(tower -> tower.builderId() == null && tower.augmentId() != null));
+        assertTrue(document.builders().stream().flatMap(builder -> builder.towerIds().stream())
+                .noneMatch(expected::contains));
+        assertTrue(document.builders().stream().allMatch(builder -> builder.builderOrigin() != null
+                && builder.builderEnabled() != null));
+    }
+
+    @Test
+    void hashIncludesWaveEconomyAndSummonRulesWithoutDependingOnMapOrder() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        SummonConfig summons = SummonConfig.defaultConfig();
+        IncomeSummons.reloadBuiltIns(summons);
+        WaveConfig waves = WaveConfig.defaultConfig();
+        EconomyConfig economy = EconomyConfig.defaultConfig();
+        String initial = WebCatalogExporter.snapshot(1, waves, economy, summons).versionHash();
+
+        WaveConfig changedWaves = new WaveConfig(waves.rounds(), waves.infiniteFromRound() + 1,
+                waves.infinite(), waves.infiniteTemplates());
+        assertNotEquals(initial, WebCatalogExporter.snapshot(1, changedWaves, economy, summons).versionHash());
+        EconomyConfig changedEconomy = new EconomyConfig(economy.startingDiamond() + 1, economy.startingEmerald(),
+                economy.startingIncome(), economy.emeraldCap(), economy.emeraldProduction(), economy.towerLimit(),
+                economy.killReward(), economy.teamTransfer(), economy.emeraldIncomeBoost());
+        assertNotEquals(initial, WebCatalogExporter.snapshot(1, waves, changedEconomy, summons).versionHash());
+
+        var reversed = new LinkedHashMap<String, SummonConfig.SummonDefinition>();
+        summons.summons().entrySet().stream().sorted(java.util.Map.Entry.<String, SummonConfig.SummonDefinition>
+                comparingByKey().reversed()).forEach(entry -> reversed.put(entry.getKey(), entry.getValue()));
+        assertEquals(initial, WebCatalogExporter.snapshot(1, waves, economy, new SummonConfig(reversed)).versionHash());
+        reversed.remove(reversed.keySet().iterator().next());
+        assertNotEquals(initial, WebCatalogExporter.snapshot(1, waves, economy, new SummonConfig(reversed)).versionHash());
+    }
+
+    @Test
     void adversaryFamilyExportsWithOneBuilder() {
         ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
         IncomeSummons.reloadBuiltIns(SummonConfig.defaultConfig());
@@ -122,7 +195,7 @@ final class WebCatalogExporterTest {
         assertEquals(expectedIds, Set.copyOf(builder.towerIds()));
 
         var towers = document.towers().stream()
-                .filter(entry -> entry.builderId().equals(AdversaryTowerJob.ID.toString()))
+                .filter(entry -> AdversaryTowerJob.ID.toString().equals(entry.builderId()))
                 .toList();
         assertEquals(expectedIds, towers.stream().map(WebCatalogExporter.TowerEntry::id)
                 .collect(java.util.stream.Collectors.toSet()));
@@ -145,7 +218,7 @@ final class WebCatalogExporterTest {
         assertEquals(expectedIds, Set.copyOf(builder.towerIds()));
 
         var towers = document.towers().stream()
-                .filter(entry -> entry.builderId().equals(kim.biryeong.semiontd.job.AtlantisTowerJob.ID.toString()))
+                .filter(entry -> kim.biryeong.semiontd.job.AtlantisTowerJob.ID.toString().equals(entry.builderId()))
                 .toList();
         assertEquals(expectedIds, towers.stream().map(WebCatalogExporter.TowerEntry::id)
                 .collect(java.util.stream.Collectors.toSet()));
@@ -210,7 +283,7 @@ final class WebCatalogExporterTest {
         assertTrue(builder.description().stream().noneMatch(WebCatalogExporterTest::hasUnresolvedPlaceholder));
 
         var towers = document.towers().stream()
-                .filter(entry -> entry.builderId().equals(builderId))
+                .filter(entry -> builderId.equals(entry.builderId()))
                 .toList();
         assertEquals(expectedTowerIds, towers.stream().map(WebCatalogExporter.TowerEntry::id)
                 .collect(java.util.stream.Collectors.toSet()));

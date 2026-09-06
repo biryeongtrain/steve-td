@@ -49,10 +49,10 @@ public final class SuccubusTower extends ProductionTower {
     }
 
     @Override
-    public double currentMaxHealth() {
+    protected double builderCurrentMaxHealth() {
         return role() == SuccubusRole.SUCCUBUS
                 ? applyTraitMaxHealth(maxHealth() + SuccubusAbsorption.health(ownerPlayer()))
-                : super.currentMaxHealth();
+                : super.builderCurrentMaxHealth();
     }
 
     @Override

@@ -227,8 +227,8 @@ public class PetTower extends ProductionTower {
     }
 
     @Override
-    public double currentMaxHealth() {
-        double base = super.currentMaxHealth();
+    protected double builderCurrentMaxHealth() {
+        double base = super.builderCurrentMaxHealth();
         return isCompanion() ? base * PetBalance.healthMultiplier(bond) : base;
     }
 

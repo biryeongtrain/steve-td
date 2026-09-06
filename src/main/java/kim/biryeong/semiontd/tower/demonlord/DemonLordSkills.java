@@ -362,10 +362,7 @@ public final class DemonLordSkills {
                     player, lane, altar, monster, damage, DamageType.PHYSICAL);
             monster.setDeltaMovement(monster.getDeltaMovement().x, lift, monster.getDeltaMovement().z);
             monster.hurtMarked = true;
-            // 기절: 이동·공격 속도·공격력을 모두 100% 깎아 아무것도 못 하게 만듭니다.
-            monster.applyTimedEffect(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION, 1.0, stunTicks);
-            monster.applyTimedEffect(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION, 1.0, stunTicks);
-            monster.applyTimedEffect(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION, 1.0, stunTicks);
+            monster.applyTimedEffect(TimedEffectType.MONSTER_STUN, 1.0, stunTicks);
             return damageOutcome(result);
         });
         player.teleportTo(end.x, end.y, end.z);
@@ -586,7 +583,6 @@ public final class DemonLordSkills {
                 entity.isAlive()
                         && !entity.isRemoved()
                         && entity.runtimeMonster() != null
-                        && entity.runtimeMonster().isAlive()
                         && state.canFight(entity.runtimeMonster())
                         && entity.position().distanceToSqr(center) <= radiusSqr);
     }

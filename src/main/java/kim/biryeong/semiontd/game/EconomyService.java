@@ -5,8 +5,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.EconomyConfig;
+import kim.biryeong.semiontd.augment.AugmentEconomyService;
 import kim.biryeong.semiontd.entity.monster.KillSourceKind;
 import kim.biryeong.semiontd.entity.monster.Monster;
+import kim.biryeong.semiontd.entity.monster.MonsterOrigin;
 import kim.biryeong.semiontd.job.JobContext;
 import kim.biryeong.semiontd.summon.SummonMonsterType;
 
@@ -32,6 +34,9 @@ public final class EconomyService {
     }
 
     public void tickEmerald(Collection<SemionPlayer> players, Map<TeamId, SemionTeam> teams, int currentRound) {
+        if (game != null && game.isAugmentSelectionActive()) {
+            return;
+        }
         long emeraldCap = economyConfig.emeraldCapForRound(currentRound);
         long multiplier = economyConfig.emeraldIncomeMultiplierForRound(currentRound);
         for (SemionPlayer player : players) {
@@ -49,6 +54,18 @@ public final class EconomyService {
         for (SemionPlayer player : players) {
             if (isEconomyEligible(player, teams)) {
                 player.economy().payIncome();
+            }
+        }
+    }
+
+    public void payRoundIncome(int currentRound, Collection<SemionPlayer> players, Map<TeamId, SemionTeam> teams) {
+        for (SemionPlayer player : players) {
+            if (isEconomyEligible(player, teams)) {
+                if (game != null && !game.augmentsEnabled()) {
+                    player.economy().payIncome();
+                } else {
+                    AugmentEconomyService.payRoundIncome(player, currentRound);
+                }
             }
         }
     }
@@ -109,7 +126,9 @@ public final class EconomyService {
     }
 
     public void awardMonsterKillReward(Monster monster, Map<UUID, SemionPlayer> players) {
-        if (monster == null || monster.rewardGranted() || monster.mineralReward() <= 0) {
+        if (monster == null || monster.rewardGranted()
+                || monster.origin() == MonsterOrigin.ECHO || monster.origin() == MonsterOrigin.FREE_AUGMENT
+                || (monster.mineralReward() <= 0 && monster.origin() != MonsterOrigin.NATURAL_WAVE)) {
             return;
         }
         if (monster.lastHitSourceKind() != KillSourceKind.TOWER && monster.lastHitSourceKind() != KillSourceKind.DEFENDER) {
@@ -157,7 +176,7 @@ public final class EconomyService {
 
         boolean sameTeamCrossLaneKill = player.teamId() == monster.targetTeam()
                 && player.laneId() != monster.targetLaneId();
-        boolean eligibleMonster = monster.ownerPlayer().isEmpty() || killReward.applyToIncomeUnits();
+        boolean eligibleMonster = monster.origin() == MonsterOrigin.NATURAL_WAVE || killReward.applyToIncomeUnits();
         boolean nearFinalDefense = monster.laneProgress() >= killReward.finalDefenseProgressThreshold();
         if (sameTeamCrossLaneKill && eligibleMonster && nearFinalDefense) {
             return Math.max(1, Math.round(boundedReward * killReward.crossLaneFinalDefenseWaveMultiplier()));

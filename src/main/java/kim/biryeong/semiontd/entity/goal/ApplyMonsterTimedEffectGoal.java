@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.entity.goal;
 
 import java.util.Comparator;
+import kim.biryeong.semiontd.augment.AugmentEconomyService;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
@@ -64,7 +65,12 @@ public final class ApplyMonsterTimedEffectGoal extends CooldownAbilityGoal {
                 .filter(this::sameTargetLane)
                 .sorted(Comparator.comparingDouble(caster::distanceToSqr))
                 .toList()) {
+            double beforeMagnitude = target.activeTimedEffectMagnitude(effectType);
             target.applyTimedEffect(effectType, magnitude, durationTicks);
+            double increase = target.activeTimedEffectMagnitude(effectType) - beforeMagnitude;
+            if (increase > 0.0) {
+                AugmentEconomyService.recordSupport(caster.runtimeMonster(), target.runtimeMonster(), increase);
+            }
             applied++;
             if (applied >= maxTargets) {
                 break;

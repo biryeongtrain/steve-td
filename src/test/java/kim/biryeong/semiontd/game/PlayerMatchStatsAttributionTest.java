@@ -145,7 +145,7 @@ final class PlayerMatchStatsAttributionTest {
     }
 
     private static Monster naturalWaveMonster(String id, TeamId targetTeam, int targetLaneId, long reward) {
-        return new Monster(
+        Monster monster = new Monster(
                 id,
                 targetTeam,
                 targetLaneId,
@@ -158,6 +158,8 @@ final class PlayerMatchStatsAttributionTest {
                 "minecraft:zombie",
                 reward
         );
+        monster.setOrigin(kim.biryeong.semiontd.entity.monster.MonsterOrigin.NATURAL_WAVE);
+        return monster;
     }
 
     private static Monster incomeMonster(

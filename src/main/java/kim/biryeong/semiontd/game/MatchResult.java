@@ -16,7 +16,8 @@ public record MatchResult(
         List<TeamMatchResult> teamResults,
         int finalRound,
         MatchMode matchMode,
-        String catalogVersion
+        String catalogVersion,
+        String augmentVersion
 ) {
     public MatchResult(
             List<MatchParticipantResult> participants,
@@ -87,6 +88,23 @@ public record MatchResult(
             throw new IllegalArgumentException("match timestamps cannot be negative");
         }
         catalogVersion = catalogVersion == null || catalogVersion.isBlank() ? null : catalogVersion;
+        augmentVersion = augmentVersion == null || augmentVersion.isBlank() ? null : augmentVersion;
+    }
+
+    public MatchResult(
+            MatchId matchId,
+            long startedAtEpochMillis,
+            long endedAtEpochMillis,
+            List<MatchParticipantResult> participants,
+            Set<UUID> spectatorIds,
+            Set<TeamId> winningTeams,
+            List<TeamMatchResult> teamResults,
+            int finalRound,
+            MatchMode matchMode,
+            String catalogVersion
+    ) {
+        this(matchId, startedAtEpochMillis, endedAtEpochMillis, participants, spectatorIds,
+                winningTeams, teamResults, finalRound, matchMode, catalogVersion, null);
     }
 
     public int participantCount() {

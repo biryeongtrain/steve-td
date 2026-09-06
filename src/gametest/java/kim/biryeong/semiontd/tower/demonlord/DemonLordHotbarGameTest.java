@@ -16,9 +16,6 @@ import net.minecraft.world.phys.BlockHitResult;
 
 /**
  * 마왕이 전투에 들어가며 치운 핫바가 전투 뒤에 돌아오는지 확인합니다.
- *
- * <p>{@link DemonLordGameTest} 와 나눠 둔 것은 그쪽이 아직 gametest 엔트리포인트에 등록되어
- * 있지 않기 때문입니다.
  */
 public final class DemonLordHotbarGameTest {
     /**

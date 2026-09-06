@@ -52,6 +52,7 @@ public final class ArmyGameTest {
             PlayerLane lane = game.playerLane(owner).orElseThrow();
 
             require(ProductionTowerCatalog.all().stream()
+                    .filter(entry -> entry.availability() == ProductionTowerCatalog.Availability.JOB)
                     .filter(ProductionTowerCatalog.CatalogEntry::starter).count() == 140,
                     "Built-ins must include all 140 starter entries after Frost and Pet Builder registration.");
             require(ProductionTowerService.availableTowers(game, owner).stream()

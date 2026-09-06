@@ -45,6 +45,17 @@ public final class SemionLaneIndicatorService {
         }
     }
 
+    public static void showPlacementPoints(ServerPlayer player, List<Vec3> points) {
+        if (player == null || !(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+        for (Vec3 point : points) {
+            Vec3 center = point.add(0, 0.15, 0);
+            drawDirectionLine(player, level, center.add(-0.4, 0, 0), center.add(0.4, 0, 0));
+            drawDirectionLine(player, level, center.add(0, 0, -0.4), center.add(0, 0, 0.4));
+        }
+    }
+
     static List<DirectionArrow> directionArrows(LaneRegionLayout layout, int animationTick) {
         double offset = Math.floorMod(animationTick, DIRECTION_LOOP_TICKS) / (double) DIRECTION_LOOP_TICKS;
         List<DirectionArrow> arrows = new ArrayList<>(DIRECTION_ARROW_COUNT);

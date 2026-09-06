@@ -258,6 +258,7 @@ public record TowerBalanceConfig(
         addBodyTowers(towers);
         addFrostTowers(towers);
         addPetTowers(towers);
+        kim.biryeong.semiontd.tower.augment.AugmentTowers.all().forEach(type -> addTower(towers, type));
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
         putUpgrade(upgradeCosts, VillagerTowers.T1_SPLASH_TOWER, "villager_splash_t2", 110);

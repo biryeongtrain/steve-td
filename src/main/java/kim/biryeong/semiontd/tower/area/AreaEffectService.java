@@ -70,7 +70,8 @@ public final class AreaEffectService implements AreaEffectApi {
                 .toList();
         if (request.maxTargets() != Integer.MAX_VALUE && candidates.size() > request.maxTargets()) {
             candidates = candidates.stream()
-                    .sorted(Comparator.comparingDouble(monster -> monster.position().distanceToSqr(request.center())))
+                    .sorted(Comparator.comparingDouble((SemionMonsterEntity monster) -> monster.position().distanceToSqr(request.center()))
+                            .thenComparing(monster -> monster.runtimeMonster().logicalId()))
                     .limit(request.maxTargets())
                     .toList();
         }
