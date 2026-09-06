@@ -7922,32 +7922,47 @@
     "t1_pet_dog": {
       "bondCap": 100.0,
       "bondToUpgrade": 70.0,
-      "packDamagePerPackMate": 0.12
+      "packDamagePerPackMate": 0.08,
+      "packHealthPerPackMate": 0.08,
+      "adultDamageReduction": 0.1
     },
     "t2_pet_dog": {
       "bondCap": 200.0,
       "bondToUpgrade": 160.0,
-      "packDamagePerPackMate": 0.12
+      "packDamagePerPackMate": 0.08,
+      "packHealthPerPackMate": 0.08,
+      "adultDamageReduction": 0.15
     },
     "t3_pet_dog": {
       "bondCap": 320.0,
       "bondToUpgrade": 0.0,
-      "packDamagePerPackMate": 0.12
+      "packDamagePerPackMate": 0.08,
+      "packHealthPerPackMate": 0.08,
+      "adultDamageReduction": 0.2
     },
     "t1_pet_cat": {
       "bondCap": 100.0,
       "bondToUpgrade": 70.0,
-      "soloDamageBonus": 0.8
+      "soloDamageBonus": 2.0,
+      "adultSplashRadius": 1.5,
+      "adultSplashMaxTargets": 2.0,
+      "adultSplashDamageRatio": 0.3
     },
     "t2_pet_cat": {
       "bondCap": 200.0,
       "bondToUpgrade": 160.0,
-      "soloDamageBonus": 0.8
+      "soloDamageBonus": 2.0,
+      "adultSplashRadius": 2.0,
+      "adultSplashMaxTargets": 4.0,
+      "adultSplashDamageRatio": 0.3
     },
     "t3_pet_cat": {
       "bondCap": 320.0,
       "bondToUpgrade": 0.0,
-      "soloDamageBonus": 0.8
+      "soloDamageBonus": 2.0,
+      "adultSplashRadius": 2.5,
+      "adultSplashMaxTargets": 6.0,
+      "adultSplashDamageRatio": 0.3
     },
     "t1_pet_bird": {
       "bondCap": 100.0,
