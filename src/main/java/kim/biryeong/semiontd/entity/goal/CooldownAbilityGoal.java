@@ -1,5 +1,6 @@
 package kim.biryeong.semiontd.entity.goal;
 
+import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.Goal;
 
@@ -32,6 +33,9 @@ public abstract class CooldownAbilityGoal extends Goal {
     public void tick() {
         if (remainingCooldownTicks > 0) {
             remainingCooldownTicks--;
+            return;
+        }
+        if (caster instanceof SemionMonsterEntity monster && monster.isStunned()) {
             return;
         }
 

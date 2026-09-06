@@ -16,6 +16,8 @@ import java.util.OptionalDouble;
 import java.util.UUID;
 import kim.biryeong.semiontd.effect.TimedEffectSet;
 import kim.biryeong.semiontd.effect.TimedEffectType;
+import kim.biryeong.semiontd.augment.AugmentCombat;
+import kim.biryeong.semiontd.tower.augment.AugmentTowerService;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
 import kim.biryeong.semiontd.entity.defender.LaneDefenseEntity;
 import kim.biryeong.semiontd.entity.healing.HealingTarget;
@@ -134,6 +136,8 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     private boolean illusionClone;
     private float lockedDragonYaw = Float.NaN;
     private float lockedDragonPitch = Float.NaN;
+    private Component augmentNameplateBase;
+    private Component augmentNameplateRendered;
 
     public SemionTowerEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
@@ -316,6 +320,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         double regenerationPerSecond = activeTimedEffectMagnitude(TimedEffectType.TOWER_HEALTH_REGEN_PER_SECOND);
         double healthLossPerSecond = activeTimedEffectMagnitude(TimedEffectType.TOWER_HEALTH_LOSS_PER_SECOND);
         applyHealthOverTime(regenerationPerSecond, healthLossPerSecond);
+        refreshAugmentNameplate();
         syncMoobloomVisualEntity();
         syncBlockDisplayVisual();
         syncEndCoreInteractionHitbox();
@@ -326,7 +331,21 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     @Override
     public int aggroPriority() {
-        return aggroPriority;
+        return runtimeTower == null ? aggroPriority : runtimeTower.aggroPriority();
+    }
+
+    public void refreshAugmentNameplate() {
+        Component current = getCustomName();
+        if (current == null || !isCustomNameVisible()) return;
+        if (!Objects.equals(current, augmentNameplateRendered)) augmentNameplateBase = current;
+        if (augmentNameplateBase == null) augmentNameplateBase = current;
+        String suffix = AugmentCombat.nameplateSuffix(runtimeTower);
+        Component updated = suffix.isEmpty() ? augmentNameplateBase : augmentNameplateBase.copy().append(suffix);
+        if (!Objects.equals(current, updated)) {
+            setCustomName(updated);
+            markMoobloomVisualSyncDirty();
+        }
+        augmentNameplateRendered = updated;
     }
 
     public double attackRange() {
@@ -604,6 +623,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     }
 
     public void applyTimedEffect(TimedEffectType type, double magnitude, int durationTicks) {
+        if (rejectsExternalEffect(type)) return;
         if (runtimeTower != null) {
             magnitude = runtimeTower.adjustIncomingTimedEffectMagnitude(type, magnitude);
         }
@@ -622,6 +642,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     }
 
     public boolean applyTimedEffect(TimedEffectType type, ResourceLocation sourceId, double magnitude, int durationTicks) {
+        if (rejectsExternalEffect(type)) return false;
         if (runtimeTower != null) {
             magnitude = runtimeTower.adjustIncomingTimedEffectMagnitude(type, magnitude);
         }
@@ -642,6 +663,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     }
 
     public boolean refreshTimedEffect(TimedEffectType type, ResourceLocation sourceId, double magnitude, int durationTicks) {
+        if (rejectsExternalEffect(type)) return false;
         if (runtimeTower != null) {
             magnitude = runtimeTower.adjustIncomingTimedEffectMagnitude(type, magnitude);
         }
@@ -662,6 +684,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     }
 
     public boolean setPersistentEffect(TimedEffectType type, ResourceLocation sourceId, double magnitude) {
+        if (rejectsExternalEffect(type)) return false;
         boolean changed = timedEffects.setPersistent(type, sourceId, magnitude);
         if (changed) {
             syncMaxHealthEffect(type);
@@ -698,6 +721,20 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
                     openingTicks
             );
         }
+    }
+
+    private boolean rejectsExternalEffect(TimedEffectType type) {
+        if (runtimeTower == null || !runtimeTower.isAugmentTower() || type == null) return false;
+        return switch (type) {
+            case TOWER_FLAT_DAMAGE_BONUS, TOWER_FLAT_RANGE_BONUS, TOWER_FLAT_MAX_HEALTH_BONUS,
+                    TOWER_HEALTH_REGEN_PER_SECOND, TOWER_DAMAGE_BONUS, TOWER_ATTACK_SPEED_BONUS,
+                    TOWER_RANGE_BONUS, TOWER_DAMAGE_REDUCTION, TOWER_MAX_HEALTH_BONUS,
+                    TOWER_INCOME_DAMAGE_BONUS, TOWER_WAVE_DAMAGE_BONUS, TOWER_TRAIT_DAMAGE_BONUS,
+                    TOWER_TRAIT_INCOME_DAMAGE_BONUS, TOWER_TRAIT_WAVE_DAMAGE_BONUS,
+                    TOWER_FINAL_DAMAGE_BONUS, TOWER_TRAIT_MAX_HEALTH_BONUS,
+                    TOWER_HEAL_AMOUNT_BONUS, TOWER_ABILITY_INTERVAL_REDUCTION -> true;
+            default -> false;
+        };
     }
 
     private void copyPersistentTraitEffect(
@@ -911,7 +948,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
 
     @Override
     public boolean receiveHealing(double amount) {
-        if (runtimeTower == null || amount <= 0 || runtimeTower.health() <= 0.0) {
+        if (runtimeTower == null || runtimeTower.isAugmentTower() || amount <= 0 || runtimeTower.health() <= 0.0) {
             return false;
         }
         double before = runtimeTower.health();
@@ -1057,6 +1094,8 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
             damageAmount = runtimeTower.modifyIncomingDamage(this, damageSource, damageAmount);
             damageAmount = runtimeTower.modifyFinalIncomingDamage(
                     this, damageSource, originalDamage, damageAmount);
+            damageAmount = AugmentCombat.incomingDamage(runtimeTower, this, damageSource, originalDamage, damageAmount);
+            damageAmount = AugmentTowerService.redirectDamage(runtimeTower, damageAmount);
         }
         if (damageAmount <= 0.0) {
             return;
@@ -1086,8 +1125,16 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         if (runtimeTower != null) {
             runtimeTower.syncHealth(currentHealth);
             runtimeTower.recordDamageTaken(Math.max(0.0, previousHealth - currentHealth));
+            AugmentCombat.recordEnemyHealthDamage(runtimeTower, damageSource, Math.max(0.0, previousHealth - currentHealth));
             runtimeTower.onDamaged(this, damageSource, damageAmount, previousHealth, currentHealth);
+            refreshAugmentNameplate();
             SuccubusDreams.onTowerDamaged(this, damageSource, previousHealth, currentHealth);
+        }
+    }
+
+    public void applyTransferredDamage(double amount) {
+        if (level() instanceof ServerLevel serverLevel && Double.isFinite(amount) && amount > 0.0) {
+            applyDamage(serverLevel, damageSources().generic(), amount);
         }
     }
 

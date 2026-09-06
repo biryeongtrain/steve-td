@@ -1,6 +1,8 @@
 package kim.biryeong.semiontd.tower;
 
 import kim.biryeong.semiontd.effect.TimedEffectType;
+import kim.biryeong.semiontd.augment.AugmentCombat;
+import kim.biryeong.semiontd.augment.AugmentSnapshot;
 import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.KillSourceKind;
 import kim.biryeong.semiontd.entity.monster.Monster;
@@ -54,6 +56,10 @@ public abstract class Tower {
     private final Map<TowerDataKey<?>, Object> data = new HashMap<>();
     private TraitLoadout traitLoadout = TraitLoadout.none();
     private double traitMaxHealthBonus;
+    private static final TowerDataKey<UUID> LOGICAL_ID = new TowerDataKey<>(
+            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("semiontd", "augment_logical_id"), UUID.class);
+    private AugmentSnapshot augmentSnapshot = AugmentSnapshot.none();
+    private PlayerLane attachedLane;
 
     protected Tower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
         this(type, ownerPlayer, teamId, laneId, position, position);
@@ -142,7 +148,11 @@ public abstract class Tower {
         return maxHealth;
     }
 
-    public double currentMaxHealth() {
+    public final double currentMaxHealth() {
+        return builderCurrentMaxHealth() * (1.0 + AugmentCombat.maxHealthBonus(this));
+    }
+
+    protected double builderCurrentMaxHealth() {
         return applyTraitMaxHealth(maxHealth);
     }
 
@@ -159,7 +169,7 @@ public abstract class Tower {
     }
 
     public void addPermanentMaxHealthBonus(double amount, PlayerLane lane) {
-        if (!Double.isFinite(amount) || amount <= 0.0) {
+        if (isAugmentTower() || !Double.isFinite(amount) || amount <= 0.0) {
             return;
         }
         setData(PERMANENT_MAX_HEALTH_BONUS, getDataOrDefault(PERMANENT_MAX_HEALTH_BONUS, 0.0) + amount);
@@ -168,7 +178,7 @@ public abstract class Tower {
     }
 
     public void addPermanentFlatDamageBonus(double amount, PlayerLane lane) {
-        if (!Double.isFinite(amount) || amount <= 0.0) {
+        if (isAugmentTower() || !Double.isFinite(amount) || amount <= 0.0) {
             return;
         }
         setData(PERMANENT_FLAT_DAMAGE_BONUS, getDataOrDefault(PERMANENT_FLAT_DAMAGE_BONUS, 0.0) + amount);
@@ -218,12 +228,50 @@ public abstract class Tower {
         return health;
     }
 
-    public int aggroPriority() {
+    public final int aggroPriority() {
+        return AugmentCombat.aggroPriority(this, builderAggroPriority());
+    }
+
+    protected int builderAggroPriority() {
         return type.aggroPriority();
     }
 
     public int slotWeight() {
         return 1;
+    }
+
+    public boolean isAugmentTower() {
+        return false;
+    }
+
+    public boolean triggersNearbyDeathEffects() {
+        return !isAugmentTower();
+    }
+
+    public final UUID logicalId() {
+        UUID id = getDataOrDefault(LOGICAL_ID, null);
+        if (id == null) {
+            id = UUID.randomUUID();
+            setData(LOGICAL_ID, id);
+        }
+        return id;
+    }
+
+    public final PlayerLane attachedLane() {
+        return attachedLane;
+    }
+
+    public final AugmentSnapshot augmentSnapshot() {
+        return augmentSnapshot;
+    }
+
+    public final void syncAugments(AugmentSnapshot snapshot, PlayerLane lane) {
+        double ratio = health / Math.max(1.0, currentMaxHealth());
+        augmentSnapshot = snapshot == null ? AugmentSnapshot.none() : snapshot;
+        syncHealth(currentMaxHealth() * ratio);
+        if (lane != null) {
+            onStateChanged(lane);
+        }
     }
 
     public boolean participatesInFinalDefense() {
@@ -273,7 +321,9 @@ public abstract class Tower {
             return;
         }
         inheritSaleState(previousTower, extraPaidMineralCost);
+        previousTower.logicalId();
         copyDataFrom(previousTower);
+        augmentSnapshot = previousTower.augmentSnapshot;
         copyRuntimeStateFrom(previousTower);
     }
 
@@ -384,6 +434,12 @@ public abstract class Tower {
         recordDamageDealt(amount, DamageType.PHYSICAL);
     }
 
+    public final void recordAugmentSpecialDamage(double amount) {
+        if (roundMetricsTracker != null) {
+            roundMetricsTracker.recordAugmentSpecialDamage(amount);
+        }
+    }
+
     public void recordDamageDealt(double amount, DamageType damageType) {
         if (Double.isFinite(amount) && amount > 0.0) {
             if (damageType == DamageType.MAGIC) {
@@ -455,6 +511,8 @@ public abstract class Tower {
     }
 
     public void attachToLane(PlayerLane lane, TraitLoadout traitLoadout) {
+        attachedLane = lane;
+        syncAugments(lane == null ? AugmentSnapshot.none() : lane.augmentSnapshot(), null);
         this.traitLoadout = receivesTraitEffects() && traitLoadout != null
                 ? traitLoadout
                 : TraitLoadout.none();
@@ -469,6 +527,9 @@ public abstract class Tower {
     }
 
     public void detachFromLane(PlayerLane lane) {
+        if (attachedLane == lane) {
+            attachedLane = null;
+        }
         traitLoadout = TraitLoadout.none();
         traitMaxHealthBonus = 0.0;
         syncHealth(health);
@@ -488,6 +549,7 @@ public abstract class Tower {
             return false;
         }
         deathNotifiedThisRound = true;
+        AugmentCombat.onTowerUnavailable(lane, this);
         onDeath(lane);
         return true;
     }
@@ -526,6 +588,10 @@ public abstract class Tower {
 
     public Optional<SemionMonsterEntity> selectAttackTarget(SemionTowerEntity towerEntity, List<SemionMonsterEntity> candidates) {
         return Optional.empty();
+    }
+
+    public boolean canAttackTarget(SemionTowerEntity towerEntity, SemionMonsterEntity target) {
+        return true;
     }
 
     public boolean supportsForcedAttackTargeting() {
@@ -616,6 +682,17 @@ public abstract class Tower {
         return damageResolvedTargetResult(towerEntity, target, outgoingDamage, damageType);
     }
 
+    public final DamageResult damagePrimaryAttackTargetResult(
+            SemionTowerEntity source, SemionMonsterEntity target, double baseDamage
+    ) {
+        double builderOutgoing = resolveBuilderOutgoingDamage(source, target, baseDamage);
+        double globalBonus = AugmentCombat.damageBonus(this, source);
+        double outgoing = builderOutgoing * Math.max(0.0, 1.0 + globalBonus + AugmentCombat.primaryDamageBonus(this, target));
+        DamageResult result = damageResolvedTargetResult(source, target, outgoing, primaryDamageType());
+        return new DamageResult(result.killed(), result.dealtDamage(), result.outgoingDamage(),
+                result.healthDamageAttempted(), result.healthBeforeHit(), builderOutgoing * Math.max(0.0, 1.0 + globalBonus));
+    }
+
     public double resolveOutgoingDamage(
             SemionTowerEntity towerEntity,
             SemionMonsterEntity target,
@@ -633,6 +710,13 @@ public abstract class Tower {
             SemionTowerEntity towerEntity,
             SemionMonsterEntity target,
             double baseDamage
+    ) {
+        return resolveBuilderOutgoingDamage(towerEntity, target, baseDamage)
+                * Math.max(0.0, 1.0 + AugmentCombat.damageBonus(this, towerEntity));
+    }
+
+    private double resolveBuilderOutgoingDamage(
+            SemionTowerEntity towerEntity, SemionMonsterEntity target, double baseDamage
     ) {
         if (towerEntity == null || !Double.isFinite(baseDamage)) {
             return 0.0;
@@ -670,6 +754,19 @@ public abstract class Tower {
             double outgoingDamage,
             DamageType damageType
     ) {
+        return damageResolvedTargetResult(towerEntity, target, outgoingDamage, damageType, true);
+    }
+
+    public final DamageResult damageAugmentTargetResult(
+            SemionTowerEntity source, SemionMonsterEntity target, double damage, DamageType type
+    ) {
+        return damageResolvedTargetResult(source, target, damage, type, false);
+    }
+
+    private DamageResult damageResolvedTargetResult(
+            SemionTowerEntity towerEntity, SemionMonsterEntity target, double outgoingDamage,
+            DamageType damageType, boolean applyAttackerModifier
+    ) {
         if (towerEntity == null
                 || target == null
                 || !Double.isFinite(outgoingDamage)
@@ -677,21 +774,21 @@ public abstract class Tower {
             return DamageResult.NONE;
         }
         Monster runtimeMonster = target.runtimeMonster();
-        double damageAmount = modifyAppliedDamage(
-                towerEntity,
-                target,
-                target.towerDamageTaken(outgoingDamage)
-        );
+        double damageAmount = target.towerDamageTaken(outgoingDamage);
+        if (applyAttackerModifier) {
+            damageAmount = modifyAppliedDamage(towerEntity, target, damageAmount);
+        }
         if (!Double.isFinite(damageAmount) || damageAmount <= 0.0) {
             return DamageResult.NONE;
         }
         double previousHealth = runtimeMonster == null ? target.getHealth() : runtimeMonster.health();
         DamageType resolvedDamageType = damageType == null ? DamageType.PHYSICAL : damageType;
-        boolean killed = target.applyRuntimeDamage(
+        var applied = target.applySemionDamageResult(
                 towerEntity.damageSources().mobAttack(towerEntity),
                 damageAmount,
                 resolvedDamageType
         );
+        boolean killed = applied.killed();
         double currentHealth = runtimeMonster == null ? target.getHealth() : runtimeMonster.health();
         double dealtDamage = Math.max(0.0, previousHealth - currentHealth);
         recordDamageDealt(target, dealtDamage, resolvedDamageType);
@@ -705,7 +802,7 @@ public abstract class Tower {
             runtimeMonster.recordLastHit(ownerPlayer, KillSourceKind.TOWER);
         }
         SuccubusDreams.onMonsterDamaged(target, this, dealtDamage);
-        return new DamageResult(killed, dealtDamage, outgoingDamage);
+        return new DamageResult(killed, dealtDamage, outgoingDamage, applied.healthDamageAttempted(), previousHealth);
     }
 
     public void onAttack(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount, boolean killedTarget) {
@@ -936,12 +1033,25 @@ public abstract class Tower {
         return Double.isFinite(value) && value > 0.0 ? value : 0.0;
     }
 
-    public record DamageResult(boolean killed, double dealtDamage, double outgoingDamage) {
+    public record DamageResult(boolean killed, double dealtDamage, double outgoingDamage,
+                               double healthDamageAttempted, double healthBeforeHit, double secondaryOutgoingDamage) {
         public static final DamageResult NONE = new DamageResult(false, 0.0, 0.0);
+
+        public DamageResult(boolean killed, double dealtDamage, double outgoingDamage) {
+            this(killed, dealtDamage, outgoingDamage, 0.0, 0.0);
+        }
+
+        public DamageResult(boolean killed, double dealtDamage, double outgoingDamage,
+                            double healthDamageAttempted, double healthBeforeHit) {
+            this(killed, dealtDamage, outgoingDamage, healthDamageAttempted, healthBeforeHit, outgoingDamage);
+        }
 
         public DamageResult {
             dealtDamage = Double.isFinite(dealtDamage) && dealtDamage > 0.0 ? dealtDamage : 0.0;
             outgoingDamage = Double.isFinite(outgoingDamage) && outgoingDamage > 0.0 ? outgoingDamage : 0.0;
+            healthDamageAttempted = finiteNonNegative(healthDamageAttempted);
+            healthBeforeHit = finiteNonNegative(healthBeforeHit);
+            secondaryOutgoingDamage = finiteNonNegative(secondaryOutgoingDamage);
         }
     }
 }

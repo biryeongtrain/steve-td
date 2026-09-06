@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import kim.biryeong.semiontd.api.area.AreaVfxSpec;
+import kim.biryeong.semiontd.api.area.AreaVfxStyles;
+import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
@@ -15,7 +18,10 @@ import kim.biryeong.semiontd.tower.ProductionTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
+import kim.biryeong.semiontd.tower.area.AreaEffectIds;
+import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
 import kim.biryeong.semiontd.tower.hero.FakePlayerTowerVisuals;
+import net.minecraft.world.damagesource.DamageSource;
 
 /**
  * Every pet builder tower, owner and companion alike.
@@ -106,7 +112,7 @@ public class PetTower extends ProductionTower {
     /** True once the companion has grown enough to unlock its next tier. */
     public final boolean isAdult() {
         double required = PetBalance.bondToUpgrade(type());
-        return required > 0.0 && bond >= required;
+        return isCompanion() && (required <= 0.0 || bond >= required);
     }
 
     /**
@@ -118,8 +124,7 @@ public class PetTower extends ProductionTower {
         if (!isCompanion()) {
             return base;
         }
-        boolean grown = PetBalance.bondToUpgrade(type()) <= 0.0 || isAdult();
-        return base * (grown ? PetBalance.ADULT_SCALE : PetBalance.PUP_SCALE);
+        return base * (isAdult() ? PetBalance.ADULT_SCALE : PetBalance.PUP_SCALE);
     }
 
     final void bindLoyalOwner(GridPosition position) {
@@ -128,11 +133,20 @@ public class PetTower extends ProductionTower {
 
     final void updateYardState(int yardCompanions, int packSize, boolean soloCat, boolean ownerActive,
                                TowerType ownerType) {
+        double previousMaxHealth = currentMaxHealth();
+        double healthRatio = previousMaxHealth <= 0.0 ? 0.0 : health() / previousMaxHealth;
         this.yardCompanions = yardCompanions;
         this.packSize = packSize;
         this.soloCat = soloCat;
         this.ownerActive = ownerActive;
         this.loyalOwnerType = ownerType;
+        double nextMaxHealth = currentMaxHealth();
+        if (health() > 0.0 && Math.abs(nextMaxHealth - previousMaxHealth) > 1.0E-9) {
+            syncHealth(nextMaxHealth * healthRatio);
+            if (currentLane != null) {
+                onStateChanged(currentLane);
+            }
+        }
     }
 
     @Override
@@ -209,12 +223,18 @@ public class PetTower extends ProductionTower {
             boolean killedTarget
     ) {
         super.onAttackResolved(towerEntity, target, attemptedDamage, resolvedOutgoingDamage, dealtDamage, killedTarget);
-        if (killedTarget) {
-            recordPraise();
-        }
         if (role() == PetRole.BIRD && dealtDamage > 0.0) {
             healYardmate(towerEntity, dealtDamage * PetBalance.healRatio(type()));
         }
+        if (role() == PetRole.CAT && isAdult() && dealtDamage > 0.0) {
+            splash(towerEntity, target, resolvedOutgoingDamage);
+        }
+    }
+
+    @Override
+    public void onKill(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
+        super.onKill(towerEntity, target, damageAmount);
+        recordPraise();
     }
 
     @Override
@@ -227,9 +247,29 @@ public class PetTower extends ProductionTower {
     }
 
     @Override
-    public double currentMaxHealth() {
-        double base = super.currentMaxHealth();
-        return isCompanion() ? base * PetBalance.healthMultiplier(bond) : base;
+    protected double builderCurrentMaxHealth() {
+        double base = super.builderCurrentMaxHealth();
+        if (!isCompanion()) {
+            return base;
+        }
+        double multiplier = PetBalance.healthMultiplier(bond);
+        if (role() == PetRole.DOG) {
+            multiplier *= 1.0 + PetBalance.packHealthBonus(type(), packSize);
+        }
+        return base * multiplier;
+    }
+
+    @Override
+    public double modifyIncomingDamage(
+            SemionTowerEntity towerEntity,
+            DamageSource damageSource,
+            double damageAmount
+    ) {
+        double damage = super.modifyIncomingDamage(towerEntity, damageSource, damageAmount);
+        if (role() != PetRole.DOG || !isAdult()) {
+            return damage;
+        }
+        return damage * (1.0 - PetBalance.adultDamageReduction(type()));
     }
 
     @Override
@@ -259,11 +299,24 @@ public class PetTower extends ProductionTower {
         }
         lines.add("마당 반려 " + yardCompanions + "/" + PetBalance.YARD_TILES);
         switch (role()) {
-            case DOG -> lines.add("무리 " + packSize + "마리, 공격력 +"
-                    + percent(PetBalance.packBonus(type(), packSize)));
-            case CAT -> lines.add("독립 " + (soloCat
-                    ? "활성, 공격력 +" + percent(PetBalance.soloBonus(type()))
-                    : "비활성 (같은 마당에 다른 고양이가 있습니다)"));
+            case DOG -> {
+                lines.add("무리 " + packSize + "마리, 공격력 +"
+                        + percent(PetBalance.packBonus(type(), packSize)) + ", 체력 +"
+                        + percent(PetBalance.packHealthBonus(type(), packSize)));
+                if (isAdult()) {
+                    lines.add("성체 효과 받는 피해 -" + percent(PetBalance.adultDamageReduction(type())));
+                }
+            }
+            case CAT -> {
+                lines.add("독립 " + (soloCat
+                        ? "활성, 공격력 +" + percent(PetBalance.soloBonus(type()))
+                        : "비활성 (같은 마당에 다른 고양이가 있습니다)"));
+                if (isAdult()) {
+                    lines.add("성체 효과 스플래시 " + oneDecimal(PetBalance.adultSplashRadius(type()))
+                            + "칸, 최대 " + PetBalance.adultSplashMaxTargets(type()) + "마리, 피해 "
+                            + percent(PetBalance.adultSplashDamageRatio(type())));
+                }
+            }
             case BIRD -> lines.add("회복 입힌 피해의 " + percent(PetBalance.healRatio(type())));
             default -> {
             }
@@ -344,6 +397,36 @@ public class PetTower extends ProductionTower {
             praiseThisRound += 1.0;
             addBond(1.0);
         }
+    }
+
+    private void splash(
+            SemionTowerEntity source,
+            SemionMonsterEntity primary,
+            double resolvedOutgoingDamage
+    ) {
+        double radius = PetBalance.adultSplashRadius(type());
+        int maxTargets = PetBalance.adultSplashMaxTargets(type());
+        double ratio = PetBalance.adultSplashDamageRatio(type());
+        if (source == null || primary == null || resolvedOutgoingDamage <= 0.0
+                || radius <= 0.0 || maxTargets <= 0 || ratio <= 0.0) {
+            return;
+        }
+        MonsterAreaEffectRequest request = MonsterAreaEffectRequest.aroundTarget(
+                AreaEffectIds.tower(this, "adult_cat_splash"),
+                source,
+                primary,
+                radius,
+                AreaVfxSpec.onTrigger(AreaVfxStyles.SPLASH)
+        ).nearestTargets(maxTargets);
+        TowerAreaDamage.applyResolved(
+                this,
+                source,
+                request,
+                ignored -> resolvedOutgoingDamage * ratio,
+                true,
+                (target, damage, killed) -> {},
+                type().primaryDamageType()
+        );
     }
 
     private void healYardmate(SemionTowerEntity source, double amount) {

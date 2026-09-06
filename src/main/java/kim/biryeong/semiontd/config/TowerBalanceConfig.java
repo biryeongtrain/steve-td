@@ -259,6 +259,7 @@ public record TowerBalanceConfig(
         addBodyTowers(towers);
         addFrostTowers(towers);
         addPetTowers(towers);
+        kim.biryeong.semiontd.tower.augment.AugmentTowers.all().forEach(type -> addTower(towers, type));
         addPirateTowers(towers);
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
@@ -995,12 +996,12 @@ public record TowerBalanceConfig(
         putPetOwnerAbilities(abilities, PetTowers.KEEPER_T1, 8.0, 0.3, 1.0, 0.0, 0.0, 3.0);
         putPetOwnerAbilities(abilities, PetTowers.KEEPER_T2, 11.0, 0.3, 1.0, 0.0, 0.0, 3.0);
 
-        putPetDogAbilities(abilities, PetTowers.DOG_T1, 100.0, 70.0);
-        putPetDogAbilities(abilities, PetTowers.DOG_T2, 200.0, 160.0);
-        putPetDogAbilities(abilities, PetTowers.DOG_T3, 320.0, 0.0);
-        putPetCatAbilities(abilities, PetTowers.CAT_T1, 100.0, 70.0);
-        putPetCatAbilities(abilities, PetTowers.CAT_T2, 200.0, 160.0);
-        putPetCatAbilities(abilities, PetTowers.CAT_T3, 320.0, 0.0);
+        putPetDogAbilities(abilities, PetTowers.DOG_T1, 100.0, 70.0, 0.10);
+        putPetDogAbilities(abilities, PetTowers.DOG_T2, 200.0, 160.0, 0.15);
+        putPetDogAbilities(abilities, PetTowers.DOG_T3, 320.0, 0.0, 0.20);
+        putPetCatAbilities(abilities, PetTowers.CAT_T1, 100.0, 70.0, 1.5, 2, 0.30);
+        putPetCatAbilities(abilities, PetTowers.CAT_T2, 200.0, 160.0, 2.0, 4, 0.30);
+        putPetCatAbilities(abilities, PetTowers.CAT_T3, 320.0, 0.0, 2.5, 6, 0.30);
         putPetBirdAbilities(abilities, PetTowers.BIRD_T1, 100.0, 70.0, 0.50);
         putPetBirdAbilities(abilities, PetTowers.BIRD_T2, 200.0, 160.0, 0.75);
         putPetBirdAbilities(abilities, PetTowers.BIRD_T3, 320.0, 0.0, 1.00);
@@ -1066,12 +1067,15 @@ public record TowerBalanceConfig(
             Map<String, Map<String, Double>> abilities,
             TowerType type,
             double bondCap,
-            double bondToUpgrade
+            double bondToUpgrade,
+            double adultDamageReduction
     ) {
         putAbilities(abilities, type.id(), Map.of(
                 PetBalance.KEY_BOND_CAP, bondCap,
                 PetBalance.KEY_BOND_TO_UPGRADE, bondToUpgrade,
-                PetBalance.KEY_PACK_DAMAGE_PER_MATE, 0.12
+                PetBalance.KEY_PACK_DAMAGE_PER_MATE, 0.08,
+                PetBalance.KEY_PACK_HEALTH_PER_MATE, 0.08,
+                PetBalance.KEY_ADULT_DAMAGE_REDUCTION, adultDamageReduction
         ));
     }
 
@@ -1079,12 +1083,18 @@ public record TowerBalanceConfig(
             Map<String, Map<String, Double>> abilities,
             TowerType type,
             double bondCap,
-            double bondToUpgrade
+            double bondToUpgrade,
+            double adultSplashRadius,
+            int adultSplashMaxTargets,
+            double adultSplashDamageRatio
     ) {
         putAbilities(abilities, type.id(), Map.of(
                 PetBalance.KEY_BOND_CAP, bondCap,
                 PetBalance.KEY_BOND_TO_UPGRADE, bondToUpgrade,
-                PetBalance.KEY_SOLO_DAMAGE_BONUS, 0.80
+                PetBalance.KEY_SOLO_DAMAGE_BONUS, 2.00,
+                PetBalance.KEY_ADULT_SPLASH_RADIUS, adultSplashRadius,
+                PetBalance.KEY_ADULT_SPLASH_MAX_TARGETS, (double) adultSplashMaxTargets,
+                PetBalance.KEY_ADULT_SPLASH_DAMAGE_RATIO, adultSplashDamageRatio
         ));
     }
 
@@ -1788,6 +1798,18 @@ public record TowerBalanceConfig(
         validateSuccubusAbilities();
         validateBodyAbilities();
         validateFrostAbilities();
+        validatePetAbilities();
+    }
+
+    private void validatePetAbilities() {
+        for (TowerType dog : List.of(PetTowers.DOG_T1, PetTowers.DOG_T2, PetTowers.DOG_T3)) {
+            validateRatios(dog.id(), PetBalance.KEY_ADULT_DAMAGE_REDUCTION);
+        }
+        for (TowerType cat : List.of(PetTowers.CAT_T1, PetTowers.CAT_T2, PetTowers.CAT_T3)) {
+            validatePositive(cat.id(), PetBalance.KEY_ADULT_SPLASH_RADIUS);
+            validateIntegral(cat.id(), false, PetBalance.KEY_ADULT_SPLASH_MAX_TARGETS);
+            validateRatios(cat.id(), PetBalance.KEY_ADULT_SPLASH_DAMAGE_RATIO);
+        }
     }
 
     private void validateFrostAbilities() {

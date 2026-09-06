@@ -99,7 +99,15 @@ public final class ProductionTowerCatalog {
     }
 
     public static synchronized CatalogEntry register(TowerType type, TowerFactory factory, int tier) {
-        CatalogEntry entry = new CatalogEntry(type, factory, tier);
+        return registerEntry(new CatalogEntry(type, factory, tier));
+    }
+
+    public static synchronized CatalogEntry registerAugment(TowerType type, TowerFactory factory, String augmentId) {
+        return registerEntry(new CatalogEntry(type, factory, 1, Availability.AUGMENT, augmentId));
+    }
+
+    private static CatalogEntry registerEntry(CatalogEntry entry) {
+        TowerType type = entry.type();
         CatalogEntry previous = ENTRIES.putIfAbsent(type.id(), entry);
         if (previous != null) {
             throw new IllegalArgumentException("Duplicate production tower id: " + type.id());
@@ -126,12 +134,25 @@ public final class ProductionTowerCatalog {
         );
     }
 
-    public record CatalogEntry(TowerType type, TowerFactory factory, int tier) {
+    public enum Availability { JOB, AUGMENT }
+
+    public record CatalogEntry(TowerType type, TowerFactory factory, int tier, Availability availability, String augmentId) {
+        public CatalogEntry(TowerType type, TowerFactory factory, int tier) {
+            this(type, factory, tier, Availability.JOB, null);
+        }
+
         public CatalogEntry {
             Objects.requireNonNull(type, "type");
             factory = factory == null ? ProductionTowerDefinitions.DEFAULT_TOWER_FACTORY : factory;
             if (tier < 1) {
                 throw new IllegalArgumentException("Tower tier must be positive: " + tier);
+            }
+            Objects.requireNonNull(availability, "availability");
+            if (availability == Availability.AUGMENT && (augmentId == null || augmentId.isBlank())) {
+                throw new IllegalArgumentException("Augment towers require an augment id");
+            }
+            if (availability == Availability.JOB && augmentId != null) {
+                throw new IllegalArgumentException("Job towers cannot require an augment");
             }
         }
 

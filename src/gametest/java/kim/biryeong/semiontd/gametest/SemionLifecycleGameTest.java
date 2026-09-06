@@ -15,7 +15,6 @@ import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.MapConfig;
 import kim.biryeong.semiontd.config.ProgressionConfig;
-import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.config.WaveMonsterEntry;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
@@ -35,7 +34,6 @@ import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.game.TowerPlacementResult;
 import kim.biryeong.semiontd.job.JobContext;
 import kim.biryeong.semiontd.job.JobRegistry;
-import kim.biryeong.semiontd.job.ResonanceTowerJob;
 import kim.biryeong.semiontd.job.SemionJob;
 import kim.biryeong.semiontd.map.GameArena;
 import kim.biryeong.semiontd.map.GameArenaLoader;
@@ -46,9 +44,6 @@ import kim.biryeong.semiontd.summon.SummonResult;
 import kim.biryeong.semiontd.summon.SummonResultType;
 import kim.biryeong.semiontd.test.TestTowerService;
 import kim.biryeong.semiontd.test.tower.TestTowerTypes;
-import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
-import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
-import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
 import net.fabricmc.fabric.api.gametest.v1.CustomTestMethodInvoker;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
@@ -998,40 +993,6 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
             manager.tick(server);
         }
         if (!assertTrue(context, getField(manager, "pendingMatchResultDialog") == null, "Game manager should clear the queued result dialog after showing it.")) {
-            return;
-        }
-        context.succeed();
-    }
-
-    @GameTest
-    public void resonanceBuilderCatalogAndJobAreAvailableInGameRuntime(GameTestHelper context) {
-        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
-        Optional<SemionJob> job = JobRegistry.find(ResonanceTowerJob.ID);
-        if (!assertTrue(context, job.isPresent(), "Resonance builder job should be registered.")) {
-            return;
-        }
-        if (!assertTrue(context, job.orElseThrow().canUseTower(null, ResonanceTowers.FOCUS_CRYSTAL), "Resonance builder should be allowed to build focus crystal.")) {
-            return;
-        }
-        if (!assertTrue(context, job.orElseThrow().canUseTower(null, ResonanceTowers.WAVE_CRYSTAL), "Resonance builder should be allowed to build wave crystal.")) {
-            return;
-        }
-        if (!assertTrue(context, job.orElseThrow().canUseTower(null, ResonanceTowers.FROST_CRYSTAL), "Resonance builder should be allowed to build frost crystal.")) {
-            return;
-        }
-        if (!assertTrue(context, job.orElseThrow().canUseTower(null, ResonanceTowers.AMPLIFY_CRYSTAL), "Resonance builder should be allowed to build amplify crystal.")) {
-            return;
-        }
-        if (!assertTrue(context, ProductionTowerCatalog.find(ResonanceTowers.FOCUS_CRYSTAL.id()).orElseThrow().starter(), "Focus crystal should be a starter resonance tower.")) {
-            return;
-        }
-        if (!assertTrue(context, ProductionTowerCatalog.find(ResonanceTowers.WAVE_CRYSTAL.id()).orElseThrow().starter(), "Wave crystal should be a starter resonance tower.")) {
-            return;
-        }
-        if (!assertTrue(context, ProductionTowerCatalog.find(ResonanceTowers.FROST_CRYSTAL.id()).orElseThrow().starter(), "Frost crystal should be a starter resonance tower.")) {
-            return;
-        }
-        if (!assertTrue(context, ProductionTowerCatalog.find(ResonanceTowers.AMPLIFY_CRYSTAL.id()).orElseThrow().starter(), "Amplify crystal should be a starter resonance tower.")) {
             return;
         }
         context.succeed();

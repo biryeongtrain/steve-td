@@ -610,6 +610,9 @@ public final class TowerVfxService {
     }
 
     public static BuilderPalette paletteFor(TowerType type) {
+        if (kim.biryeong.semiontd.tower.augment.AugmentTowers.isAugment(type)) {
+            return BuilderPalette.AUGMENT;
+        }
         if (VillagerTowers.isAdvVillagerTower(type)) {
             return BuilderPalette.VILLAGER_ADV;
         }

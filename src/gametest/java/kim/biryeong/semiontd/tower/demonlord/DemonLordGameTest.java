@@ -1,5 +1,7 @@
 package kim.biryeong.semiontd.tower.demonlord;
 
+import com.mojang.authlib.GameProfile;
+import io.netty.channel.embedded.EmbeddedChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,6 +10,9 @@ import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.EconomyConfig;
+import kim.biryeong.semiontd.config.TowerBalanceConfig;
+import kim.biryeong.semiontd.config.TowerBalanceRuntime;
+import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
 import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.KillSourceKind;
@@ -25,13 +30,18 @@ import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.job.DemonLordTowerJob;
 import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.tower.area.AreaEffectLaneIndex;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
@@ -39,8 +49,18 @@ import xyz.nucleoid.map_templates.BlockBounds;
 public final class DemonLordGameTest {
     @GameTest
     public void cleanupOnlyRestoresFlightForAnExistingDemonLordState(GameTestHelper context) {
-        ServerPlayer player = context.makeMockServerPlayerInLevel();
+        // The vanilla mock overrides gameMode() to CREATIVE even after setGameMode().
+        CommonListenerCookie cookie = CommonListenerCookie.createInitial(
+                new GameProfile(UUID.randomUUID(), "demon-flight-test"), false);
+        ServerPlayer player = new ServerPlayer(context.getLevel().getServer(), context.getLevel(),
+                cookie.gameProfile(), cookie.clientInformation());
+        Connection connection = new Connection(PacketFlow.SERVERBOUND);
+        EmbeddedChannel channel = new EmbeddedChannel(connection);
+        context.getLevel().getServer().getPlayerList().placeNewPlayer(connection, player, cookie);
         try {
+            player.setGameMode(GameType.ADVENTURE);
+            require(!player.isCreative() && !player.isSpectator(),
+                    "Flight restoration must be tested in the gameplay mode.");
             player.getAbilities().mayfly = false;
             DemonLordStates.clear(player.getUUID());
             DemonLordService.cleanupPlayer(player);
@@ -57,36 +77,45 @@ public final class DemonLordGameTest {
             context.fail(Component.literal("Demon lord cleanup GameTest failed: " + failure.getMessage()));
         } finally {
             DemonLordStates.clear(player.getUUID());
+            context.getLevel().getServer().getPlayerList().remove(player);
             player.discard();
+            channel.finishAndReleaseAll();
         }
     }
 
     @GameTest
     public void altarDamageUsesSharedDefenseStatisticsAndKillAttribution(GameTestHelper context) {
-        UUID owner = stableUuid("demon-lord-damage-owner");
+        ServerPlayer player = context.makeMockServerPlayerInLevel();
+        UUID owner = player.getUUID();
         PlayerLane lane = testLane(context, owner);
         prepareFloor(context);
         DemonLordSkillTower altar = altar(context, owner, DemonLordSkill.WAVE_OF_MALICE, 1, 3, 3);
         ArrayList<SpawnedTarget> targets = new ArrayList<>();
         try {
             lane.addTower(altar);
+            DemonLordState state = DemonLordStates.getOrCreate(owner);
+            state.setLaneId(1);
+            state.enterCombat();
             SpawnedTarget armored = spawnTarget(context, lane, new BlockPos(5, 2, 5), 100.0, 100.0);
             SpawnedTarget magic = spawnTarget(context, lane, new BlockPos(6, 2, 5), 100.0, 100.0);
             targets.add(armored);
             targets.add(magic);
 
             Tower.DamageResult physical = DemonLordService.dealDamage(
-                    null, lane, altar, armored.entity(), 50.0, DamageType.PHYSICAL);
+                    player, lane, altar, armored.entity(), 50.0, DamageType.PHYSICAL);
             Tower.DamageResult magical = DemonLordService.dealDamage(
-                    null, lane, altar, magic.entity(), 50.0, DamageType.MAGIC);
+                    player, lane, altar, magic.entity(), 50.0, DamageType.MAGIC);
 
             requireClose(25.0, physical.dealtDamage(), "Physical damage must respect armor.");
             requireClose(50.0, magical.dealtDamage(), "Magic damage must ignore armor when resistance is zero.");
-            requireClose(25.0, altar.roundPhysicalDamageDealt(), "Physical damage statistics must be recorded once.");
-            requireClose(50.0, altar.roundMagicDamageDealt(), "Magic damage statistics must be recorded once.");
+            requireClose(25.0, state.roundPhysicalDamageDealt(), "Physical damage must be recorded on the demon lord once.");
+            requireClose(50.0, state.roundMagicDamageDealt(), "Magic damage must be recorded on the demon lord once.");
+            requireClose(0.0, altar.roundPhysicalDamageDealt(), "The altar must not duplicate the demon lord's physical statistics.");
+            requireClose(0.0, altar.roundMagicDamageDealt(), "The altar must not duplicate the demon lord's magic statistics.");
 
-            DemonLordService.dealDamage(null, lane, altar, magic.entity(), 1_000.0, DamageType.TRUE);
+            DemonLordService.dealDamage(player, lane, altar, magic.entity(), 1_000.0, DamageType.TRUE);
             require(!magic.runtime().isAlive(), "True damage must finish the target.");
+            require(state.roundMetrics().killCount() == 1, "The demon lord must record the skill kill once.");
             require(owner.equals(magic.runtime().lastHitPlayerId().orElse(null))
                             && magic.runtime().lastHitSourceKind() == KillSourceKind.TOWER,
                     "Demon lord skill kills must stay attributed to the altar owner.");
@@ -96,6 +125,8 @@ public final class DemonLordGameTest {
         } finally {
             targets.forEach(target -> target.entity().discard());
             lane.clearTowers();
+            DemonLordStates.clear(owner);
+            player.discard();
         }
     }
 
@@ -199,6 +230,10 @@ public final class DemonLordGameTest {
             require(DemonLordService.dealDamage(
                             player, lane, altar, otherLane.entity(), 10.0, DamageType.TRUE).dealtDamage() > 0.0,
                     "At final defense, the demon lord must damage final-defense monsters.");
+            otherLane.runtime().syncLaneProgress(1.0);
+            requireClose(10.0, DemonLordService.dealDamage(
+                            player, lane, altar, otherLane.entity(), 10.0, DamageType.TRUE).dealtDamage(),
+                    "Altar-backed skills must also damage reached-boss monsters during final defense.");
 
             otherLane.entity().setTarget(player);
             state.leaveCombat();
@@ -244,14 +279,97 @@ public final class DemonLordGameTest {
             goal.start();
             require(target.entity().getTarget() == player,
                     "The nearby final-defense monster must acquire the demon lord.");
-            require(DemonLordService.dealDamage(
-                            player, lane, null, target.entity(), 10.0, DamageType.TRUE).dealtDamage() > 0.0,
+            requireClose(10.0, DemonLordService.dealDamage(
+                            player, lane, null, target.entity(), 10.0, DamageType.TRUE).dealtDamage(),
                     "The demon lord must be able to damage a failed monster from another lane.");
+            requireClose(90.0, target.runtime().health(), "Reached-boss damage must reduce runtime health.");
             context.succeed();
         } catch (Throwable failure) {
             context.fail(Component.literal("Demon lord aggro-range GameTest failed: " + failure.getMessage()));
         } finally {
             target.entity().discard();
+            DemonLordStates.clear(player.getUUID());
+            player.discard();
+        }
+    }
+
+    @GameTest
+    public void gripOfDoomTargetsReachedBossOnlyDuringFinalDefense(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        ServerPlayer player = context.makeMockServerPlayerInLevel();
+        PlayerLane lane = testLane(context, player.getUUID());
+        prepareFloor(context);
+        DemonLordSkillTower altar = altar(context, player.getUUID(), DemonLordSkill.GRIP_OF_DOOM, 1, 3, 3);
+        SpawnedTarget target = null;
+        try {
+            lane.addTower(altar);
+            target = spawnTarget(context, lane, new BlockPos(5, 2, 6), 2, 500.0, 0.0);
+            target.runtime().syncLaneProgress(1.0);
+            require(target.runtime().state() == MonsterState.REACHED_BOSS,
+                    "The skill regression must use a reached-boss monster.");
+            DemonLordState state = DemonLordStates.getOrCreate(player.getUUID());
+            state.setLaneId(1);
+            state.enterCombat();
+            Vec3 start = Vec3.atCenterOf(context.absolutePos(new BlockPos(5, 2, 3)));
+            player.teleportTo(start.x, start.y, start.z);
+            player.setYRot(0.0F);
+            player.setXRot(0.0F);
+
+            DemonLordSkills.cast(player, lane, state, DemonLordSkill.GRIP_OF_DOOM, altar, context.getLevel().getGameTime());
+            requireClose(500.0, target.runtime().health(),
+                    "The single-target skill must not hit another lane before final defense.");
+            state.enterCentralDefense();
+            DemonLordSkills.cast(player, lane, state, DemonLordSkill.GRIP_OF_DOOM, altar, context.getLevel().getGameTime());
+            require(target.runtime().health() < 500.0,
+                    "The single-target skill must acquire a reached-boss monster during final defense.");
+            requireClose(500.0 - target.runtime().health(), state.roundMagicDamageDealt(),
+                    "The reached-boss skill damage must enter the player statistics once.");
+            context.succeed();
+        } finally {
+            if (target != null) target.entity().discard();
+            lane.clearTowers();
+            DemonLordStates.clear(player.getUUID());
+            player.discard();
+        }
+    }
+
+    @GameTest
+    public void skyBreakerAppliesSharedStunWithoutChangingLiftOrDuration(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        ServerPlayer player = context.makeMockServerPlayerInLevel();
+        PlayerLane lane = testLane(context, player.getUUID());
+        prepareFloor(context);
+        DemonLordSkillTower altar = altar(context, player.getUUID(), DemonLordSkill.SKY_BREAKER, 1, 3, 3);
+        SpawnedTarget target = null;
+        AreaEffectLaneIndex.register(lane);
+        try {
+            lane.addTower(altar);
+            target = spawnTarget(context, lane, new BlockPos(5, 2, 6), 500.0, 0.0);
+            DemonLordState state = DemonLordStates.getOrCreate(player.getUUID());
+            state.setLaneId(1);
+            state.enterCombat();
+            Vec3 start = Vec3.atCenterOf(context.absolutePos(new BlockPos(5, 2, 3)));
+            player.teleportTo(start.x, start.y, start.z);
+            player.setYRot(0.0F);
+            player.setXRot(0.0F);
+
+            DemonLordSkills.cast(player, lane, state, DemonLordSkill.SKY_BREAKER, altar, context.getLevel().getGameTime());
+
+            require(target.entity().isStunned(), "Sky Breaker must apply the same stun as electric shock.");
+            require(target.entity().activeTimedEffectTicks(TimedEffectType.MONSTER_STUN) == 40,
+                    "The first-tier stun must retain its configured 40-tick duration.");
+            requireClose(0.8, target.entity().getDeltaMovement().y, "Sky Breaker's forced lift must remain unchanged.");
+            requireClose(0.0, target.entity().activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION),
+                    "Sky Breaker must not leave a simulated movement debuff.");
+            requireClose(0.0, target.entity().activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION),
+                    "Sky Breaker must not multiply the next attack cooldown.");
+            requireClose(0.0, target.entity().activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION),
+                    "Sky Breaker must not implement stun as zero attack damage.");
+            context.succeed();
+        } finally {
+            if (target != null) target.entity().discard();
+            lane.clearTowers();
+            AreaEffectLaneIndex.unregister(lane);
             DemonLordStates.clear(player.getUUID());
             player.discard();
         }

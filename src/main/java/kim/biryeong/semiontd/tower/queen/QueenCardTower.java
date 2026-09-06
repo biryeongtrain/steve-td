@@ -162,7 +162,7 @@ public final class QueenCardTower extends ProductionTower {
         int interval = card().map(value -> QueenBalance.cardInterval(value.suit())).orElse(baseIntervalTicks);
         return Math.max(1, (int) Math.ceil(interval / (1.0 + pokerBonus)));
     }
-    @Override public int aggroPriority() {return card().map(value -> QueenBalance.cardAggro(value.suit())).orElse(super.aggroPriority());}
+    @Override protected int builderAggroPriority() {return card().map(value -> QueenBalance.cardAggro(value.suit())).orElse(super.builderAggroPriority());}
 
     @Override
     public double modifyIncomingDamage(SemionTowerEntity source, DamageSource damageSource, double damage) {

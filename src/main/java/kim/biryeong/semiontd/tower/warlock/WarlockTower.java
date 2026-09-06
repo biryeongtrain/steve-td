@@ -63,7 +63,7 @@ public class WarlockTower extends EntityBackedTower {
     }
 
     @Override
-    public double currentMaxHealth() {
+    protected double builderCurrentMaxHealth() {
         return applyTraitMaxHealth(maxHealth() * (1.0 + passiveHealthBonus()) + effectiveHealthBonus());
     }
 

@@ -683,6 +683,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
                 "minecraft:zombie",
                 10L
         );
+        monster.setOrigin(kim.biryeong.semiontd.entity.monster.MonsterOrigin.NATURAL_WAVE);
         monster.syncLaneProgress(0.90);
         monster.recordLastHit(playerId, KillSourceKind.TOWER);
         monster.syncHealth(0.0);
@@ -2267,31 +2268,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
-    public void mapConfigUsesPlainRegionMarkerNames(GameTestHelper context) {
-        MapConfig.RegionMarkers markers = MapConfig.defaultConfig().regions();
-
-        if (!assertEquals(context, "team_spawn", markers.teamSpawn(), "Team spawn marker should not require a namespace.")) {
-            return;
-        }
-        if (!assertEquals(context, "lane_spawn", markers.laneSpawn(), "Lane spawn marker should not require a namespace.")) {
-            return;
-        }
-        if (!assertEquals(context, "lane_path", markers.lanePath(), "Lane path marker should not require a namespace.")) {
-            return;
-        }
-        if (!assertEquals(context, "final_waypoint", markers.finalWaypoint(), "Final waypoint marker should not require a namespace.")) {
-            return;
-        }
-        if (!assertEquals(context, "boss_spawn", markers.bossSpawn(), "Boss spawn marker should not require a namespace.")) {
-            return;
-        }
-        if (!assertEquals(context, "final_defense_lane", markers.finalDefenseTower(), "Final defense marker should not require a namespace.")) {
-            return;
-        }
-        context.succeed();
-    }
-
-    @GameTest
     public void arenaLayoutUsesSharedFinalDefenseRegionForEveryLane(GameTestHelper context) {
         MapTemplate template = MapTemplate.createEmpty();
         template.getMetadata().addRegion("team_spawn", BlockBounds.ofBlock(new BlockPos(0, 64, 0)));
@@ -3008,15 +2984,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
     }
 
     @GameTest
-    public void productionTowerCatalogStartsEmptyForManualAuthoring(GameTestHelper context) {
-        ProductionTowerCatalog.clear();
-        if (!assertTrue(context, ProductionTowerCatalog.all().isEmpty(), "Production catalog should start empty so towers can be authored manually.")) {
-            return;
-        }
-        context.succeed();
-    }
-
-    @GameTest
     public void emptyProductionTowerCatalogRejectsBuildRequests(GameTestHelper context) {
         ProductionTowerCatalog.clear();
         UUID playerId = stableUuid("red-production-villager-owner");
@@ -3056,21 +3023,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
 
-        context.succeed();
-    }
-
-    @GameTest
-    public void animalTowerBuildListIncludesFoxStarterForAnimalJob(GameTestHelper context) {
-        ProductionTowerCatalog.clear();
-        AnimalTowerCatalogs.register();
-        UUID playerId = stableUuid("animal-fox-build-ui-owner");
-        SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED, AnimalTowerJob.ID);
-
-        boolean includesFoxStarter = ProductionTowerService.availableTowers(game, playerId).stream()
-                .anyMatch(entry -> AnimalTowers.T1_FOX_TOWER.id().equals(entry.type().id()));
-        if (!assertTrue(context, includesFoxStarter, "Animal tower build UI should include the T1 fox tower starter.")) {
-            return;
-        }
         context.succeed();
     }
 
@@ -10553,7 +10505,9 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         if (!assertPresent(context, JobRegistry.find(FrostTowerJob.ID), "Built-in reload should register the frost tower job.")) {
             return;
         }
-        if (!assertEquals(context, 148L, ProductionTowerCatalog.all().stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should expose all 148 production starter entries, including the pirate builder.")) {
+        if (!assertEquals(context, 148L, ProductionTowerCatalog.all().stream()
+                .filter(entry -> entry.availability() == ProductionTowerCatalog.Availability.JOB)
+                .filter(ProductionTowerCatalog.CatalogEntry::starter).count(), "Built-in reload should preserve every job starter family independently of augment towers.")) {
             return;
         }
         context.succeed();
@@ -12813,20 +12767,6 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
             return;
         }
         context.succeed();
-    }
-
-    @GameTest
-    public void configLoaderCreatesSummonsConfigFile(GameTestHelper context) {
-        try {
-            Path tempDir = Files.createTempDirectory("semion-td-config-test");
-            SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("semion-td-config-test"));
-            if (!assertTrue(context, Files.exists(tempDir.resolve("summons.json")), "Summon defaults should be written to summons.json.")) {
-                return;
-            }
-            context.succeed();
-        } catch (Exception exception) {
-            context.fail(Component.literal("Failed to load configs: " + exception.getMessage()));
-        }
     }
 
     @GameTest

@@ -55,7 +55,7 @@ public final class SummonDescriptionFactory {
                             + " 증가시키고 받는 피해를 " + percent(value(definition, "damageReductionMagnitude", 0.25))
                             + " 감소시킵니다. (" + seconds(definition, "cooldownTicks", 60) + " 쿨타임)");
             case "guardian", "blaze", "ghast", "wither_skeleton", "warden" ->
-                    addSiegeLine(lines, definition);
+                    addSupportLines(lines, definition);
             default -> {
             }
         }
@@ -88,10 +88,32 @@ public final class SummonDescriptionFactory {
                 + " " + verb + "시킵니다. (" + seconds(definition, "cooldownTicks", 60) + " 쿨타임)");
     }
 
-    private static void addSiegeLine(ArrayList<String> lines, SummonConfig.SummonDefinition definition) {
-        addLine(lines, "방어 대상에게 "
-                + number(value(definition, "bonusDamage", 20.0))
-                + " 고정 피해를 줍니다. (" + seconds(definition, "cooldownTicks", 80) + " 쿨타임)");
+    private static void addSupportLines(ArrayList<String> lines, SummonConfig.SummonDefinition definition) {
+        UtilitySupportProfile support = UtilitySupportProfile.from(definition);
+        if (support.physicalCanary()) {
+            addLine(lines, "방어 대상에게 일반 물리 피해 100을 줍니다. (3초 재사용 대기시간 · 중간 시험)");
+            return;
+        }
+        String order = switch (support.priority()) {
+            case NEAREST -> "가까운";
+            case MISSING_HEALTH -> "잃은 체력이 큰";
+            case HEALTH_RATIO -> "체력 비율이 낮은";
+        };
+        addLine(lines, "반경 " + blocks(support.radius()) + " 내 " + order + " 비보스 아군 최대 "
+                + support.maxTargets() + "기를 지원합니다. (자신 " + (support.includesSelf() ? "포함" : "제외") + ")");
+        if (support.healing() > 0.0) {
+            addLine(lines, "대상당 체력을 " + number(support.healing()) + " 회복합니다.");
+        }
+        if (support.physicalShield() > 0.0) {
+            addLine(lines, "대상당 물리 보호막 " + number(support.physicalShield()) + "을 "
+                    + number(support.shieldDurationTicks() / 20.0) + "초간 부여합니다.");
+        }
+        if (support.magicShield() > 0.0) {
+            addLine(lines, "대상당 마법 보호막 " + number(support.magicShield()) + "을 "
+                    + number(support.shieldDurationTicks() / 20.0) + "초간 부여합니다.");
+        }
+        addLine(lines, "같은 목표 레인의 자연 웨이브·인컴만 지원하며 보스·누수 유닛은 제외합니다.");
+        addLine(lines, "재사용 대기시간 " + number(support.cooldownTicks() / 20.0) + "초.");
     }
 
     private static double value(SummonConfig.SummonDefinition definition, String key, double fallback) {

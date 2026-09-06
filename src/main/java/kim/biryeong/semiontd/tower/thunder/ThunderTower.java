@@ -176,11 +176,8 @@ public class ThunderTower extends ProductionTower {
     }
 
     /**
-     * Electric shock as a full movement stop.
-     *
-     * <p>Implemented as a 100% move-speed reduction rather than a new mechanic, so it inherits the
-     * existing timed-effect stacking and expiry. Stun is strong in a tower defense, so it is gated
-     * behind its own cooldown instead of firing on every hit.
+     * Electric shock blocks movement, attacks and abilities through the shared timed stun.
+     * Its own cooldown and per-owner immunity prevent repeated hits from locking a target down.
      */
     private void applyStun(SemionTowerEntity towerEntity, SemionMonsterEntity target) {
         var world = towerEntity.level();
@@ -188,7 +185,7 @@ public class ThunderTower extends ProductionTower {
             return;
         }
         long now = world.getGameTime();
-        if (now - lastStunTick < ThunderBalance.stunCooldownTicks()) {
+        if (lastStunTick != Long.MIN_VALUE && now - lastStunTick < ThunderBalance.stunCooldownTicks()) {
             return;
         }
         ResourceLocation immunitySource = ResourceLocation.fromNamespaceAndPath(
@@ -204,7 +201,7 @@ public class ThunderTower extends ProductionTower {
             return;
         }
         lastStunTick = now;
-        target.applyTimedEffect(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION, 1.0, ThunderBalance.stunTicks());
+        target.applyTimedEffect(TimedEffectType.MONSTER_STUN, 1.0, ThunderBalance.stunTicks());
         TowerVfxService.showAreaEffect(
                 towerEntity,
                 AreaEffectIds.tower(this, "stun"),

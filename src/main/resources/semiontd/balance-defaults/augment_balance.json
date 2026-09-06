@@ -1,0 +1,207 @@
+{
+  "enabled": false,
+  "publicPoolEnabled": false,
+  "rarityWeights": {
+    "GGG": 18,
+    "GGP": 11,
+    "GPP": 7,
+    "PPP": 2,
+    "SGG": 23,
+    "SGP": 22,
+    "SSG": 14,
+    "SSS": 3
+  },
+  "parameters": {
+    "semiontd:additional_payload": {
+      "costMultiplier": 1.25,
+      "healthMultiplier": 1.35,
+      "supportMultiplier": 1.35
+    },
+    "semiontd:ambush_workshop_blueprint": {
+      "checkTicks": 5.0,
+      "damageRadius": 2.0,
+      "mineDamage": 100.0,
+      "mineTargets": 2.0,
+      "triggerRadius": 1.25
+    },
+    "semiontd:barrier_core_call": {
+      "redirectRatio": 0.25
+    },
+    "semiontd:battlefield_mastery": {
+      "bonusPerStack": 0.04,
+      "damageThreshold": 0.4,
+      "maxStacks": 4.0
+    },
+    "semiontd:biased_armor": {
+      "oppositeMultiplier": 1.35,
+      "selectedMultiplier": 0.75
+    },
+    "semiontd:capacitor_post_blueprint": {
+      "chargeDamage": 70.0,
+      "chargeTicks": 40.0,
+      "maxCharges": 3.0
+    },
+    "semiontd:cash_settlement": {
+      "diamondMultiplier": 3.0
+    },
+    "semiontd:decisive_delivery": {
+      "attackMultiplier": 1.4,
+      "healthMultiplier": 1.6
+    },
+    "semiontd:domino_fire": {
+      "damageCapRatio": 0.5,
+      "overkillRatio": 0.6,
+      "radius": 4.0
+    },
+    "semiontd:emergency_bell_blueprint": {
+      "checkTicks": 20.0,
+      "healCap": 90.0,
+      "healRatio": 0.25,
+      "healthThreshold": 0.4,
+      "maxHeals": 3.0
+    },
+    "semiontd:emergency_loan": {
+      "advanceCap": 300.0,
+      "advanceMultiplier": 3.0,
+      "debtMultiplier": 1.3333333333333333,
+      "repaymentCount": 4.0
+    },
+    "semiontd:engagement_plan": {
+      "longDamageBonus": 0.1,
+      "longDamageReduction": 0.1,
+      "quickDamageBonus": 0.18,
+      "transitionTicks": 160.0
+    },
+    "semiontd:finishing_fire_1": {
+      "damageBonus": 0.2
+    },
+    "semiontd:finishing_fire_2": {
+      "damageBonus": 0.35
+    },
+    "semiontd:finishing_fire_3": {
+      "damageBonus": 0.55
+    },
+    "semiontd:folding_barricade_blueprint": {},
+    "semiontd:forbidden_blueprint": {
+      "payoutMultiplier": 0.9,
+      "ticketCount": 2.0,
+      "ticketValue": 300.0
+    },
+    "semiontd:forecast_offensive": {
+      "echoRatio": 0.3
+    },
+    "semiontd:frontline_specialization": {
+      "artilleryDamageBonus": 0.3,
+      "artilleryIncomingMultiplier": 1.25,
+      "vanguardDamagePenalty": 0.25,
+      "vanguardDamageReduction": 0.3
+    },
+    "semiontd:giant_hunter_call": {
+      "bossMaxHealthDamageRatio": 0.02,
+      "maxHealthDamageRatio": 0.08,
+      "minimumRange": 3.0
+    },
+    "semiontd:independent_position": {
+      "damageBonus": 0.12,
+      "damageReduction": 0.08,
+      "radius": 4.0
+    },
+    "semiontd:low_pressure_high_yield": {
+      "bodyMultiplier": 0.7,
+      "bonusRatio": 0.25,
+      "roundBonusCap": 12.0
+    },
+    "semiontd:one_man_show": {
+      "damageBonus": 1.0,
+      "maxHealthBonus": 0.3,
+      "otherDamagePenalty": 0.2
+    },
+    "semiontd:ordnance_factory_call": {
+      "emeraldPerShell": 100.0,
+      "maxShells": 4.0,
+      "shellDamage": 120.0,
+      "shellIntervalTicks": 100.0,
+      "shellRadius": 3.0,
+      "shellTargets": 5.0
+    },
+    "semiontd:overheat_core": {
+      "damageBonus": 0.4,
+      "maxStacks": 5.0,
+      "penaltyPerStack": 0.06
+    },
+    "semiontd:pulse_relay_blueprint": {
+      "attacksPerCharge": 5.0,
+      "chargedDamageRatio": 0.5
+    },
+    "semiontd:reserve_diamonds_gold": {
+      "amount": 120.0
+    },
+    "semiontd:reserve_diamonds_prismatic": {
+      "amount": 240.0
+    },
+    "semiontd:reserve_diamonds_silver": {
+      "amount": 60.0
+    },
+    "semiontd:reserve_income_gold": {
+      "amount": 20.0
+    },
+    "semiontd:reserve_income_prismatic": {
+      "amount": 40.0
+    },
+    "semiontd:reserve_income_silver": {
+      "amount": 10.0
+    },
+    "semiontd:reserve_production_gold": {
+      "amount": 2.0
+    },
+    "semiontd:reserve_production_prismatic": {
+      "amount": 3.0
+    },
+    "semiontd:reserve_production_silver": {
+      "amount": 1.0
+    },
+    "semiontd:starlight_cocoon_call": {
+      "hatchWaves": 2.0,
+      "hatchedDamage": 110.0,
+      "hatchedHealth": 600.0,
+      "hatchedIntervalTicks": 30.0,
+      "hatchedRange": 5.0
+    },
+    "semiontd:support_performance": {
+      "incomeBonus": 2.0,
+      "matchIncomeCap": 8.0,
+      "targetCount": 3.0
+    },
+    "semiontd:tactical_designation_1": {
+      "damageBonus": 0.15,
+      "damageReduction": 0.12
+    },
+    "semiontd:tactical_designation_2": {
+      "damageBonus": 0.25,
+      "damageReduction": 0.2
+    },
+    "semiontd:tactical_designation_3": {
+      "damageBonus": 0.4,
+      "damageReduction": 0.3
+    },
+    "semiontd:triangle_formation": {
+      "damageBonus": 0.08,
+      "damageReduction": 0.08,
+      "neighborCount": 2.0,
+      "radius": 4.0
+    },
+    "semiontd:twin_squadron": {
+      "damageBonus": 0.1
+    },
+    "semiontd:wartime_economy": {
+      "damageBonus": 0.35,
+      "maxHealthBonus": 0.2,
+      "payoutMultiplier": 0.65
+    },
+    "semiontd:winning_barrage": {
+      "charges": 3.0,
+      "damageBonus": 0.3
+    }
+  },
+  "disabledIds": []
+}

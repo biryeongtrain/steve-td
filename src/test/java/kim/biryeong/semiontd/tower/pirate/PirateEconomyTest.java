@@ -2,6 +2,7 @@ package kim.biryeong.semiontd.tower.pirate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Field;
@@ -9,7 +10,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import kim.biryeong.semiontd.augment.AugmentConfig;
+import kim.biryeong.semiontd.augment.AugmentEconomyService;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
@@ -19,6 +23,7 @@ import kim.biryeong.semiontd.entity.monster.KillSourceKind;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.game.EconomyService;
 import kim.biryeong.semiontd.game.GridPosition;
+import kim.biryeong.semiontd.game.MatchMode;
 import kim.biryeong.semiontd.game.PlayerEconomy;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.RoundPhase;
@@ -26,6 +31,7 @@ import kim.biryeong.semiontd.game.SemionGame;
 import kim.biryeong.semiontd.game.SemionPlayer;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.game.TowerSellResult;
+import kim.biryeong.semiontd.game.TowerUpgradeResult;
 import kim.biryeong.semiontd.job.PirateTowerJob;
 import kim.biryeong.semiontd.map.GameArena;
 import kim.biryeong.semiontd.map.LaneRegionLayout;
@@ -154,6 +160,96 @@ class PirateEconomyTest {
         assertEquals(14, player.economy().diamond() - before);
     }
 
+    @ParameterizedTest
+    @CsvSource({"wartime_economy, 74", "emergency_loan, 9"})
+    void seasonThreePayoutPaysFerrymenOnceWithoutBypassingWithholdingOrClosure(String card, long expected)
+            throws ReflectiveOperationException {
+        player.economy().overrideStartingValues(100_000, 100_000, 100, 1);
+        enableSeasonThree(card);
+        buyFerrymen(1, 1, 1);
+        EconomyService service = new EconomyService(EconomyConfig.defaultConfig(), game);
+        long before = player.economy().diamond();
+        service.payRoundIncome(5, game.players().values(), game.teams());
+        assertEquals(expected, player.economy().diamond() - before);
+        service.payRoundIncome(5, game.players().values(), game.teams());
+        service.payRoundIncome(game.players().values(), game.teams());
+        assertEquals(expected, player.economy().diamond() - before);
+        AugmentEconomyService.close(player);
+        assertSame(player, PirateStates.player(owner), "Closed augment state must reject even an attached pirate payout");
+        service.payRoundIncome(6, game.players().values(), game.teams());
+        service.payRoundIncome(game.players().values(), game.teams());
+        assertEquals(expected, player.economy().diamond() - before);
+    }
+
+    @Test
+    void ticketUpgradeRecordsOnlyPaidDiamondsAndFailedAttemptsDoNotSpend() throws ReflectiveOperationException {
+        enableSeasonThree("forbidden_blueprint");
+        PirateTower original = buy(PirateTowers.FERRYMAN, 1, 200);
+        PirateStates.startRound(owner);
+        long before = player.economy().diamond();
+        assertEquals(TowerUpgradeResult.SUCCESS, ProductionTowerService.upgradeTower(
+                game, owner, original.position(), PirateTowers.VETERAN_FERRYMAN.id(), true));
+        Tower upgraded = lane.towerAt(original.position());
+        assertEquals(200, before - player.economy().diamond());
+        assertEquals(200, PirateStates.diamondSpent(owner));
+        assertEquals(400, upgraded.paidMineralCost());
+        assertEquals(original.logicalId(), upgraded.logicalId());
+        assertEquals(1, player.economyAugments().remainingTickets());
+        assertEquals(1, player.economyAugments().usedTickets());
+        before = player.economy().diamond();
+        long progressBefore = PirateStates.admiralProgress(owner);
+        assertEquals(TowerUpgradeResult.UPGRADE_REQUIREMENTS_NOT_MET, ProductionTowerService.upgradeTower(
+                game, owner, upgraded.position(), PirateTowers.LEGENDARY_FERRYMAN.id(), true));
+        assertEquals(before, player.economy().diamond());
+        assertEquals(200, PirateStates.diamondSpent(owner));
+        assertEquals(progressBefore, PirateStates.admiralProgress(owner));
+        PirateTower second = buy(PirateTowers.FERRYMAN, 2, 200);
+        assertTrue(player.economy().spendDiamond(player.economy().diamond() - 199));
+        long spentBefore = PirateStates.diamondSpent(owner);
+        progressBefore = PirateStates.admiralProgress(owner);
+        assertEquals(TowerUpgradeResult.NOT_ENOUGH_MINERAL, ProductionTowerService.upgradeTower(
+                game, owner, second.position(), PirateTowers.VETERAN_FERRYMAN.id(), true));
+        assertSame(second, lane.towerAt(second.position()));
+        assertEquals(199, player.economy().diamond());
+        assertEquals(spentBefore, PirateStates.diamondSpent(owner));
+        assertEquals(progressBefore, PirateStates.admiralProgress(owner));
+        assertEquals(1, player.economyAugments().remainingTickets());
+        assertEquals(1, player.economyAugments().usedTickets());
+    }
+
+    @Test
+    void staleTicketCommitRestoresTowerAndNeverTriggersAdmiral() throws ReflectiveOperationException {
+        enableSeasonThree("forbidden_blueprint");
+        buy(PirateTowers.ADMIRAL, 0, 1_000);
+        PirateTower original = buy(PirateTowers.FERRYMAN, 1, 200);
+        var source = ProductionTowerCatalog.entry(PirateTowers.FERRYMAN).orElseThrow();
+        var target = ProductionTowerCatalog.entry(PirateTowers.VETERAN_FERRYMAN).orElseThrow();
+        var upgrade = ProductionTowerCatalog.upgrade(source.type(), target.type().id()).orElseThrow();
+        // Keep the real factories and upgrade price; invalidate only the quote during target construction.
+        ProductionTowerCatalog.clear();
+        ProductionTowerCatalog.register(source.type(), source.factory(), source.tier());
+        ProductionTowerCatalog.register(target.type(), (type, id, team, laneId, origin, current) -> {
+            assertTrue(AugmentEconomyService.setContract(player, 5, AugmentEconomyService.Contract.NONE));
+            return target.factory().create(type, id, team, laneId, origin, current);
+        }, target.tier());
+        ProductionTowerCatalog.linkUpgrade(source.type(), upgrade.id(), upgrade.displayName(), target.type(), upgrade.mineralCost());
+        long before = player.economy().diamond();
+        long spentBefore = PirateStates.diamondSpent(owner);
+        long progressBefore = PirateStates.admiralProgress(owner);
+        double healthBefore = lane.towers().stream().mapToDouble(Tower::permanentMaxHealthBonus).sum();
+        double damageBefore = lane.towers().stream().mapToDouble(Tower::permanentFlatDamageBonus).sum();
+        assertEquals(TowerUpgradeResult.UPGRADE_REQUIREMENTS_NOT_MET, ProductionTowerService.upgradeTower(
+                game, owner, original.position(), upgrade.id(), true));
+        assertSame(original, lane.towerAt(original.position()));
+        assertEquals(before, player.economy().diamond());
+        assertEquals(spentBefore, PirateStates.diamondSpent(owner));
+        assertEquals(progressBefore, PirateStates.admiralProgress(owner));
+        assertEquals(healthBefore, lane.towers().stream().mapToDouble(Tower::permanentMaxHealthBonus).sum(), 1e-9);
+        assertEquals(damageBefore, lane.towers().stream().mapToDouble(Tower::permanentFlatDamageBonus).sum(), 1e-9);
+        assertEquals(2, player.economyAugments().remainingTickets());
+        assertEquals(0, player.economyAugments().usedTickets());
+    }
+
     @Test
     void maturedChestKeepsItsRewardRefundAndFullFerrymanBonus() {
         buyFerrymen(0, 9, 0);
@@ -193,6 +289,16 @@ class PirateEconomyTest {
         for (int index = 0; index < veteran; index++) buy(PirateTowers.VETERAN_FERRYMAN, position++, 700);
         for (int index = 0; index < legendary; index++) buy(PirateTowers.LEGENDARY_FERRYMAN, position++, 1_500);
         assertTrue(position + 1 <= 23, "Sale scenarios stay within the maximum legal roster size");
+    }
+
+    private void enableSeasonThree(String card) throws ReflectiveOperationException {
+        game.configureAugments(new AugmentConfig(true, false, AugmentConfig.defaults().rarityWeights(), Map.of(), Set.of()));
+        Field mode = SemionGame.class.getDeclaredField("matchMode");
+        mode.setAccessible(true);
+        mode.set(game, MatchMode.NORMAL);
+        assertTrue(game.augmentsEnabled());
+        AugmentEconomyService.beginPrepare(player, 5);
+        AugmentEconomyService.onSelected(player, card, 5, Map.of());
     }
 
     private PirateTower buy(TowerType type, int x, long paid) {

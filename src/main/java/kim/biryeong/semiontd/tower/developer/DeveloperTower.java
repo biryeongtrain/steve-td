@@ -161,8 +161,8 @@ public class DeveloperTower extends ProductionTower {
     }
 
     @Override
-    public int aggroPriority() {
-        int base = super.aggroPriority();
+    protected int builderAggroPriority() {
+        int base = super.builderAggroPriority();
         base += (int) Math.round(DeveloperTowerData.activeAmount(this, DeveloperPatch.AGGRO));
         if (hasBug(DeveloperBug.AGGRO_STORM)) {
             base += (int) Math.round(DeveloperBug.AGGRO_STORM.primary());

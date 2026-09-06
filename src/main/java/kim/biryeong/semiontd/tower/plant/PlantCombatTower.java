@@ -154,7 +154,7 @@ public class PlantCombatTower extends ProductionTower {
     // ------------------------------------------------------------------
 
     @Override
-    public double currentMaxHealth() {
+    protected double builderCurrentMaxHealth() {
         return applyTraitMaxHealth(maxHealth() * (1.0 + growthBonus()));
     }
 

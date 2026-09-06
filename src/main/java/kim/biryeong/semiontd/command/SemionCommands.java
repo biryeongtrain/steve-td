@@ -322,6 +322,11 @@ public final class SemionCommands {
                                                 StringArgumentType.getString(context, "id")
                                         )))))
                 .then(traitCommand("trait", gameManager))
+                .then(literal("augment")
+                        .executes(context -> augment(context.getSource(), gameManager, "ui current"))
+                        .then(argument("input", StringArgumentType.greedyString())
+                                .executes(context -> augment(context.getSource(), gameManager,
+                                        StringArgumentType.getString(context, "input")))))
                 .then(literal("developer")
                         .then(literal("console")
                                 .executes(context -> developerConsole(context.getSource(), gameManager, null))
@@ -469,6 +474,10 @@ public final class SemionCommands {
                 .executes(context -> openCosmeticShop(context.getSource(), cosmeticService)));
         dispatcher.register(skyboxCommand("스카이박스", skyboxService));
         dispatcher.register(traitCommand("특성", gameManager));
+        dispatcher.register(literal("증강")
+                .executes(context -> augment(context.getSource(), gameManager, "ui current"))
+                .then(literal("설정")
+                        .executes(context -> augment(context.getSource(), gameManager, "ui history"))));
         dispatcher.register(literal("레이팅")
                 .executes(context -> rating(context.getSource(), gameManager))
                 .then(literal("순위")
@@ -1590,6 +1599,17 @@ public final class SemionCommands {
                         .executes(context -> setTipsEnabled(context.getSource(), tipService, true)))
                 .then(literal("off")
                         .executes(context -> setTipsEnabled(context.getSource(), tipService, false)));
+    }
+
+    private static int augment(CommandSourceStack source, SemionGameManager gameManager, String input)
+            throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGame game = playableGame(source, gameManager);
+        if (game == null) {
+            failure(source, "참여 중인 경기가 없습니다.");
+            return 0;
+        }
+        return game.augmentService().handle(game, player, input, source.hasPermission(2));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> traitCommand(
@@ -3244,6 +3264,16 @@ public final class SemionCommands {
         ServerPlayer player = source.getPlayerOrException();
         TowerPlacementResult result = ProductionTowerService.placeTower(game, player.getUUID(), player.blockPosition(), towerId);
         if (result != TowerPlacementResult.SUCCESS) {
+            if (result == TowerPlacementResult.OUTSIDE_LANE_AREA
+                    && ProductionTowerCatalog.find(towerId).map(entry -> kim.biryeong.semiontd.tower.augment.AugmentTowers.is(
+                            entry.type(), kim.biryeong.semiontd.tower.augment.AugmentTowers.AMBUSH_WORKSHOP)).orElse(false)) {
+                PlayerLane lane = game.playerLane(player.getUUID()).orElse(null);
+                if (lane != null) {
+                    failure(source, kim.biryeong.semiontd.tower.augment.AugmentTowerService.placementProblem(
+                            lane, kim.biryeong.semiontd.tower.augment.AugmentTowers.AMBUSH_WORKSHOP));
+                    return 0;
+                }
+            }
             failure(source, "타워 설치 실패: " + placementFailureMessage(result));
             return 0;
         }
@@ -3470,6 +3500,9 @@ public final class SemionCommands {
         }
 
         ServerPlayer player = source.getPlayerOrException();
+        if (game.augmentService().showSummonPurchase(game, player, summonId)) {
+            return 1;
+        }
         SummonResult result = game.summonMonster(player.getUUID(), summonId);
         if (result.type() != SummonResultType.SUCCESS) {
             failure(source, "소환 실패: " + summonFailureMessage(result.type()));
@@ -3955,6 +3988,7 @@ public final class SemionCommands {
             case NOT_WAITING -> "참가자 확정 후에는 게임 시작 카운트다운을 시작할 수 없습니다.";
             case ALREADY_PENDING -> "시작 카운트다운이 이미 진행 중입니다.";
             case PRELOAD_FAILED -> "게임 시작 전 맵 프리로드에 실패했습니다.";
+            case AUGMENT_TRAIT_CONFLICT -> "NORMAL에서는 증강과 기존 특성을 함께 사용할 수 없습니다. 설정에서 하나를 꺼 주세요.";
             case SCHEDULED -> "시작 카운트다운을 시작했습니다.";
         };
     }
@@ -4089,6 +4123,7 @@ public final class SemionCommands {
             case PLAYER_TEAM_ELIMINATED -> "소속 팀이 탈락했습니다";
             case UNKNOWN_SUMMON -> "알 수 없는 소환 ID입니다";
             case SUMMON_NOT_ALLOWED_BY_JOB -> "현재 직업은 해당 소환을 사용할 수 없습니다";
+            case AUGMENT_CONTRACT_UNAVAILABLE -> "현재 구매에는 증강 계약을 적용할 수 없습니다. 계약과 구매 조건을 다시 확인하세요";
             case NOT_ENOUGH_GAS -> "에메랄드가 부족합니다";
             case NO_TARGET_TEAM -> "공격할 수 있는 상대 팀이 없습니다";
             case NO_TARGET_LANE -> "대상 팀에 활성화된 라인이 없습니다";

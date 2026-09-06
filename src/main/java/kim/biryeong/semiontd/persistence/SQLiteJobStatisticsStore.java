@@ -23,6 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import kim.biryeong.semiontd.SemionTd;
+import kim.biryeong.semiontd.augment.PlayerAugmentState;
+import kim.biryeong.semiontd.game.AugmentSelectionSnapshot;
+import kim.biryeong.semiontd.game.AugmentTelemetrySnapshot;
 import kim.biryeong.semiontd.game.MatchParticipantResult;
 import kim.biryeong.semiontd.game.MatchResult;
 import kim.biryeong.semiontd.game.MatchMode;
@@ -53,7 +56,8 @@ public final class SQLiteJobStatisticsStore {
             own_lane_diamond_gain, assist_clear_diamond_gain, income_generated,
             assist_clear_threat, incoming_income_threat,
             primary_trait_id, primary_trait_version, secondary_trait_id, secondary_trait_version,
-            catalog_version
+            catalog_version, augment_version, builder_origin, builder_enabled, augment_selections, augment_offer_events,
+            augment_telemetry
             """;
     private static final String AGGREGATE_COLUMNS = """
             job_id, appearances, wins, placement_samples, placement_sum, final_round_sum,
@@ -65,16 +69,22 @@ public final class SQLiteJobStatisticsStore {
             first_match_at_epoch_millis, last_match_at_epoch_millis, updated_at_epoch_millis
             """;
     private static final String INSERT_FACT = "INSERT OR IGNORE INTO job_stat_participant_facts ("
-            + FACT_COLUMNS + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            + FACT_COLUMNS + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String UPSERT_HISTORY_FACT = "INSERT INTO job_stat_participant_facts ("
-            + FACT_COLUMNS + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            + FACT_COLUMNS + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
             + "ON CONFLICT(match_id, player_id) DO UPDATE SET "
             + "cleared_round = excluded.cleared_round, "
             + "primary_trait_id = excluded.primary_trait_id, "
             + "primary_trait_version = excluded.primary_trait_version, "
             + "secondary_trait_id = excluded.secondary_trait_id, "
             + "secondary_trait_version = excluded.secondary_trait_version, "
-            + "catalog_version = excluded.catalog_version";
+            + "catalog_version = excluded.catalog_version, "
+            + "augment_version = excluded.augment_version, "
+            + "builder_origin = excluded.builder_origin, "
+            + "builder_enabled = excluded.builder_enabled, "
+            + "augment_selections = excluded.augment_selections, "
+            + "augment_offer_events = excluded.augment_offer_events, "
+            + "augment_telemetry = excluded.augment_telemetry";
     private static final String UPSERT_AGGREGATE = """
             INSERT INTO job_statistics (
             """ + AGGREGATE_COLUMNS + """
@@ -132,8 +142,10 @@ public final class SQLiteJobStatisticsStore {
                 match_id, player_id, round_number, wave_duration_ticks, combat_ticks,
                 tower_count_start, tower_count_end, tower_death_count,
                 emerald_production_upgrade_count, emerald_per_second, income,
-                emerald_balance, diamond_balance, tower_limit_purchase_count, monster_kills
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                emerald_balance, diamond_balance, tower_limit_purchase_count, monster_kills,
+                utility_support_metrics, wave_support_metrics, natural_wave_metrics,
+                wave_template_id, natural_wave_count, natural_wave_starting_health, augment_economy_metrics
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
     private static final String DELETE_PARTICIPANT_ROUND_METRICS = """
             DELETE FROM job_stat_participant_round_metrics
@@ -144,8 +156,9 @@ public final class SQLiteJobStatisticsStore {
                 match_id, player_id, round_number, tower_type_id,
                 sample_count, start_count, end_alive_count, death_count,
                 physical_damage_dealt, magic_damage_dealt, damage_taken, healing_done,
-                kill_count, first_combat_tick, last_combat_tick, survival_ticks
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                kill_count, first_combat_tick, last_combat_tick, survival_ticks,
+                wave_start_max_health, enemy_hp_damage, augment_special_damage_dealt
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
     private static final String DELETE_PARTICIPANT_ROUND_TOWER_METRICS = """
             DELETE FROM job_stat_participant_round_tower_metrics
@@ -320,6 +333,12 @@ public final class SQLiteJobStatisticsStore {
                         secondary_trait_id TEXT NOT NULL DEFAULT 'semion-td:none',
                         secondary_trait_version INTEGER NOT NULL DEFAULT 0,
                         catalog_version TEXT,
+                        augment_version TEXT,
+                        builder_origin TEXT,
+                        builder_enabled INTEGER,
+                        augment_selections TEXT,
+                        augment_offer_events TEXT,
+                        augment_telemetry TEXT,
                         PRIMARY KEY (match_id, player_id)
                     )
                     """);
@@ -338,6 +357,12 @@ public final class SQLiteJobStatisticsStore {
             ensureColumn(connection, "job_stat_participant_facts", "secondary_trait_version",
                     "INTEGER NOT NULL DEFAULT 0");
             ensureColumn(connection, "job_stat_participant_facts", "catalog_version", "TEXT");
+            ensureColumn(connection, "job_stat_participant_facts", "augment_version", "TEXT");
+            ensureColumn(connection, "job_stat_participant_facts", "builder_origin", "TEXT");
+            ensureColumn(connection, "job_stat_participant_facts", "builder_enabled", "INTEGER");
+            ensureColumn(connection, "job_stat_participant_facts", "augment_selections", "TEXT");
+            ensureColumn(connection, "job_stat_participant_facts", "augment_offer_events", "TEXT");
+            ensureColumn(connection, "job_stat_participant_facts", "augment_telemetry", "TEXT");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_facts_job_id "
                     + "ON job_stat_participant_facts (job_id)");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_facts_ended_at "
@@ -427,9 +452,23 @@ public final class SQLiteJobStatisticsStore {
                         diamond_balance INTEGER NOT NULL,
                         tower_limit_purchase_count INTEGER NOT NULL,
                         monster_kills INTEGER NOT NULL,
+                        utility_support_metrics TEXT,
+                        wave_support_metrics TEXT,
+                        natural_wave_metrics TEXT,
+                        wave_template_id TEXT,
+                        natural_wave_count INTEGER,
+                        natural_wave_starting_health REAL,
+                        augment_economy_metrics TEXT,
                         PRIMARY KEY (match_id, player_id, round_number)
                     )
                     """);
+            ensureColumn(connection, "job_stat_participant_round_metrics", "utility_support_metrics", "TEXT");
+            ensureColumn(connection, "job_stat_participant_round_metrics", "wave_support_metrics", "TEXT");
+            ensureColumn(connection, "job_stat_participant_round_metrics", "natural_wave_metrics", "TEXT");
+            ensureColumn(connection, "job_stat_participant_round_metrics", "wave_template_id", "TEXT");
+            ensureColumn(connection, "job_stat_participant_round_metrics", "natural_wave_count", "INTEGER");
+            ensureColumn(connection, "job_stat_participant_round_metrics", "natural_wave_starting_health", "REAL");
+            ensureColumn(connection, "job_stat_participant_round_metrics", "augment_economy_metrics", "TEXT");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_round_metrics_round "
                     + "ON job_stat_participant_round_metrics (round_number)");
             statement.executeUpdate("""
@@ -450,9 +489,15 @@ public final class SQLiteJobStatisticsStore {
                         first_combat_tick INTEGER NOT NULL,
                         last_combat_tick INTEGER NOT NULL,
                         survival_ticks INTEGER NOT NULL,
+                        wave_start_max_health REAL,
+                        enemy_hp_damage REAL,
+                        augment_special_damage_dealt REAL,
                         PRIMARY KEY (match_id, player_id, round_number, tower_type_id)
                     )
                     """);
+            ensureColumn(connection, "job_stat_participant_round_tower_metrics", "wave_start_max_health", "REAL");
+            ensureColumn(connection, "job_stat_participant_round_tower_metrics", "enemy_hp_damage", "REAL");
+            ensureColumn(connection, "job_stat_participant_round_tower_metrics", "augment_special_damage_dealt", "REAL");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_round_tower_metrics_type_round "
                     + "ON job_stat_participant_round_tower_metrics (tower_type_id, round_number)");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_round_tower_metrics_round "
@@ -643,7 +688,13 @@ public final class SQLiteJobStatisticsStore {
                     participant.traitLoadout(),
                     participant.finalTowerComposition(),
                     participant.roundMetrics(),
-                    matchResult.catalogVersion()
+                    matchResult.catalogVersion(),
+                    matchResult.augmentVersion(),
+                    participant.builderOrigin(),
+                    participant.builderEnabled(),
+                    participant.augmentSelections(),
+                    participant.augmentOfferEvents(),
+                    participant.augmentTelemetry()
             ));
         }
         return facts;
@@ -703,6 +754,16 @@ public final class SQLiteJobStatisticsStore {
         } else {
             statement.setString(28, fact.catalogVersion());
         }
+        statement.setString(29, fact.augmentVersion());
+        statement.setString(30, fact.builderOrigin());
+        if (fact.builderEnabled() == null) {
+            statement.setNull(31, Types.INTEGER);
+        } else {
+            statement.setInt(31, fact.builderEnabled() ? 1 : 0);
+        }
+        statement.setString(32, fact.augmentSelections() == null ? null : GSON.toJson(fact.augmentSelections()));
+        statement.setString(33, fact.augmentOfferEvents() == null ? null : GSON.toJson(fact.augmentOfferEvents()));
+        statement.setString(34, fact.augmentTelemetry() == null ? null : GSON.toJson(fact.augmentTelemetry()));
     }
 
     private static void bindAggregate(PreparedStatement statement, ParticipantFact fact, long updatedAt) throws SQLException {
@@ -824,6 +885,17 @@ public final class SQLiteJobStatisticsStore {
             roundStatement.setLong(13, round.diamond());
             roundStatement.setInt(14, round.towerLimitPurchaseCount());
             roundStatement.setLong(15, round.monsterKills());
+            roundStatement.setString(16, round.utilitySupportMetrics() == null
+                    ? null : GSON.toJson(round.utilitySupportMetrics()));
+            roundStatement.setString(17, round.waveSupportMetrics() == null
+                    ? null : GSON.toJson(round.waveSupportMetrics()));
+            roundStatement.setString(18, round.naturalWaveMetrics() == null
+                    ? null : GSON.toJson(round.naturalWaveMetrics()));
+            roundStatement.setString(19, round.waveTemplateId());
+            roundStatement.setObject(20, round.naturalWaveCount(), Types.INTEGER);
+            roundStatement.setObject(21, round.naturalWaveStartingHealth(), Types.REAL);
+            roundStatement.setString(22, round.augmentEconomyMetrics() == null
+                    ? null : GSON.toJson(round.augmentEconomyMetrics()));
             roundStatement.executeUpdate();
 
             for (TowerRoundMetricsSnapshot tower : round.towerMetrics()) {
@@ -843,6 +915,9 @@ public final class SQLiteJobStatisticsStore {
                 towerStatement.setInt(14, tower.firstCombatTick());
                 towerStatement.setInt(15, tower.lastCombatTick());
                 towerStatement.setLong(16, tower.survivalTicks());
+                towerStatement.setObject(17, tower.waveStartMaxHealth(), Types.REAL);
+                towerStatement.setObject(18, tower.enemyHpDamage(), Types.REAL);
+                towerStatement.setObject(19, tower.augmentSpecialDamageDealt(), Types.REAL);
                 towerStatement.executeUpdate();
             }
         }
@@ -1083,7 +1158,13 @@ public final class SQLiteJobStatisticsStore {
             TraitLoadoutSnapshot traitLoadout,
             List<TowerCompositionEntry> finalTowerComposition,
             List<PlayerRoundMetricsSnapshot> roundMetrics,
-            String catalogVersion
+            String catalogVersion,
+            String augmentVersion,
+            String builderOrigin,
+            Boolean builderEnabled,
+            List<AugmentSelectionSnapshot> augmentSelections,
+            List<PlayerAugmentState.OfferEvent> augmentOfferEvents,
+            AugmentTelemetrySnapshot augmentTelemetry
     ) {
         private ParticipantFact {
             traitLoadout = traitLoadout == null ? TraitLoadoutSnapshot.none() : traitLoadout;

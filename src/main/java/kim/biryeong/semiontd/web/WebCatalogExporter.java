@@ -2,6 +2,9 @@ package kim.biryeong.semiontd.web;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -17,7 +20,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
+import kim.biryeong.semiontd.augment.AugmentCatalog;
+import kim.biryeong.semiontd.augment.AugmentConfig;
+import kim.biryeong.semiontd.augment.AugmentDescriptions;
+import kim.biryeong.semiontd.config.EconomyConfig;
+import kim.biryeong.semiontd.config.SummonConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
+import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.entity.visual.EntityVisual;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.SemionJob;
@@ -29,8 +38,8 @@ import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
 
 public final class WebCatalogExporter {
-    public static final int SCHEMA_VERSION = 2;
-    private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create();
+    public static final int SCHEMA_VERSION = 3;
+    private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().serializeNulls().setPrettyPrinting().create();
     private static final Gson HASH_GSON = new GsonBuilder().disableHtmlEscaping().create();
     private static volatile String currentVersion;
 
@@ -39,6 +48,10 @@ public final class WebCatalogExporter {
 
     public static synchronized CatalogDocument export(Path configDir) throws IOException {
         CatalogDocument document = snapshot(System.currentTimeMillis());
+        return writeDocument(configDir, document);
+    }
+
+    private static CatalogDocument writeDocument(Path configDir, CatalogDocument document) throws IOException {
         if (configDir != null) {
             Path catalogDir = configDir.resolve("web_catalog");
             Path versionsDir = catalogDir.resolve("versions");
@@ -54,6 +67,32 @@ public final class WebCatalogExporter {
     }
 
     public static synchronized CatalogDocument snapshot(long generatedAtEpochMillis) {
+        return snapshot(generatedAtEpochMillis, WaveConfig.defaultConfig(), EconomyConfig.defaultConfig(),
+                SummonConfig.defaultConfig());
+    }
+
+    public static synchronized CatalogDocument export(
+            Path configDir, WaveConfig waves, EconomyConfig economy, SummonConfig summonBalance
+    ) throws IOException {
+        return writeDocument(configDir, snapshot(System.currentTimeMillis(), waves, economy, summonBalance));
+    }
+
+    public static synchronized CatalogDocument snapshot(
+            long generatedAtEpochMillis, WaveConfig waves, EconomyConfig economy, SummonConfig summonBalance
+    ) {
+        return snapshot(generatedAtEpochMillis, waves, economy, summonBalance, AugmentConfig.defaults());
+    }
+
+    public static synchronized CatalogDocument export(
+            Path configDir, WaveConfig waves, EconomyConfig economy, SummonConfig summonBalance, AugmentConfig augments
+    ) throws IOException {
+        return writeDocument(configDir, snapshot(System.currentTimeMillis(), waves, economy, summonBalance, augments));
+    }
+
+    public static synchronized CatalogDocument snapshot(
+            long generatedAtEpochMillis, WaveConfig waves, EconomyConfig economy, SummonConfig summonBalance,
+            AugmentConfig augmentConfig
+    ) {
         List<ProductionTowerCatalog.CatalogEntry> catalogEntries = ProductionTowerCatalog.all().stream()
                 .sorted(Comparator.comparing(entry -> entry.type().id()))
                 .toList();
@@ -66,6 +105,12 @@ public final class WebCatalogExporter {
             List<SemionJob> owners = jobs.stream()
                     .filter(job -> job.includesTowerInCatalog(entry.type()))
                     .toList();
+            if (entry.availability() == ProductionTowerCatalog.Availability.AUGMENT) {
+                if (!owners.isEmpty()) {
+                    throw new IllegalStateException("Augment tower cannot belong to a builder: " + entry.type().id());
+                }
+                continue;
+            }
             if (owners.size() != 1) {
                 throw new IllegalStateException("Tower must belong to exactly one builder: "
                         + entry.type().id() + " owners=" + owners.stream().map(job -> job.id().toString()).toList());
@@ -81,7 +126,9 @@ public final class WebCatalogExporter {
                         towerBuilders.entrySet().stream()
                                 .filter(entry -> entry.getValue().equals(job.id().toString()))
                                 .map(Map.Entry::getKey)
-                                .toList()
+                                .toList(),
+                        JobRegistry.officialBuilders().contains(job) ? "OFFICIAL" : "CREATIVE",
+                        JobRegistry.isEnabled(job)
                 ))
                 .filter(builder -> !builder.towerIds().isEmpty())
                 .toList();
@@ -114,8 +161,21 @@ public final class WebCatalogExporter {
                 .map(summon -> new SummonEntry(summon.id(), summon.displayName()))
                 .toList();
         Map<String, Map<String, Double>> abilities = sortedAbilities(TowerBalanceRuntime.current().abilities());
-        CatalogHashInput hashInput = new CatalogHashInput(SCHEMA_VERSION, builders, towers, upgrades, traits, summons, abilities);
-        String versionHash = sha256(HASH_GSON.toJson(hashInput));
+        List<AugmentEntry> augments = AugmentCatalog.definitions().stream()
+                .sorted(Comparator.comparing(definition -> definition.id()))
+                .map(definition -> new AugmentEntry(
+                        definition.id(), definition.displayName(), definition.rarity().name(), definition.category().name(),
+                        definition.familyKey(), definition.safe(), definition.risky(), definition.towerAugment(),
+                        definition.reserve(), definition.milestoneRounds().stream().sorted().toList(),
+                        definition.conflicts().stream().sorted().toList(), AugmentDescriptions.describe(definition, augmentConfig),
+                        augmentConfig.enabled() && augmentConfig.isEnabled(definition.id())
+                                && (definition.reserve() || augmentConfig.publicPoolEnabled()),
+                        new TreeMap<>(augmentConfig.parameters().getOrDefault(definition.id(), Map.of()))
+                ))
+                .toList();
+        CatalogHashInput hashInput = new CatalogHashInput(SCHEMA_VERSION, builders, towers, upgrades, traits, summons,
+                abilities, waves, economy, summonBalance, augmentConfig.version(), augments, augmentConfig.toJson());
+        String versionHash = sha256(HASH_GSON.toJson(canonicalJson(HASH_GSON.toJsonTree(hashInput))));
         return new CatalogDocument(
                 SCHEMA_VERSION,
                 versionHash,
@@ -125,7 +185,13 @@ public final class WebCatalogExporter {
                 upgrades,
                 traits,
                 summons,
-                abilities
+                abilities,
+                waves,
+                economy,
+                summonBalance,
+                augmentConfig.version(),
+                augments,
+                augmentConfig.toJson()
         );
     }
 
@@ -158,7 +224,9 @@ public final class WebCatalogExporter {
                         visual.blockbenchModelId(),
                         visual.scale(),
                         jsonSafeProperties(visual.properties())
-                )
+                ),
+                entry.availability().name(),
+                entry.augmentId()
         );
     }
 
@@ -206,6 +274,21 @@ public final class WebCatalogExporter {
         }
     }
 
+    private static JsonElement canonicalJson(JsonElement value) {
+        if (value.isJsonObject()) {
+            JsonObject sorted = new JsonObject();
+            value.getAsJsonObject().entrySet().stream().sorted(Map.Entry.comparingByKey())
+                    .forEach(entry -> sorted.add(entry.getKey(), canonicalJson(entry.getValue())));
+            return sorted;
+        }
+        if (value.isJsonArray()) {
+            JsonArray ordered = new JsonArray();
+            value.getAsJsonArray().forEach(element -> ordered.add(canonicalJson(element)));
+            return ordered;
+        }
+        return value;
+    }
+
     private static void writeAtomically(Path target, String contents) throws IOException {
         Path parent = target.getParent();
         Files.createDirectories(parent);
@@ -229,7 +312,13 @@ public final class WebCatalogExporter {
             List<UpgradeEntry> upgrades,
             List<TraitEntry> traits,
             List<SummonEntry> summons,
-            Map<String, Map<String, Double>> abilities
+            Map<String, Map<String, Double>> abilities,
+            WaveConfig waves,
+            EconomyConfig economy,
+            SummonConfig summonBalance,
+            String augmentVersion,
+            List<AugmentEntry> augments,
+            JsonObject augmentRules
     ) {
     }
 
@@ -242,11 +331,26 @@ public final class WebCatalogExporter {
             List<UpgradeEntry> upgrades,
             List<TraitEntry> traits,
             List<SummonEntry> summons,
-            Map<String, Map<String, Double>> abilities
+            Map<String, Map<String, Double>> abilities,
+            WaveConfig waves,
+            EconomyConfig economy,
+            SummonConfig summonBalance,
+            String augmentVersion,
+            List<AugmentEntry> augments,
+            JsonObject augmentRules
     ) {
     }
 
-    public record BuilderEntry(String id, String displayName, List<String> description, List<String> towerIds) {
+    public record BuilderEntry(String id, String displayName, List<String> description, List<String> towerIds,
+            String builderOrigin, Boolean builderEnabled) {
+    }
+
+    public record AugmentEntry(
+            String id, String displayName, String rarity, String category, String familyKey,
+            boolean safe, boolean risky, boolean towerAugment, boolean reserve,
+            List<Integer> milestoneRounds, List<String> conflicts, String description,
+            boolean enabled, Map<String, Double> parameters
+    ) {
     }
 
     public record TowerEntry(
@@ -262,7 +366,9 @@ public final class WebCatalogExporter {
             int attackIntervalTicks,
             int aggroPriority,
             List<String> description,
-            VisualEntry visual
+            VisualEntry visual,
+            String availability,
+            String augmentId
     ) {
     }
 

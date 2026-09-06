@@ -10,6 +10,7 @@ import kim.biryeong.semiontd.summon.SummonAbilityActivation;
 import kim.biryeong.semiontd.summon.SummonDescriptionFactory;
 import kim.biryeong.semiontd.summon.SummonRole;
 import kim.biryeong.semiontd.summon.SummonTier;
+import kim.biryeong.semiontd.summon.UtilitySupportProfile;
 
 public record SummonConfig(Map<String, SummonDefinition> summons) {
     public SummonConfig {
@@ -47,21 +48,21 @@ public record SummonConfig(Map<String, SummonDefinition> summons) {
         add(summons, def("phantom", "Phantom", "minecraft:phantom", 280, 13, 10, SummonTier.T3, roles(SummonRole.RUSH), AttackKind.MELEE, DamageType.PHYSICAL, 165, 2, 4, 12, 0.9, 0.5, acts(SummonAbilityActivation.PASSIVE), Map.of(), "공중 시각을 가진 일반 경로 압박 유닛입니다."));
         add(summons, def("enderman", "Enderman", "minecraft:enderman", 300, 30, 12, SummonTier.T3, roles(SummonRole.SIEGE), AttackKind.MELEE, DamageType.MAGIC, 260, 4, 10, 22, 0.6, 2.9, acts(SummonAbilityActivation.PASSIVE), Map.of(), "고수입 선택지로 강한 단일 압박을 제공합니다."));
         add(summons, def("breeze", "Breeze", "minecraft:breeze", 300, 14, 12, SummonTier.T3, roles(SummonRole.DISRUPTOR), AttackKind.RANGED, DamageType.MAGIC, 190, 3, 12, 13, 0.6, 1.77, acts(SummonAbilityActivation.COOLDOWN), Map.of("radius", 7.0, "magnitude", 0.15, "durationTicks", 60.0, "cooldownTicks", 80.0, "maxTargets", 2.0), "풍압 컨셉으로 주변 타워 공격 속도를 낮춥니다."));
-        add(summons, def("guardian", "Guardian", "minecraft:guardian", 320, 15, 12, SummonTier.T3, roles(SummonRole.SIEGE), AttackKind.RANGED, DamageType.MAGIC, 230, 6, 14, 16, 0.85, 0.85, acts(SummonAbilityActivation.CONDITIONAL), Map.of("progressThreshold", 0.70, "bonusDamage", 15.0, "cooldownTicks", 80.0), "진행도가 높을 때 방어 대상에게 추가 고정 피해를 줍니다."));
+        add(summons, def("guardian", "Guardian", "minecraft:guardian", 320, 15, 12, SummonTier.T3, roles(SummonRole.SIEGE), AttackKind.RANGED, DamageType.MAGIC, 230, 6, 14, 16, 0.85, 0.85, acts(SummonAbilityActivation.COOLDOWN), Map.of("supportRadius", 6.0, "physicalShield", 30.0, "supportMaxTargets", 8.0, "shieldDurationTicks", 80.0, "supportCooldownTicks", 60.0, "supportRetryDelayTicks", 20.0), "같은 목표 레인의 비보스 아군을 지원합니다."));
         add(summons, def("polar_bear", "Polar Bear", "minecraft:polar_bear", 350, 17, 14, SummonTier.T4, roles(SummonRole.TANK), AttackKind.MELEE, DamageType.PHYSICAL, 410, 13, 4, 20, 1.4, 1.4, acts(SummonAbilityActivation.PASSIVE), Map.of(), "후반 대형 탱커입니다."));
         add(summons, def("magma_cube", "Magma Cube", "minecraft:magma_cube", 380, 18, 14, SummonTier.T4, roles(SummonRole.SWARM, SummonRole.TANK), AttackKind.MELEE, DamageType.MAGIC, 360, 9, 12, 18, 1.4, 1.4, acts(SummonAbilityActivation.PASSIVE), Map.of(), "분열 없이 마법 저항이 높은 단일 유닛입니다."));
         add(summons, def("ocelot", "Ocelot", "minecraft:ocelot", 400, 18, 15, SummonTier.T4, roles(SummonRole.SUPPORT, SummonRole.RUSH), AttackKind.MELEE, DamageType.PHYSICAL, 205, 3, 3, 10, 0.6, 0.7, acts(SummonAbilityActivation.COOLDOWN), Map.of("radius", 7.0, "magnitude", 0.30, "durationTicks", 80.0, "cooldownTicks", 60.0, "maxTargets", 8.0), "주변 아군 인컴 유닛의 이동속도를 높입니다."));
         add(summons, def("vindicator", "Vindicator", "minecraft:vindicator", 420, 19, 15, SummonTier.T4, roles(SummonRole.DISRUPTOR), AttackKind.MELEE, DamageType.PHYSICAL, 285, 8, 2, 24, 0.6, 1.95, acts(SummonAbilityActivation.CONDITIONAL), Map.of("radius", 6.5, "magnitude", 0.18, "durationTicks", 80.0, "cooldownTicks", 80.0, "maxTargets", 1.0), "강한 근접 교란으로 타워 공격 속도를 방해합니다."));
         add(summons, def("witch", "Witch", "minecraft:witch", 450, 19, 16, SummonTier.T4, roles(SummonRole.SUPPORT, SummonRole.DISRUPTOR), AttackKind.RANGED, DamageType.MAGIC, 265, 3, 16, 12, 0.6, 1.95, acts(SummonAbilityActivation.COOLDOWN), Map.of("radius", 7.0, "moveMagnitude", 0.30, "attackMagnitude", 0.25, "attackSpeedMagnitude", 0.25, "durationTicks", 80.0, "cooldownTicks", 60.0, "maxTargets", 8.0), "주변 아군 인컴 유닛의 공격과 이동 템포를 올립니다."));
         add(summons, def("iron_golem", "Iron Golem", "minecraft:iron_golem", 460, 20, 16, SummonTier.T4, roles(SummonRole.TANK), AttackKind.MELEE, DamageType.PHYSICAL, 520, 18, 5, 30, 1.4, 2.2, acts(SummonAbilityActivation.PASSIVE), Map.of(), "느리지만 단단한 중후반 고방어 탱커입니다."));
-        add(summons, def("blaze", "Blaze", "minecraft:blaze", 500, 22, 18, SummonTier.T4, roles(SummonRole.SIEGE), AttackKind.RANGED, DamageType.MAGIC, 350, 5, 16, 28, 0.6, 1.8, acts(SummonAbilityActivation.CONDITIONAL), Map.of("progressThreshold", 0.65, "bonusDamage", 25.0, "cooldownTicks", 80.0), "후반 진행도에서 방어 대상에게 추가 고정 피해를 줍니다."));
+        add(summons, def("blaze", "Blaze", "minecraft:blaze", 500, 22, 18, SummonTier.T4, roles(SummonRole.SIEGE), AttackKind.RANGED, DamageType.MAGIC, 350, 5, 16, 28, 0.6, 1.8, acts(SummonAbilityActivation.COOLDOWN), Map.of("supportRadius", 6.0, "magicShield", 40.0, "supportMaxTargets", 8.0, "shieldDurationTicks", 80.0, "supportCooldownTicks", 80.0, "supportRetryDelayTicks", 20.0), "같은 목표 레인의 비보스 아군을 지원합니다."));
         add(summons, def("shulker", "Shulker", "minecraft:shulker", 520, 23, 18, SummonTier.T4, roles(SummonRole.DISRUPTOR, SummonRole.TANK), AttackKind.RANGED, DamageType.MAGIC, 430, 16, 14, 18, 1.0, 1.0, acts(SummonAbilityActivation.COOLDOWN), Map.of("radius", 7.0, "magnitude", 0.15, "durationTicks", 80.0, "cooldownTicks", 90.0, "maxTargets", 2.0), "가까운 타워들의 사거리를 낮춥니다."));
-        add(summons, def("ghast", "Ghast", "minecraft:ghast", 560, 25, 20, SummonTier.T4, roles(SummonRole.SIEGE), AttackKind.RANGED, DamageType.MAGIC, 460, 4, 18, 34, 2.0, 2.0, acts(SummonAbilityActivation.CONDITIONAL), Map.of("progressThreshold", 0.75, "bonusDamage", 30.0, "cooldownTicks", 90.0), "후반 라인에서 강한 공성 고정 피해를 추가합니다."));
+        add(summons, def("ghast", "Ghast", "minecraft:ghast", 560, 25, 20, SummonTier.T4, roles(SummonRole.SIEGE), AttackKind.RANGED, DamageType.MAGIC, 460, 4, 18, 34, 2.0, 2.0, acts(SummonAbilityActivation.COOLDOWN), Map.of("supportRadius", 7.0, "supportHealAmount", 45.0, "supportMaxTargets", 6.0, "supportCooldownTicks", 120.0, "supportRetryDelayTicks", 20.0), "같은 목표 레인의 비보스 아군을 지원합니다."));
         add(summons, def("zoglin", "Zoglin", "minecraft:zoglin", 600, 30, 22, SummonTier.T5, roles(SummonRole.TANK, SummonRole.RUSH), AttackKind.MELEE, DamageType.PHYSICAL, 650, 16, 6, 38, 1.4, 1.4, acts(SummonAbilityActivation.PASSIVE), Map.of(), "빠른 최종 근접 탱커입니다."));
-        add(summons, def("wither_skeleton", "Wither Skeleton", "minecraft:wither_skeleton", 650, 32, 24, SummonTier.T5, roles(SummonRole.DISRUPTOR, SummonRole.SIEGE), AttackKind.MELEE, DamageType.MAGIC, 620, 14, 18, 34, 0.7, 2.4, acts(SummonAbilityActivation.CONDITIONAL), Map.of("progressThreshold", 0.70, "bonusDamage", 35.0, "cooldownTicks", 80.0), "위더 컨셉의 후반 교란/공성 유닛입니다."));
+        add(summons, def("wither_skeleton", "Wither Skeleton", "minecraft:wither_skeleton", 650, 32, 24, SummonTier.T5, roles(SummonRole.DISRUPTOR, SummonRole.SIEGE), AttackKind.MELEE, DamageType.MAGIC, 620, 14, 18, 34, 0.7, 2.4, acts(SummonAbilityActivation.COOLDOWN), Map.of("supportRadius", 6.0, "supportHealAmount", 35.0, "physicalShield", 25.0, "magicShield", 25.0, "supportMaxTargets", 3.0, "shieldDurationTicks", 100.0, "supportCooldownTicks", 100.0, "supportRetryDelayTicks", 20.0), "같은 목표 레인의 비보스 아군을 지원합니다."));
         add(summons, def("evoker", "Evoker", "minecraft:evoker", 680, 33, 24, SummonTier.T5, roles(SummonRole.SUPPORT, SummonRole.DISRUPTOR), AttackKind.RANGED, DamageType.MAGIC, 560, 8, 24, 26, 0.6, 1.95, acts(SummonAbilityActivation.COOLDOWN), Map.of("radius", 8.0, "attackMagnitude", 0.25, "damageReductionMagnitude", 0.25, "durationTicks", 80.0, "cooldownTicks", 60.0, "maxTargets", 10.0), "주변 아군 인컴 유닛을 공격과 방어 양쪽으로 강화합니다."));
         add(summons, def("elder_guardian", "Elder Guardian", "minecraft:elder_guardian", 700, 34, 26, SummonTier.T5, roles(SummonRole.TANK, SummonRole.DISRUPTOR), AttackKind.RANGED, DamageType.MAGIC, 760, 22, 28, 32, 1.0, 1.0, acts(SummonAbilityActivation.COOLDOWN), Map.of("radius", 8.0, "attackSpeedMagnitude", 0.30, "rangeMagnitude", 0.20, "durationTicks", 100.0, "cooldownTicks", 80.0, "maxTargets", 3.0), "여러 타워의 공격 속도와 사거리를 동시에 낮춥니다."));
-        add(summons, def("warden", "Warden", "minecraft:warden", 800, 40, 30, SummonTier.T5, roles(SummonRole.TANK, SummonRole.SIEGE), AttackKind.MELEE, DamageType.PHYSICAL, 1050, 28, 22, 46, 1.55, 2.6, acts(SummonAbilityActivation.CONDITIONAL), Map.of("progressThreshold", 0.70, "bonusDamage", 50.0, "cooldownTicks", 90.0), "최종 고체력 탱커이자 보스 압박 유닛입니다."));
+        add(summons, def("warden", "Warden", "minecraft:warden", 800, 40, 30, SummonTier.T5, roles(SummonRole.TANK, SummonRole.SIEGE), AttackKind.MELEE, DamageType.PHYSICAL, 1050, 28, 22, 46, 1.55, 2.6, acts(SummonAbilityActivation.COOLDOWN), Map.of("supportRadius", 8.0, "physicalShield", 70.0, "magicShield", 70.0, "supportMaxTargets", 8.0, "shieldDurationTicks", 100.0, "supportCooldownTicks", 120.0, "supportRetryDelayTicks", 20.0, "physicalCanary", 0.0), "같은 목표 레인의 비보스 아군을 지원합니다."));
         SummonConfig fallback = new SummonConfig(summons);
         return BundledBalanceDefaults.load("summons.json", SummonConfig.class, fallback);
     }
@@ -76,6 +77,14 @@ public record SummonConfig(Map<String, SummonDefinition> summons) {
             if (!merged.containsKey(entry.getKey())) {
                 merged.put(entry.getKey(), entry.getValue());
                 changed = true;
+            } else if (UtilitySupportProfile.supports(entry.getKey())) {
+                SummonDefinition current = merged.get(entry.getKey());
+                LinkedHashMap<String, Double> abilities = new LinkedHashMap<>(entry.getValue().abilityValues());
+                abilities.putAll(current.abilityValues());
+                if (!abilities.equals(current.abilityValues())) {
+                    merged.put(entry.getKey(), current.withAbilityValues(abilities));
+                    changed = true;
+                }
             }
         }
         return changed ? new SummonConfig(merged) : this;
@@ -194,6 +203,9 @@ public record SummonConfig(Map<String, SummonDefinition> summons) {
                     : List.copyOf(abilityActivations);
             description = description == null ? List.of() : List.copyOf(description);
             abilityValues = abilityValues == null ? Map.of() : Map.copyOf(abilityValues);
+            if (UtilitySupportProfile.supports(id)) {
+                UtilitySupportProfile.validateValues(id, abilityValues);
+            }
         }
 
         public SummonDefinition withId(String id) {
@@ -247,6 +259,12 @@ public record SummonConfig(Map<String, SummonDefinition> summons) {
                     description,
                     abilityValues
             );
+        }
+
+        public SummonDefinition withAbilityValues(Map<String, Double> abilityValues) {
+            return new SummonDefinition(id, displayName, enabled, emeraldCost, incomeGain, maxHealth, armor,
+                    resistance, attackDamage, attackKind, damageType, entityTypeId, blockbenchModelId,
+                    dimensions, diamondReward, tier, roles, abilityActivations, description, abilityValues);
         }
 
         public MonsterDimensions monsterDimensions() {

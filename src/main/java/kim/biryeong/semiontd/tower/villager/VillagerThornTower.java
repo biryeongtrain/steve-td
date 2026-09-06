@@ -46,7 +46,7 @@ public class VillagerThornTower extends EntityBackedTower {
     }
 
     @Override
-    public double currentMaxHealth() {
+    protected double builderCurrentMaxHealth() {
         return applyTraitMaxHealth(maxHealth() * (1.0 + survivalHealthBonus()));
     }
 

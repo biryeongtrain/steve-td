@@ -8,10 +8,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Stream;
 import kim.biryeong.semiontd.config.JobAvailabilityConfig;
+import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
+import kim.biryeong.semiontd.game.PlayerEconomy;
+import kim.biryeong.semiontd.game.SemionPlayer;
+import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.insect.InsectTowers;
 import kim.biryeong.semiontd.tower.ocean.OceanTowers;
 import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
@@ -91,6 +96,10 @@ class JobRegistryTest {
         assertEquals(32, JobRegistry.all().size());
         assertTrue(JobRegistry.officialBuilders().stream().noneMatch(JobRegistry.defaultJob()::equals));
         assertTrue(JobRegistry.creativeBuilders().stream().noneMatch(JobRegistry.defaultJob()::equals));
+        var player = new SemionPlayer(UUID.randomUUID(), "pirate-origin-test", TeamId.RED, 0,
+                new PlayerEconomy(EconomyConfig.defaultConfig()));
+        player.assignJob(JobRegistry.find(PirateTowerJob.ID).orElseThrow());
+        assertEquals("CREATIVE", player.builderOrigin());
     }
 
     @Test

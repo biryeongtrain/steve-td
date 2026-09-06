@@ -9,6 +9,8 @@ import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.visual.SemionAnimationState;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.tower.succubus.SuccubusDreams;
+import kim.biryeong.semiontd.augment.AugmentCombat;
+import kim.biryeong.semiontd.tower.augment.AugmentTowerService;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -105,19 +107,31 @@ public final class TowerAttackMonsterGoal extends Goal {
             return;
         }
 
+        if (tower.runtimeTower() != null && !tower.runtimeTower().canAttackTarget(tower, target)) {
+            return;
+        }
         tower.playAnimation(SemionAnimationState.ATTACK);
         double damageAmount = tower.attackDamageAmount(target);
         float healthBeforeAttack = tower.getHealth();
         playRangedAttackSound();
-        var damageResult = tower.damageTargetResult(target, damageAmount);
+        var preAttackPosition = target.position();
+        var damageResult = tower.runtimeTower() == null
+                ? kim.biryeong.semiontd.tower.Tower.DamageResult.NONE
+                : tower.runtimeTower().damagePrimaryAttackTargetResult(tower, target, damageAmount);
         boolean killedPrimaryTarget = damageResult.killed();
+        AugmentCombat.onPrimaryAttackResolved(tower, target, damageResult);
+        if (damageResult.dealtDamage() > 0.0) {
+            AugmentTowerService.onPrimaryAttack(tower.runtimeTower(), target, damageResult.outgoingDamage(),
+                    tower.runtimeTower().primaryDamageType(), preAttackPosition);
+        }
         tower.recordAttack(
                 target,
                 damageAmount,
-                damageResult.outgoingDamage(),
+                damageResult.secondaryOutgoingDamage(),
                 damageResult.dealtDamage(),
                 killedPrimaryTarget
         );
+        tower.refreshAugmentNameplate();
         TowerVfxService.showAttack(
                 tower,
                 target,
@@ -251,6 +265,7 @@ public final class TowerAttackMonsterGoal extends Goal {
                 ).stream()
                 .filter(SemionMonsterEntity.class::isInstance)
                 .map(SemionMonsterEntity.class::cast)
+                .filter(monster -> tower.runtimeTower() == null || tower.runtimeTower().canAttackTarget(tower, monster))
                 .filter(this::isInTargetSearchRange)
                 .toList();
     }
@@ -260,7 +275,8 @@ public final class TowerAttackMonsterGoal extends Goal {
     }
 
     private boolean isUsableTarget(SemionMonsterEntity monster) {
-        return tower.isValidAttackTarget(monster) && isInTargetSearchRange(monster);
+        return tower.isValidAttackTarget(monster) && isInTargetSearchRange(monster)
+                && (tower.runtimeTower() == null || tower.runtimeTower().canAttackTarget(tower, monster));
     }
 
     private boolean isInTargetSearchRange(SemionMonsterEntity monster) {

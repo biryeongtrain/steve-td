@@ -52,6 +52,7 @@ public final class ArmyGameTest {
             PlayerLane lane = game.playerLane(owner).orElseThrow();
 
             require(ProductionTowerCatalog.all().stream()
+                    .filter(entry -> entry.availability() == ProductionTowerCatalog.Availability.JOB)
                     .filter(ProductionTowerCatalog.CatalogEntry::starter).count() == 148,
                     "Built-ins must include all 148 starter entries after Pirate Builder registration.");
             require(ProductionTowerService.availableTowers(game, owner).stream()
