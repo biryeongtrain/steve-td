@@ -17,6 +17,8 @@ final class EntityVisualProperties {
     static final String LLAMA_VARIANT = "llama_variant";
     static final String FOX_VARIANT = "fox_variant";
     static final String RABBIT_VARIANT = "rabbit_variant";
+    static final String PANDA_MAIN_GENE = "panda_main_gene";
+    static final String PANDA_HIDDEN_GENE = "panda_hidden_gene";
     static final String PARROT_VARIANT = "parrot_variant";
     static final String AXOLOTL_VARIANT = "axolotl_variant";
     static final String SNOW_GOLEM_HAS_PUMPKIN = "snow_golem_has_pumpkin";
@@ -35,6 +37,7 @@ final class EntityVisualProperties {
     static final String COLLAR_COLOR = "collar_color";
     static final String TAME = "tame";
     static final String SITTING = "sitting";
+    static final String BABY = "baby";
 
     private EntityVisualProperties() {
     }

@@ -9,9 +9,11 @@ import java.util.Map;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.entity.visual.BlockDisplayVisual;
 import kim.biryeong.semiontd.entity.visual.EntityVisual;
+import kim.biryeong.semiontd.entity.visual.PandaVisual;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.entity.animal.Panda;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DoublePlantBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -362,7 +364,7 @@ public final class PlantTowers {
     // 판다 - 지형이 필요 없고 걸어 다니는 계열 밖 타워. 4티어입니다.
     public static final TowerType T1_PANDA_TOWER = pandaTower(
             "t1_panda_tower", "작은 판다", 70, 260, 2.5, 12, 22, 55,
-            plantVisual(Blocks.BAMBOO, 1.0), 1,
+            pandaVisual(Panda.Gene.NORMAL, true, 1.0), 1,
             List.of(
                     "<gray>지형 없이 어디에나 세우는 근접 타워입니다.</gray>",
                     PANDA_ROAMS_LINE,
@@ -372,7 +374,7 @@ public final class PlantTowers {
             ));
     public static final TowerType T2_PANDA_TOWER = pandaTower(
             "t2_panda_tower", "판다", 150, 480, 2.5, 22, 21, 62,
-            plantVisual(Blocks.BAMBOO_BLOCK, 1.15), 2,
+            pandaVisual(Panda.Gene.NORMAL, false, 1.0), 2,
             List.of(
                     "<gray>지형 없이 어디에나 세우는 근접 타워입니다.</gray>",
                     PANDA_ROAMS_LINE,
@@ -382,7 +384,7 @@ public final class PlantTowers {
             ));
     public static final TowerType T3_PANDA_TOWER = pandaTower(
             "t3_panda_tower", "화난 판다", 260, 800, 2.5, 38, 20, 70,
-            plantVisual(Blocks.STRIPPED_BAMBOO_BLOCK, 1.3), 3,
+            pandaVisual(Panda.Gene.AGGRESSIVE, false, 1.15), 3,
             List.of(
                     "<gray>지형 없이 어디에나 세우는 근접 타워입니다.</gray>",
                     PANDA_ROAMS_LINE,
@@ -392,7 +394,7 @@ public final class PlantTowers {
             ));
     public static final TowerType T4_PANDA_TOWER = pandaTower(
             "t4_panda_tower", "갈색 판다", 400, 1250, 2.5, 58, 18, 78,
-            plantVisual(Blocks.BAMBOO_MOSAIC, 1.45), 4,
+            pandaVisual(Panda.Gene.BROWN, false, 1.3), 4,
             List.of(
                     "<gray>판다 계열의 최종 형태입니다.</gray>",
                     PANDA_ROAMS_LINE,
@@ -541,6 +543,16 @@ public final class PlantTowers {
      * 어디에나 설 수 있고, 지형 효과 계산도 전부 건너뜁니다. 뿌리 문구도 붙이지 않습니다 -
      * 판다는 유일하게 움직이는 식물 타워입니다.
      */
+    /**
+     * 판다는 블록이 아니라 진짜 판다이고, 티어마다 <b>다른 종류</b>입니다.
+     *
+     * <p>덩치만 키우면 네 티어가 전부 같은 판다로 보입니다. 바닐라 판다는 유전자로 생김새가
+     * 갈리므로(갈색·화남) 그 종류를 그대로 씁니다. 이름과 화면이 어긋나지 않습니다.
+     */
+    private static EntityVisual pandaVisual(Panda.Gene gene, boolean baby, double scale) {
+        return PandaVisual.builder().gene(gene).baby(baby).scale(scale).build();
+    }
+
     private static TowerType pandaTower(
             String id,
             String displayName,

@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.function.ToIntFunction;
+import kim.biryeong.semiontd.mixin.accessor.AgeableMobAccessor;
 import kim.biryeong.semiontd.mixin.accessor.AxolotlAccessor;
 import kim.biryeong.semiontd.mixin.accessor.CatAccessor;
 import kim.biryeong.semiontd.mixin.accessor.ChickenAccessor;
@@ -14,6 +15,7 @@ import kim.biryeong.semiontd.mixin.accessor.HorseAccessor;
 import kim.biryeong.semiontd.mixin.accessor.LlamaAccessor;
 import kim.biryeong.semiontd.mixin.accessor.MoobloomAccessor;
 import kim.biryeong.semiontd.mixin.accessor.MushroomCowAccessor;
+import kim.biryeong.semiontd.mixin.accessor.PandaAccessor;
 import kim.biryeong.semiontd.mixin.accessor.ParrotAccessor;
 import kim.biryeong.semiontd.mixin.accessor.PigAccessor;
 import kim.biryeong.semiontd.mixin.accessor.RabbitAccessor;
@@ -40,6 +42,7 @@ import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Fox;
 import net.minecraft.world.entity.animal.MushroomCow;
+import net.minecraft.world.entity.animal.Panda;
 import net.minecraft.world.entity.animal.Parrot;
 import net.minecraft.world.entity.animal.Rabbit;
 import net.minecraft.world.entity.animal.Salmon;
@@ -73,6 +76,7 @@ public final class EntityVisualApplierRegistry {
         applyHolderVariants(visual, entityType, registryAccess, data);
         applyIntegerVariants(visual, entityType, data);
         applyMoobloomVariant(visual, entityType, data);
+        applyPandaState(visual, entityType, data);
         applyShulkerState(visual, entityType, data);
         applyTamableState(visual, entityType, data);
         applySnowGolemState(visual, entityType, data);
@@ -92,6 +96,34 @@ public final class EntityVisualApplierRegistry {
                         SnowGolemAccessor.semiontd$dataPumpkinId(),
                         (byte) (hasPumpkin ? 16 : 0)
                 ));
+    }
+
+    /**
+     * 판다의 종류는 크기가 아니라 유전자입니다.
+     *
+     * <p>주 유전자만 넣으면 열성(갈색·약함)은 화면에 드러나지 않습니다. 바닐라가 보이는 종류를
+     * {@code getVariantFromGenes(main, hidden)} 으로 정하고, 열성은 두 유전자가 같을 때만
+     * 나타나기 때문입니다. 그래서 두 값을 따로 받습니다 - {@link PandaVisual.Builder#gene} 는
+     * 둘을 같은 값으로 채웁니다.
+     *
+     * <p>새끼 여부는 {@link net.minecraft.world.entity.AgeableMob} 의 값이라 판다에만 한정해
+     * 씁니다. 판다가 아닌 종류에까지 열어 두면 나이 개념이 없는 엔티티에 엉뚱한 필드 id 를
+     * 밀어 넣게 됩니다.
+     */
+    private static void applyPandaState(
+            EntityVisual visual,
+            EntityType<?> entityType,
+            List<SynchedEntityData.DataValue<?>> data
+    ) {
+        if (entityType != EntityType.PANDA) {
+            return;
+        }
+        firstEnum(visual, Panda.Gene.class, EntityVisualProperties.PANDA_MAIN_GENE, "gene", "variant")
+                .ifPresent(gene -> put(data, PandaAccessor.semiontd$mainGeneId(), (byte) gene.getId()));
+        firstEnum(visual, Panda.Gene.class, EntityVisualProperties.PANDA_HIDDEN_GENE, "hidden_gene")
+                .ifPresent(gene -> put(data, PandaAccessor.semiontd$hiddenGeneId(), (byte) gene.getId()));
+        booleanProperty(visual, EntityVisualProperties.BABY)
+                .ifPresent(baby -> put(data, AgeableMobAccessor.semiontd$dataBabyId(), baby));
     }
 
     private static void applyShulkerState(

@@ -30,6 +30,7 @@ import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.ocean.OceanTowers;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
+import net.minecraft.world.entity.animal.Panda;
 import net.minecraft.world.level.block.Blocks;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -115,6 +116,38 @@ final class PlantTowerCatalogTest {
         assertUpgrade(PlantTowers.T2_PANDA_TOWER, PlantTowers.T3_PANDA_TOWER, 260);
         assertUpgrade(PlantTowers.T3_PANDA_TOWER, PlantTowers.T4_PANDA_TOWER, 400);
         assertEquals("판다", new PlantTowerJob().towerGroup(PlantTowers.T1_PANDA_TOWER));
+    }
+
+    /**
+     * 티어마다 실제로 다른 판다여야 합니다.
+     *
+     * <p>덩치만 키우면 네 티어가 전부 같은 판다로 보입니다. 화난 판다와 갈색 판다는 이름부터
+     * 바닐라 유전자를 가리키므로 그 종류를 그대로 써야 이름과 화면이 맞습니다.
+     *
+     * <p>갈색은 열성이라 주 유전자만 갈색으로 두면 화면에는 평범한 판다가 섭니다. 숨은 유전자까지
+     * 같은 값이어야 드러납니다.
+     */
+    @Test
+    void eachPandaTierIsADifferentKindOfPanda() {
+        assertEquals("minecraft:panda", PlantTowers.T1_PANDA_TOWER.visual().entityTypeId());
+
+        assertEquals(Boolean.TRUE, PlantTowers.T1_PANDA_TOWER.visual().properties().get("baby"),
+                "작은 판다는 새끼여야 이름과 맞습니다");
+        assertEquals(Boolean.FALSE, PlantTowers.T2_PANDA_TOWER.visual().properties().get("baby"),
+                "판다는 새끼가 아닙니다");
+
+        assertEquals(Panda.Gene.AGGRESSIVE, PlantTowers.T3_PANDA_TOWER.visual().properties().get("panda_main_gene"),
+                "화난 판다는 공격적 유전자여야 합니다");
+        assertEquals(Panda.Gene.BROWN, PlantTowers.T4_PANDA_TOWER.visual().properties().get("panda_main_gene"),
+                "갈색 판다는 갈색 유전자여야 합니다");
+        assertEquals(Panda.Gene.BROWN, PlantTowers.T4_PANDA_TOWER.visual().properties().get("panda_hidden_gene"),
+                "열성 유전자는 숨은 쪽까지 같아야 화면에 드러납니다");
+
+        // 네 티어가 서로 구분돼야 합니다. 같은 값이 둘이면 업그레이드가 눈에 보이지 않습니다.
+        assertEquals(4, PlantTowers.PANDA_TOWERS.stream()
+                .map(type -> type.visual().properties() + "|" + type.visual().scale())
+                .distinct()
+                .count(), "판다 네 티어는 서로 다른 모습이어야 합니다");
     }
 
     /**
