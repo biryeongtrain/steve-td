@@ -25,6 +25,24 @@ final class MonsterDamageTest {
     }
 
     @Test
+    void temporaryArmorReductionAffectsOnlyPhysicalDamageWithoutChangingBaseDefense() {
+        Monster physical = monster(100, 25);
+        physical.damage(100, DamageType.PHYSICAL, 0.2);
+        assertEquals(1000 - 100 * 100.0 / 180, physical.health(), 0.0001);
+        assertEquals(100, physical.armor());
+        double remaining = physical.health();
+        physical.damage(100, DamageType.PHYSICAL);
+        assertEquals(remaining - 50, physical.health(), 0.0001);
+
+        Monster magic = monster(100, 25);
+        magic.damage(100, DamageType.MAGIC, 0.2);
+        assertEquals(920, magic.health(), 0.0001);
+        Monster trueDamage = monster(100, 25);
+        trueDamage.damage(100, DamageType.TRUE, 0.2);
+        assertEquals(900, trueDamage.health(), 0.0001);
+    }
+
+    @Test
     void nonPositiveDamageDoesNothing() {
         Monster monster = monster(20.0, 25.0);
 

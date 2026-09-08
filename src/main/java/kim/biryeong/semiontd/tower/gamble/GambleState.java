@@ -9,6 +9,7 @@ import kim.biryeong.semiontd.tower.TowerType;
 public record GambleState(
         double maxHealthDelta,
         double damageDelta,
+        double magicDamageDelta,
         double rangeDelta,
         double splashRadiusDelta,
         double cumulativeScore,
@@ -17,11 +18,12 @@ public record GambleState(
         String lastResult
 ) {
     public static final GambleState EMPTY = new GambleState(
-            0.0, 0.0, 0.0, 0.0, 0.0, Set.of(), 0, "도박 전");
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Set.of(), 0, "도박 전");
 
     public GambleState {
         maxHealthDelta = capPositiveDelta(GambleStat.MAX_HEALTH, maxHealthDelta);
         damageDelta = capPositiveDelta(GambleStat.DAMAGE, damageDelta);
+        magicDamageDelta = capPositiveDelta(GambleStat.MAGIC_DAMAGE, magicDamageDelta);
         rangeDelta = capPositiveDelta(GambleStat.RANGE, rangeDelta);
         splashRadiusDelta = capPositiveDelta(GambleStat.SPLASH_RADIUS, splashRadiusDelta);
         cumulativeScore = capScore(cumulativeScore);
@@ -42,6 +44,7 @@ public record GambleState(
         return switch (stat) {
             case MAX_HEALTH -> maxHealthDelta;
             case DAMAGE -> damageDelta;
+            case MAGIC_DAMAGE -> magicDamageDelta;
             case RANGE -> rangeDelta;
             case SPLASH_RADIUS -> splashRadiusDelta;
         };
@@ -63,6 +66,8 @@ public record GambleState(
         return new GambleState(
                 clampConfiguredDelta(GambleStat.MAX_HEALTH, maxHealthDelta, maxHealthBase),
                 clampConfiguredDelta(GambleStat.DAMAGE, damageDelta, damageBase),
+                clampConfiguredDelta(GambleStat.MAGIC_DAMAGE, magicDamageDelta,
+                        type == null ? 0.0 : GambleBalance.baseMagicDamage(type)),
                 clampConfiguredDelta(GambleStat.RANGE, rangeDelta, rangeBase),
                 clampConfiguredDelta(GambleStat.SPLASH_RADIUS, splashRadiusDelta, splashRadiusBase),
                 cumulativeScore,
@@ -79,8 +84,13 @@ public record GambleState(
     }
 
     public GambleState recordStats(List<StatChange> changes, double score, String result) {
+        return recordReward(changes, null, score, result);
+    }
+
+    public GambleState recordReward(List<StatChange> changes, GambleAbility ability, double score, String result) {
         double health = maxHealthDelta;
         double damage = damageDelta;
+        double magicDamage = magicDamageDelta;
         double range = rangeDelta;
         double splashRadius = splashRadiusDelta;
         for (StatChange change : changes == null ? List.<StatChange>of() : changes) {
@@ -95,25 +105,26 @@ public record GambleState(
                         health + change.amount(), minimumDelta, maximumDelta);
                 case DAMAGE -> damage = clampDelta(
                         damage + change.amount(), minimumDelta, maximumDelta);
+                case MAGIC_DAMAGE -> magicDamage = clampDelta(
+                        magicDamage + change.amount(), minimumDelta, maximumDelta);
                 case RANGE -> range = clampDelta(
                         range + change.amount(), minimumDelta, maximumDelta);
                 case SPLASH_RADIUS -> splashRadius = clampDelta(
                         splashRadius + change.amount(), minimumDelta, maximumDelta);
             }
         }
-        return new GambleState(health, damage, range, splashRadius,
-                cumulativeScore + sanitizeDelta(score), abilities, totalBets + 1, result);
-    }
-
-    public GambleState recordAbility(GambleAbility ability, double score, String result) {
         EnumSet<GambleAbility> updated = abilities.isEmpty()
                 ? EnumSet.noneOf(GambleAbility.class)
                 : EnumSet.copyOf(abilities);
         if (ability != null) {
             updated.add(ability);
         }
-        return new GambleState(maxHealthDelta, damageDelta, rangeDelta, splashRadiusDelta,
+        return new GambleState(health, damage, magicDamage, range, splashRadius,
                 cumulativeScore + sanitizeDelta(score), updated, totalBets + 1, result);
+    }
+
+    public GambleState recordAbility(GambleAbility ability, double score, String result) {
+        return recordReward(List.of(), ability, score, result);
     }
 
     private static double sanitizeDelta(double value) {

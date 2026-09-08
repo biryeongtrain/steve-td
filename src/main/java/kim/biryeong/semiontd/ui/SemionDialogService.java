@@ -1,5 +1,9 @@
 package kim.biryeong.semiontd.ui;
 
+import kim.biryeong.semiontd.tower.gamble.PokerTableTower;
+import kim.biryeong.semiontd.tower.gamble.GamblerTower;
+import kim.biryeong.semiontd.tower.gamble.GambleBalance;
+import kim.biryeong.semiontd.tower.gamble.GambleTowers;
 import de.tomalbrc.avatarrenderer.AvatarRendererMod;
 import de.tomalbrc.avatarrenderer.impl.AvatarRenderer;
 import de.tomalbrc.avatarrenderer.impl.SkinLoader;
@@ -764,6 +768,11 @@ public final class SemionDialogService {
             }
         } else {
             for (TowerUpgradeOption option : upgrades) {
+                if (selectedTower instanceof PokerTableTower poker) {
+                    actions.add(actionButton("포커 베팅 · 200~1000 다이아", PokerTableDialog.command(poker),
+                            "슬라이더로 금액을 정해 카드 3장을 뽑습니다. 한 번만 베팅할 수 있습니다."));
+                    continue;
+                }
                 boolean mineralAffordable = economy.diamond() >= option.mineralCost();
                 boolean requirementsMet = selectedTower.meetsUpgradeRequirements(
                         game.playerLane(player.getUUID()).orElse(null), option);
@@ -816,7 +825,6 @@ public final class SemionDialogService {
         Optional<SemionTowerEntity> combatStatsEntity = previewEndTower != null
                 ? Optional.empty()
                 : towerEntity;
-        double baseDamage = towerPrimaryDamage(tower);
         double currentDamage = previewEndTower != null
                 ? previewEndTower.previewHatchedAttackDamage()
                 : currentTowerPrimaryDamage(tower, combatStatsEntity.orElse(null));
@@ -840,7 +848,7 @@ public final class SemionDialogService {
         body.append("<white>팀</white> ").append(teamMarkup(tower.teamId())).append(" <dark_gray>|</dark_gray> ").append("<white>라인</white> <yellow>#").append(tower.laneId()).append("</yellow>\n");
         body.append("<divider>\n");
         body.append(formatHealth(tower.health(), currentMaxHealth, "")).append(formatIncrease(tower.type().maxHealth(), currentMaxHealth)).append('\n');
-        body.append(formatTowerDamage(tower, currentDamage)).append(formatIncrease(baseDamage, currentDamage)).append('\n');
+        body.append(formatTowerDamageStats(tower, combatStatsEntity.orElse(null), currentDamage)).append('\n');
         double baseAttacksPerSecond = 20.0 / Math.max(1, tower.type().attackIntervalTicks());
         double currentAttacksPerSecond = 20.0 / Math.max(1, currentAttackIntervalTicks);
         body.append(formatAttackSpeed(currentAttacksPerSecond, currentAttackIntervalTicks, "")).append(formatIncrease(baseAttacksPerSecond, currentAttacksPerSecond)).append('\n');
@@ -866,6 +874,11 @@ public final class SemionDialogService {
             var managementPosition = tower.managementPosition();
             List<TowerUpgradeOption> upgrades = ProductionTowerService.availableUpgrades(game, player.getUUID(), managementPosition);
             for (TowerUpgradeOption option : upgrades) {
+                if (tower instanceof PokerTableTower poker) {
+                    actions.add(actionButton("포커 베팅 · 200~1000 다이아", PokerTableDialog.command(poker),
+                            "슬라이더로 금액을 정해 카드 3장을 뽑습니다. 한 번만 베팅할 수 있습니다."));
+                    continue;
+                }
                 boolean mineralAffordable = semionPlayer.economy().diamond() >= option.mineralCost();
                 boolean requirementsMet = tower.meetsUpgradeRequirements(
                         game.playerLane(player.getUUID()).orElse(null), option);
@@ -1435,6 +1448,8 @@ public final class SemionDialogService {
                 "<red>❤ 초당 체력 감소 -", "/초</red>");
         appendTimedEffectValue(effects, entity, TimedEffectType.TOWER_FLAT_DAMAGE_BONUS,
                 "<green>⚔ 공격력 증가 +", "</green>");
+        appendTimedEffectValue(effects, entity, TimedEffectType.TOWER_FLAT_MAGIC_DAMAGE_BONUS,
+                "<green>✦ 마법 공격력 증가 +", "</green>");
         appendTimedEffectValue(effects, entity, TimedEffectType.TOWER_FLAT_DAMAGE_REDUCTION,
                 "<red>⚔ 공격력 감소 -", "</red>");
         appendTimedEffectValue(effects, entity, TimedEffectType.TOWER_FLAT_MAX_HEALTH_BONUS,
@@ -1467,6 +1482,17 @@ public final class SemionDialogService {
         return formatAttackDamage(currentDamage, "");
     }
 
+    static String formatTowerDamageStats(Tower tower, SemionTowerEntity entity, double currentDamage) {
+        if (tower instanceof GamblerTower gambler) {
+            GamblerTower.AttackDamage damage = gambler.currentAttackDamage(entity);
+            return formatAttackDamage(damage.physical(), "")
+                    + formatIncrease(tower.type().damage(), damage.physical()) + "\n"
+                    + formatMagicDamage(damage.magic(), "")
+                    + formatIncrease(GambleBalance.baseMagicDamage(tower.type()), damage.magic());
+        }
+        return formatTowerDamage(tower, currentDamage) + formatIncrease(towerPrimaryDamage(tower), currentDamage);
+    }
+
     static String formatTowerTypeDamage(TowerType type, double damage) {
         if (type != null && type.primaryDamageType() == DamageType.MAGIC) {
             return formatMagicDamage(damage, "");
@@ -1482,6 +1508,10 @@ public final class SemionDialogService {
     }
 
     static String formatTowerTypePrimaryDamage(TowerType type) {
+        if (GambleTowers.isGambler(type)) {
+            return formatAttackDamage(type.damage(), "") + "\n"
+                    + formatMagicDamage(GambleBalance.baseMagicDamage(type), "");
+        }
         return formatTowerTypeDamage(type, towerTypePrimaryDamage(type));
     }
 
@@ -1495,6 +1525,9 @@ public final class SemionDialogService {
     static double currentTowerPrimaryDamage(Tower tower, SemionTowerEntity towerEntity) {
         if (tower == null) {
             return 0.0;
+        }
+        if (tower instanceof GamblerTower gambler) {
+            return gambler.currentAttackDamage(towerEntity).physical();
         }
         double baseDamage = towerPrimaryDamage(tower);
         if (tower.primaryDamageType() == DamageType.MAGIC && !SuccubusTowers.isSuccubusTower(tower.type())) {

@@ -841,6 +841,11 @@ public abstract class Tower {
         return baseRange;
     }
 
+    /** Non-attacking towers remain unable to attack when allies grant flat range or damage. */
+    public boolean canUseBasicAttacks() {
+        return true;
+    }
+
     public double adjustMovementSpeed(double baseSpeed) {return baseSpeed;}
 
     /**

@@ -13,6 +13,7 @@ import kim.biryeong.semiontd.api.area.TowerAreaEffectRequest;
 import kim.biryeong.semiontd.api.area.TowerAreaTargetMode;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
+import kim.biryeong.semiontd.entity.visual.EntityVisual;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
@@ -31,6 +32,7 @@ public final class GambleSupportTower extends ProductionTower {
     private final List<GridPosition> linkedTargetPositions = new ArrayList<>();
     private List<GambleSupportEffect> activeEffects = List.of();
     private int lastFace;
+    private List<GambleSlots.Symbol> lastSymbols = List.of();
     private long lastDiamondReward;
     private int affectedTargets;
     private boolean waveActive;
@@ -45,8 +47,23 @@ public final class GambleSupportTower extends ProductionTower {
     }
 
     @Override
+    public boolean canUseBasicAttacks() {
+        return false;
+    }
+
+    @Override
     public boolean canChaseTargets() {
         return false;
+    }
+
+    @Override
+    public EntityVisual visual() {
+        if (!GambleTowers.isDice(type())) {
+            return super.visual();
+        }
+        int tier = type().id().equals(GambleTowers.DICE_T3.id()) ? 3
+                : type().id().equals(GambleTowers.DICE_T2.id()) ? 2 : 1;
+        return GambleDiceVisuals.visual(tier, lastFace);
     }
 
     /**
@@ -71,8 +88,10 @@ public final class GambleSupportTower extends ProductionTower {
         linkedTargetPositions.clear();
         activeEffects = List.of();
         lastFace = 0;
+        lastSymbols = List.of();
         lastDiamondReward = 0L;
         super.resetForRound(lane);
+        onStateChanged(lane);
     }
 
     @Override
@@ -104,6 +123,7 @@ public final class GambleSupportTower extends ProductionTower {
         linkedTargetPositions.clear();
         activeEffects = List.of();
         lastFace = 0;
+        lastSymbols = List.of();
         lastDiamondReward = 0L;
         affectedTargets = 0;
         SemionTowerEntity source = GambleRoundEffects.towerEntity(this, lane).orElse(null);
@@ -114,13 +134,21 @@ public final class GambleSupportTower extends ProductionTower {
         ResourceLocation sourceId = GambleRoundEffects.sourceId(this);
         GambleRoundEffects.rememberSource(lane, ownerPlayer(), sourceId);
         GambleRoundEffects.clearSource(lane, ownerPlayer(), sourceId);
-        int minimum = GambleBalance.minimumRoll(type());
-        int face = minimum + source.getRandom().nextInt(7 - minimum);
-        activeEffects = GambleSupportRolls.roll(type(), face, source.getRandom());
-        lastFace = face;
-        lastRollCounts[face - 1] = 1;
-        lastDiamondReward = GambleSpectatorRewards.awardFaceSix(ownerPlayer(), type(), face);
-        GambleRollLabels.show(lane, ownerPlayer(), this, sourceId, face);
+        if (GambleTowers.isSpectator(type())) {
+            var result = GambleSlotSupportRolls.roll(type(), source.getRandom());
+            lastSymbols = result.symbols();
+            activeEffects = result.effects();
+            lastSymbols.forEach(symbol -> lastRollCounts[symbol.ordinal()]++);
+            lastDiamondReward = GambleSpectatorRewards.awardJackpot(ownerPlayer(), type(), result.jackpot());
+            GambleRollLabels.showSymbols(lane, ownerPlayer(), this, sourceId, lastSymbols);
+        } else {
+            int minimum = GambleBalance.minimumRoll(type());
+            lastFace = minimum + source.getRandom().nextInt(7 - minimum);
+            activeEffects = GambleSupportRolls.roll(type(), lastFace, source.getRandom());
+            lastRollCounts[lastFace - 1] = 1;
+            GambleRollLabels.show(lane, ownerPlayer(), this, sourceId, lastFace);
+        }
+        onStateChanged(lane);
         List<Vec3> positiveHits = new ArrayList<>();
         List<Vec3> negativeHits = new ArrayList<>();
         Tower spectatorTarget = GambleTowers.isSpectator(type())
@@ -141,7 +169,7 @@ public final class GambleSupportTower extends ProductionTower {
             linkedTargetPositions.add(target.tower().originalPosition());
             affectedTargets++;
             Vec3 hit = target.entity().orElseThrow().position().add(0.0, 0.7, 0.0);
-            (face <= 2 ? negativeHits : positiveHits).add(hit);
+            (negativeRoll() ? negativeHits : positiveHits).add(hit);
             return changed ? AreaEffectOutcome.APPLIED : AreaEffectOutcome.UNCHANGED;
         });
 
@@ -166,6 +194,7 @@ public final class GambleSupportTower extends ProductionTower {
         activeEffects = List.of();
         waveActive = false;
         lastFace = 0;
+        lastSymbols = List.of();
     }
 
     @Override
@@ -175,6 +204,7 @@ public final class GambleSupportTower extends ProductionTower {
             linkedTargetPositions.addAll(previous.linkedTargetPositions);
             activeEffects = List.copyOf(previous.activeEffects);
             lastFace = previous.lastFace;
+            lastSymbols = List.copyOf(previous.lastSymbols);
             lastDiamondReward = previous.lastDiamondReward;
             affectedTargets = previous.affectedTargets;
             waveActive = previous.waveActive;
@@ -187,9 +217,15 @@ public final class GambleSupportTower extends ProductionTower {
     public List<String> runtimeDetailLines() {
         ArrayList<String> lines = new ArrayList<>();
         lines.add("이번 라운드 대상: " + affectedTargets + "기");
-        lines.add("이번 라운드 눈: " + (lastFace == 0 ? "아직 굴리지 않음" : Integer.toString(lastFace)));
+        if (GambleTowers.isSpectator(type())) {
+            lines.add("이번 라운드 심볼: " + (lastSymbols.isEmpty() ? "아직 뽑지 않음"
+                    : lastSymbols.stream().map(GambleSlots.Symbol::displayName).collect(java.util.stream.Collectors.joining(" · "))));
+            if (!lastSymbols.isEmpty() && activeEffects.isEmpty()) lines.add("능력치 효과 없음");
+        } else {
+            lines.add("이번 라운드 눈: " + (lastFace == 0 ? "아직 굴리지 않음" : Integer.toString(lastFace)));
+        }
         if (lastDiamondReward > 0L) {
-            lines.add("눈 6 보상: 다이아 +" + lastDiamondReward);
+            lines.add("잭팟 보상: 다이아 +" + lastDiamondReward);
         }
         activeEffects.forEach(effect -> lines.add("적용 효과: " + effect.displayLine()));
         lines.add("지원 범위: " + oneDecimal(type().range()) + "칸");
@@ -212,6 +248,10 @@ public final class GambleSupportTower extends ProductionTower {
         return activeEffects;
     }
 
+    private boolean negativeRoll() {
+        return !GambleTowers.isSpectator(type()) && lastFace <= 2;
+    }
+
     private boolean acceptsTarget(Tower target) {
         return target.type().category() != TowerCategory.SUPPORT
                 && (!GambleTowers.isSpectator(type())
@@ -225,7 +265,7 @@ public final class GambleSupportTower extends ProductionTower {
         linkedTargetPositions.forEach(position -> linkedTarget(lane, position)
                 .flatMap(target -> GambleRoundEffects.towerEntity(target, lane)).ifPresent(entity -> {
             Vec3 hit = entity.position().add(0.0, 0.7, 0.0);
-            (lastFace <= 2 ? negativeHits : positiveHits).add(hit);
+            (negativeRoll() ? negativeHits : positiveHits).add(hit);
         }));
         if (positiveHits.isEmpty() && negativeHits.isEmpty()) {
             showRange(source);

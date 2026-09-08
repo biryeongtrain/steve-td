@@ -3,6 +3,8 @@ package kim.biryeong.semiontd.tower;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import kim.biryeong.semiontd.tower.gamble.GamblePoker;
+import kim.biryeong.semiontd.tower.gamble.PokerTableTower;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.RoundPhase;
@@ -201,7 +203,25 @@ public final class ProductionTowerService {
         return upgradeTower(game, laneContext, playerId, position, upgradeId);
     }
 
+    public static TowerUpgradeResult betPoker(SemionGame game, UUID playerId, GridPosition position,
+                                             UUID betToken, long amount) {
+        if (betToken == null || !GamblePoker.validBet(amount)) {
+            return TowerUpgradeResult.UPGRADE_REQUIREMENTS_NOT_MET;
+        }
+        LaneContext context = resolveLaneContext(game, playerId);
+        if (context.failureResult != null) {
+            return mapPlacementFailure(context.failureResult);
+        }
+        return upgradeTower(game, context, playerId, position, GamblePoker.UPGRADE_ID, betToken, amount);
+    }
+
     private static TowerUpgradeResult upgradeTower(SemionGame game, LaneContext laneContext, UUID playerId, GridPosition position, String upgradeId) {
+        return upgradeTower(game, laneContext, playerId, position, upgradeId, null, 0L);
+    }
+
+    private static TowerUpgradeResult upgradeTower(SemionGame game, LaneContext laneContext, UUID playerId,
+                                                  GridPosition position, String upgradeId,
+                                                  UUID pokerToken, long pokerAmount) {
         Tower tower = laneContext.lane.towerAt(position);
         if (tower == null) {
             return TowerUpgradeResult.NO_TOWER_AT_POSITION;
@@ -216,6 +236,14 @@ public final class ProductionTowerService {
         TowerUpgradeOption upgrade = ProductionTowerCatalog.upgrade(tower.type(), upgradeId).orElse(null);
         if (upgrade == null) {
             return TowerUpgradeResult.UNKNOWN_UPGRADE;
+        }
+
+        if (GamblePoker.UPGRADE_ID.equals(upgradeId)) {
+            if (!(tower instanceof PokerTableTower poker) || !poker.betToken().equals(pokerToken)
+                    || !GamblePoker.validBet(pokerAmount)) {
+                return TowerUpgradeResult.UPGRADE_REQUIREMENTS_NOT_MET;
+            }
+            upgrade = new TowerUpgradeOption(upgrade.id(), upgrade.displayName(), upgrade.targetType(), pokerAmount);
         }
 
         TowerType targetType = upgrade.targetType();

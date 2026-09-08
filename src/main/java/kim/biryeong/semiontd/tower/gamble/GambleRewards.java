@@ -7,7 +7,8 @@ public final class GambleRewards {
     private static final GambleStat[] ROLLABLE_STATS = {
             GambleStat.MAX_HEALTH,
             GambleStat.DAMAGE,
-            GambleStat.RANGE
+            GambleStat.RANGE,
+            GambleStat.MAGIC_DAMAGE
     };
 
     private GambleRewards() {
@@ -32,6 +33,10 @@ public final class GambleRewards {
             throw new IllegalStateException("No unowned gamble ability remains.");
         }
         return missing.get(Math.floorMod(index, missing.size()));
+    }
+
+    static double statRewardScore(double score, GambleAbility ability) {
+        return ability == null ? score : Math.max(0.0, score - GambleBalance.oddEvenWinScore());
     }
 
     public static GambleStat chooseStat(int index) {

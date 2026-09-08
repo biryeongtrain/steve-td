@@ -1,0 +1,134 @@
+{
+  "meta": {
+    "format_version": "4.5",
+    "model_format": "free",
+    "box_uv": false
+  },
+  "name": "gamble_dice_4",
+  "model_identifier": "gamble_dice_4",
+  "resolution": {
+    "width": 96,
+    "height": 64
+  },
+  "elements": [
+    {
+      "name": "ivory_die",
+      "type": "cube",
+      "uuid": "5c4ad95e-55cd-5f29-bcc1-68c252f01f73",
+      "box_uv": false,
+      "to": [
+        8,
+        16,
+        8
+      ],
+      "origin": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "autouv": 0,
+      "color": 0,
+      "faces": {
+        "north": {
+          "uv": [
+            32,
+            0,
+            64,
+            32
+          ],
+          "texture": 0
+        },
+        "east": {
+          "uv": [
+            64,
+            0,
+            96,
+            32
+          ],
+          "texture": 0
+        },
+        "south": {
+          "uv": [
+            32,
+            32,
+            64,
+            64
+          ],
+          "texture": 0
+        },
+        "west": {
+          "uv": [
+            0,
+            32,
+            32,
+            64
+          ],
+          "texture": 0
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "texture": 0
+        },
+        "down": {
+          "uv": [
+            64,
+            32,
+            96,
+            64
+          ],
+          "texture": 0
+        }
+      },
+      "from": [
+        -8,
+        0,
+        -8
+      ]
+    }
+  ],
+  "outliner": [
+    {
+      "name": "body",
+      "uuid": "4b515cc0-c398-5ca9-a8c5-24f36743b764",
+      "origin": [
+        0,
+        8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -90
+      ],
+      "export": true,
+      "children": [
+        "5c4ad95e-55cd-5f29-bcc1-68c252f01f73"
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "name": "gamble_dice_4.png",
+      "uuid": "f35ef5eb-2e02-5238-a106-03e176ab416e",
+      "id": "0",
+      "width": 96,
+      "height": 64,
+      "uv_width": 96,
+      "uv_height": 64,
+      "mode": "bitmap",
+      "saved": true,
+      "source": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABACAYAAADlNHIOAAACaElEQVR4nO2cP07DMBTGk8hDByaQOABMTKyIO+QIqANTb9AjhBMwMSB2Ft+AAbEyMZUDINGpQ7ciR3WUliZqEuf98/tJqWRL7ufkqfHnZ7vp2+vDJlHQMO7j8uoaRXzx9ZnErl8GwHF6fgEqvvz53inHql8FwDE5OQMRX69+D9ZPItQ3x3QMinWE+hm4orLDzi+AGvb58V9dPp2J0if7C7Dbm58/vVdXvV6KPtkAOPxNN5Ul6JMOQAxoAJAhHYDi/ra1LEGfrAvKp7NywNu/aSgXBKVvKFu0HNBydtUPdf+9XkFefPPyUV1NnZKIDWhRe48B/qE3laUzD2RRSQ/CMaAB4BqA9O6mtSydIpBFNUMs2v5Dx3YtUIS0qL1tKOWHbZEtchd9cWOAZZZFFRcAbllUkQHghAYAGZEBKBhlUclmQ2PJoooLAAWL3EVf5CuIExoAZEzTXklolpHqp7o9HRd9BSGj5wMSPR9QoucDIt2fX0fPB6ziOx8gciaMvbDTpZ3B7gBV/frCisfld1z9Mathx7bLQq8shVqRssj6/jvayiHaZdgdoKwPgU7EkNEAjLCw06Vdht0Bqvp+wHRt/VWvD9WuTMa5o/qHZqJjuhCXfVzU/iqAov6YeH0zxspSqBWpvOfmp1D6EDaY5RhgATZfQdlglgGAspro8wBlfDQAyLANQAGw+QrCBrfa0DEZagPtwIQbFRvMNhuaAxwhhbDhBjsdS1W//l1o8wDsbOQcUV/nAQTQeUAEaDYUGc2GJodtaNNg7uhjAvbbeRvKdh4wFBbzgNjJAeYBbFMRUtDzAVv0fEASJ39k25jG/n8M8QAAAABJRU5ErkJggg=="
+    }
+  ],
+  "animations": []
+}

@@ -28,6 +28,7 @@ public final class GambleRoundEffects {
             TimedEffectType.TOWER_HEALTH_REGEN_PER_SECOND,
             TimedEffectType.TOWER_HEALTH_LOSS_PER_SECOND,
             TimedEffectType.TOWER_FLAT_DAMAGE_BONUS,
+            TimedEffectType.TOWER_FLAT_MAGIC_DAMAGE_BONUS,
             TimedEffectType.TOWER_FLAT_DAMAGE_REDUCTION,
             TimedEffectType.TOWER_FLAT_MAX_HEALTH_BONUS,
             TimedEffectType.TOWER_FLAT_MAX_HEALTH_REDUCTION

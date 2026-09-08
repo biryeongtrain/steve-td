@@ -28,11 +28,11 @@ public final class GambleSpectatorRewards {
         return playerId != null && ACTIVE_ECONOMIES.containsKey(playerId);
     }
 
-    public static long awardFaceSix(UUID playerId, TowerType type, int face) {
-        if (face != 6 || playerId == null) {
+    public static long awardJackpot(UUID playerId, TowerType type, boolean jackpot) {
+        if (!jackpot || playerId == null) {
             return 0L;
         }
-        long reward = GambleBalance.spectatorFaceSixDiamondReward(type);
+        long reward = GambleBalance.spectatorJackpotDiamondReward(type);
         PlayerEconomy economy = ACTIVE_ECONOMIES.get(playerId);
         if (reward <= 0L || economy == null) {
             return 0L;

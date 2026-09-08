@@ -17,8 +17,8 @@ public final class GambleTowerJob extends SemionJob {
 
     public GambleTowerJob() {
         super(ID, Component.literal("겜블 빌더"), List.of(
-                SemionText.mini("<green><bold>시작</bold></green> <gray>도박꾼으로 적을 막고 주사위 타워와 구경꾼으로 지원하세요.</gray>"),
-                SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>주사위 타워는 범위 안 전투 타워를, 구경꾼은 가장 강한 도박꾼 하나를 지원합니다.</gray>"),
+                SemionText.mini("<green><bold>시작</bold></green> <gray>도박꾼으로 적을 막고 주사위 타워와 슬롯머신으로 지원하세요.</gray>"),
+                SemionText.mini("<aqua><bold>운영</bold></aqua> <gray>주사위 타워는 범위 안 전투 타워를, 슬롯머신은 가장 강한 도박꾼 하나를 지원합니다.</gray>"),
                 SemionText.mini("<light_purple><bold>성장</bold></light_purple> <gray>도박 점수의 양극단에 도달해 도박왕 또는 어둠의 도박왕으로 전직하세요.</gray>")
         ));
     }
@@ -63,6 +63,7 @@ public final class GambleTowerJob extends SemionJob {
     }
 
     private static void clear(JobContext context) {
+        kim.biryeong.semiontd.ui.GambleRevealService.clear(context.player().uuid());
         context.game().playerLane(context.player().uuid())
                 .ifPresent(lane -> GambleRoundEffects.clearAll(lane, context.player().uuid()));
     }

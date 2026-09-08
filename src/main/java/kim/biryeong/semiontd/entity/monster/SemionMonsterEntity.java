@@ -266,7 +266,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
 
         runtimeMonster.syncHealth(Math.min(runtimeMonster.health(), getHealth()));
         double previousHealth = runtimeMonster.health();
-        runtimeMonster.damage(amount, damageType);
+        runtimeMonster.damage(amount, damageType, activeTimedEffectMagnitude(TimedEffectType.MONSTER_ARMOR_REDUCTION));
         double appliedDamage = previousHealth - runtimeMonster.health();
         if (appliedDamage <= 0.0) {
             return runtimeMonster.isRemoved();

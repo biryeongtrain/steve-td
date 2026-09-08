@@ -10,7 +10,8 @@ public enum GambleSupportStat {
     DAMAGE("공격력", TimedEffectType.TOWER_FLAT_DAMAGE_BONUS,
             TimedEffectType.TOWER_FLAT_DAMAGE_REDUCTION),
     MAX_HEALTH("최대 체력", TimedEffectType.TOWER_FLAT_MAX_HEALTH_BONUS,
-            TimedEffectType.TOWER_FLAT_MAX_HEALTH_REDUCTION);
+            TimedEffectType.TOWER_FLAT_MAX_HEALTH_REDUCTION),
+    MAGIC_DAMAGE("마법 공격력", TimedEffectType.TOWER_FLAT_MAGIC_DAMAGE_BONUS, null);
 
     private final String displayName;
     private final TimedEffectType positiveType;
@@ -34,6 +35,7 @@ public enum GambleSupportStat {
     }
 
     public TimedEffectType effectType(boolean positive) {
+        if (!positive && negativeType == null) throw new IllegalArgumentException("This support stat has no negative effect.");
         return positive ? positiveType : negativeType;
     }
 }

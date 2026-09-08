@@ -132,6 +132,7 @@ public class SemionTd implements ModInitializer {
         Registry.register(BuiltInRegistries.DIALOG_BODY_TYPE, ResourceLocation.fromNamespaceAndPath("ttt", "split_aligned_message"), SplitAlignedMessage.MAP_CODEC);
         ImageHandler.init();
         SemionUiFont.init();
+        kim.biryeong.semiontd.ui.rp.GambleGlyphs.init();
         LOGGER.info("Semion TD initialized.");
     }
 }

@@ -3282,7 +3282,7 @@
     },
     "gamble_dice_t2": {
       "mineralCost": 0,
-      "maxHealth": 10.0,
+      "maxHealth": 100.0,
       "range": 5.0,
       "damage": 0.0,
       "attackIntervalTicks": 20,
@@ -3290,7 +3290,7 @@
     },
     "gamble_dice_t3": {
       "mineralCost": 0,
-      "maxHealth": 10.0,
+      "maxHealth": 300.0,
       "range": 6.5,
       "damage": 0.0,
       "attackIntervalTicks": 20,
@@ -3300,7 +3300,7 @@
       "mineralCost": 60,
       "maxHealth": 110.0,
       "range": 6.5,
-      "damage": 10.0,
+      "damage": 5.0,
       "attackIntervalTicks": 13,
       "aggroPriority": 0
     },
@@ -3308,7 +3308,7 @@
       "mineralCost": 0,
       "maxHealth": 400.0,
       "range": 7.5,
-      "damage": 40.0,
+      "damage": 20.0,
       "attackIntervalTicks": 8,
       "aggroPriority": 0
     },
@@ -3316,7 +3316,7 @@
       "mineralCost": 0,
       "maxHealth": 440.0,
       "range": 8.0,
-      "damage": 44.0,
+      "damage": 22.0,
       "attackIntervalTicks": 8,
       "aggroPriority": 0
     },
@@ -3330,7 +3330,7 @@
     },
     "gamble_spectator_t2": {
       "mineralCost": 0,
-      "maxHealth": 10.0,
+      "maxHealth": 100.0,
       "range": 5.0,
       "damage": 0.0,
       "attackIntervalTicks": 20,
@@ -3338,11 +3338,19 @@
     },
     "gamble_spectator_t3": {
       "mineralCost": 0,
-      "maxHealth": 10.0,
+      "maxHealth": 300.0,
       "range": 6.5,
       "damage": 0.0,
       "attackIntervalTicks": 20,
       "aggroPriority": -20
+    },
+    "gamble_poker_table": {
+      "mineralCost": 50,
+      "maxHealth": 180.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 50
     },
     "developer_alpha": {
       "mineralCost": 35,
@@ -4352,15 +4360,19 @@
     "gamble_dice_t2->gamble_dice_t3": 200,
     "gamble_spectator_t1->gamble_spectator_t2": 100,
     "gamble_spectator_t2->gamble_spectator_t3": 200,
-    "gamble_gambler->bet_odd": 80,
-    "gamble_gambler->bet_even": 80,
-    "gamble_gambler->roll_two_dice": 160,
-    "gamble_king->bet_odd": 80,
-    "gamble_king->bet_even": 80,
-    "gamble_king->roll_two_dice": 160,
-    "gamble_dark_king->bet_odd": 80,
-    "gamble_dark_king->bet_even": 80,
-    "gamble_dark_king->roll_two_dice": 160,
+    "gamble_gambler->bet_odd": 85,
+    "gamble_gambler->bet_even": 85,
+    "gamble_gambler->roll_two_dice": 170,
+    "gamble_king->bet_odd": 85,
+    "gamble_king->bet_even": 85,
+    "gamble_king->roll_two_dice": 170,
+    "gamble_dark_king->bet_odd": 85,
+    "gamble_dark_king->bet_even": 85,
+    "gamble_dark_king->roll_two_dice": 170,
+    "gamble_gambler->spin_slots": 260,
+    "gamble_king->spin_slots": 260,
+    "gamble_dark_king->spin_slots": 260,
+    "gamble_poker_table->poker_bet": 200,
     "developer_alpha->developer_beta": 95,
     "developer_alpha->developer_test_build": 85,
     "developer_beta->developer_release": 160,
@@ -7446,43 +7458,72 @@
       "maxSpectatorsPerGambler": 3.0,
       "kingPromotionScore": 400.0,
       "darkKingPromotionScoreMagnitude": 200.0,
-      "maxGambleScore": 500.0
+      "maxGambleScore": 500.0,
+      "slotDifferentScore": 25.0,
+      "slotPairIronNugget": 60.0,
+      "slotTripleIronNugget": 150.0,
+      "slotPairIron": 70.0,
+      "slotTripleIron": 180.0,
+      "slotPairCopper": 80.0,
+      "slotTripleCopper": 210.0,
+      "slotPairGold": 90.0,
+      "slotTripleGold": 240.0,
+      "slotPairEmerald": 100.0,
+      "slotTripleEmerald": 270.0,
+      "slotPairDiamond": 110.0,
+      "slotTripleDiamond": 300.0
     },
     "gamble_king": {
-      "splashRadiusBonus": 0.5
+      "splashRadiusBonus": 0.5,
+      "baseMagicDamage": 20.0
     },
     "gamble_dark_king": {
-      "splashRadiusBonus": 0.75
+      "splashRadiusBonus": 0.75,
+      "baseMagicDamage": 22.0
     },
     "gamble_dice_t1": {
       "minimumRoll": 1.0,
-      "supportPowerMultiplier": 1.0,
-      "faceSixDiamondReward": 0.0
+      "supportPowerMultiplier": 1.0
     },
     "gamble_dice_t2": {
       "minimumRoll": 1.0,
-      "supportPowerMultiplier": 2.0,
-      "faceSixDiamondReward": 0.0
+      "supportPowerMultiplier": 2.0
     },
     "gamble_dice_t3": {
       "minimumRoll": 1.0,
-      "supportPowerMultiplier": 3.5,
-      "faceSixDiamondReward": 0.0
+      "supportPowerMultiplier": 3.5
     },
     "gamble_spectator_t1": {
-      "minimumRoll": 1.0,
-      "supportPowerMultiplier": 1.0,
-      "faceSixDiamondReward": 5.0
+      "slotBaseHealth": 25.0,
+      "slotBaseRegeneration": 3.5,
+      "slotBaseDamage": 2.0,
+      "jackpotDiamondReward": 30.0
     },
     "gamble_spectator_t2": {
-      "minimumRoll": 1.0,
-      "supportPowerMultiplier": 2.0,
-      "faceSixDiamondReward": 15.0
+      "slotBaseHealth": 65.0,
+      "slotBaseRegeneration": 7.5,
+      "slotBaseDamage": 4.5,
+      "jackpotDiamondReward": 90.0
     },
     "gamble_spectator_t3": {
-      "minimumRoll": 1.0,
-      "supportPowerMultiplier": 3.5,
-      "faceSixDiamondReward": 35.0
+      "slotBaseHealth": 125.0,
+      "slotBaseRegeneration": 13.5,
+      "slotBaseDamage": 8.5,
+      "jackpotDiamondReward": 210.0
+    },
+    "gamble_gambler": {
+      "baseMagicDamage": 5.0
+    },
+    "gamble_poker_table": {
+      "healthScoreDivisor": 56.666666666666664,
+      "normalMinHealthBonus": 620.0,
+      "normalMaxHealthBonus": 1170.0,
+      "specialScoreThreshold": 50000.0,
+      "deathRadius": 2.5,
+      "deathDamageRatio": 0.05,
+      "upgradedDeathDamageRatio": 0.1,
+      "debuffReduction": 0.2,
+      "debuffDurationTicks": 160.0
     },
     "developer_global": {
       "patchAttack": 0.16,

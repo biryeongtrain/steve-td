@@ -610,12 +610,17 @@ public final class Monster {
     }
 
     public void damage(double amount, DamageType incomingDamageType) {
+        damage(amount, incomingDamageType, 0.0);
+    }
+
+    /** Temporary physical armor reduction; the monster's permanent defenses remain unchanged. */
+    public void damage(double amount, DamageType incomingDamageType, double armorReduction) {
         if (amount <= 0 || (!isAlive() && state != MonsterState.REACHED_BOSS)) {
             return;
         }
         DamageType damageType = incomingDamageType == null ? DamageType.PHYSICAL : incomingDamageType;
         double defense = switch (damageType) {
-            case PHYSICAL -> armor;
+            case PHYSICAL -> armor * (1.0 - Math.clamp(armorReduction, 0.0, 1.0));
             case MAGIC -> resistance;
             case TRUE -> 0;
         };

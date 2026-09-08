@@ -10,6 +10,8 @@ import kim.biryeong.semiontd.config.WaveMonsterEntry;
 import kim.biryeong.semiontd.entity.model.SemionBilModelCache;
 import kim.biryeong.semiontd.summon.SummonRegistry;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
+import kim.biryeong.semiontd.tower.gamble.GambleDiceVisuals;
+import kim.biryeong.semiontd.tower.gamble.GambleTowers;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
@@ -152,6 +154,9 @@ public final class SemionPolymerEntityDataWarmup {
 
     private static void addTowerBilModels(Set<String> modelIds) {
         ProductionTowerCatalog.all().forEach(entry -> entry.type().blockbenchModel().ifPresent(modelId -> addBilModel(modelIds, modelId)));
+        if (ProductionTowerCatalog.all().stream().anyMatch(entry -> GambleTowers.isDice(entry.type()))) {
+            GambleDiceVisuals.modelIds().forEach(id -> addBilModel(modelIds, id));
+        }
     }
 
     private static void addBilModel(Set<String> modelIds, String modelId) {

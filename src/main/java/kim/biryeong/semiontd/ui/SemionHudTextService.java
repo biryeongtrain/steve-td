@@ -184,6 +184,8 @@ public final class SemionHudTextService {
             HighlightTarget highlightTarget,
             boolean highlightOn
     ) {
+        Optional<Component> reveal = GambleRevealService.actionbar(viewerId);
+        if (reveal.isPresent()) return reveal;
         SemionPlayer player = game.players().get(viewerId);
         if (player == null) {
             return Optional.empty();

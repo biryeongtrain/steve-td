@@ -1,5 +1,9 @@
 package kim.biryeong.semiontd.command;
 
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
+import kim.biryeong.semiontd.tower.gamble.PokerTableTower;
+import kim.biryeong.semiontd.ui.PokerTableDialog;
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
@@ -415,6 +419,7 @@ public final class SemionCommands {
                                                                                 IntegerArgumentType.getInteger(context, "z")
                                                                         )
                                                                 ))))))))
+                .then(pokerCommand(gameManager))
                 .then(literal("gasup")
                         .executes(context -> emeraldUp(context.getSource(), gameManager)))
                 .then(literal("emeraldup")
@@ -3429,6 +3434,61 @@ public final class SemionCommands {
                     + " 다이아비용=" + option.mineralCost());
         }
         return upgrades.size();
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> pokerCommand(
+            SemionGameManager gameManager) {
+        return literal("poker")
+                .then(argument("x", IntegerArgumentType.integer())
+                        .then(argument("y", IntegerArgumentType.integer())
+                                .then(argument("z", IntegerArgumentType.integer())
+                                        .then(argument("token", StringArgumentType.word())
+                                                .executes(context -> pokerAction(context, gameManager, null))
+                                                .then(argument("amount", DoubleArgumentType.doubleArg(200, 1000))
+                                                        .executes(context -> pokerAction(context, gameManager,
+                                                                DoubleArgumentType.getDouble(context, "amount"))))))));
+    }
+
+    private static int pokerAction(CommandContext<CommandSourceStack> context,
+                                   SemionGameManager gameManager, Double amount) throws CommandSyntaxException {
+        CommandSourceStack source = context.getSource();
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGame game = playableGame(source, gameManager);
+        GridPosition position = new GridPosition(IntegerArgumentType.getInteger(context, "x"),
+                IntegerArgumentType.getInteger(context, "y"), IntegerArgumentType.getInteger(context, "z"));
+        UUID token;
+        try {
+            token = UUID.fromString(StringArgumentType.getString(context, "token"));
+        } catch (IllegalArgumentException invalidToken) {
+            failure(source, "유효하지 않은 포커 테이블입니다. 타워 상세 창을 다시 여세요.");
+            return 0;
+        }
+        if (game == null) {
+            failure(source, "진행 중인 게임 또는 샌드박스가 없습니다.");
+            return 0;
+        }
+        if (amount == null) {
+            Tower tower = game.playerLane(player.getUUID()).map(lane -> lane.towerAt(position)).orElse(null);
+            if (!(tower instanceof PokerTableTower poker)
+                    || !poker.betToken().equals(token)
+                    || ProductionTowerService.availableUpgrades(game, player.getUUID(), position).isEmpty()) {
+                failure(source, "지금은 이 포커 테이블에 베팅할 수 없습니다.");
+                return 0;
+            }
+            PokerTableDialog.show(player, poker,
+                    game.players().get(player.getUUID()).economy().diamond());
+            return 1;
+        }
+        if (!Double.isFinite(amount) || amount != Math.rint(amount)) {
+            failure(source, "베팅액은 200~1000 사이의 정수여야 합니다.");
+            return 0;
+        }
+        TowerUpgradeResult result = ProductionTowerService.betPoker(game, player.getUUID(), position, token, amount.longValue());
+        if (result != TowerUpgradeResult.SUCCESS) {
+            failure(source, "포커 베팅 실패: " + towerUpgradeFailureMessage(result));
+            return 0;
+        }
+        return 1;
     }
 
     private static int upgradeTower(CommandSourceStack source, SemionGameManager gameManager, String upgradeId)

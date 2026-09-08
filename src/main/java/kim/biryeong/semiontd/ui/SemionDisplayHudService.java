@@ -148,6 +148,8 @@ public final class SemionDisplayHudService {
     }
 
     public static Optional<Component> actionbarTextFor(UUID viewerId, SemionGame game) {
+        Optional<Component> reveal = GambleRevealService.actionbar(viewerId);
+        if (reveal.isPresent()) return reveal;
         SemionPlayer player = game.players().get(viewerId);
         if (player == null) {
             return Optional.empty();

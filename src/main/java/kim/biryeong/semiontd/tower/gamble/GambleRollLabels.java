@@ -2,6 +2,8 @@ package kim.biryeong.semiontd.tower.gamble;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.List;
+import kim.biryeong.semiontd.ui.rp.GambleGlyphs;
 import java.util.UUID;
 import java.util.WeakHashMap;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
@@ -15,7 +17,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.decoration.ArmorStand;
 
-/** Keeps the round-scoped dice face above each support tower. */
+/** Keeps round results above their support towers. */
 final class GambleRollLabels {
     private static final Map<PlayerLane, Map<UUID, Map<Tower, Label>>> LABELS = new WeakHashMap<>();
 
@@ -25,9 +27,20 @@ final class GambleRollLabels {
     static synchronized void show(
             PlayerLane lane, UUID owner, Tower target, ResourceLocation sourceId, int face
     ) {
-        if (lane == null || owner == null || target == null || sourceId == null || face < 1 || face > 6) {
-            return;
-        }
+        if (face < 1 || face > 6) return;
+        showResult(lane, owner, target, sourceId, Component.literal("[" + face + "]")
+                .withStyle(face <= 2 ? ChatFormatting.RED : ChatFormatting.GREEN));
+    }
+
+    static synchronized void showSymbols(PlayerLane lane, UUID owner, Tower target, ResourceLocation sourceId,
+                                         List<GambleSlots.Symbol> symbols) {
+        MutableComponent text = Component.empty();
+        for (var symbol : symbols) text.append(GambleGlyphs.slot(symbol.ordinal())).append(" ");
+        showResult(lane, owner, target, sourceId, text);
+    }
+
+    private static void showResult(PlayerLane lane, UUID owner, Tower target, ResourceLocation sourceId, Component text) {
+        if (lane == null || owner == null || target == null || sourceId == null) return;
         SemionTowerEntity targetEntity = GambleRoundEffects.towerEntity(target, lane).orElse(null);
         if (targetEntity == null || !(targetEntity.level() instanceof ServerLevel level)) {
             return;
@@ -35,7 +48,7 @@ final class GambleRollLabels {
         Label label = LABELS.computeIfAbsent(lane, ignored -> new LinkedHashMap<>())
                 .computeIfAbsent(owner, ignored -> new LinkedHashMap<>())
                 .computeIfAbsent(target, ignored -> new Label());
-        label.faces.put(sourceId, face);
+        label.faces.put(sourceId, text);
         if (label.visual == null || label.visual.isRemoved()) {
             label.visual = create(level, targetEntity);
         } else {
@@ -107,7 +120,7 @@ final class GambleRollLabels {
                 && !label.visual.isRemoved()
                 && label.visual.isCustomNameVisible()
                 && label.visual.getCustomName() != null
-                && label.visual.getCustomName().getString().matches("\\[\\d]");
+                && !label.visual.getCustomName().getString().isBlank();
     }
 
     private static ArmorStand create(ServerLevel level, SemionTowerEntity target) {
@@ -132,15 +145,14 @@ final class GambleRollLabels {
         visual.teleportTo(target.getX(), target.getY(), target.getZ());
     }
 
-    private static Component component(Map<ResourceLocation, Integer> faces) {
+    private static Component component(Map<ResourceLocation, Component> faces) {
         MutableComponent result = Component.empty();
         boolean first = true;
-        for (int face : faces.values()) {
+        for (Component face : faces.values()) {
             if (!first) {
                 result.append(Component.literal(" "));
             }
-            result.append(Component.literal("[" + face + "]")
-                    .withStyle(face <= 2 ? ChatFormatting.RED : ChatFormatting.GREEN));
+            result.append(face);
             first = false;
         }
         return result;
@@ -167,7 +179,7 @@ final class GambleRollLabels {
     }
 
     private static final class Label {
-        private final Map<ResourceLocation, Integer> faces = new LinkedHashMap<>();
+        private final Map<ResourceLocation, Component> faces = new LinkedHashMap<>();
         private ArmorStand visual;
     }
 }

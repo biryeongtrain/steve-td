@@ -108,7 +108,7 @@ public final class GambleBalance {
     public static double statDelta(GambleStat stat, double score) {
         double perScore = switch (stat) {
             case MAX_HEALTH -> global("maxHealthPerScore", MAX_HEALTH_PER_SCORE);
-            case DAMAGE -> global("damagePerScore", DAMAGE_PER_SCORE);
+            case DAMAGE, MAGIC_DAMAGE -> global("damagePerScore", DAMAGE_PER_SCORE);
             case RANGE -> global("rangePerScore", RANGE_PER_SCORE);
             case SPLASH_RADIUS -> global("splashRadiusPerScore", SPLASH_RADIUS_PER_SCORE);
         };
@@ -119,16 +119,21 @@ public final class GambleBalance {
         return Math.max(1, Math.min(6, TowerBalanceRuntime.abilityInt(type.id(), "minimumRoll", 1)));
     }
 
+    public static double baseMagicDamage(TowerType type) {
+        double fallback = GambleTowers.isKing(type) ? 20.0 : GambleTowers.isDarkKing(type) ? 22.0 : 5.0;
+        return TowerBalanceRuntime.ability(type.id(), "baseMagicDamage", fallback);
+    }
+
     public static double supportPowerMultiplier(TowerType type) {
         return Math.max(0.0, TowerBalanceRuntime.ability(type.id(), "supportPowerMultiplier", 1.0));
     }
 
-    public static long spectatorFaceSixDiamondReward(TowerType type) {
+    public static long spectatorJackpotDiamondReward(TowerType type) {
         if (!GambleTowers.isSpectator(type)) {
             return 0L;
         }
         return Math.max(0L, Math.round(TowerBalanceRuntime.ability(
-                type.id(), "faceSixDiamondReward", 0.0
+                type.id(), "jackpotDiamondReward", 0.0
         )));
     }
 
@@ -151,6 +156,7 @@ public final class GambleBalance {
             case DAMAGE -> positive
                     ? global("supportPositiveDamageUnit", SUPPORT_POSITIVE_DAMAGE_UNIT)
                     : global("supportNegativeDamageUnit", SUPPORT_NEGATIVE_DAMAGE_UNIT);
+            case MAGIC_DAMAGE -> positive ? global("supportPositiveDamageUnit", SUPPORT_POSITIVE_DAMAGE_UNIT) : 0.0;
             case MAX_HEALTH -> positive
                     ? global("supportPositiveMaxHealthUnit", SUPPORT_POSITIVE_MAX_HEALTH_UNIT)
                     : global("supportNegativeMaxHealthUnit", SUPPORT_NEGATIVE_MAX_HEALTH_UNIT);

@@ -168,6 +168,19 @@ final class GambleTowerTest {
         }
         assertTrue(cappedTower.runtimeDetailLines().stream()
                 .anyMatch(line -> line.contains("도박 상태: 종료")));
+        // The final slot bet keeps its full reward while the score reaches its cap.
+
+        GambleState before = GambleState.EMPTY.recordAbility(GambleAbility.LOSS_INSURANCE, 499, "near cap");
+        var result = GambleSlots.resolve(GambleSlots.Symbol.DIAMOND,
+                GambleSlots.Symbol.DIAMOND, GambleSlots.Symbol.DIAMOND);
+        GambleState after = before.recordStats(List.of(
+                new GambleState.StatChange(GambleStat.DAMAGE, GambleBalance.statDelta(GambleStat.DAMAGE, 150), 5),
+                new GambleState.StatChange(GambleStat.MAGIC_DAMAGE, GambleBalance.statDelta(GambleStat.MAGIC_DAMAGE, 150), 5)
+        ), result.score(), result.display());
+        assertEquals(500, after.cumulativeScore());
+        assertEquals(75, after.damageDelta());
+        assertEquals(75, after.magicDamageDelta());
+        assertTrue(after.atScoreCap());
     }
 
     @Test
@@ -181,7 +194,7 @@ final class GambleTowerTest {
                     OWNER, TeamId.RED, 1,
                     new GridPosition(0, 64, 0), new GridPosition(0, 64, 0));
             gambler.setData(GamblerTower.STATE, new GambleState(
-                    10_000.0, 1_000.0, 100.0, 50.0,
+                    10_000.0, 1_000.0, 0.0, 100.0, 50.0,
                     2_000.0, Set.of(GambleAbility.LOSS_INSURANCE), 99, "이전 상한"
             ));
             gambler.syncMaxHealth(gambler.effectBaseMaxHealth(), false);
@@ -223,12 +236,27 @@ final class GambleTowerTest {
         assertFalse(GambleRewards.awardsAbility(GambleState.EMPTY, -5.0, 0.0));
         GambleState all = GambleState.EMPTY.recordAbility(GambleAbility.LOSS_INSURANCE, 40, "all");
         assertFalse(GambleRewards.awardsAbility(all, 40.0, 0.0));
+        assertEquals(0, GambleRewards.statRewardScore(70, GambleAbility.LOSS_INSURANCE));
+        assertEquals(0, GambleRewards.statRewardScore(40, GambleAbility.LOSS_INSURANCE));
+        double remainder = GambleRewards.statRewardScore(GambleRolls.twoDiceDelta(6, 6), GambleAbility.LOSS_INSURANCE);
+        assertEquals(230, remainder);
+        assertEquals(300, GambleRewards.statRewardScore(300, null));
+        GambleState reward = GambleState.EMPTY.recordReward(List.of(
+                new GambleState.StatChange(GambleStat.MAX_HEALTH, GambleBalance.statDelta(GambleStat.MAX_HEALTH, remainder / 2), 110),
+                new GambleState.StatChange(GambleStat.DAMAGE, GambleBalance.statDelta(GambleStat.DAMAGE, remainder / 2), 5)),
+                GambleAbility.LOSS_INSURANCE, 300, "double with insurance");
+        assertEquals(575, reward.maxHealthDelta());
+        assertEquals(57.5, reward.damageDelta());
+        assertTrue(reward.has(GambleAbility.LOSS_INSURANCE));
+        assertEquals(1, reward.totalBets());
+        assertEquals(300, reward.cumulativeScore());
         assertEquals(1, GambleRewards.missingAbilities(GambleState.EMPTY).size());
         assertEquals(0, GambleRewards.missingAbilities(all).size());
         assertEquals(GambleAbility.LOSS_INSURANCE, GambleRewards.chooseMissing(GambleState.EMPTY, 0));
         assertThrows(IllegalStateException.class, () -> GambleRewards.chooseMissing(all, 0));
-        assertEquals(3, GambleRewards.rollableStatCount());
-        assertEquals(GambleStat.MAX_HEALTH, GambleRewards.chooseStat(3));
+        assertEquals(4, GambleRewards.rollableStatCount());
+        assertEquals(GambleStat.MAGIC_DAMAGE, GambleRewards.chooseStat(3));
+        assertEquals(GambleStat.MAX_HEALTH, GambleRewards.chooseStat(4));
         assertFalse(java.util.stream.IntStream.range(0, 12)
                 .mapToObj(GambleRewards::chooseStat)
                 .anyMatch(stat -> stat == GambleStat.SPLASH_RADIUS));
@@ -240,18 +268,11 @@ final class GambleTowerTest {
                 GambleAbility.LOSS_INSURANCE.description());
         assertFalse(GambleAbility.LOSS_INSURANCE.description().contains("홀수·짝수"));
         assertFalse(GambleAbility.LOSS_INSURANCE.description().contains("주사위 두 개"));
-        assertTrue(GambleTowers.GAMBLER.description().stream().anyMatch(line -> line.contains("손실 보험")));
-        assertTrue(GambleTowers.GAMBLER.description().stream().anyMatch(
-                line -> line.contains("능력치 상승 대신 손실 보험")));
         assertFalse(GambleTowers.GAMBLER.description().stream().anyMatch(line -> line.contains("모든 도박")));
         assertFalse(GambleTowers.DICE_T3.description().stream().anyMatch(line -> line.contains("효과 배율")));
         assertTrue(GambleTowers.DICE_T2.description().stream().anyMatch(
                 line -> line.contains("2배") && line.contains("약화 수치는 증가하지")));
         assertTrue(GambleTowers.DICE_T3.description().stream().anyMatch(
-                line -> line.contains("3.5배") && line.contains("약화 수치는 증가하지")));
-        assertTrue(GambleTowers.SPECTATOR_T1.description().stream().anyMatch(
-                line -> line.contains("도박꾼 하나") && line.contains("최대")));
-        assertTrue(GambleTowers.SPECTATOR_T3.description().stream().anyMatch(
                 line -> line.contains("3.5배") && line.contains("약화 수치는 증가하지")));
         assertEquals("초당 체력 회복 +2.5", new GambleSupportEffect(
                 GambleSupportStat.REGENERATION, true, 2.5).displayLine());
@@ -268,11 +289,11 @@ final class GambleTowerTest {
     }
 
     @Test
-    void catalogUsesThreeStartersConfiguredUpgradeCostsAndCreativeClassification() {
+    void catalogUsesFourStartersConfiguredUpgradeCostsAndCreativeClassification() {
         List<ProductionTowerCatalog.CatalogEntry> entries = ProductionTowerCatalog.all().stream()
                 .filter(entry -> GambleTowers.isGambleTower(entry.type())).toList();
-        assertEquals(9, entries.size());
-        assertEquals(3, entries.stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count());
+        assertEquals(10, entries.size());
+        assertEquals(4, entries.stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count());
         assertTrue(entries.stream().filter(ProductionTowerCatalog.CatalogEntry::starter)
                 .map(entry -> entry.type().id()).toList().containsAll(List.of(
                         GambleTowers.DICE_T1.id(), GambleTowers.GAMBLER.id(), GambleTowers.SPECTATOR_T1.id())));
@@ -289,8 +310,6 @@ final class GambleTowerTest {
                 ProductionTowerCatalog.find(GambleTowers.GAMBLER.id()).orElseThrow()
                         .create(OWNER, TeamId.RED, 1, new GridPosition(1, 64, 0)));
         assertFalse(gambler.type().description().stream().anyMatch(line -> line.contains("{")));
-        assertTrue(gambler.type().description().stream().anyMatch(
-                line -> line.contains("합이 10 이상") && line.contains("나눠")));
         TowerUpgradeOption twoDice = ProductionTowerCatalog.upgrade(
                 GambleTowers.GAMBLER, GambleBet.TWO_DICE.upgradeId()).orElseThrow();
         assertTrue(gambler.upgradeTooltipLines(twoDice).stream().anyMatch(
@@ -308,14 +327,18 @@ final class GambleTowerTest {
                 && line.contains("체력 +200") && line.contains("공격력 +20")));
         assertTrue(gambler.type().maxHealth() >= IllagerTowers.T1_PILLAGER.maxHealth());
         assertTrue(gambler.type().range() >= IllagerTowers.T1_PILLAGER.range());
-        assertTrue(gambler.type().damage() * IllagerTowers.T1_PILLAGER.attackIntervalTicks()
+        assertTrue((gambler.type().damage() + gambler.magicAttackDamage(null)) * IllagerTowers.T1_PILLAGER.attackIntervalTicks()
                 > IllagerTowers.T1_PILLAGER.damage() * gambler.type().attackIntervalTicks());
         for (var gamblerType : List.of(
                 GambleTowers.GAMBLER, GambleTowers.KING, GambleTowers.DARK_KING)) {
             for (GambleBet bet : GambleBet.values()) {
                 TowerUpgradeOption option = ProductionTowerCatalog.upgrade(gamblerType, bet.upgradeId())
                         .orElseThrow();
-                assertEquals(bet == GambleBet.TWO_DICE ? 160 : 80, option.mineralCost());
+                assertEquals(switch (bet) {
+                    case ODD, EVEN -> 85;
+                    case TWO_DICE -> 170;
+                    case SLOTS -> 260;
+                }, option.mineralCost());
                 assertFalse(gambler.upgradeCostAddsToSaleValue(option));
             }
         }
@@ -334,7 +357,8 @@ final class GambleTowerTest {
                 GambleTowers.SPECTATOR_T3.range()));
         assertTrue(GambleTowers.all().stream()
                 .filter(type -> GambleTowers.isDice(type) || GambleTowers.isSpectator(type))
-                .allMatch(type -> Math.abs(type.maxHealth() - 10.0) < EPSILON));
+                .allMatch(type -> Math.abs(type.maxHealth()
+                        - (type.id().endsWith("t3") ? 300 : type.id().endsWith("t2") ? 100 : 10)) < EPSILON));
         assertTrue(JobRegistry.creativeBuilders().stream().anyMatch(job -> job.id().equals(GambleTowerJob.ID)));
         assertFalse(JobRegistry.officialBuilders().stream().anyMatch(job -> job.id().equals(GambleTowerJob.ID)));
         assertEquals("semion-td:gamble_towers", new GambleTowerJob().id().toString());
@@ -352,11 +376,13 @@ final class GambleTowerTest {
         assertEquals(null, GambleTowers.promotionTarget(GambleTowers.DARK_KING, 1_000.0));
 
         assertEquals(400.0, GambleTowers.KING.maxHealth(), EPSILON);
-        assertEquals(40.0, GambleTowers.KING.damage(), EPSILON);
+        assertEquals(20.0, GambleTowers.KING.damage(), EPSILON);
+        assertEquals(20.0, GambleBalance.baseMagicDamage(GambleTowers.KING), EPSILON);
         assertEquals(7.5, GambleTowers.KING.range(), EPSILON);
         assertEquals(8, GambleTowers.KING.attackIntervalTicks());
         assertEquals(440.0, GambleTowers.DARK_KING.maxHealth(), EPSILON);
-        assertEquals(44.0, GambleTowers.DARK_KING.damage(), EPSILON);
+        assertEquals(22.0, GambleTowers.DARK_KING.damage(), EPSILON);
+        assertEquals(22.0, GambleBalance.baseMagicDamage(GambleTowers.DARK_KING), EPSILON);
         assertEquals(8.0, GambleTowers.DARK_KING.range(), EPSILON);
         assertEquals(8, GambleTowers.DARK_KING.attackIntervalTicks());
         assertEquals(3.0, GambleBalance.gamblerSplashRadius(GambleTowers.KING), EPSILON);
@@ -401,44 +427,51 @@ final class GambleTowerTest {
                 GambleSupportStat.DAMAGE,
                 GambleSupportStat.MAX_HEALTH
         );
-        assertEffects(GambleSupportRolls.resolve(false, 1, 1.0, stats), false, 0.50);
-        assertEffects(GambleSupportRolls.resolve(false, 2, 1.0, stats), false, 0.25);
-        assertEffects(GambleSupportRolls.resolve(false, 3, 1.0, stats), true, 0.25);
-        assertEffects(GambleSupportRolls.resolve(false, 4, 1.0, stats), true, 0.375);
-        assertEffects(GambleSupportRolls.resolve(false, 5, 1.0, stats), true, 0.4375, 4.375);
-        assertEffects(GambleSupportRolls.resolve(false, 6, 1.0, stats), true, 0.5625, 5.625);
+        assertEffects(GambleSupportRolls.resolve(1, 1.0, stats), false, 0.50);
+        assertEffects(GambleSupportRolls.resolve(2, 1.0, stats), false, 0.25);
+        assertEffects(GambleSupportRolls.resolve(3, 1.0, stats), true, 0.25);
+        assertEffects(GambleSupportRolls.resolve(4, 1.0, stats), true, 0.375);
+        assertEffects(GambleSupportRolls.resolve(5, 1.0, stats), true, 0.4375, 4.375);
+        assertEffects(GambleSupportRolls.resolve(6, 1.0, stats), true, 0.5625, 5.625);
 
-        assertEffects(GambleSupportRolls.resolve(true, 1, 1.0, stats), false, 0.50, 2.00);
-        assertEffects(GambleSupportRolls.resolve(true, 2, 1.0, stats), false, 0.25, 1.00);
-        assertEffects(GambleSupportRolls.resolve(true, 3, 1.0, stats), true, 0.25, 2.50);
-        assertEffects(GambleSupportRolls.resolve(true, 4, 1.0, stats), true, 0.375, 3.75);
-        assertEffects(GambleSupportRolls.resolve(true, 5, 1.0, stats), true,
-                0.4375, 4.375, 4.375, 43.75);
-        assertEffects(GambleSupportRolls.resolve(true, 6, 1.0, stats), true,
-                0.5625, 5.625, 5.625, 56.25);
 
-        assertEffects(GambleSupportRolls.resolve(false, 6, 3.5, stats), true, 1.96875, 19.6875);
-        assertEffects(GambleSupportRolls.resolve(true, 1, 3.5, stats), false, 0.50, 2.00);
+        assertEffects(GambleSupportRolls.resolve(6, 3.5, stats), true, 1.96875, 19.6875);
+        var iron = GambleSlots.Symbol.IRON;
+        var nugget = GambleSlots.Symbol.IRON_NUGGET;
+        assertEffects(GambleSlotSupportRolls.resolve(GambleTowers.SPECTATOR_T1, List.of(iron, iron, nugget)).effects(), true, 62.5);
+        assertEffects(GambleSlotSupportRolls.resolve(GambleTowers.SPECTATOR_T1, List.of(iron, iron, iron)).effects(), true, 125);
+        var blank = GambleSlotSupportRolls.resolve(GambleTowers.SPECTATOR_T1, List.of(nugget, nugget, nugget));
+        assertTrue(blank.jackpot());
+        assertTrue(blank.effects().isEmpty());
+        double[] sums = new double[GambleSupportStat.values().length];
+        int jackpots = 0;
+        for (var first : GambleSlots.Symbol.values()) for (var second : GambleSlots.Symbol.values()) for (var third : GambleSlots.Symbol.values()) {
+            var result = GambleSlotSupportRolls.resolve(GambleTowers.SPECTATOR_T1, List.of(first, second, third));
+            if (result.jackpot()) jackpots++;
+            result.effects().forEach(effect -> {
+                assertTrue(effect.positive());
+                sums[effect.stat().ordinal()] += effect.magnitude();
+            });
+        }
+        assertEquals(6, jackpots);
+        assertEquals(25 * 235.0 / 432, sums[GambleSupportStat.MAX_HEALTH.ordinal()] / 216, EPSILON);
+        assertEquals(3.5 * 235.0 / 432, sums[GambleSupportStat.REGENERATION.ordinal()] / 216, EPSILON);
+        assertEquals(3 * 235.0 / 432, sums[GambleSupportStat.DAMAGE.ordinal()] / 216, EPSILON);
+        assertEquals(sums[GambleSupportStat.DAMAGE.ordinal()], sums[GambleSupportStat.MAGIC_DAMAGE.ordinal()], EPSILON);
         assertThrows(IllegalArgumentException.class,
-                () -> GambleSupportRolls.resolve(false, 0, 1.0, stats));
+                () -> GambleSupportRolls.resolve(0, 1.0, stats));
     }
 
     @Test
     void supportTierConfigurationMatchesRangePowerAndMinimumRollDesign() {
         assertEquals(1, GambleBalance.minimumRoll(GambleTowers.DICE_T3));
-        assertEquals(1, GambleBalance.minimumRoll(GambleTowers.SPECTATOR_T1));
-        assertEquals(1, GambleBalance.minimumRoll(GambleTowers.SPECTATOR_T2));
-        assertEquals(1, GambleBalance.minimumRoll(GambleTowers.SPECTATOR_T3));
         assertEquals(1.0, GambleBalance.supportPowerMultiplier(GambleTowers.DICE_T1), EPSILON);
         assertEquals(2.0, GambleBalance.supportPowerMultiplier(GambleTowers.DICE_T2), EPSILON);
         assertEquals(3.5, GambleBalance.supportPowerMultiplier(GambleTowers.DICE_T3), EPSILON);
-        assertEquals(1.0, GambleBalance.supportPowerMultiplier(GambleTowers.SPECTATOR_T1), EPSILON);
-        assertEquals(2.0, GambleBalance.supportPowerMultiplier(GambleTowers.SPECTATOR_T2), EPSILON);
-        assertEquals(3.5, GambleBalance.supportPowerMultiplier(GambleTowers.SPECTATOR_T3), EPSILON);
-        assertEquals(5, GambleBalance.spectatorFaceSixDiamondReward(GambleTowers.SPECTATOR_T1));
-        assertEquals(15, GambleBalance.spectatorFaceSixDiamondReward(GambleTowers.SPECTATOR_T2));
-        assertEquals(35, GambleBalance.spectatorFaceSixDiamondReward(GambleTowers.SPECTATOR_T3));
-        assertEquals(0, GambleBalance.spectatorFaceSixDiamondReward(GambleTowers.DICE_T3));
+        assertEquals(30, GambleBalance.spectatorJackpotDiamondReward(GambleTowers.SPECTATOR_T1));
+        assertEquals(90, GambleBalance.spectatorJackpotDiamondReward(GambleTowers.SPECTATOR_T2));
+        assertEquals(210, GambleBalance.spectatorJackpotDiamondReward(GambleTowers.SPECTATOR_T3));
+        assertEquals(0, GambleBalance.spectatorJackpotDiamondReward(GambleTowers.DICE_T3));
         assertEquals(3, GambleBalance.maxSpectatorsPerGambler());
         assertEquals(2.5, GambleBalance.baseSplashRadius(), EPSILON);
         assertEquals(0.60, GambleBalance.splashDamageRatio(), EPSILON);
@@ -450,20 +483,31 @@ final class GambleTowerTest {
     @Test
     void defaultsMergeMissingGambleValuesAndRejectInvalidOnes() throws Exception {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        assertInvalidAbility(defaults, GambleBalance.GLOBAL_ID, "slotTripleDiamond", 301);
+        assertInvalidAbility(defaults, GambleTowers.POKER_TABLE.id(), "healthScoreDivisor", 0);
+        var code = TowerBalanceConfig.codeDefaults();
+        GambleTowers.all().forEach(type -> {
+            assertEquals(code.towers().get(type.id()), defaults.towers().get(type.id()));
+            assertEquals(code.abilities().get(type.id()), defaults.abilities().get(type.id()));
+        });
         GambleTowers.all().forEach(type -> assertTrue(defaults.towers().containsKey(type.id())));
-        assertEquals(80, defaults.upgradeCost(GambleTowers.GAMBLER.id(), GambleBet.ODD.upgradeId(), -1));
-        assertEquals(160, defaults.upgradeCost(
+        assertEquals(85, defaults.upgradeCost(GambleTowers.GAMBLER.id(), GambleBet.ODD.upgradeId(), -1));
+        assertEquals(170, defaults.upgradeCost(
                 GambleTowers.GAMBLER.id(), GambleBet.TWO_DICE.upgradeId(), -1));
         TowerBalanceConfig partial = new TowerBalanceConfig(Map.of(), Map.of(), Map.of(
                 GambleBalance.GLOBAL_ID, Map.of("damagePerScore", 0.2))).withMissingDefaults(defaults);
+        assertEquals(defaults.ability(GambleBalance.GLOBAL_ID, "slotTripleDiamond", -1),
+                partial.ability(GambleBalance.GLOBAL_ID, "slotTripleDiamond", -1));
+        assertEquals(defaults.ability(GambleTowers.POKER_TABLE.id(), "healthScoreDivisor", -1),
+                partial.ability(GambleTowers.POKER_TABLE.id(), "healthScoreDivisor", -1));
         assertEquals(0.2, partial.ability(GambleBalance.GLOBAL_ID, "damagePerScore", -1), EPSILON);
         assertEquals(5.0, partial.ability(GambleBalance.GLOBAL_ID, "maxHealthPerScore", -1), EPSILON);
         assertEquals(3.0, partial.ability(GambleBalance.GLOBAL_ID, "maxSpectatorsPerGambler", -1), EPSILON);
         assertEquals(10.0, partial.ability(GambleBalance.GLOBAL_ID, "twoDiceCompoundMinSum", -1), EPSILON);
         assertEquals(3.5, partial.ability(
                 GambleTowers.DICE_T3.id(), "supportPowerMultiplier", -1), EPSILON);
-        assertEquals(35.0, partial.ability(
-                GambleTowers.SPECTATOR_T3.id(), "faceSixDiamondReward", -1), EPSILON);
+        assertEquals(210.0, partial.ability(
+                GambleTowers.SPECTATOR_T3.id(), "jackpotDiamondReward", -1), EPSILON);
         assertEquals(110, partial.towers().get(GambleTowers.GAMBLER.id()).maxHealth(), EPSILON);
         assertEquals(400, partial.towers().get(GambleTowers.KING.id()).maxHealth(), EPSILON);
         assertEquals(440, partial.towers().get(GambleTowers.DARK_KING.id()).maxHealth(), EPSILON);
@@ -489,9 +533,9 @@ final class GambleTowerTest {
         assertInvalidAbility(defaults, GambleBalance.GLOBAL_ID, "maxGambleScore", 0.0);
         assertInvalidAbility(defaults, GambleBalance.GLOBAL_ID, "maxGambleScore", 399.0);
         assertInvalidAbility(defaults, GambleTowers.KING.id(), "splashRadiusBonus", 0.0);
-        assertInvalidAbility(defaults, GambleTowers.SPECTATOR_T3.id(), "minimumRoll", 7.0);
-        assertInvalidAbility(defaults, GambleTowers.SPECTATOR_T3.id(), "supportPowerMultiplier", -1.0);
-        assertInvalidAbility(defaults, GambleTowers.SPECTATOR_T3.id(), "faceSixDiamondReward", 3.5);
+        assertInvalidAbility(defaults, GambleTowers.SPECTATOR_T3.id(), "slotBaseHealth", -1.0);
+        assertInvalidAbility(defaults, GambleTowers.SPECTATOR_T3.id(), "slotBaseRegeneration", -1.0);
+        assertInvalidAbility(defaults, GambleTowers.SPECTATOR_T3.id(), "jackpotDiamondReward", 3.5);
 
         try (var input = GambleTowerTest.class.getResourceAsStream(
                 "/semiontd/balance-defaults/tower_balance.json")) {
@@ -505,28 +549,28 @@ final class GambleTowerTest {
     }
 
     @Test
-    void spectatorFaceSixPaysOnlyDuringTheOwnersOpenRound() {
+    void spectatorJackpotPaysOnlyDuringTheOwnersOpenRound() {
         PlayerEconomy economy = new PlayerEconomy(EconomyConfig.defaultConfig());
         long startingDiamond = economy.diamond();
         try {
             GambleSpectatorRewards.openRound(OWNER, economy);
-            assertEquals(0, GambleSpectatorRewards.awardFaceSix(
-                    OWNER, GambleTowers.SPECTATOR_T3, 5));
-            assertEquals(0, GambleSpectatorRewards.awardFaceSix(
-                    OWNER, GambleTowers.DICE_T3, 6));
-            assertEquals(5, GambleSpectatorRewards.awardFaceSix(
-                    OWNER, GambleTowers.SPECTATOR_T1, 6));
-            assertEquals(15, GambleSpectatorRewards.awardFaceSix(
-                    OWNER, GambleTowers.SPECTATOR_T2, 6));
-            assertEquals(35, GambleSpectatorRewards.awardFaceSix(
-                    OWNER, GambleTowers.SPECTATOR_T3, 6));
-            assertEquals(startingDiamond + 55, economy.diamond());
+            assertEquals(0, GambleSpectatorRewards.awardJackpot(
+                    OWNER, GambleTowers.SPECTATOR_T3, false));
+            assertEquals(0, GambleSpectatorRewards.awardJackpot(
+                    OWNER, GambleTowers.DICE_T3, true));
+            assertEquals(30, GambleSpectatorRewards.awardJackpot(
+                    OWNER, GambleTowers.SPECTATOR_T1, true));
+            assertEquals(90, GambleSpectatorRewards.awardJackpot(
+                    OWNER, GambleTowers.SPECTATOR_T2, true));
+            assertEquals(210, GambleSpectatorRewards.awardJackpot(
+                    OWNER, GambleTowers.SPECTATOR_T3, true));
+            assertEquals(startingDiamond + 330, economy.diamond());
         } finally {
             GambleSpectatorRewards.closeRound(OWNER);
         }
-        assertEquals(0, GambleSpectatorRewards.awardFaceSix(
-                OWNER, GambleTowers.SPECTATOR_T3, 6));
-        assertEquals(startingDiamond + 55, economy.diamond());
+        assertEquals(0, GambleSpectatorRewards.awardJackpot(
+                OWNER, GambleTowers.SPECTATOR_T3, true));
+        assertEquals(startingDiamond + 330, economy.diamond());
     }
 
     private static void assertEffects(

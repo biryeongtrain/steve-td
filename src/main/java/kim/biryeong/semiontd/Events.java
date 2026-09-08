@@ -42,6 +42,7 @@ public final class Events {
             gameManager.tickStartupLobbyLoad(server);
             skyboxService.tick(server);
             tipService.tick(server);
+            kim.biryeong.semiontd.ui.GambleRevealService.tick(server);
             TowerVfxService.endServerTick(server);
         });
 
@@ -52,6 +53,7 @@ public final class Events {
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
             gameManager.restoreCombatTickRate(server);
             TowerVfxService.shutdown();
+            kim.biryeong.semiontd.ui.GambleRevealService.clearAll();
             skyboxService.shutdown();
             tipService.shutdown();
             FrostFullOperationService.clearAll();
@@ -71,11 +73,13 @@ public final class Events {
                 skyboxService.handlePlayerDisconnect(player);
                 tipService.handlePlayerDisconnect(player);
                 gameManager.handlePlayerDisconnect(player);
+                kim.biryeong.semiontd.ui.GambleRevealService.clear(player.getUUID());
                 DemonLordService.cleanupPlayer(player);
                 FrostFullOperationService.cleanupPlayer(player);
             });
         });
         ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((player, origin, destination) -> {
+            kim.biryeong.semiontd.ui.GambleRevealService.clear(player.getUUID());
             skyboxService.handlePlayerWorldChanged(player);
             gameManager.handlePlayerWorldChanged(player);
             // 경기가 끝나 로비로 돌아갈 때 보스바를 걷습니다. 아직 전투 중이면 다음 틱에

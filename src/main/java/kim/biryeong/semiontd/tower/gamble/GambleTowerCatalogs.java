@@ -19,10 +19,13 @@ public final class GambleTowerCatalogs {
         register(GambleTowers.SPECTATOR_T2, 2, GambleSupportTower::new);
         register(GambleTowers.SPECTATOR_T3, 3, GambleSupportTower::new);
 
+        registerStarter(GambleTowers.POKER_TABLE, PokerTableTower::new);
+        link(GambleTowers.POKER_TABLE, GamblePoker.UPGRADE_ID, "포커 베팅", GambleTowers.POKER_TABLE);
+
         link(GambleTowers.DICE_T1, GambleTowers.DICE_T2.id(), "주사위 지원 강화 II", GambleTowers.DICE_T2);
         link(GambleTowers.DICE_T2, GambleTowers.DICE_T3.id(), "주사위 지원 강화 III", GambleTowers.DICE_T3);
-        link(GambleTowers.SPECTATOR_T1, GambleTowers.SPECTATOR_T2.id(), "구경꾼 강화 II", GambleTowers.SPECTATOR_T2);
-        link(GambleTowers.SPECTATOR_T2, GambleTowers.SPECTATOR_T3.id(), "구경꾼 강화 III", GambleTowers.SPECTATOR_T3);
+        link(GambleTowers.SPECTATOR_T1, GambleTowers.SPECTATOR_T2.id(), "슬롯머신 강화 II", GambleTowers.SPECTATOR_T2);
+        link(GambleTowers.SPECTATOR_T2, GambleTowers.SPECTATOR_T3.id(), "슬롯머신 강화 III", GambleTowers.SPECTATOR_T3);
         for (TowerType gambler : java.util.List.of(
                 GambleTowers.GAMBLER, GambleTowers.KING, GambleTowers.DARK_KING)) {
             for (GambleBet bet : GambleBet.values()) {
