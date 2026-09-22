@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.ui;
 
 import kim.biryeong.semiontd.game.SemionGame;
+import kim.biryeong.semiontd.augment.AugmentTargetTool;
 import kim.biryeong.semiontd.game.SemionGameManager;
 import kim.biryeong.semiontd.tower.frost.FrostFullOperationService;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
@@ -60,6 +61,7 @@ public final class SemionHotbarService {
         clearTool(player, LEADER_TOOL_SLOT, Items.BLAZE_ROD);
         clearTool(player, SANDBOX_ROUND_TOOL_SLOT, Items.CLOCK);
         FrostFullOperationService.clearActivationItem(player);
+        AugmentTargetTool.clear(player);
     }
 
     private static InteractionResult handleUse(
@@ -78,6 +80,9 @@ public final class SemionHotbarService {
         }
 
         ItemStack stack = serverPlayer.getItemInHand(hand);
+        if (game.augmentService().handleTargetToolInput(game, serverPlayer, null, false, true)) {
+            return InteractionResult.SUCCESS;
+        }
         if (isTowerTool(stack)) {
             gameManager.dialogService().showTowerControl(serverPlayer, game, gameManager.buildGuideService());
             return InteractionResult.SUCCESS;

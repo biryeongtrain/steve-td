@@ -80,6 +80,7 @@ public final class DeveloperStates {
         private int maintenancesUsed;
         private int debugRemovalsUsed;
         private int reproductionsUsed;
+        private boolean copiedBugUsed;
         private PendingReproduction pendingReproduction;
 
         /** Match-wide, deliberately not reset per round. */
@@ -96,6 +97,7 @@ public final class DeveloperStates {
             this.maintenancesUsed = 0;
             this.debugRemovalsUsed = 0;
             this.reproductionsUsed = 0;
+            this.copiedBugUsed = false;
             this.pendingReproduction = null;
         }
 
@@ -114,6 +116,22 @@ public final class DeveloperStates {
 
         public int patchesRemaining() {
             return Math.max(0, capacity.patchSlots() - patchesUsed);
+        }
+
+        boolean firstPatch() {
+            return patchesUsed == 0;
+        }
+
+        boolean firstHotfix() {
+            return hotfixesUsed == 0;
+        }
+
+        boolean consumeFirstCopiedBug() {
+            if (copiedBugUsed) {
+                return false;
+            }
+            copiedBugUsed = true;
+            return true;
         }
 
         public boolean consumePatch() {

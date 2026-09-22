@@ -198,7 +198,6 @@ public final class SemionGameManager {
         NO_ACTIVE_GAME,
         NOT_WAITING,
         ALREADY_PENDING,
-        AUGMENT_TRAIT_CONFLICT,
         PRELOAD_FAILED
     }
 
@@ -1835,9 +1834,6 @@ public final class SemionGameManager {
         }
         if (!activeGame.canConfigureRoster()) {
             return StartCountdownResult.NOT_WAITING;
-        }
-        if (plan.mode() == MatchMode.NORMAL && augmentConfig.enabled() && traitsEnabled()) {
-            return StartCountdownResult.AUGMENT_TRAIT_CONFLICT;
         }
         if (!activeGame.preloadWorldsForStart(plan)) {
             return StartCountdownResult.PRELOAD_FAILED;

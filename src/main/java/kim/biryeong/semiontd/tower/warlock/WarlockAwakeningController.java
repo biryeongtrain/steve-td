@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.tower.warlock;
 
 import java.util.UUID;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.game.PlayerLane;
@@ -27,11 +28,11 @@ public final class WarlockAwakeningController {
         WarlockAwakeningProgress.Snapshot progress = WarlockAwakeningProgress.snapshot(ownerPlayer);
         WarlockRules.AwakeningRule rule = config.awakening(path);
         tower.syncFromEntityHealth(towerEntity.getHealth());
-        if (!rule.canActivate(
-                progress.unlocked(),
-                tower.currentHealthRatio(),
-                tower.isLastSurvivingTower(lane)
-        ) || !state.awaken()) {
+        boolean augmented = tower.augmentSnapshot().has(WarlockAugments.AWAKENING)
+                && AugmentCombat.allowsTriggers();
+        if (!new WarlockRules.AwakeningRule(augmented ? tower.awakeningHealthThreshold() : rule.healthThreshold(), rule.bonus()).canActivate(
+                progress.unlocked() || augmented, tower.currentHealthRatio(),
+                augmented || tower.isLastSurvivingTower(lane)) || !state.awaken()) {
             return false;
         }
 

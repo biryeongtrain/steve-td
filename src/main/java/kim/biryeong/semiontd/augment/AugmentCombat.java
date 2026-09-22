@@ -64,6 +64,57 @@ public final class AugmentCombat {
 
     private AugmentCombat() {}
 
+    private static final ThreadLocal<Boolean> EXTRA_ATTACK = ThreadLocal.withInitial(() -> false);
+    private static final kim.biryeong.semiontd.entity.monster.MonsterDataKey<Boolean> SUPPRESSED_KILL =
+            kim.biryeong.semiontd.entity.monster.MonsterDataKey.of(
+                    ResourceLocation.fromNamespaceAndPath("semiontd", "augment_suppressed_kill"), Boolean.class);
+
+    public static void recordKillOrigin(Tower tower, Monster monster) {
+        if (monster != null && (!allowsTriggers() || tower.isTemporaryCopy())) {monster.setData(SUPPRESSED_KILL, true);}
+    }
+
+    public static void withKillOrigin(Monster monster, Runnable action) {
+        if (monster != null && monster.getData(SUPPRESSED_KILL).orElse(false)) {runWithoutTriggers(action);}
+        else {action.run();}
+    }
+
+    public static boolean allowsTriggers() {
+        return !EXTRA_ATTACK.get();
+    }
+
+    public static void runWithoutTriggers(Runnable action) {
+        boolean previous = EXTRA_ATTACK.get();
+        EXTRA_ATTACK.set(true);
+        try {action.run();} finally {
+            if (previous) {EXTRA_ATTACK.set(true);} else {EXTRA_ATTACK.remove();}
+        }
+    }
+
+    public static void additionalAction(Tower tower, PlayerLane lane) {
+        if (tower == null || lane == null || !lane.towers().contains(tower) || tower.health() <= 0) {return;}
+        runWithoutTriggers(() -> tower.executeAugmentAction(lane));
+    }
+
+    /** Preserve native attack callbacks while preventing cross-augment trigger loops. */
+    public static void additionalAttack(SemionTowerEntity source, SemionMonsterEntity target, double ratio) {
+        additionalAttack(source, target, ratio, false);
+    }
+
+    public static void additionalAttack(SemionTowerEntity source, SemionMonsterEntity target, double ratio, boolean allowSleep) {
+        Tower tower = source == null ? null : source.runtimeTower();
+        if (tower == null || !source.isAlive() || source.isRemoved()
+                || !allowSleep && kim.biryeong.semiontd.tower.succubus.SuccubusDreams.isAsleep(source)
+                || target == null || !target.isAlive() || !source.isValidAttackTarget(target)
+                || source.distanceToSqr(target) > source.attackRange() * source.attackRange() && !tower.ignoresAttackRange(source, target)
+                || !tower.canAttackTarget(source, target)) {return;}
+        runWithoutTriggers(() -> {
+            double damage = source.attackDamageAmount(target) * ratio;
+            Tower.DamageResult result = tower.damageBasicAttackTargetResult(source, target, damage);
+            source.recordAttack(target, damage, result.outgoingDamage(), result.dealtDamage(), result.killed());
+            kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService.showSecondaryAttack(source, target);
+        });
+    }
+
     public static boolean isNormalPermanent(Tower tower) {
         return isNormalPermanentType(tower) && tower.attachedLane() != null
                 && tower.attachedLane().towers().contains(tower);
@@ -98,6 +149,14 @@ public final class AugmentCombat {
 
     public static int masteryStacks(Tower tower) {
         return tower == null ? 0 : tower.getDataOrDefault(MASTERY, 0);
+    }
+
+    public static void resetMastery(Tower tower, PlayerLane lane) {
+        if (masteryStacks(tower) == 0) {return;}
+        double ratio = tower.health() / Math.max(1.0, tower.currentMaxHealth());
+        tower.removeData(MASTERY);
+        tower.syncHealth(tower.currentMaxHealth() * ratio);
+        tower.onStateChanged(lane);
     }
 
     /** Low-pressure bodies cannot create a new condition; already held bonuses still apply. */
@@ -218,8 +277,8 @@ public final class AugmentCombat {
     }
 
     public static double maxHealthBonus(Tower tower) {
-        if (tower.augmentSnapshot().selections().isEmpty() || !isNormalPermanentType(tower)) return 0.0;
-        double bonus = 0.0;
+        double bonus = kim.biryeong.semiontd.tower.undead.UndeadAugments.maxHealthBonus(tower);
+        if (tower.augmentSnapshot().selections().isEmpty() || !isNormalPermanentType(tower)) return bonus;
         if (selected(tower, "one_man_show")) bonus += parameter(tower, "one_man_show", "maxHealthBonus", .30);
         if (tower.augmentSnapshot().has("wartime_economy")) bonus += parameter(tower, "wartime_economy", "maxHealthBonus", .20);
         if (selected(tower, "battlefield_mastery")) bonus += masteryStacks(tower) * parameter(tower, "battlefield_mastery", "bonusPerStack", .04);
@@ -227,9 +286,14 @@ public final class AugmentCombat {
     }
 
     public static double damageBonus(Tower tower, SemionTowerEntity entity) {
-        if (tower.augmentSnapshot().selections().isEmpty() || !isNormalPermanent(tower)) return 0.0;
+        double jobBonus = kim.biryeong.semiontd.tower.undead.UndeadAugments.damageBonus(tower);
+        if (tower instanceof kim.biryeong.semiontd.tower.engineer.EngineerTrapTower
+                && tower.augmentSnapshot().has("job_engineer_towers_p")) {
+            jobBonus += parameter(tower, "job_engineer_towers_p", "damageBonus", 1.0);
+        }
+        if (tower.augmentSnapshot().selections().isEmpty() || !isNormalPermanent(tower)) return jobBonus;
         AugmentSnapshot snapshot = tower.augmentSnapshot();
-        double bonus = -heatStacks(tower) * parameter(tower, "overheat_core", "penaltyPerStack", .06);
+        double bonus = jobBonus - heatStacks(tower) * parameter(tower, "overheat_core", "penaltyPerStack", .06);
         for (int tier = 1; tier <= 3; tier++) {
             String id = "tactical_designation_" + tier;
             if (!isRoleTarget(tower) && selected(tower, id) && mode(tower, id, "ASSAULT")) {
@@ -273,7 +337,10 @@ public final class AugmentCombat {
 
     public static void onPrimaryAttackResolved(SemionTowerEntity entity, SemionMonsterEntity target, Tower.DamageResult result) {
         Tower tower = entity.runtimeTower();
-        if (!isNormalAttacker(tower) || result.dealtDamage() <= 0.0) return;
+        if (tower != null && !tower.isTemporaryCopy() && allowsTriggers()) {
+            kim.biryeong.semiontd.tower.villager.VillagerAdvAugments.onAttackResolved(entity, target, result);
+        }
+        if (!allowsTriggers() || !isNormalAttacker(tower) || result.dealtDamage() <= 0.0) return;
         boolean eligibleKill = result.killed() && canBuildCondition(target.runtimeMonster())
                 && (target.runtimeMonster().origin() == MonsterOrigin.NATURAL_WAVE
                 || target.runtimeMonster().origin() == MonsterOrigin.NORMAL_PAID);
@@ -443,16 +510,19 @@ public final class AugmentCombat {
     }
 
     public static List<String> detailLines(Tower tower) {
-        if (!isNormalPermanent(tower)) return List.of();
         List<String> lines = new ArrayList<>();
+        lines.addAll(kim.biryeong.semiontd.tower.undead.UndeadAugments.detailLines(tower));
+        lines.addAll(kim.biryeong.semiontd.tower.legion.LegionAugments.detailLines(tower));
+        lines.addAll(kim.biryeong.semiontd.tower.villager.VillagerAdvAugments.runtimeDetails(tower));
+        if (!isNormalPermanent(tower)) return List.copyOf(lines);
         if (heatStacks(tower) > 0) lines.add("열화 " + heatStacks(tower) + "/5");
         if (selected(tower, "battlefield_mastery")) lines.add("숙련 " + masteryStacks(tower) + "/4 · 조건 피해 "
                 + Math.round(tower.getDataOrDefault(ENEMY_DAMAGE, 0.0)) + "/" + Math.round(wave(tower).openingHealth() * .40));
-        if (tower.augmentSnapshot().has("winning_barrage")) lines.add("연승 탄환 " + tower.getDataOrDefault(BARRAGE, 0) + "/3");
+        if (tower.augmentSnapshot().has("winning_barrage")) lines.add("칼날비 " + tower.getDataOrDefault(BARRAGE, 0) + "/3");
         if (tower.getDataOrDefault(FINISHING_HITS, 0) > 0) lines.add("마무리 사격 " + tower.getDataOrDefault(FINISHING_HITS, 0) + "회");
-        if (wave(tower).triangle()) lines.add("삼각 진형 활성");
-        if (wave(tower).twin()) lines.add("쌍둥이 편대 활성");
-        if (wave(tower).independent()) lines.add("독립 진지 활성");
+        if (wave(tower).triangle()) lines.add("삼각진 활성");
+        if (wave(tower).twin()) lines.add("쌍둥이 활성");
+        if (wave(tower).independent()) lines.add("혼자가 편해 활성");
         return List.copyOf(lines);
     }
 
@@ -463,7 +533,7 @@ public final class AugmentCombat {
                 + integer(tower, "battlefield_mastery", "maxStacks", 4) + " · 조건 피해 "
                 + Math.round(tower.getDataOrDefault(ENEMY_DAMAGE, 0.0)) + "/"
                 + Math.round(wave(tower).openingHealth() * parameter(tower, "battlefield_mastery", "damageThreshold", .40)));
-        if (tower.augmentSnapshot().has("winning_barrage")) counters.add("연승 탄환 "
+        if (tower.augmentSnapshot().has("winning_barrage")) counters.add("칼날비 "
                 + tower.getDataOrDefault(BARRAGE, 0) + "/" + integer(tower, "winning_barrage", "charges", 3));
         return counters.isEmpty() ? "" : " · " + String.join(" · ", counters);
     }

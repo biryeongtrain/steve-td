@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import kim.biryeong.semiontd.augment.*;
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
@@ -33,6 +34,112 @@ import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
 public final class ThunderGameTest {
+    @GameTest(maxTicks = 120)
+    public void augmentBatteryStoresThreeShotsAndDischargesOnlyOnce(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        UUID owner = stableUuid("thunder-battery-augment");
+        PlayerLane lane = augmentLane(context, owner);
+        ThunderTower squirrel = tower(ThunderTowers.SQUIRREL_T1, owner, context, new BlockPos(4, 2, 4));
+        SpawnedTarget target = null;
+        AreaEffectLaneIndex.register(lane);
+        prepareFloor(context, 7);
+        try {
+            lane.addTower(squirrel);
+            lane.assignAugmentSnapshot(augment("job_thunder_s"));
+            lane.markWaveStarted(1);
+            for (int tick = 0; tick < 100; tick++) {squirrel.tick(lane);}
+            SemionTowerEntity source = towerEntity(context, squirrel);
+            target = spawnTarget(context, lane, source.position().add(0, 0, 2), "battery-target", 10000);
+            double damage = source.attackDamageAmount(target.entity());
+            squirrel.onAttackResolved(source, target.entity(), damage, damage, damage, false);
+            requireClose(10000 - damage * 3, target.runtime().health(), "Battery must fire exactly three full native attacks.");
+            for (int tick = 0; tick < 40; tick++) {squirrel.tick(lane);}
+            squirrel.onAttackResolved(source, target.entity(), damage, damage, damage, false);
+            requireClose(10000 - damage * 3, target.runtime().health(), "Enemies in range must prevent charging.");
+            context.succeed();
+        } finally {
+            if (target != null) {target.entity().discard();}
+            lane.clearTowers();
+            AreaEffectLaneIndex.unregister(lane);
+        }
+    }
+
+    @GameTest(maxTicks = 120)
+    public void augmentGodLightningAddsThreeTargetsAtFullDamage(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        UUID owner = stableUuid("thunder-god-augment");
+        PlayerLane lane = augmentLane(context, owner);
+        ThunderTower squirrel = tower(ThunderTowers.SQUIRREL_T3, owner, context, new BlockPos(4, 2, 4));
+        List<SpawnedTarget> targets = new ArrayList<>();
+        AreaEffectLaneIndex.register(lane);
+        prepareFloor(context, 7);
+        try {
+            lane.addTower(squirrel);
+            lane.assignAugmentSnapshot(augment("job_thunder_g2"));
+            SemionTowerEntity source = towerEntity(context, squirrel);
+            Vec3 center = source.position().add(0, 0, 2);
+            int count = ThunderBalance.chainTargets(squirrel.type().id()) + 3;
+            for (int i = 0; i < count + 2; i++) {
+                targets.add(spawnTarget(context, lane, center.add(i * 0.05, 0, 0), "god-target-" + i, 1000));
+            }
+            squirrel.onAttackResolved(source, targets.getFirst().entity(), 10, 10, 10, false);
+            require(targets.stream().filter(target -> target.runtime().health() < 1000).count() == count,
+                    "Gold lightning must add exactly three targets.");
+            for (SpawnedTarget target : targets) {
+                if (target.runtime().health() < 1000) {requireClose(990, target.runtime().health(), "Every chain hit must use 100% damage.");}
+            }
+            context.succeed();
+        } finally {
+            targets.forEach(target -> target.entity().discard());
+            lane.clearTowers();
+            AreaEffectLaneIndex.unregister(lane);
+        }
+    }
+
+    @GameTest(maxTicks = 120)
+    public void augmentRelaysEachHitFiveNewEnemiesWithoutDuplicates(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        UUID owner = stableUuid("thunder-relay-augment");
+        PlayerLane lane = augmentLane(context, owner);
+        ThunderTower squirrel = tower(ThunderTowers.SQUIRREL_T1, owner, context, new BlockPos(1, 2, 1));
+        ThunderTower first = tower(ThunderTowers.SQUIRREL_T1, owner, context, new BlockPos(6, 2, 4));
+        ThunderTower second = tower(ThunderTowers.SQUIRREL_T1, owner, context, new BlockPos(6, 2, 6));
+        List<SpawnedTarget> targets = new ArrayList<>();
+        AreaEffectLaneIndex.register(lane);
+        prepareFloor(context, 7);
+        try {
+            lane.addTower(squirrel);
+            lane.addTower(first);
+            lane.addTower(second);
+            lane.assignAugmentSnapshot(augment("job_thunder_p"));
+            SemionTowerEntity source = towerEntity(context, squirrel);
+            targets.add(spawnTarget(context, lane, source.position().add(0, 0, 1), "relay-primary", 1000));
+            Vec3 center = towerEntity(context, first).position().add(0, 0, 1);
+            require(source.position().distanceToSqr(center) > source.attackRange() * source.attackRange(),
+                    "Relay targets must remain outside the original tower's range.");
+            for (int i = 0; i < 12; i++) {
+                targets.add(spawnTarget(context, lane, center.add(i * 0.05, 0, 0), "relay-target-" + i, 1000));
+            }
+            squirrel.onAttackResolved(source, targets.getFirst().entity(), 10, 10, 10, false);
+            require(targets.stream().filter(target -> target.runtime().health() < 1000).count() == 10,
+                    "Two relays must strike ten new enemies total.");
+            for (SpawnedTarget target : targets) {
+                if (target.runtime().health() < 1000) {requireClose(990, target.runtime().health(), "Relays must never hit the same enemy twice.");}
+            }
+            requireClose(1000, targets.getFirst().runtime().health(), "Relay must exclude the primary target.");
+            context.succeed();
+        } finally {
+            targets.forEach(target -> target.entity().discard());
+            lane.clearTowers();
+            AreaEffectLaneIndex.unregister(lane);
+        }
+    }
+
+    private static AugmentSnapshot augment(String id) {
+        return new AugmentSnapshot(AugmentConfig.defaults(), List.of(new PlayerAugmentState.Selection(
+                5, AugmentRarity.GOLD, id, PlayerAugmentState.Outcome.SELECTED, null, AugmentChoice.none())));
+    }
+
     @GameTest(maxTicks = 120)
     public void chainUsesResolvedDamageAfterThePrimaryDies(GameTestHelper context) {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
@@ -274,6 +381,18 @@ public final class ThunderGameTest {
         return (SemionTowerEntity) context.getLevel().getEntity(tower.entityId().orElseThrow());
     }
 
+    private static PlayerLane augmentLane(GameTestHelper context, UUID owner) {
+        BlockPos min = context.absolutePos(new BlockPos(0, 1, 0));
+        BlockPos max = context.absolutePos(new BlockPos(7, 6, 7));
+        LaneRegionLayout layout = new LaneRegionLayout(
+                1, Vec3.atCenterOf(context.absolutePos(new BlockPos(2, 2, 2))),
+                List.of(Vec3.atCenterOf(context.absolutePos(new BlockPos(6, 2, 3)))),
+                Vec3.atCenterOf(context.absolutePos(new BlockPos(6, 2, 6))),
+                BlockBounds.of(min, max),
+                List.of(GridPosition.from(context.absolutePos(new BlockPos(5, 2, 6)))));
+        return new PlayerLane(TeamId.RED, 1, owner, context.getLevel(), layout);
+    }
+
     private static PlayerLane testLane(GameTestHelper context, UUID owner) {
         BlockPos min = context.absolutePos(new BlockPos(0, 1, 0));
         BlockPos max = context.absolutePos(new BlockPos(14, 6, 14));
@@ -289,8 +408,12 @@ public final class ThunderGameTest {
     }
 
     private static void prepareFloor(GameTestHelper context) {
-        for (int x = 0; x <= 14; x++) {
-            for (int z = 0; z <= 14; z++) {
+        prepareFloor(context, 14);
+    }
+
+    private static void prepareFloor(GameTestHelper context, int max) {
+        for (int x = 0; x <= max; x++) {
+            for (int z = 0; z <= max; z++) {
                 BlockPos floor = context.absolutePos(new BlockPos(x, 1, z));
                 context.getLevel().setBlock(floor, Blocks.STONE.defaultBlockState(), 3);
                 context.getLevel().setBlock(floor.above(), Blocks.AIR.defaultBlockState(), 3);

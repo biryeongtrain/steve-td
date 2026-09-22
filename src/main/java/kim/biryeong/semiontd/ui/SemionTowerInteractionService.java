@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.ui;
 
 import kim.biryeong.semiontd.game.SemionGame;
+import kim.biryeong.semiontd.augment.AugmentTargetTool;
 import kim.biryeong.semiontd.game.SemionGameManager;
 import kim.biryeong.semiontd.game.SemionTeam;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
@@ -9,6 +10,7 @@ import kim.biryeong.semiontd.tower.TowerPlacementPositions;
 import kim.biryeong.semiontd.tower.engineer.EngineerGolemTower;
 import kim.biryeong.semiontd.tower.developer.DeveloperPatchService;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -30,6 +32,17 @@ public final class SemionTowerInteractionService {
                 handleUse(gameManager, player, world, hand, entity, hitResult));
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) ->
                 handleBlockUse(gameManager, player, world, hand, hitResult));
+        AttackBlockCallback.EVENT.register((player, world, hand, position, direction) -> {
+            if (world.isClientSide() || hand != InteractionHand.MAIN_HAND || !(player instanceof ServerPlayer online)) {
+                return InteractionResult.PASS;
+            }
+            if (!AugmentTargetTool.isTool(online.getMainHandItem())) {return InteractionResult.PASS;}
+            SemionGame game = gameManager.protectionGame(online.getUUID());
+            if (game == null) {return InteractionResult.PASS;}
+            Tower target = game.teamForWorld(online.level()).map(team -> resolveTowerAt(team, position)).orElse(null);
+            return game.augmentService().handleTargetToolInput(game, online, target, true, false)
+                    ? InteractionResult.FAIL : InteractionResult.PASS;
+        });
     }
 
     public static InteractionResult handleUse(
@@ -49,6 +62,9 @@ public final class SemionTowerInteractionService {
         }
         SemionTowerEntity towerEntity = resolveTowerEntity(world, entity);
         Tower tower = towerEntity == null ? resolveEngineerGolem(game, entity) : towerEntity.runtimeTower();
+        if (game.augmentService().handleTargetToolInput(game, serverPlayer, tower, false, false)) {
+            return InteractionResult.SUCCESS;
+        }
         if (tower == null) {
             return InteractionResult.PASS;
         }
@@ -86,6 +102,9 @@ public final class SemionTowerInteractionService {
         Tower tower = game.teamForWorld(serverWorld)
                 .map(team -> resolveTowerAt(team, hitResult.getBlockPos()))
                 .orElse(null);
+        if (game.augmentService().handleTargetToolInput(game, serverPlayer, tower, false, false)) {
+            return InteractionResult.SUCCESS;
+        }
         if (tower == null) {
             return InteractionResult.PASS;
         }
@@ -96,6 +115,13 @@ public final class SemionTowerInteractionService {
                 serverPlayer, game, tower, gameManager.buildGuideService(), null
         );
         return InteractionResult.SUCCESS;
+    }
+
+    public static boolean handleTargetToolAttack(SemionGame game, ServerPlayer online, Entity entity) {
+        if (game == null || !AugmentTargetTool.isTool(online.getMainHandItem())) {return false;}
+        SemionTowerEntity backed = resolveTowerEntity(online.level(), entity);
+        Tower target = backed == null ? resolveEngineerGolem(game, entity) : backed.runtimeTower();
+        return game.augmentService().handleTargetToolInput(game, online, target, true, false);
     }
 
     public static Tower resolveTowerAt(SemionTeam team, BlockPos position) {

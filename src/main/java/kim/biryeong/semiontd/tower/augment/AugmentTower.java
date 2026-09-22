@@ -46,6 +46,8 @@ public class AugmentTower extends ProductionTower {
     private static final TowerDataKey<RecordedStages> RECORDED_STAGES = TowerDataKey.of(
             ResourceLocation.fromNamespaceAndPath("semiontd", "augment_tower_recorded_stages"), RecordedStages.class);
     private boolean restoringEntity;
+    private static final TowerDataKey<Integer> GROWTH_TIER = TowerDataKey.of(
+            ResourceLocation.fromNamespaceAndPath("semiontd", "augment_tower_growth_tier"), Integer.class);
 
     public AugmentTower(TowerType type, UUID owner, TeamId team, int lane, GridPosition original, GridPosition current) {
         super(type, owner, team, lane, original, current);
@@ -53,7 +55,41 @@ public class AugmentTower extends ProductionTower {
 
     protected PlayerLane currentLane() { return attachedLane(); }
     protected double value(String key, double fallback) {
-        return augmentSnapshot().parameter(AugmentTowers.augmentId(type()), key, fallback);
+        double base = augmentSnapshot().parameter(AugmentTowers.augmentId(type()), key, fallback);
+        return base * switch (key) {
+            case "hatchedHealth" -> growthMultiplier("healthPerTier", 1);
+            case "chargeDamage", "hatchedDamage", "shellDamage", "mineDamage", "healCap" -> growthMultiplier("powerPerTier", .5);
+            case "shellRadius", "damageRadius" -> growthMultiplier("areaPerTier", .15);
+            default -> 1;
+        };
+    }
+    public int growthTier() { return getDataOrDefault(GROWTH_TIER, 1); }
+    protected double growthMultiplier(String key, double fallback) {
+        return 1 + (growthTier() - 1) * augmentSnapshot().parameter(AugmentTowers.augmentId(type()), key, fallback);
+    }
+    @Override public double effectBaseMaxHealth() { return super.effectBaseMaxHealth() * growthMultiplier("healthPerTier", 1); }
+
+    public void beginPrepare(PlayerLane lane, int round) { refreshGrowth(lane, round); }
+
+    private void refreshGrowth(PlayerLane lane, int round) {
+        int tier = AugmentTowers.tierForRound(round);
+        if (tier <= growthTier()) {return;}
+        double oldMax = currentMaxHealth(), oldHealth = health();
+        setData(GROWTH_TIER, tier);
+        syncMaxHealth(effectBaseMaxHealth(), false);
+        syncHealth(oldHealth <= 0 ? 0 : oldHealth + currentMaxHealth() - oldMax);
+        onStateChanged(lane);
+    }
+
+    @Override public void onStateChanged(PlayerLane lane) {
+        super.onStateChanged(lane);
+        runtimeEntity(lane).ifPresent(entity -> entity.setCustomName(net.minecraft.network.chat.Component.literal(
+                type().displayName() + " T" + growthTier())));
+    }
+
+    protected String growthDetail() {
+        return "자동 강화 T" + growthTier() + " · R5/R15/R25 · 체력 ×" + oneDecimal(growthMultiplier("healthPerTier", 1))
+                + " · 고정 수치 ×" + oneDecimal(growthMultiplier("powerPerTier", .5));
     }
     @Override public boolean isAugmentTower() { return true; }
     @Override public boolean receivesTraitEffects() { return false; }
@@ -65,6 +101,8 @@ public class AugmentTower extends ProductionTower {
 
     @Override public void onPlaced(PlayerLane lane) {
         super.onPlaced(lane);
+        refreshGrowth(lane, lane.augmentTelemetry() != null && lane.augmentTelemetry().currentRound() != null
+                ? lane.augmentTelemetry().currentRound() : currentRound());
         if (AugmentTowers.is(type(), AugmentTowers.AMBUSH_WORKSHOP)) AmbushMines.placed(this, lane);
         if (!restoringEntity && runtimeEntity(lane).isPresent() && lane.augmentTelemetry() != null
                 && lane.augmentTelemetry().currentRound() != null) {
@@ -75,6 +113,7 @@ public class AugmentTower extends ProductionTower {
     @Override
     public void onWaveStarted(PlayerLane lane, int round) {
         super.onWaveStarted(lane, round);
+        refreshGrowth(lane, round);
         if (state().round() == round) return;
         setData(OBSERVATIONS, new Observations(0, 0, 0));
         List<UUID> links = List.of();
@@ -304,6 +343,16 @@ public class AugmentTower extends ProductionTower {
         telemetry.recordTower(telemetrySample(round, telemetry.currentTick(), telemetry.towerRef(logicalId()), eventType));
     }
     @Override public List<String> runtimeDetailLines() {
+        List<String> lines = new ArrayList<>();
+        lines.add(growthDetail());
+        lines.addAll(supportDetailLines());
+        return List.copyOf(lines);
+    }
+
+    private List<String> supportDetailLines() {
+        if (AugmentTowers.is(type(), AugmentTowers.FOLDING_BARRICADE)) return List.of(
+                "한 번에 받는 피해 최대 " + oneDecimal(value("damagePerHitCap", 15)) + " · 회복 불가",
+                "비공격 · 같은 거리의 공격 가능 타워보다 먼저 공격받음 · 라운드 복구 유지");
         if (AugmentTowers.is(type(), AugmentTowers.EMERGENCY_BELL)) return List.of("구조 " + state().healedIds().size() + "/" + (int) value("maxHeals", 3),
                 "체력 " + percentInteger(value("healthThreshold", .4)) + " 이하: 최대 체력 " + percentInteger(value("healRatio", .25)) + " 회복 (최대 " + oneDecimal(value("healCap", 90)) + ")");
         if (AugmentTowers.is(type(), AugmentTowers.PULSE_RELAY)) return List.of("연결 " + state().links().size() + "/2",

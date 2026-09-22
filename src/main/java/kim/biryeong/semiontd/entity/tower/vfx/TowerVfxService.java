@@ -765,7 +765,7 @@ public final class TowerVfxService {
         List<Vec3> samples = appliedPositions == null
                 ? List.of()
                 : appliedPositions.stream().limit(config.maxSampledHitRays()).toList();
-        String rawTowerTypeId = tower.runtimeTower().type().id();
+        String rawTowerTypeId = tower.runtimeTower().type().id().replace('#', '/');
         net.minecraft.resources.ResourceLocation towerTypeId = net.minecraft.resources.ResourceLocation.tryParse(rawTowerTypeId);
         if (towerTypeId == null || rawTowerTypeId.indexOf(':') < 0) {
             towerTypeId = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, rawTowerTypeId);
@@ -938,7 +938,9 @@ public final class TowerVfxService {
         long started = System.nanoTime();
         Set<ExplosionKey> explosions = new HashSet<>();
         for (PendingEvent event : batch) {
-            if (event instanceof AreaEvent area && area.event.visual().styleId().equals(AreaVfxStyles.CORPSE_EXPLOSION)) {
+            if (event instanceof AreaEvent area
+                    && (area.event.visual().styleId().equals(AreaVfxStyles.CORPSE_EXPLOSION)
+                    || area.event.visual().styleId().equals(AreaVfxStyles.INSECT_EXPLOSION))) {
                 explosions.add(ExplosionKey.from(area.event));
             }
         }

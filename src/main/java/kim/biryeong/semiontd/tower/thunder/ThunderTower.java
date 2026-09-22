@@ -1,11 +1,16 @@
 package kim.biryeong.semiontd.tower.thunder;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import kim.biryeong.semiontd.SemionTd;
+import kim.biryeong.semiontd.api.SemionTdApi;
+import kim.biryeong.semiontd.api.area.AreaEffectOutcome;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.api.area.AreaVfxSpec;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
@@ -16,6 +21,8 @@ import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.ProductionTower;
+import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.tower.succubus.SuccubusDreams;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
@@ -39,6 +46,9 @@ public class ThunderTower extends ProductionTower {
     private ThunderPower.Snapshot grid = ThunderPower.empty();
     private long lastGridScanTick = Long.MIN_VALUE;
     private long lastStunTick = Long.MIN_VALUE;
+    private int storedShots;
+    private int idleChargeTicks;
+    private boolean waveActive;
 
     /**
      * Kept so the discharge can still name a source after the tank dies.
@@ -89,11 +99,15 @@ public class ThunderTower extends ProductionTower {
     public void tick(PlayerLane lane) {
         super.tick(lane);
         refreshGrid(lane, false);
+        chargeBattery();
     }
 
     @Override
     public void onWaveStarted(PlayerLane lane, int currentRound) {
         super.onWaveStarted(lane, currentRound);
+        waveActive = true;
+        storedShots = 0;
+        idleChargeTicks = 0;
         // The storm roll for this wave is already in place; force a rescan so the first attack of
         // the wave uses the real output rather than the previous wave's number.
         refreshGrid(lane, true);
@@ -104,7 +118,7 @@ public class ThunderTower extends ProductionTower {
             return;
         }
         long now = lane.arenaWorld().getGameTime();
-        if (!force && now - lastGridScanTick < GRID_SCAN_INTERVAL_TICKS) {
+        if (!force && lastGridScanTick != Long.MIN_VALUE && now - lastGridScanTick < GRID_SCAN_INTERVAL_TICKS) {
             return;
         }
         lastGridScanTick = now;
@@ -160,8 +174,21 @@ public class ThunderTower extends ProductionTower {
             return;
         }
 
+        Set<UUID> visited = new HashSet<>();
+        visited.add(target.getUUID());
         if (ThunderBalance.chainTargets(type().id()) > 0) {
-            fireChain(towerEntity, target, resolvedOutgoingDamage);
+            fireChain(towerEntity, target, resolvedOutgoingDamage, visited);
+        }
+        if (dealtDamage > 0.0 && AugmentCombat.allowsTriggers()) {
+            if (ThunderTowers.isSquirrel(type()) && augmentSnapshot().has("job_thunder_p")) {
+                AugmentCombat.runWithoutTriggers(() -> relayLightning(towerEntity, resolvedOutgoingDamage, visited));
+            }
+            int shots = storedShots;
+            storedShots = 0;
+            for (int i = 0; i < shots; i++) {
+                AugmentCombat.additionalAttack(towerEntity, target,
+                        augmentSnapshot().parameter("job_thunder_s", "damageRatio", 1.0));
+            }
         }
         if (killedTarget || !target.isAlive()) {
             return;
@@ -278,11 +305,16 @@ public class ThunderTower extends ProductionTower {
      * <p>The struck target is excluded and the arc count is capped by decrementing a counter inside
      * the damage function, so a dense wave cannot turn one attack into unlimited splash.
      */
-    private void fireChain(SemionTowerEntity towerEntity, SemionMonsterEntity target, double outgoingDamage) {
+    private void fireChain(SemionTowerEntity towerEntity, SemionMonsterEntity target, double outgoingDamage,
+            Set<UUID> visited) {
         String id = type().id();
         int targets = ThunderBalance.chainTargets(id);
         double radius = ThunderBalance.chainRadius(id);
         double ratio = ThunderBalance.chainDamageRatio(id);
+        if (type().id().equals(ThunderTowers.SQUIRREL_T3.id()) && augmentSnapshot().has("job_thunder_g2")) {
+            targets += (int) augmentSnapshot().parameter("job_thunder_g2", "extraTargets", 3);
+            ratio = augmentSnapshot().parameter("job_thunder_g2", "damageRatio", 1.0);
+        }
         if (targets <= 0 || radius <= 0.0 || ratio <= 0.0 || outgoingDamage <= 0.0) {
             return;
         }
@@ -306,8 +338,81 @@ public class ThunderTower extends ProductionTower {
                 request,
                 monster -> remaining.getAndDecrement() > 0 ? chainDamage : 0.0,
                 true,
-                (monster, damage, killed) -> {}
+                (monster, damage, killed) -> {
+                    visited.add(monster.getUUID());
+                }
         );
+    }
+
+    private void chargeBattery() {
+        SemionTowerEntity source = spawnedEntity;
+        if (!waveActive || source == null || !source.isAlive() || SuccubusDreams.isAsleep(source)
+                || !AugmentCombat.allowsTriggers() || !ThunderTowers.isSquirrel(type())
+                || !augmentSnapshot().has("job_thunder_s") || grid.shortage()
+                || !nearbyEnemies(source).isEmpty()) {
+            idleChargeTicks = 0;
+            return;
+        }
+        if (++idleChargeTicks >= augmentSnapshot().parameter("job_thunder_s", "chargeTicks", 20)) {
+            idleChargeTicks = 0;
+            storedShots = Math.min((int) augmentSnapshot().parameter("job_thunder_s", "maxShots", 3), storedShots + 1);
+        }
+    }
+
+    private static List<SemionMonsterEntity> nearbyEnemies(SemionTowerEntity source) {
+        List<SemionMonsterEntity> targets = new ArrayList<>();
+        SemionTdApi.areaEffects().applyToMonsters(MonsterAreaEffectRequest.aroundTower(
+                AreaEffectIds.tower(source.runtimeTower(), "augment_targets"), source,
+                source.attackRange(), AreaVfxSpec.none()), target -> {
+                    targets.add(target);
+                    return AreaEffectOutcome.UNCHANGED;
+                });
+        targets.sort(Comparator.comparingDouble(source::distanceToSqr));
+        return targets;
+    }
+
+    private void relayLightning(SemionTowerEntity source, double damage, Set<UUID> visited) {
+        PlayerLane lane = attachedLane();
+        if (lane == null || damage <= 0.0) {return;}
+        int relays = (int) augmentSnapshot().parameter("job_thunder_p", "maxRelays", 2);
+        int targets = (int) augmentSnapshot().parameter("job_thunder_p", "targetsPerRelay", 5);
+        double ratio = augmentSnapshot().parameter("job_thunder_p", "damageRatio", 1.0);
+        List<ThunderTower> candidates = lane.towers().stream()
+                .filter(tower -> tower instanceof ThunderTower && tower != this
+                        && ownerPlayer().equals(tower.ownerPlayer()) && ThunderTowers.isSquirrel(tower.type()))
+                .map(ThunderTower.class::cast)
+                .filter(tower -> tower.spawnedEntity != null && tower.spawnedEntity.isAlive()
+                        && !SuccubusDreams.isAsleep(tower.spawnedEntity))
+                .sorted(Comparator.comparingDouble(tower -> source.distanceToSqr(tower.spawnedEntity)))
+                .limit(relays).toList();
+        for (ThunderTower relay : candidates) {
+            AtomicInteger remaining = new AtomicInteger(targets);
+            MonsterAreaEffectRequest request = MonsterAreaEffectRequest.aroundTower(
+                    AreaEffectIds.tower(this, "relay"), relay.spawnedEntity,
+                    relay.spawnedEntity.attackRange(), AreaVfxSpec.onTrigger(ThunderVfx.ARC))
+                    .withFilter(monster -> !visited.contains(monster.getUUID()));
+            TowerAreaDamage.applyResolved(this, source, request,
+                    monster -> remaining.getAndDecrement() > 0 ? damage * ratio : 0.0, true,
+                    (monster, dealt, killed) -> visited.add(monster.getUUID()));
+        }
+    }
+
+    @Override
+    public void resetForRound(PlayerLane lane) {
+        waveActive = false;
+        storedShots = 0;
+        idleChargeTicks = 0;
+        super.resetForRound(lane);
+    }
+
+    @Override
+    protected void copyRuntimeStateFrom(Tower previousTower) {
+        super.copyRuntimeStateFrom(previousTower);
+        if (previousTower instanceof ThunderTower previous) {
+            storedShots = previous.storedShots;
+            idleChargeTicks = previous.idleChargeTicks;
+            waveActive = previous.waveActive;
+        }
     }
 
     /**
@@ -354,6 +459,10 @@ public class ThunderTower extends ProductionTower {
         lines.add("발전 " + round(grid.generation()) + " / 소비 " + round(grid.consumption())
                 + " (가동률 " + loadFactorText(grid.loadFactor()) + ")");
         lines.add(powerStateLine());
+        if (augmentSnapshot().has("job_thunder_s") && ThunderTowers.isSquirrel(type())) {
+            lines.add("축전지 추가 탄 " + storedShots + "/"
+                    + (int) augmentSnapshot().parameter("job_thunder_s", "maxShots", 3));
+        }
         if (ThunderBalance.isStormRod(type().id())) {
             addStormLines(lines);
         }

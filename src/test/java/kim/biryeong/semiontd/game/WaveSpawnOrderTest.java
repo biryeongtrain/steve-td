@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.game;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 import java.util.Set;
@@ -35,21 +36,52 @@ final class WaveSpawnOrderTest {
     }
 
     @Test
-    void healerAppearsOnceAfterFiftyFivePercentAndRewardBudgetIsExact() {
+    void healerRampKeepsCombatOrderAndRewardBudgetExact() {
         for (boolean counts : List.of(false, true)) {
-            var config = WaveConfig.defaultConfig().withSeason3Stages(counts, true, Set.of("overworld_assault"));
-            for (int round : new int[] {16, 20, 25}) {
-                var wave = config.candidatesForRound(round).stream()
-                        .filter(candidate -> round == 16 || "overworld_assault".equals(candidate.templateId())).findFirst().orElseThrow();
-                var expanded = PlayerLane.expandWaveEntries(wave.entriesForLane("lane_1"), wave.spawnMode(), wave.rewardBudgetForLane("lane_1"));
-                int expected = (int) Math.floor((expanded.size() - 1) * 0.55);
-                assertEquals(1, expanded.stream().filter(entry -> entry.healing() != null).count());
-                assertEquals(expected, java.util.stream.IntStream.range(0, expanded.size()).filter(i -> expanded.get(i).healing() != null).findFirst().orElseThrow());
-                assertEquals(wave.rewardBudgetForLane("lane_1"), expanded.stream().mapToLong(WaveMonsterEntry::mineralReward).sum());
-                if (round == 16) {assertEquals(counts ? 39 : 32, expected);}
-                if (round >= 20 && counts) {assertEquals(expanded.size() - 55, expanded.stream().filter(entry -> entry.mineralReward() == 0).count());}
+            var config = WaveConfig.defaultConfig().withSeason3Stages(counts, true,
+                    Set.of("animal_stampede", "overworld_assault", "zombified_legion"));
+            for (int round : new int[] {15, 16, 17, 18, 19, 20, 24, 25}) {
+                for (var wave : config.candidatesForRound(round)) {
+                    var entries = wave.entriesForLane("lane_1");
+                    var expanded = PlayerLane.expandWaveEntries(entries, wave.spawnMode(), wave.rewardBudgetForLane("lane_1"));
+                    int healerCount = Math.max(0, Math.min(5, round - 15));
+                    var positions = healerPositions(expanded);
+                    assertEquals(healerCount, positions.size(), "R" + round + ": " + wave.templateId());
+                    assertEquals(entries.stream().mapToInt(WaveMonsterEntry::count).sum(), expanded.size());
+                    if (healerCount > 0) {
+                        int combatCount = expanded.size() - healerCount;
+                        assertEquals(combatCount * 55 / 100, positions.getFirst());
+                        assertEquals(combatCount * (healerCount == 1 ? 55 : 85) / 100 + healerCount - 1, positions.getLast());
+                    }
+                    var combat = entries.stream().filter(entry -> entry.healing() == null).toList();
+                    assertEquals(ids(PlayerLane.expandWaveEntries(combat, wave.spawnMode())),
+                            ids(expanded.stream().filter(entry -> entry.healing() == null).toList()));
+                    assertEquals(wave.rewardBudgetForLane("lane_1"), expanded.stream().mapToLong(WaveMonsterEntry::mineralReward).sum());
+                    if (round >= 20 && counts) {
+                        assertEquals(expanded.size() - 55, expanded.stream().filter(entry -> entry.mineralReward() == 0).count());
+                    }
+                }
             }
         }
+    }
+
+    @Test
+    void healersSpreadAcrossCombatQueueWithoutCountingEarlierHealers() {
+        var healer = healer();
+        List<List<Integer>> expected = List.of(List.of(11), List.of(11, 18), List.of(11, 15, 19),
+                List.of(11, 14, 17, 20), List.of(11, 13, 16, 18, 21));
+        for (WaveSpawnMode mode : WaveSpawnMode.values()) {
+            for (int count = 1; count <= 5; count++) {
+                var expanded = PlayerLane.expandWaveEntries(List.of(TANK.withCount(20), healer.withCount(count)), mode);
+                assertEquals(expected.get(count - 1), healerPositions(expanded));
+            }
+            var crowded = PlayerLane.expandWaveEntries(List.of(TANK.withCount(1), healer.withCount(5)), mode);
+            assertEquals(List.of(0, 1, 2, 3, 4), healerPositions(crowded));
+        }
+        assertThrows(IllegalArgumentException.class, () -> PlayerLane.expandWaveEntries(
+                List.of(TANK, healer.withCount(6)), WaveSpawnMode.ROUND_ROBIN));
+        assertThrows(IllegalArgumentException.class, () -> PlayerLane.expandWaveEntries(
+                List.of(TANK, healer, healer), WaveSpawnMode.ROUND_ROBIN));
     }
 
     @Test
@@ -60,5 +92,14 @@ final class WaveSpawnOrderTest {
 
     private static WaveMonsterEntry entry(String id, int count) {
         return new WaveMonsterEntry(id, 10.0, 0.0, 1.0, AttackKind.MELEE, "minecraft:zombie", null, count);
+    }
+
+    private static WaveMonsterEntry healer() {
+        return WaveConfig.defaultConfig().withSeason3Stages(false, true, Set.of()).configForRound(16).orElseThrow()
+                .entriesForLane("lane_1").stream().filter(entry -> entry.healing() != null).findFirst().orElseThrow();
+    }
+
+    private static List<Integer> healerPositions(List<WaveMonsterEntry> entries) {
+        return java.util.stream.IntStream.range(0, entries.size()).filter(i -> entries.get(i).healing() != null).boxed().toList();
     }
 }

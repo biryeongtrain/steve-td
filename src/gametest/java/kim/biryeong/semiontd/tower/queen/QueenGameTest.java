@@ -5,6 +5,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import kim.biryeong.semiontd.augment.AugmentChoice;
+import kim.biryeong.semiontd.augment.AugmentConfig;
+import kim.biryeong.semiontd.augment.AugmentRarity;
+import kim.biryeong.semiontd.augment.AugmentSnapshot;
+import kim.biryeong.semiontd.augment.PlayerAugmentState;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
@@ -35,6 +40,100 @@ import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
 public final class QueenGameTest {
+    @GameTest
+    public void jokerTicketsGuardAuraAndRowBonusUseTheNativeCards(GameTestHelper context) {
+        UUID owner = UUID.nameUUIDFromBytes("queen-augment-cards".getBytes(StandardCharsets.UTF_8));
+        PlayerLane lane = augmentLane(context, owner);
+        TeamLaneGroup group = new TeamLaneGroup(TeamId.RED, BossMonster.defaultBoss(TeamId.RED));
+        group.addLane(lane);
+        QueenStates.begin(owner, group);
+        prepareFloor(context, 7);
+        try {
+            lane.assignAugmentSnapshot(queenSnapshot("g1", "g2"));
+            QueenStates.onSelected(lane, "job_queen_towers_g2", AugmentConfig.defaults());
+            require(QueenStates.state(owner).jokerTickets() == 3, "Selection must grant three tickets without placing towers.");
+            QueenTower queen = new QueenTower(QueenTowers.QUEEN, owner, TeamId.RED, 1,
+                    GridPosition.from(context.absolutePos(new BlockPos(3, 2, 3))),
+                    GridPosition.from(context.absolutePos(new BlockPos(3, 2, 3))));
+            lane.addTower(queen);
+            List<QueenCardTower> row = new ArrayList<>();
+            for (int index = 0; index < 5; index++) {
+                GridPosition position = GridPosition.from(context.absolutePos(new BlockPos(4, 2, 2 + index)));
+                QueenCardTower card = new QueenCardTower(index < 3 ? QueenTowers.JOKER : QueenTowers.RANDOM_CARD_SOLDIER,
+                        owner, TeamId.RED, 1, position, position);
+                card.assignCard(new QueenCard(index == 4 ? QueenCard.Suit.HEART : QueenCard.Suit.DIAMOND, 7));
+                lane.addTower(card);
+                row.add(card);
+            }
+            require(QueenStates.state(owner).jokerTickets() == 0, "Only successful placements consume the three tickets.");
+            require(lane.towers().size() == 6, "Jokers must occupy ordinary registered slots.");
+            require(!QueenStates.state(owner).consumeJokerTicket(), "No fourth ticket may be consumed.");
+            QueenPoker.snapshot(lane, owner);
+            QueenCardTower joker = row.getFirst();
+            requireClose(90, joker.currentMaxHealth(), "Five-of-a-kind must double the joker's native 45 health.");
+            require(joker.adjustAttackInterval(100) == 4, "Poker +100%, row +40% once and guard +50% must combine.");
+            require(joker.sellRefundAmount() == 0, "Free joker refund must remain zero.");
+            queen.syncHealth(0);
+            towerEntity(context, queen).setHealth(0);
+            require(joker.adjustAttackInterval(100) == 5, "A dead Queen must stop granting the guard aura.");
+            context.succeed();
+        } finally {
+            group.closeRuntime();
+            QueenStates.clear(owner);
+        }
+    }
+
+    @GameTest
+    public void returningGiantRechecksPreviouslyContactedEnemyAndTransfersExecutionShrink(GameTestHelper context) {
+        UUID owner = UUID.nameUUIDFromBytes("queen-augment-giant".getBytes(StandardCharsets.UTF_8));
+        PlayerLane lane = augmentLane(context, owner);
+        TeamLaneGroup group = new TeamLaneGroup(TeamId.RED, BossMonster.defaultBoss(TeamId.RED));
+        group.addLane(lane);
+        QueenStates.begin(owner, group);
+        prepareFloor(context, 7);
+        try {
+            lane.assignAugmentSnapshot(queenSnapshot("s", "p"));
+            GridPosition position = GridPosition.from(context.absolutePos(new BlockPos(3, 2, 3)));
+            QueenTower queen = new QueenTower(QueenTowers.QUEEN, owner, TeamId.RED, 1, position, position);
+            lane.addTower(queen);
+            QueenStates.PlayerState state = QueenStates.state(owner);
+            require(QueenGiantRunner.dispatch(queen, lane, state), "The giant must dispatch.");
+            QueenGiantRunner runner = state.runner();
+            SpawnedTarget target = spawnTarget(context, lane, runner.position(), "queen-return-target");
+            SpawnedTarget nearby = spawnTarget(context, lane, runner.position().add(2, 0, 0), "queen-return-neighbor");
+            target.runtime().syncHealth(4);
+            target.entity().setHealth(4);
+            runner.tick(queen, lane, state);
+            require(target.runtime().isAlive(), "First contact must not execute an unshrunk enemy.");
+            QueenShrink.apply(target.entity(), 15);
+            double expected = QueenShrink.points(target.entity()) * 0.5;
+            for (int tick = 0; tick < 100 && runner.active(); tick++) runner.tick(queen, lane, state);
+            require(!target.runtime().isAlive(), "Return contact must recheck the same enemy after it becomes weak enough.");
+            requireClose(expected, QueenShrink.points(nearby.entity()), "Execution must transfer half the stored shrink to one nearby enemy.");
+            require(!runner.active(), "The giant must stop after exactly one return trip.");
+            context.succeed();
+        } finally {
+            group.closeRuntime();
+            QueenStates.clear(owner);
+        }
+    }
+
+    private static AugmentSnapshot queenSnapshot(String... suffixes) {
+        return new AugmentSnapshot(AugmentConfig.defaults(), java.util.Arrays.stream(suffixes)
+                .map(suffix -> new PlayerAugmentState.Selection(5, AugmentRarity.GOLD, "job_queen_towers_" + suffix,
+                        PlayerAugmentState.Outcome.SELECTED, null, AugmentChoice.none())).toList());
+    }
+
+    private static PlayerLane augmentLane(GameTestHelper context, UUID owner) {
+        LaneRegionLayout layout = new LaneRegionLayout(1,
+                Vec3.atCenterOf(context.absolutePos(new BlockPos(1, 2, 1))),
+                List.of(Vec3.atCenterOf(context.absolutePos(new BlockPos(5, 2, 5)))),
+                Vec3.atCenterOf(context.absolutePos(new BlockPos(6, 2, 6))),
+                BlockBounds.of(context.absolutePos(new BlockPos(0, 1, 0)), context.absolutePos(new BlockPos(7, 5, 7))),
+                List.of(GridPosition.from(context.absolutePos(new BlockPos(6, 2, 5)))));
+        return new PlayerLane(TeamId.RED, 1, owner, context.getLevel(), layout);
+    }
+
     @GameTest(maxTicks = 120)
     public void shrinkPreservesHealthAndGiantExecutesContactedEnemy(GameTestHelper context) {
         UUID owner = UUID.nameUUIDFromBytes("queen-runtime".getBytes(StandardCharsets.UTF_8));
@@ -519,7 +618,11 @@ public final class QueenGameTest {
     }
 
     private static void prepareFloor(GameTestHelper context) {
-        for (int x = 0; x <= 14; x++) for (int z = 0; z <= 14; z++) {
+        prepareFloor(context, 14);
+    }
+
+    private static void prepareFloor(GameTestHelper context, int max) {
+        for (int x = 0; x <= max; x++) for (int z = 0; z <= max; z++) {
             BlockPos floor = context.absolutePos(new BlockPos(x, 1, z));
             context.getLevel().setBlock(floor, Blocks.STONE.defaultBlockState(), 3);
             context.getLevel().setBlock(floor.above(), Blocks.AIR.defaultBlockState(), 3);

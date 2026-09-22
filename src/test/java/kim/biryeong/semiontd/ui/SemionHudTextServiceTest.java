@@ -71,6 +71,19 @@ final class SemionHudTextServiceTest {
     }
 
     @Test
+    void healerCountIsVisibleEvenWhenItsEntryIsBeyondTheThreeSpeciesPreview() {
+        var config = WaveConfig.defaultConfig();
+        assertEquals("", SemionHudTextService.healerCountMarkup(config.configForRound(15).orElseThrow().entriesForLane("lane_1")));
+        for (int round : new int[] {16, 17, 18, 19, 20, 25}) {
+            for (var wave : config.candidatesForRound(round)) {
+                var entries = wave.entriesForLane("lane_1");
+                assertEquals(" <dark_gray>·</dark_gray> <green>회복 ×" + Math.min(5, round - 15) + "</green>",
+                        SemionHudTextService.healerCountMarkup(entries));
+            }
+        }
+    }
+
+    @Test
     void damageTypesUseIconsAndSharedHudColors() {
         assertEquals("<#ec8d34>🪓 123</#ec8d34>", attackDamageText("🪓 123"));
         assertEquals("<#796CFF>🔥 456</#796CFF>", magicDamageText("🔥 456"));

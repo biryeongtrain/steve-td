@@ -22,6 +22,7 @@ import kim.biryeong.semiontd.game.GridPosition;
  */
 public final class AtlantisPressure {
     private static final Map<Key, Entry> ENTRIES = new HashMap<>();
+    private static final ThreadLocal<Map<UUID, Chain>> ACTIVE_CHAINS = ThreadLocal.withInitial(HashMap::new);
 
     private AtlantisPressure() {
     }
@@ -44,6 +45,7 @@ public final class AtlantisPressure {
 
     public static void clearAll() {
         ENTRIES.clear();
+        ACTIVE_CHAINS.remove();
     }
 
     public static void clearPlayer(UUID playerId) {
@@ -142,13 +144,17 @@ public final class AtlantisPressure {
      * pipeline.
      */
     public static double consumeForBurst(UUID ownerPlayer, UUID monsterId, double ratioBonus) {
+        return consumeForBurst(ownerPlayer, monsterId, ratioBonus, AtlantisBalance.waterPressureDamageCap());
+    }
+
+    public static double consumeForBurst(UUID ownerPlayer, UUID monsterId, double ratioBonus, double cap) {
         Entry entry = ownerPlayer == null || monsterId == null
                 ? null
                 : ENTRIES.remove(new Key(ownerPlayer, monsterId));
         if (entry == null || entry.stacks <= 0) {
             return 0.0;
         }
-        return burstDamage(entry.sourceDamage, entry.stacks, ratioBonus);
+        return burstDamage(entry.sourceDamage, entry.stacks, ratioBonus, cap);
     }
 
     public static void remove(UUID ownerPlayer, UUID monsterId) {
@@ -169,11 +175,15 @@ public final class AtlantisPressure {
      * <p>Extracted so unit tests can assert the ceiling without a live world.
      */
     public static double burstDamage(double sourceDamage, int stacks, double ratioBonus) {
+        return burstDamage(sourceDamage, stacks, ratioBonus, AtlantisBalance.waterPressureDamageCap());
+    }
+
+    public static double burstDamage(double sourceDamage, int stacks, double ratioBonus, double cap) {
         if (sourceDamage <= 0.0 || stacks <= 0) {
             return 0.0;
         }
         double ratio = AtlantisBalance.waterPressureDamageRatio() + Math.max(0.0, ratioBonus);
-        double multiplier = Math.min(stacks * ratio, AtlantisBalance.waterPressureDamageCap());
+        double multiplier = Math.min(stacks * ratio, cap);
         return sourceDamage * multiplier;
     }
 
@@ -192,17 +202,47 @@ public final class AtlantisPressure {
     public static final class Chain {
         private final Set<UUID> burst = new HashSet<>();
         private int depth;
+        private final int maximumUnique;
+        private final int maximumDepth;
+        private UUID owner;
+
+        public Chain() {this(Integer.MAX_VALUE, AtlantisBalance.maxChainDepth());}
+        public Chain(int maximumUnique) {this(maximumUnique, maximumUnique);}
+        private Chain(int maximumUnique, int maximumDepth) {
+            this.maximumUnique = maximumUnique;
+            this.maximumDepth = maximumDepth;
+        }
+
+        public static Chain currentOrNew(int maximumUnique) {
+            return currentOrNew(null, maximumUnique);
+        }
+
+        public static Chain currentOrNew(UUID owner, int maximumUnique) {
+            Chain active = ACTIVE_CHAINS.get().get(owner);
+            if (active != null) return active;
+            Chain chain = maximumUnique > 0 ? new Chain(maximumUnique) : new Chain();
+            chain.owner = owner;
+            return chain;
+        }
+
+        public boolean alreadyBurst(UUID monsterId) {return burst.contains(monsterId);}
+        Set<UUID> burstIds() {return Set.copyOf(burst);}
 
         public boolean canBurst(UUID monsterId) {
-            return depth < AtlantisBalance.maxChainDepth() && burst.add(monsterId);
+            return monsterId != null && depth < maximumDepth && burst.size() < maximumUnique && burst.add(monsterId);
         }
 
         public void enter() {
             depth++;
+            ACTIVE_CHAINS.get().put(owner, this);
         }
 
         public void exit() {
             depth--;
+            if (depth <= 0) {
+                ACTIVE_CHAINS.get().remove(owner);
+                if (ACTIVE_CHAINS.get().isEmpty()) ACTIVE_CHAINS.remove();
+            }
         }
     }
 }

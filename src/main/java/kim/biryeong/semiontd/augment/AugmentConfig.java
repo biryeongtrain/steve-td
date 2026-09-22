@@ -31,7 +31,7 @@ public record AugmentConfig(boolean enabled, boolean publicPoolEnabled,
         DEFAULT_PARAMETERS.forEach((id, values) -> copy.put(id, new TreeMap<>(values)));
         if (parameters != null) {
             parameters.forEach((id, values) -> {
-                String normalized = AugmentCatalog.normalizeId(id);
+                String normalized = AugmentCatalog.effectId(id);
                 Map<String, Double> defaults = DEFAULT_PARAMETERS.get(normalized);
                 if (defaults == null) {throw new IllegalArgumentException("Unknown augment: " + id);}
                 values.forEach((key, value) -> {
@@ -53,11 +53,16 @@ public record AugmentConfig(boolean enabled, boolean publicPoolEnabled,
     }
 
     public boolean isEnabled(String cardId) {
-        return AugmentCatalog.find(cardId).isPresent() && !disabledIds.contains(AugmentCatalog.normalizeId(cardId));
+        return AugmentCatalog.find(cardId).isPresent() && !disabledIds.contains(AugmentCatalog.normalizeId(cardId))
+                && !disabledIds.contains(AugmentCatalog.effectId(cardId));
     }
 
     public double parameter(String cardId, String key, double fallback) {
-        return parameters.getOrDefault(AugmentCatalog.normalizeId(cardId), Map.of()).getOrDefault(key, fallback);
+        return parametersFor(cardId).getOrDefault(key, fallback);
+    }
+
+    public Map<String, Double> parametersFor(String cardId) {
+        return parameters.getOrDefault(AugmentCatalog.effectId(cardId), Map.of());
     }
 
     public void validate() {
@@ -91,7 +96,7 @@ public record AugmentConfig(boolean enabled, boolean publicPoolEnabled,
         if (json.has("parameters")) {
             Set<String> suppliedIds = new TreeSet<>();
             for (var card : json.getAsJsonObject("parameters").entrySet()) {
-                String normalizedId = AugmentCatalog.normalizeId(card.getKey());
+                String normalizedId = AugmentCatalog.effectId(card.getKey());
                 Map<String, Double> values = new TreeMap<>(parameters.getOrDefault(normalizedId, Map.of()));
                 for (var parameter : card.getValue().getAsJsonObject().entrySet()) {
                     values.put(parameter.getKey(), number(parameter.getValue()));
@@ -157,6 +162,7 @@ public record AugmentConfig(boolean enabled, boolean publicPoolEnabled,
             entry.addProperty("rarity", card.rarity().name());
             entry.addProperty("category", card.category().name());
             entry.addProperty("familyKey", card.familyKey());
+            entry.addProperty("requiredJobId", card.requiredJobId());
             entry.addProperty("safe", card.safe());
             entry.addProperty("risky", card.risky());
             entry.addProperty("towerAugment", card.towerAugment());
@@ -212,15 +218,25 @@ public record AugmentConfig(boolean enabled, boolean publicPoolEnabled,
         }
         boolean fraction = Set.of("damageReduction", "longDamageReduction", "vanguardDamageReduction", "vanguardDamagePenalty",
                 "otherDamagePenalty", "damageThreshold", "healthThreshold", "redirectRatio", "payoutMultiplier", "bodyMultiplier",
-                "echoRatio", "bonusRatio").contains(key);
+                "echoRatio", "bonusRatio", "healRatio", "repeatDamageRatio", "inheritRatio", "copyRatio", "childRatio",
+                "statRatio", "healthRatio", "healthLossRatio", "healthCapRatio", "reviveHealthRatio", "intervalRatio",
+                "refundRatio", "transferRatio", "decayReduction", "waitReduction", "slow", "chill").contains(key);
         if (fraction && value > 1) {throw new IllegalArgumentException(key + " must be in [0,1].");}
         boolean positiveInteger = key.endsWith("Ticks") || Set.of("maxStacks", "charges", "ticketCount", "repaymentCount",
-                "targetCount", "maxCharges", "hatchWaves", "maxShells", "shellTargets", "maxHeals", "attacksPerCharge", "mineTargets").contains(key);
+                "targetCount", "maxCharges", "hatchWaves", "maxShells", "shellTargets", "maxHeals", "attacksPerCharge", "mineTargets", "scoreMultiplier",
+                "attacks", "attacksRequired", "centers", "chainTargets", "chestsPerStack", "companions", "copiesPerSummon",
+                "deathsPerCharge", "deathsPerSummon", "distinctSkills", "everyAttacks", "explosions", "extraShots", "extraTargets",
+                "fastBeats", "growthRounds", "healTargets", "hitsRequired", "initialMana", "initialStacks", "killsRequired",
+                "maxAdditional", "maxAllies", "maxAttempts", "maxCopies", "maxDepth", "maxGeneration", "maxNeighbors",
+                "maxRelays", "maxShots", "maxSources", "maxTargets", "maxTowers", "maxExtraAttacks", "maxChainDepth",
+                "normalBeats", "openingAttacks", "openingWater", "requiredKinds", "requiredLeaderKinds", "requiredLinks",
+                "revivalCount", "roundCap", "roundReduction", "shots", "spawnCount", "stacks", "survivorCap",
+                "targets", "targetsPerRelay", "tickets", "transfersPerCharge", "waterPerCharge", "yardRadius", "gaugePerVolley").contains(key);
         if (positiveInteger && (value < 1 || value != Math.rint(value))) {
             throw new IllegalArgumentException(key + " must be a positive integer.");
         }
         if (key.equals("emeraldPerShell") && value < 1) {throw new IllegalArgumentException("emeraldPerShell must be positive.");}
-        if (Set.of("echoRatio", "bodyMultiplier", "healthMultiplier", "attackMultiplier", "costMultiplier").contains(key) && value <= 0) {
+        if (Set.of("echoRatio", "bodyMultiplier", "healthMultiplier", "attackMultiplier", "costMultiplier", "damagePerHitCap").contains(key) && value <= 0) {
             throw new IllegalArgumentException(key + " must be positive.");
         }
         if (Set.of("amount", "ticketValue", "advanceCap", "incomeBonus", "matchIncomeCap", "roundBonusCap", "neighborCount").contains(key)
@@ -229,49 +245,58 @@ public record AugmentConfig(boolean enabled, boolean publicPoolEnabled,
 
     private static Map<String, Map<String, Double>> defaultParameters() {
         Map<String, Map<String, Double>> cards = new TreeMap<>();
-        AugmentCatalog.definitions().forEach(card -> cards.put(card.id(), Map.of()));
-        put(cards, "tactical_designation_1", "damageBonus", .15, "damageReduction", .12);
-        put(cards, "tactical_designation_2", "damageBonus", .25, "damageReduction", .20);
-        put(cards, "tactical_designation_3", "damageBonus", .40, "damageReduction", .30);
-        put(cards, "triangle_formation", "damageBonus", .08, "damageReduction", .08, "radius", 4, "neighborCount", 2);
-        put(cards, "engagement_plan", "quickDamageBonus", .18, "longDamageBonus", .10, "longDamageReduction", .10, "transitionTicks", 160);
+        AugmentCatalog.definitions().forEach(card -> cards.put(AugmentCatalog.effectId(card.id()), Map.of()));
+        JobAugmentCatalog.entries().forEach(entry -> cards.put(entry.definition().id(), entry.parameters()));
+        put(cards, "tactical_designation_1", "damageBonus", .35, "damageReduction", .20);
+        put(cards, "tactical_designation_2", "damageBonus", .65, "damageReduction", .30);
+        put(cards, "tactical_designation_3", "damageBonus", 1.0, "damageReduction", .40);
+        put(cards, "triangle_formation", "damageBonus", .20, "damageReduction", .15, "radius", 4, "neighborCount", 2);
+        put(cards, "engagement_plan", "quickDamageBonus", .35, "longDamageBonus", .25, "longDamageReduction", .15, "transitionTicks", 160);
         put(cards, "emergency_loan", "advanceMultiplier", 3, "advanceCap", 300, "debtMultiplier", 4.0 / 3.0, "repaymentCount", 4);
-        put(cards, "additional_payload", "costMultiplier", 1.25, "healthMultiplier", 1.35, "supportMultiplier", 1.35);
-        put(cards, "twin_squadron", "damageBonus", .10);
-        put(cards, "overheat_core", "damageBonus", .40, "penaltyPerStack", .06, "maxStacks", 5);
-        put(cards, "frontline_specialization", "vanguardDamagePenalty", .25, "vanguardDamageReduction", .30,
-                "artilleryDamageBonus", .30, "artilleryIncomingMultiplier", 1.25);
-        put(cards, "forecast_offensive", "echoRatio", .30);
-        put(cards, "support_performance", "targetCount", 3, "incomeBonus", 2, "matchIncomeCap", 8);
-        put(cards, "battlefield_mastery", "bonusPerStack", .04, "maxStacks", 4, "damageThreshold", .40);
-        put(cards, "biased_armor", "selectedMultiplier", .75, "oppositeMultiplier", 1.35);
-        put(cards, "cash_settlement", "diamondMultiplier", 3);
-        put(cards, "forbidden_blueprint", "ticketCount", 2, "ticketValue", 300, "payoutMultiplier", .90);
-        put(cards, "low_pressure_high_yield", "bonusRatio", .25, "roundBonusCap", 12, "bodyMultiplier", .70);
-        put(cards, "finishing_fire_1", "damageBonus", .20);
-        put(cards, "finishing_fire_2", "damageBonus", .35);
-        put(cards, "finishing_fire_3", "damageBonus", .55);
-        put(cards, "independent_position", "damageBonus", .12, "damageReduction", .08, "radius", 4);
-        put(cards, "winning_barrage", "damageBonus", .30, "charges", 3);
-        put(cards, "decisive_delivery", "healthMultiplier", 1.60, "attackMultiplier", 1.40);
-        put(cards, "domino_fire", "overkillRatio", .60, "damageCapRatio", .50, "radius", 4);
-        put(cards, "one_man_show", "damageBonus", 1.0, "maxHealthBonus", .30, "otherDamagePenalty", .20);
-        put(cards, "wartime_economy", "payoutMultiplier", .65, "damageBonus", .35, "maxHealthBonus", .20);
-        put(cards, "giant_hunter_call", "minimumRange", 3, "maxHealthDamageRatio", .08, "bossMaxHealthDamageRatio", .02);
-        put(cards, "capacitor_post_blueprint", "chargeTicks", 40, "maxCharges", 3, "chargeDamage", 70);
-        put(cards, "starlight_cocoon_call", "hatchWaves", 2, "hatchedHealth", 600, "hatchedRange", 5, "hatchedDamage", 110, "hatchedIntervalTicks", 30);
-        put(cards, "ordnance_factory_call", "emeraldPerShell", 100, "maxShells", 4, "shellDamage", 120, "shellRadius", 3,
+        put(cards, "folding_barricade_blueprint", "damagePerHitCap", 15);
+        put(cards, "additional_payload", "costMultiplier", 1.25, "healthMultiplier", 1.65, "supportMultiplier", 1.65);
+        put(cards, "twin_squadron", "damageBonus", .30);
+        put(cards, "overheat_core", "damageBonus", 1.0, "penaltyPerStack", .06, "maxStacks", 5);
+        put(cards, "frontline_specialization", "vanguardDamagePenalty", .25, "vanguardDamageReduction", .45,
+                "artilleryDamageBonus", .70, "artilleryIncomingMultiplier", 1.25);
+        put(cards, "forecast_offensive", "echoRatio", .50);
+        put(cards, "support_performance", "targetCount", 3, "incomeBonus", 6, "matchIncomeCap", 24);
+        put(cards, "battlefield_mastery", "bonusPerStack", .15, "maxStacks", 4, "damageThreshold", .40);
+        put(cards, "biased_armor", "selectedMultiplier", .55, "oppositeMultiplier", 1.35);
+        put(cards, "cash_settlement", "diamondMultiplier", 5);
+        put(cards, "forbidden_blueprint", "ticketCount", 2, "ticketValue", 450, "payoutMultiplier", .90);
+        put(cards, "low_pressure_high_yield", "bonusRatio", .40, "roundBonusCap", 20, "bodyMultiplier", .70);
+        put(cards, "finishing_fire_1", "damageBonus", .40);
+        put(cards, "finishing_fire_2", "damageBonus", .70);
+        put(cards, "finishing_fire_3", "damageBonus", 1.10);
+        put(cards, "independent_position", "damageBonus", .30, "damageReduction", .15, "radius", 4);
+        put(cards, "winning_barrage", "damageBonus", .60, "charges", 3);
+        put(cards, "decisive_delivery", "healthMultiplier", 2.0, "attackMultiplier", 1.80);
+        put(cards, "domino_fire", "overkillRatio", .90, "damageCapRatio", .75, "radius", 4);
+        put(cards, "one_man_show", "damageBonus", 1.75, "maxHealthBonus", .60, "otherDamagePenalty", .20);
+        put(cards, "wartime_economy", "payoutMultiplier", .65, "damageBonus", .65, "maxHealthBonus", .40);
+        put(cards, "giant_hunter_call", "minimumRange", 3, "maxHealthDamageRatio", .12, "bossMaxHealthDamageRatio", .03);
+        put(cards, "capacitor_post_blueprint", "chargeTicks", 40, "maxCharges", 3, "chargeDamage", 110);
+        put(cards, "starlight_cocoon_call", "hatchWaves", 2, "hatchedHealth", 800, "hatchedRange", 5, "hatchedDamage", 170, "hatchedIntervalTicks", 30);
+        put(cards, "ordnance_factory_call", "emeraldPerShell", 100, "maxShells", 4, "shellDamage", 200, "shellRadius", 3,
                 "shellTargets", 5, "shellIntervalTicks", 100);
-        put(cards, "emergency_bell_blueprint", "healRatio", .25, "healCap", 90, "healthThreshold", .40, "maxHeals", 3, "checkTicks", 20);
-        put(cards, "pulse_relay_blueprint", "attacksPerCharge", 5, "chargedDamageRatio", .50);
-        put(cards, "barrier_core_call", "redirectRatio", .25);
-        put(cards, "ambush_workshop_blueprint", "triggerRadius", 1.25, "damageRadius", 2, "mineDamage", 100, "mineTargets", 2, "checkTicks", 5);
+        put(cards, "emergency_bell_blueprint", "healRatio", .40, "healCap", 150, "healthThreshold", .40, "maxHeals", 3, "checkTicks", 20);
+        put(cards, "pulse_relay_blueprint", "attacksPerCharge", 5, "chargedDamageRatio", 1.0);
+        put(cards, "barrier_core_call", "redirectRatio", .35);
+        put(cards, "ambush_workshop_blueprint", "triggerRadius", 1.25, "damageRadius", 2, "mineDamage", 170, "mineTargets", 2, "checkTicks", 5);
+        AugmentCatalog.definitions().stream().filter(AugmentDefinition::towerAugment).forEach(card -> {
+            Map<String, Double> values = new TreeMap<>(cards.get(card.id()));
+            values.put("healthPerTier", 1.0);
+            values.put("powerPerTier", .5);
+            values.put("areaPerTier", .15);
+            cards.put(card.id(), Map.copyOf(values));
+        });
         for (AugmentRarity rarity : AugmentRarity.values()) {
             String suffix = rarity.name().toLowerCase(java.util.Locale.ROOT);
             int index = rarity.ordinal();
-            put(cards, "reserve_diamonds_" + suffix, "amount", new int[]{60, 120, 240}[index]);
-            put(cards, "reserve_income_" + suffix, "amount", new int[]{10, 20, 40}[index]);
-            put(cards, "reserve_production_" + suffix, "amount", new int[]{1, 2, 3}[index]);
+            put(cards, "reserve_diamonds_" + suffix, "amount", new int[]{150, 300, 600}[index]);
+            put(cards, "reserve_income_" + suffix, "amount", new int[]{15, 30, 60}[index]);
+            put(cards, "reserve_production_" + suffix, "amount", new int[]{2, 3, 6}[index]);
         }
         return Map.copyOf(cards);
     }

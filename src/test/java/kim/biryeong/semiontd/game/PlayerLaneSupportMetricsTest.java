@@ -96,11 +96,15 @@ final class PlayerLaneSupportMetricsTest {
         WaveMonsterEntry entry = wave.entriesForLane("lane_1").stream()
                 .filter(candidate -> candidate.healing() != null).findFirst().orElseThrow();
         Monster healer = Monster.fromWaveEntry(entry, TeamId.BLUE, 1, MonsterOrigin.NATURAL_WAVE);
+        Monster secondHealer = Monster.fromWaveEntry(entry, TeamId.BLUE, 1, MonsterOrigin.NATURAL_WAVE);
         Monster proxy = Monster.fromWaveEntry(entry, TeamId.BLUE, 1, MonsterOrigin.BUILDER_PROXY);
         lane.enqueueSummonedMonster(healer);
+        lane.enqueueSummonedMonster(secondHealer);
         lane.enqueueSummonedMonster(proxy);
         healer.supportMetrics().recordHealing(240.0, 180.0);
         healer.waveHealingState().recordAttempt(entry.healing(), 3, 180.0, 240.0, 180.0, WaveHealingState.Failure.NONE);
+        secondHealer.supportMetrics().recordHealing(240.0, 220.0);
+        secondHealer.waveHealingState().recordAttempt(entry.healing(), 3, 220.0, 240.0, 220.0, WaveHealingState.Failure.NONE);
         proxy.supportMetrics().recordHealing(900.0, 900.0);
         proxy.waveHealingState().recordAttempt(entry.healing(), 3, 900.0, 900.0, 900.0, WaveHealingState.Failure.NONE);
 
@@ -113,10 +117,10 @@ final class PlayerLaneSupportMetricsTest {
         healer.markRemoved();
         lane.disableMonsters();
 
-        assertEquals(180.0, lane.naturalWaveSupportMetrics().effectiveHealing());
-        assertEquals(1, lane.waveSupportMetrics().successfulCasts());
-        assertEquals(180.0, lane.waveSupportMetrics().effectiveHealing());
-        assertEquals(60.0, lane.waveSupportMetrics().overhealing());
+        assertEquals(400.0, lane.naturalWaveSupportMetrics().effectiveHealing());
+        assertEquals(2, lane.waveSupportMetrics().successfulCasts());
+        assertEquals(400.0, lane.waveSupportMetrics().effectiveHealing());
+        assertEquals(80.0, lane.waveSupportMetrics().overhealing());
         assertEquals(MonsterSupportMetrics.Snapshot.empty(), lane.utilitySupportMetrics(PURCHASER));
     }
 

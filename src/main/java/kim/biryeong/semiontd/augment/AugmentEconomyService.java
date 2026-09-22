@@ -113,17 +113,17 @@ public final class AugmentEconomyService {
         } else if (id.startsWith("reserve_")) {
             int tier = id.endsWith("_silver") ? 1 : id.endsWith("_gold") ? 2 : 3;
             if (id.startsWith("reserve_diamond")) {
-                long amount = valueLong(state, id, "amount", 60L << (tier - 1));
+                long amount = valueLong(state, id, "amount", 150L << (tier - 1));
                 grantDiamond(player, amount);
                 player.augmentTelemetry().recordEconomy(new EconomyEvent(round, player.augmentTelemetry().currentTick(),
                         "semiontd:" + id, "SELECTION_GRANT", null, null, null, null, amount, null, null, null, 1));
             } else if (id.startsWith("reserve_income")) {
-                long amount = valueLong(state, id, "amount", 10L << (tier - 1));
+                long amount = valueLong(state, id, "amount", 15L << (tier - 1));
                 grantIncome(player, amount);
                 player.augmentTelemetry().recordEconomy(new EconomyEvent(round, player.augmentTelemetry().currentTick(),
                         "semiontd:" + id, "SELECTION_GRANT", null, null, null, null, null, amount, null, null, 1));
             } else if (id.startsWith("reserve_production")) {
-                long amount = valueLong(state, id, "amount", tier);
+                long amount = valueLong(state, id, "amount", new long[]{2, 3, 6}[tier - 1]);
                 player.economy().addAugmentEmeraldProduction(amount);
                 player.augmentTelemetry().recordEconomy(new EconomyEvent(round, player.augmentTelemetry().currentTick(),
                         "semiontd:" + id, "SELECTION_GRANT", null, null, null, null, null, null, null, null, Math.toIntExact(amount)));

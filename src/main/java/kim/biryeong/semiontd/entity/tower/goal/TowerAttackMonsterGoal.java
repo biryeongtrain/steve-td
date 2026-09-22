@@ -9,6 +9,8 @@ import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.visual.SemionAnimationState;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.tower.succubus.SuccubusDreams;
+import kim.biryeong.semiontd.tower.insect.InsectBalance;
+import kim.biryeong.semiontd.tower.insect.InsectUnitTower;
 import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.tower.augment.AugmentTowerService;
 import net.minecraft.sounds.SoundEvents;
@@ -89,9 +91,22 @@ public final class TowerAttackMonsterGoal extends Goal {
 
         tower.getLookControl().setLookAt(target);
         tower.faceAttackTarget(target);
+        if (tower.runtimeTower() instanceof InsectUnitTower insect && insect.usesContactDetonation()) {
+            double contactRange = InsectBalance.contactDetonationRange();
+            if (tower.distanceToSqr(target) <= contactRange * contactRange) {
+                tower.getNavigation().stop();
+                insect.detonateOnContact(tower, target);
+            } else if (!tower.deployedAtFinalDefense() && tower.canChaseTargets()) {
+                tower.moveTowardTarget(target.position(), tower.chaseSpeedModifier());
+            } else {
+                tower.getNavigation().stop();
+                tower.playAnimation(SemionAnimationState.IDLE);
+            }
+            return;
+        }
         double attackRangeSqr = tower.attackRange() * tower.attackRange();
         double distanceSqr = tower.distanceToSqr(target);
-        if (distanceSqr > attackRangeSqr) {
+        if (distanceSqr > attackRangeSqr && !ignoresRange(target)) {
             if (tower.deployedAtFinalDefense() || !tower.canChaseTargets()) {
                 tower.getNavigation().stop();
                 tower.playAnimation(SemionAnimationState.IDLE);
@@ -280,6 +295,7 @@ public final class TowerAttackMonsterGoal extends Goal {
     }
 
     private boolean isInTargetSearchRange(SemionMonsterEntity monster) {
+        if (ignoresRange(monster)) {return true;}
         if (tower.deployedAtFinalDefense()) {
             double range = SemionTowerEntity.FINAL_DEFENSE_TARGET_RANGE;
             return tower.distanceToSqr(monster) <= range * range;
@@ -289,12 +305,16 @@ public final class TowerAttackMonsterGoal extends Goal {
 
     private boolean isInAttackRange(SemionMonsterEntity monster) {
         double attackRangeSqr = tower.attackRange() * tower.attackRange();
-        return tower.distanceToSqr(monster) <= attackRangeSqr;
+        return tower.distanceToSqr(monster) <= attackRangeSqr || ignoresRange(monster);
     }
 
     private boolean isInEncounterRange(SemionMonsterEntity monster) {
         double encounterRange = tower.attackRange() + ENCOUNTER_RANGE_BONUS;
-        return tower.distanceToSqr(monster) <= encounterRange * encounterRange;
+        return tower.distanceToSqr(monster) <= encounterRange * encounterRange || ignoresRange(monster);
+    }
+
+    private boolean ignoresRange(SemionMonsterEntity monster) {
+        return tower.runtimeTower() != null && tower.runtimeTower().ignoresAttackRange(tower, monster);
     }
 
     private long stableTargetOffset(SemionMonsterEntity monster) {

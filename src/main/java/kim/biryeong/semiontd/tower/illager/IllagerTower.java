@@ -18,6 +18,7 @@ import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
 import net.minecraft.core.registries.Registries;
@@ -26,6 +27,9 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.raid.Raid;
 
 public class IllagerTower extends EntityBackedTower {
+    private static final String OMEN = "job_illager_towers_s";
+    public static final String NEXT_TARGET = "job_illager_towers_g2";
+    private static final TowerDataKey<Boolean> OMEN_USED = TowerDataKey.of(raidSource("omen_used"), Boolean.class);
     private static final ResourceLocation RAID_DAMAGE_SOURCE = raidSource("damage");
     private static final ResourceLocation RAID_ATTACK_SPEED_SOURCE = raidSource("attack_speed");
     private static final ResourceLocation RAID_DAMAGE_REDUCTION_SOURCE = raidSource("damage_reduction");
@@ -98,6 +102,16 @@ public class IllagerTower extends EntityBackedTower {
 
     @Override
     public double modifyAttackDamage(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
+        // With Omen, resolve marks per victim at the shared outgoing boundary, including splash.
+        return augmentSnapshot().has(OMEN) ? damageAmount : damageAmount * targetDamageMultiplier(target);
+    }
+
+    @Override
+    public double modifyOutgoingDamage(SemionTowerEntity source, SemionMonsterEntity target, double damageAmount) {
+        return augmentSnapshot().has(OMEN) ? damageAmount * targetDamageMultiplier(target) : damageAmount;
+    }
+
+    private double targetDamageMultiplier(SemionMonsterEntity target) {
         double multiplier = 1.0;
         Monster monster = target == null ? null : target.runtimeMonster();
         boolean raidActive = IllagerRaidStates.active(ownerPlayer());
@@ -114,7 +128,28 @@ public class IllagerTower extends EntityBackedTower {
                 multiplier += ability("raidIncomeDamageBonus");
             }
         }
-        return damageAmount * Math.max(0.0, multiplier);
+        multiplier += IllagerMarks.omenBonus(monster, ownerPlayer());
+        return Math.max(0.0, multiplier);
+    }
+
+    @Override
+    public void onWaveStarted(PlayerLane lane, int round) {
+        super.onWaveStarted(lane, round);
+        setData(OMEN_USED, false);
+    }
+
+    @Override
+    public void onAttackResolved(SemionTowerEntity source, SemionMonsterEntity target, double attemptedDamage,
+                                 double outgoingDamage, double dealtDamage, boolean killed) {
+        super.onAttackResolved(source, target, attemptedDamage, outgoingDamage, dealtDamage, killed);
+        if (!kim.biryeong.semiontd.augment.AugmentCombat.allowsTriggers()
+                || !augmentSnapshot().has(OMEN) || dealtDamage <= 0 || getDataOrDefault(OMEN_USED, false)) {return;}
+        setData(OMEN_USED, true);
+        if (target == null || killed || !target.isAlive()) {return;}
+        int ticks = (int) augmentSnapshot().parameter(OMEN, "markDurationTicks", 80);
+        IllagerMarks.applyOmen(target.runtimeMonster(), ownerPlayer(),
+                augmentSnapshot().parameter(OMEN, "markDamageBonus", .20), ticks);
+        target.applyTimedEffect(TimedEffectType.MONSTER_MARKED, 1, ticks);
     }
 
     @Override
@@ -127,6 +162,13 @@ public class IllagerTower extends EntityBackedTower {
     public void onAttack(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount, boolean killedTarget) {
         applyMark(target);
         applySplash(towerEntity, target, damageAmount);
+    }
+
+    @Override
+    public List<String> runtimeDetailLines() {
+        var state = IllagerRaidStates.get(ownerPlayer()).orElse(null);
+        if (state == null || state.grandRaidThreshold() <= 0) {return super.runtimeDetailLines();}
+        return List.of("대습격 추가 게이지 " + state.extraGauge() + "/" + state.grandRaidThreshold());
     }
 
     protected void applyMark(SemionMonsterEntity target) {
@@ -188,7 +230,7 @@ public class IllagerTower extends EntityBackedTower {
     }
 
     private void refreshRaidTimedEffects(PlayerLane lane) {
-        if (lane == null || health() <= 0.0 || !IllagerRaidStates.active(ownerPlayer()) || entityId().isEmpty()) {
+        if (lane == null || lane.arenaWorld() == null || health() <= 0.0 || !IllagerRaidStates.active(ownerPlayer()) || entityId().isEmpty()) {
             return;
         }
         if (!(lane.arenaWorld().getEntity(entityId().getAsInt()) instanceof SemionTowerEntity towerEntity)) {

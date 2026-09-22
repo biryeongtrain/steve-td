@@ -46,6 +46,7 @@ public final class DeveloperTowerData {
     public static final TowerDataKey<Integer> INSTABILITY = key("instability", Integer.class);
 
     public static final TowerDataKey<String> BUGS = key("bugs", String.class);
+    private static final TowerDataKey<String> COPIED_BUGS = key("copied_bugs", String.class);
     public static final TowerDataKey<String> OPTIMIZATIONS = key("optimizations", String.class);
     public static final TowerDataKey<Boolean> VERSION_PINNED = key("version_pinned", Boolean.class);
 
@@ -252,7 +253,26 @@ public final class DeveloperTowerData {
         }
         current.add(bug);
         tower.setData(BUGS, encode(current, DeveloperBug::key));
+        DeveloperAugments.onBugAdded(tower, bug);
         return true;
+    }
+
+    static Set<DeveloperBug> copiedBugs(Tower tower) {
+        Set<DeveloperBug> bugs = new LinkedHashSet<>();
+        for (String token : tower.getDataOrDefault(COPIED_BUGS, "").split(",")) {
+            DeveloperBug.fromKey(token).ifPresent(bugs::add);
+        }
+        return bugs;
+    }
+
+    static boolean hasCopiedBug(Tower tower, DeveloperBug bug) {
+        return copiedBugs(tower).contains(bug);
+    }
+
+    static void addCopiedBug(Tower tower, DeveloperBug bug) {
+        Set<DeveloperBug> copied = copiedBugs(tower);
+        copied.add(bug);
+        tower.setData(COPIED_BUGS, encode(copied, DeveloperBug::key));
     }
 
     public static boolean removeBug(Tower tower, DeveloperBug bug) {

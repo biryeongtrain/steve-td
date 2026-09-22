@@ -14,6 +14,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
+import java.util.function.Function;
 
 /** Pure per-match state. The server controller owns identity, phase, target and resource validation. */
 public final class PlayerAugmentState {
@@ -68,9 +69,6 @@ public final class PlayerAugmentState {
     private record Receipt(String fingerprint, ActionResult result) {}
     private static final Set<String> CALLS = Set.of("semiontd:barrier_core_call", "semiontd:giant_hunter_call",
             "semiontd:starlight_cocoon_call", "semiontd:ordnance_factory_call");
-    private static final Set<String> CONFIGURABLE = Set.of("semiontd:tactical_designation_1", "semiontd:tactical_designation_2",
-            "semiontd:tactical_designation_3", "semiontd:engagement_plan", "semiontd:overheat_core",
-            "semiontd:frontline_specialization", "semiontd:biased_armor");
     private UUID playerId;
     private long seed;
     private AugmentConfig config = AugmentConfig.defaults();
@@ -89,6 +87,49 @@ public final class PlayerAugmentState {
     private int preparedRound = -1;
     private long configurationRevision;
     private ConfigurationDraft configurationDraft;
+    private Integer targetToolMilestone;
+
+    public synchronized List<Selection> targetedSelections() {
+        return selections.values().stream().filter(selection -> selection.outcome() == Outcome.SELECTED
+                && AugmentService.targetCount(selection.augmentId()) > 0).toList();
+    }
+
+    public synchronized Optional<Selection> targetToolSelection() {
+        return targetedSelections().stream().filter(selection -> Objects.equals(selection.milestoneRound(), targetToolMilestone))
+                .findFirst().or(() -> targetedSelections().stream().findFirst());
+    }
+
+    public synchronized void selectTargetTool(int milestone) {
+        if (targetedSelections().stream().anyMatch(selection -> selection.milestoneRound() == milestone)) {
+            targetToolMilestone = milestone;
+        }
+    }
+
+    public synchronized void cycleTargetTool() {
+        List<Selection> targeted = targetedSelections();
+        if (targeted.isEmpty()) {return;}
+        int index = targeted.indexOf(targetToolSelection().orElseThrow());
+        targetToolMilestone = targeted.get((index + 1) % targeted.size()).milestoneRound();
+    }
+
+    /** Removed logical towers are not silently replaced; dead towers still present in the lane remain bound. */
+    public synchronized boolean clearMissingTargets(Set<UUID> present) {
+        if (committing) {return false;}
+        boolean changed = false;
+        for (Selection selection : targetedSelections()) {
+            AugmentChoice old = selection.choice();
+            UUID primary = old.primaryTargetId() != null && present.contains(old.primaryTargetId()) ? old.primaryTargetId() : null;
+            UUID secondary = old.secondaryTargetId() != null && present.contains(old.secondaryTargetId()) ? old.secondaryTargetId() : null;
+            AugmentChoice next = new AugmentChoice(primary, secondary, old.mode());
+            if (!old.equals(next)) {
+                selections.put(selection.milestoneRound(), new Selection(selection.milestoneRound(), selection.rarity(),
+                        selection.augmentId(), selection.outcome(), null, next));
+                changed = true;
+            }
+        }
+        if (changed) {configurationDraft = null; configurationRevision++;}
+        return changed;
+    }
 
     public PlayerAugmentState() {}
     public PlayerAugmentState(UUID playerId) {this.playerId = Objects.requireNonNull(playerId);}
@@ -119,7 +160,7 @@ public final class PlayerAugmentState {
     }
     public synchronized boolean hasSelected(String id) {
         String normalized = AugmentCatalog.normalizeId(id);
-        return selections.values().stream().anyMatch(selection -> normalized.equals(selection.augmentId()));
+        return selections.values().stream().anyMatch(selection -> AugmentCatalog.matchesSelection(normalized, selection.augmentId()));
     }
     public synchronized boolean canUseTowerCall(String id) {
         String normalized = AugmentCatalog.normalizeId(id);
@@ -272,6 +313,7 @@ public final class PlayerAugmentState {
         if (!isEligible(card, milestone, eligible)) {return result(requestId, fingerprint, Status.INELIGIBLE);}
         if (!apply(commit, card, offer.draft().choice())) {return result(requestId, fingerprint, Status.COMMIT_REJECTED);}
         selections.put(milestone, new Selection(milestone, offer.rarity(), card.id(), Outcome.SELECTED, null, offer.draft().choice()));
+        if (AugmentService.targetCount(card.id()) > 0) {targetToolMilestone = milestone;}
         lastConfiguredRounds.put(milestone, offer.offeredRound());
         currentMilestone = null;
         return result(requestId, fingerprint, Status.SUCCESS);
@@ -288,9 +330,28 @@ public final class PlayerAugmentState {
         return result(requestId, fingerprint, Status.SUCCESS);
     }
 
-    public synchronized void expire(long now) {
-        if (committing) {return;}
-        currentOffer().filter(offer -> now >= offer.deadlineTickExclusive()).ifPresent(offer -> resolveSkipped(offer, SkipReason.TIMEOUT));
+    /** Only the server may settle a timeout, using the same validation and effect commit as manual selection. */
+    public synchronized boolean expire(long now, Predicate<AugmentDefinition> eligible,
+                                       Function<AugmentDefinition, AugmentChoice> choices, Commit commit) {
+        Offer offer = currentOffer().orElse(null);
+        if (committing || offer == null || now < offer.deadlineTickExclusive()) {return false;}
+        List<AugmentDefinition> candidates = new ArrayList<>(offer.cardIds().stream()
+                .map(id -> AugmentCatalog.find(id).orElseThrow()).toList());
+        shuffle(candidates, offer.milestoneRound(), 200);
+        // A stale board can invalidate every offered card. The same-rarity reserve never needs a target or cost.
+        candidates.add(diamondReserve(offer.rarity()));
+        for (AugmentDefinition card : candidates) {
+            if (!isEligible(card, offer.milestoneRound(), eligible)) {continue;}
+            AugmentChoice choice = choices.apply(card);
+            if (choice == null || !apply(commit, card, choice)) {continue;}
+            selections.put(offer.milestoneRound(), new Selection(offer.milestoneRound(), offer.rarity(), card.id(),
+                    Outcome.SELECTED, null, choice));
+            if (AugmentService.targetCount(card.id()) > 0) {targetToolMilestone = offer.milestoneRound();}
+            lastConfiguredRounds.put(offer.milestoneRound(), offer.offeredRound());
+            currentMilestone = null;
+            return true;
+        }
+        return false;
     }
 
     public synchronized long configurationRevision() {return configurationRevision;}
@@ -308,10 +369,12 @@ public final class PlayerAugmentState {
         if (expectedRevision != configurationRevision) {return result(requestId, fingerprint, Status.STALE_REVISION);}
         Selection selection = selections.get(selectedMilestone);
         if (selection == null || selection.outcome() != Outcome.SELECTED
-                || !CONFIGURABLE.contains(selection.augmentId()) || currentRound != preparedRound) {
+                || !AugmentService.configurable(selection.augmentId()) || currentRound != preparedRound) {
             return result(requestId, fingerprint, Status.INELIGIBLE);
         }
-        if (lastConfiguredRound(selectedMilestone) >= currentRound) {return result(requestId, fingerprint, Status.CONFIGURED_THIS_ROUND);}
+        if (AugmentService.targetCount(selection.augmentId()) == 0 && lastConfiguredRound(selectedMilestone) >= currentRound) {
+            return result(requestId, fingerprint, Status.CONFIGURED_THIS_ROUND);
+        }
         AugmentDefinition card = AugmentCatalog.find(selection.augmentId()).orElseThrow();
         if (!eligible.test(card)) {return result(requestId, fingerprint, Status.INELIGIBLE);}
         if (configurationDraft != null && configurationDraft.selectedMilestone() == selectedMilestone
@@ -334,8 +397,10 @@ public final class PlayerAugmentState {
         if (draft == null || draft.currentRound() != currentRound || currentRound != preparedRound) {
             return result(requestId, fingerprint, Status.INVALID_REQUEST);
         }
-        if (lastConfiguredRound(draft.selectedMilestone()) >= currentRound) {return result(requestId, fingerprint, Status.CONFIGURED_THIS_ROUND);}
         Selection selection = selections.get(draft.selectedMilestone());
+        if (AugmentService.targetCount(selection.augmentId()) == 0 && lastConfiguredRound(draft.selectedMilestone()) >= currentRound) {
+            return result(requestId, fingerprint, Status.CONFIGURED_THIS_ROUND);
+        }
         AugmentDefinition card = AugmentCatalog.find(selection.augmentId()).orElseThrow();
         if (!eligible.test(card)) {return result(requestId, fingerprint, Status.INELIGIBLE);}
         if (!apply(commit, card, draft.choice())) {return result(requestId, fingerprint, Status.COMMIT_REJECTED);}
@@ -363,7 +428,7 @@ public final class PlayerAugmentState {
         if (selections.containsKey(milestone)) {return Status.ALREADY_RESOLVED;}
         Offer offer = offers.get(milestone);
         if (offer == null || !Objects.equals(currentMilestone, milestone)) {return Status.INVALID_REQUEST;}
-        if (now >= offer.deadlineTickExclusive()) {resolveSkipped(offer, SkipReason.TIMEOUT); return Status.EXPIRED;}
+        if (now >= offer.deadlineTickExclusive()) {return Status.EXPIRED;}
         if (revision != offer.revision()) {return Status.STALE_REVISION;}
         if (now < offer.inputAllowedTick()) {return Status.INVALID_REQUEST;}
         return null;

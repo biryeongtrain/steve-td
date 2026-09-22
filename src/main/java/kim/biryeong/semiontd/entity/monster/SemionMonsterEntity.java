@@ -10,6 +10,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.config.WaveMonsterEntry;
 import kim.biryeong.semiontd.effect.TimedEffectSet;
 import kim.biryeong.semiontd.effect.TimedEffectType;
@@ -452,15 +453,23 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         return timedEffects.magnitude(TimedEffectType.MONSTER_STUN) > 0.0;
     }
 
+    public boolean isRooted() {
+        return timedEffects.magnitude(TimedEffectType.MONSTER_ROOT) > 0.0;
+    }
+
     @Override
     public void travel(Vec3 movementInput) {
         // Keep AI timers and forced motion (including Sky Breaker's lift) running.
-        super.travel(isStunned() ? Vec3.ZERO : movementInput);
+        if (isRooted()) {
+            setDeltaMovement(0, getDeltaMovement().y, 0);
+            getNavigation().stop();
+        }
+        super.travel(isStunned() || isRooted() ? Vec3.ZERO : movementInput);
     }
 
     @Override
     public void setJumping(boolean jumping) {
-        super.setJumping(jumping && !isStunned());
+        super.setJumping(jumping && !isStunned() && !isRooted());
     }
 
     public boolean applyTimedEffect(TimedEffectType type, ResourceLocation sourceId, double magnitude, int durationTicks) {
@@ -512,7 +521,8 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
                     additiveTraitBonus,
                     finalTraitMultiplier,
                     durationTicks,
-                    ticksUntilDamage
+                    ticksUntilDamage,
+                    !AugmentCombat.allowsTriggers() || sourceTower != null && sourceTower.isTemporaryCopy()
             );
         } else {
             ignite = new IgniteState(
@@ -523,7 +533,8 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
                     ignite.additiveTraitBonus(),
                     ignite.finalTraitMultiplier(),
                     durationTicks,
-                    ticksUntilDamage
+                    ticksUntilDamage,
+                    ignite.suppressAugmentTriggers()
             );
         }
         timedEffects.apply(TimedEffectType.MONSTER_IGNITED, 1.0, durationTicks);
@@ -554,7 +565,9 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
                 sourceTower,
                 Math.max(0.0, damagePerStack),
                 Math.max(1, tickIntervalTicks),
-                sting
+                sting,
+                !AugmentCombat.allowsTriggers() || sourceTower.isTemporaryCopy()
+                        || previous != null && previous.suppressAugmentTriggers()
         ));
     }
 
@@ -609,11 +622,16 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
                 ignite.additiveTraitBonus(),
                 ignite.finalTraitMultiplier(),
                 remainingTicks,
-                ticksUntilDamage
+                ticksUntilDamage,
+                ignite.suppressAugmentTriggers()
         );
     }
 
     private void applyIgniteDamage(IgniteState state) {
+        if (state.suppressAugmentTriggers() && AugmentCombat.allowsTriggers()) {
+            AugmentCombat.runWithoutTriggers(() -> applyIgniteDamage(state));
+            return;
+        }
         TraitVfx.showIgniteTick(this);
         double conditionalBonus = TraitEffects.conditionalTargetDamageBonus(
                 state.sourceLoadout(),
@@ -634,6 +652,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
             if (state.sourceTower() != null) {
                 state.sourceTower().recordDamageDealt(this, dealtDamage, DamageType.MAGIC);
                 if (killed) {
+                    AugmentCombat.recordKillOrigin(state.sourceTower(), runtimeMonster);
                     state.sourceTower().recordKill();
                     state.sourceTower().onIgniteKill(this);
                 }
@@ -670,13 +689,18 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
                         poison.sourceTower(),
                         poison.damagePerStack(),
                         poison.tickIntervalTicks(),
-                        result.state().orElseThrow()
+                        result.state().orElseThrow(),
+                        poison.suppressAugmentTriggers()
                 ));
             }
         }
     }
 
     private void applyBeePoisonDamage(BeePoisonState poison, double outgoingDamage) {
+        if (poison.suppressAugmentTriggers() && AugmentCombat.allowsTriggers()) {
+            AugmentCombat.runWithoutTriggers(() -> applyBeePoisonDamage(poison, outgoingDamage));
+            return;
+        }
         double damageAmount = towerDamageTaken(outgoingDamage);
         if (damageAmount <= 0.0) {
             return;
@@ -687,6 +711,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         if (dealtDamage > 0.0) {
             poison.sourceTower().recordDamageDealt(this, dealtDamage, DamageType.MAGIC);
             if (killed) {
+                AugmentCombat.recordKillOrigin(poison.sourceTower(), runtimeMonster);
                 poison.sourceTower().recordKill();
             }
             runtimeMonster.recordLastHit(poison.sourcePlayer(), KillSourceKind.TOWER);
@@ -705,7 +730,8 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
             double additiveTraitBonus,
             double finalTraitMultiplier,
             int remainingTicks,
-            int ticksUntilDamage
+            int ticksUntilDamage,
+            boolean suppressAugmentTriggers
     ) {
         private IgniteState {
             damagePerTick = Math.max(0.0, damagePerTick);
@@ -721,7 +747,8 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
             Tower sourceTower,
             double damagePerStack,
             int tickIntervalTicks,
-            BeeStingPolicy.State sting
+            BeeStingPolicy.State sting,
+            boolean suppressAugmentTriggers
     ) {
     }
 

@@ -1,11 +1,13 @@
 package kim.biryeong.semiontd.tower.nether;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.SemionTd;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.api.area.AreaVfxSpec;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
@@ -31,6 +33,10 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.AABB;
 
 public class NetherTower extends EntityBackedTower {
+    public static final String BLOODLETTING = "job_nether_s";
+    public static final String HOT_BLOODED = "job_nether_g1";
+    public static final String SECOND_PHASE = "job_nether_g2";
+    public static final String TOTEM = "job_nether_p";
     public static final String CONFIG_ID = "nether_global";
     private static final TowerDataKey<NetherTowerState> STATE = TowerDataKey.of(
             ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "nether_tower_state"),
@@ -54,6 +60,13 @@ public class NetherTower extends EntityBackedTower {
     private int pulseCooldownTicks;
     private int markCounter;
     private boolean lastAttackWasCritical;
+    private double naturalHealthLoss;
+    private final ArrayDeque<Double> bloodCharges = new ArrayDeque<>();
+    private int secondPhaseTicks;
+    private int totemReviveTicks = -1;
+    private boolean totemUsed;
+    private boolean totemRevived;
+    private GridPosition totemRevivePosition;
 
     public NetherTower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
         super(type, ownerPlayer, teamId, laneId, position);
@@ -76,8 +89,23 @@ public class NetherTower extends EntityBackedTower {
         return getDataOrDefault(STATE, NetherTowerState.NETHER);
     }
 
+    public boolean hasPendingRevival() {return totemReviveTicks > 0;}
+
     @Override
     public void tick(PlayerLane lane) {
+        if (totemReviveTicks > 0) {
+            if (--totemReviveTicks == 0) {
+                totemRevived = true;
+                totemReviveTicks = -1;
+                onRemoved(lane);
+                syncPosition(totemRevivePosition);
+                syncHealth(currentMaxHealth() * augmentValue(TOTEM, "reviveHealthRatio", .5));
+                markRevived();
+                onPlaced(lane);
+                TowerVfxService.showNetherTransition(towerEntity(lane).orElse(null));
+            }
+            return;
+        }
         SemionTowerEntity entity = towerEntity(lane).orElse(null);
         if (entity != null) {
             refreshDynamicTimedEffects(entity);
@@ -91,7 +119,33 @@ public class NetherTower extends EntityBackedTower {
         if (entity != null && shouldDecay(lane)) {
             applyDecay(lane, entity);
         }
+        if (secondPhaseTicks > 0) {secondPhaseTicks--;}
         super.tick(lane);
+    }
+
+    @Override
+    public void onDeath(PlayerLane lane) {
+        super.onDeath(lane);
+        if (state() == NetherTowerState.ZOMBIE && !totemUsed && augmentSnapshot().has(TOTEM)) {
+            totemUsed = true;
+            totemReviveTicks = (int) augmentValue(TOTEM, "reviveDelayTicks", 20);
+            totemRevivePosition = position();
+        }
+    }
+
+    @Override
+    public double modifyIncomingDamage(SemionTowerEntity entity, DamageSource source, double damage) {
+        return secondPhaseTicks > 0 ? Math.min(damage, Math.max(0, health() - 1)) : damage;
+    }
+
+    @Override
+    public double modifyIncomingDamageIgnoringReductions(SemionTowerEntity entity, DamageSource source, double damage) {
+        return modifyIncomingDamage(entity, source, damage);
+    }
+
+    @Override
+    public double modifyOutgoingDamage(SemionTowerEntity entity, SemionMonsterEntity target, double damage) {
+        return damage * (1 + (totemRevived ? augmentValue(TOTEM, "damageBonus", 1) : 0));
     }
 
     @Override
@@ -131,6 +185,13 @@ public class NetherTower extends EntityBackedTower {
         pulseCooldownTicks = 0;
         markCounter = 0;
         lastAttackWasCritical = false;
+        naturalHealthLoss = 0;
+        bloodCharges.clear();
+        secondPhaseTicks = 0;
+        totemReviveTicks = -1;
+        totemUsed = false;
+        totemRevived = false;
+        totemRevivePosition = null;
         super.resetForRound(lane);
     }
 
@@ -231,6 +292,24 @@ public class NetherTower extends EntityBackedTower {
     }
 
     @Override
+    public void onAttackResolved(SemionTowerEntity entity, SemionMonsterEntity target, double attempted,
+                                 double outgoing, double dealt, boolean killed) {
+        super.onAttackResolved(entity, target, attempted, outgoing, dealt, killed);
+        if (!AugmentCombat.allowsTriggers() || entity == null || target == null || dealt <= 0) {return;}
+        double bloodDamage = consumeBloodCharge();
+        AugmentCombat.runWithoutTriggers(() -> {
+            if (bloodDamage > 0) {damageTargetResult(entity, target, bloodDamage, DamageType.MAGIC);}
+            if (secondPhaseTicks <= 0) {return;}
+            var request = MonsterAreaEffectRequest.aroundTarget(AreaEffectIds.tower(this, "augment_second_phase"),
+                    entity, target, augmentValue(SECOND_PHASE, "radius", 3), AreaVfxSpec.onTrigger(AreaVfxStyles.SPLASH))
+                    .including(target.getUUID());
+            TowerAreaDamage.applyBasicAttackSplash(this, entity, request,
+                    monster -> entity.attackDamageAmount(monster) * augmentValue(SECOND_PHASE, "damageRatio", .5),
+                    true);
+        });
+    }
+
+    @Override
     public List<String> runtimeDetailLines() {
         ArrayList<String> lines = new ArrayList<>();
         lines.add("상태 " + (state() == NetherTowerState.NETHER ? "네더" : "좀비"));
@@ -242,6 +321,10 @@ public class NetherTower extends EntityBackedTower {
             lines.add("저체력 피해 +" + percent(damageBonus));
         }
         lines.add("흡혈 " + percent(lifeStealRatio(null)));
+        if (augmentSnapshot().has(BLOODLETTING)) {lines.add("방혈 충전 " + bloodCharges.size());}
+        if (secondPhaseTicks > 0) {lines.add("2 페이즈 " + oneDecimal(secondPhaseTicks / 20.0) + "초");}
+        if (totemReviveTicks > 0) {lines.add("불사의 토템 부활 " + oneDecimal(totemReviveTicks / 20.0) + "초");}
+        if (totemRevived) {lines.add("불사의 토템 피해 +" + percent(augmentValue(TOTEM, "damageBonus", 1)));}
         if (decayReductionTicks > 0) {
             lines.add("체력 감소 완화 " + oneDecimal(decayReductionTicks / 20.0) + "초");
         }
@@ -258,6 +341,14 @@ public class NetherTower extends EntityBackedTower {
         pulseCooldownTicks = netherTower.pulseCooldownTicks;
         markCounter = netherTower.markCounter;
         lastAttackWasCritical = netherTower.lastAttackWasCritical;
+        naturalHealthLoss = netherTower.naturalHealthLoss;
+        bloodCharges.clear();
+        bloodCharges.addAll(netherTower.bloodCharges);
+        secondPhaseTicks = netherTower.secondPhaseTicks;
+        totemReviveTicks = netherTower.totemReviveTicks;
+        totemUsed = netherTower.totemUsed;
+        totemRevived = netherTower.totemRevived;
+        totemRevivePosition = netherTower.totemRevivePosition;
         double previousMax = Math.max(1.0, netherTower.currentMaxHealth());
         syncHealth(currentMaxHealth() * Math.max(0.0, netherTower.health() / previousMax));
     }
@@ -268,6 +359,8 @@ public class NetherTower extends EntityBackedTower {
             damage *= Math.max(0.0, 1.0 - value("decayReductionRatio"));
         }
         double nextHealth = health() - damage;
+        if (secondPhaseTicks > 0) {nextHealth = Math.max(1, nextHealth);}
+        recordNaturalHealthLoss(Math.max(0, health() - Math.max(0, nextHealth)));
         if (nextHealth <= 0.0 && state() == NetherTowerState.NETHER) {
             reviveAsZombie(lane, entity);
             return;
@@ -281,6 +374,9 @@ public class NetherTower extends EntityBackedTower {
 
     private void reviveAsZombie(PlayerLane lane, SemionTowerEntity entity) {
         setData(STATE, NetherTowerState.ZOMBIE);
+        if (augmentSnapshot().has(SECOND_PHASE)) {
+            secondPhaseTicks = (int) augmentValue(SECOND_PHASE, "durationTicks", 60);
+        }
         syncHealth(currentMaxHealth() * Math.max(0.01, global("zombieReviveHealthRatio")));
         if (entity == null || entity.isRemoved()) {
             if (lane != null) {
@@ -364,9 +460,31 @@ public class NetherTower extends EntityBackedTower {
     }
 
     private double decayRatioPerSecond() {
-        return state() == NetherTowerState.ZOMBIE
+        double ratio = state() == NetherTowerState.ZOMBIE
                 ? global("zombieDecayMaxHealthRatioPerSecond")
                 : global("netherDecayMaxHealthRatioPerSecond");
+        return ratio * (augmentSnapshot().has(HOT_BLOODED)
+                ? 1 - augmentValue(HOT_BLOODED, "decayReduction", .5) : 1);
+    }
+
+    void recordNaturalHealthLoss(double loss) {
+        if (!augmentSnapshot().has(BLOODLETTING) || loss <= 0 || !AugmentCombat.allowsTriggers()) {return;}
+        naturalHealthLoss += loss;
+        double threshold = currentMaxHealth() * augmentValue(BLOODLETTING, "healthRatio", .2);
+        if (threshold <= 0) {return;}
+        while (naturalHealthLoss + 1.0e-9 >= threshold) {
+            naturalHealthLoss = Math.max(0, naturalHealthLoss - threshold);
+            bloodCharges.addLast(threshold);
+        }
+    }
+
+    double consumeBloodCharge() {
+        if (!AugmentCombat.allowsTriggers() || bloodCharges.isEmpty()) {return 0;}
+        return bloodCharges.removeFirst();
+    }
+
+    private double augmentValue(String card, String key, double fallback) {
+        return augmentSnapshot().parameter(card, key, fallback);
     }
 
     private double lifeStealRatio(SemionMonsterEntity target) {
@@ -533,7 +651,7 @@ public class NetherTower extends EntityBackedTower {
     }
 
     private Optional<SemionTowerEntity> towerEntity(PlayerLane lane) {
-        if (lane == null || entityId().isEmpty()) {
+        if (lane == null || lane.arenaWorld() == null || entityId().isEmpty()) {
             return Optional.empty();
         }
         return Optional.ofNullable(lane.arenaWorld().getEntity(entityId().getAsInt()))
@@ -542,7 +660,8 @@ public class NetherTower extends EntityBackedTower {
     }
 
     private boolean isCritical() {
-        return healthRatio() <= global("criticalHealthThreshold");
+        return healthRatio() <= (augmentSnapshot().has(HOT_BLOODED)
+                ? augmentValue(HOT_BLOODED, "healthThreshold", .6) : global("criticalHealthThreshold"));
     }
 
     private double healthRatio() {

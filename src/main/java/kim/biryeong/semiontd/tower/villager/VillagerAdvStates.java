@@ -31,7 +31,7 @@ public final class VillagerAdvStates {
     private static final double SURVIVAL_BONUS_MULTIPLIER = 0.5;
 
     private static final Map<UUID, Double> REPUTATION = new ConcurrentHashMap<>();
-    private static final Map<UUID, ConcurrentLinkedQueue<ExperienceGainResult>> PENDING_EXPERIENCE_GAINS = new ConcurrentHashMap<>();
+    private static final Map<UUID, ConcurrentLinkedQueue<ExperienceGainBatch>> PENDING_EXPERIENCE_GAINS = new ConcurrentHashMap<>();
     private static final ExecutorService EXPERIENCE_EXECUTOR = Executors.newSingleThreadExecutor(task -> {
         Thread thread = new Thread(task, "SemionTD Villager ADV Experience");
         thread.setDaemon(true);
@@ -79,12 +79,13 @@ public final class VillagerAdvStates {
         }
 
         TowerBalanceConfig.VillagerAdvConfig config = TowerBalanceRuntime.villagerAdv();
-        List<ExperienceGainSnapshot> snapshots = new ArrayList<>();
         for (SemionPlayer player : game.players().values()) {
             if (!isAdvPlayer(player)) {
                 continue;
             }
             game.playerLane(player.uuid()).ifPresent(lane -> {
+                List<ExperienceGainSnapshot> snapshots = new ArrayList<>();
+                VillagerAdvAugments.startWave(lane);
                 for (Tower tower : lane.towers()) {
                     if (VillagerTowers.isVillagerTower(tower.type())) {
                         snapshots.add(new ExperienceGainSnapshot(
@@ -92,18 +93,21 @@ public final class VillagerAdvStates {
                                 lane,
                                 tower,
                                 tier(tower),
-                                experience(tower)
+                                experience(tower),
+                                normalExperienceGain(tower, config),
+                                tower.augmentSnapshot().has(VillagerAdvAugments.MENTOR)
+                                        ? tower.augmentSnapshot().parameter(VillagerAdvAugments.MENTOR, "experienceRatio", .50) : 0
                         ));
                         refreshTowerEffects(player, lane, tower);
                     }
                 }
+                if (!snapshots.isEmpty()) {
+                    ConcurrentLinkedQueue<ExperienceGainBatch> queue = PENDING_EXPERIENCE_GAINS
+                            .computeIfAbsent(player.uuid(), ignored -> new ConcurrentLinkedQueue<>());
+                    CompletableFuture.supplyAsync(() -> calculateExperienceGains(List.copyOf(snapshots), config), EXPERIENCE_EXECUTOR)
+                            .thenAccept(results -> queue.add(new ExperienceGainBatch(lane, results)));
+                }
             });
-        }
-
-        if (!snapshots.isEmpty()) {
-            CompletableFuture
-                    .supplyAsync(() -> calculateExperienceGains(List.copyOf(snapshots), config), EXPERIENCE_EXECUTOR)
-                    .thenAccept(VillagerAdvStates::queueExperienceGains);
         }
     }
 
@@ -112,21 +116,20 @@ public final class VillagerAdvStates {
             return;
         }
         for (UUID playerId : game.players().keySet()) {
-            ConcurrentLinkedQueue<ExperienceGainResult> queue = PENDING_EXPERIENCE_GAINS.get(playerId);
+            ConcurrentLinkedQueue<ExperienceGainBatch> queue = PENDING_EXPERIENCE_GAINS.get(playerId);
             if (queue == null) {
                 continue;
             }
-            ExperienceGainResult result;
-            while ((result = queue.poll()) != null) {
-                SemionPlayer player = game.players().get(result.ownerPlayer());
-                if (!isAdvPlayer(player) || !result.lane().towers().contains(result.tower())) {
-                    continue;
+            ExperienceGainBatch batch;
+            while ((batch = queue.poll()) != null) {
+                SemionPlayer player = game.players().get(playerId);
+                if (!isAdvPlayer(player) || game.playerLane(playerId).orElse(null) != batch.lane()) continue;
+                for (ExperienceGainResult result : batch.results()) {
+                    if (!result.lane().towers().contains(result.tower())) continue;
+                    result.tower().setData(EXPERIENCE, result.nextExperience());
+                    refreshTowerEffects(player, result.lane(), result.tower());
                 }
-                result.tower().setData(EXPERIENCE, result.nextExperience());
-                refreshTowerEffects(player, result.lane(), result.tower());
-            }
-            if (queue.isEmpty()) {
-                PENDING_EXPERIENCE_GAINS.remove(playerId, queue);
+                VillagerAdvAugments.captureGraduate(batch.lane());
             }
         }
     }
@@ -151,14 +154,6 @@ public final class VillagerAdvStates {
         }
     }
 
-    private static void queueExperienceGains(List<ExperienceGainResult> results) {
-        for (ExperienceGainResult result : results) {
-            PENDING_EXPERIENCE_GAINS
-                    .computeIfAbsent(result.ownerPlayer(), ignored -> new ConcurrentLinkedQueue<>())
-                    .add(result);
-        }
-    }
-
     public static void onLaneLeak(SemionPlayer laneOwner, PlayerLane lane) {
         if (!isAdvPlayer(laneOwner)) {
             return;
@@ -179,6 +174,7 @@ public final class VillagerAdvStates {
         if (tower == null || upgrade == null) {
             return false;
         }
+        if (tower.augmentSnapshot().has(VillagerAdvAugments.EARLY)) return true;
         double requirement = TowerBalanceRuntime.villagerAdvUpgradeRequirement(tower.type(), upgrade.id());
         return requirement <= 0.0 || experience(tower) + 1.0E-6 >= requirement;
     }
@@ -246,10 +242,20 @@ public final class VillagerAdvStates {
         refresh(entity, TimedEffectType.TOWER_ABILITY_INTERVAL_REDUCTION, ABILITY_INTERVAL_SOURCE, abilityInterval, durationTicks);
     }
 
-    private static List<ExperienceGainResult> calculateExperienceGains(
+    static double normalExperienceGain(Tower tower, TowerBalanceConfig.VillagerAdvConfig config) {
+        double tierMultiplier = tower.augmentSnapshot().has(VillagerAdvAugments.EARLY)
+                ? tower.augmentSnapshot().parameter(VillagerAdvAugments.EARLY, "tierExperienceMultiplier", 2.0) : 1.0;
+        return config.resolvedExperiencePerTower() + tier(tower) * config.resolvedExperiencePerTier() * tierMultiplier;
+    }
+
+    static List<ExperienceGainResult> calculateExperienceGains(
             List<ExperienceGainSnapshot> snapshots,
             TowerBalanceConfig.VillagerAdvConfig config
     ) {
+        ExperienceGainSnapshot mentor = snapshots.stream()
+                .max(java.util.Comparator.comparingDouble(ExperienceGainSnapshot::currentExperience)).orElse(null);
+        ExperienceGainSnapshot mentee = snapshots.stream()
+                .min(java.util.Comparator.comparingDouble(ExperienceGainSnapshot::currentExperience)).orElse(null);
         return snapshots.stream()
                 .map(snapshot -> new ExperienceGainResult(
                         snapshot.ownerPlayer(),
@@ -257,7 +263,8 @@ public final class VillagerAdvStates {
                         snapshot.tower(),
                         Math.min(
                                 config.resolvedExperienceMax(),
-                                snapshot.currentExperience() + config.resolvedExperiencePerTower() + Math.max(1, snapshot.tier()) * config.resolvedExperiencePerTier()
+                                snapshot.currentExperience() + snapshot.normalGain()
+                                        + (snapshot == mentee && mentor != null ? mentor.normalGain() * snapshot.mentorRatio() : 0.0)
                         )
                 ))
                 .toList();
@@ -382,9 +389,13 @@ public final class VillagerAdvStates {
         return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "villager_adv/effect/" + path);
     }
 
-    private record ExperienceGainSnapshot(UUID ownerPlayer, PlayerLane lane, Tower tower, int tier, double currentExperience) {
+    record ExperienceGainSnapshot(UUID ownerPlayer, PlayerLane lane, Tower tower, int tier, double currentExperience,
+                                  double normalGain, double mentorRatio) {
     }
 
-    private record ExperienceGainResult(UUID ownerPlayer, PlayerLane lane, Tower tower, double nextExperience) {
+    record ExperienceGainResult(UUID ownerPlayer, PlayerLane lane, Tower tower, double nextExperience) {
+    }
+
+    private record ExperienceGainBatch(PlayerLane lane, List<ExperienceGainResult> results) {
     }
 }

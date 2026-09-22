@@ -11,6 +11,7 @@ import kim.biryeong.semiontd.api.area.AreaVfxSpec;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.api.area.TowerAreaEffectRequest;
 import kim.biryeong.semiontd.api.area.TowerAreaTargetMode;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
@@ -115,8 +116,11 @@ public final class GambleSupportTower extends ProductionTower {
         GambleRoundEffects.rememberSource(lane, ownerPlayer(), sourceId);
         GambleRoundEffects.clearSource(lane, ownerPlayer(), sourceId);
         int minimum = GambleBalance.minimumRoll(type());
-        int face = minimum + source.getRandom().nextInt(7 - minimum);
-        activeEffects = GambleSupportRolls.roll(type(), face, source.getRandom());
+        int face = GambleSupportRolls.rollFace(minimum, source.getRandom(),
+                AugmentCombat.allowsTriggers() && augmentSnapshot().has("job_gamble_g1"));
+        double insurance = AugmentCombat.allowsTriggers() && augmentSnapshot().has("job_gamble_s")
+                ? augmentSnapshot().parameter("job_gamble_s", "oppositeEffectRatio", .5) : 0.0;
+        activeEffects = GambleSupportRolls.roll(type(), face, source.getRandom(), insurance);
         lastFace = face;
         lastRollCounts[face - 1] = 1;
         lastDiamondReward = GambleSpectatorRewards.awardFaceSix(ownerPlayer(), type(), face);

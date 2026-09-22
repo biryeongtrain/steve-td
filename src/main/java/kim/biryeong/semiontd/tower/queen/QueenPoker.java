@@ -19,8 +19,9 @@ final class QueenPoker {
                 .filter(card -> card.ownerPlayer().equals(ownerPlayer) && card.card().isPresent())
                 .toList();
         Map<QueenCardTower, PokerHand> best = new HashMap<>();
+        Map<QueenCardTower, QueenCard> jokerCards = new HashMap<>();
         cards.forEach(card -> best.put(card, PokerHand.HIGH_CARD));
-        if (cards.size() >= 5) {
+        if (!cards.isEmpty()) {
             boolean pathMostlyX = pathMostlyX(lane);
             Map<RowKey, List<QueenCardTower>> rows = new HashMap<>();
             for (QueenCardTower card : cards) {
@@ -30,14 +31,18 @@ final class QueenPoker {
             }
             double healthBonus = 0.0;
             for (List<QueenCardTower> row : rows.values()) {
-                healthBonus += evaluateRow(row, pathMostlyX, best);
+                boolean jokerPresent = row.stream().anyMatch(QueenCardTower::isJoker);
+                row.forEach(card -> card.applyJokerRowBonus(jokerPresent));
+                healthBonus += evaluateRow(row, pathMostlyX, best, jokerCards);
             }
             QueenStates.state(ownerPlayer).addPokerHealthBonus(healthBonus);
         }
+        jokerCards.forEach(QueenCardTower::assignCard);
         best.forEach(QueenCardTower::applyPokerSnapshot);
     }
 
-    private static double evaluateRow(List<QueenCardTower> row, boolean pathMostlyX, Map<QueenCardTower, PokerHand> best) {
+    private static double evaluateRow(List<QueenCardTower> row, boolean pathMostlyX,
+                                     Map<QueenCardTower, PokerHand> best, Map<QueenCardTower, QueenCard> jokerCards) {
         double healthBonus = 0.0;
         row.sort(Comparator.comparingInt(card -> perpendicular(card.originalPosition(), pathMostlyX)));
         for (int start = 0; start + 5 <= row.size(); start++) {
@@ -45,13 +50,57 @@ final class QueenPoker {
             int first = perpendicular(window.getFirst().originalPosition(), pathMostlyX);
             int last = perpendicular(window.getLast().originalPosition(), pathMostlyX);
             if (last - first != 4) continue;
-            PokerHand hand = PokerHand.evaluate(window.stream().map(card -> card.card().orElseThrow()).toList());
+            JokerHand result = bestWithJokers(window.stream().map(card -> card.card().orElseThrow()).toList(),
+                    window.stream().map(QueenCardTower::isJoker).toList());
+            PokerHand hand = result.hand();
             healthBonus += QueenBalance.handBonus(hand);
-            for (QueenCardTower card : window) {
-                if (hand.ordinal() > best.get(card).ordinal()) best.put(card, hand);
+            for (int index = 0; index < window.size(); index++) {
+                QueenCardTower card = window.get(index);
+                if (hand.ordinal() > best.get(card).ordinal()) {
+                    best.put(card, hand);
+                    if (card.isJoker()) jokerCards.put(card, result.cards().get(index));
+                }
             }
         }
         return healthBonus;
+    }
+
+    record JokerHand(PokerHand hand, List<QueenCard> cards) {}
+
+    static JokerHand bestWithJokers(List<QueenCard> cards, List<Boolean> jokers) {
+        if (cards.size() != 5 || jokers.size() != 5) return new JokerHand(PokerHand.HIGH_CARD, cards);
+        return assignJokerRanks(new ArrayList<>(cards), jokers, 0,
+                new JokerHand(PokerHand.evaluate(cards), List.copyOf(cards)));
+    }
+
+    private static JokerHand assignJokerRanks(List<QueenCard> cards, List<Boolean> jokers, int index, JokerHand best) {
+        if (best.hand() == PokerHand.FIVE_OF_A_KIND) return best;
+        if (index == cards.size()) {
+            PokerHand hand = PokerHand.evaluate(cards);
+            if (hand.ordinal() > best.hand().ordinal()) best = new JokerHand(hand, List.copyOf(cards));
+            // Only flushes depend on suits. Other hands retain each joker's current suit.
+            List<QueenCard.Suit> fixedSuits = java.util.stream.IntStream.range(0, cards.size())
+                    .filter(i -> !jokers.get(i)).mapToObj(i -> cards.get(i).suit()).distinct().toList();
+            if (fixedSuits.size() == 1) {
+                List<QueenCard> flushCards = new ArrayList<>(cards);
+                for (int i = 0; i < cards.size(); i++) {
+                    if (jokers.get(i)) flushCards.set(i, new QueenCard(fixedSuits.getFirst(), cards.get(i).rank()));
+                }
+                PokerHand flushHand = PokerHand.evaluate(flushCards);
+                if (flushHand.ordinal() > best.hand().ordinal()) best = new JokerHand(flushHand, List.copyOf(flushCards));
+            }
+            return best;
+        }
+        if (!jokers.get(index)) return assignJokerRanks(cards, jokers, index + 1, best);
+        QueenCard previous = cards.get(index);
+        best = assignJokerRanks(cards, jokers, index + 1, best);
+        for (int rank = 1; rank <= 13; rank++) {
+            if (rank == previous.rank()) continue;
+            cards.set(index, new QueenCard(previous.suit(), rank));
+            best = assignJokerRanks(cards, jokers, index + 1, best);
+        }
+        cards.set(index, previous);
+        return best;
     }
 
     private static int perpendicular(GridPosition position, boolean pathMostlyX) {

@@ -63,6 +63,11 @@ final class WarlockSacrifice {
             double intervalReduction,
             double maximumIntervalReduction
     ) {
+        Gain withPermanentMultiplier(double multiplier) {
+            return new Gain(permanentHealth * multiplier, permanentDamage * multiplier,
+                    roundHealth, roundDamage, intervalReduction, maximumIntervalReduction);
+        }
+
         Gain {
             permanentHealth = finiteNonNegative(permanentHealth);
             permanentDamage = finiteNonNegative(permanentDamage);

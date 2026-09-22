@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.RoundPhase;
 import kim.biryeong.semiontd.game.SemionGame;
@@ -137,19 +138,51 @@ public final class DeveloperPatchService {
         }
 
         DeveloperStates.PlayerState state = DeveloperStates.of(tower.ownerPlayer());
+        boolean superHotfix = hotfix && state.firstHotfix() && AugmentCombat.allowsTriggers()
+                && tower.augmentSnapshot().has(DeveloperAugments.SUPER_HOTFIX);
+        boolean batch = !hotfix && state.firstPatch() && AugmentCombat.allowsTriggers()
+                && tower.augmentSnapshot().has(DeveloperAugments.BATCH);
         if (hotfix ? !state.consumeHotfix() : !state.consumePatch()) {
             return Result.fail(hotfix ? "이번 라운드 핫픽스를 모두 사용했습니다." : "이번 라운드 패치 슬롯이 없습니다.");
         }
 
+        List<DeveloperTower> targets = batch && lane != null ? lane.towers().stream()
+                .filter(DeveloperTower.class::isInstance).map(DeveloperTower.class::cast)
+                .filter(target -> tower.ownerPlayer().equals(target.ownerPlayer())
+                        && tower.teamId() == target.teamId() && tower.laneId() == target.laneId()
+                        && DeveloperTowers.isGrowthTower(target.type())
+                        && !DeveloperTowerData.isPinned(target) && !target.hasBug(DeveloperBug.ROLLBACK_FAILURE))
+                .toList() : List.of(tower);
+        DeveloperBug spawned = null;
+        for (DeveloperTower target : targets) {
+            DeveloperBug bug = applyCommittedPatch(lane, target, patch, hotfix, superHotfix);
+            if (target == tower) {
+                spawned = bug;
+            }
+        }
+        String base = hotfix
+                ? patch.displayName() + " 핫픽스를 즉시 적용했습니다."
+                : patch.displayName() + " 패치를 " + (batch ? targets.size() + "기에 " : "")
+                        + "예약했습니다. 다음 라운드부터 적용됩니다.";
+        return spawned == null ? Result.ok(base) : Result.ok(base + " 버그가 발생했습니다.", spawned);
+    }
+
+    private static DeveloperBug applyCommittedPatch(PlayerLane lane, DeveloperTower tower,
+                                                    DeveloperPatch patch, boolean hotfix, boolean superHotfix) {
         double step = patch.stepAmount(DeveloperTowerData.effectiveCount(tower, patch));
         double amount = step * tower.patchEfficiency(lane);
         if (hotfix) {
             amount *= DeveloperBalance.hotfixScale(tower.type());
+            if (superHotfix) {
+                amount *= tower.augmentSnapshot().parameter(DeveloperAugments.SUPER_HOTFIX, "statMultiplier", 3);
+            }
         }
 
         if (hotfix) {
             DeveloperTowerData.addActivePatch(tower, patch, amount);
-            DeveloperTowerData.addInstability(tower, 1);
+            if (!superHotfix) {
+                DeveloperTowerData.addInstability(tower, 1);
+            }
         } else {
             DeveloperTowerData.addPendingPatch(tower, patch, amount);
         }
@@ -169,13 +202,7 @@ public final class DeveloperPatchService {
             DeveloperVfx.show(tower, AreaVfxStyles.DEBUFF, "bug");
         }
 
-        String base = hotfix
-                ? patch.displayName() + " 핫픽스를 즉시 적용했습니다."
-                : patch.displayName() + " 패치를 예약했습니다. 다음 라운드부터 적용됩니다.";
-        if (spawned == null) {
-            return Result.ok(base);
-        }
-        return Result.ok(base + " 버그가 발생했습니다.", spawned);
+        return spawned;
     }
 
     /**

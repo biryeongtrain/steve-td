@@ -217,10 +217,14 @@ public final class FrostSplashTower extends ProductionTower {
     }
 
     void onEmissionWaveHit(PlayerLane lane) {
+        onEmissionWaveHit(lane, FrostBalance.chillPerHit());
+    }
+
+    void onEmissionWaveHit(PlayerLane lane, double amount) {
         if (!FrostTowers.isFrozenDumpling(type())) {
             return;
         }
-        chill = Math.min(FrostBalance.chillThreshold(), chill + FrostBalance.chillPerHit());
+        chill = Math.min(FrostBalance.chillThreshold(), chill + Math.max(0.0, amount));
         if (chill + 1.0E-9 < FrostBalance.chillThreshold()) {
             onStateChanged(lane);
             return;
@@ -270,6 +274,7 @@ public final class FrostSplashTower extends ProductionTower {
             return;
         }
         DamageResult result = damageResolvedTargetResult(towerEntity, target, thaw.damage(), DamageType.TRUE);
+        FrostAugments.onThawed(this, towerEntity, target);
         TowerVfxService.showSecondaryAttack(towerEntity, target);
         if (result.killed()) {
             onKill(towerEntity, target, thaw.damage());

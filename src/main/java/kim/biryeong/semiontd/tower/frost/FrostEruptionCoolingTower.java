@@ -53,9 +53,13 @@ public final class FrostEruptionCoolingTower extends SupportTower {
     }
 
     void onEmissionWaveHit(PlayerLane lane) {
+        onEmissionWaveHit(lane, FrostBalance.chillPerHit());
+    }
+
+    void onEmissionWaveHit(PlayerLane lane, double amount) {
         operationChill = Math.min(
                 Math.max(0.0, FrostBalance.fullOperationEruptionChill()),
-                operationChill + Math.max(0.0, FrostBalance.chillPerHit())
+                operationChill + Math.max(0.0, amount)
         );
         FrostFullOperationService.onEruptionChillChanged(lane);
         onStateChanged(lane);

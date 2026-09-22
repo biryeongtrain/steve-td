@@ -40,12 +40,12 @@ final class QueenTowerCatalogTest {
     }
 
     @Test
-    void catalogRegistersOnlyQueenAndRandomCardAsStarters() {
+    void catalogRegistersQueenCardsAndTicketGatedJokerAsStarters() {
         ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
         var entries = ProductionTowerCatalog.all().stream()
                 .filter(entry -> QueenTowers.isQueenTower(entry.type())).toList();
-        assertEquals(2, entries.size());
-        assertEquals(2, entries.stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count());
+        assertEquals(3, entries.size());
+        assertEquals(3, entries.stream().filter(ProductionTowerCatalog.CatalogEntry::starter).count());
         assertTrue(JobRegistry.find(QueenTowerJob.ID).isPresent());
         assertInstanceOf(QueenTower.class, ProductionTowerCatalog.find(QueenTowers.QUEEN.id()).orElseThrow()
                 .create(OWNER, TeamId.RED, 1, new GridPosition(0, 64, 0)));
@@ -53,12 +53,49 @@ final class QueenTowerCatalogTest {
                 .create(OWNER, TeamId.RED, 1, new GridPosition(1, 64, 0)));
         assertTrue(ProductionTowerCatalog.upgrades(QueenTowers.QUEEN).isEmpty());
         assertTrue(ProductionTowerCatalog.upgrades(QueenTowers.RANDOM_CARD_SOLDIER).isEmpty());
+        assertTrue(ProductionTowerCatalog.upgrades(QueenTowers.JOKER).isEmpty());
         assertEquals("붉은 여왕", ProductionTowerCatalog.find(QueenTowers.QUEEN.id()).orElseThrow().type().displayName());
         assertEquals(55, QueenBalance.cardAggro(QueenCard.Suit.HEART));
         assertEquals(45, QueenBalance.cardAggro(QueenCard.Suit.DIAMOND));
         assertEquals(110, QueenBalance.cardAggro(QueenCard.Suit.CLUB));
         assertEquals(80, QueenBalance.cardAggro(QueenCard.Suit.SPADE));
         assertEquals("붉은 여왕 빌더", new QueenTowerJob().displayName().getString());
+    }
+
+    @Test
+    void threeJokersUseDuplicateRanksAndKeepTheirSuitsForEqualBestHands() {
+        List<QueenCard> cards = List.of(new QueenCard(QueenCard.Suit.HEART, 7),
+                new QueenCard(QueenCard.Suit.DIAMOND, 7), new QueenCard(QueenCard.Suit.CLUB, 2),
+                new QueenCard(QueenCard.Suit.SPADE, 3), new QueenCard(QueenCard.Suit.HEART, 4));
+        QueenPoker.JokerHand result = QueenPoker.bestWithJokers(cards, List.of(false, false, true, true, true));
+        assertEquals(PokerHand.FIVE_OF_A_KIND, result.hand());
+        assertTrue(result.cards().stream().allMatch(card -> card.rank() == 7));
+        for (int index = 0; index < 5; index++) assertEquals(cards.get(index).suit(), result.cards().get(index).suit());
+        assertEquals(result, QueenPoker.bestWithJokers(result.cards(), List.of(false, false, true, true, true)));
+    }
+
+    @Test
+    void jokerCanAdoptTheSuitNeededForRoyalFlushWithoutChangingTheOtherCards() {
+        List<QueenCard> cards = List.of(new QueenCard(QueenCard.Suit.HEART, 1),
+                new QueenCard(QueenCard.Suit.HEART, 10), new QueenCard(QueenCard.Suit.HEART, 11),
+                new QueenCard(QueenCard.Suit.HEART, 12), new QueenCard(QueenCard.Suit.SPADE, 2));
+        var result = QueenPoker.bestWithJokers(cards, List.of(false, false, false, false, true));
+        assertEquals(PokerHand.ROYAL_FLUSH, result.hand());
+        assertEquals(new QueenCard(QueenCard.Suit.HEART, 13), result.cards().getLast());
+        assertEquals(cards.subList(0, 4), result.cards().subList(0, 4));
+    }
+
+    @Test
+    void jokerKeepsApprovedBaseStatsAndHasZeroRefund() {
+        QueenCardTower joker = new QueenCardTower(QueenTowers.JOKER, OWNER, TeamId.RED, 1,
+                new GridPosition(1, 64, 0), new GridPosition(1, 64, 0));
+        for (QueenCard.Suit suit : QueenCard.Suit.values()) {
+            joker.assignCard(new QueenCard(suit, 2));
+            assertEquals(45, joker.currentMaxHealth());
+            assertEquals(8, joker.adjustAttackRange(100));
+            assertEquals(10, joker.adjustAttackInterval(100));
+        }
+        assertEquals(0, joker.sellRefundAmount());
     }
 
     @Test

@@ -8,9 +8,11 @@ import java.util.UUID;
 import kim.biryeong.semiontd.api.area.AreaVfxSpec;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.monster.Monster;
+import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.GridPosition;
@@ -32,6 +34,9 @@ public final class OceanTower extends EntityBackedTower {
     private int dehydrationTicks;
     private int transferCooldownTicks;
     private PlayerLane currentLane;
+    private int waveTicks;
+    private double currentWaterSpent;
+    private int currentCharges;
 
     public OceanTower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
         super(type, ownerPlayer, teamId, laneId, position);
@@ -67,8 +72,13 @@ public final class OceanTower extends EntityBackedTower {
         if (water + EPSILON < amount) {
             return false;
         }
-        water = Math.max(0.0, water - amount);
+        drainWater(amount);
         return true;
+    }
+
+    public double waterSoftCap() {
+        return global("waterSoftCap") * (augmentSnapshot().has("job_ocean_g1")
+                ? augmentSnapshot().parameter("job_ocean_g1", "supplyMultiplier", 1.5) : 1.0);
     }
 
     public double waterDamageMultiplier() {
@@ -87,6 +97,12 @@ public final class OceanTower extends EntityBackedTower {
     @Override
     public void onWaveStarted(PlayerLane lane, int currentRound) {
         waveActive = true;
+        waveTicks = 0;
+        currentWaterSpent = 0.0;
+        currentCharges = 0;
+        if (augmentSnapshot().has("job_ocean_g1")) {
+            water = Math.max(water, augmentSnapshot().parameter("job_ocean_g1", "openingWater", 150));
+        }
     }
 
     @Override
@@ -94,6 +110,9 @@ public final class OceanTower extends EntityBackedTower {
         waveActive = false;
         dehydrationTicks = 0;
         transferCooldownTicks = 0;
+        waveTicks = 0;
+        currentWaterSpent = 0.0;
+        currentCharges = 0;
         currentLane = lane;
         super.resetForRound(lane);
     }
@@ -101,6 +120,7 @@ public final class OceanTower extends EntityBackedTower {
     @Override
     public void tick(PlayerLane lane) {
         currentLane = lane;
+        tickTide();
         super.tick(lane);
         if (transferCooldownTicks > 0) {
             transferCooldownTicks--;
@@ -253,12 +273,33 @@ public final class OceanTower extends EntityBackedTower {
     }
 
     @Override
+    public void onAttackResolved(SemionTowerEntity source, SemionMonsterEntity target, double attemptedDamage,
+                                 double outgoingDamage, double dealtDamage, boolean killedTarget) {
+        if (AugmentCombat.allowsTriggers() && dealtDamage > 0.0 && source != null && target != null
+                && consumeCurrentCharge()) {
+            MonsterAreaEffectRequest request = MonsterAreaEffectRequest.aroundTarget(
+                    AreaEffectIds.tower(this, "augment_ocean_current"), source, target,
+                    augmentSnapshot().parameter("job_ocean_g2", "radius", 3),
+                    AreaVfxSpec.onTrigger(AreaVfxStyles.SPLASH))
+                    .including(target.getUUID())
+                    .withFilter(source::isValidAttackTarget)
+                    .nearestTargets((int) augmentSnapshot().parameter("job_ocean_g2", "targets", 12));
+            double damage = source.attackDamageAmount(target)
+                    * augmentSnapshot().parameter("job_ocean_g2", "damageRatio", 2);
+            AugmentCombat.runWithoutTriggers(() -> TowerAreaDamage.applyResolved(this, source, request,
+                    victim -> resolveBasicAttackOutgoingDamage(source, victim, damage),
+                    true, (victim, amount, killed) -> {}, DamageType.MAGIC));
+        }
+        super.onAttackResolved(source, target, attemptedDamage, outgoingDamage, dealtDamage, killedTarget);
+    }
+
+    @Override
     public List<String> runtimeDetailLines() {
         ArrayList<String> lines = new ArrayList<>();
         lines.add("물 " + oneDecimal(water));
         if (type().damage() > 0.0) {
             lines.add("물 공격력 " + percent(waterDamageMultiplier() - 1.0));
-            lines.add("물 " + oneDecimal(global("waterSoftCap")) + " 초과분은 공격력에 완만하게 반영");
+            lines.add("물 " + oneDecimal(waterSoftCap()) + " 초과분은 공격력에 완만하게 반영");
             lines.add("공격당 물 -" + oneDecimal(value("attackWaterCost")));
         }
         if (OceanTowers.isSupport(type()) || OceanTowers.isHealer(type())) {
@@ -274,6 +315,13 @@ public final class OceanTower extends EntityBackedTower {
         if (water <= 0.0) {
             lines.add("탈수: 능력 정지, 공격력·공격 속도 감소");
         }
+        if (augmentSnapshot().has("job_ocean_g2") && type().damage() > 0.0) {
+            lines.add("거센 해류 " + currentCharges + "회 · 물 소모 " + oneDecimal(currentWaterSpent)
+                    + "/" + oneDecimal(augmentSnapshot().parameter("job_ocean_g2", "waterPerCharge", 30)));
+        }
+        if (tideActive()) {
+            lines.add("밀물: 물 " + oneDecimal(waterSoftCap()) + " 이상 유지");
+        }
         return lines;
     }
 
@@ -286,6 +334,9 @@ public final class OceanTower extends EntityBackedTower {
         waveActive = oceanTower.waveActive;
         dehydrationTicks = oceanTower.dehydrationTicks;
         transferCooldownTicks = oceanTower.transferCooldownTicks;
+        waveTicks = oceanTower.waveTicks;
+        currentWaterSpent = oceanTower.currentWaterSpent;
+        currentCharges = oceanTower.currentCharges;
     }
 
     private void splash(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
@@ -381,8 +432,51 @@ public final class OceanTower extends EntityBackedTower {
 
     private void drainWater(double amount) {
         if (Double.isFinite(amount) && amount > 0.0) {
+            double spent = Math.min(water, amount);
             water = Math.max(0.0, water - amount);
+            if (waveActive && type().damage() > 0.0 && AugmentCombat.allowsTriggers()
+                    && augmentSnapshot().has("job_ocean_g2")) {
+                double threshold = augmentSnapshot().parameter("job_ocean_g2", "waterPerCharge", 30);
+                currentWaterSpent += spent;
+                int charges = (int) Math.floor((currentWaterSpent + EPSILON) / threshold);
+                currentCharges += charges;
+                currentWaterSpent = Math.max(0.0, currentWaterSpent - charges * threshold);
+            }
+            maintainTideFloor();
         }
+    }
+
+    void tickTide() {
+        if (waveActive) {
+            waveTicks++;
+            maintainTideFloor();
+        }
+    }
+
+    boolean tideActive() {
+        int period = (int) augmentSnapshot().parameter("job_ocean_p", "periodTicks", 240);
+        int duration = (int) augmentSnapshot().parameter("job_ocean_p", "durationTicks", 80);
+        return waveActive && augmentSnapshot().has("job_ocean_p")
+                && waveTicks >= period && waveTicks % period < duration;
+    }
+
+    private void maintainTideFloor() {
+        if (health() > 0.0 && tideActive()) {
+            water = Math.max(water, waterSoftCap());
+        }
+    }
+
+    boolean consumeCurrentCharge() {
+        if (!waveActive || !AugmentCombat.allowsTriggers() || currentCharges <= 0
+                || !augmentSnapshot().has("job_ocean_g2")) {
+            return false;
+        }
+        currentCharges--;
+        return true;
+    }
+
+    int currentCharges() {
+        return currentCharges;
     }
 
     private boolean canPayAttackAndExtra(String extraCostKey) {
@@ -398,7 +492,7 @@ public final class OceanTower extends EntityBackedTower {
     }
 
     private double waterRoot() {
-        double softCap = Math.max(EPSILON, global("waterSoftCap"));
+        double softCap = Math.max(EPSILON, waterSoftCap());
         double effectiveWater = water <= softCap
                 ? Math.max(0.0, water)
                 : softCap + softCap * Math.log1p((water - softCap) / softCap);

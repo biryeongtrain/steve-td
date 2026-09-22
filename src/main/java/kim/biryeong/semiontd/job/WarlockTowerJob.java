@@ -42,7 +42,8 @@ public final class WarlockTowerJob extends SemionJob {
         return context.game().playerLane(context.player().uuid())
                 .map(lane -> lane.towers().stream()
                         .map(Tower::type)
-                        .noneMatch(WarlockTowers::isWarlockCore))
+                        .filter(WarlockTowers::isWarlockCore).count()
+                        < (lane.augmentSnapshot().has("job_warlock_towers_p") ? 2 : 1))
                 .orElse(true);
     }
 

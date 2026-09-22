@@ -4,6 +4,7 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
+import kim.biryeong.semiontd.augment.AugmentSnapshot;
 import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.game.TowerRoundMetricsSnapshot;
@@ -47,6 +48,11 @@ public final class DemonLordState {
     private double roundMagicDamageDealt;
     private TowerRoundMetricsTracker roundMetricsTracker;
     private int roundMetricsTick;
+    private final DemonLordAugments augments = new DemonLordAugments();
+
+    DemonLordAugments augments() {
+        return augments;
+    }
 
     public DemonLordState(UUID playerId) {
         this.playerId = playerId;
@@ -150,6 +156,10 @@ public final class DemonLordState {
      * @return {@code true} when this hit emptied the pool and the player drops out of combat
      */
     public boolean applyDamage(double amount) {
+        return applyDamage(amount, AugmentSnapshot.none(), 0L);
+    }
+
+    boolean applyDamage(double amount, AugmentSnapshot snapshot, long gameTime) {
         if (amount <= 0.0 || !inCombat) {
             return false;
         }
@@ -166,6 +176,9 @@ public final class DemonLordState {
         health = Math.max(0.0, health - remaining);
         if (roundMetricsTracker != null) {
             roundMetricsTracker.recordDamageTaken(before - health);
+            roundMetricsTracker.updateAlive(health > 0.0);
+        }
+        if (augments.activatePhase(this, snapshot, gameTime) && roundMetricsTracker != null) {
             roundMetricsTracker.updateAlive(health > 0.0);
         }
         return health <= 0.0;
@@ -460,6 +473,7 @@ public final class DemonLordState {
      * without a {@code ServerPlayer} handle and the service tick has one.
      */
     public void enterCombat() {
+        augments.reset();
         inCombat = true;
         centralDefense = false;
         pendingSpawn = true;
@@ -482,6 +496,7 @@ public final class DemonLordState {
 
     /** Called when the pool empties. Skills stop working and monsters stop caring. */
     public void leaveCombat() {
+        augments.reset();
         inCombat = false;
         centralDefense = false;
         health = 0.0;
@@ -503,6 +518,7 @@ public final class DemonLordState {
      * and the boss bar reads 대기 instead of 전투 제외. The next wave refills it anyway.
      */
     public void standDown() {
+        augments.reset();
         if (!inCombat) {
             return;
         }
@@ -522,6 +538,19 @@ public final class DemonLordState {
 
     public void startCooldown(DemonLordSkill skill, long gameTime, int cooldownTicks) {
         cooldownReadyTick.put(skill, gameTime + Math.max(1, cooldownTicks));
+    }
+
+    void resetSkillCooldowns() {
+        cooldownReadyTick.clear();
+    }
+
+    void reduceAttackSkillCooldowns(int ticks) {
+        cooldownReadyTick.replaceAll((skill, ready) -> skill == DemonLordSkill.DEMON_BARRIER
+                ? ready : ready - Math.max(0, ticks));
+    }
+
+    void refundCooldown(DemonLordSkill skill, int ticks) {
+        cooldownReadyTick.computeIfPresent(skill, (ignored, ready) -> ready - Math.max(0, ticks));
     }
 
     public int remainingCooldownTicks(DemonLordSkill skill, long gameTime) {

@@ -28,7 +28,13 @@ public final class QueenTowers {
                     "라인에 수직인 가로 5장을 맞추면 <light_purple>포커 족보</light_purple>가 해당 카드병정의 체력·공속·치유·축소를 강화하고, 클로버 고유 방어력과 합산해 받는 피해를 최대 {ability.queen_global.pokerDamageReductionCap:percent} 감소시킵니다."
             )).build();
 
-    private static final List<TowerType> ALL = List.of(QUEEN, RANDOM_CARD_SOLDIER);
+    public static final TowerType JOKER = TowerType.builder("queen_joker", "조커")
+            .mineralCost(0).maxHealth(45).range(8).damage(0).attackIntervalTicks(10).aggroPriority(0)
+            .visual(RANDOM_CARD_SOLDIER.visual())
+            .description(List.of("궁정 광대 배치권으로 설치합니다. 판매 환급과 승급이 없습니다.",
+                    "족보를 가장 높게 만드는 카드로 계산하며, 대신한 문양의 능력을 얻습니다.")).build();
+
+    private static final List<TowerType> ALL = List.of(QUEEN, RANDOM_CARD_SOLDIER, JOKER);
 
     static {ALL.forEach(type -> TowerDescriptionRegistry.registerTemplate(type, type.description()));}
 

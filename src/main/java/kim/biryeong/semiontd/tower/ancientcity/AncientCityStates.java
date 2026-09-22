@@ -162,6 +162,34 @@ public final class AncientCityStates {
         return state == null ? Set.of() : Set.copyOf(state.territory);
     }
 
+    static Set<BlockPos> combatTerritory(Tower tower) {
+        AncientCityState state = STATES.get(tower.ownerPlayer());
+        return state == null ? Set.of() : tower.deployedAtFinalDefense()
+                ? state.finalDefenseTerritory : state.territory;
+    }
+
+    static Optional<BlockPos> sculkBelow(Tower tower, Vec3 position) {
+        int x = net.minecraft.util.Mth.floor(position.x);
+        int z = net.minecraft.util.Mth.floor(position.z);
+        return combatTerritory(tower).stream()
+                .filter(block -> block.getX() == x && block.getZ() == z)
+                .findFirst();
+    }
+
+    static boolean claimCityPulse(UUID owner, long tick, int cooldownTicks) {
+        AncientCityState state = STATES.get(owner);
+        if (state == null || tick < state.nextCityPulseTick) {
+            return false;
+        }
+        state.nextCityPulseTick = tick + cooldownTicks;
+        return true;
+    }
+
+    static long cityPulseTicksRemaining(UUID owner, long tick) {
+        AncientCityState state = STATES.get(owner);
+        return state == null ? 0 : Math.max(0, state.nextCityPulseTick - tick);
+    }
+
     public static void clear(UUID playerId) {
         if (playerId != null) {
             STATES.remove(playerId);
@@ -313,6 +341,7 @@ public final class AncientCityStates {
         private int activeRound;
         private int waveSpreadRound = -1;
         private int deathSpreadsThisRound;
+        private long nextCityPulseTick;
 
         private void beginRound(int round) {
             if (activeRound == round) {
@@ -320,6 +349,7 @@ public final class AncientCityStates {
             }
             activeRound = round;
             deathSpreadsThisRound = 0;
+            nextCityPulseTick = 0;
         }
     }
 }

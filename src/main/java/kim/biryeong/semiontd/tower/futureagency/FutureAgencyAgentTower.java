@@ -3,13 +3,16 @@ package kim.biryeong.semiontd.tower.futureagency;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import kim.biryeong.semiontd.api.area.AreaVfxSpec;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
@@ -28,6 +31,10 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
 
 public final class FutureAgencyAgentTower extends ProductionTower {
+    private static final String CROSSFIRE = "job_future_agency_towers_s";
+    private static final String RETURN = "job_future_agency_towers_g1";
+    private static final String RESCUE = "job_future_agency_towers_g2";
+    private static final String LOOP = "job_future_agency_towers_p";
     private transient PlayerLane lane;
     private boolean withdrawn;
     private GridPosition carriedPosition;
@@ -36,6 +43,11 @@ public final class FutureAgencyAgentTower extends ProductionTower {
     private boolean restoringCarry;
     private boolean carriedCopy;
     private boolean waveActive;
+    private int waveTicks;
+    private double waveStartHealth;
+    private boolean timeLoopUsed;
+    private List<FutureAgencyAgentTower> waveSurvivors = List.of();
+    private final Map<UUID, Crossfire> crossfire = new HashMap<>();
 
     public FutureAgencyAgentTower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId,
                                   GridPosition originalPosition, GridPosition currentPosition) {
@@ -63,6 +75,9 @@ public final class FutureAgencyAgentTower extends ProductionTower {
     public void tick(PlayerLane lane) {
         this.lane = lane;
         if (!withdrawn) super.tick(lane);
+        if (waveActive && ++waveTicks == (int) augmentSnapshot().parameter(RETURN, "durationTicks", 120)) {
+            onStateChanged(lane);
+        }
     }
 
     @Override
@@ -105,7 +120,28 @@ public final class FutureAgencyAgentTower extends ProductionTower {
     @Override
     public void onWaveStarted(PlayerLane lane, int currentRound) {
         this.lane = lane;
+        // Observe the entity before syncing opening modifiers; a dead survivor must stay dead.
+        boolean destroyed = isDestroyed(lane);
         waveActive = true;
+        waveTicks = 0;
+        timeLoopUsed = false;
+        waveStartHealth = 0;
+        waveSurvivors = List.of();
+        crossfire.clear();
+        if (!destroyed) onStateChanged(lane);
+    }
+
+    public static void captureWaveStart(PlayerLane lane) {
+        for (Tower tower : lane.towers()) {
+            if (!(tower instanceof FutureAgencyAgentTower agent)) continue;
+            if (agent.carriedCopy && agent.augmentSnapshot().has(RETURN) && !agent.isDestroyed(lane)) {
+                agent.syncHealth(agent.currentMaxHealth());
+                agent.onStateChanged(lane);
+            }
+            agent.waveStartHealth = agent.health();
+            if (!agent.carriedCopy) agent.waveSurvivors = agent.linkedSurvivors(lane).stream()
+                    .filter(survivor -> !survivor.isDestroyed(lane)).toList();
+        }
     }
 
     @Override
@@ -115,6 +151,11 @@ public final class FutureAgencyAgentTower extends ProductionTower {
             return;
         }
         waveActive = false;
+        waveTicks = 0;
+        waveStartHealth = 0;
+        timeLoopUsed = false;
+        waveSurvivors = List.of();
+        crossfire.clear();
         // A cleared lane records its carry before the shared final-defense pass.
         if (withdrawn) return;
         if (carriedCopy && lane != null) {
@@ -129,6 +170,11 @@ public final class FutureAgencyAgentTower extends ProductionTower {
     public void resetForRound(PlayerLane lane) {
         boolean restoreCarry = carriedCopy && carriedPosition != null && carriedHealth > 0.0;
         waveActive = false;
+        waveTicks = 0;
+        waveStartHealth = 0;
+        timeLoopUsed = false;
+        waveSurvivors = List.of();
+        crossfire.clear();
         withdrawn = false;
         restoringCarry = restoreCarry;
         super.resetForRound(lane);
@@ -189,6 +235,10 @@ public final class FutureAgencyAgentTower extends ProductionTower {
 
     @Override
     public double adjustAttackRange(double baseRange) {
+        if (openingReturn() && lane != null) {
+            return Math.max(baseRange, Math.sqrt(lane.laneLayout().laneArea().min()
+                    .distSqr(lane.laneLayout().laneArea().max())) + 2);
+        }
         if (FutureAgencyTowers.role(type()) != FutureAgencyRole.COMBAT) return baseRange;
         return baseRange + FutureAgencyBalance.stacked(FutureAgencyStates.state(ownerPlayer()), FutureAgencyPolicy.LONG_RANGE_OPTICS);
     }
@@ -246,14 +296,15 @@ public final class FutureAgencyAgentTower extends ProductionTower {
                         nearby * FutureAgencyBalance.policy(FutureAgencyPolicy.DENSE_CONTROL));
             }
         }
-        return damage * (1.0 + bonus);
+        double amount = damage * (1.0 + bonus);
+        return openingReturn() ? amount * (1 + augmentSnapshot().parameter(RETURN, "damageBonus", .6)) : amount;
     }
 
     @Override
     public double modifyIncomingDamage(SemionTowerEntity source, DamageSource damageSource, double damage) {
         FutureAgencyStates.PlayerState state = FutureAgencyStates.state(ownerPlayer());
         double reduction = FutureAgencyBalance.stacked(state, FutureAgencyPolicy.PROFESSIONAL_AGENTS);
-        if (damageSource.getEntity() instanceof SemionMonsterEntity monster) {
+        if (damageSource != null && damageSource.getEntity() instanceof SemionMonsterEntity monster) {
             if (monster.runtimeMonster().attackKind() == AttackKind.RANGED) reduction += FutureAgencyBalance.stacked(state, FutureAgencyPolicy.RANGED_ARMOR);
             else reduction += FutureAgencyBalance.stacked(state, FutureAgencyPolicy.MELEE_TRAINING);
             if ("minecraft:warden".equals(monster.runtimeMonster().id())) reduction += FutureAgencyBalance.stacked(state, FutureAgencyPolicy.ANOMALY_DEPARTMENT);
@@ -272,12 +323,56 @@ public final class FutureAgencyAgentTower extends ProductionTower {
         } else if (hasEscort()) {
             reduction += FutureAgencyBalance.stacked(state, FutureAgencyPolicy.ESCORT_FORMATION);
         }
-        return damage * (1.0 - Math.min(FutureAgencyBalance.damageReductionCap(), reduction));
+        double amount = damage * (1.0 - Math.min(FutureAgencyBalance.damageReductionCap(), reduction));
+        if (!carriedCopy && augmentSnapshot().has(RESCUE) && lane != null
+                && linkedSurvivors(lane).stream().anyMatch(survivor -> !survivor.withdrawn && !survivor.isDestroyed(lane))) {
+            amount *= 1 - augmentSnapshot().parameter(RESCUE, "damageReduction", .25);
+        }
+        return amount;
+    }
+
+    @Override
+    public boolean preventLethalDamage(SemionTowerEntity entity, DamageSource source, double finalHealthDamage) {
+        if (carriedCopy || !waveActive || timeLoopUsed || waveStartHealth <= 0 || entity == null
+                || finalHealthDamage < entity.getHealth() || !AugmentCombat.allowsTriggers()
+                || !augmentSnapshot().has(LOOP)) return false;
+        timeLoopUsed = true;
+        restoreWaveHealth();
+        for (FutureAgencyAgentTower survivor : waveSurvivors) {
+            if (lane.towers().contains(survivor)) survivor.restoreWaveHealth();
+        }
+        showCarryVfx(lane);
+        return true;
+    }
+
+    private void restoreWaveHealth() {
+        if (waveStartHealth <= 0) return;
+        if (isDestroyed(lane)) {
+            super.onRemoved(lane);
+            withdrawn = false;
+            restoringCarry = false;
+            copiedHealthRatio = waveStartHealth / currentMaxHealth();
+            onPlaced(lane);
+        }
+        syncHealth(waveStartHealth);
+        onStateChanged(lane);
+    }
+
+    private boolean openingReturn() {
+        return carriedCopy && waveActive && waveTicks < (int) augmentSnapshot().parameter(RETURN, "durationTicks", 120)
+                && augmentSnapshot().has(RETURN);
+    }
+
+    int survivorLimit() {
+        return augmentSnapshot().has(RESCUE) ? (int) augmentSnapshot().parameter(RESCUE, "survivorCap", 2) : 1;
     }
 
     @Override
     public void onAttackResolved(SemionTowerEntity source, SemionMonsterEntity primary, double attempted,
                                  double outgoing, double dealt, boolean killed) {
+        if (dealt > 0 && primary != null && AugmentCombat.allowsTriggers() && augmentSnapshot().has(CROSSFIRE)) {
+            registerCrossfire(primary);
+        }
         if (dealt <= 0.0 || FutureAgencyTowers.role(type()) != FutureAgencyRole.SUPPRESSION || lane == null) return;
         int grade = FutureAgencyTowers.grade(type());
         FutureAgencyStates.PlayerState state = FutureAgencyStates.state(ownerPlayer());
@@ -306,6 +401,30 @@ public final class FutureAgencyAgentTower extends ProductionTower {
                 (target, amount, secondaryKilled) -> {applySuppression(target, slow); TowerVfxService.showSecondaryAttack(source, target);});
     }
 
+    private void registerCrossfire(SemionMonsterEntity target) {
+        if (!waveActive || lane == null) return;
+        FutureAgencyAgentTower original = carriedCopy ? lane.towers().stream()
+                .filter(FutureAgencyAgentTower.class::isInstance).map(FutureAgencyAgentTower.class::cast)
+                .filter(agent -> !agent.carriedCopy && ownerPlayer().equals(agent.ownerPlayer())
+                        && laneId() == agent.laneId()
+                        && originalPosition().equals(agent.originalPosition())).findFirst().orElse(null) : this;
+        if (original == null) return;
+        long now = lane.arenaWorld().getGameTime();
+        Crossfire previous = original.crossfire.getOrDefault(target.getUUID(), new Crossfire(-1_000_000, -1_000_000, -1_000_000));
+        long originalHit = carriedCopy ? previous.originalHit : now;
+        long survivorHit = carriedCopy ? now : previous.survivorHit;
+        long rooted = previous.rooted;
+        if (Math.abs(originalHit - survivorHit) <= augmentSnapshot().parameter(CROSSFIRE, "windowTicks", 40)
+                && now - rooted >= augmentSnapshot().parameter(CROSSFIRE, "cooldownTicks", 160)) {
+            target.applyTimedEffect(TimedEffectType.MONSTER_ROOT, 1,
+                    (int) augmentSnapshot().parameter(CROSSFIRE, "durationTicks", 40));
+            rooted = now;
+        }
+        original.crossfire.put(target.getUUID(), new Crossfire(originalHit, survivorHit, rooted));
+    }
+
+    private record Crossfire(long originalHit, long survivorHit, long rooted) {}
+
     public void refreshPolicyHealth(boolean healIncrease) {
         FutureAgencyStates.PlayerState state = FutureAgencyStates.state(ownerPlayer());
         double bonus = FutureAgencyBalance.leaderHealth(state)
@@ -324,8 +443,10 @@ public final class FutureAgencyAgentTower extends ProductionTower {
             lines.add("<aqua>이월 체력</aqua> <white>" + oneDecimal(carryHealth) + "/" + oneDecimal(currentMaxHealth()) + "</white>");
         } else {
             long linked = lane == null ? 0 : linkedSurvivors(lane).stream().filter(survivor -> !survivor.isDestroyed(lane)).count();
-            lines.add("<aqua>연결 생존자</aqua> <white>" + Math.min(1, linked) + "/1</white>");
+            lines.add("<aqua>연결 생존자</aqua> <white>" + Math.min(survivorLimit(), linked) + "/" + survivorLimit() + "</white>");
             lines.add("<gray>관리 위치</gray> <white>" + originalPosition().x() + ", " + originalPosition().z() + "</white>");
+            if (augmentSnapshot().has(LOOP)) lines.add("<light_purple>구조 타임루프</light_purple> "
+                    + (timeLoopUsed ? "<gray>사용 완료</gray>" : "<green>대기</green>"));
         }
         return List.copyOf(lines);
     }
@@ -341,13 +462,13 @@ public final class FutureAgencyAgentTower extends ProductionTower {
         double survivalHealth = Math.min(currentMaxHealth(), health() + heal);
         if (!carriedCopy && lane != null) {
             List<FutureAgencyAgentTower> linked = linkedSurvivors(lane);
-            FutureAgencyAgentTower survivor = linked.stream().filter(candidate -> !candidate.isDestroyed(lane))
-                    .findFirst().orElse(null);
+            List<FutureAgencyAgentTower> surviving = linked.stream().filter(candidate -> !candidate.isDestroyed(lane))
+                    .limit(survivorLimit()).toList();
             for (FutureAgencyAgentTower candidate : linked) {
-                if (candidate != survivor) lane.removeTower(candidate);
+                if (!surviving.contains(candidate)) lane.removeTower(candidate);
             }
-            if (survivor == null) {
-                survivor = new FutureAgencyAgentTower(
+            if (surviving.size() < survivorLimit()) {
+                FutureAgencyAgentTower survivor = new FutureAgencyAgentTower(
                         type(), ownerPlayer(), teamId(), laneId(), originalPosition(), survivalPosition);
                 survivor.carriedCopy = true;
                 survivor.withdrawn = !worldSaved;

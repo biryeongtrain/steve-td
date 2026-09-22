@@ -170,7 +170,7 @@ public final class WebCatalogExporter {
                         definition.conflicts().stream().sorted().toList(), AugmentDescriptions.describe(definition, augmentConfig),
                         augmentConfig.enabled() && augmentConfig.isEnabled(definition.id())
                                 && (definition.reserve() || augmentConfig.publicPoolEnabled()),
-                        new TreeMap<>(augmentConfig.parameters().getOrDefault(definition.id(), Map.of()))
+                        new TreeMap<>(augmentConfig.parametersFor(definition.id())), definition.requiredJobId()
                 ))
                 .toList();
         CatalogHashInput hashInput = new CatalogHashInput(SCHEMA_VERSION, builders, towers, upgrades, traits, summons,
@@ -349,7 +349,7 @@ public final class WebCatalogExporter {
             String id, String displayName, String rarity, String category, String familyKey,
             boolean safe, boolean risky, boolean towerAugment, boolean reserve,
             List<Integer> milestoneRounds, List<String> conflicts, String description,
-            boolean enabled, Map<String, Double> parameters
+            boolean enabled, Map<String, Double> parameters, String requiredJobId
     ) {
     }
 

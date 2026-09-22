@@ -102,8 +102,8 @@ public final class AugmentTowerService {
 
     public static void beginPrepare(SemionGame game) {
         for (SemionPlayer player : game.players().values()) game.playerLane(player.uuid()).ifPresent(lane -> {
-            for (Tower tower : lane.towers()) if (tower instanceof OffensiveAugmentTower offensive) {
-                offensive.beginPrepare(lane, game.currentRound());
+            for (Tower tower : lane.towers()) if (tower instanceof AugmentTower augment) {
+                augment.beginPrepare(lane, game.currentRound());
             }
         });
     }

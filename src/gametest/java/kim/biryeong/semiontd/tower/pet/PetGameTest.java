@@ -5,6 +5,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import kim.biryeong.semiontd.augment.AugmentChoice;
+import kim.biryeong.semiontd.augment.AugmentCombat;
+import kim.biryeong.semiontd.augment.AugmentConfig;
+import kim.biryeong.semiontd.augment.AugmentRarity;
+import kim.biryeong.semiontd.augment.AugmentSnapshot;
+import kim.biryeong.semiontd.augment.PlayerAugmentState;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
@@ -29,6 +35,100 @@ import xyz.nucleoid.map_templates.BlockBounds;
 
 public final class PetGameTest {
     private static final UUID OWNER = UUID.nameUUIDFromBytes("pet-gametest".getBytes(StandardCharsets.UTF_8));
+
+    @GameTest
+    public void designatedLeaderRalliesOneOfEachOtherSpeciesAndAdditionalAttacksDoNotCharge(GameTestHelper context) {
+        reloadBalance();
+        PlayerLane lane = testLane(context);
+        PetTower owner = tower(PetTowers.KEEPER_T1, position(context, 3, 2, 4));
+        PetTower dog = tower(PetTowers.DOG_T1, position(context, 4, 2, 4));
+        PetTower cat = tower(PetTowers.CAT_T1, position(context, 4, 2, 5));
+        PetTower secondCat = tower(PetTowers.CAT_T1, position(context, 2, 2, 4));
+        PetTower bird = tower(PetTowers.BIRD_T1, position(context, 3, 2, 5));
+        for (PetTower pet : List.of(owner, dog, cat, secondCat, bird)) {
+            lane.addTower(pet);
+        }
+        lane.assignAugmentSnapshot(new AugmentSnapshot(AugmentConfig.defaults(), List.of(
+                new PlayerAugmentState.Selection(5, AugmentRarity.GOLD, PetTower.LEADER,
+                        PlayerAugmentState.Outcome.SELECTED, null, new AugmentChoice(dog.logicalId(), null, "")))));
+        SemionMonsterEntity target = spawnMonster(context, lane, "pet_leader_target",
+                Vec3.atCenterOf(context.absolutePos(new BlockPos(4, 2, 6))));
+        SemionTowerEntity source = dog.runtimeEntity(lane).orElseThrow();
+        double expected = cat.runtimeEntity(lane).orElseThrow().attackDamageAmount(target)
+                + bird.runtimeEntity(lane).orElseThrow().attackDamageAmount(target);
+        dog.onAttackResolved(source, target, 1, 1, 0, false);
+        dog.onAttackResolved(source, target, 1, 1, 1, false);
+        dog.onAttackResolved(source, target, 1, 1, 1, false);
+        requireClose(1_000, target.runtimeMonster().health(), "Two valid hits must not rally");
+        double dogDamage = source.attackDamageAmount(target);
+        AugmentCombat.additionalAttack(source, target, 1);
+        requireClose(1_000 - dogDamage, target.runtimeMonster().health(), "Augment attack must not charge rally");
+        dog.onAttackResolved(source, target, 1, 1, 1, false);
+        requireClose(1_000 - dogDamage - expected, target.runtimeMonster().health(),
+                "Third valid hit adds exactly one cat and one bird native attack");
+        context.succeed();
+    }
+
+    @GameTest
+    public void grownUpBirdHealsSelfAndOneAllyThenFamilyHealsThreeAllies(GameTestHelper context) {
+        reloadBalance();
+        PlayerLane lane = testLane(context);
+        PetTower owner = tower(PetTowers.KEEPER_T1, position(context, 3, 2, 4));
+        PetTower bird = tower(PetTowers.BIRD_T1, position(context, 4, 2, 4));
+        PetTower dog = tower(PetTowers.DOG_T1, position(context, 3, 2, 5));
+        PetTower cat = tower(PetTowers.CAT_T1, position(context, 4, 2, 5));
+        PetTower cat2 = tower(PetTowers.CAT_T1, position(context, 2, 2, 4));
+        List<PetTower> pets = List.of(bird, dog, cat, cat2);
+        lane.addTower(owner);
+        pets.forEach(lane::addTower);
+        lane.assignAugmentSnapshot(petAugments(PetTower.GROWN_UP));
+        pets.forEach(pet -> pet.syncHealth(pet.currentMaxHealth() * .5));
+        double birdBefore = bird.health();
+        double totalBefore = dog.health() + cat.health() + cat2.health();
+        double amount = 10 * PetBalance.healRatio(bird.type());
+        bird.onAttackResolved(bird.runtimeEntity(lane).orElseThrow(), null, 10, 10, 10, false);
+        requireHealthClose(birdBefore + amount, bird.health(), "Bird heals itself");
+        requireHealthClose(totalBefore + amount, dog.health() + cat.health() + cat2.health(), "Exactly one ally heals");
+        lane.assignAugmentSnapshot(petAugments(PetTower.GROWN_UP, PetTower.FAMILY));
+        pets.forEach(pet -> pet.addBond(PetBalance.bondToUpgrade(pet.type())));
+        PetBondService.refresh(lane);
+        require(bird.hasFamilyYard(), "Three actual adult species must activate the family");
+        pets.forEach(pet -> pet.syncHealth(pet.currentMaxHealth() * .5));
+        List<Double> before = pets.stream().map(PetTower::health).toList();
+        bird.onAttackResolved(bird.runtimeEntity(lane).orElseThrow(), null, 10, 10, 10, false);
+        for (int i = 0; i < pets.size(); i++) {
+            requireHealthClose(before.get(i) + amount, pets.get(i).health(), "Family heals self plus three allies");
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void earlyCatUsesNativeSplashBeforeUpgradeGrowth(GameTestHelper context) {
+        reloadBalance();
+        PlayerLane lane = testLane(context);
+        PetTower cat = tower(PetTowers.CAT_T1, position(context, 4, 2, 4));
+        lane.addTower(cat);
+        lane.assignAugmentSnapshot(petAugments(PetTower.GROWN_UP));
+        SemionMonsterEntity primary = spawnMonster(context, lane, "early_cat_primary",
+                Vec3.atCenterOf(context.absolutePos(new BlockPos(4, 2, 6))));
+        SemionMonsterEntity secondary = spawnMonster(context, lane, "early_cat_secondary", primary.position().add(.5, 0, 0));
+        AreaEffectLaneIndex.register(lane);
+        try {
+            cat.onAttackResolved(cat.runtimeEntity(lane).orElseThrow(), primary, 100, 100, 100, false);
+            requireClose(1_000 - 100 * PetBalance.adultSplashDamageRatio(cat.type()), secondary.runtimeMonster().health(),
+                    "Young cat uses native adult splash");
+            require(!cat.isAdult() && cat.bond() == 0, "Combat unlock must not grant growth");
+            context.succeed();
+        } finally {
+            AreaEffectLaneIndex.unregister(lane);
+        }
+    }
+
+    private static AugmentSnapshot petAugments(String... cards) {
+        return new AugmentSnapshot(AugmentConfig.defaults(), java.util.Arrays.stream(cards)
+                .map(card -> new PlayerAugmentState.Selection(5, AugmentRarity.GOLD, card,
+                        PlayerAugmentState.Outcome.SELECTED, null, AugmentChoice.none())).toList());
+    }
 
     @GameTest
     public void companionsBondOverRoundsAndGrowUpIntoAnUpgrade(GameTestHelper context) {

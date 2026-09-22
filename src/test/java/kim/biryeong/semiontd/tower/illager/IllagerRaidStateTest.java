@@ -8,6 +8,37 @@ import org.junit.jupiter.api.Test;
 
 class IllagerRaidStateTest {
     @Test
+    void grandRaidAccumulatesOnlyAfterActivationConsumesFiftiesAndResets() {
+        IllagerRaidState state = new IllagerRaidState();
+        state.resetForRound(3);
+        state.enableGrandRaid(50);
+        state.addExtraGauge(100);
+        assertEquals(0, state.consumePendingVolleys());
+        state.addGauge(100, 100);
+        state.addExtraGauge(49);
+        assertEquals(0, state.consumePendingVolleys());
+        state.addExtraGauge(102);
+        assertEquals(3, state.consumePendingVolleys());
+        assertEquals(1, state.extraGauge());
+        assertEquals(0, state.consumePendingVolleys());
+        assertEquals(100, state.gauge());
+        state.addExtraGauge(50);
+        state.resetForRound(1);
+        assertEquals(0, state.extraGauge());
+        assertEquals(0, state.consumePendingVolleys());
+        assertEquals(0, state.grandRaidThreshold());
+    }
+
+    @Test
+    void ordinaryRaidsNeverAcquireGrandRaidCharges() {
+        IllagerRaidState state = new IllagerRaidState();
+        state.resetForRound(3);
+        state.addGauge(100, 100);
+        state.addExtraGauge(500);
+        assertEquals(0, state.extraGauge());
+        assertEquals(0, state.consumePendingVolleys());
+    }
+    @Test
     void startsEachRoundEmptyAndSnapshotsTowerCount() {
         IllagerRaidState state = new IllagerRaidState();
 

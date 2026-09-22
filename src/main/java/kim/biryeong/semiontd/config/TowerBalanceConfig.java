@@ -3275,13 +3275,23 @@ public record TowerBalanceConfig(
     }
 
     private static void putInsectAbilities(Map<String, Map<String, Double>> abilities) {
-        putAbilities(abilities, InsectBalance.GLOBAL_ID, Map.of(
-                "freshPowerMultiplier", InsectBalance.FRESH_POWER_MULTIPLIER,
-                "freshPowerScale", InsectBalance.FRESH_POWER_SCALE,
-                "reviveBaseTicks", (double) InsectBalance.REVIVE_BASE_TICKS,
-                "reviveIncrementTicks", (double) InsectBalance.REVIVE_INCREMENT_TICKS,
-                "radiusVfxIntervalTicks", (double) InsectBalance.RADIUS_VFX_INTERVAL_TICKS,
-                "deathDamageTakenPerStack", InsectBalance.DEATH_DAMAGE_TAKEN_PER_STACK
+        putAbilities(abilities, InsectBalance.GLOBAL_ID, Map.ofEntries(
+                Map.entry("freshPowerMultiplier", InsectBalance.FRESH_POWER_MULTIPLIER),
+                Map.entry("freshDamageTakenMultiplier", InsectBalance.FRESH_DAMAGE_TAKEN_MULTIPLIER),
+                Map.entry("freshPowerScale", InsectBalance.FRESH_POWER_SCALE),
+                Map.entry("reviveBaseTicks", (double) InsectBalance.REVIVE_BASE_TICKS),
+                Map.entry("reviveIncrementTicks", (double) InsectBalance.REVIVE_INCREMENT_TICKS),
+                Map.entry("beeReviveBaseTicks", (double) InsectBalance.BEE_REVIVE_BASE_TICKS),
+                Map.entry("beeReviveIncrementTicks", (double) InsectBalance.BEE_REVIVE_INCREMENT_TICKS),
+                Map.entry("reviveHealthLossRatio", InsectBalance.REVIVE_HEALTH_LOSS_RATIO),
+                Map.entry("tier1DeathExplosionHealthRatio", InsectBalance.TIER1_DEATH_EXPLOSION_HEALTH_RATIO),
+                Map.entry("tier2DeathExplosionHealthRatio", InsectBalance.TIER2_DEATH_EXPLOSION_HEALTH_RATIO),
+                Map.entry("deathExplosionHealthRatio", InsectBalance.DEATH_EXPLOSION_HEALTH_RATIO),
+                Map.entry("tier1DeathExplosionRadius", InsectBalance.TIER1_DEATH_EXPLOSION_RADIUS),
+                Map.entry("deathExplosionRadius", InsectBalance.DEATH_EXPLOSION_RADIUS),
+                Map.entry("contactDetonationRange", InsectBalance.CONTACT_DETONATION_RANGE),
+                Map.entry("radiusVfxIntervalTicks", (double) InsectBalance.RADIUS_VFX_INTERVAL_TICKS),
+                Map.entry("deathDamageTakenPerStack", InsectBalance.DEATH_DAMAGE_TAKEN_PER_STACK)
         ));
         putAbilities(abilities, InsectTowers.SPAWNER.id(), Map.of(
                 "reviveRadius", InsectBalance.SPAWNER_RADIUS
@@ -3901,12 +3911,19 @@ public record TowerBalanceConfig(
             validateEngineerValues(InsectBalance.GLOBAL_ID, global);
             requireEngineerPositive(global,
                     "freshPowerMultiplier", "freshPowerScale", "reviveBaseTicks", "reviveIncrementTicks",
-                    "radiusVfxIntervalTicks");
-            requireEngineerIntegral(global, "reviveBaseTicks", "reviveIncrementTicks", "radiusVfxIntervalTicks");
+                    "radiusVfxIntervalTicks", "freshDamageTakenMultiplier", "beeReviveBaseTicks",
+                    "beeReviveIncrementTicks", "deathExplosionHealthRatio", "deathExplosionRadius",
+                    "tier1DeathExplosionHealthRatio", "tier2DeathExplosionHealthRatio", "tier1DeathExplosionRadius",
+                    "contactDetonationRange");
+            requireEngineerIntegral(global, "reviveBaseTicks", "reviveIncrementTicks", "radiusVfxIntervalTicks",
+                    "beeReviveBaseTicks", "beeReviveIncrementTicks");
             double power = global.getOrDefault("freshPowerMultiplier", 0.0);
             double scale = global.getOrDefault("freshPowerScale", 0.0);
             double vulnerability = global.getOrDefault("deathDamageTakenPerStack", -1.0);
-            if (power < 1.0 || scale < 1.0 || scale > 1.25 || vulnerability < 0.0 || vulnerability > 1.0) {
+            double healthLoss = global.getOrDefault("reviveHealthLossRatio", -1.0);
+            if (power < 1.0 || scale < 1.0 || scale > 1.25 || vulnerability < 0.0 || vulnerability > 1.0
+                    || healthLoss < 0.0 || healthLoss >= 1.0
+                    || global.getOrDefault("freshDamageTakenMultiplier", 0.0) < 1.0) {
                 throw new IllegalArgumentException("Insect global multipliers are outside their supported range.");
             }
         }

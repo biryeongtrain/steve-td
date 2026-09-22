@@ -17,13 +17,17 @@ public record AugmentSnapshot(AugmentConfig config, List<PlayerAugmentState.Sele
     public boolean has(String cardId) {
         String id = AugmentCatalog.normalizeId(cardId);
         return selections.stream().anyMatch(selection -> selection.outcome() == PlayerAugmentState.Outcome.SELECTED
-                && id.equals(selection.augmentId()));
+                && AugmentCatalog.matchesSelection(id, selection.augmentId()));
     }
 
     public AugmentChoice choice(String cardId) {
         String id = AugmentCatalog.normalizeId(cardId);
-        return selections.stream().filter(selection -> id.equals(selection.augmentId()))
-                .map(PlayerAugmentState.Selection::choice).findFirst().orElseGet(AugmentChoice::none);
+        return selections.stream().filter(selection -> AugmentCatalog.matchesSelection(id, selection.augmentId()))
+                .map(selection -> {
+                    AugmentChoice choice = selection.choice();
+                    String fixed = AugmentCatalog.fixedMode(selection.augmentId());
+                    return fixed.isEmpty() ? choice : new AugmentChoice(choice.primaryTargetId(), choice.secondaryTargetId(), fixed);
+                }).findFirst().orElseGet(AugmentChoice::none);
     }
 
     public double parameter(String cardId, String key, double fallback) {

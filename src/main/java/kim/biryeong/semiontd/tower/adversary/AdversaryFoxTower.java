@@ -13,6 +13,7 @@ import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.api.area.AreaVfxSpec;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
@@ -40,6 +41,7 @@ import net.minecraft.world.phys.Vec3;
 /** Runtime combat implementation for one Adversary fox. */
 public final class AdversaryFoxTower extends EntityBackedTower {
     private static final double LINE_HALF_WIDTH = 0.75;
+    private static final ResourceLocation RIVAL_MATCH = ResourceLocation.fromNamespaceAndPath("semiontd", "job_adversary_towers_g1");
     private static final TowerDataKey<UUID> FOX_ID = TowerDataKey.of(
             ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "adversary/fox_id"),
             UUID.class
@@ -51,6 +53,13 @@ public final class AdversaryFoxTower extends EntityBackedTower {
     private boolean unscaledEntityDamagePending;
     private double unscaledEntityDamageLogicalHealth;
     private double rivalHealingThisWave;
+    private double adaptationOpeningHealth;
+    private double adaptationOpeningDamage;
+    private double absorbedHealth;
+    private double absorbedDamage;
+    private int finaleTicks;
+    private boolean maceAllowsAugments = true;
+    private final Set<UUID> nativeAttackTargets = new HashSet<>();
 
     private UUID goldenTargetId;
     private int goldenTargetHits;
@@ -130,7 +139,7 @@ public final class AdversaryFoxTower extends EntityBackedTower {
 
     @Override
     public double effectBaseMaxHealth() {
-        return form.maxHealth();
+        return form.maxHealth() * finaleMultiplier("healthBonus", 1.0) + absorbedHealth;
     }
 
     @Override
@@ -185,20 +194,51 @@ public final class AdversaryFoxTower extends EntityBackedTower {
     @Override
     public void onWaveStarted(PlayerLane lane, int currentRound) {
         currentLane = lane;
+        clearRivalMatchBuff(lane);
+        clearJobAugmentCombat(lane);
         resetTransientCombatState();
+        captureAugmentOpeningStats(lane);
+    }
+
+    void captureAugmentOpeningStats(PlayerLane lane) {
+        adaptationOpeningHealth = currentMaxHealth();
+        SemionTowerEntity entity = towerEntity(lane);
+        double damage = form.damage() * (1.0 + postEvolutionDamageBonus()) * finaleMultiplier("damageBonus", 1.2);
+        adaptationOpeningDamage = entity == null ? damage : resolveOutgoingDamage(entity, null, damage);
     }
 
     @Override
     public void resetForRound(PlayerLane lane) {
         currentLane = lane;
+        clearRivalMatchBuff(lane);
+        clearJobAugmentCombat(lane);
         resetTransientCombatState();
         super.resetForRound(lane);
+    }
+
+    private void clearRivalMatchBuff(PlayerLane lane) {
+        SemionTowerEntity entity = towerEntity(lane);
+        if (entity != null) {
+            entity.refreshTimedEffect(TimedEffectType.TOWER_DAMAGE_BONUS, RIVAL_MATCH, 0, 1);
+        }
+    }
+
+    private void clearJobAugmentCombat(PlayerLane lane) {
+        absorbedHealth = 0.0;
+        absorbedDamage = 0.0;
+        finaleTicks = 0;
+        adaptationOpeningHealth = 0.0;
+        adaptationOpeningDamage = 0.0;
+        refreshMaxHealthAfterTypeChange(lane);
     }
 
     @Override
     public void tick(PlayerLane lane) {
         currentLane = lane;
         super.tick(lane);
+        if (finaleTicks > 0) {
+            finaleTicks--;
+        }
         if (shieldCounterCooldownTicks > 0) {
             shieldCounterCooldownTicks--;
         }
@@ -314,7 +354,9 @@ public final class AdversaryFoxTower extends EntityBackedTower {
             SemionMonsterEntity target,
             double damageAmount
     ) {
-        return damageAmount * (1.0 + postEvolutionDamageBonus());
+        double nativeDamage = form.damage() * (1.0 + postEvolutionDamageBonus()) * finaleMultiplier("damageBonus", 1.2);
+        double absorption = nativeDamage > 0.0 ? 1.0 + absorbedDamage / nativeDamage : 1.0;
+        return damageAmount * (1.0 + postEvolutionDamageBonus()) * finaleMultiplier("damageBonus", 1.2) * absorption;
     }
 
     @Override
@@ -341,6 +383,8 @@ public final class AdversaryFoxTower extends EntityBackedTower {
         if (dealtDamage <= 0.0) {
             return;
         }
+        nativeAttackTargets.clear();
+        nativeAttackTargets.add(target.getUUID());
         if (usesEvolvedSplash(form)) {
             applyNearbySecondaries(
                     towerEntity,
@@ -392,6 +436,7 @@ public final class AdversaryFoxTower extends EntityBackedTower {
             default -> {
             }
         }
+        finaleSecondaries(towerEntity, resolvedOutgoingDamage);
     }
 
     @Override
@@ -602,6 +647,12 @@ public final class AdversaryFoxTower extends EntityBackedTower {
         int maxFoxes = globalInt("maxFoxTowers", AdversaryBalance.MAX_FOX_TOWERS);
         lines.add("<gold>여우</gold>: " + progress.foxCount() + "/" + maxFoxes);
         lines.add("<gold>현재 형태</gold>: " + form.displayName());
+        if (augmentSnapshot().has(AdversaryAugments.ADAPTATION)) {
+            lines.add("적응 (전투 중): 체력 +" + number(absorbedHealth) + " / 공격력 +" + number(absorbedDamage));
+        }
+        if (finaleTicks > 0) {
+            lines.add("최종장: 추가 대상 2기 / " + number(finaleTicks / 20.0) + "초");
+        }
         foxProgress.lockedRoute().ifPresent(route -> lines.add(
                 "<yellow>점유 계열</yellow>: " + FoxForm.intermediateFor(route).displayName()
         ));
@@ -892,7 +943,12 @@ public final class AdversaryFoxTower extends EntityBackedTower {
                     1.0,
                     previousFox.health() / Math.max(1.0, previousFox.currentMaxHealth())
             ));
-            syncMaxHealth(form.maxHealth(), false);
+            absorbedHealth = previousFox.absorbedHealth;
+            absorbedDamage = previousFox.absorbedDamage;
+            adaptationOpeningHealth = previousFox.adaptationOpeningHealth;
+            adaptationOpeningDamage = previousFox.adaptationOpeningDamage;
+            finaleTicks = previousFox.finaleTicks;
+            syncMaxHealth(effectBaseMaxHealth(), false);
             syncHealth(currentMaxHealth() * ratio);
         }
         resetTransientCombatState();
@@ -1118,6 +1174,7 @@ public final class AdversaryFoxTower extends EntityBackedTower {
         if (selected.isEmpty()) {
             return;
         }
+        nativeAttackTargets.addAll(selected);
         MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
                 AreaEffectIds.tower(this, "base_splash"),
                 source,
@@ -1233,6 +1290,7 @@ public final class AdversaryFoxTower extends EntityBackedTower {
         }
         int focusTicks = globalInt("maceFocusTicks", AdversaryBalance.MACE_FOCUS_TICKS);
         if (maceTargetId == null) {
+            maceAllowsAugments = AugmentCombat.allowsTriggers();
             maceTargetId = target.getUUID();
             maceTicksUntilStrike = focusTicks;
             maceSuccessfulStrikes = 0;
@@ -1242,11 +1300,13 @@ public final class AdversaryFoxTower extends EntityBackedTower {
         }
         if (!maceTargetId.equals(target.getUUID())) {
             resetMace();
+            maceAllowsAugments = AugmentCombat.allowsTriggers();
             maceTargetId = target.getUUID();
             maceTicksUntilStrike = focusTicks;
             maceFocusDamageTaken = 0.0;
             AdversaryVfx.showMaceFocus(source, target, focusTicks, focusTicks);
         } else if (maceTicksUntilStrike < 0) {
+            maceAllowsAugments = AugmentCombat.allowsTriggers();
             // The ordinary zero-damage attack ray is the clock for every focus.
             maceTicksUntilStrike = focusTicks;
             maceFocusDamageTaken = 0.0;
@@ -1282,6 +1342,15 @@ public final class AdversaryFoxTower extends EntityBackedTower {
             return;
         }
 
+        if (maceAllowsAugments) {
+            strikeMace(source, target);
+        } else {
+            AugmentCombat.runWithoutTriggers(() -> strikeMace(source, target));
+        }
+    }
+
+    private void strikeMace(SemionTowerEntity source, SemionMonsterEntity target) {
+        nativeAttackTargets.clear();
         double[] multipliers = AdversaryBalance.maceStreakMultipliers();
         double multiplier = multipliers[Math.min(maceSuccessfulStrikes, multipliers.length - 1)];
         DamageResult result = damageSecondary(
@@ -1298,6 +1367,7 @@ public final class AdversaryFoxTower extends EntityBackedTower {
         );
         if (result.dealtDamage() > 0.0) {
             applyMaceSweep(source, target, form.damage() * multiplier);
+            finaleSecondaries(source, result.outgoingDamage());
         }
         if (result.dealtDamage() <= 0.0 || result.killed()) {
             resetMace();
@@ -1337,6 +1407,7 @@ public final class AdversaryFoxTower extends EntityBackedTower {
         if (selected.isEmpty()) {
             return;
         }
+        nativeAttackTargets.addAll(selected);
         MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
                 AreaEffectIds.tower(this, "mace_sweep"),
                 source,
@@ -1370,7 +1441,8 @@ public final class AdversaryFoxTower extends EntityBackedTower {
         int delayTicks = globalInt("sculkDelayTicks", AdversaryBalance.SCULK_DETONATION_DELAY_TICKS);
         pendingSculkBlasts.add(new PendingSculkBlast(
                 center,
-                delayTicks
+                delayTicks,
+                AugmentCombat.allowsTriggers()
         ));
         AdversaryVfx.showSculkWarning(
                 level,
@@ -1405,12 +1477,17 @@ public final class AdversaryFoxTower extends EntityBackedTower {
                 }
                 continue;
             }
-            detonateSculk(source, blast.center());
+            if (blast.allowsAugments()) {
+                detonateSculk(source, blast.center());
+            } else {
+                AugmentCombat.runWithoutTriggers(() -> detonateSculk(source, blast.center()));
+            }
             pendingSculkBlasts.remove(index);
         }
     }
 
     private void detonateSculk(SemionTowerEntity source, Vec3 center) {
+        nativeAttackTargets.clear();
         double radius = global("sculkRadius", AdversaryBalance.SCULK_DETONATION_RADIUS);
         int maxTargets = globalInt("sculkMaxTargets", AdversaryBalance.SCULK_MAX_TARGETS);
         if (source.level() instanceof ServerLevel level) {
@@ -1428,6 +1505,7 @@ public final class AdversaryFoxTower extends EntityBackedTower {
                     .limit(maxTargets)
                     .map(SemionMonsterEntity::getUUID)
                     .collect(java.util.stream.Collectors.toCollection(HashSet::new));
+            nativeAttackTargets.addAll(selected);
 
             MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
                     AreaEffectIds.tower(this, "sculk_blast"),
@@ -1452,6 +1530,9 @@ public final class AdversaryFoxTower extends EntityBackedTower {
                     },
                     DamageType.MAGIC
             );
+            if (!selected.isEmpty()) {
+                finaleSecondaries(source, resolveOutgoingDamage(source, null, specialAttackDamage(source, null, form.damage())));
+            }
         }
         // The core is dangerous even when the snapshot catches targets; "miss" explicitly
         // does not waive its normal recoil.
@@ -1533,6 +1614,7 @@ public final class AdversaryFoxTower extends EntityBackedTower {
         if (source == null || target == null || !source.isValidAttackTarget(target) || damage <= 0.0) {
             return DamageResult.NONE;
         }
+        nativeAttackTargets.add(target.getUUID());
         DamageResult result;
         if (alreadyResolvedOutgoing) {
             result = damageResolvedTargetResult(source, target, damage, damageType);
@@ -1555,8 +1637,17 @@ public final class AdversaryFoxTower extends EntityBackedTower {
     }
 
     private void recordRivalKill(Monster monster) {
-        if (!AdversaryProgressStates.recordFoxKill(ownerPlayer(), monster, currentLane)) {
+        String card = RIVAL_MATCH.getPath();
+        boolean rivalMatch = AugmentCombat.allowsTriggers() && augmentSnapshot().has(card);
+        int multiplier = rivalMatch ? (int) augmentSnapshot().parameter(card, "scoreMultiplier", 2) : 1;
+        if (!AdversaryProgressStates.recordFoxKill(ownerPlayer(), monster, currentLane, multiplier)) {
             return;
+        }
+        if (AugmentCombat.allowsTriggers()) {
+            absorbRival(monster);
+            if (augmentSnapshot().has(AdversaryAugments.FINALE)) {
+                finaleTicks = (int) augmentSnapshot().parameter(AdversaryAugments.FINALE, "durationTicks", 200);
+            }
         }
         double amount = rivalKillHealingAmount(
                 health(),
@@ -1564,18 +1655,54 @@ public final class AdversaryFoxTower extends EntityBackedTower {
                 rivalHealingThisWave,
                 AdversaryRivalTower.isEnhancedProxy(monster)
         );
-        if (amount <= 0.0) {
-            return;
-        }
         double before = health();
         SemionTowerEntity entity = towerEntity(currentLane);
-        if (entity != null) {
+        if (entity != null && amount > 0) {
             entity.healTarget(entity, amount);
-        } else {
+        } else if (amount > 0) {
             syncHealth(before + amount);
             recordHealingDone(health() - before);
         }
         rivalHealingThisWave += Math.max(0.0, health() - before);
+        if (rivalMatch && entity != null && health() > 0) {
+            entity.healTarget(entity, currentMaxHealth() * augmentSnapshot().parameter(card, "healRatio", .30));
+            entity.refreshTimedEffect(TimedEffectType.TOWER_DAMAGE_BONUS,
+                    RIVAL_MATCH,
+                    augmentSnapshot().parameter(card, "damageBonus", 1),
+                    (int) augmentSnapshot().parameter(card, "durationTicks", 120));
+        }
+    }
+
+    private double finaleMultiplier(String key, double fallback) {
+        return form.isFinal() && augmentSnapshot().has(AdversaryAugments.FINALE)
+                ? 1.0 + augmentSnapshot().parameter(AdversaryAugments.FINALE, key, fallback) : 1.0;
+    }
+
+    private void absorbRival(Monster rival) {
+        String card = AdversaryAugments.ADAPTATION;
+        if (!augmentSnapshot().has(card) || adaptationOpeningHealth <= 0.0) {
+            return;
+        }
+        absorbedHealth = AdversaryAugments.absorb(absorbedHealth, adaptationOpeningHealth,
+                augmentSnapshot().parameter(card, "healthCapRatio", 1.0), rival.maxHealth(),
+                augmentSnapshot().parameter(card, "healthRatio", .20));
+        absorbedDamage = AdversaryAugments.absorb(absorbedDamage, adaptationOpeningDamage,
+                augmentSnapshot().parameter(card, "damageCapRatio", 1.5), rival.attackDamage(),
+                augmentSnapshot().parameter(card, "damageRatio", .50));
+        refreshMaxHealthAfterTypeChange(currentLane);
+    }
+
+    private void finaleSecondaries(SemionTowerEntity source, double damage) {
+        if (finaleTicks <= 0 || !AugmentCombat.allowsTriggers() || damage <= 0.0) {
+            return;
+        }
+        int count = (int) augmentSnapshot().parameter(AdversaryAugments.FINALE, "extraTargets", 2);
+        double ratio = augmentSnapshot().parameter(AdversaryAugments.FINALE, "secondaryRatio", 1.0);
+        List<SemionMonsterEntity> targets = attackableMonsters(source, source.position(), source.attackRange(),
+                nativeAttackTargets).stream()
+                .sorted(Comparator.comparingDouble(source::distanceToSqr)).limit(count).toList();
+        AugmentCombat.runWithoutTriggers(() -> targets.forEach(target ->
+                damageSecondary(source, target, damage * ratio, primaryDamageType(), true, false)));
     }
 
     private double postEvolutionDamageBonus() {
@@ -1636,6 +1763,7 @@ public final class AdversaryFoxTower extends EntityBackedTower {
     }
 
     private void resetTransientCombatState() {
+        nativeAttackTargets.clear();
         normalEntityHealthSyncPending = false;
         unscaledEntityDamagePending = false;
         unscaledEntityDamageLogicalHealth = 0.0;
@@ -1680,9 +1808,9 @@ public final class AdversaryFoxTower extends EntityBackedTower {
     private record LineCandidate(SemionMonsterEntity monster, double projection) {
     }
 
-    private record PendingSculkBlast(Vec3 center, int remainingTicks) {
+    private record PendingSculkBlast(Vec3 center, int remainingTicks, boolean allowsAugments) {
         PendingSculkBlast tick() {
-            return new PendingSculkBlast(center, Math.max(0, remainingTicks - 1));
+            return new PendingSculkBlast(center, Math.max(0, remainingTicks - 1), allowsAugments);
         }
     }
 }

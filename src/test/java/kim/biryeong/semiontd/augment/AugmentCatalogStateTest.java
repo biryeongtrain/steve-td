@@ -21,15 +21,15 @@ class AugmentCatalogStateTest {
     private static final Predicate<AugmentDefinition> ALL = card -> true;
 
     @Test
-    void approvedCatalogHas35NormalNineReserveAndNineTowerCards() {
-        assertEquals(44, AugmentCatalog.definitions().size());
-        assertEquals(35, AugmentCatalog.normalDefinitions().size());
+    void approvedCatalogHas164NormalNineReserveAndNineTowerCards() {
+        assertEquals(173, AugmentCatalog.definitions().size());
+        assertEquals(164, AugmentCatalog.normalDefinitions().size());
         assertEquals(9, AugmentCatalog.reserveDefinitions().size());
         assertEquals(9, AugmentCatalog.normalDefinitions().stream().filter(AugmentDefinition::towerAugment).count());
-        assertEquals(44, AugmentCatalog.definitions().stream().map(AugmentDefinition::id).distinct().count());
+        assertEquals(173, AugmentCatalog.definitions().stream().map(AugmentDefinition::id).distinct().count());
         assertTrue(AugmentCatalog.find("honorable_retirement").isEmpty());
         assertTrue(AugmentCatalog.find("overcapacity_permit").isEmpty());
-        assertEquals(List.of(10L, 15L, 10L), List.of(SILVER, GOLD, PRISMATIC).stream()
+        assertEquals(List.of(43L, 79L, 42L), List.of(SILVER, GOLD, PRISMATIC).stream()
                 .map(rarity -> AugmentCatalog.normalDefinitions().stream().filter(card -> card.rarity() == rarity).count()).toList());
         for (AugmentDefinition card : AugmentCatalog.definitions()) {
             for (String conflict : card.conflicts()) {
@@ -39,15 +39,128 @@ class AugmentCatalogStateTest {
     }
 
     @Test
-    void defaultsAreDisabledAndHaveCorrectedReserveIncome() {
+    void allJobCardsKeepStableOwnershipAndMergeValidatedDefaults() {
+        var jobs = AugmentCatalog.definitions().stream().filter(card -> card.requiredJobId() != null).toList();
+        assertEquals(124, jobs.size());
+        assertEquals(31, jobs.stream().map(AugmentDefinition::requiredJobId).distinct().count());
+        for (String job : jobs.stream().map(AugmentDefinition::requiredJobId).distinct().toList()) {
+            List<AugmentDefinition> owned = jobs.stream().filter(card -> job.equals(card.requiredJobId())).toList();
+            String key = switch (job) {
+                case "semion-td:atlantis" -> "atlantis_towers";
+                case "semion-td:developer" -> "developer_towers";
+                case "semion-td:gamble_towers" -> "gamble";
+                default -> job.substring("semion-td:".length());
+            };
+            String prefix = "semiontd:job_" + key + "_";
+            assertEquals(Set.of(prefix + "s", prefix + "g1", prefix + "g2", prefix + "p"),
+                    owned.stream().map(AugmentDefinition::id).collect(java.util.stream.Collectors.toSet()), job);
+            assertEquals(List.of(1L, 2L, 1L), List.of(SILVER, GOLD, PRISMATIC).stream()
+                    .map(rarity -> owned.stream().filter(card -> card.rarity() == rarity).count()).toList(), job);
+        }
+        for (var card : jobs) {
+            assertEquals(Set.of(5, 15, 25), card.milestoneRounds());
+            assertFalse(card.reserve());
+        }
+        AugmentConfig config = AugmentConfig.fromJson(JsonParser.parseString("{\"parameters\":{\"job_illager_towers_s\":{\"markDamageBonus\":0.35}}}").getAsJsonObject());
+        assertEquals(.35, config.parameter("job_illager_towers_s", "markDamageBonus", -1));
+        assertEquals(80, config.parameter("job_illager_towers_s", "markDurationTicks", -1));
+        assertEquals(2, config.parameter("job_adversary_towers_g1", "scoreMultiplier", -1));
+        assertEquals(.8, config.parameter("job_engineer_towers_g2", "repeatDamageRatio", -1));
+        assertNotEquals(AugmentConfig.defaults().version(), config.version());
+        for (String parameters : List.of("\"job_illager_towers_s\":{\"markDurationTicks\":0}",
+                "\"job_adversary_towers_g1\":{\"scoreMultiplier\":1.5}",
+                "\"job_adversary_towers_g1\":{\"healRatio\":1.1}",
+                "\"job_engineer_towers_g2\":{\"repeatDamageRatio\":1.1}")) {
+            assertThrows(IllegalArgumentException.class, () -> AugmentConfig.fromJson(
+                    JsonParser.parseString("{\"parameters\":{" + parameters + "}}").getAsJsonObject()));
+        }
+    }
+
+    @Test
+    void fixedStancesKeepLegacySettingsAndExcludeTheOtherStanceAfterSelection() {
+        AugmentConfig config = new AugmentConfig(true, true, null,
+                Map.of("engagement_plan", Map.of("quickDamageBonus", .41)), Set.of("biased_armor"));
+        for (String id : List.of("engagement_plan_quick", "engagement_plan_long")) {
+            assertEquals(.41, config.parameter(id, "quickDamageBonus", -1));
+            assertEquals(config.parametersFor("engagement_plan"), config.parametersFor(id));
+        }
+        assertFalse(config.isEnabled("biased_armor_physical"));
+        assertFalse(config.isEnabled("biased_armor_magic"));
+        AugmentConfig oneDisabled = new AugmentConfig(true, true, null, Map.of(), Set.of("engagement_plan_quick"));
+        assertFalse(oneDisabled.isEnabled("engagement_plan_quick"));
+        assertTrue(oneDisabled.isEnabled("engagement_plan_long"));
+        assertTrue(AugmentCatalog.find("engagement_plan").isPresent());
+        assertTrue(AugmentCatalog.normalDefinitions().stream().noneMatch(card ->
+                card.id().equals("semiontd:engagement_plan") || card.id().equals("semiontd:biased_armor")
+                        || card.id().matches("semiontd:tactical_designation_[123]")));
+        PlayerAugmentState state = state(42, SILVER);
+        var offer = state.offer(5, 5, 600, card -> card.id().equals("semiontd:engagement_plan_quick"));
+        int slot = offer.cardIds().indexOf("semiontd:engagement_plan_quick");
+        assertTrue(slot >= 0);
+        choose(state, offer, slot, AugmentChoice.none(), 25);
+        assertTrue(state.hasSelected("engagement_plan"));
+        assertEquals("QUICK", state.snapshot().choice("engagement_plan").mode());
+        assertFalse(state.snapshot().has("engagement_plan_long"));
+        assertTrue(state.offer(15, 30, 600, ALL).cardIds().stream()
+                .noneMatch(id -> AugmentCatalog.effectId(id).equals("semiontd:engagement_plan")));
+        assertEquals(config, AugmentConfig.fromJson(config.toJson()));
+    }
+
+    @Test
+    void defaultsAreDisabledAndHaveApprovedReserveRewards() {
         AugmentConfig config = AugmentConfig.defaults();
         assertFalse(config.enabled());
         assertFalse(config.publicPoolEnabled());
-        assertEquals(10, config.parameter("reserve_income_silver", "amount", -1));
-        assertEquals(20, config.parameter("reserve_income_gold", "amount", -1));
-        assertEquals(40, config.parameter("reserve_income_prismatic", "amount", -1));
-        assertEquals(240, config.parameter("reserve_diamonds_prismatic", "amount", -1));
-        assertEquals(3, config.parameter("reserve_production_prismatic", "amount", -1));
+        String[] rarities = {"silver", "gold", "prismatic"};
+        int[] diamonds = {150, 300, 600};
+        int[] income = {15, 30, 60};
+        int[] production = {2, 3, 6};
+        for (int tier = 0; tier < rarities.length; tier++) {
+            String suffix = rarities[tier];
+            assertEquals(diamonds[tier], config.parameter("reserve_diamonds_" + suffix, "amount", -1));
+            assertEquals(income[tier], config.parameter("reserve_income_" + suffix, "amount", -1));
+            assertEquals(production[tier], config.parameter("reserve_production_" + suffix, "amount", -1));
+            assertEquals("즉시 다이아 +" + diamonds[tier] + ".",
+                    AugmentCatalog.find("reserve_diamonds_" + suffix).orElseThrow().description());
+            assertEquals("정기 인컴 +" + income[tier] + ".",
+                    AugmentCatalog.find("reserve_income_" + suffix).orElseThrow().description());
+            assertEquals("기본 에메랄드 초당 생산 +" + production[tier] + ".",
+                    AugmentCatalog.find("reserve_production_" + suffix).orElseThrow().description());
+        }
+    }
+
+    @Test
+    void betaBuffsMatchBundledDefaultsAndPreserveExplicitOlderSettings() {
+        AugmentConfig defaults = AugmentConfig.defaults();
+        assertEquals(defaults.parameters(), new AugmentConfig(false, false, null, Map.of(), Set.of()).parameters());
+        assertEquals(.35, defaults.parameter("tactical_designation_1", "damageBonus", -1));
+        assertEquals(.65, defaults.parameter("tactical_designation_2", "damageBonus", -1));
+        assertEquals(1.0, defaults.parameter("tactical_designation_3", "damageBonus", -1));
+        assertEquals(.15, defaults.parameter("battlefield_mastery", "bonusPerStack", -1));
+        assertEquals(450, defaults.parameter("forbidden_blueprint", "ticketValue", -1));
+        assertEquals(200, defaults.parameter("ordnance_factory_call", "shellDamage", -1));
+        assertEquals(.65, defaults.parameter("wartime_economy", "payoutMultiplier", -1));
+        assertEquals(300, defaults.parameter("emergency_loan", "advanceCap", -1));
+        AugmentConfig legacy = AugmentConfig.fromJson(JsonParser.parseString("""
+                {"enabled":true,"publicPoolEnabled":true,"parameters":{
+                  "tactical_designation_1":{"damageBonus":0.15,"damageReduction":0.12},
+                  "reserve_diamonds_silver":{"amount":60},
+                  "reserve_income_gold":{"amount":20},
+                  "reserve_production_prismatic":{"amount":3},
+                  "wartime_economy":{"damageBonus":0.35,"maxHealthBonus":0.20,"payoutMultiplier":0.65}}}
+                """).getAsJsonObject());
+        assertEquals(.15, legacy.parameter("tactical_designation_1", "damageBonus", -1));
+        assertEquals(.12, legacy.parameter("tactical_designation_1", "damageReduction", -1));
+        assertEquals(.35, legacy.parameter("wartime_economy", "damageBonus", -1));
+        assertEquals(60, legacy.parameter("reserve_diamonds_silver", "amount", -1));
+        assertEquals(20, legacy.parameter("reserve_income_gold", "amount", -1));
+        assertEquals(3, legacy.parameter("reserve_production_prismatic", "amount", -1));
+        assertEquals(legacy, AugmentConfig.fromJson(legacy.toJson()));
+        var changed = legacy.toJson();
+        changed.getAsJsonObject("parameters").getAsJsonObject("semiontd:tactical_designation_1")
+                .addProperty("damageBonus", .35);
+        assertNotEquals(legacy.version(), AugmentConfig.fromJson(changed).version());
+        assertEquals(.15, legacy.parameter("tactical_designation_1", "damageBonus", -1));
     }
 
     @Test
@@ -58,12 +171,19 @@ class AugmentCatalogStateTest {
         card.put("damageBonus", .99);
         parameters.clear();
         assertEquals(.27, config.parameter("tactical_designation_1", "damageBonus", 0));
-        assertEquals(.12, config.parameter("tactical_designation_1", "damageReduction", 0));
+        assertEquals(.20, config.parameter("tactical_designation_1", "damageReduction", 0));
         assertThrows(UnsupportedOperationException.class, () -> config.parameters().clear());
         assertThrows(UnsupportedOperationException.class, () -> config.parameters().get("semiontd:tactical_designation_1").clear());
         assertEquals(config, AugmentConfig.fromJson(config.toJson()));
         assertEquals(config.version(), AugmentConfig.fromJson(config.toJson()).version());
         assertNotEquals(config.version(), AugmentConfig.defaults().version());
+        AugmentConfig legacy = AugmentConfig.fromJson(JsonParser.parseString(
+                "{\"parameters\":{\"folding_barricade_blueprint\":{\"healthPerTier\":0.8}}}").getAsJsonObject());
+        assertEquals(.8, legacy.parameter("folding_barricade_blueprint", "healthPerTier", 0));
+        assertEquals(.5, legacy.parameter("folding_barricade_blueprint", "powerPerTier", 0));
+        assertEquals(.15, legacy.parameter("folding_barricade_blueprint", "areaPerTier", 0));
+        assertEquals(15, legacy.parameter("folding_barricade_blueprint", "damagePerHitCap", 0));
+        assertEquals(legacy, AugmentConfig.fromJson(legacy.toJson()));
     }
 
     @Test
@@ -77,6 +197,7 @@ class AugmentCatalogStateTest {
                 "{\"parameters\":{\"reserve_income_gold\":{\"amount\":1.5}}}",
                 "{\"parameters\":{\"forecast_offensive\":{\"echoRatio\":0}}}",
                 "{\"parameters\":{\"overheat_core\":{\"maxStacks\":0}}}",
+                "{\"parameters\":{\"folding_barricade_blueprint\":{\"damagePerHitCap\":0}}}",
                 "{\"disabledIds\":[\"reserve_diamonds_silver\"]}")) {
             assertThrows(RuntimeException.class, () -> AugmentConfig.fromJson(JsonParser.parseString(json).getAsJsonObject()), json);
         }
@@ -256,20 +377,42 @@ class AugmentCatalogStateTest {
     }
 
     @Test
-    void deadlineIsExclusiveAndNeverAutoSelects() {
+    void deadlineRejectsManualInputThenRandomSettlementCommitsExactlyOnce() {
         PlayerAugmentState state = state(1, SILVER);
-        state.offer(5, 5, 600, ALL);
+        state.offer(5, 5, 1200, ALL);
         assertEquals(INVALID_REQUEST, state.draft(5, 0, 1, 0, AugmentChoice.none(), UUID.randomUUID(), 19, ALL).status());
         assertTrue(state.draft(5, 0, 1, 0, AugmentChoice.none(), UUID.randomUUID(), 20, ALL).successful());
         long revision = state.currentOffer().orElseThrow().draftRevision();
-        assertEquals(EXPIRED, state.confirm(5, 1, revision, UUID.randomUUID(), 600, ALL,
+        assertEquals(EXPIRED, state.confirm(5, 1, revision, UUID.randomUUID(), 1200, ALL,
                 (card, choice) -> fail("Expired choice must not grant.")).status());
-        assertEquals(PlayerAugmentState.Outcome.SKIPPED, state.selections().getFirst().outcome());
-        assertEquals(PlayerAugmentState.SkipReason.TIMEOUT, state.selections().getFirst().skipReason());
-        assertNull(state.selections().getFirst().augmentId());
-        state.expire(900);
+        assertTrue(state.selections().isEmpty(), "Late input must leave resolution to the server timeout path");
+        AtomicInteger grants = new AtomicInteger();
+        assertTrue(state.expire(1200, ALL, card -> AugmentChoice.none(), (card, choice) -> { grants.incrementAndGet(); return true; }));
+        assertEquals(PlayerAugmentState.Outcome.SELECTED, state.selections().getFirst().outcome());
+        assertNull(state.selections().getFirst().skipReason());
+        assertFalse(state.expire(1500, ALL, card -> AugmentChoice.none(), (card, choice) -> { grants.incrementAndGet(); return true; }));
+        assertEquals(1, grants.get());
         assertEquals(1, state.selections().size());
-        assertEquals("선택한 증강 0/3", AugmentService.selectionCountLabel(state));
+        assertEquals("선택한 증강 1/3", AugmentService.selectionCountLabel(state));
+    }
+
+    @Test
+    void timeoutFallsBackToSameRarityDiamondsWhenEveryOfferedChoiceFails() {
+        for (var rarity : AugmentRarity.values()) {
+            PlayerAugmentState state = state(42, rarity);
+            state.offer(5, 5, 1200, ALL);
+            AtomicInteger grants = new AtomicInteger();
+            assertFalse(state.expire(1199, ALL, card -> AugmentChoice.none(), (card, choice) -> fail("Too early")));
+            assertTrue(state.expire(1200, ALL, card -> AugmentChoice.none(), (card, choice) -> {
+                if (!card.familyKey().equals("RESERVE_DIAMONDS")) {return false;}
+                grants.incrementAndGet();
+                return true;
+            }));
+            var selection = state.selections().getFirst();
+            assertEquals(rarity, selection.rarity());
+            assertEquals("semiontd:reserve_diamonds_" + rarity.name().toLowerCase(java.util.Locale.ROOT), selection.augmentId());
+            assertEquals(1, grants.get());
+        }
     }
 
     @Test
@@ -300,7 +443,7 @@ class AugmentCatalogStateTest {
     }
 
     @Test
-    void overheatStartsEachNewPrepareUnusedAndCanConfigureOnlyOnce() {
+    void overheatResetsNextRoundButAllowsRepeatedPrepareTargetingAndDeduplicatesConfirm() {
         PlayerAugmentState state = state(1, GOLD);
         state.beginPrepare(5);
         state.forceOffer(5, 5, 600, List.of("overheat_core", "reserve_diamonds_gold", "reserve_income_gold"));
@@ -309,7 +452,7 @@ class AugmentCatalogStateTest {
         assertEquals(choice, state.snapshot().choice("overheat_core"));
         state.beginPrepare(5);
         assertEquals(choice, state.snapshot().choice("overheat_core"));
-        assertEquals(CONFIGURED_THIS_ROUND, state.draftConfiguration(5, 5, state.configurationRevision(), choice, UUID.randomUUID(), ALL).status());
+        assertTrue(state.draftConfiguration(5, 5, state.configurationRevision(), choice, UUID.randomUUID(), ALL).successful());
         state.beginPrepare(6);
         assertEquals(AugmentChoice.none(), state.snapshot().choice("overheat_core"));
         assertTrue(state.hasSelected("overheat_core"));
@@ -322,7 +465,7 @@ class AugmentCatalogStateTest {
         assertTrue(state.confirmConfiguration(6, revision, request, ALL, commit).successful());
         assertEquals(1, effects.get());
         assertEquals(choice, state.snapshot().choice("overheat_core"));
-        assertEquals(CONFIGURED_THIS_ROUND, state.draftConfiguration(5, 6, state.configurationRevision(), choice, UUID.randomUUID(), ALL).status());
+        assertTrue(state.draftConfiguration(5, 6, state.configurationRevision(), choice, UUID.randomUUID(), ALL).successful());
         state.beginPrepare(7);
         assertEquals(AugmentChoice.none(), state.snapshot().choice("overheat_core"));
     }
@@ -337,6 +480,33 @@ class AugmentCatalogStateTest {
         assertEquals(1, state.snapshot().selections().size());
         assertThrows(IllegalStateException.class, () -> state.initialize(2, AugmentConfig.defaults(), List.of(GOLD, GOLD, GOLD)));
         assertSame(AugmentSnapshot.none(), AugmentSnapshot.none());
+    }
+
+    @Test
+    void targetToolCyclesAcquisitionOrderAndPrunesOnlyMissingLogicalTowers() {
+        PlayerAugmentState state = state(1, GOLD);
+        state.beginPrepare(5);
+        state.forceOffer(5, 5, 600, List.of("overheat_core", "reserve_diamonds_gold", "reserve_income_gold"));
+        UUID first = UUID.randomUUID();
+        choose(state, state.currentOffer().orElseThrow(), 0, new AugmentChoice(first, null, ""), 20);
+        assertEquals(5, state.targetToolSelection().orElseThrow().milestoneRound());
+        state.beginPrepare(15);
+        state.forceOffer(15, 15, 1800, List.of("frontline_specialization", "reserve_diamonds_gold", "reserve_income_gold"));
+        UUID second = UUID.randomUUID();
+        choose(state, state.currentOffer().orElseThrow(), 0, new AugmentChoice(first, second, ""), 620);
+        assertEquals(15, state.targetToolSelection().orElseThrow().milestoneRound());
+        state.cycleTargetTool();
+        assertEquals(5, state.targetToolSelection().orElseThrow().milestoneRound());
+        state.cycleTargetTool();
+        assertEquals(15, state.targetToolSelection().orElseThrow().milestoneRound());
+        assertFalse(state.clearMissingTargets(Set.of(first, second)));
+        assertTrue(state.clearMissingTargets(Set.of(second)));
+        assertNull(state.snapshot().choice("frontline_specialization").primaryTargetId());
+        assertEquals(second, state.snapshot().choice("frontline_specialization").secondaryTargetId());
+        assertEquals(15, state.targetToolSelection().orElseThrow().milestoneRound());
+        assertTrue(state.clearMissingTargets(Set.of()));
+        assertEquals(AugmentChoice.none(), state.snapshot().choice("frontline_specialization"));
+        assertEquals(2, state.targetedSelections().size());
     }
 
     @Test
@@ -387,7 +557,7 @@ class AugmentCatalogStateTest {
         var draft = state.currentOffer().orElseThrow();
         assertEquals(UNCHANGED, state.draft(5, 0, draft.revision(), draft.draftRevision(),
                 AugmentChoice.none(), UUID.randomUUID(), 20, ALL).status());
-        state.expire(600);
+        state.expire(600, ALL, card -> AugmentChoice.none(), (card, choice) -> true);
         assertEquals(1, state.offerEvents().size());
     }
 

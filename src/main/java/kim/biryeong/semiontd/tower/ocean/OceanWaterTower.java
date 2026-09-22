@@ -1,7 +1,10 @@
 package kim.biryeong.semiontd.tower.ocean;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -135,11 +138,12 @@ public final class OceanWaterTower extends EntityBackedTower {
     public List<String> runtimeDetailLines() {
         ArrayList<String> lines = new ArrayList<>();
         lines.add("공급 반경 " + oneDecimal(value("supplyRadius")) + "블록");
-        lines.add("웨이브 시작 물 +" + oneDecimal(value("waveStartWater")));
-        lines.add("초당 물 +" + oneDecimal(value("waterPerSupply") * 20.0 / Math.max(1, ticks("supplyIntervalTicks"))));
+        lines.add("웨이브 시작 물 +" + oneDecimal(value("waveStartWater") * supplyMultiplier()));
+        lines.add("초당 물 +" + oneDecimal(value("waterPerSupply") * supplyMultiplier()
+                * 20.0 / Math.max(1, ticks("supplyIntervalTicks"))));
         lines.add("중첩 체감 계수 " + percent(global("waterSupplyStackDecay"))
                 + " (같은 대상 연결 수 증가 시 타워당 공급 효율 감소)");
-        lines.add("물 " + oneDecimal(global("waterSoftCap")) + "부터 공급 감소, "
+        lines.add("물 " + oneDecimal(global("waterSoftCap") * supplyMultiplier()) + "부터 공급 감소, "
                 + oneDecimal(global("waterSupplyStopThreshold")) + " 이상 공급 중단");
         return lines;
     }
@@ -169,11 +173,15 @@ public final class OceanWaterTower extends EntityBackedTower {
                 .filter(target -> target.getData(SUPPLY_TARGET_ID).filter(supplyTargetIds::contains).isPresent())
                 .toList();
         ArrayList<OceanTower> suppliedTargets = new ArrayList<>();
-        for (OceanTower target : targets) {
+        Map<OceanTower, Double> allocations = supplyAllocations(targets, amount * supplyMultiplier(),
+                augmentSnapshot().has("job_ocean_s"));
+        for (Map.Entry<OceanTower, Double> allocation : allocations.entrySet()) {
+            OceanTower target = allocation.getKey();
             double remainingCapacity = Math.max(0.0, global("waterSupplyStopThreshold") - target.water());
             double supplied = Math.min(
                     remainingCapacity,
-                    amount * supplyStackMultiplier(lane, target) * supplyEfficiency(target.water())
+                    allocation.getValue() * supplyStackMultiplier(lane, target)
+                            * supplyEfficiency(target.water(), target.waterSoftCap())
             );
             if (supplied > EPSILON) {
                 target.addWater(supplied);
@@ -181,6 +189,27 @@ public final class OceanWaterTower extends EntityBackedTower {
             }
         }
         return List.copyOf(suppliedTargets);
+    }
+
+    static Map<OceanTower, Double> supplyAllocations(List<OceanTower> targets, double amount, boolean recycle) {
+        Map<OceanTower, Double> allocations = new LinkedHashMap<>();
+        for (OceanTower target : targets) {
+            OceanTower recipient = target;
+            if (recycle && target.water() + EPSILON >= target.waterSoftCap()) {
+                recipient = targets.stream().filter(candidate -> candidate.water() + EPSILON < candidate.waterSoftCap())
+                        .min(Comparator.comparingDouble(OceanTower::water).thenComparing(Tower::logicalId))
+                        .orElse(null);
+            }
+            if (recipient != null) {
+                allocations.merge(recipient, amount, Double::sum);
+            }
+        }
+        return allocations;
+    }
+
+    double supplyMultiplier() {
+        return augmentSnapshot().has("job_ocean_g1")
+                ? augmentSnapshot().parameter("job_ocean_g1", "supplyMultiplier", 1.5) : 1.0;
     }
 
     private List<OceanTower> nearbyTargets(PlayerLane lane) {
@@ -229,9 +258,8 @@ public final class OceanWaterTower extends EntityBackedTower {
         return (1.0 - Math.pow(clampedDecay, sources)) / (sources * (1.0 - clampedDecay));
     }
 
-    private double supplyEfficiency(double water) {
-        double softCap = Math.max(0.0, global("waterSoftCap"));
-        double stopThreshold = Math.max(softCap, global("waterSupplyStopThreshold"));
+    private double supplyEfficiency(double water, double softCap) {
+        double stopThreshold = global("waterSupplyStopThreshold");
         double efficiency = (stopThreshold - water) / Math.max(EPSILON, stopThreshold - softCap);
         return Math.max(0.0, Math.min(1.0, efficiency));
     }

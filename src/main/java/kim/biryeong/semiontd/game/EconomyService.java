@@ -136,7 +136,7 @@ public final class EconomyService {
         if (sender == null || receiver == null || boundedAmount <= 0) {
             return false;
         }
-        if (isPirate(sender) || isPirate(receiver)) {
+        if (!canTransferDiamond(sender) || !canTransferDiamond(receiver)) {
             return false;
         }
         if (!sender.economy().spendDiamond(boundedAmount)) {
@@ -211,7 +211,7 @@ public final class EconomyService {
         return team != null && team.active() && !team.eliminated();
     }
 
-    private static boolean isPirate(SemionPlayer player) {
-        return player != null && player.job().filter(PirateTowerJob.class::isInstance).isPresent();
+    public static boolean canTransferDiamond(SemionPlayer player) {
+        return player != null && player.job().filter(PirateTowerJob.class::isInstance).isEmpty();
     }
 }

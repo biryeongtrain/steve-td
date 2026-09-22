@@ -250,6 +250,7 @@ public final class PlayerLane {
         for (Tower tower : towers) {
             tower.syncAugments(augmentSnapshot, this);
         }
+        kim.biryeong.semiontd.tower.pet.PetBondService.refresh(this);
     }
 
     public TraitLoadout traitLoadout() {
@@ -319,6 +320,12 @@ public final class PlayerLane {
     }
 
     public void resetForRound() {
+        kim.biryeong.semiontd.tower.legion.LegionAugments.clear(this);
+        kim.biryeong.semiontd.tower.undead.UndeadAugments.resetRound(this);
+        kim.biryeong.semiontd.tower.villager.VillagerAdvAugments.resetWave(this);
+        kim.biryeong.semiontd.tower.frost.FrostAugments.endWave(this);
+        kim.biryeong.semiontd.tower.pirate.PirateAugments.endWave(this);
+        for (Tower copy : towers.stream().filter(Tower::isTemporaryCopy).toList()) {removeTower(copy);}
         FrostFullOperationService.endWave(this);
         // markWaveStarted 의 짝: 여기서 전투를 풀지 않으면 준비 단계까지 스킬 핫바가 유지됩니다.
         DemonLordService.endRound(ownerPlayer);
@@ -383,8 +390,8 @@ public final class PlayerLane {
         }
         List<WaveMonsterEntry> expanded = new ArrayList<>();
         List<WaveMonsterEntry> healers = entries.stream().filter(entry -> entry.healing() != null && entry.count() > 0).toList();
-        if (healers.size() > 1 || healers.stream().mapToInt(WaveMonsterEntry::count).sum() > 1) {
-            throw new IllegalArgumentException("Only one natural wave healer is supported.");
+        if (healers.size() > 1 || healers.stream().mapToInt(WaveMonsterEntry::count).sum() > 5) {
+            throw new IllegalArgumentException("A natural wave supports one healer type with at most five units.");
         }
         entries = entries.stream().filter(entry -> entry.healing() == null).toList();
         if (spawnMode != WaveSpawnMode.ROUND_ROBIN) {
@@ -404,7 +411,13 @@ public final class PlayerLane {
             }
         }
         if (!healers.isEmpty()) {
-            expanded.add((int) Math.floor(expanded.size() * 0.55), healers.getFirst());
+            WaveMonsterEntry healer = healers.getFirst();
+            int combatCount = expanded.size();
+            int intervals = Math.max(1, healer.count() - 1);
+            for (int i = 0; i < healer.count(); i++) {
+                int combatIndex = (int) ((long) combatCount * (55L * intervals + 30L * i) / (100L * intervals));
+                expanded.add(combatIndex + i, healer);
+            }
         }
         if (rewardBudget != null) {
             if (rewardBudget < 0) {throw new IllegalArgumentException("Wave reward budget cannot be negative.");}
@@ -485,6 +498,12 @@ public final class PlayerLane {
             return false;
         }
         towerMembership.remove(tower);
+        kim.biryeong.semiontd.tower.legion.LegionAugments.onRemoved(tower, this);
+        kim.biryeong.semiontd.tower.undead.UndeadAugments.onRemoved(this, tower);
+        for (Tower copy : towers.stream().filter(Tower::isTemporaryCopy)
+                .filter(candidate -> tower.logicalId().equals(candidate.temporaryCopySourceId())).toList()) {
+            removeTower(copy);
+        }
         AugmentCombat.onTowerUnavailable(this, tower);
         AugmentCombat.onTowerRemoved(this, tower);
         if (tower.roundMetricsTracker() != null) {
@@ -527,7 +546,11 @@ public final class PlayerLane {
         trackedRound = Math.max(1, currentRound);
         trackedRoundTick = 0;
         roundTowerTrackers.clear();
-        for (Tower tower : towers) {
+        kim.biryeong.semiontd.tower.legion.LegionAugments.onWaveStarted(this);
+        kim.biryeong.semiontd.tower.villager.VillagerAdvAugments.startWave(this);
+        IllagerRaidStates.onWaveStarted(this);
+        kim.biryeong.semiontd.tower.frost.FrostAugments.beginWave(this);
+        for (Tower tower : List.copyOf(towers)) {
             tower.markWaveStarted(currentRound);
             roundTowerTrackers.add(tower.roundMetricsTracker());
             tower.onWaveStarted(this, currentRound);
@@ -537,6 +560,10 @@ public final class PlayerLane {
         applyOpeningAttackSpeed();
         ResonanceService.captureWaveStart(this);
         AugmentCombat.captureWaveStartHealth(this);
+        kim.biryeong.semiontd.tower.adversary.AdversaryAugments.captureWaveStart(this);
+        kim.biryeong.semiontd.tower.futureagency.FutureAgencyAgentTower.captureWaveStart(this);
+        kim.biryeong.semiontd.tower.pirate.PirateAugments.beginWave(this);
+        kim.biryeong.semiontd.tower.army.ArmyStates.spawnReserves(this, currentRound);
         // 마왕은 여기서 전투 상태가 됩니다. 라운드 시작(준비 단계)에 걸면 상점을 열 수 없는
         // 채로 준비 시간을 보내게 되고, 스스로 물러난 뒤 웨이브가 시작돼도 복귀하지 못합니다.
         DemonLordService.beginWave(ownerPlayer);
@@ -573,6 +600,8 @@ public final class PlayerLane {
         SuccubusDreams.tick(this);
         tickTowers();
         FrostFullOperationService.tick(this);
+        kim.biryeong.semiontd.tower.frost.FrostAugments.tick(this);
+        kim.biryeong.semiontd.tower.pirate.PirateAugments.tick(this);
         PlantSoilEnvironment.tick(this);
         DemonLordService.tick(this, players);
 
@@ -581,11 +610,13 @@ public final class PlayerLane {
             Monster monster = iterator.next();
             syncMonsterEntityState(monster, players, monsterScalingConfig, roundElapsedTicks);
             if (monster.state() == MonsterState.DEAD) {
-                if (economyService != null) {
-                    economyService.awardMonsterKillReward(monster, players);
-                }
-                IllagerRaidStates.onMonsterKilled(players, monster);
-                notifyNearbyMonsterDeath(monster, monsterDeathPosition(monster));
+                AugmentCombat.withKillOrigin(monster, () -> {
+                    if (economyService != null) {
+                        economyService.awardMonsterKillReward(monster, players);
+                    }
+                    IllagerRaidStates.onMonsterKilled(players, monster);
+                    notifyNearbyMonsterDeath(monster, monsterDeathPosition(monster));
+                });
                 discardMinecraftEntity(monster);
                 monster.markRemoved();
                 iterator.remove();
@@ -613,11 +644,22 @@ public final class PlayerLane {
                 tower.tick(this);
             }
         }
+        kim.biryeong.semiontd.tower.legion.LegionAugments.tick(this);
+        kim.biryeong.semiontd.tower.undead.UndeadAugments.tick(this);
+        kim.biryeong.semiontd.tower.villager.VillagerAdvAugments.tick(this);
+        ResonanceService.tickAugments(this);
+        IllagerRaidStates.tick(this);
         syncTowerStates();
+        kim.biryeong.semiontd.tower.insect.InsectAugments.flush(this);
     }
 
     public void clearTowers() {
-        for (Tower tower : towers) {
+        kim.biryeong.semiontd.tower.legion.LegionAugments.clear(this);
+        kim.biryeong.semiontd.tower.undead.UndeadAugments.resetRound(this);
+        kim.biryeong.semiontd.tower.frost.FrostAugments.endWave(this);
+        kim.biryeong.semiontd.tower.pirate.PirateAugments.endWave(this);
+        kim.biryeong.semiontd.tower.insect.InsectAugments.clear(ownerPlayer);
+        for (Tower tower : List.copyOf(towers)) {
             AugmentCombat.onTowerRemoved(this, tower);
             if (tower.roundMetricsTracker() != null) {
                 tower.roundMetricsTracker().markRemoved();
@@ -962,11 +1004,16 @@ public final class PlayerLane {
                 if (tower.notifyDeath(this)) {
                     notifyNearbyTowerDeath(tower);
                 }
+                if (kim.biryeong.semiontd.tower.undead.UndeadAugments.hasPendingRevival(tower)
+                        || tower instanceof kim.biryeong.semiontd.tower.nether.NetherTower nether && nether.hasPendingRevival()) {
+                    allTowersDestroyed = false;
+                }
             } else {
                 allTowersDestroyed = false;
             }
         }
-        if (!laneDefenseBroken && allTowersDestroyed) {
+        if (!laneDefenseBroken && allTowersDestroyed
+                && !kim.biryeong.semiontd.tower.insect.InsectAugments.hasPendingDefender(this)) {
             laneDefenseBroken = true;
         }
         if (laneDefenseBroken) {
@@ -976,6 +1023,7 @@ public final class PlayerLane {
 
     private void notifyNearbyMonsterDeath(Monster monster, Vec3 deathPosition) {
         for (PlayerLane recipientLane : notificationLanes()) {
+            kim.biryeong.semiontd.tower.frost.FrostAugments.onMonsterDeath(recipientLane, monster, deathPosition);
             for (Tower tower : List.copyOf(recipientLane.towers)) {
                 if (recipientLane.towerMembership.contains(tower)) {
                     tower.onNearbyMonsterDeath(recipientLane, monster, deathPosition);

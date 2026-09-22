@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.UUID;
+import kim.biryeong.semiontd.augment.*;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
@@ -201,6 +202,22 @@ class ThunderPowerTest {
 
     private static ThunderTower tower(kim.biryeong.semiontd.tower.TowerType type, UUID owner, int x) {
         return new ThunderTower(type, owner, TeamId.RED, 1, new GridPosition(x, 64, 1));
+    }
+
+    @Test
+    void acornPowerDoublesRodOutputSurvivesCombatDeathAndStopsAfterRemoval() {
+        PlayerLane lane = testLane();
+        ThunderTower rod = tower(ThunderTowers.ROD_T1, PLAYER, 1);
+        lane.addTower(rod);
+        lane.assignAugmentSnapshot(new AugmentSnapshot(AugmentConfig.defaults(), List.of(new PlayerAugmentState.Selection(
+                5, AugmentRarity.GOLD, "job_thunder_g1", PlayerAugmentState.Outcome.SELECTED,
+                null, AugmentChoice.none()))));
+        double expected = ThunderBalance.basePower() + ThunderBalance.powerOutput(rod.type().id()) * 2.0;
+        assertEquals(expected, ThunderPower.snapshot(PLAYER, lane).generation(), EPSILON);
+        rod.syncHealth(0.0);
+        assertEquals(expected, ThunderPower.snapshot(PLAYER, lane).generation(), EPSILON);
+        lane.removeTower(rod);
+        assertEquals(ThunderBalance.basePower(), ThunderPower.snapshot(PLAYER, lane).generation(), EPSILON);
     }
 
     private static PlayerLane testLane() {

@@ -8,6 +8,7 @@ public final class AreaVfxStyles {
     public static final ResourceLocation SPLASH = id("splash");
     public static final ResourceLocation PULSE = id("pulse");
     public static final ResourceLocation CORPSE_EXPLOSION = id("corpse_explosion");
+    public static final ResourceLocation INSECT_EXPLOSION = id("insect_explosion");
     public static final ResourceLocation BUFF = id("buff");
     public static final ResourceLocation DEBUFF = id("debuff");
     public static final ResourceLocation DRAGON_BREATH = id("dragon_breath");

@@ -26,11 +26,11 @@ final class WarlockStatsAssembler {
                 new WarlockStatsView.AwakeningStats(
                         awakeningProgress.kills(),
                         awakeningProgress.requiredKills(),
-                        awakeningProgress.unlocked(),
+                        awakeningProgress.unlocked() || tower.augmentSnapshot().has(WarlockAugments.AWAKENING),
                         specialized,
                         tower.currentHealthRatio(),
                         tower.awakeningHealthThreshold(),
-                        tower.isLastSurvivingTower(),
+                        tower.augmentSnapshot().has(WarlockAugments.AWAKENING) || tower.isLastSurvivingTower(),
                         tower.regenerationPerSecond(),
                         tower.awakeningDamageBonus(),
                         tower.awakeningMovementSpeedBonus()

@@ -25,6 +25,32 @@ import org.junit.jupiter.api.Test;
 
 final class AugmentEconomyServiceTest {
     @Test
+    void betaConfiguredPayloadAndCashUseBuffedValuesWithoutChangingCostOrPayingTwice() {
+        SemionPlayer player = player(10);
+        AugmentEconomyService.beginPrepare(player, 5);
+        for (String id : List.of("additional_payload", "cash_settlement")) {
+            String cardId = "semiontd:" + id;
+            AugmentEconomyService.onSelected(player, cardId, 5, AugmentConfig.defaults().parameters().get(cardId));
+        }
+        assertTrue(AugmentEconomyService.setAdditionalPayload(player, 5, true));
+        assertTrue(AugmentEconomyService.setContract(player, 5, AugmentEconomyService.Contract.CASH));
+        var plan = quote(player, 5, true, true, false, false, 241, 15);
+        assertEquals(302, plan.emeraldCost());
+        assertEquals(0, plan.incomeGain());
+        assertEquals(75, plan.instantDiamond());
+        assertEquals(1.65, plan.supportMultiplier());
+        Monster monster = paidMonster(player);
+        AugmentEconomyService.applyPurchaseBody(monster, plan);
+        AugmentEconomyService.applyPurchaseBody(monster, plan);
+        assertEquals(165, monster.maxHealth(), .0001);
+        assertTrue(AugmentEconomyService.commitPurchase(player, plan, monster));
+        assertFalse(AugmentEconomyService.commitPurchase(player, plan, monster));
+        assertEquals(75, player.economy().diamond());
+        assertEquals(10, player.economy().income());
+        assertEquals(15, player.economyAugments().incomeForgone());
+    }
+
+    @Test
     void loanRepaysOnlyAtRealPayoutAndDuplicateRoundDoesNotPayTwice() {
         SemionPlayer player = player(80);
         select(player, "emergency_loan", 5);
@@ -58,8 +84,9 @@ final class AugmentEconomyServiceTest {
     @Test
     void allNineReserveRewardsApplyOncePerMilestoneAndCanRepeatLater() {
         String[] rarities = { "silver", "gold", "prismatic" };
-        long[] diamonds = { 60, 120, 240 };
-        long[] income = { 10, 20, 40 };
+        long[] diamonds = { 150, 300, 600 };
+        long[] income = { 15, 30, 60 };
+        int[] production = { 2, 3, 6 };
         for (int tier = 0; tier < rarities.length; tier++) {
             SemionPlayer player = player(0);
             String suffix = rarities[tier];
@@ -70,12 +97,12 @@ final class AugmentEconomyServiceTest {
             }
             assertEquals(2 * diamonds[tier], player.economy().diamond());
             assertEquals(2 * income[tier], player.economy().income());
-            assertEquals(2 * (tier + 1), player.economy().emeraldPerSec());
+            assertEquals(2 * production[tier], player.economy().emeraldPerSec());
             assertEquals(0, player.economy().emeraldProductionUpgradeCount());
             List<EconomyEvent> events = player.augmentTelemetry().snapshot().economyEvents();
             assertEquals(6, events.size());
             assertTrue(events.stream().allMatch(event -> event.tick() == null));
-            int expectedProductionUnits = 2 * (tier + 1);
+            int expectedProductionUnits = 2 * production[tier];
             assertEquals(expectedProductionUnits, events.stream().filter(event -> event.augmentId().contains("reserve_production"))
                     .mapToInt(EconomyEvent::units).sum());
         }
@@ -91,13 +118,13 @@ final class AugmentEconomyServiceTest {
         }
         long before = player.economy().emeraldPerSec();
         select(player, "reserve_production_prismatic", 25);
-        assertEquals(before + 3, player.economy().emeraldPerSec());
+        assertEquals(before + 6, player.economy().emeraldPerSec());
         assertFalse(player.economy().upgradeGasProduction(config.gasProduction()));
         player.economy().spendEmerald(player.economy().emerald());
         SemionTeam team = new SemionTeam(TeamId.RED);
         team.activate();
         new EconomyService(config).tickEmerald(List.of(player), Map.of(TeamId.RED, team), 25);
-        assertEquals((before + 3) * 2, player.economy().emerald());
+        assertEquals((before + 6) * 2, player.economy().emerald());
     }
 
     @Test
@@ -308,11 +335,11 @@ final class AugmentEconomyServiceTest {
         select(player, "wartime_economy", 5);
         select(player, "reserve_income_gold", 15);
         select(player, "reserve_diamonds_silver", 25);
-        assertEquals(121, player.economy().income());
-        assertEquals(60, player.economy().diamond());
+        assertEquals(131, player.economy().income());
+        assertEquals(150, player.economy().diamond());
         AugmentEconomyService.payRoundIncome(player, 25);
-        assertEquals(138, player.economy().diamond());
-        assertEquals(43, player.economyAugments().payoutWithheld());
+        assertEquals(235, player.economy().diamond());
+        assertEquals(46, player.economyAugments().payoutWithheld());
     }
 
     @Test

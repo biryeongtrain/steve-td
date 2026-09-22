@@ -14,6 +14,10 @@ import java.util.Set;
 import java.util.UUID;
 import kim.biryeong.semiontd.augment.AugmentConfig;
 import kim.biryeong.semiontd.augment.AugmentEconomyService;
+import kim.biryeong.semiontd.augment.AugmentChoice;
+import kim.biryeong.semiontd.augment.AugmentRarity;
+import kim.biryeong.semiontd.augment.AugmentSnapshot;
+import kim.biryeong.semiontd.augment.PlayerAugmentState;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
@@ -289,6 +293,103 @@ class PirateEconomyTest {
         for (int index = 0; index < veteran; index++) buy(PirateTowers.VETERAN_FERRYMAN, position++, 700);
         for (int index = 0; index < legendary; index++) buy(PirateTowers.LEGENDARY_FERRYMAN, position++, 1_500);
         assertTrue(position + 1 <= 23, "Sale scenarios stay within the maximum legal roster size");
+    }
+
+    @Test
+    void locksmithCascadeSettlesEachChestOnceAndOnlyMultipliesMaturityReward() {
+        selectPirateAugments(PirateAugments.LOOT, PirateAugments.LOCKSMITH, PirateAugments.CANNON);
+        PirateAugments.onSelected(lane, PirateAugments.CANNON, AugmentConfig.defaults());
+        PirateAugments.onSelected(lane, PirateAugments.CANNON, AugmentConfig.defaults());
+        assertEquals(1, PirateAugments.cannonStacks(owner));
+        buyFerrymen(1, 0, 0);
+        PirateTower first = buy(PirateTowers.SHABBY_CHEST, 30, 50);
+        PirateTower second = buy(PirateTowers.SHABBY_CHEST, 31, 50);
+        PirateTower third = buy(PirateTowers.SHABBY_CHEST, 32, 50);
+        PirateTower younger = buy(PirateTowers.SHABBY_CHEST, 33, 50);
+        first.recordPlacementEconomy(50, 0);
+        second.recordPlacementEconomy(50, 1);
+        third.recordPlacementEconomy(50, 1);
+        younger.recordPlacementEconomy(50, 2);
+        long before = player.economy().diamond();
+        first.onRoundEnded(lane, 5);
+        assertEquals(3 * (135 + 25 + 2) + 200, player.economy().diamond() - before);
+        assertEquals(2, PirateAugments.cannonStacks(owner));
+        assertTrue(PirateAugments.freeChestAvailable(owner));
+        assertFalse(lane.towers().contains(first));
+        assertFalse(lane.towers().contains(second));
+        assertFalse(lane.towers().contains(third));
+        assertTrue(lane.towers().contains(younger), "Cascade must shorten each surviving chest only once");
+        first.onRoundEnded(lane, 5);
+        second.onRoundEnded(lane, 5);
+        third.onRoundEnded(lane, 5);
+        PirateAugments.onMatured(lane, first, 5);
+        assertEquals(3 * (135 + 25 + 2) + 200, player.economy().diamond() - before);
+        assertEquals(2, PirateAugments.cannonStacks(owner));
+    }
+
+    @Test
+    void directSaleNeverGrantsMaturityAugments() {
+        selectPirateAugments(PirateAugments.LOOT, PirateAugments.LOCKSMITH, PirateAugments.CANNON);
+        PirateAugments.onSelected(lane, PirateAugments.CANNON, AugmentConfig.defaults());
+        buyFerrymen(1, 0, 0);
+        long before = player.economy().diamond();
+        sell(buy(PirateTowers.SHABBY_CHEST, 30, 50));
+        assertEquals(-23, player.economy().diamond() - before);
+        assertFalse(PirateAugments.freeChestAvailable(owner));
+        assertEquals(1, PirateAugments.cannonStacks(owner));
+    }
+
+    @Test
+    void freeChestTicketHasCapacityOneAndRequiresSuccessfulBasicChestPlacement() {
+        selectPirateAugments(PirateAugments.LOOT);
+        PirateTower first = buy(PirateTowers.SHABBY_CHEST, 30, 50);
+        PirateTower second = buy(PirateTowers.SHABBY_CHEST, 31, 50);
+        first.onRoundEnded(lane, first.placedRound() + 5);
+        assertEquals(0, PirateAugments.placementCost(lane, PirateTowers.SHABBY_CHEST, 50));
+        assertEquals(200, PirateAugments.placementCost(lane, PirateTowers.EMPIRE_CHEST, 200));
+        PirateTower free = new PirateTower(PirateTowers.SHABBY_CHEST, owner, TeamId.RED, 1, new GridPosition(32, 63, 1));
+        free.recordPlacementEconomy(0, 10);
+        PirateAugments.onPlaced(lane, free);
+        assertTrue(PirateAugments.freeChestAvailable(owner), "Failed/unregistered placement must keep the ticket");
+        lane.addTower(free);
+        PirateAugments.onPlaced(lane, free);
+        assertFalse(PirateAugments.freeChestAvailable(owner));
+        assertEquals(0, free.sellRefundAmount());
+        second.onRoundEnded(lane, second.placedRound() + 5);
+        assertFalse(PirateAugments.freeChestAvailable(owner), "Another maturity in the same round cannot grant another ticket");
+        free.onRoundEnded(lane, 15);
+        assertTrue(PirateAugments.freeChestAvailable(owner));
+        PirateTower held = buy(PirateTowers.SHABBY_CHEST, 34, 50);
+        held.onRoundEnded(lane, 16);
+        PirateTower next = new PirateTower(PirateTowers.SHABBY_CHEST, owner, TeamId.RED, 1, new GridPosition(35, 63, 1));
+        next.recordPlacementEconomy(0, 16);
+        lane.addTower(next);
+        PirateAugments.onPlaced(lane, next);
+        assertFalse(PirateAugments.freeChestAvailable(owner), "Unspent tickets cannot accumulate beyond one");
+    }
+
+    @Test
+    void cannonUsesOneStackPerWaveAndEndWaveCancelsShotsWithoutRefund() {
+        selectPirateAugments(PirateAugments.CANNON);
+        PirateAugments.onSelected(lane, PirateAugments.CANNON, AugmentConfig.defaults());
+        PirateAugments.beginWave(lane);
+        assertEquals(0, PirateAugments.cannonStacks(owner));
+        assertEquals(5, PirateAugments.pendingCannonShots(owner));
+        PirateAugments.endWave(lane);
+        assertEquals(0, PirateAugments.pendingCannonShots(owner));
+        assertEquals(0, PirateAugments.cannonStacks(owner));
+        PirateStates.close(owner);
+        PirateStates.open(game, player);
+        assertFalse(PirateAugments.freeChestAvailable(owner));
+        assertEquals(0, PirateAugments.cannonStacks(owner));
+        PirateAugments.onSelected(lane, PirateAugments.CANNON, AugmentConfig.defaults());
+        assertEquals(1, PirateAugments.cannonStacks(owner), "New match may grant its own initial stack");
+    }
+
+    private void selectPirateAugments(String... cards) {
+        lane.assignAugmentSnapshot(new AugmentSnapshot(AugmentConfig.defaults(), java.util.Arrays.stream(cards)
+                .map(id -> new PlayerAugmentState.Selection(5, AugmentRarity.GOLD, id,
+                        PlayerAugmentState.Outcome.SELECTED, null, AugmentChoice.none())).toList()));
     }
 
     private void enableSeasonThree(String card) throws ReflectiveOperationException {

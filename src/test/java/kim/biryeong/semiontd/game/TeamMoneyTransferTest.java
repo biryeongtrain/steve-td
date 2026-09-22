@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.game;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Field;
@@ -8,10 +9,92 @@ import java.util.Map;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.WaveConfig;
+import kim.biryeong.semiontd.job.JobRegistry;
+import kim.biryeong.semiontd.job.PirateTowerJob;
 import kim.biryeong.semiontd.map.GameArena;
+import net.minecraft.SharedConstants;
+import net.minecraft.server.Bootstrap;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 final class TeamMoneyTransferTest {
+    @BeforeAll
+    static void bootstrapMinecraft() {
+        SharedConstants.tryDetectVersion();
+        Bootstrap.bootStrap();
+    }
+
+    @Test
+    void everyOtherBuilderCanSendAndReceiveWithAPirateTeammate() {
+        for (var job : JobRegistry.all()) {
+            if (job.id().equals(PirateTowerJob.ID)) {continue;}
+            for (boolean asSender : new boolean[] {true, false}) {
+                SemionGame game = newGame(EconomyConfig.defaultConfig());
+                UUID receiver = addPlayer(game, "receiver", TeamId.BLUE, 1, 200);
+                UUID sender = addPlayer(game, "sender", TeamId.BLUE, 2, 200);
+                UUID pirate = addPlayer(game, "pirate", TeamId.BLUE, 3, 200);
+                game.players().get(pirate).assignJob(new PirateTowerJob());
+                game.players().get(sender).assignJob(asSender ? job : JobRegistry.defaultJob());
+                game.players().get(receiver).assignJob(asSender ? JobRegistry.defaultJob() : job);
+                var request = game.requestTeamMoney(receiver, 30);
+                assertEquals(TeamMoneyTransferResultType.SUCCESS, request.type(), job.id().toString());
+                assertEquals(TeamMoneyTransferResultType.SUCCESS,
+                        game.acceptTeamMoneyRequest(sender, request.requestId().orElseThrow()).type(), job.id().toString());
+                assertEquals(170, game.players().get(sender).economy().diamond());
+                assertEquals(230, game.players().get(receiver).economy().diamond());
+                assertEquals(200, game.players().get(pirate).economy().diamond());
+            }
+        }
+    }
+
+    @Test
+    void pirateCannotPublishAnUnfulfillableRequest() {
+        SemionGame game = newGame(EconomyConfig.defaultConfig());
+        UUID pirate = addPlayer(game, "pirate", TeamId.BLUE, 1, 200);
+        game.players().get(pirate).assignJob(new PirateTowerJob());
+        var request = game.requestTeamMoney(pirate, 30);
+        assertEquals(TeamMoneyTransferResultType.BUILDER_RESTRICTED, request.type());
+        assertTrue(request.requestId().isEmpty());
+        assertEquals(200, game.players().get(pirate).economy().diamond());
+    }
+
+    @Test
+    void pirateRejectionIsNotReportedAsInsufficientFundsAndKeepsOrdinaryRequestOpen() {
+        SemionGame game = newGame(EconomyConfig.defaultConfig());
+        UUID receiver = addPlayer(game, "receiver", TeamId.BLUE, 1, 200);
+        UUID sender = addPlayer(game, "sender", TeamId.BLUE, 2, 200);
+        UUID pirate = addPlayer(game, "pirate", TeamId.BLUE, 3, 200);
+        game.players().get(pirate).assignJob(new PirateTowerJob());
+        var request = game.requestTeamMoney(receiver, 30);
+        String requestId = request.requestId().orElseThrow();
+        var rejected = game.acceptTeamMoneyRequest(pirate, requestId);
+        assertEquals(TeamMoneyTransferResultType.BUILDER_RESTRICTED, rejected.type());
+        assertEquals(200, game.players().get(pirate).economy().diamond());
+        assertEquals(200, game.players().get(receiver).economy().diamond());
+        assertTrue(game.teamMoneyRequest(requestId).isPresent());
+        assertEquals(TeamMoneyTransferResultType.SUCCESS, game.acceptTeamMoneyRequest(sender, requestId).type());
+        assertEquals(170, game.players().get(sender).economy().diamond());
+        assertEquals(230, game.players().get(receiver).economy().diamond());
+        assertFalse(new EconomyService(game.economyConfig(), game).transferDiamond(
+                game.players().get(sender), game.players().get(pirate), 30));
+        assertEquals(170, game.players().get(sender).economy().diamond());
+    }
+
+    @Test
+    void requesterChangedToPirateCannotUseAnOlderRequestOrConsumeReceiveCooldown() {
+        SemionGame game = newGame(EconomyConfig.defaultConfig());
+        UUID receiver = addPlayer(game, "receiver", TeamId.BLUE, 1, 200);
+        UUID sender = addPlayer(game, "sender", TeamId.BLUE, 2, 200);
+        String requestId = game.requestTeamMoney(receiver, 30).requestId().orElseThrow();
+        game.players().get(receiver).assignJob(new PirateTowerJob());
+        assertEquals(TeamMoneyTransferResultType.BUILDER_RESTRICTED, game.acceptTeamMoneyRequest(sender, requestId).type());
+        assertTrue(game.teamMoneyRequest(requestId).isEmpty());
+        assertEquals(200, game.players().get(sender).economy().diamond());
+        assertEquals(200, game.players().get(receiver).economy().diamond());
+        game.players().get(receiver).assignJob(JobRegistry.defaultJob());
+        assertEquals(TeamMoneyTransferResultType.SUCCESS, game.requestTeamMoney(receiver, 30).type());
+    }
+
     @Test
     void requestExceedingRoundLimitFailsWithConfiguredMaximum() {
         SemionGame game = newGame(EconomyConfig.defaultConfig());

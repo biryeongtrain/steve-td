@@ -312,7 +312,7 @@ public final class FrostFullOperationService {
                 AreaVfxSpec.none()
         );
         SemionTdApi.areaEffects().applyToMonsters(request, target -> {
-            var result = FrostMonsterStates.applyChill(target, FrostBalance.fullOperationChillPerPulse());
+            var result = FrostMonsterStates.applyChill(source, target, FrostBalance.fullOperationChillPerPulse());
             return result.currentChill() > result.previousChill() || result.becameRefrigerated()
                     ? AreaEffectOutcome.APPLIED
                     : AreaEffectOutcome.UNCHANGED;

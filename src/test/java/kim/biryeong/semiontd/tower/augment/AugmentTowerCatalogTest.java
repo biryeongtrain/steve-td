@@ -19,9 +19,32 @@ import org.junit.jupiter.api.Test;
 class AugmentTowerCatalogTest {
     @BeforeAll static void bootstrap() { SharedConstants.tryDetectVersion(); Bootstrap.bootStrap(); }
 
+    @Test void nineTowersGrowAtRoundBoundariesWithoutCompoundingOrRestoringHealthTwice() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        for (var type : AugmentTowers.all()) {
+            AugmentTower tower = (AugmentTower) ProductionTowerCatalog.entry(type).orElseThrow()
+                    .create(UUID.randomUUID(), TeamId.RED, 1, new GridPosition(0, 0, 0));
+            for (int round : new int[]{5, 14, 15, 24, 25, 26}) {
+                tower.beginPrepare(null, round);
+                assertEquals(AugmentTowers.tierForRound(round), tower.growthTier());
+                assertEquals(type.maxHealth() * tower.growthTier(), tower.currentMaxHealth(), .001, type.id());
+                double mineDamage = AugmentTowers.is(type, AugmentTowers.AMBUSH_WORKSHOP) ? 170 : 100;
+                assertEquals(mineDamage * (1 + (tower.growthTier() - 1) * .5), tower.value("mineDamage", 100), .001);
+                assertEquals(2 * (1 + (tower.growthTier() - 1) * .15), tower.value("damageRadius", 2), .001);
+                double health = tower.health() - 10;
+                tower.syncHealth(health);
+                tower.beginPrepare(null, round);
+                assertEquals(health, tower.health(), .001, "Repeated preparation cannot heal or multiply growth again");
+            }
+            assertTrue(tower.runtimeDetailLines().getFirst().contains("T3"));
+        }
+    }
+
     @Test void nineNeutralTowersUseSharedCatalogWithoutUpgrades() {
         ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
         assertEquals(9, AugmentTowers.all().size());
+        assertEquals(300, ProductionTowerCatalog.entry(AugmentTowers.FOLDING_BARRICADE).orElseThrow().type().maxHealth());
+        assertEquals(1000, ProductionTowerCatalog.entry(AugmentTowers.BARRIER_CORE).orElseThrow().type().maxHealth());
         assertEquals(9, ProductionTowerCatalog.all().stream().filter(e -> e.availability() == ProductionTowerCatalog.Availability.AUGMENT).count());
         for (var type : AugmentTowers.all()) {
             var entry = ProductionTowerCatalog.entry(type).orElseThrow();

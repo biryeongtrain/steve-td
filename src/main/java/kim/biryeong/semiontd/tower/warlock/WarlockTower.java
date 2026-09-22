@@ -73,6 +73,20 @@ public class WarlockTower extends EntityBackedTower {
     }
 
     @Override
+    public double finalDamageBonus() {
+        return awakenedThisRound() && augmentSnapshot().has(WarlockAugments.AWAKENING)
+                ? augmentSnapshot().parameter(WarlockAugments.AWAKENING, "damageBonus", .20) : 0.0;
+    }
+
+    public static long placementCost(PlayerLane lane, TowerType type, long defaultCost) {
+        return lane != null && WarlockTowers.isWarlockCore(type)
+                && lane.augmentSnapshot().has(WarlockAugments.PARTNERSHIP)
+                && lane.towers().stream().anyMatch(tower -> WarlockTowers.isWarlockCore(tower.type()))
+                ? Math.round(lane.augmentSnapshot().parameter(WarlockAugments.PARTNERSHIP, "secondCoreCost", 700))
+                : defaultCost;
+    }
+
+    @Override
     public double adjustMovementSpeed(double baseSpeed) {
         return baseSpeed * (1.0 + awakening.movementSpeedBonus());
     }
@@ -218,6 +232,18 @@ public class WarlockTower extends EntityBackedTower {
         onStateChanged(lane);
     }
 
+    void receiveSharedGrowth(PlayerLane lane, WarlockSacrifice.Gain gain, double completionHealing) {
+        double previousMax = currentMaxHealth();
+        state.shareGrowth(gain);
+        double healing = Math.max(0.0, currentMaxHealth() - previousMax) + completionHealing;
+        if (lane.arenaWorld() != null && entityId().isPresent()
+                && lane.arenaWorld().getEntity(entityId().getAsInt()) instanceof SemionTowerEntity entity) {
+            refreshAfterSacrifice(lane, entity, healing);
+        } else {
+            applyRegeneration(lane, healing);
+        }
+    }
+
     private double passiveHealthBonus() {
         return sacrifice.passiveHealthBonus(this, currentLane);
     }
@@ -327,6 +353,9 @@ public class WarlockTower extends EntityBackedTower {
         }
         return lane.towers().stream()
                 .filter(tower -> tower.health() > 0.0)
+                .filter(tower -> !augmentSnapshot().has(WarlockAugments.PARTNERSHIP)
+                        || !ownerPlayer().equals(tower.ownerPlayer())
+                        || !WarlockTowers.isWarlockCore(tower.type()))
                 .noneMatch(tower -> tower != this);
     }
 
@@ -335,7 +364,9 @@ public class WarlockTower extends EntityBackedTower {
     }
 
     double awakeningHealthThreshold() {
-        return config.awakening(path).healthThreshold();
+        return augmentSnapshot().has(WarlockAugments.AWAKENING)
+                ? augmentSnapshot().parameter(WarlockAugments.AWAKENING, "healthThreshold", .60)
+                : config.awakening(path).healthThreshold();
     }
 
     double regenerationPerSecond() {

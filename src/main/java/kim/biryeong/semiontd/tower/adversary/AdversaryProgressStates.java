@@ -47,6 +47,10 @@ public final class AdversaryProgressStates {
      * @return {@code true} when the kill awarded rival score
      */
     public static boolean recordFoxKill(UUID ownerPlayer, Monster monster, PlayerLane lane) {
+        return recordFoxKill(ownerPlayer, monster, lane, 1);
+    }
+
+    public static boolean recordFoxKill(UUID ownerPlayer, Monster monster, PlayerLane lane, int scoreMultiplier) {
         if (ownerPlayer == null || monster == null) {
             return false;
         }
@@ -65,7 +69,7 @@ public final class AdversaryProgressStates {
                     .filter(tower -> ownerPlayer.equals(tower.ownerPlayer()))
                     .filter(tower -> rivalId.equals(tower.rivalId()))
                     .findFirst()
-                    .map(tower -> tower.creditFoxKill(lane, monster))
+                    .map(tower -> tower.creditFoxKill(lane, monster, scoreMultiplier))
                     .orElse(false);
         }
 

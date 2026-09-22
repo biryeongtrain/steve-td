@@ -11,6 +11,17 @@ public final class GambleSupportRolls {
     }
 
     public static List<GambleSupportEffect> roll(TowerType type, int face, RandomSource random) {
+        return roll(type, face, random, 0.0);
+    }
+
+    public static int rollFace(int minimum, RandomSource random, boolean twice) {
+        int first = minimum + random.nextInt(7 - minimum);
+        return twice ? Math.max(first, minimum + random.nextInt(7 - minimum)) : first;
+    }
+
+    public static List<GambleSupportEffect> roll(
+            TowerType type, int face, RandomSource random, double insuranceRatio
+    ) {
         if (type == null || random == null) {
             return List.of();
         }
@@ -21,7 +32,14 @@ public final class GambleSupportRolls {
             order.set(index, order.get(swap));
             order.set(swap, previous);
         }
-        return resolve(GambleTowers.isSpectator(type), face, GambleBalance.supportPowerMultiplier(type), order);
+        ArrayList<GambleSupportEffect> effects = new ArrayList<>(resolve(
+                GambleTowers.isSpectator(type), face, GambleBalance.supportPowerMultiplier(type), order));
+        if (face <= 2 && insuranceRatio > 0.0) {
+            resolve(GambleTowers.isSpectator(type), 7 - face, GambleBalance.supportPowerMultiplier(type), order)
+                    .forEach(effect -> effects.add(new GambleSupportEffect(
+                            effect.stat(), effect.positive(), effect.magnitude() * insuranceRatio)));
+        }
+        return List.copyOf(effects);
     }
 
     static List<GambleSupportEffect> resolve(

@@ -77,16 +77,17 @@ public final class OffensiveAugmentTower extends AugmentTower {
 
     @Override
     public double modifyResolvedAttackDamage(SemionTowerEntity source, SemionMonsterEntity target, double ignored) {
+        double baseDamage = type().damage() * growthMultiplier("powerPerTier", .5);
         if (is(AugmentTowers.GIANT_HUNTER)) {
-            if (target == null || target.runtimeMonster() == null) return type().damage();
+            if (target == null || target.runtimeMonster() == null) return baseDamage;
             var monster = target.runtimeMonster();
             boolean boss = monster.origin() == MonsterOrigin.NATURAL_WAVE && monster.id().equals("warden_boss_15");
-            return type().damage() + monster.maxHealth()
+            return baseDamage + monster.maxHealth()
                     * value(boss ? "bossMaxHealthDamageRatio" : "maxHealthDamageRatio", boss ? 0.02 : 0.08);
         }
-        if (is(AugmentTowers.CAPACITOR_POST)) return type().damage() + charges() * value("chargeDamage", 70);
+        if (is(AugmentTowers.CAPACITOR_POST)) return baseDamage + charges() * value("chargeDamage", 70);
         if (is(AugmentTowers.STARLIGHT_COCOON)) return hatched() ? value("hatchedDamage", 110) : 0;
-        return type().damage();
+        return baseDamage;
     }
 
     @Override
@@ -206,7 +207,8 @@ public final class OffensiveAugmentTower extends AugmentTower {
     }
 
     /** Runs after normal round restoration, only if a real next preparation phase opens. */
-    public void beginPrepare(PlayerLane lane, int round) {
+    @Override public void beginPrepare(PlayerLane lane, int round) {
+        super.beginPrepare(lane, round);
         if (is(AugmentTowers.ORDNANCE_FACTORY)) setData(ORDNANCE, ordnance().prepare(round));
         if (is(AugmentTowers.STARLIGHT_COCOON)) {
             CocoonState previous = cocoon();
@@ -262,7 +264,7 @@ public final class OffensiveAugmentTower extends AugmentTower {
             if (is(AugmentTowers.CAPACITOR_POST)) suffix = " · 충전 " + charges() + "/" + integer("maxCharges", 3);
             if (is(AugmentTowers.STARLIGHT_COCOON) && !hatched()) suffix = " · 부화 " + cocoon().successes() + "/" + integer("hatchWaves", 2);
             if (is(AugmentTowers.ORDNANCE_FACTORY)) suffix = " · 포탄 " + preparedShells() + "/" + integer("maxShells", 4);
-            source.setCustomName(Component.literal((hatched() ? "별빛 파수꾼" : type().displayName()) + suffix));
+            source.setCustomName(Component.literal((hatched() ? "별빛 파수꾼" : type().displayName()) + " T" + growthTier() + suffix));
             source.setCustomNameVisible(true);
         });
     }
@@ -270,6 +272,7 @@ public final class OffensiveAugmentTower extends AugmentTower {
     @Override
     public List<String> runtimeDetailLines() {
         List<String> lines = new ArrayList<>();
+        lines.add(growthDetail());
         lines.add("외부 회복·전투 버프 없음 · 복제 불가");
         if (is(AugmentTowers.GIANT_HUNTER)) lines.add("최소 사거리 " + oneDecimal(value("minimumRange", 3)) + " · 최대 체력 우선, 대상 고정");
         if (is(AugmentTowers.CAPACITOR_POST)) lines.add("충전 " + charges() + "/" + integer("maxCharges", 3)

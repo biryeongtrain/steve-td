@@ -116,6 +116,11 @@ public record GambleState(
                 cumulativeScore + sanitizeDelta(score), updated, totalBets + 1, result);
     }
 
+    public GambleState adjustScore(double score, String result) {
+        return new GambleState(maxHealthDelta, damageDelta, rangeDelta, splashRadiusDelta,
+                cumulativeScore + sanitizeDelta(score), abilities, totalBets, result);
+    }
+
     private static double sanitizeDelta(double value) {
         return Double.isFinite(value) ? value : 0.0;
     }

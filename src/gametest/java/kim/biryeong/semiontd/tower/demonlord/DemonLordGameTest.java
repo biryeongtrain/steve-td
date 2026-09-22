@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import kim.biryeong.semiontd.augment.*;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
@@ -47,6 +48,66 @@ import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
 public final class DemonLordGameTest {
+    @GameTest(maxTicks = 120)
+    public void augmentThronesReplayDamageOnlyWithoutCombatTowersOrCooldowns(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        ServerPlayer player = context.makeMockServerPlayerInLevel();
+        Vec3 playerPosition = Vec3.atCenterOf(context.absolutePos(new BlockPos(3, 2, 3)));
+        player.teleportTo(playerPosition.x, playerPosition.y, playerPosition.z);
+        PlayerLane lane = augmentLane(context, player.getUUID());
+        DemonLordSkillTower first = altar(context, player.getUUID(), DemonLordSkill.WAVE_OF_MALICE, 1, 3, 3);
+        DemonLordSkillTower second = altar(context, player.getUUID(), DemonLordSkill.SOUL_DRAIN, 1, 4, 3);
+        SpawnedTarget target = null;
+        prepareFloor(context, 7);
+        try {
+            lane.addTower(first);
+            lane.addTower(second);
+            lane.assignAugmentSnapshot(new AugmentSnapshot(AugmentConfig.defaults(), List.of(
+                    new PlayerAugmentState.Selection(5, AugmentRarity.PRISMATIC, "job_demon_lord_towers_p",
+                            PlayerAugmentState.Outcome.SELECTED, null, AugmentChoice.none()),
+                    new PlayerAugmentState.Selection(15, AugmentRarity.SILVER, "job_demon_lord_towers_s",
+                            PlayerAugmentState.Outcome.SELECTED, null, AugmentChoice.none()))));
+            DemonLordState state = DemonLordStates.getOrCreate(player.getUUID());
+            state.setLaneId(1);
+            state.enterCombat();
+            target = spawnTarget(context, lane, new BlockPos(5, 2, 5), 1000, 0);
+            state.startCooldown(first.skill(), 0, 500);
+            state.startCooldown(second.skill(), 0, 500);
+            state.augments().beginSpell(first);
+            DemonLordService.dealDamage(player, lane, first, target.entity(), 20, DamageType.MAGIC);
+            state.augments().finishSpell(player, lane, state, 0);
+            state.augments().beginSpell(second);
+            DemonLordService.dealDamage(player, lane, second, target.entity(), 30, DamageType.MAGIC);
+            state.augments().finishSpell(player, lane, state, 1);
+            requireClose(875, target.runtime().health(), "Two original skills and their 150% replays must deal 125 total.");
+            require(lane.towers().size() == 2, "Echoes must not register targetable combat towers or use tower slots.");
+            require(state.remainingCooldownTicks(first.skill(), 1) == 499
+                            && state.remainingCooldownTicks(second.skill(), 1) == 499,
+                    "Echoes must not restart skill cooldowns.");
+            requireClose(2, state.augments().consumeFinisher(lane.augmentSnapshot(), 2),
+                    "Only the original successful skill grants one finisher.");
+            requireClose(0, state.augments().consumeFinisher(lane.augmentSnapshot(), 2),
+                    "Replays must not grant extra finisher charges.");
+            state.augments().beginSpell(first);
+            DemonLordService.dealDamage(player, lane, first, target.entity(), 20, DamageType.MAGIC);
+            state.augments().finishSpell(player, lane, state, 2);
+            requireClose(855, target.runtime().health(), "Throne cooldown must suppress another pair of replays.");
+            var visuals = context.getLevel().getEntitiesOfClass(net.minecraft.world.entity.decoration.ArmorStand.class,
+                    player.getBoundingBox().inflate(3), entity -> entity.getTags().contains(SemionEntityTypes.RUNTIME_NO_SAVE_TAG));
+            require(visuals.size() == 2 && visuals.stream().allMatch(net.minecraft.world.entity.decoration.ArmorStand::isMarker),
+                    "Exactly two untargetable marker visuals must represent the echoes.");
+            state.standDown();
+            require(visuals.stream().allMatch(net.minecraft.world.entity.Entity::isRemoved),
+                    "Ending combat must remove both echo visuals.");
+            context.succeed();
+        } finally {
+            if (target != null) {target.entity().discard();}
+            lane.clearTowers();
+            DemonLordStates.clear(player.getUUID());
+            player.discard();
+        }
+    }
+
     @GameTest
     public void cleanupOnlyRestoresFlightForAnExistingDemonLordState(GameTestHelper context) {
         // The vanilla mock overrides gameMode() to CREATIVE even after setGameMode().
@@ -437,6 +498,18 @@ public final class DemonLordGameTest {
         return new SpawnedTarget(runtime, entity);
     }
 
+    private static PlayerLane augmentLane(GameTestHelper context, UUID owner) {
+        BlockPos min = context.absolutePos(new BlockPos(0, 1, 0));
+        BlockPos max = context.absolutePos(new BlockPos(7, 6, 7));
+        LaneRegionLayout layout = new LaneRegionLayout(
+                1, Vec3.atCenterOf(context.absolutePos(new BlockPos(2, 2, 2))),
+                BlockBounds.of(min, min),
+                List.of(Vec3.atCenterOf(context.absolutePos(new BlockPos(6, 2, 3)))),
+                Vec3.atCenterOf(context.absolutePos(new BlockPos(6, 2, 6))),
+                BlockBounds.of(min, max), List.of(grid(context, new BlockPos(5, 2, 6))), 1);
+        return new PlayerLane(TeamId.RED, 1, owner, context.getLevel(), layout);
+    }
+
     private static PlayerLane testLane(GameTestHelper context, UUID owner) {
         BlockPos min = context.absolutePos(new BlockPos(0, 1, 0));
         BlockPos max = context.absolutePos(new BlockPos(16, 6, 16));
@@ -473,8 +546,12 @@ public final class DemonLordGameTest {
     }
 
     private static void prepareFloor(GameTestHelper context) {
-        for (int x = 0; x <= 16; x++) {
-            for (int z = 0; z <= 16; z++) {
+        prepareFloor(context, 16);
+    }
+
+    private static void prepareFloor(GameTestHelper context, int max) {
+        for (int x = 0; x <= max; x++) {
+            for (int z = 0; z <= max; z++) {
                 BlockPos floor = context.absolutePos(new BlockPos(x, 1, z));
                 context.getLevel().setBlock(floor, Blocks.STONE.defaultBlockState(), 3);
                 context.getLevel().setBlock(floor.above(), Blocks.AIR.defaultBlockState(), 3);

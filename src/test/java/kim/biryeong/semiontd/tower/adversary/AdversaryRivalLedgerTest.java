@@ -96,6 +96,26 @@ class AdversaryRivalLedgerTest {
     }
 
     @Test
+    void doubledScoreIsStoredOnceAndFollowsUpgradeAndSaleLedger() {
+        PlayerLane lane = testLane();
+        AdversaryRivalTower base = rival(RivalKind.BREEZE, false);
+        lane.addTower(base);
+        Monster proxy = base.createProxy(1);
+        assertTrue(AdversaryProgressStates.recordFoxKill(OWNER, proxy, lane, 2));
+        assertFalse(AdversaryProgressStates.recordFoxKill(OWNER, proxy, lane, 2));
+        assertEquals(4, base.contributedScore());
+        AdversaryRivalTower enhanced = rival(RivalKind.BREEZE, true);
+        enhanced.copyFrom(base, RivalKind.BREEZE.enhancementCost());
+        assertTrue(lane.replaceTower(base, enhanced));
+        assertEquals(4, enhanced.contributedScore());
+        assertTrue(AdversaryProgressStates.recordFoxKill(OWNER, enhanced.createProxy(2), lane, 2));
+        assertEquals(10, enhanced.contributedScore());
+        assertEquals(10, AdversaryProgressStates.state(OWNER).score(RivalKind.BREEZE));
+        assertTrue(lane.removeTower(enhanced));
+        assertEquals(0, AdversaryProgressStates.state(OWNER).score(RivalKind.BREEZE));
+    }
+
+    @Test
     void sellingAContributorSubtractsItsLedgerAndDemotesWithoutUnlockingAnotherRoute() {
         PlayerLane lane = testLane();
         AdversaryFoxTower fox = new AdversaryFoxTower(

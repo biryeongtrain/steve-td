@@ -4,6 +4,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import kim.biryeong.semiontd.augment.AugmentChoice;
+import kim.biryeong.semiontd.augment.AugmentConfig;
+import kim.biryeong.semiontd.augment.AugmentRarity;
+import kim.biryeong.semiontd.augment.AugmentSnapshot;
+import kim.biryeong.semiontd.augment.PlayerAugmentState;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
@@ -11,6 +16,8 @@ import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
 import kim.biryeong.semiontd.entity.monster.Monster;
+import kim.biryeong.semiontd.entity.monster.MonsterOrigin;
+import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.AssignedParticipant;
@@ -27,7 +34,9 @@ import kim.biryeong.semiontd.job.JobContext;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.tower.ProductionTowerService;
+import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.army.ArmyBalance;
+import kim.biryeong.semiontd.tower.army.ArmyRank;
 import kim.biryeong.semiontd.tower.army.ArmyStates;
 import kim.biryeong.semiontd.tower.army.ArmyTower;
 import kim.biryeong.semiontd.tower.army.ArmyTowers;
@@ -53,8 +62,8 @@ public final class ArmyGameTest {
 
             require(ProductionTowerCatalog.all().stream()
                     .filter(entry -> entry.availability() == ProductionTowerCatalog.Availability.JOB)
-                    .filter(ProductionTowerCatalog.CatalogEntry::starter).count() == 148,
-                    "Built-ins must include all 148 starter entries after Pirate Builder registration.");
+                    .filter(ProductionTowerCatalog.CatalogEntry::starter).count() == 149,
+                    "Built-ins must include 149 starter entries including the ticket-gated joker.");
             require(ProductionTowerService.availableTowers(game, owner).stream()
                     .filter(entry -> ArmyTowers.isArmyTower(entry.type())).count() == 3,
                     "Army must expose headquarters, guard, and combat starters.");
@@ -238,6 +247,137 @@ public final class ArmyGameTest {
             ArmyStates.clear(owner);
             TowerBalanceRuntime.apply(defaults);
         }
+    }
+
+    @GameTest
+    public void specialPromotionCountsOnlyWaveKillsAndRetirementFundsOneRankedStarter(GameTestHelper context) {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        UUID owner = stableUuid("army-special-promotion-ticket");
+        SemionGame game = startedArmyGame(context, owner);
+        SemionMonsterEntity target = null;
+        try {
+            PlayerLane lane = game.playerLane(owner).orElseThrow();
+            lane.assignAugmentSnapshot(augmentSnapshot("job_army_s", "job_army_g2"));
+            ArmyTower recruit = tower(ArmyTowers.RECRUIT, owner, emptyPosition(lane, 0));
+            lane.addTower(recruit);
+            lane.markWaveStarted(1);
+            SemionTowerEntity source = towerEntity(lane, recruit);
+            target = spawnTarget(context, lane, source.position().add(0, 0, 2), "promotion-target");
+            recruit.onKill(source, target, 10);
+            require(recruit.rank() == ArmyRank.PRIVATE, "Builder proxies cannot charge special promotion.");
+            target.runtimeMonster().setOrigin(MonsterOrigin.NATURAL_WAVE);
+            for (int i = 0; i < 3; i++) recruit.onKill(source, target, 10);
+            require(recruit.rank() == ArmyRank.CORPORAL, "Three wave kills must promote immediately.");
+            for (int i = 0; i < 6; i++) recruit.onKill(source, target, 10);
+            require(recruit.rank() == ArmyRank.CORPORAL, "Special promotion must only trigger once per round.");
+            while (recruit.service() < ArmyBalance.dischargeService()) {
+                recruit.onWaveStarted(lane, 1);
+                recruit.completeServiceWave(lane);
+            }
+            require(lane.removeTower(recruit) && recruit.completeDischarge(lane), "Retirement must settle once.");
+            require(ArmyStates.hasFreeStarter(owner, ArmyTowers.RECRUIT), "Retirement must create a free recruit ticket.");
+            long minerals = game.players().get(owner).economy().mineral();
+            BlockPos position = emptyPosition(lane, 0);
+            require(ProductionTowerService.placeTower(game, owner, position, ArmyTowers.RECRUIT.id())
+                    == TowerPlacementResult.SUCCESS, "A ticket must place a recruit through the real service.");
+            ArmyTower free = (ArmyTower) lane.towerAt(GridPosition.from(position));
+            require(game.players().get(owner).economy().mineral() == minerals && free.paidMineralCost() == 0,
+                    "The ticket must spend nothing and create no paid sale value.");
+            require(free.rank() == ArmyRank.CORPORAL, "The free recruit must gain exactly one rank.");
+            require(!ArmyStates.hasFreeStarter(owner, ArmyTowers.RECRUIT), "Successful placement must consume the ticket.");
+            context.succeed();
+        } finally {
+            if (target != null) target.discard();
+            game.close();
+        }
+    }
+
+    @GameTest
+    public void artilleryReserveUsesRetirementSnapshotKeepsSplashAndExpiresWithRound(GameTestHelper context) {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        UUID owner = stableUuid("army-reserve-runtime");
+        SemionGame game = startedArmyGame(context, owner);
+        SemionMonsterEntity primary = null;
+        SemionMonsterEntity secondary = null;
+        try {
+            PlayerLane lane = game.playerLane(owner).orElseThrow();
+            lane.assignAugmentSnapshot(augmentSnapshot("job_army_p"));
+            ArmyTower retired = tower(ArmyTowers.GUNNER, owner, emptyPosition(lane, 0));
+            lane.addTower(retired);
+            double maximumHealth = retired.currentMaxHealth();
+            while (retired.service() < ArmyBalance.dischargeService()) {
+                retired.onWaveStarted(lane, 1);
+                retired.completeServiceWave(lane);
+            }
+            require(lane.removeTower(retired) && retired.completeDischarge(lane), "Artillery must retire once.");
+            lane.markWaveStarted(2);
+            ArmyStates.spawnReserves(lane, 2);
+            List<ArmyTower> reserves = lane.towers().stream().filter(tower -> tower instanceof ArmyTower)
+                    .map(ArmyTower.class::cast).filter(ArmyTower::isTemporaryCopy).toList();
+            require(reserves.size() == 1, "The recent retirement must return exactly once.");
+            ArmyTower reserve = reserves.getFirst();
+            SemionTowerEntity source = towerEntity(lane, reserve);
+            require(close(reserve.currentMaxHealth(), maximumHealth), "Reserve health must equal retirement maximum health.");
+            require(close(source.attackDamageAmount(null), retired.type().damage() * 1.5),
+                    "Reserve damage must ignore retirement rank and avoid reapplying the new medal.");
+            require(reserve.slotWeight() == 0 && !reserve.canBeSold() && !reserve.ranks(),
+                    "Reserves are slot-free, unsellable, and outside the rank system.");
+            primary = spawnTarget(context, lane, source.position().add(0, 0, 2), "reserve-primary");
+            secondary = spawnTarget(context, lane, source.position().add(.5, 0, 2), "reserve-secondary");
+            reserve.onAttackResolved(source, primary, 45, 45, 45, false);
+            require(secondary.getHealth() < 100, "Artillery reserves must retain their native splash ability.");
+            reserve.onLaneCleared(lane);
+            require(lane.towers().contains(reserve) && source.isAlive(), "Lane clear cannot remove the reserve.");
+            lane.resetForRound();
+            require(lane.towers().stream().noneMatch(tower -> tower.isTemporaryCopy()), "Round reset must remove reserves.");
+            require(ArmyStates.medalCount(owner) == 1, "Reserves cannot award retirement medals.");
+            context.succeed();
+        } finally {
+            if (primary != null) primary.discard();
+            if (secondary != null) secondary.discard();
+            game.close();
+        }
+    }
+
+    @GameTest
+    public void veteranThirdJuniorAttackUsesSeniorPrePenaltyDamageAndOriginalDamageType(GameTestHelper context) {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        UUID owner = stableUuid("army-veteran-runtime");
+        SemionGame game = startedArmyGame(context, owner);
+        SemionMonsterEntity target = null;
+        try {
+            PlayerLane lane = game.playerLane(owner).orElseThrow();
+            lane.assignAugmentSnapshot(augmentSnapshot("job_army_g1"));
+            TowerType original = ArmyTowers.RECRUIT;
+            TowerType magic = new TowerType(original.id(), original.displayName(), original.category(), original.mineralCost(),
+                    original.maxHealth(), original.range(), original.damage(), original.attackIntervalTicks(),
+                    original.aggroPriority(), original.description(), original.visual(), original.upgradeOptions(), DamageType.MAGIC);
+            ArmyTower senior = new ArmyTower(magic, owner, TeamId.RED, 1, GridPosition.from(emptyPosition(lane, 0)));
+            lane.addTower(senior);
+            ArmyTower junior = tower(ArmyTowers.RECRUIT, owner, emptyPosition(lane, 0));
+            lane.addTower(junior);
+            for (int i = 0; i < 3; i++) senior.promoteOneRank(lane);
+            SemionTowerEntity juniorEntity = towerEntity(lane, junior);
+            target = spawnTarget(context, lane, juniorEntity.position().add(0, 0, 2), "veteran-target");
+            junior.onAttackResolved(juniorEntity, target, 9, 9, 9, false);
+            junior.onAttackResolved(juniorEntity, target, 9, 9, 9, false);
+            require(close(target.getHealth(), 100), "The first two junior attacks must only charge support fire.");
+            junior.onAttackResolved(juniorEntity, target, 9, 9, 9, false);
+            require(Math.abs(target.getHealth() - (100 - original.damage() * 1.5)) < .01,
+                    "The third target must receive 150% of the senior's pre-penalty damage.");
+            require(senior.roundMagicDamageDealt() > 0 && senior.roundPhysicalDamageDealt() == 0,
+                    "Support fire must retain the firing senior's damage type.");
+            context.succeed();
+        } finally {
+            if (target != null) target.discard();
+            game.close();
+        }
+    }
+
+    private static AugmentSnapshot augmentSnapshot(String... cards) {
+        return new AugmentSnapshot(AugmentConfig.defaults(), java.util.Arrays.stream(cards).map(id ->
+                new PlayerAugmentState.Selection(5, AugmentRarity.GOLD, id,
+                        PlayerAugmentState.Outcome.SELECTED, null, AugmentChoice.none())).toList());
     }
 
     private static SemionGame startedArmyGame(GameTestHelper context, UUID owner) {

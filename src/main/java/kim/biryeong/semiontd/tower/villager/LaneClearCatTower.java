@@ -42,7 +42,9 @@ public class LaneClearCatTower extends EntityBackedTower {
 
     @Override
     public void onKill(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
-        explode(towerEntity, target, damageAmount);
+        boolean chain = augmentSnapshot().has("job_villager_towers_g2")
+                && kim.biryeong.semiontd.augment.AugmentCombat.allowsTriggers();
+        explode(towerEntity, target, damageAmount, 0, new java.util.HashSet<>(), chain);
     }
 
     @Override
@@ -74,11 +76,14 @@ public class LaneClearCatTower extends EntityBackedTower {
         }
     }
 
-    private void explode(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
-        if (towerEntity == null || target == null) {
+    private void explode(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount,
+                         int depth, Set<UUID> exploded, boolean chain) {
+        if (towerEntity == null || target == null || !exploded.add(target.getUUID())) {
             return;
         }
         double radius = value("explosionRadius");
+        String card = "job_villager_towers_g2";
+        if (chain) {radius += augmentSnapshot().parameter(card, "radiusBonus", 1);}
         MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
                 AreaEffectIds.tower(this, "corpse_explosion"),
                 towerEntity,
@@ -88,14 +93,20 @@ public class LaneClearCatTower extends EntityBackedTower {
                 null,
                 AreaVfxSpec.onTrigger(AreaVfxStyles.CORPSE_EXPLOSION)
         );
-        TowerAreaDamage.applyResolved(
+        Runnable detonation = () -> TowerAreaDamage.applyResolved(
                 this,
                 towerEntity,
                 request,
                 monster -> resolveBasicAttackOutgoingDamage(towerEntity, monster, damageAmount),
                 false,
-                (monster, damage, killed) -> {}
+                (monster, damage, killed) -> {
+                    if (chain && killed && depth < augmentSnapshot().parameter(card, "maxChainDepth", 2)) {
+                        explode(towerEntity, monster, damageAmount, depth + 1, exploded, true);
+                    }
+                }
         );
+        if (chain) {kim.biryeong.semiontd.augment.AugmentCombat.runWithoutTriggers(detonation);}
+        else {detonation.run();}
     }
 
     private void incrementDeathStack() {

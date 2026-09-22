@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.tower.warlock;
 
 import java.util.Comparator;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.game.PlayerLane;
@@ -42,6 +43,10 @@ final class WarlockSacrificeController {
         WarlockSacrifice.Snapshot snapshot = WarlockSacrifice.snapshot(target);
         Vec3 center = sacrificedCenter(lane, target);
         WarlockSacrifice.Gain gain = sacrificeGain(warlock, snapshot);
+        if (AugmentCombat.allowsTriggers() && warlock.augmentSnapshot().has(WarlockAugments.EXPLOSIVE)) {
+            gain = gain.withPermanentMultiplier(1.0 + warlock.augmentSnapshot().parameter(
+                    WarlockAugments.EXPLOSIVE, "growthBonus", .25));
+        }
         boolean killed = lane.killTower(target);
         if (!killed) {
             return false;
@@ -54,6 +59,10 @@ final class WarlockSacrificeController {
         double increasedMaxHealth = Math.max(0.0, warlock.currentMaxHealth() - previousMaxHealth);
         warlock.refreshAfterSacrifice(lane, towerEntity, increasedMaxHealth + rule.completionHealing());
         TowerVfxService.showWarlockSacrifice(towerEntity, center);
+        if (AugmentCombat.allowsTriggers()) {
+            WarlockAugments.onAbsorbed(warlock, towerEntity, lane, target, snapshot, gain,
+                    rule.completionHealing(), center);
+        }
         return true;
     }
 
@@ -111,6 +120,7 @@ final class WarlockSacrificeController {
                 && rule != null
                 && tower != warlock
                 && !tower.isAugmentTower()
+                && !tower.isTemporaryCopy()
                 && tower.health() > 0.0
                 && !WarlockTowers.isWarlockCore(tower.type())
                 && warlock.path().acceptsSacrificeTower(tower.type())

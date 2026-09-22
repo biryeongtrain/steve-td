@@ -751,7 +751,8 @@ public final class SemionDialogService {
             }
         } else if (selectedTower == null) {
             for (ProductionTowerCatalog.CatalogEntry entry : entries) {
-                long mineralCost = Math.max(0, entry.type().mineralCost());
+                long mineralCost = ProductionTowerService.placementCost(
+                        game.playerLane(player.getUUID()).orElse(null), entry.type());
                 String augmentPreview = AugmentService.placementPreview(game, player, entry.type());
                 if (!augmentPreview.isEmpty()) {
                     body.append("<gray>").append(augmentPreview).append("</gray>\n");
@@ -775,7 +776,7 @@ public final class SemionDialogService {
             }
         } else {
             for (TowerUpgradeOption option : upgrades) {
-                boolean mineralAffordable = economy.diamond() >= option.mineralCost();
+                boolean mineralAffordable = economy.diamond() >= ProductionTowerService.upgradeCost(selectedTower, option);
                 boolean requirementsMet = selectedTower.meetsUpgradeRequirements(
                         game.playerLane(player.getUUID()).orElse(null), option);
                 boolean recommended = buildGuideService != null
@@ -879,7 +880,7 @@ public final class SemionDialogService {
             var managementPosition = tower.managementPosition();
             List<TowerUpgradeOption> upgrades = ProductionTowerService.availableUpgrades(game, player.getUUID(), managementPosition);
             for (TowerUpgradeOption option : upgrades) {
-                boolean mineralAffordable = semionPlayer.economy().diamond() >= option.mineralCost();
+                boolean mineralAffordable = semionPlayer.economy().diamond() >= ProductionTowerService.upgradeCost(tower, option);
                 boolean requirementsMet = tower.meetsUpgradeRequirements(
                         game.playerLane(player.getUUID()).orElse(null), option);
                 boolean recommended = buildGuideService != null
@@ -923,7 +924,7 @@ public final class SemionDialogService {
                         BUTTON_WIDTH
                 ));
             }
-            if (tower.canBeSold()) {
+            if (!tower.isTemporaryCopy() && tower.canBeSold()) {
                 actions.add(actionButton(
                         tower.saleActionLabel(),
                         "/semiontd tower sell "
@@ -960,7 +961,8 @@ public final class SemionDialogService {
         String body = "<yellow><bold>" + role.displayName() + "</bold></yellow>를 동료로 선택합니다.\n\n"
                 + "<gray>설치에 성공하면 이 경기에서는 판매해도 동료 종류가 유지됩니다.</gray>\n"
                 + "<gray>타워 수</gray> <yellow>" + TowerCapacity.slotCost(type) + "</yellow> <dark_gray>|</dark_gray> <gray>가격</gray> <aqua>"
-                + type.mineralCost() + " 다이아</aqua>\n\n"
+                + ProductionTowerService.placementCost(game.playerLane(player.getUUID()).orElse(null), type)
+                + " 다이아</aqua>\n\n"
                 + "<red>최대 네 종류만 선택할 수 있습니다.</red>";
         List<ActionButton> actions = List.of(
                 actionButton("선택 확정", "/semiontd tower build " + type.id(), "현재 위치에 설치하며, 성공 시 동료가 확정됩니다."),
@@ -1984,9 +1986,10 @@ public final class SemionDialogService {
     }
 
     private static Component upgradeTooltip(TowerUpgradeOption option, boolean affordable, boolean recommended, Tower currentTower) {
+        long mineralCost = ProductionTowerService.upgradeCost(currentTower, option);
         Optional<ProductionTowerCatalog.CatalogEntry> target = ProductionTowerCatalog.entry(option.targetType());
         if (target.isEmpty()) {
-            return Component.literal("대상 타워를 찾을 수 없습니다.\n비용 " + option.mineralCost() + " 다이아");
+            return Component.literal("대상 타워를 찾을 수 없습니다.\n비용 " + mineralCost + " 다이아");
         }
         var entry = target.get();
         var type = entry.type();
@@ -1995,7 +1998,7 @@ public final class SemionDialogService {
         double attacksPerSecond = 20.0 / Math.max(1, type.attackIntervalTicks());
         int capacityDelta = TowerCapacity.slotCost(type) - TowerCapacity.slotCost(currentTower.type());
         String capacityLine = capacityDelta == 0 ? "" : "<yellow>타워 수 +" + capacityDelta + "</yellow>\n";
-        MutableComponent tooltip = mutableMiniMessage("<yellow><bold>" + option.displayName() + "</bold></yellow>\n" + (recommended ? "<blue>빌드 추천</blue>\n" : "") + "<gray>대상</gray> <white>" + type.displayName() + "</white>\n" + DIAMOND_GRADIENT + "\uD83D\uDC8E " + option.mineralCost() + " 다이아" + GRADIENT_CLOSE + (affordable ? " <green>(구매 가능)</green>" : " <red>(부족)</red>") + "\n" + capacityLine + advExperienceRequirementLine(currentTower, option));
+        MutableComponent tooltip = mutableMiniMessage("<yellow><bold>" + option.displayName() + "</bold></yellow>\n" + (recommended ? "<blue>빌드 추천</blue>\n" : "") + "<gray>대상</gray> <white>" + type.displayName() + "</white>\n" + DIAMOND_GRADIENT + "\uD83D\uDC8E " + mineralCost + " 다이아" + GRADIENT_CLOSE + (affordable ? " <green>(구매 가능)</green>" : " <red>(부족)</red>") + "\n" + capacityLine + advExperienceRequirementLine(currentTower, option));
         if (!actionOnly) {
             tooltip.append(dividerComponent(160)).append(Component.literal("\n"));
             tooltip.append(mutableMiniMessage(formatHealth(type.maxHealth(), "") + "\n" + formatTowerTypePrimaryDamage(type) + "\n" + formatAttackSpeed(attacksPerSecond, type.attackIntervalTicks(), "") + "\n" + formatAttackRange(type.range(), "") + " <dark_gray>|</dark_gray> " + formatAggroPriority(type.aggroPriority(), "") + "\n"));
@@ -2026,7 +2029,8 @@ public final class SemionDialogService {
     }
 
     private static double advExperienceRequirement(Tower tower, TowerUpgradeOption option) {
-        if (!VillagerAdvStates.isAdvTower(tower) || option == null) {
+        if (!VillagerAdvStates.isAdvTower(tower) || option == null
+                || tower.augmentSnapshot().has("job_villager_adv_towers_g1")) {
             return 0.0;
         }
         return TowerBalanceRuntime.villagerAdvUpgradeRequirement(tower.type(), option.id());

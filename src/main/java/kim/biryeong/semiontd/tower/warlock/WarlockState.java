@@ -34,6 +34,13 @@ final class WarlockState {
         awakenedThisRound = false;
     }
 
+    void shareGrowth(WarlockSacrifice.Gain gain) {
+        permanentHealthBonus += gain.permanentHealth();
+        permanentDamageBonus += gain.permanentDamage();
+        roundHealthBonus += gain.roundHealth();
+        roundDamageBonus += gain.roundDamage();
+    }
+
     void copyFrom(WarlockState source) {
         if (source == null) {
             return;

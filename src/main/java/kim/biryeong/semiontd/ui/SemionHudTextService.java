@@ -514,7 +514,7 @@ public final class SemionHudTextService {
     private static void appendNextWavePreview(StringBuilder text, UUID viewerId, SemionGame game) {
         List<WaveMonsterEntry> entries = game.upcomingWaveEntries(viewerId);
         text.append("<dark_gray>────</dark_gray>\n");
-        text.append("<aqua><bold>다음 웨이브</bold></aqua>\n");
+        text.append("<aqua><bold>다음 웨이브</bold></aqua>").append(healerCountMarkup(entries)).append('\n');
         if (entries.isEmpty()) {
             text.append("<gray>정보 없음</gray>\n");
         } else {
@@ -556,12 +556,18 @@ public final class SemionHudTextService {
             text.append(" <gray>외 ").append(entries.size() - 1).append("종</gray>");
         }
         text.append(" <dark_gray>·</dark_gray> <gray>").append(totalCount).append("기</gray>");
+        text.append(healerCountMarkup(entries));
         game.playerLane(viewerId).ifPresent(lane -> {
             if (lane.queuedSummonCount() > 0) {
                 text.append(" <yellow>+소환 ").append(lane.queuedSummonCount()).append("</yellow>");
             }
         });
         text.append('\n');
+    }
+
+    static String healerCountMarkup(List<WaveMonsterEntry> entries) {
+        int count = entries.stream().filter(entry -> entry.healing() != null).mapToInt(WaveMonsterEntry::count).sum();
+        return count == 0 ? "" : " <dark_gray>·</dark_gray> <green>회복 ×" + count + "</green>";
     }
 
     private static String monsterNameMarkup(WaveMonsterEntry entry) {

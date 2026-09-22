@@ -7,6 +7,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.UUID;
+import kim.biryeong.semiontd.augment.AugmentChoice;
+import kim.biryeong.semiontd.augment.AugmentConfig;
+import kim.biryeong.semiontd.augment.AugmentRarity;
+import kim.biryeong.semiontd.augment.AugmentSnapshot;
+import kim.biryeong.semiontd.augment.PlayerAugmentState;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.game.GridPosition;
@@ -404,5 +409,127 @@ class DeveloperPatchServiceTest {
         grant(0, 0, false, false, true);
         assertTrue(DeveloperPatchService.setPinned(null, beta, true).success());
         assertTrue(DeveloperTowerData.isPinned(beta));
+    }
+
+    @Test
+    void superHotfixWaitsForFirstSuccessTriplesOnlyTheGainAndStillRollsBug() {
+        grant(0, 3, false, false, false);
+        DeveloperTower beta = tower(DeveloperTowers.BETA);
+        beta.syncAugments(augment(DeveloperAugments.SUPER_HOTFIX), null);
+        DeveloperTowerData.setPinned(beta, true);
+        assertFalse(DeveloperPatchService.applyPatch(null, beta, DeveloperPatch.ATTACK, true).success());
+        assertEquals(3, DeveloperStates.of(OWNER).hotfixesRemaining());
+        DeveloperTowerData.setPinned(beta, false);
+        double firstGain = DeveloperPatch.ATTACK.stepAmount(0) * beta.patchEfficiency(null)
+                * DeveloperBalance.hotfixScale(beta.type());
+        var result = DeveloperPatchService.applyPatch(null, beta, DeveloperPatch.ATTACK, true);
+        assertTrue(result.success());
+        assertNotNull(result.spawnedBug());
+        assertEquals(firstGain * 3, DeveloperTowerData.activeAmount(beta, DeveloperPatch.ATTACK), 1e-9);
+        assertEquals(0, DeveloperTowerData.instability(beta));
+        double nextGain = DeveloperPatch.ATTACK.stepAmount(1) * beta.patchEfficiency(null)
+                * DeveloperBalance.hotfixScale(beta.type());
+        assertTrue(DeveloperPatchService.applyPatch(null, beta, DeveloperPatch.ATTACK, true).success());
+        assertEquals(firstGain * 3 + nextGain, DeveloperTowerData.activeAmount(beta, DeveloperPatch.ATTACK), 1e-9);
+        assertEquals(1, DeveloperTowerData.instability(beta));
+        grant(0, 1, false, false, false);
+        assertTrue(DeveloperStates.of(OWNER).firstHotfix());
+    }
+
+    @Test
+    void batchQueuesAllCurrentEligibleTowersButSpendsOnlyOneSuccessfulPatch() {
+        grant(3, 0, false, false, false);
+        DeveloperTower selected = tower(DeveloperTowers.RELEASE);
+        DeveloperTower other = tower(DeveloperTowers.LTS, OWNER, 0, 2);
+        DeveloperTower pinned = tower(DeveloperTowers.BETA, OWNER, 0, 3);
+        DeveloperTower rollback = tower(DeveloperTowers.BETA, OWNER, 0, 4);
+        DeveloperTower ability = tower(DeveloperTowers.WORKBENCH, OWNER, 0, 5);
+        DeveloperTower outsider = tower(DeveloperTowers.RELEASE, UUID.randomUUID(), 0, 6);
+        PlayerLane lane = lane(selected, other, pinned, rollback, ability, outsider);
+        lane.assignAugmentSnapshot(augment(DeveloperAugments.BATCH));
+        DeveloperTowerData.setPinned(pinned, true);
+        DeveloperTowerData.addBug(rollback, DeveloperBug.ROLLBACK_FAILURE);
+        assertFalse(DeveloperPatchService.applyPatch(lane, pinned, DeveloperPatch.ATTACK, false).success());
+        assertEquals(3, DeveloperStates.of(OWNER).patchesRemaining());
+        assertTrue(DeveloperPatchService.applyPatch(lane, selected, DeveloperPatch.ATTACK, false).success());
+        assertEquals(2, DeveloperStates.of(OWNER).patchesRemaining());
+        assertEquals(1, DeveloperTowerData.pendingCount(selected, DeveloperPatch.ATTACK));
+        assertEquals(1, DeveloperTowerData.pendingCount(other, DeveloperPatch.ATTACK));
+        assertEquals(DeveloperPatch.ATTACK.stepAmount(0) * other.patchEfficiency(lane),
+                DeveloperTowerData.pendingAmount(other, DeveloperPatch.ATTACK), 1e-9);
+        for (DeveloperTower excluded : List.of(pinned, rollback, ability, outsider)) {
+            assertEquals(0, DeveloperTowerData.pendingCount(excluded, DeveloperPatch.ATTACK));
+        }
+        DeveloperTower newcomer = tower(DeveloperTowers.RELEASE, OWNER, 0, 7);
+        lane.addTower(newcomer);
+        assertEquals(0, DeveloperTowerData.pendingCount(newcomer, DeveloperPatch.ATTACK));
+        assertTrue(DeveloperPatchService.applyPatch(lane, selected, DeveloperPatch.ATTACK, false).success());
+        assertEquals(2, DeveloperTowerData.pendingCount(selected, DeveloperPatch.ATTACK));
+        assertEquals(1, DeveloperTowerData.pendingCount(other, DeveloperPatch.ATTACK));
+        assertEquals(0, DeveloperTowerData.activeCount(other, DeveloperPatch.ATTACK));
+        other.onWaveStarted(lane, 2);
+        assertEquals(1, DeveloperTowerData.activeCount(other, DeveloperPatch.ATTACK));
+        assertEquals(0, DeveloperTowerData.pendingCount(other, DeveloperPatch.ATTACK));
+    }
+
+    @Test
+    void copierUsesNearestEligibleCombatTowerOncePerRoundWithoutInstallingNegativeBug() {
+        grant(3, 0, false, false, false);
+        DeveloperTower source = tower(DeveloperTowers.ALPHA);
+        DeveloperTower duplicate = tower(DeveloperTowers.BETA, OWNER, 0, 1);
+        DeveloperTower nearest = tower(DeveloperTowers.RELEASE, OWNER, 0, 2);
+        DeveloperTower far = tower(DeveloperTowers.RELEASE, OWNER, 0, 4);
+        DeveloperTower ability = tower(DeveloperTowers.WORKBENCH, OWNER, 0, 1);
+        DeveloperTower outsider = tower(DeveloperTowers.RELEASE, UUID.randomUUID(), 0, 1);
+        PlayerLane lane = lane(source, duplicate, nearest, far, ability, outsider);
+        DeveloperTowerData.addBug(duplicate, DeveloperBug.BUFFER_OVERRUN);
+        lane.assignAugmentSnapshot(augment(DeveloperAugments.COPIER, DeveloperAugments.INTENDED));
+        DeveloperTowerData.addBug(source, DeveloperBug.PRIMITIVE);
+        DeveloperTowerData.addBug(source, DeveloperBug.BUFFER_OVERRUN);
+        assertTrue(DeveloperTowerData.hasCopiedBug(nearest, DeveloperBug.BUFFER_OVERRUN));
+        assertFalse(nearest.hasBug(DeveloperBug.BUFFER_OVERRUN));
+        assertEquals(130, nearest.modifyAttackDamage(null, null, 100), 1e-9);
+        assertFalse(DeveloperTowerData.hasCopiedBug(far, DeveloperBug.BUFFER_OVERRUN));
+        assertFalse(DeveloperTowerData.hasCopiedBug(ability, DeveloperBug.BUFFER_OVERRUN));
+        assertFalse(DeveloperTowerData.hasCopiedBug(outsider, DeveloperBug.BUFFER_OVERRUN));
+        DeveloperTowerData.addBug(source, DeveloperBug.STEALTH);
+        assertFalse(DeveloperTowerData.hasCopiedBug(nearest, DeveloperBug.STEALTH));
+        DeveloperTower upgraded = tower(DeveloperTowers.LTS);
+        upgraded.copyFrom(nearest, 100);
+        assertTrue(DeveloperTowerData.hasCopiedBug(upgraded, DeveloperBug.BUFFER_OVERRUN));
+        grant(3, 0, false, false, false);
+        DeveloperTowerData.addBug(source, DeveloperBug.LAZY_LOADING);
+        assertTrue(DeveloperTowerData.hasCopiedBug(duplicate, DeveloperBug.LAZY_LOADING));
+    }
+
+    @Test
+    void intendedBonusesIgnoreOnlyPositiveConditionsAndKeepNativePenalties() {
+        DeveloperTower boundary = tower(DeveloperTowers.BETA);
+        DeveloperTowerData.addBug(boundary, DeveloperBug.BOUNDARY);
+        assertEquals(100, boundary.modifyAttackDamage(null, null, 100), 1e-9);
+        boundary.syncAugments(augment(DeveloperAugments.INTENDED), null);
+        assertEquals(200, boundary.modifyAttackDamage(null, null, 100), 1e-9);
+        DeveloperTower buffer = tower(DeveloperTowers.BETA);
+        DeveloperTowerData.addBug(buffer, DeveloperBug.BUFFER_OVERRUN);
+        buffer.syncAugments(augment(DeveloperAugments.INTENDED), null);
+        assertEquals(100 * 1.6 * .6, buffer.modifyAttackDamage(null, null, 100), 1e-9);
+        DeveloperTower lazy = tower(DeveloperTowers.BETA);
+        DeveloperTowerData.addBug(lazy, DeveloperBug.LAZY_LOADING);
+        lazy.syncAugments(augment(DeveloperAugments.INTENDED), null);
+        assertEquals(100 * 1.3 * .5, lazy.modifyAttackDamage(null, null, 100), 1e-9);
+        DeveloperTower stealth = tower(DeveloperTowers.BETA);
+        DeveloperTowerData.addBug(stealth, DeveloperBug.STEALTH);
+        int originalAggro = stealth.aggroPriority();
+        stealth.onDamaged(null, null, 1, 100, 99);
+        assertEquals(100, stealth.modifyAttackDamage(null, null, 100), 1e-9);
+        stealth.syncAugments(augment(DeveloperAugments.INTENDED), null);
+        assertEquals(130, stealth.modifyAttackDamage(null, null, 100), 1e-9);
+        assertEquals(originalAggro, stealth.aggroPriority());
+    }
+
+    private static AugmentSnapshot augment(String... cards) {
+        return new AugmentSnapshot(AugmentConfig.defaults(), java.util.Arrays.stream(cards)
+                .map(card -> new PlayerAugmentState.Selection(5, AugmentRarity.GOLD, card,
+                        PlayerAugmentState.Outcome.SELECTED, null, AugmentChoice.none())).toList());
     }
 }

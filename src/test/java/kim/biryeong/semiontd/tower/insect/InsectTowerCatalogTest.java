@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
+import kim.biryeong.semiontd.config.TowerBalanceRuntime;
+import kim.biryeong.semiontd.web.WebCatalogExporter;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
@@ -73,9 +75,9 @@ final class InsectTowerCatalogTest {
         assertEquals(300.0, ProductionTowerCatalog.find(InsectTowers.SPIDER.id()).orElseThrow().type().maxHealth());
         assertEquals(12.0, ProductionTowerCatalog.find(InsectTowers.ENHANCED_SPIDER.id()).orElseThrow().type().damage());
         assertEquals(540.0, ProductionTowerCatalog.find(InsectTowers.ENHANCED_SPIDER.id()).orElseThrow().type().maxHealth());
-        assertEquals(7.0, ProductionTowerCatalog.find(InsectTowers.BEE.id()).orElseThrow().type().damage());
-        assertEquals(12.0, ProductionTowerCatalog.find(InsectTowers.ENHANCED_BEE.id()).orElseThrow().type().damage());
-        assertEquals(21.0, ProductionTowerCatalog.find(InsectTowers.QUEEN_BEE.id()).orElseThrow().type().damage());
+        assertEquals(0.0, ProductionTowerCatalog.find(InsectTowers.BEE.id()).orElseThrow().type().damage());
+        assertEquals(0.0, ProductionTowerCatalog.find(InsectTowers.ENHANCED_BEE.id()).orElseThrow().type().damage());
+        assertEquals(0.0, ProductionTowerCatalog.find(InsectTowers.QUEEN_BEE.id()).orElseThrow().type().damage());
     }
 
     @Test
@@ -86,8 +88,8 @@ final class InsectTowerCatalogTest {
         assertFalse(unit.waveStartedAfterPlacement());
         assertTrue(unit.freshPowerActive());
         assertFalse(unit.freshPowerPending());
-        assertEquals(157.5, unit.currentMaxHealth(), 0.0001);
-        assertEquals(12.25, unit.modifyAttackDamage(null, null, 7.0), 0.0001);
+        assertEquals(180.0, unit.currentMaxHealth(), 0.0001);
+        assertEquals(7.0, unit.modifyAttackDamage(null, null, 7.0), 0.0001);
         assertEquals(1.2, unit.visual().scale(), 0.0001);
         assertFalse(unit.meetsUpgradeRequirements(null, null));
 
@@ -95,8 +97,8 @@ final class InsectTowerCatalogTest {
         unit.onWaveStarted(null, 1);
         assertTrue(unit.freshPowerActive());
         assertFalse(unit.freshPowerPending());
-        assertEquals(157.5, unit.currentMaxHealth(), 0.0001);
-        assertEquals(12.25, unit.modifyAttackDamage(null, null, 7.0), 0.0001);
+        assertEquals(180.0, unit.currentMaxHealth(), 0.0001);
+        assertEquals(7.0, unit.modifyAttackDamage(null, null, 7.0), 0.0001);
         assertTrue(unit.meetsUpgradeRequirements(null, null));
 
         unit.resetForRound(null);
@@ -107,7 +109,7 @@ final class InsectTowerCatalogTest {
     }
 
     @Test
-    void revivalUsesFourSevenThenTenSecondsAndCancelsWhenSpawnerDies() {
+    void revivalUsesSixNineThenTwelveSecondsAndCancelsWhenSpawnerDies() {
         PlayerLane lane = testLane();
         ProductionTower spawner = new ProductionTower(
                 InsectTowers.SPAWNER, OWNER, TeamId.RED, 1, position(0));
@@ -121,21 +123,21 @@ final class InsectTowerCatalogTest {
         unit.syncHealth(0.0);
         assertFalse(unit.isDestroyed(lane));
         assertEquals(1, unit.deathsThisRound());
-        assertEquals(80, unit.reviveTicksRemaining());
-        for (int tick = 0; tick < 80; tick++) {
+        assertEquals(120, unit.reviveTicksRemaining());
+        for (int tick = 0; tick < 120; tick++) {
             unit.tick(lane);
         }
         assertEquals(unit.currentMaxHealth(), unit.health(), 0.0001);
 
         unit.syncHealth(0.0);
         assertFalse(unit.isDestroyed(lane));
-        assertEquals(140, unit.reviveTicksRemaining());
-        for (int tick = 0; tick < 140; tick++) {
+        assertEquals(180, unit.reviveTicksRemaining());
+        for (int tick = 0; tick < 180; tick++) {
             unit.tick(lane);
         }
         unit.syncHealth(0.0);
         assertFalse(unit.isDestroyed(lane));
-        assertEquals(200, unit.reviveTicksRemaining());
+        assertEquals(240, unit.reviveTicksRemaining());
         spawner.syncHealth(0.0);
         assertTrue(unit.isDestroyed(lane));
     }
@@ -154,6 +156,9 @@ final class InsectTowerCatalogTest {
 
         spider.syncHealth(0.0);
         assertFalse(spider.isDestroyed(lane));
+        for (int tick = 0; tick < 120; tick++) {
+            spider.tick(lane);
+        }
         assertEquals(110.4, spider.modifyIncomingDamage(null, null, 100.0), 0.0001);
         spider.resetForRound(lane);
         assertEquals(92.0, spider.modifyIncomingDamage(null, null, 100.0), 0.0001);
@@ -175,9 +180,9 @@ final class InsectTowerCatalogTest {
     void defaultsMergeAndRejectInvalidReduction() {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
         assertTrue(InsectTowers.all().stream().allMatch(type -> defaults.towers().containsKey(type.id())));
-        assertEquals(1.75, defaults.ability(InsectBalance.GLOBAL_ID, "freshPowerMultiplier", -1), 0.0001);
+        assertEquals(2.0, defaults.ability(InsectBalance.GLOBAL_ID, "freshPowerMultiplier", -1), 0.0001);
         assertEquals(1.2, defaults.ability(InsectBalance.GLOBAL_ID, "freshPowerScale", -1), 0.0001);
-        assertEquals(80, defaults.abilityTicks(InsectBalance.GLOBAL_ID, "reviveBaseTicks", -1));
+        assertEquals(120, defaults.abilityTicks(InsectBalance.GLOBAL_ID, "reviveBaseTicks", -1));
         assertEquals(60, defaults.abilityTicks(InsectBalance.GLOBAL_ID, "reviveIncrementTicks", -1));
         assertEquals(80, defaults.abilityTicks(InsectBalance.GLOBAL_ID, "radiusVfxIntervalTicks", -1));
         assertEquals(0.20, defaults.ability(InsectBalance.GLOBAL_ID, "deathDamageTakenPerStack", -1), 0.0001);
@@ -200,17 +205,17 @@ final class InsectTowerCatalogTest {
         assertEquals(4.0, dps(InsectTowers.CAVE_SPIDER), 0.001);
         assertEquals(7.7777, dps(InsectTowers.SPIDER), 0.001);
         assertEquals(15.0, dps(InsectTowers.ENHANCED_SPIDER), 0.001);
-        assertEquals(8.75, dps(InsectTowers.BEE), 0.001);
-        assertEquals(18.4615, dps(InsectTowers.ENHANCED_BEE), 0.001);
-        assertEquals(42.0, dps(InsectTowers.QUEEN_BEE), 0.001);
+        assertEquals(0.0, dps(InsectTowers.BEE), 0.001);
+        assertEquals(0.0, dps(InsectTowers.ENHANCED_BEE), 0.001);
+        assertEquals(0.0, dps(InsectTowers.QUEEN_BEE), 0.001);
 
-        double freshSilverfishDps = dps(InsectTowers.SILVERFISH) * InsectBalance.FRESH_POWER_MULTIPLIER;
-        assertEquals(49.0, freshSilverfishDps * 3, 0.001);
-        assertEquals(752.5, InsectTowers.SPAWNER.maxHealth()
+        double freshSilverfishDps = dps(InsectTowers.SILVERFISH);
+        assertEquals(28.0, freshSilverfishDps * 3, 0.001);
+        assertEquals(820.0, InsectTowers.SPAWNER.maxHealth()
                 + InsectTowers.SILVERFISH.maxHealth() * InsectBalance.FRESH_POWER_MULTIPLIER * 3, 0.001);
         assertEquals(189.0909, dps(InsectTowers.ENHANCED_ENDERMITE) * 4, 0.001);
         assertEquals(60.0, dps(InsectTowers.ENHANCED_SPIDER) * 4, 0.001);
-        assertEquals(168.0, dps(InsectTowers.QUEEN_BEE) * 4, 0.001);
+        assertEquals(0.0, dps(InsectTowers.QUEEN_BEE) * 4, 0.001);
         assertEquals(720.0, InsectTowers.ENHANCED_SPIDER.maxHealth() / (1.0 - 0.25), 0.001);
         assertEquals(1_040.0, dps(InsectTowers.ENHANCED_ENDERMITE) * 22, 0.001);
         assertEquals(23, TowerCapacity.slotCost(InsectTowers.SPAWNER)
@@ -246,9 +251,23 @@ final class InsectTowerCatalogTest {
         assertEquals(1.9, merged.ability(InsectBalance.GLOBAL_ID, "freshPowerMultiplier", -1), 0.0001);
         assertEquals(80, merged.abilityTicks(InsectBalance.GLOBAL_ID, "radiusVfxIntervalTicks", -1));
         assertEquals(6.0, merged.ability(InsectTowers.SPAWNER.id(), "reviveRadius", -1), 0.0001);
+        assertEquals(0.25, merged.ability(InsectBalance.GLOBAL_ID, "tier1DeathExplosionHealthRatio", -1), 0.0001);
+        assertEquals(0.4, merged.ability(InsectBalance.GLOBAL_ID, "tier2DeathExplosionHealthRatio", -1), 0.0001);
+        assertEquals(2.0, merged.ability(InsectBalance.GLOBAL_ID, "tier1DeathExplosionRadius", -1), 0.0001);
 
         assertInvalidAbility(defaults, InsectBalance.GLOBAL_ID, "freshPowerMultiplier", 0.99);
         assertInvalidAbility(defaults, InsectBalance.GLOBAL_ID, "freshPowerScale", 1.26);
+        assertInvalidAbility(defaults, InsectBalance.GLOBAL_ID, "freshDamageTakenMultiplier", 0.99);
+        assertInvalidAbility(defaults, InsectBalance.GLOBAL_ID, "reviveHealthLossRatio", 1.0);
+        assertInvalidAbility(defaults, InsectBalance.GLOBAL_ID, "reviveHealthLossRatio", -0.01);
+        assertInvalidAbility(defaults, InsectBalance.GLOBAL_ID, "beeReviveBaseTicks", 40.5);
+        assertInvalidAbility(defaults, InsectBalance.GLOBAL_ID, "beeReviveIncrementTicks", 0.0);
+        assertInvalidAbility(defaults, InsectBalance.GLOBAL_ID, "deathExplosionHealthRatio", 0.0);
+        assertInvalidAbility(defaults, InsectBalance.GLOBAL_ID, "deathExplosionRadius", Double.NaN);
+        assertInvalidAbility(defaults, InsectBalance.GLOBAL_ID, "tier1DeathExplosionHealthRatio", 0.0);
+        assertInvalidAbility(defaults, InsectBalance.GLOBAL_ID, "tier2DeathExplosionHealthRatio", 0.0);
+        assertInvalidAbility(defaults, InsectBalance.GLOBAL_ID, "tier1DeathExplosionRadius", 0.0);
+        assertInvalidAbility(defaults, InsectBalance.GLOBAL_ID, "contactDetonationRange", 0.0);
         assertInvalidAbility(defaults, InsectBalance.GLOBAL_ID, "reviveBaseTicks", 80.5);
         assertInvalidAbility(defaults, InsectBalance.GLOBAL_ID, "radiusVfxIntervalTicks", 0.0);
         assertInvalidAbility(defaults, InsectBalance.GLOBAL_ID, "deathDamageTakenPerStack", 1.01);
@@ -293,6 +312,169 @@ final class InsectTowerCatalogTest {
                 assertEquals(stats.attackIntervalTicks(), bundled.get("attackIntervalTicks").getAsInt(), type.id());
             }
         }
+    }
+
+    @Test
+    void tieredExplosionsMatchCombatAndDescriptions() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        for (TowerType type : InsectTowers.all().stream().filter(InsectTowers::isCombatUnit).toList()) {
+            int tier = InsectTowers.tier(type);
+            double ratio = switch (tier) {
+                case 1 -> 0.25;
+                case 2 -> 0.4;
+                default -> 0.5;
+            };
+            int radius = tier == 1 ? 2 : 3;
+            InsectUnitTower unit = unit(type, 2);
+            unit.recordPlacementEconomy(type.mineralCost(), 1);
+            unit.onPlaced(null);
+            assertEquals(type.maxHealth() * (tier == 1 ? 2 : 1) * ratio,
+                    unit.deathExplosionDamage(), 0.0001, type.id());
+            String description = String.join(" ", TowerBalanceRuntime.resolve(type).description());
+            assertTrue(description.contains((int) (ratio * 100) + "%"), description);
+            assertTrue(description.contains(radius + "블록"), description);
+            assertTrue(String.join(" ", unit.runtimeDetailLines()).contains("반경 " + radius + ".0칸"));
+        }
+    }
+
+    @Test
+    void everyUnitKeepsFirstWaveHealthButLosesFivePercentPerCompletedRevival() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        for (TowerType type : InsectTowers.all().stream().filter(InsectTowers::isCombatUnit).toList()) {
+            PlayerLane lane = testLane();
+            lane.addTower(new ProductionTower(InsectTowers.SPAWNER, OWNER, TeamId.RED, 1, position(0)));
+            InsectUnitTower unit = unit(type, 2);
+            unit.recordPlacementEconomy(type.mineralCost(), 1);
+            lane.addTower(unit);
+            lane.markWaveStarted(1);
+            boolean fresh = InsectTowers.tier(type) == 1;
+            boolean bee = InsectTowers.line(type) == InsectTowers.UnitLine.BEE;
+            double originalMax = type.maxHealth() * (fresh ? 2.0 : 1.0);
+            double incoming = unit.modifyIncomingDamage(null, null, 100.0);
+            assertEquals(fresh ? 300.0 : 100.0,
+                    unit.modifyIncomingDamageIgnoringReductions(null, null, 100.0), 0.0001);
+            for (int revival = 1; revival <= 3; revival++) {
+                double before = unit.currentMaxHealth();
+                unit.syncHealth(0.0);
+                assertFalse(unit.isDestroyed(lane), type.id());
+                assertFalse(unit.isDestroyed(lane), "Repeated death queries must not add a second death.");
+                assertEquals(revival, unit.deathsThisRound());
+                double ratio = switch (InsectTowers.tier(type)) {
+                    case 1 -> 0.25;
+                    case 2 -> 0.4;
+                    default -> 0.5;
+                };
+                assertEquals(before * ratio, unit.deathExplosionDamage(), 0.0001);
+                int delay = bee ? 40 + (revival - 1) * 30 : 120 + (revival - 1) * 60;
+                assertEquals(delay, unit.reviveTicksRemaining(), type.id());
+                for (int tick = 0; tick < delay; tick++) unit.tick(lane);
+                assertEquals(originalMax * Math.pow(0.95, revival), unit.currentMaxHealth(), 0.0001);
+                assertEquals(unit.currentMaxHealth(), unit.health(), 0.0001);
+                assertEquals(incoming * (1.0 + revival * 0.2), unit.modifyIncomingDamage(null, null, 100.0), 0.0001);
+                // The normal stat refresh must not overwrite or multiply the builder factors twice.
+                unit.syncEffectMaxHealth(type.maxHealth() * 1.5, 0.2, false);
+                assertEquals(originalMax * Math.pow(0.95, revival) * 1.5 * 1.2, unit.currentMaxHealth(), 0.0001);
+                unit.syncEffectMaxHealth(type.maxHealth(), 0.0, false);
+            }
+            unit.resetForRound(lane);
+            assertEquals(type.maxHealth(), unit.currentMaxHealth(), 0.0001);
+            assertEquals(0, unit.deathsThisRound());
+            assertFalse(unit.freshPowerActive());
+            lane.clearTowers();
+        }
+    }
+
+    @Test
+    void reworkConfigBackfillsOverridesAndRendersWebAndRuntimeDetails() {
+        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        TowerBalanceConfig merged = new TowerBalanceConfig(Map.of(), Map.of(), Map.of(
+                InsectBalance.GLOBAL_ID, Map.of("freshPowerMultiplier", 2.5, "reviveBaseTicks", 160.0,
+                        "tier1DeathExplosionHealthRatio", 0.75, "deathExplosionHealthRatio", 0.65,
+                        "tier1DeathExplosionRadius", 2.5, "deathExplosionRadius", 4.0)
+        )).withMissingDefaults(defaults);
+        merged.validateForRuntime();
+        ProductionTowerCatalogs.reloadBuiltIns(merged);
+        assertEquals(160, InsectBalance.reviveBaseTicks(InsectTowers.SILVERFISH));
+        assertEquals(40, InsectBalance.reviveBaseTicks(InsectTowers.BEE));
+        assertEquals(0.4, InsectBalance.deathExplosionHealthRatio(InsectTowers.ENDERMITE), 0.0001);
+        assertEquals(0.65, InsectBalance.deathExplosionHealthRatio(InsectTowers.QUEEN_BEE), 0.0001);
+        assertEquals(2.5, InsectBalance.deathExplosionRadius(InsectTowers.BEE), 0.0001);
+        assertEquals(4.0, InsectBalance.deathExplosionRadius(InsectTowers.ENDERMITE), 0.0001);
+        assertEquals(4.0, InsectBalance.deathExplosionRadius(InsectTowers.QUEEN_BEE), 0.0001);
+        InsectUnitTower unit = unit(InsectTowers.SILVERFISH, 2);
+        unit.recordPlacementEconomy(30, 1);
+        unit.onPlaced(null);
+        assertEquals(225.0, unit.currentMaxHealth(), 0.0001);
+        assertEquals(168.75, unit.deathExplosionDamage(), 0.0001);
+        String details = String.join(" ", unit.runtimeDetailLines());
+        assertTrue(details.contains("폭발 기본 마법 피해") && details.contains("체력 유지율") && details.contains("3.0배"));
+        assertTrue(details.contains("반경 2.5칸"), details);
+        for (TowerType type : InsectTowers.all()) {
+            String description = String.join(" ", TowerBalanceRuntime.resolve(type).description());
+            assertFalse(description.contains("{"), description);
+            if (InsectTowers.isCombatUnit(type)) {
+                String percent = switch (InsectTowers.tier(type)) {
+                    case 1 -> "75%";
+                    case 2 -> "40%";
+                    default -> "65%";
+                };
+                assertTrue(description.contains(percent), description);
+                assertTrue(description.contains(InsectTowers.tier(type) == 1 ? "2.5블록" : "4블록"), description);
+            }
+        }
+        WebCatalogExporter.snapshot(1L);
+        ProductionTowerCatalogs.reloadBuiltIns(defaults);
+        unit.syncEffectMaxHealth(unit.type().maxHealth(), 0.0, false);
+        assertEquals(180.0, unit.currentMaxHealth(), 0.0001);
+        assertEquals(45.0, unit.deathExplosionDamage(), 0.0001);
+        assertTrue(String.join(" ", unit.runtimeDetailLines()).contains("반경 2.0칸"));
+    }
+
+    @Test
+    void reloadUpgradeAndHealthFloorPreserveRevivalState() {
+        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        PlayerLane lane = testLane();
+        lane.addTower(new ProductionTower(InsectTowers.SPAWNER, OWNER, TeamId.RED, 1, position(0)));
+        InsectUnitTower unit = unit(InsectTowers.SILVERFISH, 2);
+        unit.recordPlacementEconomy(30, 1);
+        lane.addTower(unit);
+        lane.markWaveStarted(1);
+        unit.syncHealth(0.0);
+        assertFalse(unit.isDestroyed(lane));
+        for (int tick = 0; tick < 120; tick++) unit.tick(lane);
+
+        LinkedHashMap<String, TowerBalanceConfig.TowerStats> towers = new LinkedHashMap<>(defaults.towers());
+        var old = towers.get(unit.type().id());
+        towers.put(unit.type().id(), new TowerBalanceConfig.TowerStats(
+                old.mineralCost(), 100.0, old.range(), old.damage(), old.attackIntervalTicks(), old.aggroPriority()));
+        TowerBalanceConfig reloaded = new TowerBalanceConfig(towers, defaults.upgradeCosts(), defaults.abilities());
+        ProductionTowerCatalogs.reloadBuiltIns(reloaded);
+        unit.refreshType(TowerBalanceRuntime.resolve(InsectTowers.SILVERFISH), lane);
+        assertEquals(190.0, unit.currentMaxHealth(), 0.0001);
+        assertEquals(47.5, unit.deathExplosionDamage(), 0.0001);
+        assertEquals(360.0, unit.modifyIncomingDamage(null, null, 100), 0.0001);
+        InsectUnitTower upgraded = unit(InsectTowers.ENDERMITE, 2);
+        upgraded.copyFrom(unit, 75);
+        assertEquals(323.0, upgraded.currentMaxHealth(), 0.0001);
+        assertEquals(129.2, upgraded.deathExplosionDamage(), 0.0001);
+        assertTrue(String.join(" ", upgraded.runtimeDetailLines()).contains("반경 3.0칸"));
+        assertEquals(1, upgraded.deathsThisRound());
+        assertTrue(upgraded.freshPowerActive());
+        assertEquals(105, upgraded.paidMineralCost());
+
+        TowerBalanceConfig rapidDecay = new TowerBalanceConfig(Map.of(), Map.of(), Map.of(InsectBalance.GLOBAL_ID,
+                Map.of("reviveHealthLossRatio", 0.95, "reviveBaseTicks", 1.0, "reviveIncrementTicks", 1.0)
+        )).withMissingDefaults(defaults);
+        ProductionTowerCatalogs.reloadBuiltIns(rapidDecay);
+        for (int revival = 0; revival < 4; revival++) {
+            unit.syncHealth(0.0);
+            assertFalse(unit.isDestroyed(lane));
+            int delay = unit.reviveTicksRemaining();
+            for (int tick = 0; tick < delay; tick++) unit.tick(lane);
+        }
+        assertEquals(1.0, unit.currentMaxHealth(), 0.0001);
+        assertEquals(1.0, unit.health(), 0.0001);
+        lane.clearTowers();
     }
 
     private static void assertInvalidAbility(

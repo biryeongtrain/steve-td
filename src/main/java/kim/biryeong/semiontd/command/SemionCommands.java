@@ -676,10 +676,13 @@ public final class SemionCommands {
                         .then(literal("insect")
                                 .then(literal("radius")
                                         .executes(context -> debugInsectVfx(
-                                                context.getSource(), gameManager, false)))
+                                                context.getSource(), gameManager, "radius")))
                                 .then(literal("revive")
                                         .executes(context -> debugInsectVfx(
-                                                context.getSource(), gameManager, true))))
+                                                context.getSource(), gameManager, "revive")))
+                                .then(literal("explosion")
+                                        .executes(context -> debugInsectVfx(
+                                                context.getSource(), gameManager, "explosion"))))
                         .then(literal("army")
                                 .then(literal("promotion")
                                         .executes(context -> debugArmyVfx(
@@ -1063,26 +1066,29 @@ public final class SemionCommands {
     private static int debugInsectVfx(
             CommandSourceStack source,
             SemionGameManager gameManager,
-            boolean revive
+            String kind
     ) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         SemionGame game = playableGame(source, gameManager);
         PlayerLane lane = game == null ? null : game.playerLane(player.getUUID()).orElse(null);
         if (lane != null) {
             for (Tower tower : lane.towers()) {
-                boolean shown = revive && tower instanceof InsectUnitTower unit
-                        ? unit.showDebugRevivalVfx(lane)
-                        : !revive && tower instanceof InsectSpawnerTower spawner
-                        && spawner.showDebugRadiusVfx(lane);
+                boolean shown = switch (kind) {
+                    case "revive" -> tower instanceof InsectUnitTower unit && unit.showDebugRevivalVfx(lane);
+                    case "explosion" -> tower instanceof InsectUnitTower unit && unit.showDebugExplosionVfx(lane);
+                    default -> tower instanceof InsectSpawnerTower spawner && spawner.showDebugRadiusVfx(lane);
+                };
                 if (shown) {
-                    success(source, "벌레 " + (revive ? "부활" : "스포너 반경") + " VFX를 재생했습니다.");
+                    success(source, "벌레 " + kind + " VFX를 재생했습니다.");
                     return 1;
                 }
             }
         }
-        failure(source, revive
-                ? "살아 있고 스포너에 연결된 벌레 타워가 필요합니다."
-                : "살아 있는 벌레 스포너가 필요합니다.");
+        failure(source, switch (kind) {
+            case "revive" -> "살아 있고 스포너에 연결된 벌레 타워가 필요합니다.";
+            case "explosion" -> "살아 있는 벌레 타워가 필요합니다.";
+            default -> "살아 있는 벌레 스포너가 필요합니다.";
+        });
         return 0;
     }
 
@@ -2645,7 +2651,8 @@ public final class SemionCommands {
                 .append(Component.literal(" 클릭 시 즉시 송금됩니다.").withStyle(ChatFormatting.GRAY)));
 
         for (SemionPlayer candidate : game.players().values()) {
-            if (candidate.uuid().equals(requester.uuid()) || candidate.teamId() != requester.teamId()) {
+            if (candidate.uuid().equals(requester.uuid()) || candidate.teamId() != requester.teamId()
+                    || !EconomyService.canTransferDiamond(candidate)) {
                 continue;
             }
             ServerPlayer onlinePlayer = source.getServer().getPlayerList().getPlayer(candidate.uuid());
@@ -2658,12 +2665,13 @@ public final class SemionCommands {
         return notified;
     }
 
-    private static String teamMoneyFailureMessage(TeamMoneyTransferResult result) {
+    static String teamMoneyFailureMessage(TeamMoneyTransferResult result) {
         return switch (result.type()) {
             case DISABLED -> "팀원 간 다이아 지원 요청 기능이 비활성화되어 있습니다.";
             case INVALID_AMOUNT -> "요청 금액은 1 이상이어야 합니다.";
             case PLAYER_NOT_IN_GAME -> "현재 게임 참가자가 아닙니다.";
             case TEAM_NOT_ACTIVE -> "활성 팀 참가자만 다이아 지원을 요청하거나 보낼 수 있습니다.";
+            case BUILDER_RESTRICTED -> "해적 빌더는 팀원 간 다이아 지원을 요청하거나 보내거나 받을 수 없습니다.";
             case NOT_TEAMMATE -> "같은 팀원의 요청에만 보낼 수 있습니다.";
             case SELF_TRANSFER -> "자기 자신의 요청에는 보낼 수 없습니다.";
             case RECEIVE_COOLDOWN_ACTIVE -> "아직 다이아를 받을 수 없습니다. 남은 라운드="
@@ -3988,7 +3996,6 @@ public final class SemionCommands {
             case NOT_WAITING -> "참가자 확정 후에는 게임 시작 카운트다운을 시작할 수 없습니다.";
             case ALREADY_PENDING -> "시작 카운트다운이 이미 진행 중입니다.";
             case PRELOAD_FAILED -> "게임 시작 전 맵 프리로드에 실패했습니다.";
-            case AUGMENT_TRAIT_CONFLICT -> "NORMAL에서는 증강과 기존 특성을 함께 사용할 수 없습니다. 설정에서 하나를 꺼 주세요.";
             case SCHEDULED -> "시작 카운트다운을 시작했습니다.";
         };
     }

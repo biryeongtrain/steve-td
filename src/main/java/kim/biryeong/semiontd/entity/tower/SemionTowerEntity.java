@@ -8,6 +8,8 @@ import eu.pb4.polymer.core.api.entity.PolymerEntityUtils;
 import eu.pb4.polymer.virtualentity.api.ElementHolder;
 import eu.pb4.polymer.virtualentity.api.attachment.EntityAttachment;
 import eu.pb4.polymer.virtualentity.api.elements.BlockDisplayElement;
+import eu.pb4.polymer.virtualentity.api.elements.DisplayElement;
+import eu.pb4.polymer.virtualentity.api.tracker.EntityTrackedData;
 import eu.pb4.polymer.virtualentity.api.elements.InteractionElement;
 import java.util.List;
 import java.util.Objects;
@@ -18,6 +20,7 @@ import kim.biryeong.semiontd.effect.TimedEffectSet;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.tower.augment.AugmentTowerService;
+import kim.biryeong.semiontd.tower.augment.AugmentTowers;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
 import kim.biryeong.semiontd.entity.defender.LaneDefenseEntity;
 import kim.biryeong.semiontd.entity.healing.HealingTarget;
@@ -48,6 +51,7 @@ import kim.biryeong.semiontd.trait.TraitEffects;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
@@ -355,7 +359,8 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         double resolved = attackRange * Math.max(0.01, multiplier)
                 + timedEffects.magnitude(TimedEffectType.TOWER_FLAT_RANGE_BONUS)
                 - timedEffects.magnitude(TimedEffectType.TOWER_FLAT_RANGE_REDUCTION);
-        return Math.max(0.0, resolved);
+        return Math.max(0.0, runtimeTower == null ? resolved
+                : kim.biryeong.semiontd.tower.villager.VillagerAdvAugments.attackRange(runtimeTower, resolved));
     }
 
     public double targetAcquireRange() {
@@ -363,6 +368,12 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     }
 
     public AABB targetSearchBox() {
+        if (runtimeTower != null) {
+            double extended = runtimeTower.attackTargetSearchRange(this);
+            if (extended > Math.max(attackRange(), FINAL_DEFENSE_TARGET_RANGE)) {
+                return getBoundingBox().inflate(extended);
+            }
+        }
         if (finalDefense) {
             return getBoundingBox().inflate(FINAL_DEFENSE_TARGET_RANGE);
         }
@@ -404,6 +415,9 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
             }
         }
         if (runtimeTower != null) {damageAmount = runtimeTower.modifyResolvedAttackDamage(this, target, damageAmount);
+        }
+        if (runtimeTower != null) {
+            damageAmount = kim.biryeong.semiontd.tower.legion.LegionAugments.attackDamage(runtimeTower, damageAmount);
         }
         return Double.isFinite(damageAmount) ? Math.max(0.0, damageAmount) : 0.0;
     }
@@ -582,7 +596,10 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         if (runtimeTower == null) {
             return;
         }
-
+        if (runtimeTower.isTemporaryCopy() && AugmentCombat.allowsTriggers()) {
+            AugmentCombat.runWithoutTriggers(() -> recordAttack(target, attemptedDamage, resolvedOutgoingDamage, dealtDamage, killedTarget));
+            return;
+        }
         runtimeTower.onAttackResolved(
                 this,
                 target,
@@ -592,6 +609,7 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
                 killedTarget
         );
         applyIgniteFromBasicAttack(target, attemptedDamage, killedTarget);
+        kim.biryeong.semiontd.tower.legion.LegionAugments.onAttack(runtimeTower, this, target, attemptedDamage, dealtDamage);
         if (killedTarget) {
             runtimeTower.onKill(this, target, attemptedDamage);
         }
@@ -961,6 +979,14 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     }
 
     @Override
+    public void heal(float amount) {
+        if (runtimeTower != null && AugmentTowers.is(runtimeTower.type(), AugmentTowers.FOLDING_BARRICADE)) {
+            return;
+        }
+        super.heal(amount);
+    }
+
+    @Override
     public boolean healTarget(HealingTarget target, double amount) {
         if (runtimeTower == null || target == null) {
             return false;
@@ -1052,6 +1078,32 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         return holder;
     }
 
+    /** Viewer-only metadata. Restore from current flags so existing glow/invisibility stays intact. */
+    public List<ClientboundSetEntityDataPacket> selectionGlowPackets(boolean highlight) {
+        List<ClientboundSetEntityDataPacket> packets = new java.util.ArrayList<>();
+        if (holder != null) {
+            for (var element : holder.getElements()) {
+                if (element instanceof DisplayElement display) {
+                    packets.add(selectionGlowPacket(display.getEntityId(), display.getDataTracker().get(EntityTrackedData.FLAGS), highlight));
+                }
+            }
+        } else if (blockDisplayElement != null) {
+            packets.add(selectionGlowPacket(blockDisplayElement.getEntityId(), blockDisplayElement.getDataTracker().get(EntityTrackedData.FLAGS), highlight));
+        } else {
+            net.minecraft.world.entity.Entity rendered = moobloomVisualEntity != null ? moobloomVisualEntity : this;
+            if (runtimeTower instanceof kim.biryeong.semiontd.tower.EntityBackedTower backed) {
+                rendered = kim.biryeong.semiontd.tower.hero.FakePlayerTowerVisuals.visualEntity(backed).orElse(rendered);
+            }
+            packets.add(selectionGlowPacket(rendered.getId(), rendered.getEntityData().get(DATA_SHARED_FLAGS_ID), highlight));
+        }
+        return List.copyOf(packets);
+    }
+
+    private static ClientboundSetEntityDataPacket selectionGlowPacket(int entityId, byte flags, boolean highlight) {
+        return new ClientboundSetEntityDataPacket(entityId, List.of(SynchedEntityData.DataValue.create(
+                DATA_SHARED_FLAGS_ID, highlight ? (byte) (flags | 0x40) : flags)));
+    }
+
     @Override
     public boolean isPushable() {
         return false;
@@ -1118,7 +1170,13 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
     }
 
     private void applyDamage(ServerLevel serverLevel, DamageSource damageSource, double damageAmount) {
+        if (runtimeTower != null && AugmentTowers.is(runtimeTower.type(), AugmentTowers.FOLDING_BARRICADE)) {
+            damageAmount = Math.min(damageAmount, runtimeTower.augmentSnapshot().parameter(
+                    AugmentTowers.augmentId(runtimeTower.type()), "damagePerHitCap", 15));
+        }
         double previousHealth = getHealth();
+        if (runtimeTower != null && runtimeTower.preventLethalDamage(this, damageSource, damageAmount)) {return;}
+        if (runtimeTower != null && kim.biryeong.semiontd.tower.legion.LegionAugments.preventLethal(runtimeTower, this, damageAmount)) {return;}
         super.actuallyHurt(serverLevel, damageSource, (float) damageAmount);
         invulnerableTime = 0;
         double currentHealth = getHealth();

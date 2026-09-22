@@ -29,13 +29,13 @@ public final class InsectTowers {
             EntityVisual.builder("minecraft:spider").scale(1.20).build(), 3, UnitLine.SPIDER);
 
     public static final TowerType BEE = unit(
-            "insect_bee_t1", "벌", 40, 50, 7, 7, 16, 0,
+            "insect_bee_t1", "벌", 40, 50, 1.5, 0, 16, 0,
             EntityVisual.builder("minecraft:bee").scale(0.75).build(), 1, UnitLine.BEE);
     public static final TowerType ENHANCED_BEE = unit(
-            "insect_bee_t2", "강화 벌", 0, 90, 8, 12, 13, 0,
+            "insect_bee_t2", "강화 벌", 0, 90, 1.5, 0, 13, 0,
             EntityVisual.builder("minecraft:bee").scale(0.95).build(), 2, UnitLine.BEE);
     public static final TowerType QUEEN_BEE = unit(
-            "insect_bee_t3", "여왕벌", 0, 150, 9, 21, 10, 0,
+            "insect_bee_t3", "여왕벌", 0, 150, 1.5, 0, 10, 0,
             EntityVisual.builder("minecraft:bee").scale(1.20).build(), 3, UnitLine.BEE);
 
     public static final TowerType SPAWNER = TowerType.builder("insect_spawner", "스포너")
@@ -132,10 +132,23 @@ public final class InsectTowers {
             UnitLine line
     ) {
         java.util.ArrayList<String> description = new java.util.ArrayList<>();
-        description.add("<light_purple>스포너</light_purple> 근처에서 죽으면 더 긴 대기시간을 거쳐 계속 <green>부활</green>합니다.");
-        description.add("<red>죽을 때마다 이번 라운드에 받는 피해가 {ability.insect_global.deathDamageTakenPerStack:percent} 증가합니다.</red>");
+        description.add("사망 시 반경 {ability.insect_global." + InsectBalance.deathExplosionRadiusKey(tier)
+                + ":blocks} 안의 적에게 최대 체력의 {ability.insect_global."
+                + InsectBalance.deathExplosionHealthRatioKey(tier)
+                + ":percent}만큼 <light_purple>마법 피해</light_purple>를 입힙니다.");
+        String revivePrefix = line == UnitLine.BEE ? "beeRevive" : "revive";
+        description.add("<light_purple>스포너</light_purple> 근처에서 죽으면 {ability.insect_global." + revivePrefix
+                + "BaseTicks:seconds} 후 <green>부활</green>하며, 대기가 매번 {ability.insect_global."
+                + revivePrefix + "IncrementTicks:seconds}씩 늘어납니다.");
+        description.add("부활마다 최대 체력이 {ability.insect_global.reviveHealthLossRatio:percent} 줄고, "
+                + "받는 피해가 {ability.insect_global.deathDamageTakenPerStack:percent}씩 증가합니다. 다음 라운드에 초기화됩니다.");
         if (tier == 1) {
-            description.add("<gold>첫 배치</gold> 웨이브에는 최대 체력과 기본공격 피해가 {ability.insect_global.freshPowerMultiplier:number}배입니다.");
+            description.add("<gold>첫 배치</gold> 웨이브에는 부활 후에도 최대 체력이 {ability.insect_global.freshPowerMultiplier:number}배, "
+                    + "받는 피해가 {ability.insect_global.freshDamageTakenMultiplier:number}배입니다.");
+        }
+        if (line == UnitLine.BEE) {
+            description.add("평타 없이 적에게 접근해 {ability.insect_global.contactDetonationRange:blocks} 이내에서 자폭합니다. "
+                    + "사거리 증가로 접촉 거리는 늘어나지 않습니다.");
         }
         if (line == UnitLine.SPIDER) {
             description.add("<gray>받는 피해를 {ability." + id + ".damageReduction:percent} 감소시키는 탱커입니다.</gray>");

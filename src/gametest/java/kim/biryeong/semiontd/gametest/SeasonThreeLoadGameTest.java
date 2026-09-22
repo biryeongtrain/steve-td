@@ -55,27 +55,31 @@ import xyz.nucleoid.map_templates.BlockBounds;
  * Opt-in headless lane observation, not a release balance or 30-client acceptance gate.
  * Run only this test with JAVA_TOOL_OPTIONS containing both -Dsemiontd.loadAcceptance=true
  * and -Dfabric-api.gametest.filter=semion-td-gametest:season_three_load_game_test_staged_waves.
- * Each SEASON3_R16_LOAD_REPORT log line is a complete JSON stage report. Maximum measured
- * duration is 3 * 1800 game ticks (270 seconds at 20 TPS), plus setup and stage warmup.
+ * Each SEASON3_WAVE_COMPARISON_REPORT log line is a complete JSON checkpoint/stage report.
+ * Eight logical lanes compare two existing boards and four augment profiles, not client load.
+ * Maximum measured duration is 16 * 1800 game ticks, plus setup and stage warmup.
  * Fixed factory-built boards omit purchase history, prior survival stacks and job progression.
  * Replicas share a server and are not independent matches. Entity AI is real, not seeded.
  */
 public final class SeasonThreeLoadGameTest {
     private static final String FILTER = "semion-td-gametest:season_three_load_game_test_staged_waves";
     private static final Gson JSON = new GsonBuilder().serializeNulls().create();
-    private static final int LANES = 30;
+    private static final int LANES = 8;
     private static final int STAGE_TICKS = 1800;
+    private static final List<Integer> ROUNDS = List.of(16, 19, 20, 25);
+    private static final String INFINITE_TEMPLATE = "overworld_assault";
     private static final List<String> LIMITS = List.of(
-            "INCOME_UNMEASURED", "NO_NETWORK_CLIENTS", "NO_GUI_OR_PURCHASE_TRANSACTIONS",
+            "NO_INCOME_PURCHASE_OR_REINVESTMENT; INCOME_PROFILE_HAS_DIRECT_COMBAT_EFFECT_ONLY_AT_R25",
+            "NO_NETWORK_CLIENTS", "NO_GUI_OR_PURCHASE_TRANSACTIONS", "ONLY_OVERWORLD_ASSAULT_INFINITE_TEMPLATE",
             "NO_FULL_MATCH_OR_TEAM_FINAL_DEFENSE", "NO_PRIOR_ROUND_STACK_OR_ECONOMY_HISTORY",
-            "FIXED_BOARDS_NOT_EQUAL_COST_OR_BALANCE_CONTROLS", "CORRELATED_REPLICAS_NOT_MATCH_SAMPLES");
+            "FIXED_BOARDS_NOT_EQUAL_COST_OR_BALANCE_CONTROLS", "CORRELATED_LANES_NOT_MATCH_SAMPLES");
     private static final List<Board> BOARDS = List.of(
             new Board("villager", "semion-td:villager_towers", List.of("t3_golem_tower", "t3_golem_tower",
                     "villager_splash_t3", "villager_splash_t3", "villager_splash_t3", "t2_allay_tower")),
             new Board("animal", "semion-td:animal_towers", List.of("t3_pig_tower", "t3_pig_tower",
                     "t3_pig_tower", "t3_wolf_dps_tower", "t3_wolf_dps_tower", "t3_wolf_dps_tower")));
 
-    @GameTest(maxTicks = 6200)
+    @GameTest(maxTicks = 31_000)
     public void stagedWaves(GameTestHelper context) {
         if (!Boolean.getBoolean("semiontd.loadAcceptance")) {
             SemionTd.LOGGER.info("SEASON3_LOAD_NOT_RUN: opt-in property absent; no load evidence collected.");
@@ -90,18 +94,18 @@ public final class SeasonThreeLoadGameTest {
         new Run(context).start();
     }
 
-    private enum Group { NONE, ATTACK, DEFENSE }
-    private enum Stage { BASE, HEALER_ONLY, COUNT_AND_HEALER }
+    private enum Group { NONE, ATTACK, DEFENSE, INCOME }
+    private enum Stage { BASE, HEALER_ONLY, COUNT_ONLY, COUNT_AND_HEALER }
     private record Board(String id, String job, List<String> towers) {}
     private record TickTimes(int samples, Double p50, Double p95, Double p99, Double maximum) {}
     private record LaneResult(String board, Group group, int replica, List<PlayerAugmentState.Selection> selections,
             String templateId, int expectedSpawns, int observedSpawns, Integer spawnCompleteTick,
             double initialNaturalHealth, long observedHealers, long aliveMonsters, int leaks, double leakedThreat, long rewardedKills,
-            boolean laneCleared, boolean perfectClear, boolean defenseBroken, Integer clearTick,
+            boolean laneCleared, boolean perfectClear, boolean defenseBroken, int towerDeaths, Integer clearTick,
             int endpointTick, boolean censored, int combatTicksObserved, List<TowerRoundMetricsSnapshot> towers,
             WaveHealingState.Snapshot healer, MonsterSupportMetrics.Snapshot naturalSupport,
             String healingRatioStatus, Double healingRatio) {}
-    private record StageReport(String status, Stage stage, int logicalParticipants, int initialRealTowers, int forcedArenaChunks,
+    private record StageReport(String status, int round, Stage stage, int logicalParticipants, int initialRealTowers, int forcedArenaChunks,
             int endpointTick, double wallSeconds, String towerBalanceSha256, String augmentConfigSha256,
             String waveDefinitionSha256, String definitions, List<String> limits, TickTimes serverTickMilliseconds,
             List<LaneResult> lanes) {}
@@ -145,7 +149,8 @@ public final class SeasonThreeLoadGameTest {
                         lane.leakedCountThisRound(), lane.leakedThreatThisRound(),
                         player.matchStats().monsterKills(), lane.clearedThisRound(),
                         lane.clearedThisRound() && !lane.leakedThisRound() && !lane.laneDefenseBroken(),
-                        lane.laneDefenseBroken(), lane.clearedThisRound() ? tick : null, tick,
+                        lane.laneDefenseBroken(), towers.stream().mapToInt(TowerRoundMetricsSnapshot::deathCount).sum(),
+                        lane.clearedThisRound() ? tick : null, tick,
                         !lane.clearedThisRound(), first < 0 || last < first ? 0 : last - first + 1,
                         towers, healing, lane.naturalWaveSupportMetrics(), healers == 0 ? "N/A" : "MEASURED",
                         healers == 0 ? null : healing.effectiveHealing() / lane.naturalWaveStartingHealth());
@@ -167,6 +172,7 @@ public final class SeasonThreeLoadGameTest {
         private final String towerHash = hash(TowerBalanceRuntime.current());
         private RoundWaveConfig wave;
         private int stageIndex;
+        private int roundIndex;
         private int tick;
         private long startNanos;
 
@@ -175,7 +181,7 @@ public final class SeasonThreeLoadGameTest {
             level = context.getLevel();
             origin = context.absolutePos(BlockPos.ZERO).offset(1024, 0, 1024);
             AugmentConfig defaults = AugmentConfig.defaults();
-            augments = new AugmentConfig(true, false, defaults.rarityWeights(), defaults.parameters(), defaults.disabledIds());
+            augments = new AugmentConfig(true, true, defaults.rarityWeights(), defaults.parameters(), defaults.disabledIds());
         }
 
         void start() {
@@ -216,23 +222,27 @@ public final class SeasonThreeLoadGameTest {
         private void startStage() {
             require(towerHash.equals(hash(TowerBalanceRuntime.current())), "Tower runtime changed between load stages.");
             Stage stage = Stage.values()[stageIndex];
-            wave = WaveConfig.defaultConfig().withSeason3Stages(stage == Stage.COUNT_AND_HEALER,
-                    stage != Stage.BASE, Set.of()).configForRound(16).orElseThrow();
+            int round = ROUNDS.get(roundIndex);
+            boolean healers = stage == Stage.HEALER_ONLY || stage == Stage.COUNT_AND_HEALER;
+            wave = WaveConfig.defaultConfig().withSeason3Stages(stage == Stage.COUNT_ONLY || stage == Stage.COUNT_AND_HEALER,
+                    healers, healers ? Set.of(INFINITE_TEMPLATE) : Set.of()).candidatesForRound(round).stream()
+                    .filter(candidate -> round < 20 || INFINITE_TEMPLATE.equals(candidate.templateId()))
+                    .findFirst().orElseThrow();
             tick = 0;
             tickMillis.clear();
             for (int index = 0; index < LANES; index++) {
                 Board board = BOARDS.get(index % 2);
-                Group group = Group.values()[(index / 2) % 3];
+                Group group = Group.values()[index / 2];
                 TeamId team = TeamId.values()[index / 5];
                 int laneId = index % 5 + 1;
-                UUID owner = UUID.nameUUIDFromBytes(("s3-load-" + stage + "-" + index).getBytes(StandardCharsets.UTF_8));
+                UUID owner = UUID.nameUUIDFromBytes(("s3-wave-" + round + "-" + stage + "-" + index).getBytes(StandardCharsets.UTF_8));
                 SemionPlayer player = new SemionPlayer(owner, "load-" + index, team, laneId,
                         new PlayerEconomy(EconomyConfig.defaultConfig()));
                 player.assignJob(JobRegistry.find(ResourceLocation.parse(board.job())).orElseThrow());
                 players.put(owner, player);
                 BlockPos base = base(index);
                 PlayerLane lane = new PlayerLane(team, laneId, owner, level, layout(base, laneId));
-                LaneRun run = new LaneRun(lane, player, board, group, index / 6);
+                LaneRun run = new LaneRun(lane, player, board, group, 0);
                 lanes.add(run);
                 AreaEffectLaneIndex.register(lane);
                 for (int slot = 0; slot < board.towers().size(); slot++) {
@@ -242,8 +252,8 @@ public final class SeasonThreeLoadGameTest {
                             .create(owner, team, laneId, position);
                     lane.addTower(tower);
                 }
-                lane.assignAugmentSnapshot(snapshot(augments, group, lane.towers().getFirst().logicalId()));
-                lane.markWaveStarted(16);
+                lane.assignAugmentSnapshot(snapshot(augments, group, lane.towers().getFirst().logicalId(), round));
+                lane.markWaveStarted(round);
                 String laneKey = "lane_" + laneId;
                 lane.enqueueWave(wave.entriesForLane(laneKey), wave.spawnMode(), wave.spawnIntervalTicks(),
                         wave.rewardBudgetForLane(laneKey), wave.templateId());
@@ -273,8 +283,10 @@ public final class SeasonThreeLoadGameTest {
             report("INTERNAL_OBSERVATION_ONLY");
             // These validate the fixture, not whether a board is strong enough to clear.
             require(lanes.stream().allMatch(run -> run.spawnCompleteTick != null), "Not every queued natural monster was observed spawning.");
-            require(lanes.stream().allMatch(run -> run.result.observedHealers() == (stageIndex == 0 ? 0 : 1)),
-                    "R16 stage must contain exactly zero or one natural healer per lane.");
+            long expectedHealers = wave.entriesForLane("lane_1").stream().filter(entry -> entry.healing() != null)
+                    .mapToLong(entry -> entry.count()).sum();
+            require(lanes.stream().allMatch(run -> run.result.observedHealers() == expectedHealers),
+                    "Every lane must spawn the checkpoint's configured healer count.");
             require(lanes.stream().flatMap(run -> run.spawned.values().stream()).allMatch(monster ->
                     monster.waveHealing() == null || monster.waveHealingState().successfulCasts()
                             <= monster.waveHealing().maxSuccessfulCasts()), "A natural healer exceeded its cast limit.");
@@ -283,16 +295,19 @@ public final class SeasonThreeLoadGameTest {
                     "No actual tower damage: this run provides no combat evidence.");
             cleanupStage();
             if (++stageIndex == Stage.values().length) {
-                cleanupArena();
-                context.succeed();
-            } else {
-                context.runAfterDelay(40, () -> safely(this::startStage));
+                stageIndex = 0;
+                if (++roundIndex == ROUNDS.size()) {
+                    cleanupArena();
+                    context.succeed();
+                    return;
+                }
             }
+            context.runAfterDelay(40, () -> safely(this::startStage));
         }
 
         private void report(String status) {
-            SemionTd.LOGGER.info("SEASON3_R16_LOAD_REPORT {}", JSON.toJson(new StageReport(status,
-                    Stage.values()[stageIndex], LANES, LANES * 6, forcedChunks.size(), tick,
+            SemionTd.LOGGER.info("SEASON3_WAVE_COMPARISON_REPORT {}", JSON.toJson(new StageReport(status,
+                    ROUNDS.get(roundIndex), Stage.values()[stageIndex], LANES, LANES * 6, forcedChunks.size(), tick,
                     startNanos == 0 ? 0 : (System.nanoTime() - startNanos) / 1_000_000_000.0,
                     towerHash, hash(augments), hash(wave), "BUNDLED_WAVE_AND_AUGMENT_H0; CURRENT_TOWER_RUNTIME",
                     LIMITS, tickTimes(tickMillis), lanes.stream().map(run -> run.result).toList())));
@@ -338,14 +353,25 @@ public final class SeasonThreeLoadGameTest {
                 List.of(new GridPosition(base.getX() + 9, base.getY(), base.getZ() + 25)));
     }
 
-    private static AugmentSnapshot snapshot(AugmentConfig config, Group group, UUID coverTarget) {
-        return new AugmentSnapshot(config, switch (group) {
+    private static AugmentSnapshot snapshot(AugmentConfig config, Group group, UUID coverTarget, int round) {
+        List<PlayerAugmentState.Selection> selections = new ArrayList<>(switch (group) {
             case NONE -> List.of();
             case ATTACK -> List.of(selection(5, AugmentRarity.SILVER, "finishing_fire_1", AugmentChoice.none()),
                     selection(15, AugmentRarity.GOLD, "winning_barrage", AugmentChoice.none()));
             case DEFENSE -> List.of(selection(5, AugmentRarity.SILVER, "triangle_formation", AugmentChoice.none()),
-                    selection(15, AugmentRarity.GOLD, "tactical_designation_2", new AugmentChoice(coverTarget, null, "COVER")));
+                    selection(15, AugmentRarity.GOLD, "biased_armor", new AugmentChoice(null, null, "PHYSICAL")));
+            case INCOME -> List.of(selection(5, AugmentRarity.SILVER, "additional_payload", AugmentChoice.none()),
+                    selection(15, AugmentRarity.GOLD, "support_performance", AugmentChoice.none()));
         });
+        if (round >= 25) {
+            switch (group) {
+                case ATTACK -> selections.add(selection(25, AugmentRarity.PRISMATIC, "one_man_show", new AugmentChoice(coverTarget, null, null)));
+                case DEFENSE -> selections.add(selection(25, AugmentRarity.PRISMATIC, "tactical_designation_3", new AugmentChoice(coverTarget, null, "COVER")));
+                case INCOME -> selections.add(selection(25, AugmentRarity.PRISMATIC, "wartime_economy", AugmentChoice.none()));
+                case NONE -> { }
+            }
+        }
+        return new AugmentSnapshot(config, selections);
     }
 
     private static PlayerAugmentState.Selection selection(int round, AugmentRarity rarity, String id, AugmentChoice choice) {

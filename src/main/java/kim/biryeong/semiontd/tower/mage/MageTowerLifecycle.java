@@ -26,6 +26,10 @@ public final class MageTowerLifecycle {
             }
         }
         if (hasCore) {
+            if (lane.augmentSnapshot().has(MageAugments.FLOOD)) {
+                naturalMana = (int) Math.floor(naturalMana * lane.augmentSnapshot()
+                        .parameter(MageAugments.FLOOD, "productionMultiplier", 2));
+            }
             MageStates.state(owner).addMana(naturalMana);
         }
         MageTowerRuntime.restoreTemporaryTowers(lane, owner);

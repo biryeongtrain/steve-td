@@ -49,11 +49,17 @@ class AugmentCombatTest {
             Tower tower = add(lane, "tactical_" + tier, 0);
             String id = "tactical_designation_" + tier;
             lane.assignAugmentSnapshot(snapshot(id, choice(tower, "ASSAULT")));
-            assertEquals(new double[]{.15, .25, .40}[tier - 1], AugmentCombat.damageBonus(tower, null), 1e-9);
+            assertEquals(new double[]{.35, .65, 1.0}[tier - 1], AugmentCombat.damageBonus(tower, null), 1e-9);
             assertEquals(100, AugmentCombat.incomingDamage(tower, null, null, 100, 100), 1e-9);
             lane.assignAugmentSnapshot(snapshot(id, choice(tower, "COVER")));
             assertEquals(0, AugmentCombat.damageBonus(tower, null), 1e-9);
-            assertEquals(new double[]{88, 80, 70}[tier - 1], AugmentCombat.incomingDamage(tower, null, null, 100, 100), 1e-9);
+            assertEquals(new double[]{80, 70, 60}[tier - 1], AugmentCombat.incomingDamage(tower, null, null, 100, 100), 1e-9);
+            lane.assignAugmentSnapshot(snapshot(id + "_assault", choice(tower, "")));
+            assertEquals(new double[]{.35, .65, 1.0}[tier - 1], AugmentCombat.damageBonus(tower, null), 1e-9);
+            assertEquals(100, AugmentCombat.incomingDamage(tower, null, null, 100, 100), 1e-9);
+            lane.assignAugmentSnapshot(snapshot(id + "_cover", choice(tower, "ASSAULT")));
+            assertEquals(0, AugmentCombat.damageBonus(tower, null), 1e-9);
+            assertEquals(new double[]{80, 70, 60}[tier - 1], AugmentCombat.incomingDamage(tower, null, null, 100, 100), 1e-9);
         }
     }
 
@@ -65,11 +71,11 @@ class AugmentCombatTest {
         Tower neighbor = add(lane, "neighbor", 4);
         lane.assignAugmentSnapshot(snapshot("triangle_formation", AugmentChoice.none(), "twin_squadron", AugmentChoice.none()));
         AugmentCombat.startWave(lane, 5);
-        assertEquals(.18, AugmentCombat.damageBonus(first, null), 1e-9);
-        assertEquals(.08, AugmentCombat.damageBonus(neighbor, null), 1e-9);
+        assertEquals(.50, AugmentCombat.damageBonus(first, null), 1e-9);
+        assertEquals(.20, AugmentCombat.damageBonus(neighbor, null), 1e-9);
         second.syncHealth(0);
         lane.removeTower(neighbor);
-        assertEquals(.18, AugmentCombat.damageBonus(first, null), 1e-9);
+        assertEquals(.50, AugmentCombat.damageBonus(first, null), 1e-9);
         AugmentCombat.settleWave(lane, 5);
         assertEquals(0, AugmentCombat.damageBonus(first, null), 1e-9);
     }
@@ -85,7 +91,7 @@ class AugmentCombatTest {
         assertEquals(2, AugmentCombat.independentEligibleCount(lane));
         AugmentCombat.startWave(lane, 5);
         neighbor.syncPosition(new GridPosition(1, 0, 0));
-        assertEquals(.12, AugmentCombat.damageBonus(first, null), 1e-9);
+        assertEquals(.30, AugmentCombat.damageBonus(first, null), 1e-9);
     }
 
     @Test
@@ -96,7 +102,7 @@ class AugmentCombatTest {
         lane.assignAugmentSnapshot(snapshot("frontline_specialization", new AugmentChoice(front.logicalId(), artillery.logicalId(), "")));
         AugmentCombat.startWave(lane, 15);
         assertEquals(-.25, AugmentCombat.damageBonus(front, null), 1e-9);
-        assertEquals(.30, AugmentCombat.damageBonus(artillery, null), 1e-9);
+        assertEquals(.70, AugmentCombat.damageBonus(artillery, null), 1e-9);
         assertEquals(front.type().aggroPriority(), front.aggroPriority());
         assertTrue(AugmentCombat.prefersEqualDistance(front));
         assertFalse(AugmentCombat.prefersEqualDistance(artillery));
@@ -113,7 +119,7 @@ class AugmentCombatTest {
         Tower first = add(lane, "overheat_t1", 0);
         lane.assignAugmentSnapshot(snapshot("overheat_core", choice(first, "")));
         AugmentCombat.startWave(lane, 5);
-        assertEquals(.40, AugmentCombat.damageBonus(first, null), 1e-9);
+        assertEquals(1.0, AugmentCombat.damageBonus(first, null), 1e-9);
         AugmentCombat.settleWave(lane, 5);
         AugmentCombat.settleWave(lane, 5);
         assertEquals(1, AugmentCombat.heatStacks(first));
@@ -136,16 +142,16 @@ class AugmentCombatTest {
         Tower other = add(lane, "other", 8);
         main.syncHealth(50);
         lane.assignAugmentSnapshot(snapshot("one_man_show", choice(main, ""), "wartime_economy", AugmentChoice.none()));
-        assertEquals(150, main.currentMaxHealth(), 1e-9);
-        assertEquals(75, main.health(), 1e-9);
-        assertEquals(120, other.currentMaxHealth(), 1e-9);
-        assertEquals(1.35, AugmentCombat.damageBonus(main, null), 1e-9);
-        assertEquals(.15, AugmentCombat.damageBonus(other, null), 1e-9);
+        assertEquals(200, main.currentMaxHealth(), 1e-9);
+        assertEquals(100, main.health(), 1e-9);
+        assertEquals(140, other.currentMaxHealth(), 1e-9);
+        assertEquals(2.40, AugmentCombat.damageBonus(main, null), 1e-9);
+        assertEquals(.45, AugmentCombat.damageBonus(other, null), 1e-9);
         lane.removeTower(main);
-        assertEquals(.15, AugmentCombat.damageBonus(other, null), 1e-9);
+        assertEquals(.45, AugmentCombat.damageBonus(other, null), 1e-9);
         Tower later = add(lane, "later", 12);
-        assertEquals(.15, AugmentCombat.damageBonus(later, null), 1e-9);
-        assertEquals(120, later.health(), 1e-9);
+        assertEquals(.45, AugmentCombat.damageBonus(later, null), 1e-9);
+        assertEquals(140, later.health(), 1e-9);
     }
 
     @Test
@@ -221,7 +227,7 @@ class AugmentCombatTest {
         assertEquals(upgraded.type().id(), nextStart.towerTypeId());
         assertEquals(1, nextStart.state().masteryStacks());
         assertEquals(1, nextStart.state().heatStacks());
-        assertEquals(104.0, nextStart.state().startingMaxHealth());
+        assertEquals(115.0, nextStart.state().startingMaxHealth(), 1e-9);
 
         assertTrue(lane.removeTower(upgraded));
         assertFalse(lane.removeTower(upgraded));

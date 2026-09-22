@@ -40,6 +40,45 @@ public final class AugmentTowerGameTest {
     private static final TowerType NORMAL_B = TowerType.builder("augment_test_normal_b", "검사 타워 B")
             .mineralCost(10).maxHealth(200).range(8).damage(40).attackIntervalTicks(20).build();
 
+    @GameTest public void roundGrowthRefreshesAllNineBodiesAndSurvivesEntityRestoration(GameTestHelper context) {
+        PlayerLane lane = lane(context);
+        int[] round = {5};
+        AugmentTelemetry telemetry = new AugmentTelemetry();
+        telemetry.bindClock(context.getLevel()::getGameTime, () -> round[0]);
+        lane.assignAugmentTelemetry(telemetry);
+        try {
+            for (TowerType type : AugmentTowers.all()) {
+                round[0] = 5;
+                AugmentTower tower = augment(lane, type, pos(context, 5, 1, 8));
+                UUID identity = tower.logicalId();
+                for (int checkpoint : new int[]{5, 14, 15, 24, 25}) {
+                    round[0] = checkpoint;
+                    tower.beginPrepare(lane, checkpoint);
+                    int tier = AugmentTowers.tierForRound(checkpoint);
+                    close(type.maxHealth() * tier, tower.currentMaxHealth(), type.id() + " logical growth");
+                    close(tower.currentMaxHealth(), tower.runtimeEntity(lane).orElseThrow().getMaxHealth(), "Entity maximum follows growth");
+                    if (tower instanceof OffensiveAugmentTower offensive && type != AugmentTowers.STARLIGHT_COCOON) {
+                        close(type.damage() * (1 + (tier - 1) * .5), offensive.runtimeEntity(lane).orElseThrow().attackDamageAmount(null),
+                                "Actual basic attack follows the current tier");
+                    }
+                    health(lane, tower, tower.health() - 10);
+                    double injured = tower.health();
+                    tower.beginPrepare(lane, checkpoint);
+                    close(injured, tower.health(), "Repeated preparation cannot heal injuries");
+                }
+                lane.killTower(tower);
+                lane.resetForRound();
+                close(type.maxHealth() * 3, tower.runtimeEntity(lane).orElseThrow().getMaxHealth(), "Restored entity retains T3");
+                require(tower.logicalId().equals(identity) && tower.growthTier() == 3, "Logical identity and tier survive restoration");
+                lane.removeTower(tower);
+                AugmentTower late = augment(lane, type, pos(context, 5, 1, 8));
+                close(type.maxHealth() * 3, late.health(), "A newly placed R25 body starts at the current tier and full health");
+                lane.removeTower(late);
+            }
+            context.succeed();
+        } finally { cleanup(lane); }
+    }
+
     @GameTest public void emergencyBellUsesThreeDistinctLogicalTargets(GameTestHelper context) {
         PlayerLane lane = lane(context);
         try {
@@ -50,7 +89,7 @@ public final class AugmentTowerGameTest {
             for (Tower tower : List.of(first, second, third)) health(lane, tower, 50);
             bell.markWaveStarted(5); bell.onWaveStarted(lane, 5);
             for (int i = 0; i < 4; i++) bell.execute(lane);
-            for (Tower tower : List.of(first, second, third)) close(100, tower.health(), "Each target receives one 50 HP rescue");
+            for (Tower tower : List.of(first, second, third)) close(130, tower.health(), "Each target receives one 80 HP rescue");
             health(lane, first, 50); bell.execute(lane);
             close(50, first.health(), "A healed logical target cannot be rescued twice");
             require(bell.runtimeDetailLines().contains("구조 3/3"), "Rescue count must be visible");
@@ -65,11 +104,11 @@ public final class AugmentTowerGameTest {
             AugmentTower core = augment(lane, AugmentTowers.BARRIER_CORE, pos(context, 5, 1, 8));
             Tower target = ordinary(lane, NORMAL_A, pos(context, 4, 1, 8));
             core.markWaveStarted(5); core.onWaveStarted(lane, 5);
-            close(750, AugmentTowerService.redirectDamage(target, 1000), "One quarter is redirected");
-            close(450, core.health(), "Core takes unmitigated transferred damage");
-            close(7500, AugmentTowerService.redirectDamage(target, 10000), "Lethal overflow is not returned");
+            close(650, AugmentTowerService.redirectDamage(target, 1000), "Thirty-five percent is redirected");
+            close(650, core.health(), "Core takes unmitigated transferred damage");
+            close(6500, AugmentTowerService.redirectDamage(target, 10000), "Lethal overflow is not returned");
             close(0, core.health(), "Core dies on lethal transfer");
-            close(700, core.telemetrySample(5, 0, 1, "ROUND_END").barrierAbsorbed(),
+            close(1000, core.telemetrySample(5, 0, 1, "ROUND_END").barrierAbsorbed(),
                     "Barrier telemetry measures actual absorbed health, not lethal overflow");
             close(100, AugmentTowerService.redirectDamage(target, 100), "Destroyed core has no live links");
             require(!core.canBeSold() && !core.canReceiveAllyHealing() && !core.triggersNearbyDeathEffects(), "Free body restrictions remain active");
@@ -89,9 +128,9 @@ public final class AugmentTowerGameTest {
             for (int i = 0; i < 5; i++) relay.onLinkedPrimaryAttack(first, enemy, 100, DamageType.PHYSICAL);
             double before = enemy.runtimeMonster().health();
             relay.onLinkedPrimaryAttack(second, enemy, 200, DamageType.PHYSICAL);
-            close(before - 100, enemy.runtimeMonster().health(), "Charge adds half of the other tower's resolved basic damage");
+            close(before - 200, enemy.runtimeMonster().health(), "Charge adds the other tower's full resolved basic damage");
             relay.onLinkedPrimaryAttack(second, enemy, 200, DamageType.PHYSICAL);
-            close(before - 100, enemy.runtimeMonster().health(), "An uncharged hit cannot repeat the extra damage");
+            close(before - 200, enemy.runtimeMonster().health(), "An uncharged hit cannot repeat the extra damage");
             health(lane, first, 0); relay.onNearbyTowerDeath(lane, first);
             require(relay.runtimeDetailLines().contains("연결 0/2"), "Death disconnects the whole relay for this wave");
             var sample = relay.telemetrySample(5, 0, 1, "ROUND_END");
@@ -117,9 +156,9 @@ public final class AugmentTowerGameTest {
             SemionMonsterEntity enemy = monster(context, lane, points.getFirst());
             enemy.setNoGravity(false); enemy.setOnGround(true);
             workshop.execute(lane);
-            close(900, enemy.runtimeMonster().health(), "First mine deals one physical hit");
+            close(830, enemy.runtimeMonster().health(), "First mine deals one physical hit");
             enemy.setPos(points.get(1)); enemy.setOnGround(true); workshop.execute(lane);
-            close(900, enemy.runtimeMonster().health(), "Logical enemy cannot consume a second mine");
+            close(830, enemy.runtimeMonster().health(), "Logical enemy cannot consume a second mine");
             require(workshop.runtimeDetailLines().contains("지뢰 2/3"), "Unused mines remain available");
             require(workshop.telemetrySample(5, 0, 1, "ROUND_END").mineExplosions() == 1,
                     "A used mine records one explosion, independent of target count");
@@ -151,12 +190,12 @@ public final class AugmentTowerGameTest {
             var samples = telemetry.snapshot().towerSamples();
             require(samples.size() == 2, "Repeated round settlement records one terminal snapshot");
             require(samples.getLast().towerRef() == placed.towerRef(), "One logical tower keeps an anonymous stable reference");
-            close(25, samples.getLast().barrierAbsorbed(), "Round-end snapshot preserves the measured transfer");
+            close(35, samples.getLast().barrierAbsorbed(), "Round-end snapshot preserves the measured transfer");
 
             AugmentTower copied = new AugmentTower(core.type(), OWNER, TeamId.RED, 1, core.position(), core.position());
             copied.copyFrom(core, 0);
             require(copied.logicalId().equals(core.logicalId()), "Entity replacement preserves logical identity");
-            close(25, copied.telemetrySample(5, 200, placed.towerRef(), "ROUND_END").barrierAbsorbed(),
+            close(35, copied.telemetrySample(5, 200, placed.towerRef(), "ROUND_END").barrierAbsorbed(),
                     "Copied logical state preserves measured counters");
             round[0] = 6;
             health(lane, core, 0);
@@ -195,7 +234,7 @@ public final class AugmentTowerGameTest {
             close(1000, weak.runtimeMonster().health(), "Low-pressure income cannot trigger relay secondary damage");
             require(charged.equals(relay.runtimeDetailLines()), "Blocked relay procs must preserve charge and counters");
             relay.onLinkedPrimaryAttack(second, normal, 200, DamageType.PHYSICAL);
-            close(900, normal.runtimeMonster().health(), "A normal hit may use the preserved relay charge");
+            close(800, normal.runtimeMonster().health(), "A normal hit may use the preserved relay charge");
             context.succeed();
         } finally { cleanup(lane); }
     }
@@ -219,12 +258,56 @@ public final class AugmentTowerGameTest {
             SemionMonsterEntity normal = monster(context, lane, point.add(.25, 0, 0));
             normal.setNoGravity(false); normal.setOnGround(true);
             workshop.execute(lane);
-            close(900, normal.runtimeMonster().health(), "A normal enemy triggers the mine");
-            close(900, weak.runtimeMonster().health(), "Low-pressure income is not immune to collateral mine damage");
+            close(745, normal.runtimeMonster().health(), "A normal enemy triggers the R15 T2 mine");
+            close(745, weak.runtimeMonster().health(), "Low-pressure income is not immune to T2 collateral mine damage");
             require(workshop.runtimeDetailLines().contains("지뢰 2/3"), "One real trigger consumes only one mine");
             context.succeed();
         } catch (Throwable failure) {
             context.fail(Component.literal("Low-pressure mine regression: " + failure));
+        } finally { cleanup(lane); }
+    }
+
+    @GameTest public void barricadeCapsEachHitAndRejectsHealingAfterGrowthAndRestoration(GameTestHelper context) {
+        PlayerLane lane = lane(context);
+        try {
+            AugmentTower barricade = augment(lane, AugmentTowers.FOLDING_BARRICADE, pos(context, 3, 1, 5));
+            Tower normal = ordinary(lane, NORMAL_A, pos(context, 7, 1, 5));
+            for (int round : new int[]{5, 15, 25}) {
+                barricade.beginPrepare(lane, round);
+                SemionTowerEntity entity = barricade.runtimeEntity(lane).orElseThrow();
+                double before = barricade.health(), recorded = barricade.roundDamageTaken();
+                entity.hurtServer(context.getLevel(), entity.damageSources().generic(), 1000);
+                entity.hurtServer(context.getLevel(), entity.damageSources().magic(), 1000);
+                entity.hurtServer(context.getLevel(), entity.damageSources().generic(), 7);
+                entity.hurtIgnoringReductions(entity.damageSources().magic(), 1000);
+                entity.applyTransferredDamage(1000);
+                close(before - 67, barricade.health(), "Four large hits cost 15 each; a small hit still costs 7 at R" + round);
+                close(recorded + 67, barricade.roundDamageTaken(), "Only actual health loss is recorded");
+                require(!entity.canReceiveHealing() && !entity.receiveHealing(100), "Direct game healing is blocked");
+                require(!normal.healTarget(entity, 100) && !entity.healTarget(entity, 100), "Ally and self healing are blocked");
+                entity.heal(100);
+                close(barricade.health(), entity.getHealth(), "Vanilla healing cannot bypass the restriction");
+                require(barricade.runtimeDetailLines().stream().anyMatch(line -> line.contains("최대 15") && line.contains("회복 불가")),
+                        "The tower details show the damage cap and healing restriction");
+            }
+            health(lane, barricade, 10);
+            barricade.runtimeEntity(lane).orElseThrow().hurtIgnoringReductions(context.getLevel().damageSources().magic(), 1000);
+            close(0, barricade.health(), "The cap does not prevent death when health is at most 15");
+            lane.resetForRound();
+            SemionTowerEntity restored = barricade.runtimeEntity(lane).orElseThrow();
+            close(900, restored.getHealth(), "Round restoration still restores full T3 health");
+            restored.applyTransferredDamage(1000);
+            restored.heal(100);
+            close(885, restored.getHealth(), "Restored entities retain the cap and healing restriction");
+            SemionTowerEntity ordinary = ((EntityBackedTower) normal).runtimeEntity(lane).orElseThrow();
+            ordinary.hurtServer(context.getLevel(), ordinary.damageSources().magic(), 50);
+            close(150, normal.health(), "Ordinary towers do not receive the barricade's cap");
+            require(ordinary.receiveHealing(20), "Ordinary game healing remains available");
+            ordinary.heal(10);
+            close(180, ordinary.getHealth(), "Ordinary vanilla healing remains available");
+            context.succeed();
+        } catch (Throwable failure) {
+            context.fail(Component.literal("Barricade damage and healing regression: " + failure));
         } finally { cleanup(lane); }
     }
 

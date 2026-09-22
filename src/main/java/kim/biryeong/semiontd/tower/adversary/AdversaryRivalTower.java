@@ -175,7 +175,7 @@ public final class AdversaryRivalTower extends EntityBackedTower implements Riva
     }
 
     /** Records one kill after the fox-owned kill boundary verifies this exact proxy. */
-    boolean creditFoxKill(PlayerLane lane, Monster monster) {
+    boolean creditFoxKill(PlayerLane lane, Monster monster, int scoreMultiplier) {
         if (!isProxyOf(monster, rivalId())
                 || !isOwnedRival(monster, ownerPlayer())
                 || kindOf(monster).filter(kind::equals).isEmpty()
@@ -183,7 +183,7 @@ public final class AdversaryRivalTower extends EntityBackedTower implements Riva
                 || monster.getData(PROXY_SCORE_CREDITED).orElse(false)) {
             return false;
         }
-        int next = Math.addExact(contributedScore(), kind.scorePerKill(enhanced()));
+        int next = Math.addExact(contributedScore(), Math.multiplyExact(kind.scorePerKill(enhanced()), scoreMultiplier));
         monster.setData(PROXY_SCORE_CREDITED, true);
         setData(CONTRIBUTED_SCORE, next);
         if (lane != null) {

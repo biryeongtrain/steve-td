@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.Gson;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
@@ -65,6 +66,9 @@ final class WebCatalogExporterTest {
         assertEquals(ProductionTowerCatalog.all().size(), first.towers().size());
         assertEquals(TraitRegistry.all().size(), first.traits().size());
         assertEquals(SummonRegistry.all().size(), first.summons().size());
+        assertEquals(124, first.augments().stream().filter(card -> card.requiredJobId() != null).count());
+        assertTrue(first.augments().stream().filter(card -> card.requiredJobId() != null)
+                .allMatch(card -> first.builders().stream().anyMatch(builder -> builder.id().equals(card.requiredJobId()))));
         assertTrue(first.traits().stream().allMatch(trait -> !trait.displayName().equals(trait.id())));
         assertTrue(first.summons().stream().allMatch(summon -> !summon.displayName().equals(summon.id())));
         assertTrue(first.towers().stream().allMatch(tower -> "AUGMENT".equals(tower.availability())
@@ -123,10 +127,15 @@ final class WebCatalogExporterTest {
         EconomyConfig economy = EconomyConfig.defaultConfig();
         AugmentConfig config = AugmentConfig.defaults();
         var document = WebCatalogExporter.snapshot(1, waves, economy, summons, config);
-        assertEquals(44, document.augments().size());
-        assertEquals(35, document.augments().stream().filter(augment -> !augment.reserve()).count());
+        assertEquals(173, document.augments().size());
+        assertEquals(164, document.augments().stream().filter(augment -> !augment.reserve()).count());
         assertEquals(9, document.augments().stream().filter(WebCatalogExporter.AugmentEntry::reserve).count());
         assertEquals(config.version(), document.augmentVersion());
+        var quick = document.augments().stream().filter(card -> card.id().equals("semiontd:engagement_plan_quick"))
+                .findFirst().orElseThrow();
+        assertEquals("속전", quick.displayName());
+        assertEquals(config.parametersFor("engagement_plan"), quick.parameters());
+        assertTrue(document.augments().stream().noneMatch(card -> card.id().equals("semiontd:engagement_plan")));
         assertTrue(document.augments().stream().allMatch(augment -> augment.description() != null
                 && !augment.description().isBlank()));
         assertTrue(document.towers().stream().filter(tower -> "AUGMENT".equals(tower.availability()))
@@ -166,8 +175,30 @@ final class WebCatalogExporterTest {
         String initial = WebCatalogExporter.snapshot(1, waves, economy, summons).versionHash();
 
         WaveConfig changedWaves = new WaveConfig(waves.rounds(), waves.infiniteFromRound() + 1,
-                waves.infinite(), waves.infiniteTemplates());
+                waves.infinite(), waves.infiniteTemplates(), waves.infiniteCountMultipliers(),
+                waves.season3CountsEnabled(), waves.round16HealingEnabled(), waves.healingTemplates());
         assertNotEquals(initial, WebCatalogExporter.snapshot(1, changedWaves, economy, summons).versionHash());
+        assertNotEquals(initial, WebCatalogExporter.snapshot(1,
+                waves.withSeason3Stages(!waves.season3CountsEnabled(), waves.round16HealingEnabled(), waves.healingTemplates()),
+                economy, summons).versionHash());
+        assertNotEquals(initial, WebCatalogExporter.snapshot(1,
+                waves.withSeason3Stages(waves.season3CountsEnabled(), !waves.round16HealingEnabled(), waves.healingTemplates()),
+                economy, summons).versionHash());
+        assertNotEquals(initial, WebCatalogExporter.snapshot(1,
+                waves.withSeason3Stages(waves.season3CountsEnabled(), waves.round16HealingEnabled(), Set.of()),
+                economy, summons).versionHash());
+        Gson gson = new Gson();
+        var changedHealing = gson.toJsonTree(waves).getAsJsonObject();
+        var entries = changedHealing.getAsJsonArray("infiniteTemplates").get(0).getAsJsonObject()
+                .getAsJsonObject("lanes").getAsJsonArray("default");
+        entries.forEach(entry -> {
+            var healing = entry.getAsJsonObject().getAsJsonObject("healing");
+            if (healing != null) {
+                healing.addProperty("amount", healing.get("amount").getAsDouble() + 1);
+            }
+        });
+        assertNotEquals(initial, WebCatalogExporter.snapshot(1,
+                gson.fromJson(changedHealing, WaveConfig.class), economy, summons).versionHash());
         EconomyConfig changedEconomy = new EconomyConfig(economy.startingDiamond() + 1, economy.startingEmerald(),
                 economy.startingIncome(), economy.emeraldCap(), economy.emeraldProduction(), economy.towerLimit(),
                 economy.killReward(), economy.teamTransfer(), economy.emeraldIncomeBoost());

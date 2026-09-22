@@ -530,6 +530,9 @@ public final class SemionGame {
         if (!teamCanTransfer(requester.teamId())) {
             return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.TEAM_NOT_ACTIVE);
         }
+        if (!EconomyService.canTransferDiamond(requester)) {
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.BUILDER_RESTRICTED);
+        }
 
         Optional<TeamMoneyTransferResult> cooldownResult = receiveCooldownResult(requester.uuid(), config);
         if (cooldownResult.isPresent()) {
@@ -594,6 +597,13 @@ public final class SemionGame {
         }
         if (sender.teamId() != request.teamId()) {
             return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.NOT_TEAMMATE);
+        }
+        if (!EconomyService.canTransferDiamond(requester)) {
+            teamMoneyRequests.remove(request.id());
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.BUILDER_RESTRICTED);
+        }
+        if (!EconomyService.canTransferDiamond(sender)) {
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.BUILDER_RESTRICTED);
         }
 
         Optional<TeamMoneyTransferResult> cooldownResult = receiveCooldownResult(requester.uuid(), config);
@@ -866,7 +876,7 @@ public final class SemionGame {
         }
 
         matchMode = plan.mode();
-        if (matchMode != MatchMode.NORMAL) {
+        if (!augmentsEnabled() || !augmentConfig.publicPoolEnabled()) {
             waveConfig = waveConfig.withSeason3Stages(false, false, Set.of());
         }
         augmentSeed = random.nextLong();
@@ -962,6 +972,7 @@ public final class SemionGame {
     }
 
     private void closeRuntimeState() {
+        augmentService.clearTargetPreviews();
         for (SemionPlayer semionPlayer : players.values()) {
             semionPlayer.job().ifPresent(job ->
                     job.onMatchClosed(new JobContext(this, semionPlayer)));
@@ -1395,7 +1406,6 @@ public final class SemionGame {
                 AugmentEconomyService.endPrepare(player, currentRound);
                 playerLane(player.uuid()).ifPresent(lane -> lane.assignAugmentSnapshot(player.augments().snapshot()));
             }
-            augmentService.announceWaveSettings(this, server);
         }
         phase = RoundPhase.LANE_WAVE;
         phaseTicks = 0;
@@ -1921,7 +1931,7 @@ public final class SemionGame {
             player.augmentTelemetry().bindClock(() -> tickCounter, () -> currentRound);
             player.augments().initialize(augmentSeed, augmentConfig, augmentRarities);
         }
-        player.assignTraitLoadout(augmentsEnabled() ? TraitLoadout.none() : traitSnapshot.loadoutOrDefault(participant.uuid()));
+        player.assignTraitLoadout(traitSnapshot.loadoutOrDefault(participant.uuid()));
         applyJobStartingEconomy(player, job);
         applyTraitStartingEconomy(player);
         job.onSelected(new JobContext(this, player));
@@ -1965,6 +1975,10 @@ public final class SemionGame {
             }
             if (!sandboxMode && !tutorialMode && teams.get(activePlayer.teamId()).hasLeader(activePlayer.uuid())) {
                 SemionHotbarService.grantLeaderTool(player);
+            }
+            if (augmentsEnabled()) {
+                kim.biryeong.semiontd.augment.AugmentTargetTool.grant(player, activePlayer.augments(),
+                        playerLane(activePlayer.uuid()).orElse(null));
             }
             setFlight(player, true);
             playerLane(activePlayer.uuid()).ifPresent(lane -> SemionLaneIndicatorService.showLane(player, lane));

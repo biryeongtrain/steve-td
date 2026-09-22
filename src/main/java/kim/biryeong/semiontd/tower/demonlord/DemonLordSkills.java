@@ -55,6 +55,16 @@ public final class DemonLordSkills {
             DemonLordSkillTower altar,
             long gameTime
     ) {
+        state.augments().beginSpell(altar);
+        try {
+            return castNative(player, lane, state, skill, altar, gameTime);
+        } finally {
+            state.augments().finishSpell(player, lane, state, gameTime);
+        }
+    }
+
+    private static int castNative(ServerPlayer player, PlayerLane lane, DemonLordState state,
+            DemonLordSkill skill, DemonLordSkillTower altar, long gameTime) {
         switch (skill) {
             case WAVE_OF_MALICE -> castWaveOfMalice(player, lane, state, altar);
             case DEMON_WINGS -> castDemonWings(player, lane, state, altar);
@@ -445,9 +455,14 @@ public final class DemonLordSkills {
         Vec3 impact = clip.getType() == HitResult.Type.MISS ? target : clip.getLocation();
 
         DemonLordSkillTower sourceAltar = DemonLordService.altarFor(lane, player.getUUID(), altar);
-        applyArea(sourceAltar, lane, impact, blastRadius, ignored -> true, AreaVfxStyles.PULSE,
+        state.augments().beginSpell(sourceAltar);
+        try {
+            applyArea(sourceAltar, lane, impact, blastRadius, ignored -> true, AreaVfxStyles.PULSE,
                 monster -> damageOutcome(DemonLordService.dealDamage(
                         player, lane, sourceAltar, monster, damage, DamageType.MAGIC)));
+        } finally {
+            state.augments().finishSpell(player, lane, state, gameTime);
+        }
         sound(player, SoundEvents.GENERIC_EXPLODE.value(), 1.0f, 1.1f);
     }
 
@@ -471,7 +486,9 @@ public final class DemonLordSkills {
         }
         DemonLordSkillTower sourceAltar = DemonLordService.altarFor(
                 lane, player.getUUID(), zone.altarType());
-        applyArea(sourceAltar, lane, zone.centre(), zone.radius(), ignored -> true,
+        state.augments().beginSpell(sourceAltar);
+        try {
+            applyArea(sourceAltar, lane, zone.centre(), zone.radius(), ignored -> true,
                 AreaVfxStyles.DEBUFF, monster -> {
             Tower.DamageResult result = DemonLordService.dealDamage(
                     player, lane, sourceAltar, monster, zone.damage(), DamageType.MAGIC);
@@ -482,6 +499,9 @@ public final class DemonLordSkills {
             );
             return damageOutcome(result);
         });
+        } finally {
+            state.augments().finishSpell(player, lane, state, gameTime);
+        }
         state.placeZone(new DemonLordState.HellfireZone(
                 zone.altarType(),
                 zone.centre(),

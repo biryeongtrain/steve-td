@@ -52,6 +52,7 @@ import net.minecraft.world.phys.Vec3;
 public class PlantCombatTower extends ProductionTower {
     private static final TowerDataKey<Integer> GROWTH_ROUNDS =
             TowerDataKey.of(plantId("growth_rounds"), Integer.class);
+    private static final TowerDataKey<Boolean> PLACED = TowerDataKey.of(plantId("growth_placed"), Boolean.class);
 
     /** 이 타워에 잔디 회복이 마지막으로 들어온 게임 시각. 겹치기 감산 판정에만 씁니다. */
     private static final TowerDataKey<Long> LAST_MEADOW_HEAL_TICK =
@@ -75,6 +76,27 @@ public class PlantCombatTower extends ProductionTower {
     @Override
     public boolean canChaseTargets() {
         return false;
+    }
+
+    @Override
+    public void onPlaced(PlayerLane lane) {
+        if (!getDataOrDefault(PLACED, false)) {
+            if (augmentSnapshot().has(PlantAugments.GROWTH)) {
+                int highest = lane.towers().stream().filter(PlantCombatTower.class::isInstance)
+                        .map(PlantCombatTower.class::cast)
+                        .filter(plant -> plant != this && ownerPlayer().equals(plant.ownerPlayer()) && plant.family() == family())
+                        .mapToInt(PlantCombatTower::growthRounds).max().orElse(0);
+                setData(GROWTH_ROUNDS, (int) Math.floor(highest
+                        * augmentSnapshot().parameter(PlantAugments.GROWTH, "inheritRatio", 0.25)));
+            }
+            setData(PLACED, true);
+        }
+        super.onPlaced(lane);
+    }
+
+    @Override
+    public double modifyAttackDamage(SemionTowerEntity source, SemionMonsterEntity target, double damage) {
+        return super.modifyAttackDamage(source, target, damage) * (1.0 + PlantAugments.worldTreeBonus(this));
     }
 
     // ------------------------------------------------------------------
@@ -155,7 +177,7 @@ public class PlantCombatTower extends ProductionTower {
 
     @Override
     protected double builderCurrentMaxHealth() {
-        return applyTraitMaxHealth(maxHealth() * (1.0 + growthBonus()));
+        return applyTraitMaxHealth(maxHealth() * (1.0 + growthBonus())) * (1.0 + PlantAugments.worldTreeBonus(this));
     }
 
     /**
@@ -170,8 +192,15 @@ public class PlantCombatTower extends ProductionTower {
         super.resetForRound(lane);
     }
 
-    private int growthRounds() {
+    public int growthRounds() {
         return Math.max(0, getDataOrDefault(GROWTH_ROUNDS, 0));
+    }
+
+    public void addGrowthRounds(int rounds, PlayerLane lane) {
+        double ratio = health() / Math.max(1.0, currentMaxHealth());
+        setData(GROWTH_ROUNDS, growthRounds() + Math.max(0, rounds));
+        syncHealth(currentMaxHealth() * ratio);
+        onStateChanged(lane);
     }
 
     private double growthBonus() {
@@ -584,8 +613,9 @@ public class PlantCombatTower extends ProductionTower {
         return PlantTowers.soilOf(type());
     }
 
-    private PlantSoil standingSoil() {
-        return deployedAtFinalDefense() ? family() : PlantSoilStates.soilAt(ownerPlayer(), position());
+    PlantSoil standingSoil() {
+        return deployedAtFinalDefense() || PlantAugments.inWorldTree(this)
+                ? family() : PlantSoilStates.soilAt(ownerPlayer(), position());
     }
 
     private boolean standsOn(PlantSoil soil) {

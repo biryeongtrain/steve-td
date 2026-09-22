@@ -4,6 +4,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import kim.biryeong.semiontd.game.TeamLaneGroup;
+import kim.biryeong.semiontd.game.PlayerLane;
+import kim.biryeong.semiontd.augment.AugmentConfig;
 
 public final class QueenStates {
     private static final Map<UUID, PlayerState> STATES = new ConcurrentHashMap<>();
@@ -30,6 +32,13 @@ public final class QueenStates {
         STATES.clear();
     }
 
+    public static void onSelected(PlayerLane lane, String cardId, AugmentConfig config) {
+        if (lane != null && ("job_queen_towers_g2".equals(cardId)
+                || "semiontd:job_queen_towers_g2".equals(cardId))) {
+            state(lane.ownerPlayer()).jokerTickets += (int) config.parameter(cardId, "tickets", 3);
+        }
+    }
+
     public static final class PlayerState {
         private TeamLaneGroup laneGroup;
         private double charge;
@@ -37,6 +46,14 @@ public final class QueenStates {
         private double pokerHealthBonus;
         private QueenGiantRunner runner;
         private QueenCard nextCard;
+        private int jokerTickets;
+
+        public int jokerTickets() {return jokerTickets;}
+        public boolean consumeJokerTicket() {
+            if (jokerTickets <= 0) return false;
+            jokerTickets--;
+            return true;
+        }
 
         public TeamLaneGroup laneGroup() {return laneGroup;}
         public double charge() {return charge;}

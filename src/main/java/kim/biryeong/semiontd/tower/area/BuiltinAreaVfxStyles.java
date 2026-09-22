@@ -24,6 +24,7 @@ public final class BuiltinAreaVfxStyles {
         registry.register(AreaVfxStyles.SPLASH, BuiltinAreaVfxStyles::splash);
         registry.register(AreaVfxStyles.PULSE, BuiltinAreaVfxStyles::pulse);
         registry.register(AreaVfxStyles.CORPSE_EXPLOSION, BuiltinAreaVfxStyles::explosion);
+        registry.register(AreaVfxStyles.INSECT_EXPLOSION, BuiltinAreaVfxStyles::insectExplosion);
         registry.register(AreaVfxStyles.BUFF, BuiltinAreaVfxStyles::buff);
         registry.register(AreaVfxStyles.DEBUFF, BuiltinAreaVfxStyles::debuff);
         registry.register(AreaVfxStyles.DRAGON_BREATH, BuiltinAreaVfxStyles::dragonSplash);
@@ -52,6 +53,21 @@ public final class BuiltinAreaVfxStyles {
         output.sphere(context.palette().accent(), context.center().add(0.0, 0.35, 0.0),
                 context.radius(), Math.max(24, outline), false);
         hitTrails(context, output, 12);
+    }
+
+    private static void insectExplosion(AreaVfxContext context, AreaVfxOutput output) {
+        var center = context.center();
+        double radius = context.radius();
+        output.circle(context.palette().primary(), center, radius, outlinePoints(radius), true);
+        output.sphere(context.palette().primary(), center.add(0.0, 0.35, 0.0),
+                Math.min(0.55, radius * 0.22), 16, true);
+        for (int ray = 0; ray < 6; ray++) {
+            double angle = Math.PI * 2.0 * ray / 6;
+            var edge = center.add(Math.cos(angle) * radius * 0.82, 0.12, Math.sin(angle) * radius * 0.82);
+            var control = center.lerp(edge, 0.5).add(0.0, Math.min(0.9, radius * 0.4), 0.0);
+            output.trail(context.palette().accent(), center.add(0.0, 0.35, 0.0), control, edge, 9, false);
+            output.sphere(context.palette().primary(), edge, Math.min(0.18, radius * 0.08), 6, false);
+        }
     }
 
     private static void buff(AreaVfxContext context, AreaVfxOutput output) {

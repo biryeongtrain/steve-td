@@ -85,6 +85,7 @@ public final class DemonLordStates {
         if (playerId != null) {
             DemonLordState removed = STATES.remove(playerId);
             if (removed != null) {
+                removed.augments().reset();
                 PROGRESSION.put(playerId, new Progression(
                         removed.level(),
                         removed.experience(),
@@ -96,6 +97,7 @@ public final class DemonLordStates {
     }
 
     public static void clearAllForTesting() {
+        STATES.values().forEach(state -> state.augments().reset());
         STATES.clear();
         PROGRESSION.clear();
     }

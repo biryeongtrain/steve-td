@@ -8,6 +8,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
+import kim.biryeong.semiontd.augment.AugmentChoice;
+import kim.biryeong.semiontd.augment.AugmentConfig;
+import kim.biryeong.semiontd.augment.AugmentRarity;
+import kim.biryeong.semiontd.augment.AugmentSnapshot;
+import kim.biryeong.semiontd.augment.PlayerAugmentState;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
@@ -42,6 +47,41 @@ import xyz.nucleoid.map_templates.BlockBounds;
  * {@code TowerAttackMonsterGoal} has to actually treat that as switched off once the entity exists.
  */
 public final class DeveloperGameTest {
+
+    @GameTest
+    public void intendedHardcodingKeepsWrongSpeciesPenaltyAndCopiedBonusHasNoPenalty(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        UUID owner = stableUuid("developer-intended-owner");
+        PlayerLane lane = testLane(context, owner);
+        DeveloperTower tower = tower(DeveloperTowers.BETA, owner, context, new BlockPos(4, 2, 4));
+        DeveloperTower copied = tower(DeveloperTowers.BETA, owner, context, new BlockPos(5, 2, 4));
+        lane.addTower(tower);
+        lane.addTower(copied);
+        lane.assignAugmentSnapshot(new AugmentSnapshot(AugmentConfig.defaults(), List.of(
+                new PlayerAugmentState.Selection(5, AugmentRarity.SILVER, DeveloperAugments.COPIER,
+                        PlayerAugmentState.Outcome.SELECTED, null, AugmentChoice.none()),
+                new PlayerAugmentState.Selection(15, AugmentRarity.GOLD, DeveloperAugments.INTENDED,
+                        PlayerAugmentState.Outcome.SELECTED, null, AugmentChoice.none()))));
+        DeveloperStates.clear(owner);
+        SemionMonsterEntity first = monster(context, lane, "first_species",
+                Vec3.atCenterOf(context.absolutePos(new BlockPos(4, 2, 6))), 1000);
+        SemionMonsterEntity other = monster(context, lane, "other_species", first.position().add(1, 0, 0), 1000);
+        try {
+            DeveloperTowerData.addBug(tower, DeveloperBug.HARDCODED);
+            tower.onAttackResolved(towerEntity(context, tower), first, 1, 1, 1, false);
+            copied.onAttackResolved(towerEntity(context, copied), first, 1, 1, 1, false);
+            requireClose(200, tower.modifyAttackDamage(towerEntity(context, tower), first, 100), "Native favored species");
+            requireClose(120, tower.modifyAttackDamage(towerEntity(context, tower), other, 100),
+                    "Unconditional positive damage must keep the native .6 wrong-species penalty");
+            requireClose(150, copied.modifyAttackDamage(towerEntity(context, copied), other, 100),
+                    "Copied enhancement is half of the bonus and has no wrong-species penalty");
+            require(!copied.hasBug(DeveloperBug.HARDCODED), "Copying a benefit must not install a native defect");
+            context.succeed();
+        } finally {
+            lane.clearTowers();
+            DeveloperStates.clear(owner);
+        }
+    }
 
     @GameTest(maxTicks = 120)
     public void abilityTowersSpawnWithoutFightingOrHoldingTheLane(GameTestHelper context) {

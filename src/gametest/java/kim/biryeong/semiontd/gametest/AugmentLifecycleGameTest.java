@@ -33,9 +33,13 @@ import kim.biryeong.semiontd.test.tower.TestTowerTypes;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerService;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
+import kim.biryeong.semiontd.trait.TraitEffects;
 import kim.biryeong.semiontd.trait.TraitLoadout;
+import kim.biryeong.semiontd.trait.TraitLoadoutSnapshot;
 import kim.biryeong.semiontd.trait.TraitSelectionConfig;
+import kim.biryeong.semiontd.trait.TraitSelectionSession;
 import kim.biryeong.semiontd.trait.TraitSelectionSnapshot;
+import kim.biryeong.semiontd.trait.TraitSlot;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -135,11 +139,12 @@ public final class AugmentLifecycleGameTest {
     }
 
     @GameTest
-    public void onlyEnabledNormalMatchesInitializeAugmentsAndReplaceTraits(GameTestHelper context) {
-        for (int scenario = 0; scenario < 5; scenario++) {
-            boolean enabled = scenario != 4;
-            boolean expected = scenario == 0;
-            SemionGame game = game(context, config(enabled, false));
+    public void onlyEnabledNormalMatchesInitializeAugmentsAndPublicMatchesStrengthenWaves(GameTestHelper context) {
+        for (int scenario = 0; scenario < 7; scenario++) {
+            boolean enabled = scenario != 4 && scenario != 6;
+            boolean publicPool = scenario < 5;
+            boolean expected = scenario == 0 || scenario == 5;
+            SemionGame game = game(context, config(enabled, publicPool));
             try {
                 if (scenario == 2) {game.enableSandboxMode();}
                 if (scenario == 3) {game.enableTutorialMode();}
@@ -150,11 +155,18 @@ public final class AugmentLifecycleGameTest {
                 SemionPlayer player = game.players().get(red);
                 require(game.augmentsEnabled() == expected, "Augments must be restricted to enabled NORMAL matches.");
                 require(player.augments().initialized() == expected, "Inactive modes must not initialize a hidden augment schedule.");
-                require(player.traitLoadout().equals(expected ? TraitLoadout.none() : loadout), "Only season 3 NORMAL replaces the old traits.");
+                require(player.traitLoadout().equals(loadout), "Enabling augments must preserve the selected traits in every mode.");
                 require(game.augmentRarities().size() == (expected ? 3 : 0), "Only enabled NORMAL draws three match-wide rarities.");
                 AugmentConfig frozen = game.augmentConfig();
-                game.configureAugments(config(!enabled, true));
+                game.configureAugments(config(!enabled, !publicPool));
                 require(game.augmentConfig() == frozen, "A running match must retain its original immutable augment settings.");
+                enterPrepare(game, context.getLevel().getServer(), 19);
+                var entries = game.upcomingWaveEntries(red);
+                require(entries.stream().mapToInt(entry -> entry.count()).sum() == (scenario == 0 ? 96 : 80),
+                        "Only a public enabled NORMAL match may increase wave quantities; scenario " + scenario);
+                require(entries.stream().filter(entry -> entry.healing() != null).mapToInt(entry -> entry.count()).sum()
+                                == (scenario == 0 ? 4 : 0),
+                        "The same snapshot gate must control healers, including sandbox and tutorial; scenario " + scenario);
             } finally {
                 game.close();
             }
@@ -163,24 +175,57 @@ public final class AugmentLifecycleGameTest {
     }
 
     @GameTest
-    public void managerRejectsTraitAugmentConflictBeforeOpeningEitherSelection(GameTestHelper context) {
-        SemionGame game = game(context, config(true, false));
-        SemionGameManager manager = manager(game);
-        try {
-            manager.configureAugments(config(true, false));
-            manager.configureTraits(new TraitSelectionConfig(true, 45));
-            var result = manager.scheduleStart(context.getLevel().getServer(), plan(UUID.randomUUID(), MatchMode.NORMAL));
-            require(result == SemionGameManager.StartCountdownResult.AUGMENT_TRAIT_CONFLICT,
-                    "Enabling both traits and augments must reject the start, not silently choose one.");
-            require(!manager.traitSelectionActive() && !manager.startCountdownActive() && !game.rosterLocked(),
-                    "A rejected start must not mutate selection/countdown/match state.");
-            manager.configureTraits(new TraitSelectionConfig(false, 45));
-            require(manager.scheduleStart(context.getLevel().getServer(), plan(UUID.randomUUID(), MatchMode.NORMAL))
-                            == SemionGameManager.StartCountdownResult.SCHEDULED,
-                    "Disabling traits must permit the augment match countdown.");
-            require(!manager.traitSelectionActive() && manager.startCountdownActive(), "Season 3 must skip the trait selection dialog.");
-        } finally {
-            manager.shutdown();
+    public void managerAllowsTraitsAndAugmentsTogetherOrIndependently(GameTestHelper context) {
+        MinecraftServer server = context.getLevel().getServer();
+        for (boolean traitsEnabled : List.of(false, true)) {
+            for (boolean augmentsEnabled : List.of(false, true)) {
+                SemionGame game = game(context, config(augmentsEnabled, true));
+                SemionGameManager manager = manager(game);
+                UUID red = UUID.randomUUID();
+                ParticipantSelectionPlan participants = plan(red, MatchMode.NORMAL);
+                TraitLoadout loadout = new TraitLoadout(BuiltInTraits.MOBILIZATION_GRANT_ID, BuiltInTraits.FORTITUDE_ID);
+                try {
+                    manager.configureAugments(config(augmentsEnabled, true));
+                    manager.configureTraits(new TraitSelectionConfig(traitsEnabled, 45));
+                    require(manager.scheduleStart(server, participants) == SemionGameManager.StartCountdownResult.SCHEDULED,
+                            "Every combination of the independent trait and augment settings must permit a match start.");
+                    require(manager.traitSelectionActive() == traitsEnabled && manager.startCountdownActive(),
+                            "Every scheduled start stays pending; only the trait setting controls its trait-selection stage.");
+                    if (traitsEnabled) {
+                        for (var participant : participants.activeParticipants()) {
+                            TraitLoadout selected = participant.uuid().equals(red) ? loadout : TraitLoadout.none();
+                            for (TraitSlot slot : TraitSlot.values()) {
+                                require(manager.selectTrait(server, participant.uuid(), slot, selected.traitId(slot))
+                                                == TraitSelectionSession.SelectionResult.SELECTED,
+                                        "Both trait slots must remain selectable with augments enabled.");
+                            }
+                        }
+                    }
+                    require(!manager.traitSelectionActive() && manager.startCountdownActive(),
+                            "Completed trait selection must open the ordinary match countdown.");
+                    for (int tick = 0; tick < SemionGameManager.START_COUNTDOWN_TICKS; tick++) {manager.tick(server);}
+                    SemionPlayer player = game.players().get(red);
+                    TraitLoadout expected = traitsEnabled ? loadout : TraitLoadout.none();
+                    require(game.rosterLocked() && game.phase() == RoundPhase.PREPARE_AND_SUMMON,
+                            "The manager countdown must start an actual match for every setting combination.");
+                    require(player.traitLoadout().equals(expected) && player.economy().mineral()
+                                    == game.economyConfig().startingMineral() + TraitEffects.startingMineralBonus(expected),
+                            "Selected traits and their starting reward must survive participant activation exactly once.");
+                    require(game.augmentsEnabled() == augmentsEnabled && player.augments().initialized() == augmentsEnabled,
+                            "The augment setting must remain independent of trait selection.");
+                    enterPrepare(game, server, 5);
+                    require(player.augments().currentOffer().isPresent() == augmentsEnabled
+                                    && game.remainingPrepareSeconds() == (augmentsEnabled ? 85 : 25)
+                                    && game.isAugmentSelectionActive() == augmentsEnabled,
+                            "R5 must retain the separate 60-second augment choice period even when traits are active.");
+                } catch (RuntimeException | AssertionError failure) {
+                    context.fail(net.minecraft.network.chat.Component.literal("Trait/augment start failed (traits="
+                            + traitsEnabled + ", augments=" + augmentsEnabled + "): " + failure));
+                    return;
+                } finally {
+                    manager.shutdown();
+                }
+            }
         }
         context.succeed();
     }
@@ -188,31 +233,34 @@ public final class AugmentLifecycleGameTest {
     @GameTest
     public void waveReloadOnlyChangesMatchesWhoseRosterHasNotBeenLocked(GameTestHelper context) {
         WaveConfig baseline = WaveConfig.defaultConfig().withSeason3Stages(false, false, Set.of());
-        WaveConfig reloaded = baseline.withSeason3Stages(true, true, Set.of());
-        for (boolean reloadBeforeStart : List.of(false, true)) {
-            SemionGame game = new SemionGame(EconomyConfig.defaultConfig(), baseline,
-                    SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(BlockPos.ZERO)));
-            game.configureAugments(config(true, false));
-            UUID red = UUID.randomUUID();
-            try {
-                if (reloadBeforeStart) {game.applyConfigs(EconomyConfig.defaultConfig(), reloaded);}
-                require(game.start(context.getLevel().getServer(), plan(red, MatchMode.NORMAL)), "Synthetic match must start.");
-                if (!reloadBeforeStart) {game.applyConfigs(EconomyConfig.defaultConfig(), reloaded);}
-                enterPrepare(game, context.getLevel().getServer(), 16);
-                var expected = (reloadBeforeStart ? reloaded : baseline).configForRound(16).orElseThrow().entriesForLane("lane_1");
-                var actual = game.upcomingWaveEntries(red);
-                require(actual.equals(expected), "Wave reload must preserve the running match composition and apply only before the next roster lock.");
-                require(actual.stream().anyMatch(entry -> entry.healing() != null) == reloadBeforeStart,
-                        "The R16 healer must appear only in the match started with the reloaded stage enabled.");
-            } finally {
-                game.close();
+        for (WaveConfig reloaded : List.of(baseline.withSeason3Stages(true, false, Set.of()),
+                baseline.withSeason3Stages(false, true, Set.of()), baseline.withSeason3Stages(true, true, Set.of()))) {
+            for (boolean reloadBeforeStart : List.of(false, true)) {
+                SemionGame game = new SemionGame(EconomyConfig.defaultConfig(), baseline,
+                        SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(BlockPos.ZERO)));
+                game.configureAugments(config(true, true));
+                UUID red = UUID.randomUUID();
+                try {
+                    if (reloadBeforeStart) {game.applyConfigs(EconomyConfig.defaultConfig(), reloaded);}
+                    require(game.start(context.getLevel().getServer(), plan(red, MatchMode.NORMAL)), "Synthetic match must start.");
+                    if (!reloadBeforeStart) {game.applyConfigs(EconomyConfig.defaultConfig(), reloaded);}
+                    enterPrepare(game, context.getLevel().getServer(), 16);
+                    var expected = (reloadBeforeStart ? reloaded : baseline).configForRound(16).orElseThrow().entriesForLane("lane_1");
+                    var actual = game.upcomingWaveEntries(red);
+                    require(actual.equals(expected), "Wave reload must preserve the running composition and both independent stage flags.");
+                    require(actual.stream().anyMatch(entry -> entry.healing() != null)
+                                    == (reloadBeforeStart && reloaded.round16HealingEnabled()),
+                            "The R16 healer must appear only in the match started with the healing stage enabled.");
+                } finally {
+                    game.close();
+                }
             }
         }
         context.succeed();
     }
 
     @GameTest
-    public void eachMilestoneAddsThirtyProductionFreeSecondsBeforeOrdinaryPreparation(GameTestHelper context) {
+    public void eachMilestoneAddsSixtyProductionFreeSecondsBeforeOrdinaryPreparation(GameTestHelper context) {
         SemionGame game = game(context, config(true, true));
         UUID red = UUID.randomUUID();
         try {
@@ -233,10 +281,10 @@ public final class AugmentLifecycleGameTest {
                 var offer = state.currentOffer().orElseThrow();
                 require(offer.milestoneRound() == milestone && offer.offeredRound() == milestone, "The correct milestone must open.");
                 require(offer.deadlineTickExclusive() == game.currentTick() + AugmentService.PREPARE_TICKS,
-                        "The offer ends after the separate 30-second choice period.");
-                require(game.remainingPrepareSeconds() == 55 && game.remainingAugmentSelectionSeconds() == 30
+                        "The offer ends after the separate 60-second choice period.");
+                require(game.remainingPrepareSeconds() == 85 && game.remainingAugmentSelectionSeconds() == 60
                                 && game.isAugmentSelectionActive(),
-                        "Each milestone adds 30 seconds before the unchanged 25-second preparation.");
+                        "Each milestone adds 60 seconds before the unchanged 25-second preparation.");
                 for (SemionPlayer player : game.players().values()) {
                     require(player.augments().currentOffer().orElseThrow().rarity() == offer.rarity(), "Players share the milestone rarity.");
                     player.economy().spendEmerald(player.economy().emerald());
@@ -259,15 +307,18 @@ public final class AugmentLifecycleGameTest {
                         "The choice deadline closes offers, then leaves the entire ordinary preparation intact.");
                 for (SemionPlayer player : game.players().values()) {
                     require(player.economy().emerald() == 0,
-                            "All players, including early skips and production-bonus owners, receive no emeralds during the 600 ticks.");
+                            "All players, including early skips and production-bonus owners, receive no emeralds during the 1200 ticks.");
                 }
                 game.augmentService().expire(game);
-                state.expire(game.currentTick());
+                game.augmentService().expire(game);
                 require(state.selections().size() == ++resolved, "Repeated expiry must not add another decision or reward.");
                 var selection = state.selections().getLast();
-                require(selection.milestoneRound() == milestone && selection.outcome() == PlayerAugmentState.Outcome.SKIPPED
-                                && selection.skipReason() == PlayerAugmentState.SkipReason.TIMEOUT,
-                        "Unchosen cards must be recorded as a timeout, never automatically selected.");
+                require(selection.milestoneRound() == milestone && selection.outcome() == PlayerAugmentState.Outcome.SELECTED
+                                && selection.skipReason() == null,
+                        "Unchosen cards must receive exactly one random selection at the deadline, including offline participants.");
+                require(game.upcomingWaveEntries(red).stream().mapToInt(entry -> entry.count()).sum()
+                                == (milestone == 5 ? 22 : milestone == 15 ? 4 : 72),
+                        "Skipped augments must not downgrade the match-wide strengthened wave.");
                 tick(game, context.getLevel().getServer(), 20);
                 long multiplier = game.economyConfig().emeraldIncomeMultiplierForRound(milestone);
                 for (SemionPlayer player : game.players().values()) {
@@ -277,7 +328,7 @@ public final class AugmentLifecycleGameTest {
                 tick(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS - 21);
                 require(game.phase() == RoundPhase.PREPARE_AND_SUMMON, "Combat must not start one tick before the ordinary deadline.");
                 tick(game, context.getLevel().getServer(), 1);
-                require(game.phase() == RoundPhase.LANE_WAVE, "Combat starts only after all 55 seconds.");
+                require(game.phase() == RoundPhase.LANE_WAVE, "Combat starts only after all 85 seconds.");
                 enterPrepare(game, context.getLevel().getServer(), milestone + 1);
                 require(game.remainingPrepareSeconds() == 25 && !game.isAugmentSelectionActive(),
                         "The following ordinary round must not inherit the augment pause.");
@@ -301,16 +352,21 @@ public final class AugmentLifecycleGameTest {
         SemionGame game = game(context, config(true, false));
         SemionGameManager manager = manager(game);
         try {
-            require(game.start(context.getLevel().getServer(), plan(online.getUUID(), MatchMode.NORMAL)), "Synthetic match must start.");
+            TraitLoadout loadout = new TraitLoadout(BuiltInTraits.MOBILIZATION_GRANT_ID, BuiltInTraits.FORTITUDE_ID);
+            require(game.start(context.getLevel().getServer(), plan(online.getUUID(), MatchMode.NORMAL),
+                    new TraitSelectionSnapshot(Map.of(online.getUUID(), loadout))), "Synthetic match must start.");
+            require(game.players().get(online.getUUID()).economy().mineral()
+                            == game.economyConfig().startingMineral() + TraitEffects.startingMineralBonus(loadout),
+                    "The selected starting trait must pay before the first augment choice.");
             enterPrepare(game, context.getLevel().getServer(), 5);
             require(game.augmentService().handle(game, online,
                     "force 5 reserve_diamonds_silver reserve_income_silver reserve_production_silver", true) == 1,
-                    "An authorized internal offer must add a 30-second choice period to ordinary preparation.");
+                    "An authorized internal offer must add a 60-second choice period to ordinary preparation.");
             SemionPlayer player = game.players().get(online.getUUID());
             PlayerAugmentState state = player.augments();
             var offer = state.currentOffer().orElseThrow();
             long emeralds = player.economy().emerald();
-            require(game.remainingPrepareSeconds() == 55 && game.remainingAugmentSelectionSeconds() == 30
+            require(game.remainingPrepareSeconds() == 85 && game.remainingAugmentSelectionSeconds() == 60
                             && offer.inputAllowedTick() == game.currentTick() + 20,
                     "The force-offer path must preserve the reveal delay and the separate choice period.");
             require(draft(game, online, offer.revision(), 1) == 0, "Input is locked on the reveal tick.");
@@ -318,15 +374,20 @@ public final class AugmentLifecycleGameTest {
             require(draft(game, online, offer.revision(), 1) == 0 && state.currentOffer().orElseThrow().draft() == null,
                     "A click at reveal+19 must not write a draft.");
             tick(game, context.getLevel().getServer(), 1);
+            long income = player.economy().income();
             require(draft(game, online, offer.revision(), 1) == 1, "Input unlocks at reveal+20.");
-            var savedDraft = state.currentOffer().orElseThrow();
+            var savedSelections = state.selections();
+            require(state.currentOffer().isEmpty() && player.economy().income() == income + 15,
+                    "One card click must immediately grant the reserve without another confirmation.");
             manager.handlePlayerDisconnect(online);
             require(game.restorePlayerPlacement(context.getLevel().getServer(), online), "The same-process participant must restore.");
             game.augmentService().reopen(game, online);
             require(game.players().get(online.getUUID()) == player && player.augments() == state,
                     "Reconnect must keep the original player/augment state object.");
-            require(state.currentOffer().orElseThrow().equals(savedDraft), "Reconnect must preserve candidates, revisions, deadline and draft.");
-            require(game.isAugmentSelectionActive() && game.remainingAugmentSelectionSeconds() == 29,
+            require(player.traitLoadout().equals(loadout), "Reconnect must also retain both selected traits.");
+            require(state.currentOffer().isEmpty() && state.selections().equals(savedSelections),
+                    "Reconnect must preserve the immediate selection without creating another offer.");
+            require(game.isAugmentSelectionActive() && game.remainingAugmentSelectionSeconds() == 59,
                     "Reconnect must neither reset nor shorten the shared choice period.");
 
             PlayerLane lane = game.playerLane(player.uuid()).orElseThrow();
@@ -340,25 +401,32 @@ public final class AugmentLifecycleGameTest {
                 }
             };
             lane.addTower(probe);
-            long income = player.economy().income();
-            String confirm = sessionCommand(game, "confirm " + savedDraft.revision() + " " + savedDraft.draftRevision() + " " + UUID.randomUUID());
-            require(game.augmentService().handle(game, online, confirm, false) == 1, "Confirmation must apply the selected reserve.");
-            require(player.economy().income() == income + 10, "The reserve income applies once before combat.");
-            game.augmentService().handle(game, online, confirm, false);
-            require(player.economy().income() == income + 10 && state.selections().size() == 1, "A duplicate confirmation must not pay twice.");
+            require(player.economy().income() == income + 15, "The reserve income applies once before combat.");
+            require(draft(game, online, offer.revision(), 1) == 0, "A second click on the old offer must be rejected.");
+            require(player.economy().income() == income + 15 && state.selections().size() == 1, "A duplicate card click must not pay twice.");
             lane.assignAugmentSnapshot(AugmentSnapshot.none());
             require(!probe.augmentSnapshot().has("reserve_income_silver"), "The fixture starts combat with a stale lane snapshot.");
             require(game.isAugmentSelectionActive(), "Early confirmation must not release the shared production pause.");
             tick(game, context.getLevel().getServer(), AugmentService.PREPARE_TICKS - 20);
             require(!game.isAugmentSelectionActive() && game.phase() == RoundPhase.PREPARE_AND_SUMMON
                             && game.remainingPrepareSeconds() == 25 && player.economy().emerald() == emeralds,
-                    "Early confirmation and reconnect still preserve all 30 production-free seconds plus ordinary preparation.");
+                    "Early confirmation and reconnect still preserve all 60 production-free seconds plus ordinary preparation.");
             tick(game, context.getLevel().getServer(), 20);
             require(player.economy().emerald() == emeralds + player.economy().emeraldPerSec(),
-                    "Confirmed players resume ordinary production without receiving the skipped 30 seconds.");
+                    "Confirmed players resume ordinary production without receiving the skipped 60 seconds.");
             tick(game, context.getLevel().getServer(), SemionGame.DEFAULT_PREPARE_TICKS - 20);
             require(game.phase() == RoundPhase.LANE_WAVE && sawSnapshotAtWaveStart[0],
                     "The confirmed immutable snapshot must reach towers before onWaveStarted.");
+            require(probe.traitLoadout().equals(loadout) && player.economy().income() == income + 15,
+                    "Trait effects and the confirmed augment reward must coexist during the same wave.");
+            game.teams().get(TeamId.BLUE).laneGroup().boss().damage(Double.MAX_VALUE);
+            game.tick(context.getLevel().getServer());
+            var recorded = game.matchResult().orElseThrow().participants().stream()
+                    .filter(participant -> participant.playerId().equals(player.uuid())).findFirst().orElseThrow();
+            require(recorded.traitLoadout().equals(TraitLoadoutSnapshot.from(loadout))
+                            && recorded.augmentSelections().size() == 1
+                            && recorded.augmentSelections().getFirst().augmentId().equals("semiontd:reserve_income_silver"),
+                    "The final match result must contain both selected traits and the confirmed augment.");
         } catch (RuntimeException | AssertionError failure) {
             context.fail(net.minecraft.network.chat.Component.literal("Augment lifecycle failed: " + failure));
         } finally {
@@ -388,7 +456,7 @@ public final class AugmentLifecycleGameTest {
             var offer = lateFive.augments().currentOffer().orElseThrow();
             require(offer.milestoneRound() == 5 && offer.offeredRound() == 6,
                     "A request recorded at R5 receives its R5 choice in the next preparation.");
-            require(game.remainingPrepareSeconds() == 55 && game.remainingAugmentSelectionSeconds() == 30
+            require(game.remainingPrepareSeconds() == 85 && game.remainingAugmentSelectionSeconds() == 60
                             && game.isAugmentSelectionActive()
                             && offer.deadlineTickExclusive() == game.currentTick() + AugmentService.PREPARE_TICKS,
                     "A deferred offer must also extend the actual next preparation.");
@@ -428,11 +496,8 @@ public final class AugmentLifecycleGameTest {
             require(offer.milestoneRound() == 5 && offer.offeredRound() == 6 && slot >= 0,
                     "An eligible deferred R5 blueprint must not be rejected merely because its offer is shown in R6.");
             tick(game, context.getLevel().getServer(), 20);
-            require(draft(game, late, offer.revision(), slot) == 1, "The deferred blueprint must pass the real draft eligibility check.");
-            var drafted = player.augments().currentOffer().orElseThrow();
-            require(game.augmentService().handle(game, late, sessionCommand(game, "confirm " + drafted.revision() + " "
-                    + drafted.draftRevision() + " " + UUID.randomUUID()), false) == 1,
-                    "The deferred blueprint must remain eligible at confirmation.");
+            require(draft(game, late, offer.revision(), slot) == 1 && player.augments().currentOffer().isEmpty(),
+                    "The deferred blueprint must check eligibility and grant its tickets on the first click.");
             require(player.economyAugments().remainingTickets() == 2, "The confirmed R6 offer grants two current-preparation tickets.");
             var upgrade = ProductionTowerCatalog.upgrades(tower.type()).getFirst();
             require(ProductionTowerService.upgradeTower(game, player.uuid(), tower.position(), upgrade.id(), true) == TowerUpgradeResult.SUCCESS,

@@ -65,6 +65,11 @@ public final class FakePlayerTowerVisuals {
     private FakePlayerTowerVisuals() {
     }
 
+    public static synchronized java.util.Optional<Entity> visualEntity(EntityBackedTower tower) {
+        Visual visual = VISUALS.get(tower);
+        return visual == null ? java.util.Optional.empty() : java.util.Optional.of(visual.fakePlayer);
+    }
+
     public static synchronized void attach(SemionTowerEntity anchor, EntityBackedTower tower) {
         if (anchor == null || tower == null || !(anchor.level() instanceof ServerLevel level)) {
             return;

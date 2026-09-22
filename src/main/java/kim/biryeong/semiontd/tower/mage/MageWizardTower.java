@@ -9,6 +9,7 @@ import java.util.UUID;
 import kim.biryeong.semiontd.api.area.AreaVfxSpec;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.effect.TimedEffectType;
@@ -41,6 +42,11 @@ public final class MageWizardTower extends ProductionTower {
     private int bombTicks = -1;
     private Vec3 bombCenter;
     private int collapseTicks = -1;
+    private int attackCasts;
+    private int castManaSpent;
+    private boolean castRefunded;
+    private boolean repeatCast;
+    private boolean laneWideCast;
 
     public MageWizardTower(TowerType type, UUID owner, TeamId team, int laneId, GridPosition position) {
         super(type, owner, team, laneId, position);
@@ -113,6 +119,10 @@ public final class MageWizardTower extends ProductionTower {
         bombTicks = -1;
         bombCenter = null;
         collapseTicks = -1;
+        attackCasts = 0;
+        castManaSpent = 0;
+        repeatCast = false;
+        laneWideCast = false;
     }
 
     @Override
@@ -163,7 +173,8 @@ public final class MageWizardTower extends ProductionTower {
             collapseTicks = ticks("collapseDelayTicks", MageBalance.DIMENSIONAL_COLLAPSE_DELAY_TICKS);
             return;
         }
-        List<SemionMonsterEntity> targets = targetsInRange(source, spellRange(selected));
+        List<SemionMonsterEntity> targets = worldCastAvailable(selected)
+                ? laneTargets() : targetsInRange(source, spellRange(selected));
         if (targets.isEmpty()) {
             return;
         }
@@ -203,11 +214,15 @@ public final class MageWizardTower extends ProductionTower {
             return;
         }
         MageSpell selected = MageSpell.MANA_MISSILE;
-        List<SemionMonsterEntity> targets = targetsInRange(source, spellRange(selected));
+        List<SemionMonsterEntity> targets = laneWideCast ? laneTargets() : targetsInRange(source, spellRange(selected));
         if (targets.isEmpty()) {
             return;
         }
-        damageOne(source, targets.getFirst(), ability("missileDamage", MageBalance.MISSILE_DAMAGE));
+        if (laneWideCast) {
+            targets.forEach(target -> damageOne(source, target, ability("missileDamage", MageBalance.MISSILE_DAMAGE)));
+        } else {
+            damageOne(source, targets.getFirst(), ability("missileDamage", MageBalance.MISSILE_DAMAGE));
+        }
         missilesRemaining--;
         missileCooldown = Math.max(1, ticks("missileIntervalTicks", MageBalance.MISSILE_INTERVAL_TICKS)) - 1;
         if (missilesRemaining <= 0) {
@@ -216,6 +231,10 @@ public final class MageWizardTower extends ProductionTower {
     }
 
     private void castWindCutter(SemionTowerEntity source, SemionMonsterEntity primary) {
+        if (laneWideCast) {
+            laneTargets().forEach(target -> damageOne(source, target, ability("windCutterDamage", MageBalance.WIND_CUTTER_DAMAGE)));
+            return;
+        }
         Vec3 start = source.position();
         Vec3 direction = primary.position().subtract(start);
         double length = Math.max(0.001, direction.length());
@@ -237,13 +256,17 @@ public final class MageWizardTower extends ProductionTower {
                 AreaEffectIds.tower(this, "wind_cutter"), source, start.add(normalized.scale(maxRange * 0.5)),
                 maxRange, Set.of(), target -> ids.contains(target.getUUID()), AreaVfxSpec.none()
         );
-        TowerAreaDamage.apply(this, source, request,
-                ignored -> spellDamage(ability("windCutterDamage", MageBalance.WIND_CUTTER_DAMAGE)), true,
-                (target, damage, killed) -> {}, DamageType.MAGIC);
+        damageArea(source, request, ability("windCutterDamage", MageBalance.WIND_CUTTER_DAMAGE),
+                (target, damage, killed) -> {});
         TowerVfxService.showSecondaryAttack(source, primary);
     }
 
     private void castChainLightning(SemionTowerEntity source, SemionMonsterEntity primary) {
+        if (laneWideCast) {
+            laneTargets().forEach(target -> damageOne(source, target,
+                    ability("chainDamage1", MageBalance.CHAIN_LIGHTNING_DAMAGE[0])));
+            return;
+        }
         List<SemionMonsterEntity> available = new ArrayList<>(MageTowerRuntime.liveMonsters(currentLane));
         SemionMonsterEntity current = primary;
         for (int index = 0; index < MageBalance.CHAIN_LIGHTNING_DAMAGE.length && current != null; index++) {
@@ -259,6 +282,13 @@ public final class MageWizardTower extends ProductionTower {
     }
 
     private void castFrostWave(SemionTowerEntity source, SemionMonsterEntity primary) {
+        if (laneWideCast) {
+            for (SemionMonsterEntity target : laneTargets()) {
+                damageOne(source, target, ability("frostWaveDamage", MageBalance.FROST_WAVE_DAMAGE));
+                applyFrost(target);
+            }
+            return;
+        }
         double radius = ability("frostWaveRadius", MageBalance.FROST_WAVE_RADIUS);
         int cap = intAbility("frostWaveMaxTargets", MageBalance.FROST_WAVE_MAX_TARGETS);
         Vec3 center = primary.position();
@@ -268,17 +298,25 @@ public final class MageWizardTower extends ProductionTower {
                 AreaEffectIds.tower(this, "frost_wave"), source, center, radius, Set.of(),
                 target -> ids.contains(target.getUUID()), AreaVfxSpec.onTrigger(AreaVfxStyles.DEBUFF)
         );
-        TowerAreaDamage.apply(this, source, request,
-                ignored -> spellDamage(ability("frostWaveDamage", MageBalance.FROST_WAVE_DAMAGE)), true,
-                (target, damage, killed) -> {
-                    double slow = ability("frostWaveSlow", MageBalance.FROST_WAVE_SLOW);
-                    int duration = ticks("frostWaveDurationTicks", MageBalance.FROST_WAVE_DURATION_TICKS);
-                    target.applyTimedEffect(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION, slow, duration);
-                    target.applyTimedEffect(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION, slow, duration);
-                }, DamageType.MAGIC);
+        damageArea(source, request, ability("frostWaveDamage", MageBalance.FROST_WAVE_DAMAGE),
+                (target, damage, killed) -> applyFrost(target));
+    }
+
+    private void applyFrost(SemionMonsterEntity target) {
+        double slow = ability("frostWaveSlow", MageBalance.FROST_WAVE_SLOW);
+        int duration = ticks("frostWaveDurationTicks", MageBalance.FROST_WAVE_DURATION_TICKS);
+        target.applyTimedEffect(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION, slow, duration);
+        target.applyTimedEffect(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION, slow, duration);
     }
 
     private void detonateBomb(SemionTowerEntity source) {
+        if (laneWideCast) {
+            laneTargets().forEach(target -> damageOne(source, target, ability("manaBombDamage", MageBalance.MANA_BOMB_DAMAGE)));
+            bombTicks = -1;
+            bombCenter = null;
+            beginCooldown(MageSpell.MANA_BOMB);
+            return;
+        }
         double radius = ability("manaBombRadius", MageBalance.MANA_BOMB_RADIUS);
         int cap = intAbility("manaBombMaxTargets", MageBalance.MANA_BOMB_MAX_TARGETS);
         List<SemionMonsterEntity> selected = MageTowerRuntime.liveMonsters(currentLane).stream()
@@ -291,9 +329,8 @@ public final class MageWizardTower extends ProductionTower {
                 AreaEffectIds.tower(this, "mana_bomb"), source, bombCenter, radius, Set.of(),
                 target -> ids.contains(target.getUUID()), AreaVfxSpec.onTrigger(AreaVfxStyles.CORPSE_EXPLOSION)
         );
-        TowerAreaDamage.apply(this, source, request,
-                ignored -> spellDamage(ability("manaBombDamage", MageBalance.MANA_BOMB_DAMAGE)), true,
-                (target, damage, killed) -> {}, DamageType.MAGIC);
+        damageArea(source, request, ability("manaBombDamage", MageBalance.MANA_BOMB_DAMAGE),
+                (target, damage, killed) -> {});
         bombTicks = -1;
         bombCenter = null;
         beginCooldown(MageSpell.MANA_BOMB);
@@ -305,9 +342,8 @@ public final class MageWizardTower extends ProductionTower {
                 AreaEffectIds.tower(this, "dimensional_collapse"), source, radius,
                 AreaVfxSpec.onTrigger(AreaVfxStyles.DRAGON_BREATH)
         );
-        TowerAreaDamage.apply(this, source, request,
-                ignored -> spellDamage(ability("collapseDamage", MageBalance.DIMENSIONAL_COLLAPSE_DAMAGE)), true,
-                (target, damage, killed) -> {}, DamageType.MAGIC);
+        damageArea(source, request, ability("collapseDamage", MageBalance.DIMENSIONAL_COLLAPSE_DAMAGE),
+                (target, damage, killed) -> {});
         collapseTicks = -1;
         beginCooldown(MageSpell.DIMENSIONAL_COLLAPSE);
     }
@@ -327,11 +363,63 @@ public final class MageWizardTower extends ProductionTower {
     }
 
     private void damageOne(SemionTowerEntity source, SemionMonsterEntity target, double base) {
-        Tower.DamageResult result = damageTargetResult(source, target, spellDamage(base), DamageType.MAGIC);
+        double damage = spellDamage(base);
+        Tower.DamageResult result = damageTargetResult(source, target, damage, DamageType.MAGIC);
         TowerVfxService.showSecondaryAttack(source, target);
         if (result.killed()) {
+            refundSpellKill();
             onKill(source, target, base);
         }
+        if (repeatCast && AugmentCombat.allowsTriggers() && target.isAlive()) {
+            AugmentCombat.runWithoutTriggers(() -> {
+                Tower.DamageResult replay = damageTargetResult(source, target,
+                        damage * augmentSnapshot().parameter(MageAugments.DOUBLE, "damageRatio", .6), DamageType.MAGIC);
+                if (replay.killed()) onKill(source, target, base);
+            });
+        }
+    }
+
+    private void damageArea(SemionTowerEntity source, MonsterAreaEffectRequest request, double base,
+                            TowerAreaDamage.AfterDamage afterDamage) {
+        double damage = spellDamage(base);
+        TowerAreaDamage.apply(this, source, request, ignored -> damage, true,
+                (target, amount, killed) -> {
+                    if (killed) refundSpellKill();
+                    afterDamage.accept(target, amount, killed);
+                }, DamageType.MAGIC);
+        if (repeatCast && AugmentCombat.allowsTriggers()) {
+            AugmentCombat.runWithoutTriggers(() -> TowerAreaDamage.apply(this, source, request,
+                    ignored -> damage * augmentSnapshot().parameter(MageAugments.DOUBLE, "damageRatio", .6),
+                    true, afterDamage, DamageType.MAGIC));
+        }
+    }
+
+    void refundSpellKill() {
+        if (!castRefunded && castManaSpent > 0 && AugmentCombat.allowsTriggers()
+                && augmentSnapshot().has(MageAugments.REFUND)) {
+            castRefunded = true;
+            MageStates.state(ownerPlayer()).addMana((int) Math.floor(castManaSpent
+                    * augmentSnapshot().parameter(MageAugments.REFUND, "refundRatio", .2)));
+        }
+    }
+
+    private List<SemionMonsterEntity> laneTargets() {
+        return MageTowerRuntime.prioritizedMonsters(currentLane).stream()
+                .limit((int) augmentSnapshot().parameter(MageAugments.WORLD, "maxTargets", 20)).toList();
+    }
+
+    boolean worldCastAvailable(MageSpell selected) {
+        return AugmentCombat.allowsTriggers() && isAttackSpell(selected) && selected != MageSpell.DIMENSIONAL_COLLAPSE
+                && augmentSnapshot().has(MageAugments.WORLD)
+                && MageStates.state(ownerPlayer()).mana() >= worldManaCost();
+    }
+
+    private int worldManaCost() {
+        return (int) augmentSnapshot().parameter(MageAugments.WORLD, "manaCost", 300);
+    }
+
+    private static boolean isAttackSpell(MageSpell selected) {
+        return selected != MageSpell.MAGIC_AMPLIFICATION && selected != MageSpell.PROJECTILE_BARRIER;
     }
 
     double spellDamage(double base) {
@@ -416,7 +504,8 @@ public final class MageWizardTower extends ProductionTower {
     }
 
     int naturalManaProduction() {
-        return spellUsed ? 0 : intAbility("idleWizardMana", MageBalance.IDLE_WIZARD_MANA);
+        return spellUsed && !augmentSnapshot().has(MageAugments.FLOOD)
+                ? 0 : intAbility("idleWizardMana", MageBalance.IDLE_WIZARD_MANA);
     }
 
     void finishRound() {
@@ -424,12 +513,23 @@ public final class MageWizardTower extends ProductionTower {
     }
 
     boolean tryBeginCast(MageSpell selected) {
-        if (!MageStates.state(ownerPlayer()).spend(manaCost(selected))) {
+        boolean world = worldCastAvailable(selected);
+        int spent = world ? worldManaCost() : manaCost(selected);
+        if (!MageStates.state(ownerPlayer()).spend(spent)) {
             manaRetryCooldown = intAbility("manaRetryTicks", MageBalance.MANA_RETRY_TICKS);
             return false;
         }
         spellUsed = true;
         spellCasts++;
+        laneWideCast = world;
+        castManaSpent = isAttackSpell(selected) ? spent : 0;
+        castRefunded = false;
+        repeatCast = false;
+        if (isAttackSpell(selected) && AugmentCombat.allowsTriggers()) {
+            attackCasts++;
+            repeatCast = augmentSnapshot().has(MageAugments.DOUBLE)
+                    && attackCasts % Math.max(1, (int) augmentSnapshot().parameter(MageAugments.DOUBLE, "castInterval", 3)) == 0;
+        }
         updateEntityName(MageTowerRuntime.entity(currentLane, this));
         if (selected == MageSpell.MAGIC_AMPLIFICATION || selected == MageSpell.PROJECTILE_BARRIER) {
             showSupportVfx(selected);
@@ -476,6 +576,9 @@ public final class MageWizardTower extends ProductionTower {
         bombTicks = -1;
         bombCenter = null;
         collapseTicks = -1;
+        castManaSpent = 0;
+        repeatCast = false;
+        laneWideCast = false;
     }
 
     @Override
@@ -484,6 +587,10 @@ public final class MageWizardTower extends ProductionTower {
         List<String> lines = new ArrayList<>();
         lines.add("<aqua>마나</aqua> <white>" + state.mana() + "/" + state.capacity() + "</white>");
         lines.add("<gold>등급</gold> <white>" + rankName() + "</white> <gray>· 시전 " + spellCasts + "회</gray>");
+        if (augmentSnapshot().has(MageAugments.DOUBLE)) {
+            int interval = Math.max(1, (int) augmentSnapshot().parameter(MageAugments.DOUBLE, "castInterval", 3));
+            lines.add("<light_purple>이중 주문</light_purple> <white>" + (interval - attackCasts % interval) + "회 후</white>");
+        }
         lines.add(spell().map(value -> "<light_purple>지속 주문</light_purple> <white>" + value.displayName()
                         + "</white> <gray>· 사거리 " + format(spellRange(value)) + " · 마나 " + manaCost(value) + "</gray>")
                 .orElse("<gray>지속 주문 없음</gray>"));

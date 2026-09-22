@@ -2,6 +2,7 @@ package kim.biryeong.semiontd.config;
 
 import java.util.Comparator;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeSet;
 
 public record WaveConfig(
         List<RoundWaveConfig> rounds,
@@ -42,10 +44,14 @@ public record WaveConfig(
             infiniteFromRound = 20;
         }
         infiniteCountMultipliers = infiniteCountMultipliers == null ? Map.of() : Map.copyOf(infiniteCountMultipliers);
-        healingTemplates = healingTemplates == null ? Set.of() : Set.copyOf(healingTemplates);
+        healingTemplates = healingTemplates == null ? Set.of() : Collections.unmodifiableSet(new TreeSet<>(healingTemplates));
     }
 
     public static WaveConfig defaultConfig() {
+        return BundledBalanceDefaults.load("wave.json", WaveConfig.class, fallbackConfig());
+    }
+
+    static WaveConfig fallbackConfig() {
         List<RoundWaveConfig> rounds = List.of(
                 round(1, monster("animal_pig_1", 10.0, 0.0, 1.0, AttackKind.MELEE, "minecraft:pig", 3, 12, 0, 1.0, 2.5, 13)),
                 round(2, monster("animal_sheep_2", 11.5, 0.0, 1.0, AttackKind.MELEE, "minecraft:sheep", 3, 14, 0, 1.0, 2.5, 13)),
@@ -108,14 +114,14 @@ public record WaveConfig(
         animalStampede = withHealer(animalStampede, "animal_stampede");
         overworldAssault = withHealer(overworldAssault, "overworld_assault");
         zombifiedLegion = withHealer(zombifiedLegion, "zombified_legion");
-        WaveConfig fallback = new WaveConfig(
-                rounds.stream().map(round -> round.round() == 16 ? withHealer(round, null) : round).toList(),
+        return new WaveConfig(
+                rounds.stream().map(round -> round.round() >= 16 ? withHealer(round, null) : round).toList(),
                 20,
                 animalStampede,
                 List.of(animalStampede, overworldAssault, zombifiedLegion),
-                Map.of("20", 1.20, "25", 1.30), false, false, Set.of()
+                Map.of("20", 1.20, "25", 1.30), true, true,
+                Set.of("animal_stampede", "overworld_assault", "zombified_legion")
         );
-        return BundledBalanceDefaults.load("wave.json", WaveConfig.class, fallback);
     }
 
     public Optional<RoundWaveConfig> configForRound(int round) {
@@ -193,7 +199,7 @@ public record WaveConfig(
         );
     }
 
-    /** Changes only the internal test stage; the immutable source quantities remain the baseline. */
+    /** Selects rollout stages without changing the immutable baseline quantities. */
     public WaveConfig withSeason3Stages(boolean counts, boolean round16Healing, Set<String> lateHealingTemplates) {
         return new WaveConfig(rounds, infiniteFromRound, infinite, infiniteTemplates, infiniteCountMultipliers,
                 counts, round16Healing, lateHealingTemplates);
@@ -240,8 +246,11 @@ public record WaveConfig(
                 List<WaveMonsterEntry> entries = lane.getValue();
                 int healers = entries.stream().filter(entry -> entry.healing() != null).mapToInt(WaveMonsterEntry::count).sum();
                 long healerEntries = entries.stream().filter(entry -> entry.healing() != null).count();
-                if (healerEntries > 1 || healerEntries > 0 && healers != 1 || healers > 0 && round.round() < 16) {
-                    throw new IllegalArgumentException("A wave may contain one healer, only after round 15.");
+                if (healerEntries > 1 || healerEntries > 0 && (healers < 1 || healers > 5 || round.round() < 16)) {
+                    throw new IllegalArgumentException("A wave may contain one healer type with 1 to 5 units, only after round 15.");
+                }
+                if (healers > 0 && entries.stream().anyMatch(entry -> entry.id().equals("warden_boss_15"))) {
+                    throw new IllegalArgumentException("A boss wave cannot contain healers.");
                 }
                 if (healers > 0 && (replacementId(round) == null || entries.stream().noneMatch(entry -> entry.id().equals(replacementId(round))))) {
                     throw new IllegalArgumentException("Healing wave requires its declared combat replacement.");
@@ -253,13 +262,13 @@ public record WaveConfig(
 
     private static void requireHealer(RoundWaveConfig wave) {
         if (wave.lanes().isEmpty() || wave.lanes().values().stream()
-                .anyMatch(entries -> entries.stream().noneMatch(entry -> entry.healing() != null && entry.count() == 1))) {
+                .anyMatch(entries -> entries.stream().noneMatch(entry -> entry.healing() != null && entry.count() >= 1 && entry.count() <= 5))) {
             throw new IllegalArgumentException("An enabled healing wave must contain its healer definition.");
         }
     }
 
     private RoundWaveConfig prepareComposition(RoundWaveConfig template, int round) {
-        boolean healingEnabled = round == 16 ? round16HealingEnabled
+        boolean healingEnabled = round >= 16 && round <= 19 ? round16HealingEnabled
                 : template.templateId() != null && healingTemplates.contains(template.templateId());
         double multiplier = countMultiplier(round);
         Map<String, List<WaveMonsterEntry>> lanes = new LinkedHashMap<>();
@@ -276,10 +285,10 @@ public record WaveConfig(
                 for (int i = 0; i < combat.size(); i++) {
                     WaveMonsterEntry entry = combat.get(i);
                     if (entry.id().equals(replacementId(template))) {
-                        combat.set(i, entry.withCount(entry.count() - 1));
+                        combat.set(i, entry.withCount(entry.count() - healer.count()));
                     }
                 }
-                combat.add(healer.withCount(1));
+                combat.add(healer);
             }
             lanes.put(lane.getKey(), List.copyOf(combat));
         }
@@ -332,6 +341,9 @@ public record WaveConfig(
 
     private static String replacementId(RoundWaveConfig template) {
         if (template.round() == 16) {return "hoglin_tank_16";}
+        if (template.round() == 17) {return "piglin_brute_tank_17";}
+        if (template.round() == 18) {return "magma_cube_tank_18";}
+        if (template.round() == 19) {return "hoglin_tank_19";}
         if (template.templateId() == null) {return null;}
         return switch (template.templateId()) {
             case "animal_stampede" -> "infinite_llama_ranged";
@@ -342,6 +354,7 @@ public record WaveConfig(
     }
 
     private static RoundWaveConfig withHealer(RoundWaveConfig original, String templateId) {
+        int healerCount = Math.min(5, original.round() - 15);
         RoundWaveConfig identified = new RoundWaveConfig(original.round(), original.spawnMode(), original.spawnIntervalTicks(),
                 original.lanes(), templateId, original.rewardBudgetForLane(RoundWaveConfig.DEFAULT_LANE_KEY));
         Map<String, List<WaveMonsterEntry>> lanes = new LinkedHashMap<>();
@@ -350,11 +363,11 @@ public record WaveConfig(
             WaveMonsterEntry healer = null;
             for (WaveMonsterEntry entry : lane.getValue()) {
                 if (entry.id().equals(replacementId(identified))) {
-                    entries.add(entry.withCount(entry.count() - 1));
-                    healer = new WaveMonsterEntry(original.round() == 16 ? "wave_healer_allay_16" : "wave_healer_allay_infinite",
+                    entries.add(entry.withCount(entry.count() - healerCount));
+                    healer = new WaveMonsterEntry(original.round() < 20 ? "wave_healer_allay_" + original.round() : "wave_healer_allay_infinite",
                             entry.health(), entry.armor(), 2, AttackKind.RANGED, "minecraft:allay", null, null,
-                            entry.mineralReward(), 1, 0, 0.85, 6, 13,
-                            new WaveHealingConfig(6, original.round() == 16 ? 80 : 160, 3, 160, 20, 2));
+                            entry.mineralReward(), healerCount, 0, 0.85, 6, 13,
+                            new WaveHealingConfig(6, original.round() < 20 ? 80 : 160, 3, 160, 20, 2));
                 } else {entries.add(entry);}
             }
             if (healer != null) {entries.add(healer);}

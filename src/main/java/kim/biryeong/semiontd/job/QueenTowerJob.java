@@ -28,6 +28,9 @@ public final class QueenTowerJob extends SemionJob {
         PlayerLane lane = context.game().playerLane(context.player().uuid()).orElse(null);
         if (lane == null) return type.id().equals(QueenTowers.QUEEN.id());
         boolean hasQueen = lane.towers().stream().anyMatch(tower -> tower.type().id().equals(QueenTowers.QUEEN.id()));
+        if (type.id().equals(QueenTowers.JOKER.id())) {
+            return hasQueen && QueenStates.state(context.player().uuid()).jokerTickets() > 0;
+        }
         return type.id().equals(QueenTowers.QUEEN.id()) ? !hasQueen : hasQueen;
     }
 

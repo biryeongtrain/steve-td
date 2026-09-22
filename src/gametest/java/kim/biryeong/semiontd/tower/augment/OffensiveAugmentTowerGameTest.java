@@ -43,12 +43,12 @@ public final class OffensiveAugmentTowerGameTest {
             for (int tick = 0; tick < 80; tick++) fixture.tower.tick(fixture.lane);
             require(fixture.tower.charges() == 1, "An attackable weak enemy still prevents idle charging.");
             var hit = fixture.tower.damagePrimaryAttackTargetResult(source, weak, source.attackDamageAmount(weak));
-            requireClose(105, hit.dealtDamage(), "Previously charged basic damage still applies to low-pressure income.");
+            requireClose(217.5, hit.dealtDamage(), "T2 charged basic damage still applies to low-pressure income.");
             fixture.tower.onPrimaryAttack(weak, hit.outgoingDamage(), DamageType.MAGIC, weak.position());
             require(fixture.tower.charges() == 0, "A successful charged basic shot still consumes its charge.");
             for (int tick = 0; tick < 80; tick++) fixture.tower.tick(fixture.lane);
             require(fixture.tower.charges() == 0, "The weak enemy must not manufacture fresh charges.");
-            requireClose(35, source.attackDamageAmount(weak), "The next uncharged primary retains normal base damage.");
+            requireClose(52.5, source.attackDamageAmount(weak), "The next uncharged primary retains T2 base damage.");
             context.succeed();
         }
     }
@@ -64,14 +64,14 @@ public final class OffensiveAugmentTowerGameTest {
             markLowPressure(weak.runtimeMonster());
             var first = fixture.tower.damagePrimaryAttackTargetResult(source, weak, source.attackDamageAmount(weak));
             fixture.tower.onPrimaryAttack(weak, first.outgoingDamage(), DamageType.PHYSICAL, weak.position());
-            requireClose(980, weak.runtimeMonster().health(), "Low-pressure income takes ordinary primary damage only.");
+            requireClose(970, weak.runtimeMonster().health(), "Low-pressure income takes T2 primary damage only.");
             require(fixture.tower.preparedShells() == 1, "A weak primary does not trigger or consume a shell.");
             requireClose(0, fixture.tower.specialDamageDealt(), "A weak primary does not create a new artillery proc.");
             var normal = fixture.target("normal_factory_trigger", weak.position().add(.5, 0, 0), 1000);
             var next = fixture.tower.damagePrimaryAttackTargetResult(source, normal, source.attackDamageAmount(normal));
             fixture.tower.onPrimaryAttack(normal, next.outgoingDamage(), DamageType.PHYSICAL, normal.position());
             require(fixture.tower.preparedShells() == 0, "A normal primary can fire the preserved shell.");
-            requireClose(860, weak.runtimeMonster().health(), "Low-pressure income still takes collateral shell damage.");
+            requireClose(670, weak.runtimeMonster().health(), "Low-pressure income still takes T2 collateral shell damage.");
             context.succeed();
         }
     }
@@ -83,8 +83,8 @@ public final class OffensiveAugmentTowerGameTest {
             var source = fixture.source();
             var first = fixture.target("ordinary_giant", source.position().add(4, 0, 0), 1000);
             var boss = fixture.target("warden_boss_15", source.position().add(5, 0, 0), 1000);
-            requireClose(150, source.attackDamageAmount(first), "Ordinary giant damage must include 8% max health.");
-            requireClose(90, source.attackDamageAmount(boss), "The natural R15 Warden must use the 2% boss ratio.");
+            requireClose(225, source.attackDamageAmount(first), "T2 base damage grows but the ordinary max-health ratio remains 12%.");
+            requireClose(135, source.attackDamageAmount(boss), "The natural R15 Warden retains its 3% boss ratio with T2 base damage.");
             require(fixture.tower.selectAttackTarget(source, List.of(boss, first)).orElseThrow() == first,
                     "Equal-health giants must choose the closer target.");
             var larger = fixture.target("larger_giant", source.position().add(6, 0, 0), 2000);
@@ -113,7 +113,7 @@ public final class OffensiveAugmentTowerGameTest {
             var source = fixture.source();
             var target = fixture.target("capacitor_target", source.position().add(4, 0, 0), 1000);
             fixture.tower.tick(fixture.lane);
-            requireClose(245, source.attackDamageAmount(target), "A fully charged shot must deal 35 + 70 * 3 magic damage.");
+            requireClose(547.5, source.attackDamageAmount(target), "A T2 charged shot deals (35 + 110 * 3) * 1.5 magic damage.");
             target.runtimeMonster().grantShield(DamageType.MAGIC, 1000, 40, context.getLevel().getGameTime(), target.runtimeMonster());
             var blocked = fixture.tower.damagePrimaryAttackTargetResult(source, target, source.attackDamageAmount(target));
             requireClose(0, blocked.dealtDamage(), "The first shot must be fully absorbed by the magic shield.");
@@ -122,7 +122,7 @@ public final class OffensiveAugmentTowerGameTest {
                     "Shielded attempts must not be recorded as discharged capacitor shots.");
             target.runtimeMonster().expireShields(context.getLevel().getGameTime() + 40);
             var hit = fixture.tower.damagePrimaryAttackTargetResult(source, target, source.attackDamageAmount(target));
-            requireClose(245, hit.dealtDamage(), "A later unshielded shot must still use all stored charges.");
+            requireClose(547.5, hit.dealtDamage(), "A later unshielded shot must still use all stored T2 charges.");
             fixture.tower.onPrimaryAttack(target, hit.outgoingDamage(), DamageType.MAGIC, target.position());
             require(fixture.tower.charges() == 0, "One valid primary shot must consume all charges.");
             fixture.tower.onPrimaryAttack(target, hit.outgoingDamage(), DamageType.MAGIC, target.position());
@@ -182,10 +182,10 @@ public final class OffensiveAugmentTowerGameTest {
             require(fixture.tower.hatched(), "Two survived waves must hatch on the real next preparation.");
             require(fixture.tower.logicalId().equals(logicalId), "Hatching must preserve logical identity.");
             require(fixture.tower.originalPosition().equals(original), "Hatching must preserve the original position.");
-            requireClose(600, fixture.tower.health(), "The hatched body must start at full 600 health.");
-            requireClose(600, fixture.source().getMaxHealth(), "Entity and logical maximum health must agree.");
+            requireClose(1600, fixture.tower.health(), "The hatched T2 body starts at full 1600 health.");
+            requireClose(1600, fixture.source().getMaxHealth(), "Entity and logical maximum health must agree.");
             requireClose(5, fixture.source().attackRange(), "The sentinel must gain its five-block range.");
-            requireClose(110, fixture.source().attackDamageAmount(null), "The sentinel must gain its magic attack.");
+            requireClose(255, fixture.source().attackDamageAmount(null), "The sentinel must gain its T2 magic attack.");
             require(fixture.tower.primaryDamageType() == DamageType.MAGIC, "The sentinel must remain magical.");
             require(fixture.tower.visual().entityTypeId().equals("minecraft:iron_golem"), "Hatching must change the visible body.");
             var hatched = fixture.tower.telemetrySample(18, 31, 1, "HATCHED");
@@ -219,10 +219,10 @@ public final class OffensiveAugmentTowerGameTest {
             List<SemionMonsterEntity> others = new ArrayList<>();
             for (int i = 1; i <= 6; i++) others.add(fixture.target("factory_other_" + i, center.add(i * .2, 0, 0), 1000));
             fixture.tower.onPrimaryAttack(primary, result.outgoingDamage(), DamageType.PHYSICAL, center);
-            requireClose(860, primary.runtimeMonster().health(), "The surviving primary must receive the shell after its basic hit.");
+            requireClose(670, primary.runtimeMonster().health(), "The surviving primary receives the T2 shell after its basic hit.");
             require(others.stream().filter(target -> target.runtimeMonster().health() < 1000).count() == 4,
                     "Only four additional targets may receive one shell.");
-            requireClose(600, fixture.tower.specialDamageDealt(), "Five shell hits must be attributed as separate special damage.");
+            requireClose(1500, fixture.tower.specialDamageDealt(), "Five T2 shell hits must be attributed as separate special damage.");
             require(fixture.tower.preparedShells() == 1, "Exactly one shell must be consumed by the first attack.");
             fixture.tower.onPrimaryAttack(primary, result.outgoingDamage(), DamageType.PHYSICAL, center);
             require(fixture.tower.preparedShells() == 1, "Another attack in the same tick must not fire a second shell.");

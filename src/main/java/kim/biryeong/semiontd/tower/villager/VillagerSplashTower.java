@@ -27,6 +27,7 @@ public class VillagerSplashTower extends SplashTower {
 
     @Override
     public void resetForRound(PlayerLane lane) {
+        VillagerAugments.roundEnded(this);
         if (!this.isDestroyed(lane)) {
             incrementSurvivalBonus();
         }
@@ -45,7 +46,7 @@ public class VillagerSplashTower extends SplashTower {
     @Override
     public int adjustAttackInterval(int baseIntervalTicks) {
         if (isT3()) {
-            return (int) (baseIntervalTicks * (1 - survivalBonus()));
+            return Math.max(1, (int) (baseIntervalTicks * (1 - survivalBonus())));
         }
 
         return super.adjustAttackInterval(baseIntervalTicks);
@@ -57,6 +58,7 @@ public class VillagerSplashTower extends SplashTower {
         double bonus = survivalBonus();
         String effect = isT3() ? "피해/공속 +" + percent(bonus) : "피해 +" + percent(bonus);
         lines.add("생존 스택 " + survivalBouns + "/" + maxSurvivalStacks() + " (" + effect + ")");
+        lines.add(VillagerAugments.detail(this));
         return lines;
     }
 
@@ -86,6 +88,31 @@ public class VillagerSplashTower extends SplashTower {
     }
 
     @Override
+    public void onWaveStarted(PlayerLane lane, int round) {
+        super.onWaveStarted(lane, round);
+        VillagerAugments.waveStarted(this);
+    }
+
+    @Override
+    public void onDeath(PlayerLane lane) {
+        super.onDeath(lane);
+        VillagerAugments.onDeath(this, lane);
+    }
+
+    @Override
+    public void onAttackResolved(SemionTowerEntity source, SemionMonsterEntity target, double attempted,
+                                 double outgoing, double dealt, boolean killed) {
+        super.onAttackResolved(source, target, attempted, outgoing, dealt, killed);
+        VillagerAugments.attackResolved(this, source, target, dealt);
+    }
+
+    int survivalStacks() {return survivalBouns;}
+
+    void addSurvivalStacks(int count) {
+        survivalBouns = Math.min(maxSurvivalStacks(), survivalBouns + Math.max(0, count));
+    }
+
+    @Override
     public float getSplashRange() {
         return (float) value("splashRadius");
     }
@@ -104,7 +131,7 @@ public class VillagerSplashTower extends SplashTower {
     }
 
     private double survivalBonus() {
-        return value("bonusPerSurvivedRound") * survivalBouns * VillagerAdvStates.survivalBonusMultiplier(this);
+        return value("bonusPerSurvivedRound") * VillagerAugments.totalStacks(this) * VillagerAdvStates.survivalBonusMultiplier(this);
     }
 
     private boolean isT3() {

@@ -60,6 +60,30 @@ class AtlantisPressureTest {
     }
 
     @Test
+    void deepPressureUsesFourTimesCapWithoutChangingTheNativeCap() {
+        assertEquals(80.0, AtlantisPressure.burstDamage(20, 100, 0, 4), EPSILON);
+        assertEquals(40.0, AtlantisPressure.burstDamage(20, 100, 0), EPSILON);
+        AtlantisPressure.addStacks(MONSTER, OWNER, TOWER, 100, 20, 100, 100);
+        assertEquals(80, AtlantisPressure.consumeForBurst(OWNER, MONSTER, 0, 4), EPSILON);
+        assertEquals(0, AtlantisPressure.stacks(OWNER, MONSTER));
+    }
+
+    @Test
+    void augmentChainStopsAtTwelveUniqueMonstersAcrossSiblingBranches() {
+        AtlantisPressure.Chain chain = new AtlantisPressure.Chain(12);
+        for (int index = 0; index < 12; index++) {
+            UUID monster = UUID.nameUUIDFromBytes(("unique-" + index).getBytes());
+            assertTrue(chain.canBurst(monster));
+            assertFalse(chain.canBurst(monster));
+            chain.enter();
+            assertTrue(AtlantisPressure.Chain.currentOrNew(12) == chain);
+            chain.exit();
+        }
+        assertFalse(chain.canBurst(UUID.randomUUID()));
+        assertTrue(AtlantisPressure.Chain.currentOrNew(12) != chain);
+    }
+
+    @Test
     void supportBonusRaisesTheRatioButNotBeyondTheCap() {
         double base = AtlantisPressure.burstDamage(20.0, 10, 0.0);
         assertTrue(AtlantisPressure.burstDamage(20.0, 10, 0.05) >= base,

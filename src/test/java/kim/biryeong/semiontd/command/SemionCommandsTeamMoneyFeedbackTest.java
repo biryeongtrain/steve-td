@@ -3,9 +3,19 @@ package kim.biryeong.semiontd.command;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
+import kim.biryeong.semiontd.game.TeamMoneyTransferResult;
+import kim.biryeong.semiontd.game.TeamMoneyTransferResultType;
 import org.junit.jupiter.api.Test;
 
 final class SemionCommandsTeamMoneyFeedbackTest {
+    @Test
+    void pirateRestrictionAndInsufficientFundsHaveDifferentMessages() {
+        assertEquals("해적 빌더는 팀원 간 다이아 지원을 요청하거나 보내거나 받을 수 없습니다.",
+                SemionCommands.teamMoneyFailureMessage(TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.BUILDER_RESTRICTED)));
+        assertEquals("보낼 다이아가 부족합니다.",
+                SemionCommands.teamMoneyFailureMessage(TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.NOT_ENOUGH_DIAMOND)));
+    }
+
     @Test
     void towerPlacementSuccessFeedbackIsConciseAndOmitsPosition() {
         assertEquals("주민 원거리 기본 타워를 소환했습니다", SemionCommands.towerPlacementSuccessMessage("주민 원거리 기본 타워"));

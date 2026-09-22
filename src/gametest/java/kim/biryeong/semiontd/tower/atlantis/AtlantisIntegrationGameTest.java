@@ -1,9 +1,16 @@
 package kim.biryeong.semiontd.tower.atlantis;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import kim.biryeong.semiontd.augment.AugmentChoice;
+import kim.biryeong.semiontd.augment.AugmentConfig;
+import kim.biryeong.semiontd.augment.AugmentRarity;
+import kim.biryeong.semiontd.augment.AugmentSnapshot;
+import kim.biryeong.semiontd.augment.AugmentCombat;
+import kim.biryeong.semiontd.augment.PlayerAugmentState;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
@@ -21,6 +28,7 @@ import kim.biryeong.semiontd.map.LaneRegionLayout;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
@@ -31,6 +39,199 @@ import xyz.nucleoid.map_templates.BlockBounds;
 public final class AtlantisIntegrationGameTest {
     private static final UUID OWNER = stableUuid("atlantis-zone-owner");
     private static final UUID OTHER = stableUuid("atlantis-other-owner");
+
+    @GameTest
+    public void deepPressureSpreadsToOnlyTwoEnemiesAndExtraAttacksDoNotSpread(GameTestHelper context) {
+        UUID owner = stableUuid("atlantis-augment-spread");
+        PlayerLane lane = augmentLane(context, owner);
+        TeamLaneGroup group = new TeamLaneGroup(TeamId.RED, BossMonster.defaultBoss(TeamId.RED));
+        group.addLane(lane);
+        try {
+            lane.assignAugmentSnapshot(atlantisSnapshot("g1", "p"));
+            AtlantisTower dolphin = atlantisTower(AtlantisTowers.DOLPHIN_T1, owner, position(context, 5, 2, 5));
+            lane.addTower(dolphin);
+            Monster primary = spawnMonster(context, lane, "pressure-main", position(context, 5, 2, 4));
+            List<Monster> nearby = List.of(
+                    spawnMonster(context, lane, "pressure-neighbor-a", position(context, 5, 2, 3)),
+                    spawnMonster(context, lane, "pressure-neighbor-b", position(context, 6, 2, 4)),
+                    spawnMonster(context, lane, "pressure-neighbor-c", position(context, 7, 2, 4)));
+            SemionTowerEntity source = towerEntity(context, dolphin);
+            dolphin.onAttackResolved(source, entity(context, primary), 1, 1, 1, false);
+            require(nearby.stream().filter(monster -> AtlantisPressure.stacks(owner, entity(context, monster).getUUID()) == 1).count() == 2,
+                    "A native basic hit must spread exactly one stack to only two other enemies.");
+            AtlantisPressure.clearPlayer(owner);
+            AugmentCombat.runWithoutTriggers(() -> dolphin.onAttackResolved(source, entity(context, primary), 1, 1, 1, false));
+            require(nearby.stream().allMatch(monster -> AtlantisPressure.stacks(owner, entity(context, monster).getUUID()) == 0),
+                    "An augment extra attack must not charge the pressure spread.");
+            AtlantisPressure.clearPlayer(owner);
+            lane.assignAugmentSnapshot(atlantisSnapshot("p"));
+            UUID primaryId = entity(context, primary).getUUID();
+            AtlantisPressure.addStacks(primaryId, owner, dolphin.originalPosition(), 10, 10, 10, 100);
+            dolphin.onAttackResolved(source, entity(context, primary), 0, 0, 0, true);
+            require(nearby.stream().filter(monster -> AtlantisPressure.stacks(owner, entity(context, monster).getUUID()) == 5).count() == 2,
+                    "A pressure burst must transfer half its pre-burst stack count to two neighbors.");
+            require(AtlantisPressure.stacks(owner, primaryId) == 0, "The source pressure must be consumed once.");
+            context.succeed();
+        } finally {
+            group.closeRuntime();
+            AtlantisStates.clear(owner);
+            AtlantisPressure.clearPlayer(owner);
+        }
+    }
+
+    @GameTest
+    public void chainExplosionRecursInsideZonesButStopsAfterTwelveUniqueCarriers(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        UUID owner = stableUuid("atlantis-augment-chain");
+        PlayerLane lane = augmentLane(context, owner);
+        TeamLaneGroup group = new TeamLaneGroup(TeamId.RED, BossMonster.defaultBoss(TeamId.RED));
+        group.addLane(lane);
+        try {
+            lane.assignAugmentSnapshot(atlantisSnapshot("p"));
+            AtlantisTower turtle = atlantisTower(AtlantisTowers.TURTLE_T1, owner, position(context, 3, 2, 5));
+            AtlantisTower dolphin = atlantisTower(AtlantisTowers.DOLPHIN_T1, owner, position(context, 5, 2, 5));
+            lane.addTower(turtle);
+            lane.addTower(dolphin);
+            PressureZone zone = AtlantisStates.zones(owner).getFirst();
+            int ceiling = AtlantisBalance.maxPressureStacks();
+            List<SemionMonsterEntity> carriers = new ArrayList<>();
+            for (int index = 0; index < 14; index++) {
+                Monster monster = spawnMonster(context, lane, "pressure-chain-" + index, position(context, 3, 2, 5));
+                SemionMonsterEntity carrier = entity(context, monster);
+                carrier.setPos(zone.center().add(index * .02, 0, 0));
+                carriers.add(carrier);
+                AtlantisPressure.addStacks(carrier.getUUID(), owner, dolphin.originalPosition(),
+                        index == 0 ? ceiling : ceiling / 2, dolphin.type().damage(), ceiling, 100);
+            }
+            SemionTowerEntity source = towerEntity(context, dolphin);
+            SemionMonsterEntity primary = carriers.getFirst();
+            double attackDamage = source.attackDamageAmount(primary);
+            var result = source.damageTargetResult(primary, attackDamage);
+            source.recordAttack(primary, attackDamage, result.outgoingDamage(), result.dealtDamage(), result.killed());
+
+            require(carriers.stream().filter(carrier -> AtlantisPressure.stacks(owner, carrier.getUUID()) == 0).count() == 12,
+                    "Transferred pressure must immediately recur inside the zone, consuming twelve distinct carriers.");
+            require(carriers.stream().filter(carrier -> AtlantisPressure.stacks(owner, carrier.getUUID()) == ceiling).count() == 2,
+                    "Two fully charged carriers must remain unburst after the twelve-target chain limit.");
+            double burstDamage = AtlantisPressure.burstDamage(dolphin.type().damage(), ceiling,
+                    TowerBalanceRuntime.ability(dolphin.type().id(), "waterPressureRatioBonus", 0));
+            double tolerance = 14 * 12 * Math.ulp(1_000F);
+            require(Math.abs(14 * 12 * burstDamage - dolphin.roundMagicDamageDealt()) <= tolerance,
+                    "Twelve actual bursts must each damage all fourteen nearby enemies as magic.");
+            require(carriers.stream().allMatch(carrier -> carrier.isAlive()
+                            && Math.abs(1_000 - carrier.runtimeMonster().health()
+                                    - (carrier == primary ? result.dealtDamage() : 0) - 12 * burstDamage) <= tolerance),
+                    "Every surviving carrier must take twelve bursts, with the first also taking its native basic hit.");
+            double dealt = dolphin.roundMagicDamageDealt();
+            dolphin.onNearbyMonsterDeath(lane, primary.runtimeMonster(), primary.position());
+            dolphin.onAttackResolved(source, primary, 0, 0, 0, true);
+            requireClose(dealt, dolphin.roundMagicDamageDealt(), "Repeated notifications for the consumed origin must not restart the chain.");
+            context.succeed();
+        } finally {
+            group.closeRuntime();
+            AtlantisStates.clear(owner);
+            AtlantisPressure.clearPlayer(owner);
+        }
+    }
+
+    @GameTest
+    public void turtleDeathFillsOnlyTwelveCarriersAndKeepsNativeMagicAttribution(GameTestHelper context) {
+        UUID owner = stableUuid("atlantis-augment-death");
+        PlayerLane lane = augmentLane(context, owner);
+        TeamLaneGroup group = new TeamLaneGroup(TeamId.RED, BossMonster.defaultBoss(TeamId.RED));
+        group.addLane(lane);
+        try {
+            lane.assignAugmentSnapshot(atlantisSnapshot("g2"));
+            AtlantisTower turtle = atlantisTower(AtlantisTowers.TURTLE_T1, owner, position(context, 3, 2, 5));
+            AtlantisTower dolphin = atlantisTower(AtlantisTowers.DOLPHIN_T1, owner, position(context, 5, 2, 5));
+            lane.addTower(turtle);
+            lane.addTower(dolphin);
+            PressureZone zone = AtlantisStates.zones(owner).getFirst();
+            for (int index = 0; index < 13; index++) {
+                Monster monster = spawnMonster(context, lane, "pressure-death-" + index, position(context, 3, 2, 5));
+                entity(context, monster).setPos(zone.center());
+            }
+            turtle.syncHealth(0);
+            towerEntity(context, turtle).setHealth(0);
+            turtle.onDeath(lane);
+            double damage = AtlantisPressure.burstDamage(dolphin.type().damage(), AtlantisBalance.maxPressureStacks(),
+                    TowerBalanceRuntime.ability(dolphin.type().id(), "waterPressureRatioBonus", 0));
+            // Entity health is a float; each of the 156 hits may round by one ULP.
+            require(Math.abs(13 * 12 * damage - dolphin.roundMagicDamageDealt()) <= 13 * 12 * Math.ulp(1_000F),
+                    "Only twelve pressure carriers may burst; each native splash may hit all thirteen enemies.");
+            require(AtlantisStates.zones(owner).isEmpty(), "The dead turtle's zones must be removed after detonation.");
+            context.succeed();
+        } catch (AssertionError error) {
+            context.fail(Component.literal(error.getMessage()));
+        } finally {
+            group.closeRuntime();
+            AtlantisStates.clear(owner);
+            AtlantisPressure.clearPlayer(owner);
+        }
+    }
+
+    @GameTest(maxTicks = 140)
+    public void tsunamiWaitsSixSecondsAndPullsOneEdgeEnemyAtMostTwoBlocks(GameTestHelper context) {
+        UUID owner = stableUuid("atlantis-augment-tsunami");
+        PlayerLane lane = augmentLane(context, owner);
+        TeamLaneGroup group = new TeamLaneGroup(TeamId.RED, BossMonster.defaultBoss(TeamId.RED));
+        group.addLane(lane);
+        lane.assignAugmentSnapshot(atlantisSnapshot("s"));
+        AtlantisTower turtle = atlantisTower(AtlantisTowers.TURTLE_T1, owner, position(context, 3, 2, 5));
+        lane.addTower(turtle);
+        towerEntity(context, turtle).setNoAi(true);
+        PressureZone zone = AtlantisStates.zones(owner).getFirst();
+        Monster monster = spawnMonster(context, lane, "pressure-tsunami", position(context, 3, 2, 5));
+        SemionMonsterEntity edge = entity(context, monster);
+        Vec3 initial = zone.center().add(zone.radius() - 0.1, 0, 0);
+        edge.setPos(initial);
+        edge.setNoGravity(true);
+        turtle.onWaveStarted(lane, 5);
+        context.runAtTickTime(119, () -> {
+            try {
+                AtlantisStates.rebuild(owner, lane);
+                turtle.tick(lane);
+                requireClose(0, edge.position().distanceTo(initial), "Tsunami must not trigger before six seconds.");
+            } catch (AssertionError error) {
+                group.closeRuntime();
+                AtlantisStates.clear(owner);
+                AtlantisPressure.clearPlayer(owner);
+                context.fail(Component.literal(error.getMessage()));
+            }
+        });
+        context.runAtTickTime(121, () -> {
+            try {
+                AtlantisStates.rebuild(owner, lane);
+                turtle.tick(lane);
+                requireClose(2, edge.position().distanceTo(initial), "Tsunami must pull the edge enemy at most two blocks.");
+                require(edge.position().distanceTo(zone.center()) < initial.distanceTo(zone.center()),
+                        "The pull must point toward the zone center.");
+                context.succeed();
+            } catch (AssertionError error) {
+                context.fail(Component.literal(error.getMessage()));
+            } finally {
+                group.closeRuntime();
+                AtlantisStates.clear(owner);
+                AtlantisPressure.clearPlayer(owner);
+            }
+        });
+    }
+
+    private static AugmentSnapshot atlantisSnapshot(String... suffixes) {
+        return new AugmentSnapshot(AugmentConfig.defaults(), java.util.Arrays.stream(suffixes)
+                .map(suffix -> new PlayerAugmentState.Selection(5, AugmentRarity.GOLD, "job_atlantis_towers_" + suffix,
+                        PlayerAugmentState.Outcome.SELECTED, null, AugmentChoice.none())).toList());
+    }
+
+    private static PlayerLane augmentLane(GameTestHelper context, UUID owner) {
+        LaneRegionLayout layout = new LaneRegionLayout(1,
+                Vec3.atCenterOf(context.absolutePos(new BlockPos(3, 2, 1))),
+                List.of(Vec3.atCenterOf(context.absolutePos(new BlockPos(3, 2, 4)))),
+                Vec3.atCenterOf(context.absolutePos(new BlockPos(3, 2, 6))),
+                BlockBounds.of(context.absolutePos(new BlockPos(0, 1, 0)), context.absolutePos(new BlockPos(7, 5, 7))),
+                List.of(position(context, 6, 2, 6)));
+        return new PlayerLane(TeamId.RED, 1, owner, context.getLevel(), layout);
+    }
 
     @GameTest
     public void turtlePlacementDeploysZonesAheadOnThePathNotAroundTheTower(GameTestHelper context) {
@@ -276,6 +477,8 @@ public final class AtlantisIntegrationGameTest {
             require(AtlantisStates.zoneCount(OWNER) == 3,
                     "Round reset must revive the turtle and rebuild its zones.");
             context.succeed();
+        } catch (AssertionError error) {
+            context.fail(Component.literal(error.getMessage()));
         } finally {
             AtlantisStates.clearAll();
         }

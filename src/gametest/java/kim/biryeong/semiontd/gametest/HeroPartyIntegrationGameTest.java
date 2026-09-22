@@ -138,6 +138,13 @@ public final class HeroPartyIntegrationGameTest {
             var heroAnchor = FakePlayerTowerVisuals.resolveInteractionAnchor(
                     context.getLevel(), heroFakePlayer.getId()
             );
+            var highlight = ((SemionTowerEntity) heroAnchor).selectionGlowPackets(true);
+            if (!check(context, highlight.size() == 1 && highlight.getFirst().id() == heroFakePlayer.getId()
+                            && (((Byte) highlight.getFirst().packedItems().getFirst().value()) & 0x40) != 0
+                            && !heroFakePlayer.isCurrentlyGlowing() && !heroAnchor.isCurrentlyGlowing(),
+                    "Selection glow must target the visible Hero, without changing shared entity flags.")) {
+                return;
+            }
             heroAnchor.setYHeadRot(73.0F);
             heroAnchor.setXRot(-18.0F);
             game.tick(context.getLevel().getServer());
