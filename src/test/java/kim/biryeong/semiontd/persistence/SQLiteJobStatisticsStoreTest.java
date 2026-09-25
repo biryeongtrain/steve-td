@@ -14,6 +14,14 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.IntStream;
+import kim.biryeong.semiontd.augment.AugmentRarity;
+import kim.biryeong.semiontd.augment.PlayerAugmentState;
+import kim.biryeong.semiontd.entity.monster.MonsterSupportMetrics;
+import kim.biryeong.semiontd.entity.monster.WaveHealingState;
+import kim.biryeong.semiontd.game.AugmentSelectionSnapshot;
+import kim.biryeong.semiontd.game.AugmentEconomyMetricsSnapshot;
+import kim.biryeong.semiontd.game.AugmentTelemetry;
+import kim.biryeong.semiontd.game.AugmentTelemetrySnapshot;
 import kim.biryeong.semiontd.game.MatchId;
 import kim.biryeong.semiontd.game.MatchMode;
 import kim.biryeong.semiontd.game.MatchParticipantResult;
@@ -322,6 +330,81 @@ final class SQLiteJobStatisticsStoreTest {
     }
 
     @Test
+    void preservesSeasonThreeSnapshotsAcrossStorageReplayAndDuplicateIngestion() throws Exception {
+        MatchResult base = singlePlayerResult(27L, MatchMode.NORMAL, VILLAGER);
+        MatchParticipantResult original = base.participants().getFirst();
+        List<AugmentSelectionSnapshot> selections = List.of(
+                new AugmentSelectionSnapshot(5, "SILVER", "semiontd:tactical_designation_1", "SELECTED", null),
+                new AugmentSelectionSnapshot(15, "GOLD", null, "SKIPPED", "TIMEOUT")
+        );
+        List<PlayerAugmentState.OfferEvent> offers = List.of(new PlayerAugmentState.OfferEvent(
+                5, AugmentRarity.SILVER, "INITIAL", 1, List.of(),
+                List.of("semiontd:tactical_designation_1", "semiontd:triangle_formation", "semiontd:twin_squadron")
+        ));
+        AugmentTelemetry telemetry = new AugmentTelemetry();
+        telemetry.recordGui(new AugmentTelemetrySnapshot.GuiEvent(5, 200L, "SHOWN", 1,
+                null, null, null, "SHOWN", null, null, List.of(), 0L, 0, 0));
+        telemetry.recordEconomy(new AugmentTelemetrySnapshot.EconomyEvent(15, 900L,
+                "cash_settlement", "PURCHASE_COMMIT", null, 100L, 100L, null,
+                120L, null, 12L, null, 1));
+        telemetry.recordLane(new AugmentTelemetrySnapshot.LaneRoundSample(16, true, 7.5, 1));
+        MatchParticipantResult participant = new MatchParticipantResult(
+                original.playerId(), original.playerName(), original.teamId(), original.winner(), original.stats(),
+                original.jobId(), original.attemptedRounds(), original.clearedRounds(), original.traitLoadout(),
+                original.finalTowerComposition(), original.buildActions(), original.roundMetrics(),
+                "OFFICIAL", false, selections, offers, telemetry.snapshot()
+        );
+        MatchResult result = new MatchResult(base.matchId(), base.startedAtEpochMillis(), base.endedAtEpochMillis(),
+                List.of(participant), base.spectatorIds(), base.winningTeams(), base.teamResults(), base.finalRound(),
+                base.matchMode(), "catalog-s3", "augment-s3");
+        Path history = tempDir.resolve("s3-history.db");
+        SQLiteMatchResultRepository repository = new SQLiteMatchResultRepository(history);
+        repository.saveMatchResult(result);
+        assertEquals(result, repository.findMatchResult(result.matchId()).orElseThrow());
+
+        Path database = tempDir.resolve("s3-statistics.db");
+        SQLiteJobStatisticsStore store = new SQLiteJobStatisticsStore(database);
+        store.ingest(singlePlayerResult(26L, MatchMode.NORMAL, VILLAGER));
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database.toAbsolutePath());
+             var statement = connection.createStatement()) {
+            for (String column : List.of("augment_version", "builder_origin", "builder_enabled",
+                    "augment_selections", "augment_offer_events", "augment_telemetry")) {
+                statement.executeUpdate("ALTER TABLE job_stat_participant_facts DROP COLUMN " + column);
+            }
+        }
+        store.ingest(result);
+        assertEquals(2, store.ingest(result).participantAppearances());
+        store.rebuildFromHistory(history, null);
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database.toAbsolutePath());
+             var statement = connection.createStatement();
+             var rows = statement.executeQuery("""
+                     SELECT augment_version, builder_origin, builder_enabled, augment_selections,
+                            augment_offer_events, augment_telemetry
+                     FROM job_stat_participant_facts WHERE match_id = 27
+                     """)) {
+            assertTrue(rows.next());
+            assertEquals("augment-s3", rows.getString(1));
+            assertEquals("OFFICIAL", rows.getString(2));
+            assertEquals(0, rows.getInt(3));
+            assertEquals(new Gson().toJson(selections), rows.getString(4));
+            assertEquals(new Gson().toJson(offers), rows.getString(5));
+            assertEquals(telemetry.snapshot(), new Gson().fromJson(rows.getString(6), AugmentTelemetrySnapshot.class));
+        }
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database.toAbsolutePath());
+             var statement = connection.createStatement();
+             var rows = statement.executeQuery("""
+                     SELECT augment_version, builder_origin, builder_enabled, augment_selections,
+                            augment_offer_events, augment_telemetry
+                     FROM job_stat_participant_facts WHERE match_id = 26
+                     """)) {
+            assertTrue(rows.next());
+            for (int column = 1; column <= 6; column++) {
+                assertNull(rows.getObject(column));
+            }
+        }
+    }
+
+    @Test
     void oldJsonWithoutJobAndModeLoadsButDoesNotEnterStatistics() {
         MatchResult current = singlePlayerResult(30L, MatchMode.NORMAL, VILLAGER);
         Gson gson = new Gson();
@@ -346,12 +429,74 @@ final class SQLiteJobStatisticsStoreTest {
         assertEquals(List.of(), legacy.participants().getFirst().buildActions());
         assertEquals(List.of(), legacy.participants().getFirst().roundMetrics());
         assertNull(legacy.catalogVersion());
+        assertNull(legacy.augmentVersion());
+        assertNull(legacy.participants().getFirst().builderOrigin());
+        assertNull(legacy.participants().getFirst().builderEnabled());
+        assertNull(legacy.participants().getFirst().augmentSelections());
+        assertNull(legacy.participants().getFirst().augmentOfferEvents());
+        assertNull(legacy.participants().getFirst().augmentTelemetry());
 
         JobStatisticsSnapshot snapshot = new SQLiteJobStatisticsStore(tempDir.resolve("job-statistics.db"))
                 .ingest(legacy);
         assertEquals(0L, snapshot.eligibleMatchCount());
         assertEquals(0L, snapshot.participantAppearances());
         assertTrue(snapshot.jobs().isEmpty());
+    }
+
+    @Test
+    void keepsUnmeasuredRoundMetricsNullAndPersistsMeasuredSupport() throws Exception {
+        MatchResult base = singlePlayerMetricsResult(33L, MatchMode.NORMAL, 120.0);
+        MatchParticipantResult original = base.participants().getFirst();
+        PlayerRoundMetricsSnapshot legacy = original.roundMetrics().getFirst();
+        var support = new MonsterSupportMetrics.Snapshot(1, 80, 60, 20, 30, 10, 20, 0, 0, 0);
+        var healing = new WaveHealingState.Snapshot(2, 1, 1, 0, 0, 3, 120, 80, 0, 20, 60);
+        var economy = new AugmentEconomyMetricsSnapshot(180, 12, 15, 36);
+        PlayerRoundMetricsSnapshot measured = new PlayerRoundMetricsSnapshot(
+                16, 200, 21, 2, 1, 1, 3, 8, 90, 40, 600, 2, 7, legacy.towerMetrics(),
+                support, support, healing, "nether_assault_16", 60, 4500.0, economy
+        );
+        MatchParticipantResult participant = new MatchParticipantResult(
+                original.playerId(), original.playerName(), original.teamId(), original.winner(), original.stats(),
+                original.jobId(), original.attemptedRounds(), original.clearedRounds(), original.traitLoadout(),
+                original.finalTowerComposition(), original.buildActions(), List.of(legacy, measured)
+        );
+        MatchResult result = new MatchResult(base.matchId(), base.startedAtEpochMillis(), base.endedAtEpochMillis(),
+                List.of(participant), base.spectatorIds(), base.winningTeams(), base.teamResults(), 16, base.matchMode());
+        Path database = tempDir.resolve("s3-round-statistics.db");
+        new SQLiteJobStatisticsStore(database).ingest(result);
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database.toAbsolutePath());
+             var statement = connection.createStatement();
+             var rows = statement.executeQuery("""
+                     SELECT utility_support_metrics, wave_support_metrics, natural_wave_metrics,
+                            wave_template_id, natural_wave_count, natural_wave_starting_health, augment_economy_metrics
+                     FROM job_stat_participant_round_metrics ORDER BY round_number
+                     """)) {
+            assertTrue(rows.next());
+            assertNull(rows.getString(1));
+            assertNull(rows.getString(2));
+            assertNull(rows.getString(3));
+            assertNull(rows.getString(4));
+            assertNull(rows.getObject(5));
+            assertNull(rows.getObject(6));
+            assertNull(rows.getString(7));
+            assertTrue(rows.next());
+            assertEquals(new Gson().toJson(support), rows.getString(1));
+            assertEquals(new Gson().toJson(support), rows.getString(2));
+            assertEquals(new Gson().toJson(healing), rows.getString(3));
+            assertEquals("nether_assault_16", rows.getString(4));
+            assertEquals(60, rows.getInt(5));
+            assertEquals(4500.0, rows.getDouble(6));
+            assertEquals(new Gson().toJson(economy), rows.getString(7));
+        }
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database.toAbsolutePath());
+             var statement = connection.createStatement();
+             var rows = statement.executeQuery("""
+                     SELECT wave_start_max_health, enemy_hp_damage FROM job_stat_participant_round_tower_metrics
+                     """)) {
+            assertTrue(rows.next());
+            assertNull(rows.getObject(1));
+            assertNull(rows.getObject(2));
+        }
     }
 
     @Test

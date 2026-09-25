@@ -31,7 +31,7 @@ final class EndTransferController {
             return TickResult.NONE;
         }
         captureTargets(core, lane);
-        return advanceTransfers(lane);
+        return advanceTransfers(core, lane);
     }
 
     private void captureTargets(EndTower core, PlayerLane lane) {
@@ -39,15 +39,15 @@ final class EndTransferController {
         for (Tower tower : lane.towers()) {
             state.markPresent(tower);
             if (isEligibleTarget(core, tower)) {
-                state.ensureProgress(tower, progressFactory::create);
+                state.ensureProgress(tower, source -> progressFactory.create(source, core.transferDurationMultiplier()));
             }
         }
     }
 
-    private TickResult advanceTransfers(PlayerLane lane) {
+    private TickResult advanceTransfers(EndTower core, PlayerLane lane) {
         TransferTick tick = new TransferTick();
         advanceActiveTransfers(tick);
-        resolveCompletions(lane, tick);
+        resolveCompletions(core, lane, tick);
         return tick.result();
     }
 
@@ -137,7 +137,7 @@ final class EndTransferController {
         tick.markStatsChanged(state.rollback(progress));
     }
 
-    private void resolveCompletions(PlayerLane lane, TransferTick tick) {
+    private void resolveCompletions(EndTower core, PlayerLane lane, TransferTick tick) {
         if (tick.completions().isEmpty()) {
             return;
         }
@@ -146,6 +146,7 @@ final class EndTransferController {
         for (Completion completion : tick.completions()) {
             if (killed.contains(completion.source())) {
                 registerCompletion(completion, tick);
+                core.onTransferCompleted(lane, completion.source(), completion.progress().sourceMaxHealth);
             } else {
                 rollback(completion.progress(), tick);
             }
@@ -165,6 +166,7 @@ final class EndTransferController {
     private boolean isEligibleTarget(EndTower core, Tower tower) {
         return tower != null
                 && tower != core
+                && !tower.isTemporaryCopy()
                 && Objects.equals(tower.ownerPlayer(), core.ownerPlayer())
                 && tower.health() > 0.0
                 && EndTowers.isTransferableTower(tower.type());

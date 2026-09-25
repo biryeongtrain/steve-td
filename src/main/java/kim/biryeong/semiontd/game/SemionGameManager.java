@@ -19,6 +19,9 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import kim.biryeong.semiontd.SemionTd;
+import kim.biryeong.semiontd.balance.manage.BalanceBundle;
+import kim.biryeong.semiontd.balance.manage.BalanceChangeService;
+import kim.biryeong.semiontd.balance.manage.BalanceGameRuntime;
 import kim.biryeong.semiontd.buildguide.BuildGuide;
 import kim.biryeong.semiontd.buildguide.BuildGuideService;
 import kim.biryeong.semiontd.config.CombatSpeedConfig;
@@ -104,6 +107,7 @@ import kim.biryeong.semiontd.ui.SemionSidebarHudService;
 import kim.biryeong.semiontd.ui.SemionText;
 import kim.biryeong.semiontd.util.Scheduler;
 import kim.biryeong.semiontd.web.WebCatalogExporter;
+import kim.biryeong.semiontd.augment.AugmentConfig;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -143,6 +147,7 @@ public final class SemionGameManager {
     private TraitSelectionConfig traitSelectionConfig = TraitSelectionConfig.defaultConfig();
     private WebIntegrationConfig webIntegrationConfig = WebIntegrationConfig.defaultConfig();
     private CombatSpeedConfig combatSpeedConfig = CombatSpeedConfig.defaultConfig();
+    private AugmentConfig augmentConfig = AugmentConfig.defaults();
     private Path configDir;
     private Path progressionStorePath;
     private ProgressionService progressionService = new ProgressionService(progressionConfig, null);
@@ -161,6 +166,8 @@ public final class SemionGameManager {
     private final TutorialService tutorialService = new TutorialService();
     private MatchMode matchMode = MatchMode.NORMAL;
     private SemionGame activeGame;
+    private BalanceGameRuntime managedBalance;
+    private java.util.function.Consumer<BalanceChangeService.Boundary> balanceBoundary = ignored -> {};
     private LobbyWorld lobbyWorld;
     private MatchResult lastMatchResult;
     private final Set<UUID> nextMatchPriorityPlayerIds = new HashSet<>();
@@ -492,7 +499,7 @@ public final class SemionGameManager {
         IncomeSummons.reloadBuiltIns(this.summonConfig);
         if (webIntegrationConfig.enabled()) {
             try {
-                WebCatalogExporter.export(this.configDir);
+                WebCatalogExporter.export(this.configDir, this.waveConfig, this.economyConfig, this.summonConfig, this.augmentConfig);
             } catch (IOException | RuntimeException exception) {
                 WebCatalogExporter.clearCurrentVersion();
                 SemionTd.LOGGER.warn("Failed to export the Semion TD web catalog.", exception);
@@ -664,13 +671,25 @@ public final class SemionGameManager {
                 configDir,
                 SemionTd.LOGGER,
                 TowerBalanceRuntime.current(),
-                jobAvailabilityConfig
+                jobAvailabilityConfig,
+                augmentConfig,
+                waveConfig
         );
+        if (managedBalance != null) {
+            managedBalance.checkManualConfigConflict(new BalanceBundle(configs.towerBalance(), configs.augments(),
+                    configs.waves(), configs.summons(), configs.traitBalance(), configs.economy(), configs.monsterScaling()));
+            BalanceBundle active = captureBalanceBundle();
+            configs = new LoadedConfigs(active.economy(), active.wave(), configs.map(), configs.progression(),
+                    configs.rating(), configs.persistence(), configs.jobAvailability(), active.tower(), active.summon(),
+                    configs.leaderTargeting(), configs.incomeLaneRouting(), active.monsterScaling(), configs.vfx(),
+                    configs.tips(), configs.traits(), active.trait(), configs.webIntegration(), configs.combatSpeed(), active.augment());
+        }
         configureJobAvailability(configs.jobAvailability());
         TraitBalanceRuntime.apply(configs.traitBalance());
         TowerVfxService.configure(configs.vfx());
         configureTips(configs.tips());
         configureTraits(configs.traits());
+        configureAugments(configs.augments());
         configureWebIntegration(configs.webIntegration());
         configureCombatSpeed(configs.combatSpeed());
         configure(
@@ -689,9 +708,13 @@ public final class SemionGameManager {
         );
         boolean activeGameUpdated = activeGame != null && activeGame.phase() != RoundPhase.ENDED;
         if (activeGameUpdated) {
-            activeGame.applyConfigs(configs.economy(), configs.waves(), configs.leaderTargeting(), configs.incomeLaneRouting(), configs.monsterScaling());
-            activeGame.refreshProductionTowerTypes();
-            activeGame.refreshSummonShop();
+            if (managedBalance == null) {
+                activeGame.applyConfigs(configs.economy(), configs.waves(), configs.leaderTargeting(), configs.incomeLaneRouting(), configs.monsterScaling());
+                activeGame.refreshProductionTowerTypes();
+                activeGame.refreshSummonShop();
+            } else {
+                activeGame.applyNonBalanceConfigs(configs.leaderTargeting(), configs.incomeLaneRouting());
+            }
             if (activeGame.rosterLocked()) {
                 cacheRatingProfilesForGame(activeGame);
             }
@@ -804,6 +827,13 @@ public final class SemionGameManager {
         this.traitSelectionConfig = traitSelectionConfig == null
                 ? TraitSelectionConfig.defaultConfig()
                 : traitSelectionConfig;
+    }
+
+    public void configureAugments(AugmentConfig config) {
+        this.augmentConfig = java.util.Objects.requireNonNull(config, "config");
+        if (activeGame != null && !activeGame.rosterLocked()) {
+            activeGame.configureAugments(config);
+        }
     }
 
     public TipConfig tipConfig() {
@@ -1081,9 +1111,13 @@ public final class SemionGameManager {
         pendingFinishDelayTicks = 0;
         clearPendingMatchResultDialog();
 
+        balanceBoundary.accept(BalanceChangeService.Boundary.BEFORE_MATCH);
+
         GameArena arena = GameArenaLoader.load(server, mapConfig);
         resetCombatSpeedState();
         activeGame = new SemionGame(economyConfig, waveConfig, leaderTargetingConfig, incomeLaneRoutingConfig, monsterScalingConfig, arena, buildGuideService);
+        activeGame.configureAugments(augmentConfig);
+        attachBalanceHooks(activeGame);
         applyPersistedJobSelections(server, activeGame);
         lastMatchResult = null;
         VanillaTeamBridge.ensureTeams(server);
@@ -1122,6 +1156,71 @@ public final class SemionGameManager {
 
     public Optional<SemionGame> activeGame() {
         return Optional.ofNullable(activeGame);
+    }
+
+    public BalanceBundle captureBalanceBundle() {
+        return new BalanceBundle(towerBalanceConfig, augmentConfig, waveConfig, summonConfig,
+                TraitBalanceRuntime.current(), economyConfig, monsterScalingConfig);
+    }
+
+    public void attachManagedBalance(BalanceGameRuntime runtime,
+                                    java.util.function.Consumer<BalanceChangeService.Boundary> boundary) {
+        managedBalance = runtime;
+        balanceBoundary = boundary;
+        if (activeGame != null) attachBalanceHooks(activeGame);
+    }
+
+    private void attachBalanceHooks(SemionGame game) {
+        game.configureBalanceHooks(
+                () -> balanceBoundary.accept(BalanceChangeService.Boundary.BEFORE_MATCH),
+                () -> balanceBoundary.accept(BalanceChangeService.Boundary.BEFORE_PREPARE),
+                () -> managedBalance == null ? null : managedBalance.revision());
+    }
+
+    public boolean hasPracticeGames() {
+        return !sandboxGames.isEmpty() || !tutorialGames.isEmpty();
+    }
+
+    public boolean nextBalanceMatchSafe() {
+        return !hasPracticeGames() && (activeGame == null || activeGame.canConfigureRoster()
+                || activeGame.phase() == RoundPhase.ENDED);
+    }
+
+    /** Called only inside the managed balance transaction; never rebuilds persistence or permissions. */
+    public void installBalanceBundle(BalanceBundle bundle) {
+        towerBalanceConfig = bundle.tower();
+        augmentConfig = bundle.augment();
+        waveConfig = bundle.wave();
+        summonConfig = bundle.summon();
+        economyConfig = bundle.economy();
+        monsterScalingConfig = bundle.monsterScaling();
+        if (activeGame != null && activeGame.canConfigureRoster()) {
+            activeGame.applyBalanceBeforeMatch(economyConfig, waveConfig, monsterScalingConfig, augmentConfig);
+        }
+    }
+
+    public record PreparedBalanceCatalog(Path directory, WebCatalogExporter.CatalogDocument document) {
+        public String publish() {
+            try {
+                WebCatalogExporter.writeDocument(directory, document);
+                return "SYNCED";
+            } catch (IOException | RuntimeException exception) {
+                SemionTd.LOGGER.warn("Managed balance applied, but catalog export failed.", exception);
+                return "FAILED";
+            }
+        }
+    }
+
+    public PreparedBalanceCatalog prepareBalanceCatalog() {
+        if (!webIntegrationConfig.enabled() || configDir == null) return null;
+        try {
+            var document = WebCatalogExporter.snapshot(System.currentTimeMillis(), waveConfig, economyConfig, summonConfig, augmentConfig);
+            WebCatalogExporter.useSnapshot(document);
+            return new PreparedBalanceCatalog(configDir, document);
+        } catch (RuntimeException exception) {
+            WebCatalogExporter.clearCurrentVersion();
+            throw exception;
+        }
     }
 
     public Optional<SemionGame> sandboxGame(UUID playerId) {
@@ -1239,6 +1338,7 @@ public final class SemionGameManager {
         releaseActiveMatchSpectator(playerId);
         releaseSandboxSpectator(playerId);
         boolean replacing = stopSandbox(server, playerId) | stopTutorial(server, playerId);
+        balanceBoundary.accept(BalanceChangeService.Boundary.BEFORE_MATCH);
         SemionGame sandbox = new SemionGame(
                 economyConfig,
                 waveConfig,
@@ -1828,6 +1928,7 @@ public final class SemionGameManager {
 
         midLanePreferences.clear();
         closePracticeGamesFor(server, plan);
+        balanceBoundary.accept(BalanceChangeService.Boundary.BEFORE_MATCH);
         if (!traitsEnabled() || !hasSelectableTraits()) {
             pendingStartPlan = plan;
             pendingStartTraitSnapshot = TraitSelectionSnapshot.empty();
@@ -1918,6 +2019,7 @@ public final class SemionGameManager {
     }
 
     public void tick(MinecraftServer server) {
+        balanceBoundary.accept(BalanceChangeService.Boundary.TICK);
         tickCombatSpeed(server);
         IllusionCloneSpawnQueue.tick();
         musicService.tick(server, activeGame, java.util.stream.Stream
@@ -1991,6 +2093,9 @@ public final class SemionGameManager {
         Scheduler.INSTANCE.submit((s) -> {
             if (activeGame != null && activeGame.rosterLocked()) {
                 if (activeGame.restorePlayerPlacement(s, player)) {
+                    if (activeGame.augmentsEnabled()) {
+                        activeGame.augmentService().reopen(activeGame, player);
+                    }
                     return;
                 }
 

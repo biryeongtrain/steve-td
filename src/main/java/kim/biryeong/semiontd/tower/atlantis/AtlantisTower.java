@@ -1,12 +1,16 @@
 package kim.biryeong.semiontd.tower.atlantis;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import kim.biryeong.semiontd.api.SemionTdApi;
 import kim.biryeong.semiontd.api.area.AreaEffectOutcome;
 import kim.biryeong.semiontd.api.area.AreaVfxSpec;
 import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.monster.DamageType;
@@ -37,6 +41,14 @@ public class AtlantisTower extends ProductionTower {
     private long lastZoneVfxTick = Long.MIN_VALUE;
     private long lastPressureTick = Long.MIN_VALUE;
     private PlayerLane currentLane;
+    private long nextTsunamiTick = Long.MAX_VALUE;
+
+    @Override
+    public void onWaveStarted(PlayerLane lane, int currentRound) {
+        super.onWaveStarted(lane, currentRound);
+        currentLane = lane;
+        nextTsunamiTick = lane.arenaWorld().getGameTime() + (long) parameter("s", "intervalTicks", 120);
+    }
 
     public AtlantisTower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
         super(type, ownerPlayer, teamId, laneId, position);
@@ -101,6 +113,7 @@ public class AtlantisTower extends ProductionTower {
         super.resetForRound(lane);
         currentLane = lane;
         AtlantisStates.rebuild(ownerPlayer(), lane);
+        nextTsunamiTick = Long.MAX_VALUE;
     }
 
     @Override
@@ -117,6 +130,11 @@ public class AtlantisTower extends ProductionTower {
         }
         if (role() != AtlantisRole.TURTLE) {
             return;
+        }
+        if (has("g2")) releaseLapsedPressure(lane, now);
+        if (has("s") && AugmentCombat.allowsTriggers() && !isDestroyed(lane) && now >= nextTsunamiTick) {
+            nextTsunamiTick = now + (long) parameter("s", "intervalTicks", 120);
+            pullZoneEdge(lane);
         }
         int interval = AtlantisBalance.zoneScanIntervalTicks();
         if (lastZoneScanTick != Long.MIN_VALUE && now - lastZoneScanTick < interval) {
@@ -283,8 +301,11 @@ public class AtlantisTower extends ProductionTower {
             return;
         }
         UUID monsterId = target.getUUID();
+        if (dealtDamage > 0.0 && has("g1") && AugmentCombat.allowsTriggers()) {
+            spreadBasicPressure(towerEntity, target);
+        }
         if (killedTarget) {
-            burst(towerEntity, monsterId, target.position(), new AtlantisPressure.Chain());
+            burst(towerEntity, monsterId, target.position(), pressureChain());
             return;
         }
         if (dealtDamage <= 0.0) {
@@ -313,18 +334,18 @@ public class AtlantisTower extends ProductionTower {
             // Reaching the ceiling releases immediately. Without this the duration refresh on every
             // hit means a dolphin attacking one target keeps pushing expiry out of reach, and the
             // pressure never converts into damage.
-            burst(towerEntity, monsterId, target.position(), new AtlantisPressure.Chain());
+            burst(towerEntity, monsterId, target.position(), pressureChain());
         }
     }
 
     @Override
     public void onNearbyMonsterDeath(PlayerLane lane, Monster monster, Vec3 deathPosition) {
-        if (role() != AtlantisRole.DOLPHIN || lane == null || monster == null
+        if ((role() != AtlantisRole.DOLPHIN && !(role() == AtlantisRole.TURTLE && has("g2"))) || lane == null || monster == null
                 || deathPosition == null || !monster.hasMinecraftEntity()) {
             return;
         }
         if (lane.arenaWorld().getEntity(monster.minecraftEntityId()) instanceof SemionMonsterEntity entity) {
-            burst(towerEntity(lane), entity.getUUID(), deathPosition, new AtlantisPressure.Chain());
+            burst(towerEntity(lane), entity.getUUID(), deathPosition, pressureChain());
         }
     }
 
@@ -364,7 +385,7 @@ public class AtlantisTower extends ProductionTower {
             boolean leftZone = AtlantisPressure.insideZone(ownerPlayer(), monsterId) && !insideZone;
             AtlantisPressure.markZoneState(ownerPlayer(), monsterId, insideZone);
             if (expired || leftZone) {
-                burst(towerEntity, monsterId, monster.position(), new AtlantisPressure.Chain());
+                burst(towerEntity, monsterId, monster.position(), pressureChain());
             }
         }
     }
@@ -375,6 +396,11 @@ public class AtlantisTower extends ProductionTower {
      * direct tower attack, and kills inside the burst continue the chain.
      */
     private void burst(SemionTowerEntity towerEntity, UUID originId, Vec3 center, AtlantisPressure.Chain chain) {
+        burst(towerEntity, originId, center, chain, false);
+    }
+
+    private void burst(SemionTowerEntity towerEntity, UUID originId, Vec3 center, AtlantisPressure.Chain chain,
+                       boolean generatedByAugment) {
         if (originId == null || center == null) {
             return;
         }
@@ -383,23 +409,28 @@ public class AtlantisTower extends ProductionTower {
             return;
         }
         if (!sourcePosition.equals(originalPosition())) {
-            AtlantisTower source = sourceDolphin(sourcePosition);
+            AtlantisTower source = sourcePressureTower(sourcePosition);
             if (source == null) {
                 AtlantisPressure.remove(ownerPlayer(), originId);
             } else {
-                source.burst(source.towerEntity(source.currentLane), originId, center, chain);
+                source.burst(source.towerEntity(source.currentLane), originId, center, chain, generatedByAugment);
             }
             return;
         }
         if (towerEntity == null || !chain.canBurst(originId)) {
             return;
         }
-        double damage = AtlantisPressure.consumeForBurst(ownerPlayer(), originId, waterPressureRatioBonus());
+        int previousStacks = AtlantisPressure.stacks(ownerPlayer(), originId);
+        double cap = has("g1") ? parameter("g1", "damageCap", 4) : AtlantisBalance.waterPressureDamageCap();
+        double damage = AtlantisPressure.consumeForBurst(ownerPlayer(), originId, waterPressureRatioBonus(), cap);
         if (damage <= 0.0) {
             return;
         }
         chain.enter();
         try {
+            if (has("p") && (AugmentCombat.allowsTriggers() || generatedByAugment)) {
+                transferPressure(towerEntity, originId, center, previousStacks, chain);
+            }
             MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
                     AreaEffectIds.tower(this, "water_pressure"),
                     towerEntity,
@@ -409,7 +440,7 @@ public class AtlantisTower extends ProductionTower {
                     null,
                     AreaVfxSpec.onTrigger(AtlantisVfx.WATER_PRESSURE)
             );
-            TowerAreaDamage.apply(
+            Runnable damageAction = () -> TowerAreaDamage.apply(
                     this,
                     towerEntity,
                     request,
@@ -417,23 +448,128 @@ public class AtlantisTower extends ProductionTower {
                     true,
                     (victim, dealt, killed) -> {
                         if (killed) {
-                            burst(towerEntity, victim.getUUID(), victim.position(), chain);
+                            burst(towerEntity, victim.getUUID(), victim.position(), chain, generatedByAugment);
                         }
                     },
                     DamageType.MAGIC
             );
+            if (generatedByAugment) AugmentCombat.runWithoutTriggers(damageAction);
+            else damageAction.run();
         } finally {
             chain.exit();
         }
     }
 
-    private AtlantisTower sourceDolphin(GridPosition sourcePosition) {
+    private AtlantisPressure.Chain pressureChain() {
+        return AtlantisPressure.Chain.currentOrNew(ownerPlayer(), has("p") ? (int) parameter("p", "chainTargets", 12) : 0);
+    }
+
+    private void spreadBasicPressure(SemionTowerEntity source, SemionMonsterEntity primary) {
+        double radius = parameter("g1", "radius", 3);
+        int count = (int) parameter("g1", "targets", 2);
+        for (SemionMonsterEntity target : nearby(source, primary.position(), radius, Set.of(primary.getUUID()), count)) {
+            addPressure(target, (int) parameter("g1", "stacks", 1), pressureChain(), false);
+        }
+    }
+
+    private void transferPressure(SemionTowerEntity source, UUID origin, Vec3 center, int stacks,
+                                  AtlantisPressure.Chain chain) {
+        int transferred = (int) Math.floor(stacks * parameter("p", "transferRatio", 0.5));
+        if (transferred <= 0) return;
+        for (SemionMonsterEntity target : nearby(source, center, parameter("p", "radius", 3),
+                chain.burstIds(), (int) parameter("p", "targets", 2))) {
+            if (!chain.alreadyBurst(target.getUUID())) addPressure(target, transferred, chain, true);
+        }
+    }
+
+    private void addPressure(SemionMonsterEntity target, int amount, AtlantisPressure.Chain chain, boolean requireZone) {
+        int ceiling = AtlantisBalance.maxPressureStacks() + conduitStackBonus();
+        int stacks = AtlantisPressure.addStacks(target.getUUID(), ownerPlayer(), originalPosition(), amount,
+                type().damage(), ceiling, AtlantisBalance.stackDurationTicks());
+        boolean inside = AtlantisStates.strongestZoneAt(ownerPlayer(), target.position()) != null;
+        AtlantisPressure.markZoneState(ownerPlayer(), target.getUUID(), inside);
+        if (stacks >= ceiling && (!requireZone || inside)) {
+            burst(towerEntity(currentLane), target.getUUID(), target.position(), chain, true);
+        }
+    }
+
+    private List<SemionMonsterEntity> nearby(SemionTowerEntity source, Vec3 center, double radius,
+                                            Set<UUID> excluded, int count) {
+        List<SemionMonsterEntity> candidates = new ArrayList<>();
+        var request = new MonsterAreaEffectRequest(AreaEffectIds.tower(this, "augment_pressure"), source,
+                center, radius, excluded, null, AreaVfxSpec.none());
+        SemionTdApi.areaEffects().applyToMonsters(request, target -> {
+            candidates.add(target);
+            return AreaEffectOutcome.UNCHANGED;
+        });
+        return candidates.stream().sorted(Comparator.comparingDouble(target -> target.position().distanceToSqr(center)))
+                .limit(Math.max(0, count)).toList();
+    }
+
+    private void pullZoneEdge(PlayerLane lane) {
+        SemionTowerEntity source = towerEntity(lane);
+        if (source == null) return;
+        SemionMonsterEntity edge = null;
+        PressureZone chosen = null;
+        double furthest = -1;
+        for (PressureZone zone : ownedZones()) {
+            for (SemionMonsterEntity candidate : nearby(source, zone.center(), zone.radius(), Set.of(), Integer.MAX_VALUE)) {
+                double distance = candidate.position().distanceToSqr(zone.center());
+                if (distance > furthest) {furthest = distance; edge = candidate; chosen = zone;}
+            }
+        }
+        if (edge == null || chosen == null) return;
+        Vec3 delta = chosen.center().subtract(edge.position());
+        Vec3 destination = edge.position().add(delta.normalize().scale(Math.min(delta.length(), parameter("s", "distance", 2))));
+        edge.getNavigation().stop();
+        if (edge.runtimeMonster() != null) {
+            PlayerLane pathLane = edge.runtimeMonster().inFinalDefenseCombat() ? lane.finalDefensePathLane() : lane;
+            edge.runtimeMonster().syncLaneProgress(pathLane.laneLayout().progressAt(destination));
+        }
+        edge.teleportTo(destination.x, destination.y, destination.z);
+    }
+
+    @Override
+    public void onDeath(PlayerLane lane) {
+        currentLane = lane;
+        if (role() == AtlantisRole.TURTLE && has("g2") && AugmentCombat.allowsTriggers()) {
+            SemionTowerEntity source = towerEntity(lane);
+            Set<UUID> affected = new HashSet<>();
+            AtlantisPressure.Chain chain = pressureChain();
+            int limit = (int) parameter("g2", "targets", 12);
+            for (PressureZone zone : ownedZones()) {
+                for (SemionMonsterEntity target : nearby(source, zone.center(), zone.radius(), affected, limit - affected.size())) {
+                    affected.add(target.getUUID());
+                    AtlantisTower dolphin = lane.towers().stream().filter(AtlantisTower.class::isInstance)
+                            .map(AtlantisTower.class::cast).filter(tower -> tower.role() == AtlantisRole.DOLPHIN
+                                    && ownerPlayer().equals(tower.ownerPlayer()) && !tower.isDestroyed(lane))
+                            .max(Comparator.comparingDouble(tower -> tower.type().damage())).orElse(this);
+                    int ceiling = AtlantisBalance.maxPressureStacks() + dolphin.conduitStackBonus();
+                    dolphin.addPressure(target, ceiling, chain, false);
+                }
+            }
+        }
+        super.onDeath(lane);
+        AtlantisStates.rebuildAfterDeath(ownerPlayer(), lane, this);
+    }
+
+    private List<PressureZone> ownedZones() {
+        return AtlantisStates.zones(ownerPlayer()).stream()
+                .filter(zone -> zone.ownerPosition().equals(originalPosition())).toList();
+    }
+
+    private boolean has(String suffix) {return augmentSnapshot().has("job_atlantis_towers_" + suffix);}
+    private double parameter(String suffix, String key, double fallback) {
+        return augmentSnapshot().parameter("job_atlantis_towers_" + suffix, key, fallback);
+    }
+
+    private AtlantisTower sourcePressureTower(GridPosition sourcePosition) {
         if (currentLane == null) {
             return null;
         }
         for (Tower tower : currentLane.towers()) {
             if (tower instanceof AtlantisTower atlantis
-                    && atlantis.role() == AtlantisRole.DOLPHIN
+                    && (atlantis.role() == AtlantisRole.DOLPHIN || atlantis.role() == AtlantisRole.TURTLE)
                     && ownerPlayer().equals(atlantis.ownerPlayer())
                     && sourcePosition.equals(atlantis.originalPosition())) {
                 return atlantis;

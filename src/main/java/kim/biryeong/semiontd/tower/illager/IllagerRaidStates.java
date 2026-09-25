@@ -1,10 +1,13 @@
 package kim.biryeong.semiontd.tower.illager;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
+import kim.biryeong.semiontd.augment.AugmentCombat;
+import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
@@ -17,9 +20,13 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.resources.ResourceLocation;
 
 public final class IllagerRaidStates {
     public static final String RAID_CONFIG_ID = "illager_raid";
+    public static final String AMBUSH = "job_illager_towers_g1";
+    public static final String GRAND_RAID = "job_illager_towers_p";
+    private static final ResourceLocation AMBUSH_SPEED = ResourceLocation.fromNamespaceAndPath("semiontd", "illager_ambush");
 
     private static final Map<UUID, IllagerRaidState> STATES = new HashMap<>();
 
@@ -32,6 +39,45 @@ public final class IllagerRaidStates {
                 .map(IllagerRaidStates::countAliveIllagerTowers)
                 .orElse(0);
         state(playerId).resetForRound(towerCount);
+    }
+
+    public static void onWaveStarted(PlayerLane lane) {
+        if (lane == null || !AugmentCombat.allowsTriggers() || !STATES.containsKey(lane.ownerPlayer())
+                && lane.towers().stream().noneMatch(tower -> IllagerTowers.isIllagerTower(tower.type()))) {return;}
+        IllagerRaidState raid = STATES.get(lane.ownerPlayer());
+        if (raid == null) {
+            raid = state(lane.ownerPlayer());
+            raid.resetForRound(countAliveIllagerTowers(lane));
+        }
+        if (lane.augmentSnapshot().has(GRAND_RAID)) {
+            raid.enableGrandRaid((int) lane.augmentSnapshot().parameter(GRAND_RAID, "gaugePerVolley", 50));
+        }
+        if (!lane.augmentSnapshot().has(AMBUSH)) {return;}
+        raid.addGauge(gaugeMax(), gaugeMax());
+        for (Tower tower : lane.towers()) {
+            if (tower instanceof IllagerTower illager && !tower.isTemporaryCopy()) {
+                illager.runtimeEntity(lane).ifPresent(entity -> entity.applyTimedEffect(
+                        TimedEffectType.TOWER_ATTACK_SPEED_BONUS, AMBUSH_SPEED,
+                        lane.augmentSnapshot().parameter(AMBUSH, "attackSpeedBonus", .3),
+                        (int) lane.augmentSnapshot().parameter(AMBUSH, "durationTicks", 160)));
+            }
+        }
+    }
+
+    public static void tick(PlayerLane lane) {
+        if (lane == null || !AugmentCombat.allowsTriggers()) {return;}
+        IllagerRaidState raid = STATES.get(lane.ownerPlayer());
+        if (raid == null || !raid.active()) {return;}
+        int volleys = raid.consumePendingVolleys();
+        double ratio = lane.augmentSnapshot().parameter(GRAND_RAID, "damageRatio", 3);
+        for (int volley = 0; volley < volleys; volley++) {
+            for (Tower tower : List.copyOf(lane.towers())) {
+                if (tower instanceof IllagerTower illager && !tower.isTemporaryCopy()) {
+                    illager.runtimeEntity(lane).ifPresent(entity ->
+                            AugmentCombat.additionalAttack(entity, entity.currentAttackTarget(), ratio));
+                }
+            }
+        }
     }
 
     public static void clear(UUID playerId) {
@@ -148,7 +194,12 @@ public final class IllagerRaidStates {
     }
 
     private static void addGauge(UUID playerId, int amount) {
-        state(playerId).addGauge(amount, gaugeMax());
+        IllagerRaidState raid = state(playerId);
+        if (raid.active()) {
+            if (AugmentCombat.allowsTriggers()) {raid.addExtraGauge(amount);}
+        } else {
+            raid.addGauge(amount, gaugeMax());
+        }
     }
 
     private static IllagerRaidState state(UUID playerId) {
@@ -158,7 +209,7 @@ public final class IllagerRaidStates {
     private static int countAliveIllagerTowers(PlayerLane lane) {
         int count = 0;
         for (Tower tower : lane.towers()) {
-            if (IllagerTowers.isIllagerTower(tower.type()) && tower.health() > 0) {
+            if (IllagerTowers.isIllagerTower(tower.type()) && !tower.isTemporaryCopy() && tower.health() > 0) {
                 count++;
             }
         }

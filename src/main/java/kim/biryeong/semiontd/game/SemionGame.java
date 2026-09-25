@@ -13,6 +13,13 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import kim.biryeong.semiontd.advancement.SemionAdvancementService;
+import kim.biryeong.semiontd.augment.AugmentCatalog;
+import kim.biryeong.semiontd.augment.AugmentCombat;
+import kim.biryeong.semiontd.augment.AugmentConfig;
+import kim.biryeong.semiontd.augment.AugmentEconomyService;
+import kim.biryeong.semiontd.augment.AugmentEconomyService.Contract;
+import kim.biryeong.semiontd.augment.AugmentRarity;
+import kim.biryeong.semiontd.augment.AugmentService;
 import kim.biryeong.semiontd.buildguide.BuildGuideService;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.IncomeLaneRoutingConfig;
@@ -22,6 +29,8 @@ import kim.biryeong.semiontd.config.RoundWaveConfig;
 import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.config.WaveMonsterEntry;
 import kim.biryeong.semiontd.entity.monster.Monster;
+import kim.biryeong.semiontd.entity.monster.MonsterOrigin;
+import kim.biryeong.semiontd.entity.monster.MonsterSupportMetrics;
 import kim.biryeong.semiontd.job.JobContext;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.SemionJob;
@@ -37,6 +46,7 @@ import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerCapacity;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.augment.AugmentTowerService;
 import kim.biryeong.semiontd.tower.adversary.AdversaryProgressStates;
 import kim.biryeong.semiontd.tower.adversary.AdversaryTeamEffects;
 import kim.biryeong.semiontd.tower.mage.MageStates;
@@ -128,7 +138,18 @@ public final class SemionGame {
     private boolean emeraldIncomeBoostAnnounced;
     private boolean lateJoinDisabledAnnounced;
     private String catalogVersion;
+    private String startBalanceRevision;
+    private final List<BalancePatchEvent> balancePatchEvents = new ArrayList<>();
+    private Runnable beforeBalanceMatch = () -> {};
+    private Runnable beforeBalancePrepare = () -> {};
+    private java.util.function.Supplier<String> balanceRevision = () -> null;
     private RoundWaveConfig selectedRoundWave;
+    private AugmentConfig augmentConfig = AugmentConfig.defaults();
+    private final AugmentService augmentService = new AugmentService();
+    private long augmentSeed;
+    private List<AugmentRarity> augmentRarities = List.of();
+    private int currentPrepareDurationTicks = DEFAULT_PREPARE_TICKS;
+    private int augmentSelectionDurationTicks;
 
     public SemionGame(EconomyConfig economyConfig, WaveConfig waveConfig, GameArena arena) {
         this(economyConfig, waveConfig, arena, null);
@@ -210,6 +231,59 @@ public final class SemionGame {
         return currentRound;
     }
 
+    public AugmentConfig augmentConfig() {
+        return augmentConfig;
+    }
+
+    public AugmentService augmentService() {
+        return augmentService;
+    }
+
+    public long augmentSeed() {
+        return augmentSeed;
+    }
+
+    public List<AugmentRarity> augmentRarities() {
+        return augmentRarities;
+    }
+
+    public long currentTick() {
+        return tickCounter;
+    }
+
+    public MatchId matchId() {
+        return matchId;
+    }
+
+    public void extendAugmentPreparation(long deadlineTickExclusive) {
+        if (phase != RoundPhase.PREPARE_AND_SUMMON || deadlineTickExclusive <= tickCounter) {
+            throw new IllegalArgumentException("An augment deadline must be inside a future preparation window");
+        }
+        augmentSelectionDurationTicks = Math.max(augmentSelectionDurationTicks,
+                Math.toIntExact(phaseTicks + deadlineTickExclusive - tickCounter));
+        currentPrepareDurationTicks = Math.max(currentPrepareDurationTicks,
+                augmentSelectionDurationTicks + DEFAULT_PREPARE_TICKS);
+    }
+
+    public boolean isAugmentSelectionActive() {
+        return phase == RoundPhase.PREPARE_AND_SUMMON && phaseTicks < augmentSelectionDurationTicks;
+    }
+
+    public int remainingAugmentSelectionSeconds() {
+        return isAugmentSelectionActive() ? (augmentSelectionDurationTicks - phaseTicks + 19) / 20 : 0;
+    }
+
+    public boolean augmentsEnabled() {
+        return augmentConfig.enabled() && matchMode == MatchMode.NORMAL && !sandboxMode && !tutorialMode;
+    }
+
+    public void configureAugments(AugmentConfig config) {
+        if (rosterLocked) {
+            return;
+        }
+        augmentConfig = java.util.Objects.requireNonNull(config, "config");
+    }
+
     public MatchMode matchMode() {
         return matchMode;
     }
@@ -234,7 +308,7 @@ public final class SemionGame {
         if (phase != RoundPhase.PREPARE_AND_SUMMON) {
             return -1;
         }
-        int remainingTicks = Math.max(0, DEFAULT_PREPARE_TICKS - phaseTicks);
+        int remainingTicks = Math.max(0, currentPrepareDurationTicks - phaseTicks);
         return (remainingTicks + 19) / 20;
     }
 
@@ -378,7 +452,9 @@ public final class SemionGame {
             MonsterScalingConfig monsterScalingConfig
     ) {
         this.economyConfig = economyConfig;
-        this.waveConfig = waveConfig;
+        if (!rosterLocked) {
+            this.waveConfig = waveConfig;
+        }
         this.leaderTargetingConfig = leaderTargetingConfig == null ? LeaderTargetingConfig.defaultConfig() : leaderTargetingConfig;
         this.incomeLaneRoutingConfig = incomeLaneRoutingConfig == null ? IncomeLaneRoutingConfig.defaultConfig() : incomeLaneRoutingConfig;
         this.monsterScalingConfig = monsterScalingConfig == null ? MonsterScalingConfig.defaultConfig() : monsterScalingConfig;
@@ -395,6 +471,47 @@ public final class SemionGame {
                 }
             }
         }
+    }
+
+    public void configureBalanceHooks(Runnable beforeMatch, Runnable beforePrepare,
+                                      java.util.function.Supplier<String> revision) {
+        beforeBalanceMatch = beforeMatch;
+        beforeBalancePrepare = beforePrepare;
+        balanceRevision = revision;
+    }
+
+    public void applyBalanceBeforeMatch(EconomyConfig economy, WaveConfig waves,
+                                       MonsterScalingConfig scaling, AugmentConfig augments) {
+        if (rosterLocked) {
+            throw new IllegalStateException("Cannot replace balance snapshots in a started match");
+        }
+        economyConfig = economy;
+        waveConfig = waves;
+        monsterScalingConfig = scaling;
+        economyService.configure(economy);
+        configureAugments(augments);
+        refreshSummonShop();
+    }
+
+    public void applyNonBalanceConfigs(LeaderTargetingConfig targeting, IncomeLaneRoutingConfig routing) {
+        leaderTargetingConfig = targeting;
+        incomeLaneRoutingConfig = routing;
+        incomeLaneRoutingPolicy = new IncomeLaneRoutingPolicy(routing, random);
+    }
+
+    public void recordBalancePatch(String requestId, String previousRevision, String effectiveRevision, String mode) {
+        if (rosterLocked && phase != RoundPhase.ENDED) {
+            balancePatchEvents.add(new BalancePatchEvent(requestId, previousRevision, effectiveRevision,
+                    currentRound, tickCounter, mode));
+        }
+    }
+
+    public List<BalancePatchEvent> balancePatchEvents() {
+        return List.copyOf(balancePatchEvents);
+    }
+
+    public String startBalanceRevision() {
+        return startBalanceRevision;
     }
 
     public void refreshSummonShop() {
@@ -463,6 +580,9 @@ public final class SemionGame {
         if (!teamCanTransfer(requester.teamId())) {
             return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.TEAM_NOT_ACTIVE);
         }
+        if (!EconomyService.canTransferDiamond(requester)) {
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.BUILDER_RESTRICTED);
+        }
 
         Optional<TeamMoneyTransferResult> cooldownResult = receiveCooldownResult(requester.uuid(), config);
         if (cooldownResult.isPresent()) {
@@ -527,6 +647,13 @@ public final class SemionGame {
         }
         if (sender.teamId() != request.teamId()) {
             return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.NOT_TEAMMATE);
+        }
+        if (!EconomyService.canTransferDiamond(requester)) {
+            teamMoneyRequests.remove(request.id());
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.BUILDER_RESTRICTED);
+        }
+        if (!EconomyService.canTransferDiamond(sender)) {
+            return TeamMoneyTransferResult.failure(TeamMoneyTransferResultType.BUILDER_RESTRICTED);
         }
 
         Optional<TeamMoneyTransferResult> cooldownResult = receiveCooldownResult(requester.uuid(), config);
@@ -754,7 +881,16 @@ public final class SemionGame {
                         player.traitLoadoutSnapshot(),
                         finalTowerComposition(player),
                         buildGuideService == null ? List.of() : buildGuideService.recordedActions(player.uuid()),
-                        roundMetricsByPlayer.getOrDefault(player.uuid(), List.of())
+                        roundMetricsByPlayer.getOrDefault(player.uuid(), List.of()),
+                        player.builderOrigin(),
+                        player.builderEnabled(),
+                        augmentsEnabled() ? player.augments().selections().stream()
+                                .map(selection -> new AugmentSelectionSnapshot(
+                                        selection.milestoneRound(), selection.rarity().name(), selection.augmentId(),
+                                        selection.outcome().name(), selection.skipReason() == null ? null : selection.skipReason().name()))
+                                .toList() : null,
+                        augmentsEnabled() ? player.augments().offerEvents() : null,
+                        augmentsEnabled() ? player.augmentTelemetry().snapshot() : null
                 ))
                 .toList();
         return Optional.of(new MatchResult(
@@ -767,7 +903,10 @@ public final class SemionGame {
                 teamResults(winningTeams),
                 currentRound,
                 matchMode,
-                catalogVersion
+                catalogVersion,
+                augmentsEnabled() ? augmentConfig.version() : null,
+                startBalanceRevision,
+                balancePatchEvents
         ));
     }
 
@@ -787,6 +926,17 @@ public final class SemionGame {
         if (!canConfigureRoster() || plan.activeParticipants().isEmpty()) {
             return false;
         }
+
+        beforeBalanceMatch.run();
+        startBalanceRevision = balanceRevision.get();
+        balancePatchEvents.clear();
+
+        matchMode = plan.mode();
+        if (!augmentsEnabled() || !augmentConfig.publicPoolEnabled()) {
+            waveConfig = waveConfig.withSeason3Stages(false, false, Set.of());
+        }
+        augmentSeed = random.nextLong();
+        augmentRarities = augmentsEnabled() ? AugmentCatalog.drawRarities(augmentSeed, augmentConfig) : List.of();
 
         initialSpectatorIds.clear();
         matchSpectatorIds.clear();
@@ -878,6 +1028,7 @@ public final class SemionGame {
     }
 
     private void closeRuntimeState() {
+        augmentService.clearTargetPreviews();
         for (SemionPlayer semionPlayer : players.values()) {
             semionPlayer.job().ifPresent(job ->
                     job.onMatchClosed(new JobContext(this, semionPlayer)));
@@ -900,6 +1051,7 @@ public final class SemionGame {
             EngineerPressStates.clear(playerId);
         }
         for (SemionTeam team : teams.values()) {
+            team.laneGroup().lanes().forEach(PlayerLane::clearRoundMonsterMetrics);
             team.closeRuntime();
         }
         for (UUID playerId : players.keySet()) {
@@ -917,6 +1069,7 @@ public final class SemionGame {
             HeroPartyStates.clear(playerId);
             ArmyStates.clear(playerId);
         }
+        players.values().forEach(AugmentEconomyService::close);
         players.clear();
         selectedJobs.clear();
         selectedTraitLoadouts.clear();
@@ -940,6 +1093,10 @@ public final class SemionGame {
     }
 
     public SummonResult summonMonster(UUID playerId, String summonId) {
+        return summonMonster(playerId, summonId, null);
+    }
+
+    public SummonResult summonMonster(UUID playerId, String summonId, Contract requestedContract) {
         if (phase != RoundPhase.PREPARE_AND_SUMMON && phase != RoundPhase.LANE_WAVE) {
             return SummonResult.failure(SummonResultType.INVALID_PHASE, summonId);
         }
@@ -972,41 +1129,75 @@ public final class SemionGame {
                 ? 0L
                 : Math.max(0, job.modifySummonIncomeGain(jobContext, type.get(), type.get().incomeGain()));
 
-        if (!economyService.spendForSummon(player, gasCost)) {
+        UUID transactionId = UUID.randomUUID();
+        AugmentEconomyService.PurchasePlan purchase;
+        try {
+            if (requestedContract != null && !augmentsEnabled()) {
+                return SummonResult.failure(SummonResultType.AUGMENT_CONTRACT_UNAVAILABLE, summonId);
+            }
+            purchase = augmentsEnabled()
+                    ? AugmentEconomyService.quotePurchase(player, transactionId, currentRound,
+                        phase == RoundPhase.PREPARE_AND_SUMMON, !freeSandboxSummons,
+                        AugmentEconomyService.isUtility(type.get()), AugmentEconomyService.isStandardAttack(type.get()),
+                        AugmentEconomyService.isAttackEligible(type.get()), gasCost, incomeGain, requestedContract)
+                    : null;
+        } catch (IllegalArgumentException invalidContract) {
+            return SummonResult.failure(SummonResultType.AUGMENT_CONTRACT_UNAVAILABLE, summonId);
+        }
+        if (purchase != null) {
+            gasCost = purchase.emeraldCost();
+        }
+        if (player.economy().gas() < gasCost) {
             return SummonResult.failure(SummonResultType.NOT_ENOUGH_GAS, summonId);
         }
-
         Optional<SemionTeam> targetTeam = targetTeamForSummon(player.teamId());
         if (targetTeam.isEmpty()) {
-            economyService.refundSummon(player, gasCost, currentRound);
             return SummonResult.failure(SummonResultType.NO_TARGET_TEAM, summonId);
         }
-
         Optional<PlayerLane> targetLane = targetLaneForSummon(targetTeam.get());
         if (targetLane.isEmpty()) {
-            economyService.refundSummon(player, gasCost, currentRound);
             return SummonResult.failure(SummonResultType.NO_TARGET_LANE, summonId);
         }
-
-        economyService.applySummonIncome(player, incomeGain);
-        player.matchStats().recordSummonedMonster();
-        player.matchStats().recordIncomeGenerated(incomeGain);
-        int scheduledRound = phase == RoundPhase.LANE_WAVE ? currentRound + 1 : currentRound;
+        boolean forecast = purchase != null && purchase.forecast();
+        int scheduledRound = phase == RoundPhase.LANE_WAVE || forecast ? currentRound + 1 : currentRound;
         Monster monster = type.get().createMonster(summonContext, targetTeam.get().id(), targetLane.get().laneId(), scheduledRound);
         monster.setSenderName(player.name());
+        monster.setOrigin(freeSandboxSummons ? MonsterOrigin.BUILDER_PROXY : MonsterOrigin.NORMAL_PAID);
+        monster.setSummonTransaction(transactionId, gasCost, incomeGain);
         monster.applyAttackModifiers(
                 TraitEffects.incomeAttackDamageMultiplier(player.traitLoadout()),
                 TraitEffects.incomeAttackSpeedMultiplier(player.traitLoadout())
         );
-        player.matchStats().recordSentIncomeThreat(monster.attributionThreat());
-        advancementService.recordIncomeSent(this, playerId, targetLane.get().ownerPlayer(), monster.attributionThreat());
+        if (purchase != null) {
+            AugmentEconomyService.applyPurchaseBody(monster, purchase);
+        }
+        Monster echo = forecast ? AugmentEconomyService.createForecastEcho(monster, purchase.echoRatio()) : null;
+        if (!economyService.spendForSummon(player, gasCost)) {
+            return SummonResult.failure(SummonResultType.NOT_ENOUGH_GAS, summonId);
+        }
         job.onSummonedMonster(jobContext, type.get(), monster);
         type.get().onSummoned(summonContext, monster);
-        if (phase == RoundPhase.LANE_WAVE) {
+        if (phase == RoundPhase.LANE_WAVE || forecast) {
             targetLane.get().enqueueNextRoundSummonedMonster(monster);
+            if (echo != null) {
+                targetLane.get().enqueueNextRoundSummonedMonster(echo);
+            }
         } else {
             targetLane.get().enqueueSummonedMonster(monster);
         }
+        if (purchase != null) {
+            if (!AugmentEconomyService.commitPurchase(player, purchase, monster)) {
+                throw new IllegalStateException("Validated summon transaction changed during synchronous commit");
+            }
+            incomeGain = purchase.incomeGain();
+            AugmentTowerService.onPaidSummon(this, playerId, transactionId, gasCost, purchase.ordnanceEligible());
+        } else {
+            economyService.applySummonIncome(player, incomeGain);
+            player.matchStats().recordIncomeGenerated(incomeGain);
+        }
+        player.matchStats().recordSummonedMonster();
+        player.matchStats().recordSentIncomeThreat(monster.attributionThreat());
+        advancementService.recordIncomeSent(this, playerId, targetLane.get().ownerPlayer(), monster.attributionThreat());
         if (buildGuideService != null) {
             buildGuideService.recordSummon(
                     this,
@@ -1176,6 +1367,9 @@ public final class SemionGame {
                 participant.laneId(),
                 economyConfig.startingIncome()
         ));
+        if (augmentsEnabled()) {
+            augmentService.onLateJoin(latePlayer, requestedRound);
+        }
         if (requestedRound >= currentRound) {
             skippedWaveThroughRound.put(participant.uuid(), requestedRound);
         }
@@ -1195,8 +1389,7 @@ public final class SemionGame {
         long reward = Math.max(0, startingIncome) * 5L;
         for (int round = 1; round <= Math.min(5, Math.max(0, requestedRound)); round++) {
             reward += waveConfig.configForRound(round).stream()
-                    .flatMap(config -> config.entriesForLane("lane_" + laneId).stream())
-                    .mapToLong(entry -> entry.mineralReward() * (long) entry.count())
+                    .mapToLong(config -> config.rewardBudgetForLane("lane_" + laneId))
                     .sum();
         }
         return reward;
@@ -1243,6 +1436,9 @@ public final class SemionGame {
 
     private void tickPrepare(MinecraftServer server) {
         phaseTicks++;
+        if (augmentsEnabled()) {
+            augmentService.tick(this, server, tickCounter);
+        }
         for (SemionTeam team : livingTeams()) {
             for (PlayerLane lane : team.laneGroup().lanes()) {
                 lane.tickTowers();
@@ -1254,12 +1450,19 @@ public final class SemionGame {
         if (phaseTicks % 80 == 0) {
             showLaneIndicators(server);
         }
-        if (phaseTicks >= DEFAULT_PREPARE_TICKS) {
-            startWavePhase();
+        if (phaseTicks >= currentPrepareDurationTicks) {
+            startWavePhase(server);
         }
     }
 
-    private void startWavePhase() {
+    private void startWavePhase(MinecraftServer server) {
+        if (augmentsEnabled()) {
+            augmentService.expire(this);
+            for (SemionPlayer player : players.values()) {
+                AugmentEconomyService.endPrepare(player, currentRound);
+                playerLane(player.uuid()).ifPresent(lane -> lane.assignAugmentSnapshot(player.augments().snapshot()));
+            }
+        }
         phase = RoundPhase.LANE_WAVE;
         phaseTicks = 0;
         completedWaveDurationTicks = 0;
@@ -1340,7 +1543,13 @@ public final class SemionGame {
         advancementService.onRoundCompleted(server, this, currentRound);
         VillagerAdvStates.onWaveCleared(this, currentRound);
         notifyRoundEnded(currentRound);
-        economyService.payRoundIncome(players.values(), teams);
+        if (augmentsEnabled()) {
+            for (SemionPlayer player : players.values()) {
+                playerLane(player.uuid()).ifPresent(lane -> AugmentCombat.settleWave(lane, currentRound));
+            }
+            AugmentTowerService.settleRound(this, true);
+        }
+        economyService.payRoundIncome(currentRound, players.values(), teams);
         recordRoundMetrics(currentRound, completedWaveDurationTicks);
         currentWaveTeamIds.clear();
         currentRound++;
@@ -1349,8 +1558,10 @@ public final class SemionGame {
     }
 
     private void startPreparePhase(MinecraftServer server) {
+        beforeBalancePrepare.run();
         phase = RoundPhase.PREPARE_AND_SUMMON;
         phaseTicks = 0;
+        augmentSelectionDurationTicks = 0;
         skippedWaveThroughRound.entrySet().removeIf(entry -> entry.getValue() < currentRound);
         selectedRoundWave = waveConfig.selectForRound(currentRound, random).orElse(null);
         for (SemionTeam team : livingTeams()) {
@@ -1359,6 +1570,18 @@ public final class SemionGame {
         advancementService.onRoundStarted(server, this);
         prepareActivePlayers(server);
         notifyRoundStarted(currentRound);
+        currentPrepareDurationTicks = DEFAULT_PREPARE_TICKS;
+        if (augmentsEnabled()) {
+            for (SemionPlayer player : players.values()) {
+                player.augments().beginPrepare(currentRound);
+                AugmentEconomyService.beginPrepare(player, currentRound);
+                playerLane(player.uuid()).ifPresent(lane -> lane.assignAugmentSnapshot(player.augments().snapshot()));
+            }
+            AugmentTowerService.beginPrepare(this);
+            if (augmentService.onPrepare(this, server, tickCounter)) {
+                extendAugmentPreparation(tickCounter + AugmentService.PREPARE_TICKS);
+            }
+        }
         if (!sandboxMode && !tutorialMode && !lateJoinDisabledAnnounced && currentRound > 5) {
             lateJoinDisabledAnnounced = true;
             server.getPlayerList().broadcastSystemMessage(
@@ -1397,7 +1620,8 @@ public final class SemionGame {
                 continue;
             }
             String laneKey = "lane_" + lane.laneId();
-            lane.enqueueWave(round.entriesForLane(laneKey), round.spawnMode(), round.spawnIntervalTicks());
+            lane.enqueueWave(round.entriesForLane(laneKey), round.spawnMode(), round.spawnIntervalTicks(),
+                    round.rewardBudgetForLane(laneKey), round.templateId());
         }
     }
 
@@ -1447,9 +1671,17 @@ public final class SemionGame {
                 continue;
             }
 
+            if (augmentsEnabled()) {
+                AugmentCombat.captureRoundEnd(lane, round);
+                player.augmentTelemetry().recordLane(new AugmentTelemetrySnapshot.LaneRoundSample(
+                        round, lane.leakedThisRound(), lane.leakedThreatThisRound(), lane.leakedCountThisRound()));
+            }
+
             List<TowerRoundMetricsSnapshot> towerMetrics = lane.roundTowerMetrics();
             List<TowerRoundMetricsSnapshot> builderTowerMetrics = towerMetrics.stream()
                     .filter(metrics -> !DEMON_LORD_METRICS_ID.equals(metrics.towerTypeId()))
+                    .filter(metrics -> ProductionTowerCatalog.find(metrics.towerTypeId())
+                            .map(entry -> entry.availability() == ProductionTowerCatalog.Availability.JOB).orElse(true))
                     .toList();
             int firstCombatTick = towerMetrics.stream()
                     .mapToInt(TowerRoundMetricsSnapshot::firstCombatTick)
@@ -1461,6 +1693,10 @@ public final class SemionGame {
                     .max()
                     .orElse(-1);
             PlayerEconomy economy = player.economy();
+            MonsterSupportMetrics.Snapshot utilitySupport = teams.values().stream()
+                    .flatMap(otherTeam -> otherTeam.laneGroup().lanes().stream())
+                    .map(otherLane -> otherLane.utilitySupportMetrics(playerId))
+                    .reduce(MonsterSupportMetrics.Snapshot.empty(), MonsterSupportMetrics.Snapshot::plus);
             roundMetricsByPlayer.computeIfAbsent(playerId, ignored -> new ArrayList<>()).add(
                     new PlayerRoundMetricsSnapshot(
                             round,
@@ -1476,10 +1712,20 @@ public final class SemionGame {
                             economy.diamond(),
                             economy.towerLimitPurchaseCount(),
                             player.matchStats().monsterKills() - killBaseline,
-                            towerMetrics
+                            towerMetrics,
+                            utilitySupport,
+                            lane.naturalWaveSupportMetrics(),
+                            lane.waveSupportMetrics(),
+                            lane.waveTemplateId(),
+                            lane.naturalWaveCount(),
+                            lane.naturalWaveStartingHealth(),
+                            augmentsEnabled() ? new AugmentEconomyMetricsSnapshot(
+                                    player.economyAugments().diamondGranted(), player.economyAugments().incomeGranted(),
+                                    player.economyAugments().incomeForgone(), player.economyAugments().payoutWithheld()) : null
                     )
             );
         }
+        teams.values().forEach(team -> team.laneGroup().lanes().forEach(PlayerLane::clearRoundMonsterMetrics));
     }
 
     private List<TowerCompositionEntry> finalTowerComposition(SemionPlayer player) {
@@ -1492,6 +1738,10 @@ public final class SemionGame {
     private boolean checkVictory(MinecraftServer server) {
         List<SemionTeam> living = livingTeams();
         if (living.size() <= 1 && phase != RoundPhase.WAITING) {
+            if (augmentsEnabled()) {
+                AugmentTowerService.settleRound(this, false);
+            }
+            players.values().forEach(AugmentEconomyService::close);
             recordBuilderRoundResults(currentRound);
             recordRoundMetrics(currentRound, phase == RoundPhase.LANE_WAVE ? phaseTicks : 0);
             advancementService.onRoundCompleted(server, this, currentRound);
@@ -1734,6 +1984,10 @@ public final class SemionGame {
                 new PlayerEconomy(economyConfig)
         );
         player.assignJob(job);
+        if (augmentsEnabled()) {
+            player.augmentTelemetry().bindClock(() -> tickCounter, () -> currentRound);
+            player.augments().initialize(augmentSeed, augmentConfig, augmentRarities);
+        }
         player.assignTraitLoadout(traitSnapshot.loadoutOrDefault(participant.uuid()));
         applyJobStartingEconomy(player, job);
         applyTraitStartingEconomy(player);
@@ -1742,7 +1996,12 @@ public final class SemionGame {
             return false;
         }
         team.laneGroup().lane(participant.laneId())
-                .ifPresent(lane -> lane.assignTraitLoadout(player.traitLoadout()));
+                .ifPresent(lane -> {
+                    lane.assignTraitLoadout(player.traitLoadout());
+                    if (augmentsEnabled()) {
+                        lane.assignAugmentTelemetry(player.augmentTelemetry());
+                    }
+                });
         players.put(participant.uuid(), player);
         return true;
     }
@@ -1773,6 +2032,10 @@ public final class SemionGame {
             }
             if (!sandboxMode && !tutorialMode && teams.get(activePlayer.teamId()).hasLeader(activePlayer.uuid())) {
                 SemionHotbarService.grantLeaderTool(player);
+            }
+            if (augmentsEnabled()) {
+                kim.biryeong.semiontd.augment.AugmentTargetTool.grant(player, activePlayer.augments(),
+                        playerLane(activePlayer.uuid()).orElse(null));
             }
             setFlight(player, true);
             playerLane(activePlayer.uuid()).ifPresent(lane -> SemionLaneIndicatorService.showLane(player, lane));
@@ -1890,6 +2153,10 @@ public final class SemionGame {
         }
         for (UUID memberId : team.memberIds()) {
             matchSpectatorIds.add(memberId);
+            SemionPlayer eliminated = players.get(memberId);
+            if (eliminated != null) {
+                AugmentEconomyService.close(eliminated);
+            }
             if (server == null) {
                 continue;
             }

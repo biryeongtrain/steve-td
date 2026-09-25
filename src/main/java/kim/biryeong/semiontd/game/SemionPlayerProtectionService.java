@@ -2,6 +2,7 @@ package kim.biryeong.semiontd.game;
 
 import java.util.UUID;
 import kim.biryeong.semiontd.tower.demonlord.DemonLordStates;
+import kim.biryeong.semiontd.ui.SemionTowerInteractionService;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.minecraft.server.level.ServerPlayer;
@@ -27,7 +28,11 @@ public final class SemionPlayerProtectionService {
                     || !(player instanceof ServerPlayer serverPlayer)) {
                 return InteractionResult.PASS;
             }
-            if (shouldProtectPlayer(gameManager.protectionGame(serverPlayer.getUUID()), serverPlayer.getUUID())) {
+            SemionGame game = gameManager.protectionGame(serverPlayer.getUUID());
+            if (SemionTowerInteractionService.handleTargetToolAttack(game, serverPlayer, entity)) {
+                return InteractionResult.FAIL;
+            }
+            if (shouldProtectPlayer(game, serverPlayer.getUUID())) {
                 return InteractionResult.FAIL;
             }
             return InteractionResult.PASS;

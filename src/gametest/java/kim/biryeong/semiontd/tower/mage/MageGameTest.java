@@ -2,10 +2,13 @@ package kim.biryeong.semiontd.tower.mage;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.AttackKind;
+import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
 import kim.biryeong.semiontd.entity.monster.KillSourceKind;
@@ -26,6 +29,85 @@ import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
 public final class MageGameTest {
+    @GameTest
+    public void augmentsReplayTheThirdSpellAndLimitWorldTargets(GameTestHelper context) {
+        UUID owner = stableUuid("mage-augment-world");
+        MageStates.clear(owner);
+        PlayerLane lane = testLane(context, owner);
+        prepareFloor(context, 6);
+        MageWizardTower wizard = new MageWizardTower(MageTowers.spellType(MageSpell.WIND_CUTTER),
+                owner, TeamId.RED, 1, grid(context, new BlockPos(3, 2, 3)));
+        ArrayList<SpawnedTarget> targets = new ArrayList<>();
+        TowerBalanceConfig previous = TowerBalanceRuntime.current();
+        AreaEffectLaneIndex.register(lane);
+        try {
+            LinkedHashMap<String, Map<String, Double>> abilities = new LinkedHashMap<>(previous.abilities());
+            LinkedHashMap<String, Double> mage = new LinkedHashMap<>(abilities.get(MageBalance.GLOBAL_ID));
+            mage.put("wind_cutterRange", 1.0);
+            abilities.put(MageBalance.GLOBAL_ID, mage);
+            TowerBalanceRuntime.apply(new TowerBalanceConfig(previous.towers(), previous.upgradeCosts(), abilities,
+                    previous.illusionCloneQueue(), previous.villagerAdv(), previous.schemaVersion()));
+            lane.assignAugmentSnapshot(augmentSnapshot(MageAugments.DOUBLE, MageAugments.WORLD));
+            lane.addTower(core(context, owner, new BlockPos(2, 2, 3)));
+            lane.addTower(wizard);
+            lane.markWaveStarted(1);
+            MageStates.state(owner).clearMana();
+            MageStates.state(owner).addMana(1000);
+            require(wizard.tryBeginCast(MageSpell.WIND_CUTTER) && wizard.tryBeginCast(MageSpell.WIND_CUTTER),
+                    "The first two casts must pay independently.");
+            for (int i = 0; i < 21; i++) targets.add(spawnTarget(context, lane,
+                    towerEntity(context, wizard).position().add(2, 0, i * .02), "mage-augment-target", Optional.empty()));
+            wizard.tick(lane);
+            double expected = MageBalance.WIND_CUTTER_DAMAGE * wizard.currentSpellDamageMultiplier() * 1.6;
+            long hit = targets.stream().filter(target -> target.runtime().health() < 200).count();
+            require(hit == 20, "World spell must hit exactly twenty lane targets, including beyond ordinary range.");
+            require(Math.abs(targets.getFirst().runtime().health() - (200 - expected)) < .01,
+                    "Third spell must reproduce damage at sixty percent: " + targets.getFirst().runtime().health());
+            require(MageStates.state(owner).mana() == 100 && wizard.spellCasts() == 3,
+                    "Three world casts cost 900; the replay spends no mana and adds no rank cast.");
+            context.succeed();
+        } finally {
+            targets.forEach(target -> target.entity().discard());
+            lane.clearTowers();
+            AreaEffectLaneIndex.unregister(lane);
+            MageStates.clear(owner);
+            TowerBalanceRuntime.apply(previous);
+        }
+    }
+
+    @GameTest
+    public void floodGrantsManaAndDoublesCoreAndUsedWizardProduction(GameTestHelper context) {
+        UUID owner = stableUuid("mage-augment-flood");
+        MageStates.clear(owner);
+        PlayerLane lane = testLane(context, owner);
+        prepareFloor(context, 6);
+        MageWizardTower wizard = new MageWizardTower(MageTowers.spellType(MageSpell.MAGIC_AMPLIFICATION),
+                owner, TeamId.RED, 1, grid(context, new BlockPos(3, 2, 3)));
+        try {
+            lane.addTower(core(context, owner, new BlockPos(2, 2, 3)));
+            lane.addTower(wizard);
+            MageStates.state(owner).clearMana();
+            MageAugments.onSelected(lane, MageAugments.FLOOD, kim.biryeong.semiontd.augment.AugmentConfig.defaults());
+            require(MageStates.state(owner).mana() == 300, "Flood selection must grant three hundred mana once.");
+            lane.assignAugmentSnapshot(augmentSnapshot(MageAugments.FLOOD));
+            lane.markWaveStarted(1);
+            wizard.tick(lane);
+            int before = MageStates.state(owner).mana();
+            MageTowerLifecycle.finishRound(lane, owner);
+            require(MageStates.state(owner).mana() - before == 2 * (MageBalance.coreMana() + MageBalance.IDLE_WIZARD_MANA),
+                    "Flood must double core and already-used wizard natural mana.");
+            context.succeed();
+        } finally {lane.clearTowers(); MageStates.clear(owner);}
+    }
+
+    private static kim.biryeong.semiontd.augment.AugmentSnapshot augmentSnapshot(String... cards) {
+        return new kim.biryeong.semiontd.augment.AugmentSnapshot(kim.biryeong.semiontd.augment.AugmentConfig.defaults(),
+                java.util.Arrays.stream(cards).map(card -> new kim.biryeong.semiontd.augment.PlayerAugmentState.Selection(
+                        5, kim.biryeong.semiontd.augment.AugmentRarity.GOLD, "semiontd:" + card,
+                        kim.biryeong.semiontd.augment.PlayerAugmentState.Outcome.SELECTED, null,
+                        kim.biryeong.semiontd.augment.AugmentChoice.none())).toList());
+    }
+
     @GameTest(maxTicks = 120)
     public void prophetSurvivesAndExecutesOnlyTheFirstMatchingIncome(GameTestHelper context) {
         UUID owner = stableUuid("mage-prophecy-owner");
@@ -273,8 +355,12 @@ public final class MageGameTest {
     }
 
     private static void prepareFloor(GameTestHelper context) {
-        for (int x = 0; x <= 16; x++) {
-            for (int z = 0; z <= 16; z++) {
+        prepareFloor(context, 16);
+    }
+
+    private static void prepareFloor(GameTestHelper context, int maximum) {
+        for (int x = 0; x <= maximum; x++) {
+            for (int z = 0; z <= maximum; z++) {
                 BlockPos floor = context.absolutePos(new BlockPos(x, 1, z));
                 context.getLevel().setBlock(floor, Blocks.STONE.defaultBlockState(), 3);
                 context.getLevel().setBlock(floor.above(), Blocks.AIR.defaultBlockState(), 3);

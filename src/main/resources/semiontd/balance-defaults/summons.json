@@ -923,15 +923,18 @@
         "SIEGE"
       ],
       "abilityActivations": [
-        "CONDITIONAL"
+        "COOLDOWN"
       ],
       "description": [
-        "방어 대상에게 15 고정 피해를 줍니다. (4초 쿨타임)"
+        "가까운 비보스 아군 최대 8기에게 물리 보호막 30을 4초간 부여합니다. 자신은 제외합니다. (3초 재사용 대기시간)"
       ],
       "abilityValues": {
-        "cooldownTicks": 80.0,
-        "bonusDamage": 15.0,
-        "progressThreshold": 0.0
+        "supportRadius": 6.0,
+        "physicalShield": 30.0,
+        "supportMaxTargets": 8.0,
+        "shieldDurationTicks": 80.0,
+        "supportCooldownTicks": 60.0,
+        "supportRetryDelayTicks": 20.0
       }
     },
     "polar_bear": {
@@ -1154,15 +1157,18 @@
         "SIEGE"
       ],
       "abilityActivations": [
-        "CONDITIONAL"
+        "COOLDOWN"
       ],
       "description": [
-        "방어 대상에게 25 고정 피해를 줍니다. (4초 쿨타임)"
+        "가까운 비보스 아군 최대 8기에게 마법 보호막 40을 4초간 부여합니다. 자신은 제외합니다. (4초 재사용 대기시간)"
       ],
       "abilityValues": {
-        "cooldownTicks": 80.0,
-        "bonusDamage": 25.0,
-        "progressThreshold": 0.0
+        "supportRadius": 6.0,
+        "magicShield": 40.0,
+        "supportMaxTargets": 8.0,
+        "shieldDurationTicks": 80.0,
+        "supportCooldownTicks": 80.0,
+        "supportRetryDelayTicks": 20.0
       }
     },
     "shulker": {
@@ -1225,15 +1231,17 @@
         "SIEGE"
       ],
       "abilityActivations": [
-        "CONDITIONAL"
+        "COOLDOWN"
       ],
       "description": [
-        "방어 대상에게 30 고정 피해를 줍니다. (4.5초 쿨타임)"
+        "잃은 체력이 큰 비보스 아군 최대 6기를 45 회복합니다. 자신은 제외합니다. (6초 재사용 대기시간)"
       ],
       "abilityValues": {
-        "cooldownTicks": 90.0,
-        "bonusDamage": 30.0,
-        "progressThreshold": 0.0
+        "supportRadius": 7.0,
+        "supportHealAmount": 45.0,
+        "supportMaxTargets": 6.0,
+        "supportCooldownTicks": 120.0,
+        "supportRetryDelayTicks": 20.0
       }
     },
     "zoglin": {
@@ -1289,15 +1297,20 @@
         "SIEGE"
       ],
       "abilityActivations": [
-        "CONDITIONAL"
+        "COOLDOWN"
       ],
       "description": [
-        "방어 대상에게 50 고정 피해를 줍니다. (4초 쿨타임)"
+        "자신 포함 체력 비율이 낮은 비보스 아군 최대 3기를 35 회복하고 물리·마법 보호막을 각각 25씩 5초간 부여합니다. (5초 재사용 대기시간)"
       ],
       "abilityValues": {
-        "cooldownTicks": 80.0,
-        "bonusDamage": 50.0,
-        "progressThreshold": 0.0
+        "supportRadius": 6.0,
+        "supportHealAmount": 35.0,
+        "physicalShield": 25.0,
+        "magicShield": 25.0,
+        "supportMaxTargets": 3.0,
+        "shieldDurationTicks": 100.0,
+        "supportCooldownTicks": 100.0,
+        "supportRetryDelayTicks": 20.0
       }
     },
     "evoker": {
@@ -1400,15 +1413,20 @@
         "SIEGE"
       ],
       "abilityActivations": [
-        "CONDITIONAL"
+        "COOLDOWN"
       ],
       "description": [
-        "방어 대상에게 100 고정 피해를 줍니다. (3초 쿨타임)"
+        "자신 포함 가까운 비보스 아군 최대 8기에게 물리·마법 보호막을 각각 70씩 5초간 부여합니다. (6초 재사용 대기시간)"
       ],
       "abilityValues": {
-        "cooldownTicks": 60.0,
-        "bonusDamage": 100.0,
-        "progressThreshold": 0.0
+        "supportRadius": 8.0,
+        "physicalShield": 70.0,
+        "magicShield": 70.0,
+        "supportMaxTargets": 8.0,
+        "shieldDurationTicks": 100.0,
+        "supportCooldownTicks": 120.0,
+        "supportRetryDelayTicks": 20.0,
+        "physicalCanary": 0.0
       }
     }
   }

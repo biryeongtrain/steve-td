@@ -9,5 +9,6 @@ public final class QueenTowerCatalogs {
     public static void register() {
         ProductionTowerCatalog.registerStarter(TowerBalanceRuntime.resolve(QueenTowers.QUEEN), QueenTower::new);
         ProductionTowerCatalog.registerStarter(TowerBalanceRuntime.resolve(QueenTowers.RANDOM_CARD_SOLDIER), QueenCardTower::new);
+        ProductionTowerCatalog.registerStarter(TowerBalanceRuntime.resolve(QueenTowers.JOKER), QueenCardTower::new);
     }
 }

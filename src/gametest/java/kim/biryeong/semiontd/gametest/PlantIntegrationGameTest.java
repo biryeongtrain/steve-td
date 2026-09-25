@@ -4,6 +4,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import kim.biryeong.semiontd.augment.AugmentChoice;
+import kim.biryeong.semiontd.augment.AugmentConfig;
+import kim.biryeong.semiontd.augment.AugmentRarity;
+import kim.biryeong.semiontd.augment.AugmentSnapshot;
+import kim.biryeong.semiontd.augment.PlayerAugmentState;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
@@ -39,6 +44,7 @@ import kim.biryeong.semiontd.tower.plant.PlantSoilEnvironment;
 import kim.biryeong.semiontd.tower.plant.PlantSoilStates;
 import kim.biryeong.semiontd.tower.plant.PlantTerraformTower;
 import kim.biryeong.semiontd.tower.plant.PlantTowers;
+import kim.biryeong.semiontd.tower.plant.PlantAugments;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -48,6 +54,166 @@ import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
 public final class PlantIntegrationGameTest {
+    @GameTest
+    public void rapidGrowthAndManualWorldTreePreserveStacksSoilAndHealthRatio(GameTestHelper context) {
+        UUID owner = stableUuid("plant-augment-growth-world-tree");
+        PlayerLane lane = testLane(context, owner);
+        TeamLaneGroup group = new TeamLaneGroup(TeamId.RED, BossMonster.defaultBoss(TeamId.RED));
+        group.addLane(lane);
+        try {
+            TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+            fillFloor(context);
+            PlantTerraformTower tree = new PlantTerraformTower(PlantTowers.T1_OAK_SEED_TOWER,
+                    owner, TeamId.RED, 1, position(context, 1, 1, 1));
+            PlantCombatTower meadow = new PlantCombatTower(PlantTowers.T1_MEADOW_TOWER,
+                    owner, TeamId.RED, 1, position(context, 2, 1, 1));
+            lane.addTower(tree);
+            lane.addTower(meadow);
+            PlantAugments.onSelected(lane, "job_plant_towers_g1", AugmentConfig.defaults());
+            require(meadow.growthRounds() == 5, "Selection must grant five growth rounds to existing meadow plants.");
+            GridPosition bare = position(context, 6, 1, 6);
+            require(!PlantSoilStates.canPlantAt(lane, owner, bare, PlantTowers.T1_PODZOL_TOWER),
+                    "A different plant family cannot be planted on bare soil without a selected world tree.");
+            meadow.syncHealth(meadow.currentMaxHealth() * 0.5);
+            double before = meadow.currentMaxHealth();
+            lane.assignAugmentSnapshot(plantSnapshot(tree.logicalId(), "g1", "p"));
+            requireClose(before * 1.8, meadow.currentMaxHealth(), "World tree must add 80 percent maximum health.");
+            requireClose(0.5, meadow.health() / meadow.currentMaxHealth(), "Designation must preserve health ratio.");
+            require(PlantSoilStates.canPlantAt(lane, owner, bare, PlantTowers.T1_PODZOL_TOWER),
+                    "The selected world tree must allow another plant family within eight blocks.");
+            require(PlantSoilStates.soilAt(owner, bare) == null, "World tree permission must not overwrite physical soil ownership.");
+            PlantCombatTower inherited = new PlantCombatTower(PlantTowers.T1_MEADOW_TOWER,
+                    owner, TeamId.RED, 1, position(context, 2, 1, 2));
+            PlantCombatTower podzol = new PlantCombatTower(PlantTowers.T1_PODZOL_TOWER, owner, TeamId.RED, 1, bare);
+            lane.addTower(inherited);
+            lane.addTower(podzol);
+            require(inherited.growthRounds() == 1, "New plants must inherit floor(5 * 25 percent) from the same family.");
+            require(podzol.growthRounds() == 0, "Different soil families must not inherit meadow growth.");
+            require(podzol.adjustAttackRange(1) > 1, "World tree must supply the planted tower's own podzol effect.");
+            requireClose(18, meadow.modifyAttackDamage(null, null, 10), "World tree must add 80 percent attack damage.");
+            PlantCombatTower upgraded = new PlantCombatTower(PlantTowers.T2_MEADOW_TOWER, owner, TeamId.RED, 1,
+                    meadow.originalPosition());
+            upgraded.copyFrom(meadow, 1);
+            require(lane.replaceTower(meadow, upgraded), "The plant must upgrade through normal replacement.");
+            require(upgraded.growthRounds() == 5, "Upgrade must preserve growth without reapplying placement inheritance.");
+            double ratio = upgraded.health() / upgraded.currentMaxHealth();
+            lane.assignAugmentSnapshot(plantSnapshot(null, "g1", "p"));
+            requireClose(ratio, upgraded.health() / upgraded.currentMaxHealth(), "Clearing the designation must preserve health ratio.");
+            require(!PlantSoilStates.canPlantAt(lane, owner, bare, PlantTowers.T1_PODZOL_TOWER),
+                    "Clearing the selected world tree must restore the native soil placement rule.");
+            requireClose(1, podzol.adjustAttackRange(1), "Clearing the world tree must remove virtual podzol effects.");
+            context.succeed();
+        } finally {
+            group.closeRuntime();
+            PlantSoilStates.clear(owner);
+        }
+    }
+
+    @GameTest
+    public void rootsStunOnlyOnTheFirstSoilEntryOfEachRound(GameTestHelper context) {
+        UUID owner = stableUuid("plant-augment-roots");
+        PlayerLane lane = testLane(context, owner);
+        TeamLaneGroup group = new TeamLaneGroup(TeamId.RED, BossMonster.defaultBoss(TeamId.RED));
+        group.addLane(lane);
+        try {
+            fillFloor(context);
+            lane.assignAugmentSnapshot(plantSnapshot(null, "s"));
+            PlantTerraformTower tree = new PlantTerraformTower(PlantTowers.T1_OAK_SEED_TOWER,
+                    owner, TeamId.RED, 1, position(context, 3, 1, 3));
+            lane.addTower(tree);
+            tree.markWaveStarted(5);
+            Monster monster = spawnMonster(context, lane, "plant-roots-target", position(context, 4, 1, 3));
+            SemionMonsterEntity target = entity(context, monster);
+            PlantSoilEnvironment.tick(lane);
+            require(target.activeTimedEffectTicks(TimedEffectType.MONSTER_STUN) == 20, "First soil entry must stun for one second.");
+            for (int tick = 0; tick < 10; tick++) target.tick();
+            int remaining = target.activeTimedEffectTicks(TimedEffectType.MONSTER_STUN);
+            PlantSoilEnvironment.tick(lane);
+            require(target.activeTimedEffectTicks(TimedEffectType.MONSTER_STUN) == remaining,
+                    "Staying on or reentering the same owner's soil must not refresh the round's stun.");
+            tree.markWaveStarted(6);
+            PlantSoilEnvironment.tick(lane);
+            require(target.activeTimedEffectTicks(TimedEffectType.MONSTER_STUN) == 20, "A new round must permit one new entry stun.");
+            context.succeed();
+        } finally {
+            group.closeRuntime();
+            PlantSoilStates.clear(owner);
+        }
+    }
+
+    @GameTest(maxTicks = 210)
+    public void sporeRearmsAfterThreeSecondsAndReusesEightyPercentOfTheFirstBlast(GameTestHelper context) {
+        UUID owner = stableUuid("plant-augment-spores");
+        PlayerLane lane = testLane(context, owner);
+        TeamLaneGroup group = new TeamLaneGroup(TeamId.RED, BossMonster.defaultBoss(TeamId.RED));
+        group.addLane(lane);
+        fillFloor(context);
+        lane.assignAugmentSnapshot(plantSnapshot(null, "g2"));
+        PlantTerraformTower tree = new PlantTerraformTower(PlantTowers.T1_MUSHROOM_SPORE_TOWER,
+                owner, TeamId.RED, 1, position(context, 3, 1, 3));
+        PlantMineTower mine = new PlantMineTower(TowerBalanceRuntime.resolve(PlantTowers.T1_MYCELIUM_TOWER),
+                owner, TeamId.RED, 1, position(context, 4, 1, 3));
+        lane.addTower(tree);
+        lane.addTower(mine);
+        Monster monster = spawnMonster(context, lane, "plant-spore-target", position(context, 4, 1, 3));
+        SemionMonsterEntity target = entity(context, monster);
+        target.setNoGravity(true);
+        Vec3 triggerPosition = target.position();
+        for (int tick = 0; tick < 20; tick++) mine.tick(lane);
+        double firstDamage = 1000 - monster.health();
+        require(firstDamage > 0, "The first contact must complete its fuse and explode.");
+        require(mine.spentThisRound(), "The first blast must retain the native end-of-round decay marker.");
+        mine.syncHealth(mine.currentMaxHealth() * 0.1);
+        mine.onStateChanged(lane);
+        context.runAtTickTime(59, () -> runAugmentCheck(context, group, owner, () -> {
+            for (int tick = 0; tick < 30; tick++) mine.tick(lane);
+            requireClose(1000 - firstDamage, monster.health(), "The mine must not rearm before three seconds.");
+            target.setPos(Vec3.atCenterOf(context.absolutePos(new BlockPos(1, 2, 6))));
+        }));
+        context.runAtTickTime(61, () -> runAugmentCheck(context, group, owner, () -> {
+            for (int tick = 0; tick < 30; tick++) mine.tick(lane);
+            requireClose(1000 - firstDamage, monster.health(), "Rearming without a new nearby target must not explode.");
+            target.setPos(triggerPosition);
+            for (int tick = 0; tick < 30; tick++) mine.tick(lane);
+            requireClose(1000 - firstDamage * 1.8, monster.health(), "Second blast must use 80 percent of the first snapshot despite lost health.");
+        }));
+        context.runAtTickTime(122, () -> runAugmentCheck(context, group, owner, () -> {
+            for (int tick = 0; tick < 30; tick++) mine.tick(lane);
+            requireClose(1000 - firstDamage * 2.6, monster.health(), "Third blast must also use 80 percent of the first snapshot.");
+        }));
+        context.runAtTickTime(190, () -> {
+            try {
+                for (int tick = 0; tick < 100; tick++) mine.tick(lane);
+                requireClose(1000 - firstDamage * 2.6, monster.health(), "A fourth blast must not occur in the same round.");
+                mine.resetForRound(lane);
+                require(!mine.spentThisRound(), "Round reset must clear the blast and decay state.");
+                context.succeed();
+            } catch (AssertionError error) {
+                context.fail(Component.literal(error.getMessage()));
+            } finally {
+                group.closeRuntime();
+                PlantSoilStates.clear(owner);
+            }
+        });
+    }
+
+    private static void runAugmentCheck(GameTestHelper context, TeamLaneGroup group, UUID owner, Runnable check) {
+        try {
+            check.run();
+        } catch (AssertionError error) {
+            group.closeRuntime();
+            PlantSoilStates.clear(owner);
+            context.fail(Component.literal(error.getMessage()));
+        }
+    }
+
+    private static AugmentSnapshot plantSnapshot(UUID target, String... suffixes) {
+        return new AugmentSnapshot(AugmentConfig.defaults(), java.util.Arrays.stream(suffixes)
+                .map(suffix -> new PlayerAugmentState.Selection(5, AugmentRarity.GOLD, "job_plant_towers_" + suffix,
+                        PlayerAugmentState.Outcome.SELECTED, null,
+                        suffix.equals("p") ? new AugmentChoice(target, null, "") : AugmentChoice.none())).toList());
+    }
+
     @GameTest
     public void tallPlantVisualKeepsAOneBlockInteractionHitbox(GameTestHelper context) {
         TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();

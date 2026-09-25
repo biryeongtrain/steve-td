@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.tower;
 
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
+import kim.biryeong.semiontd.tower.augment.AugmentTowers;
 
 public final class TowerCapacity {
     public static final String CONFIG_KEY = "towerSlotCost";
@@ -11,6 +12,9 @@ public final class TowerCapacity {
     public static int slotCost(TowerType type) {
         if (type == null) {
             return 1;
+        }
+        if (AugmentTowers.isAugment(type)) {
+            return AugmentTowers.slots(type);
         }
         return Math.max(0, TowerBalanceRuntime.abilityInt(type.id(), CONFIG_KEY, 1));
     }

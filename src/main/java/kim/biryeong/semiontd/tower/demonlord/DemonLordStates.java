@@ -29,7 +29,8 @@ public final class DemonLordStates {
      */
     private static final Map<UUID, Progression> PROGRESSION = new ConcurrentHashMap<>();
 
-    private record Progression(int level, double experience, Map<DemonLordStat, Integer> statPoints, int unspentPoints) {
+    private record Progression(int level, double experience, Map<DemonLordStat, Integer> statPoints, int unspentPoints,
+                               DemonLordAugments.TargetedProgress targeted) {
     }
 
     private DemonLordStates() {
@@ -49,6 +50,7 @@ public final class DemonLordStates {
             if (saved != null) {
                 created.restoreProgression(
                         saved.level(), saved.experience(), saved.statPoints(), saved.unspentPoints());
+                created.augments().restoreTargetedProgress(saved.targeted());
             }
             return created;
         });
@@ -85,17 +87,19 @@ public final class DemonLordStates {
         if (playerId != null) {
             DemonLordState removed = STATES.remove(playerId);
             if (removed != null) {
+                removed.augments().reset();
                 PROGRESSION.put(playerId, new Progression(
                         removed.level(),
                         removed.experience(),
                         removed.statPointsView(),
-                        removed.unspentPoints()));
+                        removed.unspentPoints(), removed.augments().targetedProgress()));
             }
             DemonLordService.clearBossBar(playerId);
         }
     }
 
     public static void clearAllForTesting() {
+        STATES.values().forEach(state -> state.augments().reset());
         STATES.clear();
         PROGRESSION.clear();
     }

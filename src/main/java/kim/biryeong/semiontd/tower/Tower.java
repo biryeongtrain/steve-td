@@ -1,6 +1,8 @@
 package kim.biryeong.semiontd.tower;
 
 import kim.biryeong.semiontd.effect.TimedEffectType;
+import kim.biryeong.semiontd.augment.AugmentCombat;
+import kim.biryeong.semiontd.augment.AugmentSnapshot;
 import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.KillSourceKind;
 import kim.biryeong.semiontd.entity.monster.Monster;
@@ -54,6 +56,29 @@ public abstract class Tower {
     private final Map<TowerDataKey<?>, Object> data = new HashMap<>();
     private TraitLoadout traitLoadout = TraitLoadout.none();
     private double traitMaxHealthBonus;
+    private static final TowerDataKey<UUID> LOGICAL_ID = new TowerDataKey<>(
+            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("semiontd", "augment_logical_id"), UUID.class);
+    private AugmentSnapshot augmentSnapshot = AugmentSnapshot.none();
+    private PlayerLane attachedLane;
+    private boolean temporaryCopy;
+    private UUID temporaryCopySourceId;
+
+    public final Tower markTemporaryCopy(UUID sourceLogicalId) {
+        if (!temporaryCopy) {
+            setData(LOGICAL_ID, UUID.randomUUID());
+        }
+        temporaryCopy = true;
+        temporaryCopySourceId = sourceLogicalId;
+        augmentSnapshot = AugmentSnapshot.none();
+        paidMineralCost = 0;
+        return this;
+    }
+
+    public final boolean isTemporaryCopy() {return temporaryCopy;}
+
+    public final UUID temporaryCopySourceId() {return temporaryCopySourceId;}
+
+    public final void markRevived() {deathNotifiedThisRound = false;}
 
     protected Tower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
         this(type, ownerPlayer, teamId, laneId, position, position);
@@ -92,7 +117,7 @@ public abstract class Tower {
     }
 
     public void refreshType(TowerType type, PlayerLane lane) {
-        if (type == null || !this.type.id().equals(type.id())) {
+        if (temporaryCopy || type == null || !this.type.id().equals(type.id())) {
             return;
         }
         double previousHealth = health;
@@ -100,6 +125,24 @@ public abstract class Tower {
         refreshMaxHealthAfterTypeChange(lane);
         syncHealth(previousHealth);
         onStateChanged(lane);
+    }
+
+    public record BalanceSnapshot(TowerType type, double maxHealth, double health, double traitMaxHealthBonus) {
+    }
+
+    public final BalanceSnapshot captureBalanceState() {
+        return new BalanceSnapshot(type, maxHealth, health, traitMaxHealthBonus);
+    }
+
+    /** Restores a failed stat refresh without replaying family refresh, growth, or reward hooks. */
+    public final void restoreBalanceState(BalanceSnapshot snapshot, PlayerLane lane) {
+        type = snapshot.type();
+        maxHealth = snapshot.maxHealth();
+        traitMaxHealthBonus = snapshot.traitMaxHealthBonus();
+        syncHealth(snapshot.health());
+        if (this instanceof EntityBackedTower entityBacked) {
+            entityBacked.runtimeEntity(lane).ifPresent(entity -> entity.syncTowerState(this));
+        }
     }
 
     protected void refreshMaxHealthAfterTypeChange(PlayerLane lane) {
@@ -131,7 +174,7 @@ public abstract class Tower {
     }
 
     public boolean reservesPlacementPosition(GridPosition position) {
-        return position != null && managementPosition().equals(position);
+        return !temporaryCopy && position != null && managementPosition().equals(position);
     }
 
     public int level() {
@@ -142,7 +185,11 @@ public abstract class Tower {
         return maxHealth;
     }
 
-    public double currentMaxHealth() {
+    public final double currentMaxHealth() {
+        return builderCurrentMaxHealth() * (1.0 + AugmentCombat.maxHealthBonus(this));
+    }
+
+    protected double builderCurrentMaxHealth() {
         return applyTraitMaxHealth(maxHealth);
     }
 
@@ -159,7 +206,7 @@ public abstract class Tower {
     }
 
     public void addPermanentMaxHealthBonus(double amount, PlayerLane lane) {
-        if (!Double.isFinite(amount) || amount <= 0.0) {
+        if (isAugmentTower() || !Double.isFinite(amount) || amount <= 0.0) {
             return;
         }
         setData(PERMANENT_MAX_HEALTH_BONUS, getDataOrDefault(PERMANENT_MAX_HEALTH_BONUS, 0.0) + amount);
@@ -168,7 +215,7 @@ public abstract class Tower {
     }
 
     public void addPermanentFlatDamageBonus(double amount, PlayerLane lane) {
-        if (!Double.isFinite(amount) || amount <= 0.0) {
+        if (isAugmentTower() || !Double.isFinite(amount) || amount <= 0.0) {
             return;
         }
         setData(PERMANENT_FLAT_DAMAGE_BONUS, getDataOrDefault(PERMANENT_FLAT_DAMAGE_BONUS, 0.0) + amount);
@@ -218,12 +265,59 @@ public abstract class Tower {
         return health;
     }
 
-    public int aggroPriority() {
+    public final int aggroPriority() {
+        return AugmentCombat.aggroPriority(this, builderAggroPriority());
+    }
+
+    protected int builderAggroPriority() {
         return type.aggroPriority();
     }
 
     public int slotWeight() {
-        return 1;
+        return temporaryCopy ? 0 : 1;
+    }
+
+    public boolean isAugmentTower() {
+        return false;
+    }
+
+    public boolean triggersNearbyDeathEffects() {
+        return !temporaryCopy && !isAugmentTower();
+    }
+
+    public final UUID logicalId() {
+        UUID id = getDataOrDefault(LOGICAL_ID, null);
+        if (id == null) {
+            id = UUID.randomUUID();
+            setData(LOGICAL_ID, id);
+        }
+        return id;
+    }
+
+    public final PlayerLane attachedLane() {
+        return attachedLane;
+    }
+
+    public final AugmentSnapshot augmentSnapshot() {
+        return augmentSnapshot;
+    }
+
+    public final void syncAugments(AugmentSnapshot snapshot, PlayerLane lane) {
+        double ratio = health / Math.max(1.0, currentMaxHealth());
+        double previousBaseMaxHealth = effectBaseMaxHealth();
+        augmentSnapshot = temporaryCopy || snapshot == null ? AugmentSnapshot.none() : snapshot;
+        double baseDelta = effectBaseMaxHealth() - previousBaseMaxHealth;
+        if (baseDelta != 0.0) {
+            refreshAugmentMaxHealth(lane, baseDelta);
+        }
+        syncHealth(currentMaxHealth() * ratio);
+        if (lane != null) {
+            onStateChanged(lane);
+        }
+    }
+
+    protected void refreshAugmentMaxHealth(PlayerLane lane, double baseDelta) {
+        syncMaxHealth(maxHealth() + baseDelta, false);
     }
 
     public boolean participatesInFinalDefense() {
@@ -231,7 +325,7 @@ public abstract class Tower {
     }
 
     public boolean canBeSold() {
-        return true;
+        return !temporaryCopy;
     }
 
     public String saleActionLabel() {
@@ -273,7 +367,9 @@ public abstract class Tower {
             return;
         }
         inheritSaleState(previousTower, extraPaidMineralCost);
+        previousTower.logicalId();
         copyDataFrom(previousTower);
+        augmentSnapshot = previousTower.augmentSnapshot;
         copyRuntimeStateFrom(previousTower);
     }
 
@@ -311,6 +407,27 @@ public abstract class Tower {
 
     public boolean hasData(TowerDataKey<?> key) {
         return key != null && data.containsKey(key);
+    }
+
+    public record DiagnosticState(Map<String, Object> values, List<String> omittedKeys) {}
+
+    /** Only detached scalar state, never live entities, callbacks or arbitrary object graphs. */
+    public final DiagnosticState diagnosticState() {
+        Map<String, Object> values = new java.util.TreeMap<>();
+        List<String> omitted = new java.util.ArrayList<>();
+        data.forEach((key, value) -> {
+            if (value instanceof String || value instanceof Boolean || value instanceof Integer || value instanceof Long
+                    || value instanceof Double number && Double.isFinite(number)
+                    || value instanceof Float number && Float.isFinite(number)) {
+                values.put(key.id().toString(), value);
+            } else if (value instanceof UUID || value instanceof net.minecraft.resources.ResourceLocation || value instanceof Enum<?>) {
+                values.put(key.id().toString(), value.toString());
+            } else {
+                omitted.add(key.id().toString());
+            }
+        });
+        omitted.sort(String::compareTo);
+        return new DiagnosticState(Map.copyOf(values), List.copyOf(omitted));
     }
 
     public <T> Optional<T> getData(TowerDataKey<T> key) {
@@ -384,6 +501,12 @@ public abstract class Tower {
         recordDamageDealt(amount, DamageType.PHYSICAL);
     }
 
+    public final void recordAugmentSpecialDamage(double amount) {
+        if (roundMetricsTracker != null) {
+            roundMetricsTracker.recordAugmentSpecialDamage(amount);
+        }
+    }
+
     public void recordDamageDealt(double amount, DamageType damageType) {
         if (Double.isFinite(amount) && amount > 0.0) {
             if (damageType == DamageType.MAGIC) {
@@ -455,13 +578,15 @@ public abstract class Tower {
     }
 
     public void attachToLane(PlayerLane lane, TraitLoadout traitLoadout) {
+        attachedLane = lane;
+        syncAugments(lane == null ? AugmentSnapshot.none() : lane.augmentSnapshot(), null);
         this.traitLoadout = receivesTraitEffects() && traitLoadout != null
                 ? traitLoadout
                 : TraitLoadout.none();
     }
 
     public boolean receivesTraitEffects() {
-        return true;
+        return !temporaryCopy;
     }
 
     public TraitLoadout traitLoadout() {
@@ -469,6 +594,9 @@ public abstract class Tower {
     }
 
     public void detachFromLane(PlayerLane lane) {
+        if (attachedLane == lane) {
+            attachedLane = null;
+        }
         traitLoadout = TraitLoadout.none();
         traitMaxHealthBonus = 0.0;
         syncHealth(health);
@@ -488,7 +616,9 @@ public abstract class Tower {
             return false;
         }
         deathNotifiedThisRound = true;
+        AugmentCombat.onTowerUnavailable(lane, this);
         onDeath(lane);
+        kim.biryeong.semiontd.tower.undead.UndeadAugments.onDeath(lane, this);
         return true;
     }
 
@@ -526,6 +656,31 @@ public abstract class Tower {
 
     public Optional<SemionMonsterEntity> selectAttackTarget(SemionTowerEntity towerEntity, List<SemionMonsterEntity> candidates) {
         return Optional.empty();
+    }
+
+    public boolean canAttackTarget(SemionTowerEntity towerEntity, SemionMonsterEntity target) {
+        return true;
+    }
+
+    public double attackTargetSearchRange(SemionTowerEntity source) {
+        return source.attackRange();
+    }
+
+    public boolean ignoresAttackRange(SemionTowerEntity source, SemionMonsterEntity target) {
+        return false;
+    }
+
+    /** Called after all damage reductions, immediately before health is lost. */
+    public boolean preventLethalDamage(SemionTowerEntity source, DamageSource damageSource, double finalHealthDamage) {
+        return false;
+    }
+
+    public final void executeAugmentAction(PlayerLane lane) {
+        if (health() <= 0 || isDestroyed(lane)) {return;}
+        if (this instanceof EntityBackedTower backed && backed.entityId().isPresent()
+                && lane.arenaWorld().getEntity(backed.entityId().getAsInt()) instanceof SemionTowerEntity source
+                && SuccubusDreams.isAsleep(source)) {return;}
+        execute(lane);
     }
 
     public boolean supportsForcedAttackTargeting() {
@@ -616,6 +771,17 @@ public abstract class Tower {
         return damageResolvedTargetResult(towerEntity, target, outgoingDamage, damageType);
     }
 
+    public final DamageResult damagePrimaryAttackTargetResult(
+            SemionTowerEntity source, SemionMonsterEntity target, double baseDamage
+    ) {
+        double builderOutgoing = resolveBuilderOutgoingDamage(source, target, baseDamage);
+        double globalBonus = AugmentCombat.damageBonus(this, source);
+        double outgoing = builderOutgoing * Math.max(0.0, 1.0 + globalBonus + AugmentCombat.primaryDamageBonus(this, target));
+        DamageResult result = damageResolvedTargetResult(source, target, outgoing, primaryDamageType());
+        return new DamageResult(result.killed(), result.dealtDamage(), result.outgoingDamage(),
+                result.healthDamageAttempted(), result.healthBeforeHit(), builderOutgoing * Math.max(0.0, 1.0 + globalBonus));
+    }
+
     public double resolveOutgoingDamage(
             SemionTowerEntity towerEntity,
             SemionMonsterEntity target,
@@ -633,6 +799,13 @@ public abstract class Tower {
             SemionTowerEntity towerEntity,
             SemionMonsterEntity target,
             double baseDamage
+    ) {
+        return resolveBuilderOutgoingDamage(towerEntity, target, baseDamage)
+                * Math.max(0.0, 1.0 + AugmentCombat.damageBonus(this, towerEntity));
+    }
+
+    private double resolveBuilderOutgoingDamage(
+            SemionTowerEntity towerEntity, SemionMonsterEntity target, double baseDamage
     ) {
         if (towerEntity == null || !Double.isFinite(baseDamage)) {
             return 0.0;
@@ -670,6 +843,25 @@ public abstract class Tower {
             double outgoingDamage,
             DamageType damageType
     ) {
+        return damageResolvedTargetResult(towerEntity, target, outgoingDamage, damageType, true);
+    }
+
+    public final DamageResult damageAugmentTargetResult(
+            SemionTowerEntity source, SemionMonsterEntity target, double damage, DamageType type
+    ) {
+        return damageResolvedTargetResult(source, target, damage, type, false);
+    }
+
+    private DamageResult damageResolvedTargetResult(
+            SemionTowerEntity towerEntity, SemionMonsterEntity target, double outgoingDamage,
+            DamageType damageType, boolean applyAttackerModifier
+    ) {
+        if (isTemporaryCopy() && AugmentCombat.allowsTriggers()) {
+            DamageResult[] result = {DamageResult.NONE};
+            AugmentCombat.runWithoutTriggers(() -> result[0] = damageResolvedTargetResult(
+                    towerEntity, target, outgoingDamage, damageType, applyAttackerModifier));
+            return result[0];
+        }
         if (towerEntity == null
                 || target == null
                 || !Double.isFinite(outgoingDamage)
@@ -677,21 +869,21 @@ public abstract class Tower {
             return DamageResult.NONE;
         }
         Monster runtimeMonster = target.runtimeMonster();
-        double damageAmount = modifyAppliedDamage(
-                towerEntity,
-                target,
-                target.towerDamageTaken(outgoingDamage)
-        );
+        double damageAmount = target.towerDamageTaken(outgoingDamage);
+        if (applyAttackerModifier) {
+            damageAmount = modifyAppliedDamage(towerEntity, target, damageAmount);
+        }
         if (!Double.isFinite(damageAmount) || damageAmount <= 0.0) {
             return DamageResult.NONE;
         }
         double previousHealth = runtimeMonster == null ? target.getHealth() : runtimeMonster.health();
         DamageType resolvedDamageType = damageType == null ? DamageType.PHYSICAL : damageType;
-        boolean killed = target.applyRuntimeDamage(
+        var applied = target.applySemionDamageResult(
                 towerEntity.damageSources().mobAttack(towerEntity),
                 damageAmount,
                 resolvedDamageType
         );
+        boolean killed = applied.killed();
         double currentHealth = runtimeMonster == null ? target.getHealth() : runtimeMonster.health();
         double dealtDamage = Math.max(0.0, previousHealth - currentHealth);
         recordDamageDealt(target, dealtDamage, resolvedDamageType);
@@ -703,9 +895,14 @@ public abstract class Tower {
         }
         if (runtimeMonster != null && dealtDamage > 0.0) {
             runtimeMonster.recordLastHit(ownerPlayer, KillSourceKind.TOWER);
+            if (killed) {AugmentCombat.recordKillOrigin(this, runtimeMonster);}
         }
         SuccubusDreams.onMonsterDamaged(target, this, dealtDamage);
-        return new DamageResult(killed, dealtDamage, outgoingDamage);
+        if (killed && dealtDamage > 0.0 && !isTemporaryCopy()) {
+            kim.biryeong.semiontd.tower.adversary.AdversaryAugments.onKill(this, towerEntity, target);
+            kim.biryeong.semiontd.tower.illager.IllagerMarks.onAttributedKill(this, towerEntity, target);
+        }
+        return new DamageResult(killed, dealtDamage, outgoingDamage, applied.healthDamageAttempted(), previousHealth);
     }
 
     public void onAttack(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount, boolean killedTarget) {
@@ -936,12 +1133,25 @@ public abstract class Tower {
         return Double.isFinite(value) && value > 0.0 ? value : 0.0;
     }
 
-    public record DamageResult(boolean killed, double dealtDamage, double outgoingDamage) {
+    public record DamageResult(boolean killed, double dealtDamage, double outgoingDamage,
+                               double healthDamageAttempted, double healthBeforeHit, double secondaryOutgoingDamage) {
         public static final DamageResult NONE = new DamageResult(false, 0.0, 0.0);
+
+        public DamageResult(boolean killed, double dealtDamage, double outgoingDamage) {
+            this(killed, dealtDamage, outgoingDamage, 0.0, 0.0);
+        }
+
+        public DamageResult(boolean killed, double dealtDamage, double outgoingDamage,
+                            double healthDamageAttempted, double healthBeforeHit) {
+            this(killed, dealtDamage, outgoingDamage, healthDamageAttempted, healthBeforeHit, outgoingDamage);
+        }
 
         public DamageResult {
             dealtDamage = Double.isFinite(dealtDamage) && dealtDamage > 0.0 ? dealtDamage : 0.0;
             outgoingDamage = Double.isFinite(outgoingDamage) && outgoingDamage > 0.0 ? outgoingDamage : 0.0;
+            healthDamageAttempted = finiteNonNegative(healthDamageAttempted);
+            healthBeforeHit = finiteNonNegative(healthBeforeHit);
+            secondaryOutgoingDamage = finiteNonNegative(secondaryOutgoingDamage);
         }
     }
 }

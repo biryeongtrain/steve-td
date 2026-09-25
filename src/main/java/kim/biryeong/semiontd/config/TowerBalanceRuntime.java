@@ -21,7 +21,11 @@ public final class TowerBalanceRuntime {
     }
 
     public static TowerType resolve(TowerType defaults) {
-        TowerBalanceConfig.TowerStats stats = current.statsFor(defaults);
+        return resolve(defaults, current);
+    }
+
+    public static TowerType resolve(TowerType defaults, TowerBalanceConfig config) {
+        TowerBalanceConfig.TowerStats stats = config.statsFor(defaults);
         TowerType resolved = new TowerType(
                 defaults.id(),
                 defaults.displayName(),
@@ -47,7 +51,7 @@ public final class TowerBalanceRuntime {
                 stats.damage(),
                 stats.attackIntervalTicks(),
                 stats.aggroPriority(),
-                TowerDescriptionRegistry.describe(resolved).orElse(defaults.description()),
+                TowerDescriptionRegistry.describe(resolved, config).orElse(defaults.description()),
                 defaults.visual(),
                 defaults.upgradeOptions(),
                 defaults.primaryDamageType()
@@ -67,7 +71,11 @@ public final class TowerBalanceRuntime {
     }
 
     public static double ability(String towerId, String key) {
-        return current.ability(towerId, key, DEFAULT_CONFIG.ability(towerId, key, 0.0));
+        return ability(current, towerId, key);
+    }
+
+    public static double ability(TowerBalanceConfig config, String towerId, String key) {
+        return config.ability(towerId, key, DEFAULT_CONFIG.ability(towerId, key, 0.0));
     }
 
     public static int abilityTicks(String towerId, String key, int fallback) {

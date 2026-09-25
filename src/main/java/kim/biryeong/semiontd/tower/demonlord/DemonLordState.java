@@ -4,6 +4,7 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
+import kim.biryeong.semiontd.augment.AugmentSnapshot;
 import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.game.TowerRoundMetricsSnapshot;
@@ -47,6 +48,36 @@ public final class DemonLordState {
     private double roundMagicDamageDealt;
     private TowerRoundMetricsTracker roundMetricsTracker;
     private int roundMetricsTick;
+    private final DemonLordAugments augments = new DemonLordAugments();
+    private AugmentSnapshot augmentSnapshot = AugmentSnapshot.none();
+
+    public void syncAugments(AugmentSnapshot snapshot) {
+        if (augmentSnapshot == snapshot) return;
+        double ratio = healthRatio();
+        augmentSnapshot = snapshot == null ? AugmentSnapshot.none() : snapshot;
+        health = maxHealth() * ratio;
+    }
+
+    public void settleTargetedAugments(int round) {
+        double ratio = healthRatio();
+        augments.settleTargeted(augmentSnapshot, round, inCombat && health > 0);
+        health = maxHealth() * ratio;
+    }
+
+    public String targetedAugmentDetails(String id) {
+        var progress = augments.targetedProgress();
+        return switch (id) {
+            case "overheat_core" -> "열화 " + progress.heat() + "/" + (int) augmentSnapshot.parameter(id, "maxStacks", 5);
+            case "battlefield_mastery" -> "숙련 " + progress.mastery() + "/" + (int) augmentSnapshot.parameter(id, "maxStacks", 4)
+                    + " · 조건 피해 " + Math.round(progress.enemyDamage()) + "/"
+                    + Math.round(progress.openingHealth() * augmentSnapshot.parameter(id, "damageThreshold", .40));
+            default -> "";
+        };
+    }
+
+    DemonLordAugments augments() {
+        return augments;
+    }
 
     public DemonLordState(UUID playerId) {
         this.playerId = playerId;
@@ -72,7 +103,7 @@ public final class DemonLordState {
                 global("healthBonusThreshold", 500.0),
                 global("healthBonusScale", 500.0)
         );
-        return Math.max(1.0, base + scaledLevelBonus + allocated);
+        return Math.max(1.0, (base + scaledLevelBonus + allocated) * (1.0 + augments.maxHealthBonus(augmentSnapshot)));
     }
 
     // ------------------------------------------------------------------ 스탯
@@ -150,10 +181,18 @@ public final class DemonLordState {
      * @return {@code true} when this hit emptied the pool and the player drops out of combat
      */
     public boolean applyDamage(double amount) {
+        return applyDamage(amount, augmentSnapshot, 0L);
+    }
+
+    boolean applyDamage(double amount, AugmentSnapshot snapshot, long gameTime) {
+        return applyDamage(amount, snapshot, gameTime, false);
+    }
+
+    boolean applyDamage(double amount, AugmentSnapshot snapshot, long gameTime, boolean enemyDamage) {
         if (amount <= 0.0 || !inCombat) {
             return false;
         }
-        double remaining = amount * (1.0 - damageReduction());
+        double remaining = amount * (1.0 - damageReduction()) * (1.0 - augments.damageReduction(snapshot));
         if (shield > 0.0) {
             double absorbed = Math.min(shield, remaining);
             shield -= absorbed;
@@ -164,8 +203,12 @@ public final class DemonLordState {
         }
         double before = health;
         health = Math.max(0.0, health - remaining);
+        if (enemyDamage) augments.recordEnemyDamage(before - health);
         if (roundMetricsTracker != null) {
             roundMetricsTracker.recordDamageTaken(before - health);
+            roundMetricsTracker.updateAlive(health > 0.0);
+        }
+        if (augments.activatePhase(this, snapshot, gameTime) && roundMetricsTracker != null) {
             roundMetricsTracker.updateAlive(health > 0.0);
         }
         return health <= 0.0;
@@ -460,6 +503,7 @@ public final class DemonLordState {
      * without a {@code ServerPlayer} handle and the service tick has one.
      */
     public void enterCombat() {
+        augments.reset();
         inCombat = true;
         centralDefense = false;
         pendingSpawn = true;
@@ -482,6 +526,7 @@ public final class DemonLordState {
 
     /** Called when the pool empties. Skills stop working and monsters stop caring. */
     public void leaveCombat() {
+        augments.reset();
         inCombat = false;
         centralDefense = false;
         health = 0.0;
@@ -503,6 +548,7 @@ public final class DemonLordState {
      * and the boss bar reads 대기 instead of 전투 제외. The next wave refills it anyway.
      */
     public void standDown() {
+        augments.reset();
         if (!inCombat) {
             return;
         }
@@ -522,6 +568,19 @@ public final class DemonLordState {
 
     public void startCooldown(DemonLordSkill skill, long gameTime, int cooldownTicks) {
         cooldownReadyTick.put(skill, gameTime + Math.max(1, cooldownTicks));
+    }
+
+    void resetSkillCooldowns() {
+        cooldownReadyTick.clear();
+    }
+
+    void reduceAttackSkillCooldowns(int ticks) {
+        cooldownReadyTick.replaceAll((skill, ready) -> skill == DemonLordSkill.DEMON_BARRIER
+                ? ready : ready - Math.max(0, ticks));
+    }
+
+    void refundCooldown(DemonLordSkill skill, int ticks) {
+        cooldownReadyTick.computeIfPresent(skill, (ignored, ready) -> ready - Math.max(0, ticks));
     }
 
     public int remainingCooldownTicks(DemonLordSkill skill, long gameTime) {

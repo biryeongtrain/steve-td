@@ -35,6 +35,8 @@ public enum TimedEffectType {
     MONSTER_ATTACK_SPEED_BONUS,
     MONSTER_ATTACK_SPEED_REDUCTION,
     MONSTER_ATTACK_RANGE_REDUCTION,
+    MONSTER_STUN,
+    MONSTER_ROOT,
     MONSTER_STUN_IMMUNITY,
     MONSTER_POISONED,
     MONSTER_MARKED,
@@ -47,6 +49,8 @@ public enum TimedEffectType {
                     MONSTER_ATTACK_DAMAGE_REDUCTION,
                     MONSTER_ATTACK_SPEED_REDUCTION,
                     MONSTER_ATTACK_RANGE_REDUCTION,
+                    MONSTER_STUN,
+                    MONSTER_ROOT,
                     MONSTER_POISONED,
                     MONSTER_MARKED,
                     MONSTER_IGNITED -> true;

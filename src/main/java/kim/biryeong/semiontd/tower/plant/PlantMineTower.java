@@ -8,6 +8,7 @@ import kim.biryeong.semiontd.api.area.AreaEffectOutcome;
 import kim.biryeong.semiontd.api.area.AreaVfxSpec;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.Monster;
@@ -46,6 +47,9 @@ public class PlantMineTower extends PlantCombatTower {
 
     /** 점화됐고 아직 안 터졌는지. 섬광이 뜬 뒤 도화선이 타는 동안 켜져 있습니다. */
     private boolean fuseLit;
+    private int explosionsThisRound;
+    private long rearmAt;
+    private double firstExplosionDamage;
 
     public PlantMineTower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
         super(type, ownerPlayer, teamId, laneId, position);
@@ -94,6 +98,9 @@ public class PlantMineTower extends PlantCombatTower {
         super.resetForRound(lane);
         spentThisRound = false;
         fuseLit = false;
+        explosionsThisRound = 0;
+        rearmAt = 0;
+        firstExplosionDamage = 0;
     }
 
     /**
@@ -108,17 +115,26 @@ public class PlantMineTower extends PlantCombatTower {
      */
     @Override
     protected boolean execute(PlayerLane lane) {
-        if (lane == null || spentThisRound || health() <= 0.0) {
+        if (lane == null || health() <= 0.0) {
             return true;
         }
+        int maximum = augmentSnapshot().has("job_plant_towers_g2")
+                ? (int) augmentSnapshot().parameter("job_plant_towers_g2", "explosions", 3) : 1;
+        if (explosionsThisRound >= maximum || lane.arenaWorld().getGameTime() < rearmAt
+                || (explosionsThisRound > 0 && !AugmentCombat.allowsTriggers())) return true;
         SemionTowerEntity source = towerEntity(lane).orElse(null);
         if (source == null) {
             return true;
         }
         if (fuseLit) {
-            detonate(lane, source);
+            if (explosionsThisRound == 0) firstExplosionDamage = explosionDamage();
+            if (explosionsThisRound == 0) detonate(lane, source);
+            else AugmentCombat.runWithoutTriggers(() -> detonate(lane, source));
             fuseLit = false;
             spentThisRound = true;
+            explosionsThisRound++;
+            rearmAt = lane.arenaWorld().getGameTime()
+                    + (long) augmentSnapshot().parameter("job_plant_towers_g2", "rearmTicks", 60);
             return true;
         }
         if (!triggered(lane)) {
@@ -185,7 +201,8 @@ public class PlantMineTower extends PlantCombatTower {
 
     private void detonate(PlayerLane lane, SemionTowerEntity source) {
         double radius = Math.max(1.0, ability("explosionRadius"));
-        double damage = explosionDamage();
+        double damage = explosionsThisRound == 0 ? firstExplosionDamage
+                : firstExplosionDamage * augmentSnapshot().parameter("job_plant_towers_g2", "repeatDamageRatio", 0.8);
         double slow = ability("explosionMoveSpeedReduction");
         int disableTicks = abilityTicks("explosionDisableTicks");
 
@@ -219,7 +236,7 @@ public class PlantMineTower extends PlantCombatTower {
      * 미리 두들겨 맞아 체력이 깎이면 그만큼 약해집니다.
      */
     public double explosionDamage() {
-        double base = type().damage() * ability("explosionDamageMultiplier")
+        double base = type().damage() * (1.0 + PlantAugments.worldTreeBonus(this)) * ability("explosionDamageMultiplier")
                 + health() * ability("explosionHealthRatio");
         return base * (1.0 + bloomBonus());
     }
@@ -233,7 +250,11 @@ public class PlantMineTower extends PlantCombatTower {
                 + " (체력 " + oneDecimal(health() * ability("explosionHealthRatio")) + " 포함)");
         lines.add("무력화 " + oneDecimal(abilityTicks("explosionDisableTicks") / 20.0) + "초"
                 + " · 도화선 " + oneDecimal(abilityTicks("fuseTicks") / 20.0) + "초");
-        if (spentThisRound) {
+        if (augmentSnapshot().has("job_plant_towers_g2")) {
+            lines.add("이번 라운드 폭발 " + explosionsThisRound + "/"
+                    + (int) augmentSnapshot().parameter("job_plant_towers_g2", "explosions", 3)
+                    + (fuseLit ? " · 점화됨" : " · 재무장 후 적이 밟으면 점화"));
+        } else if (spentThisRound) {
             lines.add("이번 라운드에 이미 터졌습니다 · 라운드가 끝나면 한 단계 삭습니다");
         } else if (fuseLit) {
             lines.add("점화됨");

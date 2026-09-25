@@ -124,12 +124,21 @@ class PetBondGrowthTest {
         PetBondService.refresh(board);
 
         // A pack of three pays two mates.
-        assertEquals(1.0 * (1.0 + 2 * 0.12), centre.companionDamageMultiplier(), EPSILON);
-        assertEquals(1.0 * (1.0 + 0.8), cat.companionDamageMultiplier(), EPSILON);
+        assertEquals(1.0 * (1.0 + 2 * 0.08), centre.companionDamageMultiplier(), EPSILON);
+        assertEquals(centre.maxHealth() * (1.0 + 2 * 0.08), centre.currentMaxHealth(), EPSILON);
+        assertEquals(1.0 * (1.0 + 2.0), cat.companionDamageMultiplier(), EPSILON);
 
         centre.addBond(50.0);
-        // bond 50 -> x1.4, two pack mates -> x1.24
-        assertEquals(1.4 * 1.24, centre.companionDamageMultiplier(), EPSILON);
+        // bond 50 -> x1.4, two pack mates -> x1.16
+        assertEquals(1.4 * 1.16, centre.companionDamageMultiplier(), EPSILON);
+        assertEquals(centre.maxHealth() * 1.2 * 1.16, centre.currentMaxHealth(), EPSILON);
+
+        centre.syncHealth(centre.currentMaxHealth() / 2.0);
+        board.remove(mateB);
+        PetBondService.refresh(board);
+        assertEquals(centre.maxHealth() * 1.2 * 1.08, centre.currentMaxHealth(), EPSILON);
+        assertEquals(centre.currentMaxHealth() / 2.0, centre.health(), EPSILON,
+                "pack changes must preserve current health ratio");
     }
 
     @Test
@@ -138,7 +147,7 @@ class PetBondGrowthTest {
         PetTower cat = tower(PetTowers.CAT_T1, 1, 0);
         List<Tower> board = board(keeper, cat);
         PetBondService.refresh(board);
-        assertEquals(1.8, cat.companionDamageMultiplier(), EPSILON);
+        assertEquals(3.0, cat.companionDamageMultiplier(), EPSILON);
 
         board.add(tower(PetTowers.CAT_T1, -1, 0));
         PetBondService.refresh(board);
@@ -177,6 +186,24 @@ class PetBondGrowthTest {
     }
 
     @Test
+    void adultDogsReduceIncomingDamageByTier() {
+        PetTower tierOne = tower(PetTowers.DOG_T1, 0, 0);
+        PetTower tierTwo = tower(PetTowers.DOG_T2, 0, 1);
+        PetTower tierThree = tower(PetTowers.DOG_T3, 0, 2);
+
+        assertEquals(100.0, tierOne.modifyIncomingDamage(null, null, 100.0), EPSILON);
+        assertEquals(100.0, tierTwo.modifyIncomingDamage(null, null, 100.0), EPSILON);
+
+        tierOne.addBond(PetBalance.bondToUpgrade(PetTowers.DOG_T1));
+        tierTwo.addBond(PetBalance.bondToUpgrade(PetTowers.DOG_T2));
+
+        assertEquals(90.0, tierOne.modifyIncomingDamage(null, null, 100.0), EPSILON);
+        assertEquals(85.0, tierTwo.modifyIncomingDamage(null, null, 100.0), EPSILON);
+        assertTrue(tierThree.isAdult(), "The final tier must always receive adult effects.");
+        assertEquals(80.0, tierThree.modifyIncomingDamage(null, null, 100.0), EPSILON);
+    }
+
+    @Test
     void ownersHaveNoBondRequirementOfTheirOwn() {
         PetTower butler = tower(PetTowers.BUTLER_T1, 0, 0);
         var upgrade = ProductionTowerCatalog.upgrade(PetTowers.BUTLER_T1, PetTowers.BUTLER_T2.id()).orElseThrow();
@@ -212,14 +239,14 @@ class PetBondGrowthTest {
 
         // 200 kills is 20 praise worth of kills, but the round only pays out five.
         for (int kill = 0; kill < 200; kill++) {
-            cat.onAttackResolved(null, null, 1.0, 1.0, 1.0, true);
+            cat.onKill(null, null, 1.0);
         }
         assertEquals(afterGrant + 5.0, cat.bond(), EPSILON, "the round cap holds");
 
         double beforeNextRound = cat.bond();
         startRound(board, 2);
         double grantOnly = cat.bond() - beforeNextRound;
-        cat.onAttackResolved(null, null, 1.0, 1.0, 1.0, true);
+        cat.onKill(null, null, 1.0);
 
         assertEquals(beforeNextRound + grantOnly, cat.bond(), EPSILON,
                 "banked kills must not dump into the next round");

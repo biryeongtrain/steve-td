@@ -4,19 +4,23 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.AttackKind;
+import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.config.WaveMonsterEntry;
 import kim.biryeong.semiontd.config.WaveSpawnMode;
+import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
 import kim.biryeong.semiontd.entity.boss.BossMonster;
 import kim.biryeong.semiontd.entity.boss.SemionBossEntity;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.MonsterDimensions;
+import kim.biryeong.semiontd.entity.monster.MonsterOrigin;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.monster.goal.AcquireLaneDefenseTargetGoal;
 import kim.biryeong.semiontd.entity.monster.goal.LaneFollowGoal;
 import kim.biryeong.semiontd.entity.monster.goal.MonsterAttackTargetGoal;
 import kim.biryeong.semiontd.entity.goal.SiegeTrueDamageGoal;
+import kim.biryeong.semiontd.entity.goal.NaturalWaveHealGoal;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
@@ -38,6 +42,7 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
 import net.minecraft.world.phys.AABB;
@@ -888,6 +893,210 @@ public final class SemionWaveGameTest {
             throw new AssertionError("A source killed by completed transfer should return on the next round.");
         }
         context.succeed();
+    }
+
+    @GameTest
+    public void fiveNaturalHealersKeepIndependentCastsAndAggregateEffectiveHealing(GameTestHelper context) {
+        PlayerLane lane = lane(context, "five-natural-healers");
+        Vec3 origin = lane.laneLayout().spawn();
+        WaveMonsterEntry healing = WaveConfig.defaultConfig().withSeason3Stages(false, false, Set.of("overworld_assault"))
+                .candidatesForRound(20).stream().filter(wave -> "overworld_assault".equals(wave.templateId()))
+                .findFirst().orElseThrow().entriesForLane("lane_1").stream()
+                .filter(entry -> entry.healing() != null).findFirst().orElseThrow();
+        lane.enqueueWaveMonster(healing);
+        for (int i = 0; i < 5; i++) { lane.tick(context.getLevel().getServer()); }
+        List<SemionMonsterEntity> casters = lane.activeMonsters().stream()
+                .map(monster -> (SemionMonsterEntity) context.getLevel().getEntity(monster.minecraftEntityId())).toList();
+        if (casters.size() != 5) { throw new AssertionError("The fixture must spawn five independent logical healers."); }
+        casters.forEach(caster -> caster.setPos(origin));
+        WaveMonsterEntry combat = new WaveMonsterEntry("multi_heal_target", 2000, 0, 1, AttackKind.MELEE, "minecraft:husk", null, 1);
+        List<SemionMonsterEntity> targets = List.of(
+                spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.NATURAL_WAVE, origin.add(1, 0, 0), 1600),
+                spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.NATURAL_WAVE, origin.add(2, 0, 0), 1600),
+                spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.NATURAL_WAVE, origin.add(3, 0, 0), 1600));
+        List<NaturalWaveHealGoal> goals = casters.stream().map(NaturalWaveHealGoal::new).toList();
+        goals.forEach(NaturalWaveHealGoal::tick);
+        assertClose(2400, lane.waveSupportMetrics().effectiveHealing(), "five first casts in lane metrics");
+        targets.forEach(target -> assertClose(1200, target.runtimeMonster().health(), "five first casts on shared targets"));
+
+        ResourceLocation stun = ResourceLocation.fromNamespaceAndPath("semiontd", "multi_healer_test_stun");
+        casters.getFirst().setPersistentEffect(TimedEffectType.MONSTER_STUN, stun, 1);
+        for (int tick = 0; tick < 160; tick++) { goals.forEach(NaturalWaveHealGoal::tick); }
+        assertClose(4320, lane.waveSupportMetrics().effectiveHealing(), "other healers cast independently during stun");
+        if (casters.getFirst().runtimeMonster().waveHealingState().remainingCooldownTicks() != 0) {
+            throw new AssertionError("The stunned healer's cooldown must continue.");
+        }
+        casters.getFirst().setPersistentEffect(TimedEffectType.MONSTER_STUN, stun, 0);
+        goals.getFirst().tick();
+        for (int tick = 0; tick < 500; tick++) { goals.forEach(NaturalWaveHealGoal::tick); }
+        targets.forEach(target -> assertClose(2000, target.runtimeMonster().health(), "no overhealing or delayed third cast"));
+        if (casters.stream().anyMatch(caster -> caster.runtimeMonster().waveHealingState().successfulCasts() != 2)
+                || lane.waveSupportMetrics().successfulCasts() != 10) {
+            throw new AssertionError("Five healers must each retain their own two-cast cap.");
+        }
+        casters.getFirst().discard();
+        assertClose(4800, lane.waveSupportMetrics().effectiveHealing(), "aggregate remains after an entity is removed");
+        lane.disableMonsters();
+        lane.clearRoundMonsterMetrics();
+        assertClose(0, lane.waveSupportMetrics().effectiveHealing(), "next round cannot retain previous healer contribution");
+        targets.forEach(SemionMonsterEntity::discard);
+        context.succeed();
+    }
+
+    @GameTest
+    public void consecutiveHealersRecheckSharedInjuryAndDeadCasterCannotHeal(GameTestHelper context) {
+        PlayerLane lane = lane(context, "consecutive-natural-healers");
+        Vec3 origin = lane.laneLayout().spawn();
+        WaveMonsterEntry healing = WaveConfig.defaultConfig().withSeason3Stages(false, true, Set.of())
+                .configForRound(18).orElseThrow().entriesForLane("lane_1").stream()
+                .filter(entry -> entry.healing() != null).findFirst().orElseThrow();
+        SemionMonsterEntity first = spawnNaturalTestMonster(context, lane, healing, MonsterOrigin.NATURAL_WAVE, origin, 10);
+        SemionMonsterEntity second = spawnNaturalTestMonster(context, lane, healing, MonsterOrigin.NATURAL_WAVE, origin.add(0, 0, 1), 10);
+        SemionMonsterEntity third = spawnNaturalTestMonster(context, lane, healing, MonsterOrigin.NATURAL_WAVE, origin.add(0, 0, 2), 10);
+        WaveMonsterEntry combat = new WaveMonsterEntry("shared_heal_target", 200, 0, 1, AttackKind.MELEE, "minecraft:husk", null, 1);
+        List<SemionMonsterEntity> targets = List.of(
+                spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.NATURAL_WAVE, origin.add(1, 0, 0), 120),
+                spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.NATURAL_WAVE, origin.add(2, 0, 0), 120),
+                spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.NATURAL_WAVE, origin.add(3, 0, 0), 120));
+        new NaturalWaveHealGoal(first).tick();
+        new NaturalWaveHealGoal(second).tick();
+        NaturalWaveHealGoal thirdGoal = new NaturalWaveHealGoal(third);
+        thirdGoal.tick();
+        assertClose(240, first.runtimeMonster().waveHealingState().snapshot().effectiveHealing(), "first caster contribution");
+        assertClose(120, second.runtimeMonster().waveHealingState().snapshot().effectiveHealing(), "second caster rechecks remaining injury");
+        assertClose(120, second.runtimeMonster().waveHealingState().snapshot().overhealing(), "unused second cast healing is not effective healing");
+        if (third.runtimeMonster().waveHealingState().successfulCasts() != 0) {
+            throw new AssertionError("A later healer must not spend a cast on already healed targets.");
+        }
+        for (SemionMonsterEntity caster : List.of(first, second, third)) {
+            assertClose(healing.health() - 10, caster.runtimeMonster().health(), "self and other healers are excluded");
+        }
+        targets.forEach(target -> {
+            assertClose(200, target.runtimeMonster().health(), "shared target health cap");
+            target.runtimeMonster().damage(80, DamageType.TRUE);
+            target.setHealth((float) target.runtimeMonster().health());
+        });
+        third.runtimeMonster().damage(healing.health(), DamageType.TRUE);
+        for (int tick = 0; tick < 200; tick++) { thirdGoal.tick(); }
+        targets.forEach(target -> assertClose(120, target.runtimeMonster().health(), "logically dead caster cannot heal"));
+        for (SemionMonsterEntity entity : List.of(first, second, third)) { entity.discard(); }
+        targets.forEach(SemionMonsterEntity::discard);
+        context.succeed();
+    }
+
+    @GameTest
+    public void naturalHealerUsesInjuryPriorityAndExcludesOtherSources(GameTestHelper context) {
+        PlayerLane lane = lane(context, "natural-healer-filter");
+        Vec3 origin = lane.laneLayout().spawn();
+        WaveMonsterEntry healing = WaveConfig.defaultConfig().withSeason3Stages(false, true, Set.of())
+                .configForRound(16).orElseThrow().entriesForLane("lane_1").stream()
+                .filter(entry -> entry.healing() != null).findFirst().orElseThrow();
+        SemionMonsterEntity caster = spawnNaturalTestMonster(context, lane, healing, MonsterOrigin.NATURAL_WAVE, origin, 0);
+        WaveMonsterEntry combat = new WaveMonsterEntry("test_combat", 200, 0, 1, AttackKind.MELEE, "minecraft:husk", null, 1);
+        SemionMonsterEntity light = spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.NATURAL_WAVE, origin.add(0.5, 0, 0), 40);
+        SemionMonsterEntity heavy = spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.NATURAL_WAVE, origin.add(2, 0, 0), 100);
+        SemionMonsterEntity middle = spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.NATURAL_WAVE, origin.add(1, 0, 0), 80);
+        SemionMonsterEntity third = spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.NATURAL_WAVE, origin.add(1.5, 0, 0), 60);
+        SemionMonsterEntity proxy = spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.BUILDER_PROXY, origin.add(1, 0, 1), 190);
+        SemionMonsterEntity income = spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.NORMAL_PAID, origin.add(1, 0, 2), 190);
+        SemionMonsterEntity otherHealer = spawnNaturalTestMonster(context, lane, healing, MonsterOrigin.NATURAL_WAVE, origin.add(2, 0, 1), 110);
+        SemionMonsterEntity leaked = spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.NATURAL_WAVE, origin.add(2, 0, 2), 190);
+        leaked.runtimeMonster().markLaneLeakRecorded();
+        WaveMonsterEntry boss = WaveConfig.defaultConfig().configForRound(15).orElseThrow().entriesForLane("lane_1").getFirst();
+        SemionMonsterEntity bossEntity = spawnNaturalTestMonster(context, lane, boss, MonsterOrigin.NATURAL_WAVE, origin.add(1, 0, 1.5), 1000);
+        SemionMonsterEntity far = spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.NATURAL_WAVE, origin.add(7, 0, 0), 190);
+        SemionMonsterEntity dead = spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.NATURAL_WAVE, origin.add(2, 0, 1.5), 200);
+
+        new NaturalWaveHealGoal(caster).tick();
+
+        assertClose(160, light.runtimeMonster().health(), "unselected light injury");
+        assertClose(180, heavy.runtimeMonster().health(), "highest injury");
+        assertClose(200, middle.runtimeMonster().health(), "second injury");
+        assertClose(200, third.runtimeMonster().health(), "third injury capped at max health");
+        assertClose(10, proxy.runtimeMonster().health(), "proxy exclusion");
+        assertClose(10, income.runtimeMonster().health(), "income exclusion");
+        assertClose(10, otherHealer.runtimeMonster().health(), "healer exclusion");
+        assertClose(10, leaked.runtimeMonster().health(), "leaked exclusion");
+        assertClose(100, bossEntity.runtimeMonster().health(), "natural boss exclusion");
+        assertClose(10, far.runtimeMonster().health(), "radius exclusion");
+        assertClose(0, dead.runtimeMonster().health(), "dead units cannot revive");
+        assertClose(220, caster.runtimeMonster().waveHealingState().snapshot().effectiveHealing(), "effective healing metric");
+        assertClose(20, caster.runtimeMonster().waveHealingState().snapshot().overhealing(), "overhealing metric");
+        if (!caster.getName().getString().contains("1회")) {throw new AssertionError("Remaining successful casts must be visible.");}
+        context.succeed();
+    }
+
+    @GameTest
+    public void naturalHealerRecreationPreservesCooldownAndTwoCastCap(GameTestHelper context) {
+        PlayerLane lane = lane(context, "natural-healer-recreation");
+        Vec3 origin = lane.laneLayout().spawn();
+        WaveMonsterEntry healing = WaveConfig.defaultConfig().withSeason3Stages(false, true, Set.of())
+                .configForRound(16).orElseThrow().entriesForLane("lane_1").stream()
+                .filter(entry -> entry.healing() != null).findFirst().orElseThrow();
+        SemionMonsterEntity caster = spawnNaturalTestMonster(context, lane, healing, MonsterOrigin.NATURAL_WAVE, origin, 0);
+        WaveMonsterEntry combat = new WaveMonsterEntry("injured_target", 1000, 0, 1, AttackKind.MELEE, "minecraft:husk", null, 1);
+        SemionMonsterEntity first = spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.NATURAL_WAVE, origin.add(1, 0, 0), 500);
+        SemionMonsterEntity second = spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.NATURAL_WAVE, origin.add(2, 0, 0), 500);
+        new NaturalWaveHealGoal(caster).tick();
+        Monster logical = caster.runtimeMonster();
+        caster.discard();
+        SemionMonsterEntity restored = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
+        restored.configureFrom(logical, lane.laneLayout());
+        restored.setPos(origin);
+        context.getLevel().addFreshEntity(restored);
+        NaturalWaveHealGoal goal = new NaturalWaveHealGoal(restored);
+        ResourceLocation stunSource = ResourceLocation.fromNamespaceAndPath("semiontd", "healer_test_stun");
+        restored.setPersistentEffect(TimedEffectType.MONSTER_STUN, stunSource, 1);
+        for (int tick = 0; tick < 200; tick++) {goal.tick();}
+        assertClose(580, first.runtimeMonster().health(), "cooldown survives recreation");
+        if (logical.waveHealingState().remainingCooldownTicks() != 0) {throw new AssertionError("Stun must not freeze healing cooldown.");}
+        restored.setPersistentEffect(TimedEffectType.MONSTER_STUN, stunSource, 0);
+        goal.tick();
+        assertClose(660, first.runtimeMonster().health(), "second cast");
+        assertClose(660, second.runtimeMonster().health(), "second target");
+        for (int tick = 0; tick < 500; tick++) {goal.tick();}
+        assertClose(660, first.runtimeMonster().health(), "no third cast");
+        if (logical.waveHealingState().successfulCasts() != 2) {throw new AssertionError("Entity recreation must not restore successful cast allowance.");}
+        context.succeed();
+    }
+
+    @GameTest
+    public void naturalHealerWaitsForExactInjuryThresholdWithoutSpendingCast(GameTestHelper context) {
+        PlayerLane lane = lane(context, "natural-healer-threshold");
+        Vec3 origin = lane.laneLayout().spawn();
+        WaveMonsterEntry healing = WaveConfig.defaultConfig().withSeason3Stages(false, true, Set.of())
+                .configForRound(16).orElseThrow().entriesForLane("lane_1").stream()
+                .filter(entry -> entry.healing() != null).findFirst().orElseThrow();
+        SemionMonsterEntity caster = spawnNaturalTestMonster(context, lane, healing, MonsterOrigin.NATURAL_WAVE, origin, 0);
+        WaveMonsterEntry combat = new WaveMonsterEntry("threshold_target", 200, 0, 1, AttackKind.MELEE, "minecraft:husk", null, 1);
+        SemionMonsterEntity first = spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.NATURAL_WAVE, origin.add(1, 0, 0), 79);
+        SemionMonsterEntity second = spawnNaturalTestMonster(context, lane, combat, MonsterOrigin.NATURAL_WAVE, origin.add(2, 0, 0), 40);
+        NaturalWaveHealGoal goal = new NaturalWaveHealGoal(caster);
+        goal.tick();
+        if (caster.runtimeMonster().waveHealingState().successfulCasts() != 0
+                || caster.runtimeMonster().waveHealingState().snapshot().insufficientInjury() != 1) {
+            throw new AssertionError("119 recoverable injury must retry without spending a successful cast.");
+        }
+        second.runtimeMonster().damage(1, DamageType.TRUE);
+        second.setHealth((float) second.runtimeMonster().health());
+        for (int tick = 0; tick < 19; tick++) {goal.tick();}
+        assertClose(121, first.runtimeMonster().health(), "retry delay");
+        goal.tick();
+        assertClose(200, first.runtimeMonster().health(), "exact threshold first target");
+        assertClose(200, second.runtimeMonster().health(), "exact threshold second target");
+        assertClose(120, caster.runtimeMonster().waveHealingState().snapshot().effectiveHealing(), "threshold effective healing");
+        context.succeed();
+    }
+
+    private static SemionMonsterEntity spawnNaturalTestMonster(GameTestHelper context, PlayerLane lane, WaveMonsterEntry entry,
+            MonsterOrigin origin, Vec3 position, double missingHealth) {
+        Monster logical = Monster.fromWaveEntry(entry, lane.teamId(), lane.laneId(), origin);
+        logical.damage(missingHealth, DamageType.TRUE);
+        SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
+        entity.configureFrom(logical, lane.laneLayout());
+        entity.setPos(position);
+        context.getLevel().addFreshEntity(entity);
+        return entity;
     }
 
     private static PlayerLane lane(GameTestHelper context, String seed) {

@@ -161,8 +161,8 @@ public class DeveloperTower extends ProductionTower {
     }
 
     @Override
-    public int aggroPriority() {
-        int base = super.aggroPriority();
+    protected int builderAggroPriority() {
+        int base = super.builderAggroPriority();
         base += (int) Math.round(DeveloperTowerData.activeAmount(this, DeveloperPatch.AGGRO));
         if (hasBug(DeveloperBug.AGGRO_STORM)) {
             base += (int) Math.round(DeveloperBug.AGGRO_STORM.primary());
@@ -321,32 +321,32 @@ public class DeveloperTower extends ProductionTower {
             double spread = DeveloperBug.FLOATING_POINT.primary();
             multiplier *= 1.0 + (random.nextDouble() * 2.0 - 1.0) * spread;
         }
-        if (hasBug(DeveloperBug.BOUNDARY) && towerEntity != null && target != null) {
+        boolean unconditional = augmentSnapshot().has(DeveloperAugments.INTENDED);
+        if (DeveloperAugments.bonusScale(this, DeveloperBug.BOUNDARY) > 0.0) {
             double edge = adjustAttackRange(type().range()) * DeveloperBug.BOUNDARY.primary();
-            if (towerEntity.distanceTo(target) >= edge) {
-                multiplier *= DeveloperBug.BOUNDARY.secondary();
+            if (unconditional || (towerEntity != null && target != null && towerEntity.distanceTo(target) >= edge)) {
+                multiplier *= conditionalBugMultiplier(DeveloperBug.BOUNDARY, DeveloperBug.BOUNDARY.secondary() - 1.0);
             }
         }
-        if (hasBug(DeveloperBug.BUFFER_OVERRUN)) {
-            if (lastCandidateCount >= 5) {
-                multiplier *= 1.0 + DeveloperBug.BUFFER_OVERRUN.primary();
-            } else if (lastCandidateCount <= 2) {
-                multiplier *= 1.0 - DeveloperBug.BUFFER_OVERRUN.secondary();
-            }
+        if (unconditional || lastCandidateCount >= 5) {
+            multiplier *= conditionalBugMultiplier(DeveloperBug.BUFFER_OVERRUN, DeveloperBug.BUFFER_OVERRUN.primary());
         }
-        if (hasBug(DeveloperBug.HARDCODED) && target != null) {
+        if (hasBug(DeveloperBug.BUFFER_OVERRUN) && lastCandidateCount <= 2) {
+            multiplier *= 1.0 - DeveloperBug.BUFFER_OVERRUN.secondary();
+        }
+        if (DeveloperAugments.bonusScale(this, DeveloperBug.HARDCODED) > 0.0) {
             String latched = DeveloperTowerData.hardcodedType(this);
             String current = monsterId(target);
-            if (!latched.isEmpty() && !current.isEmpty()) {
-                multiplier *= latched.equals(current)
-                        ? DeveloperBug.HARDCODED.primary()
-                        : DeveloperBug.HARDCODED.secondary();
+            if (unconditional || (!latched.isEmpty() && latched.equals(current))) {
+                multiplier *= conditionalBugMultiplier(DeveloperBug.HARDCODED, DeveloperBug.HARDCODED.primary() - 1.0);
+            }
+            if (hasBug(DeveloperBug.HARDCODED) && !latched.isEmpty() && !current.isEmpty() && !latched.equals(current)) {
+                multiplier *= DeveloperBug.HARDCODED.secondary();
             }
         }
-        if (hasBug(DeveloperBug.STEALTH)
-                && (lastDamagedGameTick == Long.MIN_VALUE
-                || gameTick - lastDamagedGameTick >= STEALTH_QUIET_TICKS)) {
-            multiplier *= 1.0 + DeveloperBug.STEALTH.secondary();
+        if (unconditional || lastDamagedGameTick == Long.MIN_VALUE
+                || gameTick - lastDamagedGameTick >= STEALTH_QUIET_TICKS) {
+            multiplier *= conditionalBugMultiplier(DeveloperBug.STEALTH, DeveloperBug.STEALTH.secondary());
         }
         if (hasBug(DeveloperBug.EXCEPTION_HANDLING) && exceptionTriggeredThisWave) {
             multiplier *= 1.0 - DeveloperBug.EXCEPTION_HANDLING.secondary();
@@ -354,12 +354,17 @@ public class DeveloperTower extends ProductionTower {
         if (hasBug(DeveloperBug.ZOMBIE_PROCESS) && zombieTicksRemaining > 0) {
             multiplier *= DeveloperBug.ZOMBIE_PROCESS.secondary();
         }
-        if (hasBug(DeveloperBug.LAZY_LOADING)) {
-            multiplier *= waveTicks < LAZY_LOADING_WARMUP_TICKS
-                    ? DeveloperBug.LAZY_LOADING.primary()
-                    : DeveloperBug.LAZY_LOADING.secondary();
+        if (hasBug(DeveloperBug.LAZY_LOADING) && waveTicks < LAZY_LOADING_WARMUP_TICKS) {
+            multiplier *= DeveloperBug.LAZY_LOADING.primary();
+        }
+        if (unconditional || waveTicks >= LAZY_LOADING_WARMUP_TICKS) {
+            multiplier *= conditionalBugMultiplier(DeveloperBug.LAZY_LOADING, DeveloperBug.LAZY_LOADING.secondary() - 1.0);
         }
         return multiplier;
+    }
+
+    private double conditionalBugMultiplier(DeveloperBug bug, double bonus) {
+        return 1.0 + Math.max(0.0, bonus) * DeveloperAugments.bonusScale(this, bug);
     }
 
     private double situationalDamageMultiplier() {
@@ -509,7 +514,7 @@ public class DeveloperTower extends ProductionTower {
             spawnedEntity = towerEntity;
         }
         applyPatchSplash(towerEntity, target, resolvedOutgoingDamage);
-        if (hasBug(DeveloperBug.HARDCODED) && target != null) {
+        if (DeveloperAugments.bonusScale(this, DeveloperBug.HARDCODED) > 0.0 && target != null) {
             DeveloperTowerData.latchHardcodedType(this, monsterId(target));
         }
         if (hasBug(DeveloperBug.CACHE_MISS) && target != null) {

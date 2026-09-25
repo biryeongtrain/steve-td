@@ -47,6 +47,251 @@ import xyz.nucleoid.map_templates.BlockBounds;
 
 public final class FrostGameTest {
     @GameTest(maxTicks = 120)
+    public void refrigerantRequiresSevenHitsAndReducesAttackAndSpeedByFifteenPercent(GameTestHelper context) {
+        TestSetup setup = setup(context, "frost-refrigerant-nerf");
+        SemionMonsterEntity enemy = spawnTarget(context, Vec3.atCenterOf(context.absolutePos(new BlockPos(6, 2, 6))));
+        try {
+            for (int hit = 0; hit < 6; hit++) {
+                FrostMonsterStates.applyChill(enemy, FrostBalance.chillPerHit());
+            }
+            if (FrostMonsterStates.isRefrigerated(enemy.runtimeMonster())) {
+                throw new AssertionError("Six hits must not refrigerate the target.");
+            }
+            requireClose(.9, FrostMonsterStates.chill(enemy.runtimeMonster()), "Six hits store 90% chill");
+            FrostMonsterStates.applyChill(enemy, FrostBalance.chillPerHit());
+            if (!FrostMonsterStates.isRefrigerated(enemy.runtimeMonster())) {
+                throw new AssertionError("The seventh hit must refrigerate the target.");
+            }
+            requireClose(.15, enemy.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION), "Refrigerant damage reduction");
+            requireClose(.15, enemy.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION), "Refrigerant attack speed reduction");
+            FrostMonsterStates.thaw(enemy);
+            requireClose(0, enemy.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION), "Thaw clears the damage debuff");
+            requireClose(0, enemy.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION), "Thaw clears the speed debuff");
+            context.succeed();
+        } finally {
+            enemy.discard();
+            cleanup(setup);
+        }
+    }
+
+    @GameTest(maxTicks = 120)
+    public void rapidFreezeDoublesActualEmissionForEnemiesAndAllies(GameTestHelper context) {
+        TestSetup setup = augmentSetup(context, "frost-augment-emission");
+        try {
+            selectAugments(setup.lane(), FrostAugments.FREEZE);
+            FrostCoolingTower cooling = cooling(setup.owner(), context, new BlockPos(6, 2, 3));
+            FrostHealingTower icebox = healer(FrostTowers.ICEBOX_T1, setup.owner(), context, new BlockPos(4, 2, 3));
+            setup.lane().addTower(cooling);
+            setup.lane().addTower(icebox);
+            SemionTowerEntity source = towerEntity(context, cooling);
+            SemionMonsterEntity enemy = spawnTarget(context, source.position().add(-3, 0, 0));
+            cooling.execute(setup.lane());
+            requireClose(FrostBalance.chillPerHit() * 2, FrostMonsterStates.chill(enemy.runtimeMonster()), "Enemy emission chill");
+            requireClose(FrostBalance.chillPerHit() * 2, icebox.chillForTest(), "Allied emission chill");
+            context.succeed();
+        } finally {
+            cleanup(setup);
+        }
+    }
+
+    @GameTest(maxTicks = 120)
+    public void rapidFreezeLeavesUnselectedEmissionAndDongtaeSpreadUnchanged(GameTestHelper context) {
+        TestSetup setup = augmentSetup(context, "frost-augment-emission-negative");
+        SemionMonsterEntity enemy = null;
+        try {
+            FrostCoolingTower cooling = cooling(setup.owner(), context, new BlockPos(6, 2, 3));
+            FrostHealingTower icebox = healer(FrostTowers.ICEBOX_T1, setup.owner(), context, new BlockPos(4, 2, 3));
+            setup.lane().addTower(cooling);
+            setup.lane().addTower(icebox);
+            enemy = spawnTarget(context, towerEntity(context, cooling).position().add(-3, 0, 0));
+            cooling.execute(setup.lane());
+            requireClose(FrostBalance.chillPerHit(), FrostMonsterStates.chill(enemy.runtimeMonster()),
+                    "Without rapid freeze, actual enemy emission chill must keep its base amount");
+            requireClose(FrostBalance.chillPerHit(), icebox.chillForTest(),
+                    "Without rapid freeze, actual allied emission chill must keep its base amount");
+
+            selectAugments(setup.lane(), FrostAugments.FREEZE);
+            FrostVanguardTower dongtae = vanguard(FrostTowers.DONGTAE, setup.owner(), context, new BlockPos(4, 2, 4));
+            setup.lane().addTower(dongtae);
+            double beforeSpread = FrostMonsterStates.chill(enemy.runtimeMonster());
+            for (int hit = 0; hit < 7; hit++) dongtae.onEmissionWaveHit(setup.lane());
+            requireClose(FrostBalance.chillPerHit(), FrostMonsterStates.chill(enemy.runtimeMonster()) - beforeSpread,
+                    "Selected rapid freeze must not double Dongtae's non-emission chill spread");
+            requireClose(0, dongtae.chillForTest(), "Dongtae must consume its chill for the real spread");
+            context.succeed();
+        } finally {
+            if (enemy != null) enemy.discard();
+            cleanup(setup);
+        }
+    }
+
+    @GameTest(maxTicks = 120)
+    public void icePatchRespectsRadiusDurationAndDoesNotDuplicateDeath(GameTestHelper context) {
+        TestSetup setup = augmentSetup(context, "frost-augment-ice");
+        try {
+            selectAugments(setup.lane(), FrostAugments.ICE);
+            FrostCoolingTower cooling = cooling(setup.owner(), context, new BlockPos(2, 2, 3));
+            setup.lane().addTower(cooling);
+            SemionTowerEntity source = towerEntity(context, cooling);
+            SemionMonsterEntity frozen = spawnTarget(context, source.position().add(1, 0, 0));
+            SemionMonsterEntity inside = spawnTarget(context, frozen.position().add(1.9, 0, 0));
+            SemionMonsterEntity outside = spawnTarget(context, frozen.position().add(2.1, 0, 0));
+            FrostMonsterStates.applyChill(source, frozen, 1);
+            long now = context.getLevel().getGameTime();
+            FrostAugments.onMonsterDeath(setup.lane(), frozen.runtimeMonster(), frozen.position());
+            FrostAugments.onMonsterDeath(setup.lane(), frozen.runtimeMonster(), frozen.position());
+            requireClose(.3, inside.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION), "Ice slow");
+            requireClose(0, outside.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION), "Ice radius");
+            FrostAugments.tick(setup.lane(), now + 79);
+            if (inside.activeTimedEffectTicks(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION) > 2) {
+                throw new AssertionError("Ice refresh must not leave a long slow after leaving the patch");
+            }
+            inside.aiStep();
+            inside.aiStep();
+            FrostAugments.tick(setup.lane(), now + 80);
+            requireClose(0, inside.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION), "Ice expires at four seconds");
+            context.succeed();
+        } finally {
+            cleanup(setup);
+        }
+    }
+
+    @GameTest(maxTicks = 120)
+    public void icePatchRejectsIneligibleDeathsAndRoundResetCancelsIt(GameTestHelper context) {
+        TestSetup setup = augmentSetup(context, "frost-augment-ice-failure");
+        List<SemionMonsterEntity> enemies = new ArrayList<>();
+        try {
+            FrostCoolingTower cooling = cooling(setup.owner(), context, new BlockPos(2, 2, 3));
+            setup.lane().addTower(cooling);
+            SemionTowerEntity source = towerEntity(context, cooling);
+            SemionMonsterEntity frozen = spawnTarget(context, source.position().add(1, 0, 0));
+            SemionMonsterEntity normal = spawnTarget(context, frozen.position().add(.5, 0, 0));
+            SemionMonsterEntity receiver = spawnTarget(context, frozen.position().add(1, 0, 0));
+            enemies.addAll(List.of(frozen, normal, receiver));
+            FrostMonsterStates.applyChill(source, frozen, 1);
+            FrostAugments.onMonsterDeath(setup.lane(), frozen.runtimeMonster(), frozen.position());
+            requireClose(0, receiver.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION),
+                    "A refrigerated death without the ice augment must not create a patch");
+
+            selectAugments(setup.lane(), FrostAugments.ICE);
+            FrostAugments.onMonsterDeath(setup.lane(), normal.runtimeMonster(), normal.position());
+            requireClose(0, receiver.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION),
+                    "A non-refrigerated death must not create an ice patch");
+            kim.biryeong.semiontd.augment.AugmentCombat.runWithoutTriggers(
+                    () -> FrostAugments.onMonsterDeath(setup.lane(), frozen.runtimeMonster(), frozen.position()));
+            requireClose(0, receiver.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION),
+                    "Augment-generated deaths must not create an ice patch");
+
+            FrostAugments.onMonsterDeath(setup.lane(), frozen.runtimeMonster(), frozen.position());
+            requireClose(.3, receiver.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION),
+                    "Rejected deaths must not consume the later valid ice trigger");
+            setup.lane().resetForRound();
+            receiver.aiStep();
+            receiver.aiStep();
+            FrostAugments.tick(setup.lane(), context.getLevel().getGameTime() + 2);
+            requireClose(0, receiver.activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION),
+                    "Round reset must cancel the patch before its four-second duration ends");
+            context.succeed();
+        } finally {
+            enemies.forEach(SemionMonsterEntity::discard);
+            cleanup(setup);
+        }
+    }
+
+    @GameTest(maxTicks = 120)
+    public void thawAugmentCapsAreaAndRejectsRepeatedOrGeneratedTriggers(GameTestHelper context) {
+        TestSetup setup = augmentSetup(context, "frost-augment-thaw");
+        try {
+            selectAugments(setup.lane(), FrostAugments.THAW);
+            FrostSplashTower breaker = splash(FrostTowers.ICE_BREAKER_T1, setup.owner(), context, new BlockPos(2, 2, 3));
+            setup.lane().addTower(breaker);
+            SemionTowerEntity source = towerEntity(context, breaker);
+            List<SemionMonsterEntity> enemies = new ArrayList<>();
+            for (int index = 0; index < 14; index++) enemies.add(spawnTarget(context, source.position().add(2 + index * .02, 0, 0)));
+            double damage = source.attackDamageAmount(null) * 3;
+            FrostAugments.onThawed(breaker, source, enemies.getFirst());
+            if (enemies.stream().filter(enemy -> enemy.runtimeMonster().health() < 100_000).count() != 12) {
+                throw new AssertionError("Thaw area must hit at most twelve enemies including the center");
+            }
+            requireClose(100_000 - damage, enemies.getFirst().runtimeMonster().health(), "Thaw uses three times attack as magic damage");
+            FrostAugments.onThawed(breaker, source, enemies.getFirst());
+            kim.biryeong.semiontd.augment.AugmentCombat.runWithoutTriggers(
+                    () -> FrostAugments.onThawed(breaker, source, enemies.get(1)));
+            requireClose(100_000 - damage, enemies.getFirst().runtimeMonster().health(), "Cooldown and generated attacks cannot trigger another thaw");
+            context.succeed();
+        } finally {
+            cleanup(setup);
+        }
+    }
+
+    @GameTest(maxTicks = 120)
+    public void iceAgeCapsOwnSourcesAndTargetsWithoutRefreshingStun(GameTestHelper context) {
+        TestSetup setup = augmentSetup(context, "frost-augment-ice-age");
+        try {
+            selectAugments(setup.lane(), FrostAugments.AGE);
+            FrostCoolingTower cooling = cooling(setup.owner(), context, new BlockPos(3, 2, 3));
+            setup.lane().addTower(cooling);
+            SemionTowerEntity source = towerEntity(context, cooling);
+            FrostAugments.beginWave(setup.lane());
+            List<SemionMonsterEntity> refrigerated = new ArrayList<>();
+            List<SemionMonsterEntity> receivers = new ArrayList<>();
+            for (int index = 0; index < 4; index++) {
+                SemionMonsterEntity frozen = spawnTarget(context, source.position().add(index % 2 * 4 - 2, 0, index / 2 * 4 - 2));
+                refrigerated.add(frozen);
+                FrostMonsterStates.applyChill(source, frozen, 1);
+                receivers.add(spawnTarget(context, frozen.position().add(.5, 0, 0)));
+            }
+            List<SemionMonsterEntity> firstNeighbors = new ArrayList<>(List.of(receivers.getFirst()));
+            for (int index = 1; index < 9; index++) firstNeighbors.add(spawnTarget(context, refrigerated.getFirst().position().add(.5 + index * .01, 0, 0)));
+            long now = context.getLevel().getGameTime();
+            FrostAugments.tick(setup.lane(), now + 39);
+            requireClose(0, FrostMonsterStates.chill(receivers.getFirst().runtimeMonster()), "No propagation before two seconds");
+            FrostAugments.tick(setup.lane(), now + 40);
+            requireClose(2, firstNeighbors.stream().mapToDouble(enemy -> FrostMonsterStates.chill(enemy.runtimeMonster())).sum(), "Only eight neighbors receive 25 percent chill");
+            requireClose(.25, FrostMonsterStates.chill(receivers.get(1).runtimeMonster()), "Second own source");
+            requireClose(.25, FrostMonsterStates.chill(receivers.get(2).runtimeMonster()), "Third own source");
+            requireClose(0, FrostMonsterStates.chill(receivers.get(3).runtimeMonster()), "Fourth source cannot propagate");
+            SemionMonsterEntity first = refrigerated.getFirst();
+            if (first.activeTimedEffectTicks(TimedEffectType.MONSTER_STUN) != 40) throw new AssertionError("New refrigerant must stun for two seconds");
+            first.aiStep();
+            FrostMonsterStates.applyChill(source, first, 1);
+            FrostMonsterStates.thaw(first);
+            FrostMonsterStates.applyChill(source, first, 1);
+            if (first.activeTimedEffectTicks(TimedEffectType.MONSTER_STUN) != 39) throw new AssertionError("Repeated refrigeration cannot extend stun inside eight seconds");
+            context.succeed();
+        } finally {
+            cleanup(setup);
+        }
+    }
+
+    private static void selectAugments(PlayerLane lane, String... cards) {
+        lane.assignAugmentSnapshot(new kim.biryeong.semiontd.augment.AugmentSnapshot(
+                kim.biryeong.semiontd.augment.AugmentConfig.defaults(), java.util.Arrays.stream(cards)
+                .map(id -> new kim.biryeong.semiontd.augment.PlayerAugmentState.Selection(5,
+                        kim.biryeong.semiontd.augment.AugmentRarity.GOLD, id,
+                        kim.biryeong.semiontd.augment.PlayerAugmentState.Outcome.SELECTED, null,
+                        kim.biryeong.semiontd.augment.AugmentChoice.none())).toList()));
+    }
+
+    private static TestSetup augmentSetup(GameTestHelper context, String ownerSeed) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        UUID owner = UUID.nameUUIDFromBytes(ownerSeed.getBytes(StandardCharsets.UTF_8));
+        BlockPos min = context.absolutePos(new BlockPos(0, 1, 0));
+        BlockPos max = context.absolutePos(new BlockPos(7, 6, 7));
+        LaneRegionLayout layout = new LaneRegionLayout(1, Vec3.atCenterOf(context.absolutePos(new BlockPos(2, 2, 2))),
+                List.of(Vec3.atCenterOf(context.absolutePos(new BlockPos(2, 2, 2))),
+                        Vec3.atCenterOf(context.absolutePos(new BlockPos(6, 2, 2)))),
+                Vec3.atCenterOf(context.absolutePos(new BlockPos(6, 2, 6))), BlockBounds.of(min, max),
+                List.of(GridPosition.from(context.absolutePos(new BlockPos(6, 2, 5)))));
+        PlayerLane lane = new PlayerLane(TeamId.RED, 1, owner, context.getLevel(), layout);
+        AreaEffectLaneIndex.register(lane);
+        for (int x = 0; x < 8; x++) {
+            for (int z = 0; z < 8; z++) context.getLevel().setBlock(context.absolutePos(new BlockPos(x, 1, z)), Blocks.STONE.defaultBlockState(), 3);
+        }
+        return new TestSetup(owner, lane);
+    }
+
+    @GameTest(maxTicks = 120)
     public void iceBreakerPrioritizesARefrigeratedTarget(GameTestHelper context) {
         TestSetup setup = setup(context, "frost-ice-breaker-target-owner");
         FrostSplashTower breaker = splash(
@@ -60,7 +305,7 @@ public final class FrostGameTest {
             SemionTowerEntity breakerEntity = towerEntity(context, breaker);
             SemionMonsterEntity normal = spawnTarget(context, breakerEntity.position().add(2.0, 0.0, 0.0));
             SemionMonsterEntity refrigerated = spawnTarget(context, breakerEntity.position().add(4.0, 0.0, 0.0));
-            for (int hit = 0; hit < 5; hit++) {
+            for (int hit = 0; hit < 7; hit++) {
                 FrostMonsterStates.applyChill(refrigerated);
             }
 
@@ -328,7 +573,7 @@ public final class FrostGameTest {
     }
 
     @GameTest(maxTicks = 120)
-    public void fifthEmissionHitReleasesTheRefrigerantHealingPulse(GameTestHelper context) {
+    public void seventhEmissionHitReleasesTheRefrigerantHealingPulse(GameTestHelper context) {
         TestSetup setup = setup(context, "frost-icebox-refrigerant-owner");
         FrostHealingTower healer = healer(FrostTowers.ICEBOX_T3, setup.owner(), context, new BlockPos(6, 2, 6));
         FrostVanguardTower target = vanguard(FrostTowers.DONGTAE, setup.owner(), context, new BlockPos(8, 2, 6));
@@ -337,15 +582,15 @@ public final class FrostGameTest {
             setup.lane().addTower(target);
             setHealth(context, target, 100.0);
 
-            for (int hit = 0; hit < 4; hit++) {
+            for (int hit = 0; hit < 6; hit++) {
                 healer.onEmissionWaveHit(setup.lane());
             }
-            requireClose(100.0, target.health(), "Four emission hits must not release the special pulse.");
-            requireClose(0.80, healer.chillForTest(), "Four emission hits must store 80% chill.");
+            requireClose(100.0, target.health(), "Six emission hits must not release the special pulse.");
+            requireClose(0.90, healer.chillForTest(), "Six emission hits must store 90% chill.");
 
             healer.onEmissionWaveHit(setup.lane());
 
-            requireClose(269.2, target.health(), "The fifth hit must heal 120 x 1.41 health.");
+            requireClose(269.2, target.health(), "The seventh hit must heal 120 x 1.41 health.");
             requireClose(0.0, healer.chillForTest(), "The special pulse must consume all stored chill.");
             context.succeed();
         } finally {
@@ -385,13 +630,13 @@ public final class FrostGameTest {
 
             cooling.tick(setup.lane());
 
-            requireClose(0.20, healer.chillForTest(),
+            requireClose(0.15, healer.chillForTest(),
                     "The real emission wave must hit an icebox positioned inside its lane-wide path.");
-            requireClose(0.20, food.chill(),
+            requireClose(0.15, food.chill(),
                     "The real emission wave must also hit frozen food inside its lane-wide path.");
-            requireClose(0.20, dongtae.chillForTest(),
+            requireClose(0.15, dongtae.chillForTest(),
                     "The real emission wave must hit Dongtae for its fully-frozen cycle.");
-            requireClose(0.20, eruption.operationChill(),
+            requireClose(0.15, eruption.operationChill(),
                     "The real emission wave must charge the eruption device beyond refrigerant rules.");
             context.succeed();
         } finally {
@@ -400,7 +645,7 @@ public final class FrostGameTest {
     }
 
     @GameTest(maxTicks = 120)
-    public void fifthEmissionHitFullyFreezesDongtaeAndSpreadsChill(GameTestHelper context) {
+    public void seventhEmissionHitFullyFreezesDongtaeAndSpreadsChill(GameTestHelper context) {
         TestSetup setup = setup(context, "frost-dongtae-fully-frozen-owner");
         FrostVanguardTower dongtae = vanguard(
                 FrostTowers.DONGTAE,
@@ -414,16 +659,16 @@ public final class FrostGameTest {
             SemionMonsterEntity target = spawnTarget(
                     context, source.position().add(2.0, 0.0, 0.0), 10_000.0, true);
 
-            for (int hit = 0; hit < 5; hit++) {
+            for (int hit = 0; hit < 7; hit++) {
                 dongtae.onEmissionWaveHit(setup.lane());
             }
 
             requireClose(0.0, dongtae.chillForTest(),
-                    "The fifth emission hit must consume Dongtae's chill.");
+                    "The seventh emission hit must consume Dongtae's chill.");
             requireClose(0.10, source.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_REDUCTION),
                     "Fully frozen Dongtae must receive 10% damage reduction for one second.");
-            requireClose(0.20, FrostMonsterStates.chill(target.runtimeMonster()),
-                    "Fully frozen Dongtae must spread 20% chill within three blocks.");
+            requireClose(0.15, FrostMonsterStates.chill(target.runtimeMonster()),
+                    "Fully frozen Dongtae must spread 15% chill within three blocks.");
             context.succeed();
         } finally {
             cleanup(setup);
@@ -481,7 +726,7 @@ public final class FrostGameTest {
     }
 
     @GameTest(maxTicks = 120)
-    public void fifthEmissionHitFiresThreeAttacksWithoutChangingTheNormalCooldown(GameTestHelper context) {
+    public void seventhEmissionHitFiresThreeAttacksWithoutChangingTheNormalCooldown(GameTestHelper context) {
         TestSetup setup = setup(context, "frost-frozen-food-refrigerant-owner");
         FrostSplashTower food = splash(
                 FrostTowers.FROZEN_DUMPLING_T1,
@@ -497,14 +742,17 @@ public final class FrostGameTest {
             TowerAttackMonsterGoal normalAttack = new TowerAttackMonsterGoal(source);
             normalAttack.tick();
 
-            for (int hit = 0; hit < 4; hit++) {
+            double beforeCooling = target.runtimeMonster().health();
+            for (int hit = 0; hit < 6; hit++) {
                 food.onEmissionWaveHit(setup.lane());
             }
-            double beforeFifthHit = target.runtimeMonster().health();
+            requireClose(beforeCooling, target.runtimeMonster().health(), "Six hits must not trigger bonus attacks.");
+            requireClose(0.9, food.chill(), "Six hits store 90% chill.");
+            double beforeSeventhHit = target.runtimeMonster().health();
             food.onEmissionWaveHit(setup.lane());
-            requireClose(beforeFifthHit - 36.0, target.runtimeMonster().health(),
-                    "The fifth wave hit must immediately fire exactly three 12-damage attacks.");
-            requireClose(0.0, food.chill(), "The fifth wave hit must consume all stored chill.");
+            requireClose(beforeSeventhHit - 36.0, target.runtimeMonster().health(),
+                    "The seventh wave hit must immediately fire exactly three 12-damage attacks.");
+            requireClose(0.0, food.chill(), "The seventh wave hit must consume all stored chill.");
 
             double afterBonusAttacks = target.runtimeMonster().health();
             for (int tick = 0; tick < 19; tick++) {
@@ -776,6 +1024,7 @@ public final class FrostGameTest {
     }
 
     private static void cleanup(TestSetup setup) {
+        FrostAugments.clearPlayer(setup.owner());
         setup.lane().clearTowers();
         AreaEffectLaneIndex.unregister(setup.lane());
     }

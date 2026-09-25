@@ -7,12 +7,22 @@ import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.ProductionTower;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.entity.visual.EntityVisual;
+import kim.biryeong.semiontd.entity.visual.BlockDisplayVisual;
+import net.minecraft.world.level.block.Blocks;
 
 /**
  * Terrain-only plant tower. It never attacks; placing (or upgrading) it converts lane tiles into its
  * family's {@link PlantSoil}, which is the only place the matching combat towers can be planted.
  */
 public class PlantTerraformTower extends ProductionTower {
+    private static final EntityVisual WORLD_TREE_VISUAL = BlockDisplayVisual.builder(Blocks.OAK_LOG.defaultBlockState())
+            .topBlockState(Blocks.OAK_LEAVES.defaultBlockState()).scale(2.0).build();
+
+    @Override
+    public EntityVisual visual() {
+        return PlantAugments.worldTree(attachedLane(), ownerPlayer()) == this ? WORLD_TREE_VISUAL : super.visual();
+    }
     public PlantTerraformTower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
         super(type, ownerPlayer, teamId, laneId, position);
     }
@@ -65,6 +75,7 @@ public class PlantTerraformTower extends ProductionTower {
     public void onPlaced(PlayerLane lane) {
         super.onPlaced(lane);
         terraform(lane);
+        PlantAugments.refreshWorldTree(lane);
     }
 
     /**
@@ -78,6 +89,7 @@ public class PlantTerraformTower extends ProductionTower {
     public void onRemoved(PlayerLane lane) {
         PlantSoilStates.releaseFrom(lane, ownerPlayer(), originalPosition());
         super.onRemoved(lane);
+        PlantAugments.refreshWorldTree(lane);
     }
 
     /**
@@ -100,7 +112,8 @@ public class PlantTerraformTower extends ProductionTower {
             return List.of();
         }
         return List.of(
-                soil.displayName() + " 지형 " + PlantSoilStates.count(ownerPlayer(), soil) + "칸"
+                soil.displayName() + " 지형 " + PlantSoilStates.count(ownerPlayer(), soil) + "칸",
+                PlantAugments.worldTree(attachedLane(), ownerPlayer()) == this ? "세계수 · 주변 식물의 모든 계열 토양 허용" : "지형 설비"
         );
     }
 }

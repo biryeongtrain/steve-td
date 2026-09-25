@@ -33,19 +33,19 @@ public class PigTower extends AnimalStackTower {
     }
 
     @Override
-    public double currentMaxHealth() {
+    protected double builderCurrentMaxHealth() {
         double value = applyTraitMaxHealth(maxHealth() + currentStacks() * value("healthPerStack"));
-        return hasLeaderAura() ? value * (1.0 + leaderValue("leaderMaxHealthBonus")) : value;
+        return value * animalHealthMultiplier();
     }
 
     @Override
     public double modifyAttackDamage(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
-        return damageAmount + currentStacks() * value("damagePerStack");
+        return super.modifyAttackDamage(towerEntity, target, damageAmount + currentStacks() * value("damagePerStack"));
     }
 
     @Override
     public double modifyIncomingDamage(SemionTowerEntity towerEntity, DamageSource damageSource, double damageAmount) {
-        double reduction = hasLeaderAura() ? leaderValue("leaderDamageReductionBonus") : 0.0;
+        double reduction = auraValue(AnimalTowers.T4_PIG_LEADER_TOWER, "leaderDamageReductionBonus");
         if (!is(AnimalTowers.T1_PIG_TOWER) && atMaxStacks()) {
             reduction += value("damageReduction");
         }
@@ -137,7 +137,8 @@ public class PigTower extends AnimalStackTower {
                 AreaVfxSpec.onTrigger(AreaVfxStyles.SPLASH)
         );
         TowerAreaDamage.applyBasicAttackSplash(this, towerEntity, request,
-                monster -> damageAmount * value("splashDamageRatio"), true);
+                monster -> damageAmount * (value("splashDamageRatio")
+                        + auraValue(AnimalTowers.T4_WOLF_LEADER_TOWER, "leaderSplashDamageRatioBonus")), true);
     }
 
     private boolean is(TowerType towerType) {

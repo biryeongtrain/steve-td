@@ -15,6 +15,7 @@ import kim.biryeong.semiontd.tower.SummonerTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerCategory;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.trait.TraitLoadout;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
@@ -69,6 +70,7 @@ public abstract class IllusionSummonerTower extends SummonerTower {
         IllusionCloneSpawnQueue.cancel(this);
         super.moveToFinalDefense(lane, position);
         moveClonesToFinalDefense(lane);
+        LegionAugments.moveToFinalDefense(lane);
     }
 
     @Override
@@ -124,6 +126,9 @@ public abstract class IllusionSummonerTower extends SummonerTower {
     }
 
     final void spawnQueuedClone(PlayerLane lane, Tower sourceTower, IllusionProfile profile, Vec3 offset) {
+        if (sourceTower.isAugmentTower()) {
+            return;
+        }
         Vec3 spawnPosition = new Vec3(
                 sourceTower.position().x() + 0.5 + offset.x,
                 sourceTower.position().y() + 1.0 + offset.y,
@@ -143,8 +148,28 @@ public abstract class IllusionSummonerTower extends SummonerTower {
         entity.setPos(spawnPosition.x, spawnPosition.y, spawnPosition.z);
 
         if (lane.arenaWorld().addFreshEntity(entity)) {
-            clones.add(new CloneInstance(entity.getId(), profile.durationTicks()));
+            if (!LegionAugments.register(this, lane, sourceTower, entity, profile)) {
+                clones.add(new CloneInstance(entity.getId(), profile.durationTicks()));
+            }
             onCloneSpawned(lane, entity, cloneTower);
+        }
+    }
+
+    final void spawnQueuedChild(PlayerLane lane, Tower parent, LegionAugments.Material material, Vec3 position) {
+        TowerType source = parent.type();
+        TowerType type = new TowerType(source.id(), source.displayName(), source.category(), 0,
+                material.maxHealth, source.range(), material.damage, source.attackIntervalTicks(), source.aggroPriority(),
+                source.description(), LegionAugments.originalVisual(parent), List.of(), source.primaryDamageType());
+        GridPosition grid = GridPosition.from(BlockPos.containing(position.x, position.y - 1, position.z));
+        Tower child = new IllusionRuntimeTower(type, parent.ownerPlayer(), parent.teamId(), parent.laneId(), grid);
+        child.attachToLane(lane, TraitLoadout.none());
+        SemionTowerEntity entity = new SemionTowerEntity(SemionEntityTypes.TOWER, lane.arenaWorld());
+        entity.configure(child, lane.laneLayout());
+        entity.markIllusionClone();
+        entity.setPos(position);
+        if (lane.arenaWorld().addFreshEntity(entity)) {
+            LegionAugments.register(this, lane, entity, material);
+            onCloneSpawned(lane, entity, child);
         }
     }
 

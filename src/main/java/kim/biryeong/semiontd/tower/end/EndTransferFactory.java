@@ -12,7 +12,18 @@ final class EndTransferFactory {
     }
 
     EndTransferState.Progress create(Tower source) {
-        return create(source.type(), config.transfer());
+        return create(source, 1.0);
+    }
+
+    EndTransferState.Progress create(Tower source, double durationMultiplier) {
+        EndConfig.TransferRule rule = config.transfer();
+        EndTransferState.Progress initial = create(source.type(), rule);
+        EndTransferState.Progress progress = new EndTransferState.Progress(
+                Math.max(1, (int) Math.ceil(initial.durationTicks * durationMultiplier)),
+                initial.roundHealthBonus, initial.permanentHealthBonus, initial.roundDamageBonus,
+                initial.permanentDamageBonus, initial.completionHealing, initial.periodicHealingPerSecond);
+        progress.sourceMaxHealth = source.currentMaxHealth();
+        return progress;
     }
 
     static EndTransferState.Progress create(TowerType sourceType, EndConfig.TransferRule rule) {

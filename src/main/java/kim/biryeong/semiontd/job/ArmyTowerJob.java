@@ -40,6 +40,11 @@ public final class ArmyTowerJob extends SemionJob {
         ArmyStates.clear(context.player().uuid());
     }
 
+    @Override
+    public void onRoundStarted(JobContext context, int round) {
+        ArmyStates.beginRound(context.player().uuid(), round);
+    }
+
     /**
      * Discharges everyone who has served their time.
      *

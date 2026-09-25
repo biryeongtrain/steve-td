@@ -3,6 +3,8 @@ package kim.biryeong.semiontd.tower;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import kim.biryeong.semiontd.augment.AugmentCombat;
+import kim.biryeong.semiontd.augment.AugmentEconomyService;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.RoundPhase;
@@ -16,9 +18,14 @@ import kim.biryeong.semiontd.job.JobContext;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.SemionJob;
 import kim.biryeong.semiontd.tower.demonlord.DemonLordBinding;
+import kim.biryeong.semiontd.tower.augment.AugmentTowerService;
+import kim.biryeong.semiontd.tower.augment.AugmentTowers;
 import kim.biryeong.semiontd.tower.demonlord.DemonLordService;
 import kim.biryeong.semiontd.tower.demonlord.DemonLordSkill;
 import kim.biryeong.semiontd.tower.demonlord.DemonLordTowers;
+import kim.biryeong.semiontd.tower.army.ArmyStates;
+import kim.biryeong.semiontd.tower.army.ArmyTower;
+import kim.biryeong.semiontd.tower.villager.VillagerAdvAugments;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import kim.biryeong.semiontd.tower.ocean.OceanTowers;
 import kim.biryeong.semiontd.tower.ocean.OceanWaterTower;
@@ -26,6 +33,8 @@ import kim.biryeong.semiontd.tower.plant.PlantSoilStates;
 import kim.biryeong.semiontd.tower.plant.PlantTowers;
 import kim.biryeong.semiontd.tower.pirate.PirateStates;
 import kim.biryeong.semiontd.tower.pirate.PirateTower;
+import kim.biryeong.semiontd.tower.pirate.PirateAugments;
+import kim.biryeong.semiontd.tower.warlock.WarlockTower;
 import net.minecraft.core.BlockPos;
 
 public final class ProductionTowerService {
@@ -54,11 +63,19 @@ public final class ProductionTowerService {
         }
 
         TowerType towerType = entry.get().type();
+        if (AugmentTowers.isAugment(towerType)) {
+            if (!AugmentTowerService.underPlacementLimit(laneContext.lane, playerId, towerType)) {
+                return TowerPlacementResult.TOWER_LIMIT_REACHED;
+            }
+            if (!AugmentTowerService.legalPosition(laneContext.lane, position, towerType)) {
+                return TowerPlacementResult.OUTSIDE_LANE_AREA;
+            }
+        }
         if (OceanTowers.isWaterTower(towerType) && !OceanWaterTower.canPlaceAt(laneContext.lane, position)) {
             return TowerPlacementResult.OCCUPIED;
         }
         if (PlantTowers.isPlantTower(towerType)
-                && !PlantSoilStates.canPlantAt(laneContext.player.uuid(), position, towerType)) {
+                && !PlantSoilStates.canPlantAt(laneContext.lane, laneContext.player.uuid(), position, towerType)) {
             return TowerPlacementResult.OCCUPIED;
         }
         // 마왕은 스킬 종류별로 제단 하나만 세울 수 있습니다. 같은 스킬을 더 원하면 업그레이드해야 합니다.
@@ -80,7 +97,7 @@ public final class ProductionTowerService {
             return TowerPlacementResult.TOWER_LIMIT_REACHED;
         }
 
-        long mineralCost = Math.max(0, towerType.mineralCost());
+        long mineralCost = placementCost(laneContext.lane, towerType);
         if (!laneContext.player.economy().spendMineral(mineralCost)) {
             return TowerPlacementResult.NOT_ENOUGH_MINERAL;
         }
@@ -92,6 +109,12 @@ public final class ProductionTowerService {
         );
         tower.recordPlacementEconomy(mineralCost, game.currentRound());
         laneContext.lane.addTower(tower);
+        PirateAugments.onPlaced(laneContext.lane, tower);
+        if (mineralCost == 0 && tower instanceof ArmyTower army
+                && ArmyStates.consumeFreeStarter(playerId, towerType)) {
+            army.promoteOneRank(laneContext.lane);
+        }
+        AugmentTowerService.onPlaced(game, laneContext.player, tower);
         PirateStates.recordDiamondSpend(laneContext.player, mineralCost);
         VillagerAdvStates.refreshTowerEffects(laneContext.player, laneContext.lane, tower);
         game.recordTowerPlacement(playerId, towerType.id(), position, mineralCost);
@@ -124,7 +147,7 @@ public final class ProductionTowerService {
         if (!tower.ownerPlayer().equals(playerId)) {
             return SaleResult.failure(TowerSellResult.TOWER_NOT_OWNED);
         }
-        if (!tower.canBeSold()) {
+        if (tower.isTemporaryCopy() || !tower.canBeSold()) {
             return SaleResult.failure(TowerSellResult.TOWER_NOT_SELLABLE);
         }
 
@@ -152,6 +175,16 @@ public final class ProductionTowerService {
                 .toList();
     }
 
+    public static long placementCost(PlayerLane lane, TowerType type) {
+        long cost = WarlockTower.placementCost(lane, type, Math.max(0, type.mineralCost()));
+        cost = PirateAugments.placementCost(lane, type, cost);
+        return lane != null && ArmyStates.hasFreeStarter(lane.ownerPlayer(), type) ? 0 : Math.max(0, cost);
+    }
+
+    public static long upgradeCost(Tower tower, TowerUpgradeOption upgrade) {
+        return Math.max(0, VillagerAdvAugments.upgradeCost(tower, Math.max(0, upgrade.mineralCost())));
+    }
+
     public static List<TowerUpgradeOption> availableUpgrades(SemionGame game, UUID playerId, BlockPos blockPos) {
         LaneContext laneContext = resolveLaneContext(game, playerId);
         if (laneContext.failureResult != null) {
@@ -172,7 +205,7 @@ public final class ProductionTowerService {
 
     private static List<TowerUpgradeOption> availableUpgrades(SemionGame game, LaneContext laneContext, UUID playerId, GridPosition position) {
         Tower tower = laneContext.lane.towerAt(position);
-        if (tower == null || !tower.ownerPlayer().equals(playerId)) {
+        if (tower == null || !tower.ownerPlayer().equals(playerId) || tower.isTemporaryCopy()) {
             return List.of();
         }
         return ProductionTowerCatalog.upgrades(tower.type()).stream()
@@ -183,25 +216,49 @@ public final class ProductionTowerService {
                 .toList();
     }
 
+    public static boolean eligibleTicketUpgrade(SemionGame game, SemionPlayer player, Tower tower, TowerUpgradeOption upgrade) {
+        if (game == null || player == null || tower == null || upgrade == null
+                || game.phase() != RoundPhase.PREPARE_AND_SUMMON || !player.uuid().equals(tower.ownerPlayer())
+                || !AugmentCombat.isNormalPermanent(tower) || upgradeCost(tower, upgrade) <= 0) return false;
+        LaneContext context = resolveLaneContext(game, player.uuid());
+        if (context.failureResult != null || !context.lane.towers().contains(tower)
+                || ProductionTowerCatalog.upgrade(tower.type(), upgrade.id()).filter(upgrade::equals).isEmpty()
+                || ProductionTowerCatalog.entry(upgrade.targetType()).isEmpty()
+                || (!upgrade.targetType().id().equals(tower.type().id()) && !canUseTower(game, player, upgrade.targetType()))
+                || !tower.meetsUpgradeRequirements(context.lane, upgrade)
+                || !game.canFitUpgrade(player.uuid(), tower.type(), upgrade.targetType())
+                || !VillagerAdvStates.canUpgrade(player, tower, upgrade)) return false;
+        long ticketValue = (long) game.augmentConfig().parameter("semiontd:forbidden_blueprint", "ticketValue", 300);
+        return player.economy().mineral() >= Math.max(0, upgradeCost(tower, upgrade) - ticketValue);
+    }
+
     public static TowerUpgradeResult upgradeTower(SemionGame game, UUID playerId, BlockPos blockPos, String upgradeId) {
+        return upgradeTower(game, playerId, blockPos, upgradeId, false);
+    }
+
+    public static TowerUpgradeResult upgradeTower(SemionGame game, UUID playerId, BlockPos blockPos, String upgradeId, boolean useTicket) {
         LaneContext laneContext = resolveLaneContext(game, playerId);
         if (laneContext.failureResult != null) {
             return mapPlacementFailure(laneContext.failureResult);
         }
         return TowerPlacementPositions.resolveGrid(laneContext.lane, blockPos)
-                .map(position -> upgradeTower(game, laneContext, playerId, position, upgradeId))
+                .map(position -> upgradeTower(game, laneContext, playerId, position, upgradeId, useTicket))
                 .orElse(TowerUpgradeResult.NO_TOWER_AT_POSITION);
     }
 
     public static TowerUpgradeResult upgradeTower(SemionGame game, UUID playerId, GridPosition position, String upgradeId) {
+        return upgradeTower(game, playerId, position, upgradeId, false);
+    }
+
+    public static TowerUpgradeResult upgradeTower(SemionGame game, UUID playerId, GridPosition position, String upgradeId, boolean useTicket) {
         LaneContext laneContext = resolveLaneContext(game, playerId);
         if (laneContext.failureResult != null) {
             return mapPlacementFailure(laneContext.failureResult);
         }
-        return upgradeTower(game, laneContext, playerId, position, upgradeId);
+        return upgradeTower(game, laneContext, playerId, position, upgradeId, useTicket);
     }
 
-    private static TowerUpgradeResult upgradeTower(SemionGame game, LaneContext laneContext, UUID playerId, GridPosition position, String upgradeId) {
+    private static TowerUpgradeResult upgradeTower(SemionGame game, LaneContext laneContext, UUID playerId, GridPosition position, String upgradeId, boolean useTicket) {
         Tower tower = laneContext.lane.towerAt(position);
         if (tower == null) {
             return TowerUpgradeResult.NO_TOWER_AT_POSITION;
@@ -209,7 +266,7 @@ public final class ProductionTowerService {
         if (!tower.ownerPlayer().equals(playerId)) {
             return TowerUpgradeResult.TOWER_NOT_OWNED;
         }
-        if (!ProductionTowerCatalog.hasUpgrades(tower.type())) {
+        if (tower.isTemporaryCopy() || !ProductionTowerCatalog.hasUpgrades(tower.type())) {
             return TowerUpgradeResult.TOWER_NOT_UPGRADABLE;
         }
 
@@ -236,7 +293,14 @@ public final class ProductionTowerService {
             return TowerUpgradeResult.NOT_ENOUGH_ADV_EXPERIENCE;
         }
 
-        long mineralCost = Math.max(0, upgrade.mineralCost());
+        AugmentEconomyService.UpgradePlan ticketPlan = null;
+        long mineralCost = upgradeCost(tower, upgrade);
+        if (useTicket) {
+            ticketPlan = AugmentEconomyService.quoteUpgrade(laneContext.player, UUID.randomUUID(), game.currentRound(),
+                    tower.logicalId(), AugmentCombat.isNormalPermanent(tower), mineralCost, true).orElse(null);
+            if (ticketPlan == null) return TowerUpgradeResult.UPGRADE_REQUIREMENTS_NOT_MET;
+            mineralCost = ticketPlan.cost();
+        }
         if (!laneContext.player.economy().spendMineral(mineralCost)) {
             return TowerUpgradeResult.NOT_ENOUGH_MINERAL;
         }
@@ -252,6 +316,11 @@ public final class ProductionTowerService {
         if (!laneContext.lane.replaceTower(tower, upgradedTower)) {
             laneContext.player.economy().addMineral(mineralCost);
             return TowerUpgradeResult.NO_TOWER_AT_POSITION;
+        }
+        if (ticketPlan != null && !AugmentEconomyService.commitUpgrade(laneContext.player, ticketPlan)) {
+            laneContext.lane.replaceTower(upgradedTower, tower);
+            laneContext.player.economy().addMineral(mineralCost);
+            return TowerUpgradeResult.UPGRADE_REQUIREMENTS_NOT_MET;
         }
         PirateStates.recordDiamondSpend(laneContext.player, mineralCost);
         upgradedTower.onUpgradeApplied(laneContext.lane, upgrade);
@@ -275,6 +344,9 @@ public final class ProductionTowerService {
     }
 
     private static boolean canUseTower(SemionGame game, SemionPlayer player, TowerType towerType) {
+        if (ProductionTowerCatalog.entry(towerType).map(entry -> entry.availability() == ProductionTowerCatalog.Availability.AUGMENT).orElse(false)) {
+            return AugmentTowerService.canUse(player, towerType);
+        }
         SemionJob job = player.job().orElse(JobRegistry.defaultJob());
         return job.canUseTower(new JobContext(game, player), towerType);
     }

@@ -322,6 +322,11 @@ public final class SemionCommands {
                                                 StringArgumentType.getString(context, "id")
                                         )))))
                 .then(traitCommand("trait", gameManager))
+                .then(literal("augment")
+                        .executes(context -> augment(context.getSource(), gameManager, "ui current"))
+                        .then(argument("input", StringArgumentType.greedyString())
+                                .executes(context -> augment(context.getSource(), gameManager,
+                                        StringArgumentType.getString(context, "input")))))
                 .then(literal("developer")
                         .then(literal("console")
                                 .executes(context -> developerConsole(context.getSource(), gameManager, null))
@@ -469,6 +474,10 @@ public final class SemionCommands {
                 .executes(context -> openCosmeticShop(context.getSource(), cosmeticService)));
         dispatcher.register(skyboxCommand("스카이박스", skyboxService));
         dispatcher.register(traitCommand("특성", gameManager));
+        dispatcher.register(literal("증강")
+                .executes(context -> augment(context.getSource(), gameManager, "ui current"))
+                .then(literal("설정")
+                        .executes(context -> augment(context.getSource(), gameManager, "ui history"))));
         dispatcher.register(literal("레이팅")
                 .executes(context -> rating(context.getSource(), gameManager))
                 .then(literal("순위")
@@ -667,10 +676,13 @@ public final class SemionCommands {
                         .then(literal("insect")
                                 .then(literal("radius")
                                         .executes(context -> debugInsectVfx(
-                                                context.getSource(), gameManager, false)))
+                                                context.getSource(), gameManager, "radius")))
                                 .then(literal("revive")
                                         .executes(context -> debugInsectVfx(
-                                                context.getSource(), gameManager, true))))
+                                                context.getSource(), gameManager, "revive")))
+                                .then(literal("explosion")
+                                        .executes(context -> debugInsectVfx(
+                                                context.getSource(), gameManager, "explosion"))))
                         .then(literal("army")
                                 .then(literal("promotion")
                                         .executes(context -> debugArmyVfx(
@@ -1054,26 +1066,29 @@ public final class SemionCommands {
     private static int debugInsectVfx(
             CommandSourceStack source,
             SemionGameManager gameManager,
-            boolean revive
+            String kind
     ) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         SemionGame game = playableGame(source, gameManager);
         PlayerLane lane = game == null ? null : game.playerLane(player.getUUID()).orElse(null);
         if (lane != null) {
             for (Tower tower : lane.towers()) {
-                boolean shown = revive && tower instanceof InsectUnitTower unit
-                        ? unit.showDebugRevivalVfx(lane)
-                        : !revive && tower instanceof InsectSpawnerTower spawner
-                        && spawner.showDebugRadiusVfx(lane);
+                boolean shown = switch (kind) {
+                    case "revive" -> tower instanceof InsectUnitTower unit && unit.showDebugRevivalVfx(lane);
+                    case "explosion" -> tower instanceof InsectUnitTower unit && unit.showDebugExplosionVfx(lane);
+                    default -> tower instanceof InsectSpawnerTower spawner && spawner.showDebugRadiusVfx(lane);
+                };
                 if (shown) {
-                    success(source, "벌레 " + (revive ? "부활" : "스포너 반경") + " VFX를 재생했습니다.");
+                    success(source, "벌레 " + kind + " VFX를 재생했습니다.");
                     return 1;
                 }
             }
         }
-        failure(source, revive
-                ? "살아 있고 스포너에 연결된 벌레 타워가 필요합니다."
-                : "살아 있는 벌레 스포너가 필요합니다.");
+        failure(source, switch (kind) {
+            case "revive" -> "살아 있고 스포너에 연결된 벌레 타워가 필요합니다.";
+            case "explosion" -> "살아 있는 벌레 타워가 필요합니다.";
+            default -> "살아 있는 벌레 스포너가 필요합니다.";
+        });
         return 0;
     }
 
@@ -1590,6 +1605,17 @@ public final class SemionCommands {
                         .executes(context -> setTipsEnabled(context.getSource(), tipService, true)))
                 .then(literal("off")
                         .executes(context -> setTipsEnabled(context.getSource(), tipService, false)));
+    }
+
+    private static int augment(CommandSourceStack source, SemionGameManager gameManager, String input)
+            throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        SemionGame game = playableGame(source, gameManager);
+        if (game == null) {
+            failure(source, "참여 중인 경기가 없습니다.");
+            return 0;
+        }
+        return game.augmentService().handle(game, player, input, source.hasPermission(2));
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> traitCommand(
@@ -2625,7 +2651,8 @@ public final class SemionCommands {
                 .append(Component.literal(" 클릭 시 즉시 송금됩니다.").withStyle(ChatFormatting.GRAY)));
 
         for (SemionPlayer candidate : game.players().values()) {
-            if (candidate.uuid().equals(requester.uuid()) || candidate.teamId() != requester.teamId()) {
+            if (candidate.uuid().equals(requester.uuid()) || candidate.teamId() != requester.teamId()
+                    || !EconomyService.canTransferDiamond(candidate)) {
                 continue;
             }
             ServerPlayer onlinePlayer = source.getServer().getPlayerList().getPlayer(candidate.uuid());
@@ -2638,12 +2665,13 @@ public final class SemionCommands {
         return notified;
     }
 
-    private static String teamMoneyFailureMessage(TeamMoneyTransferResult result) {
+    static String teamMoneyFailureMessage(TeamMoneyTransferResult result) {
         return switch (result.type()) {
             case DISABLED -> "팀원 간 다이아 지원 요청 기능이 비활성화되어 있습니다.";
             case INVALID_AMOUNT -> "요청 금액은 1 이상이어야 합니다.";
             case PLAYER_NOT_IN_GAME -> "현재 게임 참가자가 아닙니다.";
             case TEAM_NOT_ACTIVE -> "활성 팀 참가자만 다이아 지원을 요청하거나 보낼 수 있습니다.";
+            case BUILDER_RESTRICTED -> "해적 빌더는 팀원 간 다이아 지원을 요청하거나 보내거나 받을 수 없습니다.";
             case NOT_TEAMMATE -> "같은 팀원의 요청에만 보낼 수 있습니다.";
             case SELF_TRANSFER -> "자기 자신의 요청에는 보낼 수 없습니다.";
             case RECEIVE_COOLDOWN_ACTIVE -> "아직 다이아를 받을 수 없습니다. 남은 라운드="
@@ -3244,6 +3272,16 @@ public final class SemionCommands {
         ServerPlayer player = source.getPlayerOrException();
         TowerPlacementResult result = ProductionTowerService.placeTower(game, player.getUUID(), player.blockPosition(), towerId);
         if (result != TowerPlacementResult.SUCCESS) {
+            if (result == TowerPlacementResult.OUTSIDE_LANE_AREA
+                    && ProductionTowerCatalog.find(towerId).map(entry -> kim.biryeong.semiontd.tower.augment.AugmentTowers.is(
+                            entry.type(), kim.biryeong.semiontd.tower.augment.AugmentTowers.AMBUSH_WORKSHOP)).orElse(false)) {
+                PlayerLane lane = game.playerLane(player.getUUID()).orElse(null);
+                if (lane != null) {
+                    failure(source, kim.biryeong.semiontd.tower.augment.AugmentTowerService.placementProblem(
+                            lane, kim.biryeong.semiontd.tower.augment.AugmentTowers.AMBUSH_WORKSHOP));
+                    return 0;
+                }
+            }
             failure(source, "타워 설치 실패: " + placementFailureMessage(result));
             return 0;
         }
@@ -3470,6 +3508,9 @@ public final class SemionCommands {
         }
 
         ServerPlayer player = source.getPlayerOrException();
+        if (game.augmentService().showSummonPurchase(game, player, summonId)) {
+            return 1;
+        }
         SummonResult result = game.summonMonster(player.getUUID(), summonId);
         if (result.type() != SummonResultType.SUCCESS) {
             failure(source, "소환 실패: " + summonFailureMessage(result.type()));
@@ -4089,6 +4130,7 @@ public final class SemionCommands {
             case PLAYER_TEAM_ELIMINATED -> "소속 팀이 탈락했습니다";
             case UNKNOWN_SUMMON -> "알 수 없는 소환 ID입니다";
             case SUMMON_NOT_ALLOWED_BY_JOB -> "현재 직업은 해당 소환을 사용할 수 없습니다";
+            case AUGMENT_CONTRACT_UNAVAILABLE -> "현재 구매에는 증강 계약을 적용할 수 없습니다. 계약과 구매 조건을 다시 확인하세요";
             case NOT_ENOUGH_GAS -> "에메랄드가 부족합니다";
             case NO_TARGET_TEAM -> "공격할 수 있는 상대 팀이 없습니다";
             case NO_TARGET_LANE -> "대상 팀에 활성화된 라인이 없습니다";

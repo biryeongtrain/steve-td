@@ -36,7 +36,7 @@ public class WolfTower extends AnimalStackTower {
         if (isT3OrLeader() && atMaxStacks()) {
             amount += value("maxStackDamageBonus");
         }
-        return amount;
+        return super.modifyAttackDamage(towerEntity, target, amount);
     }
 
     @Override
@@ -45,10 +45,7 @@ public class WolfTower extends AnimalStackTower {
         if (!is(AnimalTowers.T1_WOLF_TOWER) && atMaxStacks()) {
             interval -= ticks("maxStackExtraIntervalReduction");
         }
-        if (hasLeaderAura()) {
-            interval -= (int) Math.round(leaderValue("leaderAttackIntervalReductionTicks"));
-        }
-        return Math.max(1, interval);
+        return super.adjustAttackInterval(interval);
     }
 
     @Override
@@ -112,7 +109,7 @@ public class WolfTower extends AnimalStackTower {
         );
         TowerAreaDamage.applyBasicAttackSplash(this, towerEntity, request,
                 monster -> damageAmount * (value("splashDamageRatio")
-                        + (hasLeaderAura() ? leaderValue("leaderSplashDamageRatioBonus") : 0.0)), true);
+                        + auraValue(AnimalTowers.T4_WOLF_LEADER_TOWER, "leaderSplashDamageRatioBonus")), true);
     }
 
     private boolean is(TowerType towerType) {

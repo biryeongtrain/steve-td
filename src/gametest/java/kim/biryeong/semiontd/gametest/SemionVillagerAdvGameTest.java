@@ -7,6 +7,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import kim.biryeong.semiontd.augment.AugmentChoice;
+import kim.biryeong.semiontd.augment.AugmentConfig;
+import kim.biryeong.semiontd.augment.AugmentRarity;
+import kim.biryeong.semiontd.augment.AugmentSnapshot;
+import kim.biryeong.semiontd.augment.PlayerAugmentState;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
@@ -28,6 +33,7 @@ import kim.biryeong.semiontd.game.TowerUpgradeResult;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.VillagerAdvTowerJob;
 import kim.biryeong.semiontd.test.tower.TestTower;
+import kim.biryeong.semiontd.tower.ProductionTower;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.tower.ProductionTowerService;
@@ -35,6 +41,7 @@ import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerCategory;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
+import kim.biryeong.semiontd.tower.villager.VillagerAdvAugments;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import kim.biryeong.semiontd.tower.villager.VillagerSplashTower;
 import kim.biryeong.semiontd.tower.villager.VillagerThornTower;
@@ -121,7 +128,7 @@ public final class SemionVillagerAdvGameTest implements CustomTestMethodInvoker 
         }
         Tower placedTower = lane.towerAt(gridPosition);
         VillagerAdvStates.onWaveStarted(game, 1);
-        waitForAdvExperience(context, game, lane, gridPosition, 0, () -> {
+        waitForAdvExperience(context, game, lane, gridPosition, 5.5, 0, () -> {
             Tower tower = lane.towerAt(gridPosition);
             if (!assertEquals(
                     context,
@@ -141,6 +148,59 @@ public final class SemionVillagerAdvGameTest implements CustomTestMethodInvoker 
                 return;
             }
             context.succeed();
+        });
+    }
+
+    @GameTest(maxTicks = 240)
+    public void selectedMentorTransfersRealRoundAwardOnlyToLowestEligibleTower(GameTestHelper context) {
+        verifyMentorRoundAward(context, true);
+    }
+
+    @GameTest(maxTicks = 240)
+    public void unselectedMentorLeavesRealRoundAwardsUnchanged(GameTestHelper context) {
+        verifyMentorRoundAward(context, false);
+    }
+
+    private static void verifyMentorRoundAward(GameTestHelper context, boolean selected) {
+        UUID playerId = stableUuid("villager-adv-mentor-owner-" + selected);
+        SemionGame game = startedSinglePlayerGame(context, playerId, VillagerAdvTowerJob.ID);
+        PlayerLane lane = redLane(game, 1);
+        if (selected) {
+            lane.assignAugmentSnapshot(new AugmentSnapshot(AugmentConfig.defaults(), List.of(
+                    new PlayerAugmentState.Selection(5, AugmentRarity.SILVER, VillagerAdvAugments.MENTOR,
+                            PlayerAugmentState.Outcome.SELECTED, null, AugmentChoice.none()))));
+        }
+        BlockPos base = towerPlacementPos(lane);
+        Tower mentor = new ProductionTower(VillagerTowers.ADV_T3_CLERIC_TOWER, playerId, TeamId.RED, 1,
+                GridPosition.from(base));
+        Tower mentee = new ProductionTower(VillagerTowers.ADV_T1_SPLASH_TOWER, playerId, TeamId.RED, 1,
+                GridPosition.from(base.offset(1, 0, 0)));
+        Tower other = new ProductionTower(VillagerTowers.ADV_T1_CAT_TOWER, playerId, TeamId.RED, 1,
+                GridPosition.from(base.offset(2, 0, 0)));
+        Tower ineligible = new ProductionTower(AnimalTowers.T1_PIG_TOWER, playerId, TeamId.RED, 1,
+                GridPosition.from(base.offset(3, 0, 0)));
+        for (Tower tower : List.of(mentor, mentee, other, ineligible)) lane.addTower(tower);
+        mentor.setData(VillagerAdvStates.EXPERIENCE, 40.0);
+        other.setData(VillagerAdvStates.EXPERIENCE, 10.0);
+        ineligible.setData(VillagerAdvStates.EXPERIENCE, 100.0);
+        VillagerAdvStates.onWaveStarted(game, 1);
+        waitForAdvExperience(context, game, lane, mentee.position(), selected ? 9.75 : 5.5, 0, () -> {
+            try {
+                if (!assertClose(context, 48.5, VillagerAdvStates.experience(mentor),
+                        "The mentor must retain its normal T3 award without transferring stored experience.")) return;
+                if (!assertClose(context, 15.5, VillagerAdvStates.experience(other),
+                        "Only the lowest-experience tower may receive the mentor bonus.")) return;
+                if (!assertClose(context, 100, VillagerAdvStates.experience(ineligible),
+                        "A non-villager tower must neither receive experience nor become the mentor.")) return;
+                for (Tower tower : List.of(mentor, mentee, other)) lane.removeTower(tower);
+                VillagerAdvStates.onWaveStarted(game, 2);
+                VillagerAdvStates.applyPending(game);
+                if (!assertClose(context, 100, VillagerAdvStates.experience(ineligible),
+                        "A wave without eligible villagers must not award mentor experience.")) return;
+                context.succeed();
+            } finally {
+                game.close();
+            }
         });
     }
 
@@ -312,22 +372,24 @@ public final class SemionVillagerAdvGameTest implements CustomTestMethodInvoker 
             SemionGame game,
             PlayerLane lane,
             GridPosition gridPosition,
+            double expectedExperience,
             int waitedTicks,
             Runnable continuation
     ) {
         context.runAfterDelay(1, () -> {
             VillagerAdvStates.applyPending(game);
             Tower tower = lane.towerAt(gridPosition);
-            if (tower != null && Math.abs(VillagerAdvStates.experience(tower) - 5.5) <= 0.01) {
+            if (tower != null && Math.abs(VillagerAdvStates.experience(tower) - expectedExperience) <= 0.01) {
                 continuation.run();
                 return;
             }
             if (waitedTicks >= 180) {
                 double experience = tower == null ? 0.0 : VillagerAdvStates.experience(tower);
-                context.fail(Component.literal("T1 tower should gain experiencePerTower + experiencePerTier asynchronously. Expected 5.5, got " + experience + "."));
+                context.fail(Component.literal("Tower should receive its round experience asynchronously. Expected "
+                        + expectedExperience + ", got " + experience + "."));
                 return;
             }
-            waitForAdvExperience(context, game, lane, gridPosition, waitedTicks + 1, continuation);
+            waitForAdvExperience(context, game, lane, gridPosition, expectedExperience, waitedTicks + 1, continuation);
         });
     }
 

@@ -10,6 +10,8 @@ import java.util.UUID;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.tower.augment.AugmentTower;
+import kim.biryeong.semiontd.tower.augment.AugmentTowers;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
 import org.junit.jupiter.api.BeforeAll;
@@ -88,6 +90,17 @@ class WarlockSacrificeControllerTest {
         assertFalse(WarlockSacrificeController.isEligibleTarget(melee, rangedPet, rule));
         assertTrue(WarlockSacrificeController.isEligibleTarget(base, rangedPet, rule));
         assertTrue(WarlockSacrificeController.isEligibleTarget(base, meleePet, rule));
+    }
+
+    @Test
+    void basePathCannotAbsorbAnyAugmentBodyForPermanentStats() {
+        UUID owner = UUID.randomUUID();
+        WarlockTower base = warlock(WarlockTowers.BASE_WARLOCK_TOWER, owner);
+        GridPosition position = new GridPosition(1, 0, 0);
+        for (var type : AugmentTowers.all()) {
+            var target = new AugmentTower(type, owner, TeamId.RED, 0, position, position);
+            assertFalse(WarlockSacrificeController.isEligibleTarget(base, target, rule(5)), type.id());
+        }
     }
 
     @Test

@@ -2,6 +2,9 @@ package kim.biryeong.semiontd.game;
 
 import java.util.Objects;
 
+/**
+ * @param augmentSpecialDamageDealt separately resolved augment secondary HP damage, not total augment uplift
+ */
 public record TowerRoundMetricsSnapshot(
         String towerTypeId,
         int sampleCount,
@@ -15,8 +18,54 @@ public record TowerRoundMetricsSnapshot(
         long killCount,
         int firstCombatTick,
         int lastCombatTick,
-        long survivalTicks
+        long survivalTicks,
+        Double waveStartMaxHealth,
+        Double enemyHpDamage,
+        Double augmentSpecialDamageDealt
 ) {
+    public TowerRoundMetricsSnapshot(
+            String towerTypeId,
+            int sampleCount,
+            int startCount,
+            int endAliveCount,
+            int deathCount,
+            double physicalDamageDealt,
+            double magicDamageDealt,
+            double damageTaken,
+            double healingDone,
+            long killCount,
+            int firstCombatTick,
+            int lastCombatTick,
+            long survivalTicks
+    ) {
+        this(towerTypeId, sampleCount, startCount, endAliveCount, deathCount,
+                physicalDamageDealt, magicDamageDealt, damageTaken, healingDone,
+                killCount, firstCombatTick, lastCombatTick, survivalTicks, null, null);
+    }
+
+    public TowerRoundMetricsSnapshot(
+            String towerTypeId,
+            int sampleCount,
+            int startCount,
+            int endAliveCount,
+            int deathCount,
+            double physicalDamageDealt,
+            double magicDamageDealt,
+            double damageTaken,
+            double healingDone,
+            long killCount,
+            int firstCombatTick,
+            int lastCombatTick,
+            long survivalTicks,
+            Double waveStartMaxHealth,
+            Double enemyHpDamage
+    ) {
+        this(towerTypeId, sampleCount, startCount, endAliveCount, deathCount,
+                physicalDamageDealt, magicDamageDealt, damageTaken, healingDone,
+                killCount, firstCombatTick, lastCombatTick, survivalTicks,
+                waveStartMaxHealth, enemyHpDamage, null);
+    }
+
     public TowerRoundMetricsSnapshot {
         Objects.requireNonNull(towerTypeId, "towerTypeId");
         sampleCount = Math.max(0, sampleCount);
@@ -33,6 +82,9 @@ public record TowerRoundMetricsSnapshot(
             lastCombatTick = -1;
         }
         survivalTicks = Math.max(0L, survivalTicks);
+        waveStartMaxHealth = measuredNonNegative(waveStartMaxHealth);
+        enemyHpDamage = measuredNonNegative(enemyHpDamage);
+        augmentSpecialDamageDealt = measuredNonNegative(augmentSpecialDamageDealt);
     }
 
     public double damageDealt() {
@@ -69,7 +121,10 @@ public record TowerRoundMetricsSnapshot(
                 killCount + other.killCount,
                 firstCombatTick(firstCombatTick, other.firstCombatTick),
                 Math.max(lastCombatTick, other.lastCombatTick),
-                survivalTicks + other.survivalTicks
+                survivalTicks + other.survivalTicks,
+                mergeMeasured(waveStartMaxHealth, other.waveStartMaxHealth),
+                mergeMeasured(enemyHpDamage, other.enemyHpDamage),
+                mergeMeasured(augmentSpecialDamageDealt, other.augmentSpecialDamageDealt)
         );
     }
 
@@ -85,5 +140,13 @@ public record TowerRoundMetricsSnapshot(
 
     private static double finiteNonNegative(double value) {
         return Double.isFinite(value) ? Math.max(0.0, value) : 0.0;
+    }
+
+    private static Double measuredNonNegative(Double value) {
+        return value != null && Double.isFinite(value) && value >= 0.0 ? value : null;
+    }
+
+    private static Double mergeMeasured(Double first, Double second) {
+        return first == null || second == null ? null : first + second;
     }
 }

@@ -13,9 +13,12 @@ import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
 import kim.biryeong.semiontd.api.area.TowerAreaEffectRequest;
 import kim.biryeong.semiontd.api.area.TowerAreaTargetMode;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.effect.TimedEffectType;
+import kim.biryeong.semiontd.entity.monster.MonsterOrigin;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
+import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.entity.visual.TowerEquipmentVisual;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
@@ -53,6 +56,11 @@ public class ArmyTower extends ProductionTower {
     private ArmyRank appliedRank;
     private long lastCommandTick = Long.MIN_VALUE;
     private boolean commanded;
+    private int promotionKills;
+    private boolean promotedThisRound;
+    private int veteranAttacks;
+    private boolean ignoreRankPenalty;
+    private ArmyStates.Retirement retirement;
     private transient ArmorStand equipmentVisual;
 
     /**
@@ -88,7 +96,17 @@ public class ArmyTower extends ProductionTower {
 
     /** Whether this tower's damage is scaled by rank. Only the 전투 line is. */
     public boolean ranks() {
-        return ArmyTowers.ranks(type());
+        return !isTemporaryCopy() && ArmyTowers.ranks(type());
+    }
+
+    @Override
+    public boolean receivesTraitEffects() {
+        return !isTemporaryCopy() && super.receivesTraitEffects();
+    }
+
+    @Override
+    public void refreshType(TowerType type, PlayerLane lane) {
+        if (!isTemporaryCopy()) super.refreshType(type, lane);
     }
 
     @Override
@@ -100,6 +118,9 @@ public class ArmyTower extends ProductionTower {
             dischargePending = army.dischargePending;
             dischargeCompleted = army.dischargeCompleted;
             appliedRank = army.appliedRank;
+            promotionKills = army.promotionKills;
+            promotedThisRound = army.promotedThisRound;
+            veteranAttacks = army.veteranAttacks;
         }
     }
 
@@ -119,6 +140,10 @@ public class ArmyTower extends ProductionTower {
 
     @Override
     public void onRemoved(PlayerLane lane) {
+        if (ranks() && service >= ArmyBalance.dischargeService() && !dischargeCompleted) {
+            retirement = new ArmyStates.Retirement(type(), originalPosition(), currentMaxHealth(),
+                    attackDamageBeforeRankPenalty(entity(lane).orElse(null), null));
+        }
         TowerEquipmentVisual.remove(equipmentVisual);
         equipmentVisual = null;
         super.onRemoved(lane);
@@ -139,6 +164,9 @@ public class ArmyTower extends ProductionTower {
     public void onWaveStarted(PlayerLane lane, int currentRound) {
         super.onWaveStarted(lane, currentRound);
         currentLane = lane;
+        promotionKills = 0;
+        promotedThisRound = false;
+        veteranAttacks = 0;
         if (!ranks()) {
             return;
         }
@@ -159,6 +187,33 @@ public class ArmyTower extends ProductionTower {
             entity(lane).ifPresent(this::applyAppearance);
             onStateChanged(lane);
             playRankVfx(lane, AreaVfxStyles.BUFF, "promotion");
+        }
+    }
+
+    public boolean promoteOneRank(PlayerLane lane) {
+        if (!ranks() || rank() == ArmyRank.STAFF_SERGEANT) return false;
+        service = ArmyRank.values()[rank().ordinal() + 1].requiredService();
+        entity(lane).ifPresent(this::applyAppearance);
+        onStateChanged(lane);
+        playRankVfx(lane, AreaVfxStyles.BUFF, "special_promotion");
+        return true;
+    }
+
+    @Override
+    public void onKill(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
+        super.onKill(towerEntity, target, damageAmount);
+        if (target == null || target.runtimeMonster() == null
+                || target.runtimeMonster().origin() != MonsterOrigin.NATURAL_WAVE) return;
+        recordPromotionKill(currentLane);
+    }
+
+    void recordPromotionKill(PlayerLane lane) {
+        if (!AugmentCombat.allowsTriggers() || !ranks() || promotedThisRound
+                || !augmentSnapshot().has("job_army_s")) return;
+        promotionKills++;
+        if (promotionKills >= (int) augmentSnapshot().parameter("job_army_s", "killsRequired", 3)) {
+            promotedThisRound = true;
+            promoteOneRank(lane);
         }
     }
 
@@ -209,10 +264,22 @@ public class ArmyTower extends ProductionTower {
     @Override
     public double modifyAttackDamage(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
         double damage = super.modifyAttackDamage(towerEntity, target, damageAmount);
-        if (ranks()) {
+        if (isTemporaryCopy()) return damage;
+        if (ranks() && !ignoreRankPenalty) {
             damage *= rank().attackMultiplier();
         }
         return damage * (1.0 + ArmyStates.medalBonus(ownerPlayer()));
+    }
+
+    double attackDamageBeforeRankPenalty(SemionTowerEntity source, SemionMonsterEntity target) {
+        ignoreRankPenalty = true;
+        try {
+            return source == null
+                    ? modifyAttackDamage(null, target, type().damage() + permanentFlatDamageBonus())
+                    : source.attackDamageAmount(target);
+        } finally {
+            ignoreRankPenalty = false;
+        }
     }
 
     @Override
@@ -318,6 +385,14 @@ public class ArmyTower extends ProductionTower {
             boolean killedTarget
     ) {
         super.onAttackResolved(towerEntity, target, attemptedDamage, resolvedOutgoingDamage, dealtDamage, killedTarget);
+        if (AugmentCombat.allowsTriggers() && ranks() && towerEntity != null && target != null
+                && dealtDamage > 0.0 && augmentSnapshot().has("job_army_g1") && currentLane != null) {
+            for (Tower tower : List.copyOf(currentLane.towers())) {
+                if (tower instanceof ArmyTower senior && senior.acceptVeteranAttack(this, currentLane)) {
+                    senior.fireVeteranShot(target, currentLane);
+                }
+            }
+        }
         if (towerEntity == null || target == null || !ArmyTowers.isArtillery(type())) {
             return;
         }
@@ -338,6 +413,31 @@ public class ArmyTower extends ProductionTower {
         );
         TowerAreaDamage.applyResolved(this, towerEntity, request, monster -> splash, true,
                 (monster, damage, killed) -> {});
+    }
+
+    boolean acceptVeteranAttack(ArmyTower junior, PlayerLane lane) {
+        if (!AugmentCombat.allowsTriggers() || !ranks() || rank() != ArmyRank.STAFF_SERGEANT
+                || junior == this || junior == null || !junior.ranks()
+                || !rank().isSuperiorTo(junior.rank()) || !type().id().equals(junior.type().id())
+                || !ownerPlayer().equals(junior.ownerPlayer()) || isDestroyed(lane)
+                || !withinRadius(junior, ArmyBalance.commandRadius())
+                || !augmentSnapshot().has("job_army_g1")) return false;
+        veteranAttacks++;
+        if (veteranAttacks < (int) augmentSnapshot().parameter("job_army_g1", "attacksRequired", 3)) return false;
+        veteranAttacks = 0;
+        return true;
+    }
+
+    private void fireVeteranShot(SemionMonsterEntity target, PlayerLane lane) {
+        SemionTowerEntity source = entity(lane).orElse(null);
+        if (source == null || !source.isAlive() || target == null || !target.isAlive()) return;
+        double damage = attackDamageBeforeRankPenalty(source, target)
+                * augmentSnapshot().parameter("job_army_g1", "damageRatio", 1.5);
+        AugmentCombat.runWithoutTriggers(() -> {
+            DamageResult result = damageBasicAttackTargetResult(source, target, damage, primaryDamageType());
+            if (result.killed()) onKill(source, target, result.dealtDamage());
+        });
+        TowerVfxService.showSecondaryAttack(source, target);
     }
 
     // ------------------------------------------------------------------ discharge
@@ -375,6 +475,9 @@ public class ArmyTower extends ProductionTower {
             return false;
         }
         dischargeCompleted = true;
+        ArmyStates.recordRetirement(this, retirement != null ? retirement
+                : new ArmyStates.Retirement(type(), originalPosition(), currentMaxHealth(),
+                        attackDamageBeforeRankPenalty(entity(lane).orElse(null), null)));
         ArmyStates.awardMedal(ownerPlayer(), 1.0 + supportBonus(lane, false));
         return true;
     }
@@ -435,7 +538,7 @@ public class ArmyTower extends ProductionTower {
             entity.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.COMPASS));
             return;
         }
-        if (!ranks()) {
+        if (!ArmyTowers.ranks(type())) {
             entity.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
             entity.setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(Items.SHIELD));
             return;
@@ -509,6 +612,10 @@ public class ArmyTower extends ProductionTower {
     @Override
     public List<String> runtimeDetailLines() {
         ArrayList<String> lines = new ArrayList<>();
+        if (isTemporaryCopy()) {
+            lines.add("예비군 · 라운드 종료까지 참전 · 계급 오라와 전역 보상 없음");
+            return lines;
+        }
         if (!ranks()) {
             lines.add("계급 없음 · 짬의 영향을 받지 않습니다");
             addSupportLines(lines);

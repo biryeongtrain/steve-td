@@ -40,7 +40,7 @@ abstract class UndeadTowerSupport extends EntityBackedTower {
         if (towerEntity == null || damageAmount <= 0.0 || ratio <= 0.0) {
             return;
         }
-        towerEntity.healTarget(towerEntity, damageAmount * ratio);
+        UndeadAugments.healFromLifeSteal(towerEntity, damageAmount * ratio);
     }
 
     protected final void applyFlatDamageBoost(SemionTowerEntity towerEntity, double amount) {

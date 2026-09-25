@@ -6,6 +6,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import kim.biryeong.semiontd.augment.AugmentChoice;
+import kim.biryeong.semiontd.augment.AugmentConfig;
+import kim.biryeong.semiontd.augment.AugmentRarity;
+import kim.biryeong.semiontd.augment.AugmentSnapshot;
+import kim.biryeong.semiontd.augment.PlayerAugmentState;
+import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
@@ -31,6 +37,143 @@ import xyz.nucleoid.map_templates.BlockBounds;
 
 public final class SuccubusGameTest {
     private static final UUID OWNER = UUID.nameUUIDFromBytes("succubus-gametest".getBytes(StandardCharsets.UTF_8));
+
+    @GameTest
+    public void sleepAttackWaitsFortyTicksAndRetainsNativeDreamDustAttack(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        PlayerLane lane = augmentLane(context);
+        lane.assignAugmentSnapshot(augments(SuccubusDreams.SLEEP_ATTACK));
+        SuccubusTower sleeper = tower(SuccubusTowers.DREAM_DUST_T1, position(context, 3, 2, 4));
+        lane.addTower(sleeper);
+        SemionTowerEntity entity = sleeper.entity(lane);
+        SemionMonsterEntity target = spawnMonster(context, lane, "sleep-attack", position(context, 4, 2, 4));
+        try {
+            sleeper.onAttackResolved(entity, target, 1, 1, 1, false);
+            sleeper.onAttackResolved(entity, target, 1, 1, 1, false);
+            SuccubusDreams.add(sleeper, lane, sleeper, 10);
+            double expected = entity.attackDamageAmount(target) * .60;
+            for (int tick = 0; tick < 39; tick++) SuccubusDreams.tick(lane);
+            requireClose(1_000, target.getHealth(), "Sleeping attack must wait its full interval");
+            SuccubusDreams.tick(lane);
+            require(Math.abs(1_000 - expected - target.getHealth()) < .001, "Sleeping attack must deal sixty percent");
+            require(SuccubusDreams.stacks(target) == 1, "Sleeping basic attack must retain the native third-hit dream stack");
+            require(!SuccubusDreams.isAsleep(sleeper), "The ordinary two-second allied sleep still expires");
+            context.succeed();
+        } finally {
+            SuccubusDreams.clearLane(lane);
+        }
+    }
+
+    @GameTest
+    public void lucidDreamEnhancesOnlyAlliedDreamBonusesAndPreventsTheirSleep(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        PlayerLane lane = augmentLane(context);
+        lane.assignAugmentSnapshot(augments(SuccubusDreams.LUCID));
+        SuccubusTower source = tower(SuccubusTowers.DREAM_DUST_T1, position(context, 3, 2, 4));
+        lane.addTower(source);
+        SemionMonsterEntity enemy = spawnMonster(context, lane, "lucid-enemy", position(context, 4, 2, 4));
+        try {
+            SuccubusDreams.add(source, lane, source, 10);
+            require(!SuccubusDreams.isAsleep(source), "Lucid allies never sleep at maximum dream stacks");
+            requireClose(10 * SuccubusBalance.allyDamagePerStack() * 1.5,
+                    source.entity(lane).activeEffectMagnitude(TimedEffectType.TOWER_DAMAGE_BONUS), "Lucid attack bonus");
+            requireClose(10 * SuccubusBalance.allyAttackSpeedPerStack() * 1.5,
+                    source.entity(lane).activeEffectMagnitude(TimedEffectType.TOWER_ATTACK_SPEED_BONUS), "Lucid attack speed bonus");
+            SuccubusDreams.add(enemy, lane, source, 10);
+            require(SuccubusDreams.isAsleep(enemy), "Lucid dream must not protect enemy sleep");
+            SuccubusDreams.clearLane(lane);
+            lane.assignAugmentSnapshot(AugmentSnapshot.none());
+            SuccubusDreams.add(source, lane, source, 10);
+            require(SuccubusDreams.isAsleep(source), "A new match without Lucid restores allied sleep");
+            context.succeed();
+        } finally {
+            SuccubusDreams.clearLane(lane);
+        }
+    }
+
+    @GameTest
+    public void nightmareContagionStopsAfterTwoGenerationsAndTwoTargets(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        PlayerLane lane = augmentLane(context);
+        lane.assignAugmentSnapshot(augments(SuccubusDreams.CONTAGION));
+        AreaEffectLaneIndex.register(lane);
+        SuccubusTower source = tower(SuccubusTowers.DREAM_DUST_T1, position(context, 1, 2, 4));
+        lane.addTower(source);
+        SemionMonsterEntity initial = spawnMonster(context, lane, "contagion-root", position(context, 2, 2, 4));
+        List<SemionMonsterEntity> nearby = new ArrayList<>();
+        nearby.add(spawnMonster(context, lane, "contagion-a", position(context, 4, 2, 4)));
+        nearby.add(spawnMonster(context, lane, "contagion-b", position(context, 4, 2, 5)));
+        nearby.add(spawnMonster(context, lane, "contagion-c", position(context, 4, 2, 3)));
+        try {
+            SuccubusDreams.add(initial, lane, source, 10);
+            source.damageResolvedTargetResult(source.entity(lane), initial, 2_000, DamageType.TRUE);
+            List<SemionMonsterEntity> first = nearby.stream().filter(SuccubusDreams::isAsleep).toList();
+            require(first.size() == 2, "A sleeping death may infect only two enemies");
+            nearby.add(spawnMonster(context, lane, "contagion-d", position(context, 6, 2, 4)));
+            nearby.add(spawnMonster(context, lane, "contagion-e", position(context, 6, 2, 5)));
+            source.damageResolvedTargetResult(source.entity(lane), first.getFirst(), 2_000, DamageType.TRUE);
+            List<SemionMonsterEntity> second = nearby.stream().filter(SuccubusDreams::isAsleep)
+                    .filter(enemy -> !first.contains(enemy)).toList();
+            require(second.size() == 2, "First-generation sleepers may produce a second generation");
+            SemionMonsterEntity terminal = second.getFirst();
+            SemionMonsterEntity fresh = spawnMonster(context, lane, "contagion-terminal", GridPosition.from(terminal.blockPosition().below()));
+            source.damageResolvedTargetResult(source.entity(lane), terminal, 2_000, DamageType.TRUE);
+            require(!SuccubusDreams.isAsleep(fresh), "Second-generation deaths must not start a third generation");
+            for (int tick = 0; tick < 40; tick++) SuccubusDreams.tick(lane);
+            require(nearby.stream().filter(SemionMonsterEntity::isAlive).noneMatch(SuccubusDreams::isAsleep),
+                    "Infected sleep expires after forty ticks");
+            context.succeed();
+        } finally {
+            AreaEffectLaneIndex.unregister(lane);
+            SuccubusDreams.clearLane(lane);
+        }
+    }
+
+    @GameTest
+    public void sleepwalkingLimitsThreeEnemiesAndNeverBypassesStun(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        PlayerLane lane = augmentLane(context);
+        lane.assignAugmentSnapshot(augments(SuccubusDreams.SLEEPWALK));
+        SuccubusTower source = tower(SuccubusTowers.DREAM_DUST_T1, position(context, 2, 2, 4));
+        lane.addTower(source);
+        List<SemionMonsterEntity> enemies = new ArrayList<>();
+        for (int index = 0; index < 4; index++) {
+            SemionMonsterEntity enemy = spawnMonster(context, lane, "sleepwalk-" + index, position(context, 3 + index, 2, 4));
+            enemies.add(enemy);
+            SuccubusDreams.add(enemy, lane, source, 10);
+        }
+        try {
+            for (int tick = 0; tick < 19; tick++) SuccubusDreams.tick(lane);
+            requireClose(4_000, enemies.stream().mapToDouble(SemionMonsterEntity::getHealth).sum(), "Sleepwalk one-second interval");
+            SuccubusDreams.tick(lane);
+            requireClose(4_000 - 3 * 15, enemies.stream().mapToDouble(SemionMonsterEntity::getHealth).sum(),
+                    "Only three sleepers deal 150 percent of their own ten attack damage");
+            for (SemionMonsterEntity enemy : enemies) enemy.applyTimedEffect(TimedEffectType.MONSTER_STUN, 1, 40);
+            for (int tick = 0; tick < 20; tick++) SuccubusDreams.tick(lane);
+            requireClose(4_000 - 3 * 15, enemies.stream().mapToDouble(SemionMonsterEntity::getHealth).sum(),
+                    "Sleepwalking must not bypass stun or save pending attacks");
+            context.succeed();
+        } finally {
+            SuccubusDreams.clearLane(lane);
+        }
+    }
+
+    private static AugmentSnapshot augments(String... cards) {
+        return new AugmentSnapshot(AugmentConfig.defaults(), java.util.Arrays.stream(cards)
+                .map(card -> new PlayerAugmentState.Selection(5, AugmentRarity.GOLD, card,
+                        PlayerAugmentState.Outcome.SELECTED, null, AugmentChoice.none())).toList());
+    }
+
+    private static PlayerLane augmentLane(GameTestHelper context) {
+        BlockPos min = context.absolutePos(new BlockPos(0, 1, 0));
+        BlockPos max = context.absolutePos(new BlockPos(7, 5, 7));
+        LaneRegionLayout layout = new LaneRegionLayout(1,
+                Vec3.atCenterOf(context.absolutePos(new BlockPos(1, 2, 1))),
+                List.of(Vec3.atCenterOf(context.absolutePos(new BlockPos(4, 2, 4)))),
+                Vec3.atCenterOf(context.absolutePos(new BlockPos(6, 2, 6))),
+                BlockBounds.of(min, max), List.of(position(context, 6, 2, 6)));
+        return new PlayerLane(TeamId.RED, 1, OWNER, context.getLevel(), layout);
+    }
 
     @GameTest
     public void thirdSleepExecutesAndWakeImmunityBlocksImmediateRestacking(GameTestHelper context) {

@@ -16,12 +16,20 @@ public record WaveMonsterEntry(
         double targetPriority,
         double movementSpeedMultiplier,
         double attackRange,
-        int attackIntervalTicks
+        int attackIntervalTicks,
+        WaveHealingConfig healing
 ) {
     public static final double DEFAULT_MELEE_ATTACK_RANGE = 2.5;
     public static final double DEFAULT_RANGED_ATTACK_RANGE = 6.0;
     public static final double DEFAULT_MOVEMENT_SPEED_MULTIPLIER = 1.0;
     public static final int DEFAULT_ATTACK_INTERVAL_TICKS = 13;
+
+    public WaveMonsterEntry(String id, double health, double armor, double attackDamage, AttackKind attackKind,
+            String entityType, String blockbenchModelId, MonsterDimensions dimensions, long mineralReward, int count,
+            double targetPriority, double movementSpeedMultiplier, double attackRange, int attackIntervalTicks) {
+        this(id, health, armor, attackDamage, attackKind, entityType, blockbenchModelId, dimensions, mineralReward, count,
+                targetPriority, movementSpeedMultiplier, attackRange, attackIntervalTicks, null);
+    }
 
     public WaveMonsterEntry(
             String id,
@@ -98,10 +106,10 @@ public record WaveMonsterEntry(
         if (id == null || id.isBlank()) {
             throw new IllegalArgumentException("Wave monster id cannot be blank.");
         }
-        if (health <= 0) {
+        if (!Double.isFinite(health) || health <= 0) {
             throw new IllegalArgumentException("Wave monster health must be positive.");
         }
-        if (armor < 0 || attackDamage < 0 || mineralReward < 0 || count < 0) {
+        if (!Double.isFinite(armor) || !Double.isFinite(attackDamage) || armor < 0 || attackDamage < 0 || mineralReward < 0 || count < 0) {
             throw new IllegalArgumentException("Wave monster numeric values cannot be negative.");
         }
         if (attackKind == null) {
@@ -138,5 +146,15 @@ public record WaveMonsterEntry(
 
     public static double defaultAttackRange(AttackKind attackKind) {
         return attackKind == AttackKind.RANGED ? DEFAULT_RANGED_ATTACK_RANGE : DEFAULT_MELEE_ATTACK_RANGE;
+    }
+
+    public WaveMonsterEntry withCount(int value) {
+        return new WaveMonsterEntry(id, health, armor, attackDamage, attackKind, entityType, blockbenchModelId,
+                dimensions, mineralReward, value, targetPriority, movementSpeedMultiplier, attackRange, attackIntervalTicks, healing);
+    }
+
+    public WaveMonsterEntry withMineralReward(long value) {
+        return new WaveMonsterEntry(id, health, armor, attackDamage, attackKind, entityType, blockbenchModelId,
+                dimensions, value, count, targetPriority, movementSpeedMultiplier, attackRange, attackIntervalTicks, healing);
     }
 }

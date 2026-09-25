@@ -10,10 +10,10 @@ public final class FrostBalance {
     public static final int FIRST_THRESHOLD = 3;
     public static final int SECOND_THRESHOLD = 6;
     public static final int THIRD_THRESHOLD = 9;
-    public static final double CHILL_PER_HIT = 0.20;
+    public static final double CHILL_PER_HIT = 0.15;
     public static final double CHILL_THRESHOLD = 1.0;
-    public static final double REFRIGERANT_DAMAGE_REDUCTION = 0.20;
-    public static final double REFRIGERANT_ATTACK_SPEED_REDUCTION = 0.20;
+    public static final double REFRIGERANT_DAMAGE_REDUCTION = 0.15;
+    public static final double REFRIGERANT_ATTACK_SPEED_REDUCTION = 0.15;
     public static final double THAW_MAX_HEALTH_DAMAGE = 0.05;
     public static final double COOLING_WAVE_RANGE = 50.0;
     public static final double COOLING_WAVE_WIDTH = 7.0;

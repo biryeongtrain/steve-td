@@ -21,6 +21,9 @@ import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
+import kim.biryeong.semiontd.map.LaneRegionLayout;
+import kim.biryeong.semiontd.tower.ProductionTower;
+import kim.biryeong.semiontd.tower.area.AreaEffectLaneIndex;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.adversary.AdversaryTowers;
@@ -46,6 +49,8 @@ import kim.biryeong.semiontd.tower.hero.HeroPartyTowers;
 import kim.biryeong.semiontd.tower.illager.IllagerTower;
 import kim.biryeong.semiontd.tower.illager.IllagerTowers;
 import kim.biryeong.semiontd.tower.insect.InsectTowers;
+import kim.biryeong.semiontd.tower.insect.InsectBalance;
+import kim.biryeong.semiontd.tower.insect.InsectUnitTower;
 import kim.biryeong.semiontd.tower.legion.LegionTowers;
 import kim.biryeong.semiontd.tower.mage.MageTowers;
 import kim.biryeong.semiontd.tower.nether.NetherTower;
@@ -63,10 +68,12 @@ import kim.biryeong.semiontd.tower.undead.UndeadTowers;
 import kim.biryeong.semiontd.tower.villager.VillagerTowers;
 import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
+import xyz.nucleoid.map_templates.BlockBounds;
 
 public final class TowerVfxGameTest {
     @GameTest
@@ -132,6 +139,59 @@ public final class TowerVfxGameTest {
     }
 
     @GameTest
+    public void insectDeathsEmitOneDedicatedBurstPerLifeWithTierRadius(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        UUID owner = UUID.nameUUIDFromBytes("insect-death-vfx".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        BlockPos origin = context.absolutePos(new BlockPos(2, 2, 2));
+        GridPosition position = GridPosition.from(origin);
+        LaneRegionLayout layout = new LaneRegionLayout(1, Vec3.atCenterOf(origin),
+                List.of(Vec3.atCenterOf(origin.offset(5, 0, 0))), Vec3.atCenterOf(origin.offset(5, 0, 5)),
+                BlockBounds.of(origin.offset(-2, -1, -2), origin.offset(8, 5, 8)), List.of(position));
+        PlayerLane lane = new PlayerLane(TeamId.RED, 1, owner, context.getLevel(), layout);
+        AreaEffectLaneIndex.register(lane);
+        List<AreaEffectVfxEvent> observed = new ArrayList<>();
+        TowerVfxService.setAreaEffectTestObserver(observed::add);
+        try {
+            for (TowerType type : InsectTowers.all().stream().filter(InsectTowers::isCombatUnit).toList()) {
+                lane.addTower(new ProductionTower(InsectTowers.SPAWNER, owner, TeamId.RED, 1,
+                        GridPosition.from(origin.offset(-1, 0, 0))));
+                InsectUnitTower unit = new InsectUnitTower(type, owner, TeamId.RED, 1, position, position);
+                unit.recordPlacementEconomy(type.mineralCost(), 1);
+                lane.addTower(unit);
+                lane.markWaveStarted(1);
+                observed.clear();
+                for (int life = 0; life < 2; life++) {
+                    SemionTowerEntity entity = unit.runtimeEntity(lane).orElseThrow();
+                    entity.setHealth(0.0F);
+                    for (int query = 0; query < 3; query++) unit.isDestroyed(lane);
+                    if (observed.size() != 1) throw new AssertionError("Expected one burst per life: " + type.id()
+                            + ", life=" + life + ", events=" + observed);
+                    var visual = observed.getFirst().visual();
+                    if (!visual.styleId().equals(AreaVfxStyles.INSECT_EXPLOSION)
+                            || !visual.palette().equals(BuilderPalette.INSECT.areaPalette())
+                            || visual.radius() != (InsectTowers.tier(type) == 1 ? 2.0 : 3.0)
+                            || !visual.sourceTowerId().equals(entity.getUUID())) {
+                        throw new AssertionError("Death must emit the insect burst with current tier and owner: " + visual);
+                    }
+                    if (life == 0) {
+                        for (int tick = 0; tick < InsectBalance.reviveBaseTicks(type); tick++) unit.tick(lane);
+                    }
+                    observed.clear();
+                }
+                lane.clearTowers();
+                if (!observed.isEmpty()) throw new AssertionError("Cleanup must not emit a death burst.");
+            }
+            context.succeed();
+        } catch (RuntimeException | AssertionError failure) {
+            context.fail(net.minecraft.network.chat.Component.literal("Insect death VFX failed: " + failure));
+        } finally {
+            TowerVfxService.setAreaEffectTestObserver(null);
+            lane.clearTowers();
+            AreaEffectLaneIndex.unregister(lane);
+        }
+    }
+
+    @GameTest
     public void petHealUsesDedicatedPaletteAndSharedPulse(GameTestHelper context) {
         if (!BuilderPalette.PET.gcbRayParticle().equals("minecraft:heart")
                 || !BuilderPalette.PET.gcbAccentParticle().equals("minecraft:happy_villager")) {
@@ -170,6 +230,7 @@ public final class TowerVfxGameTest {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
         UUID owner = UUID.nameUUIDFromBytes("developer-state-vfx".getBytes(java.nio.charset.StandardCharsets.UTF_8));
         TestDeveloperTower runtimeTower = new TestDeveloperTower(DeveloperTowers.RELEASE, owner);
+        runtimeTower.useRandom(net.minecraft.util.RandomSource.create(0L));
         SemionTowerEntity tower = new SemionTowerEntity(SemionEntityTypes.TOWER, context.getLevel());
         tower.setPos(2.0, 2.0, 2.0);
         tower.configure(runtimeTower, null);
@@ -619,7 +680,7 @@ public final class TowerVfxGameTest {
     @GameTest
     public void insectDebugCommandsParse(GameTestHelper context) {
         var dispatcher = context.getLevel().getServer().getCommands().getDispatcher();
-        for (String effect : List.of("radius", "revive")) {
+        for (String effect : List.of("radius", "revive", "explosion")) {
             String command = "semiontd-debug vfx insect " + effect;
             var parsed = dispatcher.parse(command, context.getLevel().getServer().createCommandSourceStack());
             if (parsed.getContext().getNodes().isEmpty() || parsed.getReader().canRead()) {

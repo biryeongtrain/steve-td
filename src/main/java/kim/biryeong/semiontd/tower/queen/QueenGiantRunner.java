@@ -12,6 +12,7 @@ import kim.biryeong.semiontd.api.area.AreaEffectOutcome;
 import kim.biryeong.semiontd.api.area.AreaVfxSpec;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.Monster;
@@ -36,6 +37,7 @@ final class QueenGiantRunner {
     private final Set<UUID> contacted = new HashSet<>();
     private int segment = 1;
     private boolean active = true;
+    private boolean returning;
 
     private QueenGiantRunner(Entity entity, SemionTowerEntity source, List<Vec3> path) {
         this.entity = entity;
@@ -79,6 +81,16 @@ final class QueenGiantRunner {
         }
         move();
         contact(queen, state);
+        if (segment >= path.size()) {
+            if (!returning && queen.augmentSnapshot().has("job_queen_towers_p") && AugmentCombat.allowsTriggers()) {
+                Collections.reverse(path);
+                segment = 1;
+                returning = true;
+                contacted.clear();
+            } else {
+                remove();
+            }
+        }
         if (!active) state.runner(null);
     }
 
@@ -106,7 +118,6 @@ final class QueenGiantRunner {
             remaining = 0.0;
         }
         entity.setPos(current.x, current.y, current.z);
-        if (segment >= path.size()) remove();
     }
 
     private void contact(QueenTower queen, QueenStates.PlayerState state) {
@@ -119,12 +130,14 @@ final class QueenGiantRunner {
             contacted.add(target.getUUID());
             if (target.runtimeMonster() == null) return AreaEffectOutcome.UNCHANGED;
             if (canExecute(target.runtimeMonster(), state.executionHealth())) {
+                double shrinkPoints = QueenShrink.points(target);
                 double effectiveMaxHealth = target.runtimeMonster().maxHealth();
                 double lethalDamage = Math.max(1.0, effectiveMaxHealth * 1_000_000.0);
                 var damageResult = queen.damageResolvedTargetResult(source, target, lethalDamage, DamageType.TRUE);
                 if (damageResult.killed()) {
                     queen.onKill(source, target, damageResult.outgoingDamage());
                     state.growExecutionHealth(effectiveMaxHealth);
+                    transferShrink(queen, target, shrinkPoints);
                     return AreaEffectOutcome.KILLED;
                 }
             }
@@ -132,6 +145,21 @@ final class QueenGiantRunner {
                     QueenBalance.giantSlow(), QueenBalance.giantSlowTicks());
             target.applyTimedEffect(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION,
                     QueenBalance.giantSlow(), QueenBalance.giantSlowTicks());
+            return AreaEffectOutcome.APPLIED;
+        });
+    }
+
+    private void transferShrink(QueenTower queen, SemionMonsterEntity executed, double points) {
+        if (!AugmentCombat.allowsTriggers() || !queen.augmentSnapshot().has("job_queen_towers_s")) return;
+        double radius = queen.augmentSnapshot().parameter("job_queen_towers_s", "radius", 3);
+        double ratio = queen.augmentSnapshot().parameter("job_queen_towers_s", "transferRatio", 0.5);
+        boolean[] transferred = {false};
+        var request = MonsterAreaEffectRequest.aroundTarget(EFFECT_ID, source, executed, radius,
+                AreaVfxSpec.onChange(AreaVfxStyles.DEBUFF));
+        SemionTdApi.areaEffects().applyToMonsters(request, target -> {
+            if (transferred[0]) return AreaEffectOutcome.UNCHANGED;
+            if (!QueenShrink.apply(target, points * ratio)) return AreaEffectOutcome.UNCHANGED;
+            transferred[0] = true;
             return AreaEffectOutcome.APPLIED;
         });
     }

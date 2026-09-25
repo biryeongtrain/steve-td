@@ -3,7 +3,6 @@ package kim.biryeong.semiontd.tower.undead;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.UndeadTowerJob;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
-import kim.biryeong.semiontd.tower.ProductionTower;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.TowerType;
 
@@ -16,7 +15,7 @@ public final class UndeadTowerCatalogs {
         registerTower(UndeadTowers.T2_ZOMBIE_TOWER, UndeadHuskTower::new, 2);
         registerTower(UndeadTowers.T3_ZOMBIE_TOWER, UndeadDrownedTower::new, 3);
 
-        registerTower(UndeadTowers.T1_SKELETON_TOWER, ProductionTower::new, 1);
+        registerTower(UndeadTowers.T1_SKELETON_TOWER, UndeadBasicSkeletonTower::new, 1);
         registerTower(UndeadTowers.T2_RANGED_SKELETON_TOWER, UndeadRangedSkeletonTower::new, 2);
         registerTower(UndeadTowers.T2_MELEE_TOWER, UndeadMeleeSkeletonTower::new, 2);
         registerTower(UndeadTowers.T3_RANGED_SKELETON_TOWER, UndeadRangedSkeletonTower::new, 3);

@@ -10,6 +10,8 @@ public final class AreaEffectIds {
 
     public static ResourceLocation tower(Tower tower, String effect) {
         String towerId = tower == null || tower.type() == null ? "unknown" : tower.type().id();
+        // Native fallback clones use a runtime-only #illusion suffix, not a resource path.
+        towerId = towerId.replace('#', '/');
         return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "tower/" + towerId + "/" + effect);
     }
 }

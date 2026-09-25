@@ -11,6 +11,7 @@ import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
 import kim.biryeong.semiontd.api.area.TowerAreaEffectRequest;
 import kim.biryeong.semiontd.api.area.TowerAreaTargetMode;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.monster.DamageType;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
@@ -23,14 +24,23 @@ import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
+import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
 import net.minecraft.world.damagesource.DamageSource;
 
 public final class ResonanceTower extends EntityBackedTower {
+    static final String FRIEND = "job_resonance_towers_s";
+    static final String REMOTE = "job_resonance_towers_g1";
+    static final String HARMONY = "job_resonance_towers_g2";
+    static final String CYCLE = "job_resonance_towers_p";
     private int resonanceLevel;
     private int resonanceLinks;
     private int pulseCharge;
     private double auraAttackSpeedBonus;
     private double auraDamageVsSlowedBonus;
+    private UUID internetFriend;
+    private int harmonyCharge;
+    private long augmentWaveStart = -1;
+    private long lastCycle;
 
     public ResonanceTower(
             TowerType type,
@@ -64,8 +74,52 @@ public final class ResonanceTower extends EntityBackedTower {
     }
 
     void updateResonanceState(int level, int links) {
+        double oldMaxHealth = currentMaxHealth();
         resonanceLevel = Math.max(0, level);
         resonanceLinks = Math.max(0, links);
+        internetFriend = null;
+        double newMaxHealth = currentMaxHealth();
+        if (Double.compare(oldMaxHealth, newMaxHealth) != 0) {
+            syncHealth(health() * newMaxHealth / Math.max(1.0, oldMaxHealth));
+            if (attachedLane() != null) onStateChanged(attachedLane());
+        }
+    }
+
+    void setInternetFriend(UUID logicalId) {internetFriend = logicalId;}
+
+    UUID internetFriend() {return internetFriend;}
+
+    void startAugmentWave(long tick) {
+        augmentWaveStart = tick;
+        lastCycle = 0;
+        harmonyCharge = 0;
+    }
+
+    boolean cycleDue(long now) {
+        if (augmentWaveStart < 0) return false;
+        long cycle = (now - augmentWaveStart) / Math.max(1,
+                (long) augmentSnapshot().parameter(CYCLE, "intervalTicks", 120));
+        if (cycle <= lastCycle) return false;
+        lastCycle = cycle;
+        return true;
+    }
+
+    @Override
+    public void resetForRound(PlayerLane lane) {
+        augmentWaveStart = -1;
+        harmonyCharge = 0;
+        super.resetForRound(lane);
+    }
+
+    @Override
+    protected double builderCurrentMaxHealth() {
+        return super.builderCurrentMaxHealth() * (1.0 + remoteBonus("maxHealthBonus"));
+    }
+
+    private double remoteBonus(String key) {
+        return augmentSnapshot().has(REMOTE)
+                && resonanceLinks >= (int) augmentSnapshot().parameter(REMOTE, "requiredLinks", 3)
+                ? augmentSnapshot().parameter(REMOTE, key, .50) : 0.0;
     }
 
     void updateAuraAttackSpeedBonus(double bonus) {
@@ -78,9 +132,21 @@ public final class ResonanceTower extends EntityBackedTower {
 
     @Override
     public List<String> runtimeDetailLines() {
-        return List.of("무블룸 공명 Lv " + resonanceLevel
+        java.util.ArrayList<String> lines = new java.util.ArrayList<>(List.of("무블룸 공명 Lv " + resonanceLevel
                 + " (링크 " + resonanceLinks + ") / 받는 오라 공속 +" + percent(auraAttackSpeedBonus)
-                + " / 둔화 대상 피해 +" + percent(auraDamageVsSlowedBonus));
+                + " / 둔화 대상 피해 +" + percent(auraDamageVsSlowedBonus)));
+        if (internetFriend != null) lines.add("인터넷 친구 연결 +1");
+        if (augmentSnapshot().has(HARMONY)) lines.add("화음 충전 " + harmonyCharge + "/"
+                + (int) augmentSnapshot().parameter(HARMONY, "everyAttacks", 3));
+        if (augmentSnapshot().has(CYCLE) && attachedLane() != null && attachedLane().towers().stream()
+                .filter(ResonanceTower.class::isInstance).map(ResonanceTower.class::cast)
+                .filter(tower -> tower.health() > 0)
+                .sorted(java.util.Comparator.comparingInt(ResonanceTower::resonanceLevel).reversed()
+                        .thenComparing(Tower::logicalId))
+                .limit((int) augmentSnapshot().parameter(CYCLE, "maxTowers", 5)).anyMatch(tower -> tower == this)) {
+            lines.add("공명 순환: 추가 공격 대상");
+        }
+        return lines;
     }
 
     @Override
@@ -91,6 +157,10 @@ public final class ResonanceTower extends EntityBackedTower {
             pulseCharge = previousResonanceTower.pulseCharge;
             auraAttackSpeedBonus = previousResonanceTower.auraAttackSpeedBonus;
             auraDamageVsSlowedBonus = previousResonanceTower.auraDamageVsSlowedBonus;
+            internetFriend = previousResonanceTower.internetFriend;
+            harmonyCharge = previousResonanceTower.harmonyCharge;
+            augmentWaveStart = previousResonanceTower.augmentWaveStart;
+            lastCycle = previousResonanceTower.lastCycle;
         }
     }
 
@@ -103,8 +173,26 @@ public final class ResonanceTower extends EntityBackedTower {
     @Override
     public double modifyAttackDamage(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
         double damageBonus = (aspect() == ResonanceAspect.FOCUS ? focusDamageBonus() : 0.0)
-                + auraDamageVsSlowedBonus(target);
+                + auraDamageVsSlowedBonus(target) + remoteBonus("damageBonus");
         return damageAmount * Math.max(0.0, 1.0 + damageBonus);
+    }
+
+    @Override
+    public void onAttackResolved(SemionTowerEntity source, SemionMonsterEntity target, double attempted,
+                                 double outgoing, double dealt, boolean killed) {
+        super.onAttackResolved(source, target, attempted, outgoing, dealt, killed);
+        if (!AugmentCombat.allowsTriggers() || dealt <= 0 || !augmentSnapshot().has(HARMONY)
+                || resonanceLevel <= 0 || resonanceLevel < abilityInt("maxResonanceLevel")) return;
+        if (++harmonyCharge < (int) augmentSnapshot().parameter(HARMONY, "everyAttacks", 3)) return;
+        harmonyCharge = 0;
+        if (source == null || target == null) return;
+        var request = new MonsterAreaEffectRequest(AreaEffectIds.tower(this, "augment_harmony"), source,
+                target.position(), augmentSnapshot().parameter(HARMONY, "radius", 3), Set.of(), null,
+                AreaVfxSpec.onTrigger(AreaVfxStyles.PULSE))
+                .nearestTargets((int) augmentSnapshot().parameter(HARMONY, "maxTargets", 12));
+        AugmentCombat.runWithoutTriggers(() -> TowerAreaDamage.apply(this, source, request,
+                other -> attempted * augmentSnapshot().parameter(HARMONY, "damageRatio", 2.0), true,
+                (other, amount, dead) -> {}, DamageType.MAGIC));
     }
 
     @Override

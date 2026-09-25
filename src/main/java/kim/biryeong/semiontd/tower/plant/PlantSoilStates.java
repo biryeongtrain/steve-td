@@ -131,6 +131,11 @@ public final class PlantSoilStates {
         return existing == null || existing == family;
     }
 
+    public static boolean canPlantAt(PlayerLane lane, UUID owner, GridPosition position, TowerType type) {
+        return (PlantTowers.isCombatTower(type) && PlantAugments.inWorldTree(lane, owner, position))
+                || canPlantAt(owner, position, type);
+    }
+
     public static int count(UUID owner, PlantSoil soil) {
         Map<Long, SoilTile> tiles = SOILS.get(owner);
         if (tiles == null || soil == null) {

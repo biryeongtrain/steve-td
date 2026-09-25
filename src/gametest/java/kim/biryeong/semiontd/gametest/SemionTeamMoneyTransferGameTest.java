@@ -10,6 +10,8 @@ import kim.biryeong.semiontd.game.SemionPlayer;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.game.TeamMoneyTransferResult;
 import kim.biryeong.semiontd.game.TeamMoneyTransferResultType;
+import kim.biryeong.semiontd.job.JobRegistry;
+import kim.biryeong.semiontd.job.PirateTowerJob;
 import kim.biryeong.semiontd.map.GameArena;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.commands.CommandSourceStack;
@@ -47,14 +49,25 @@ public final class SemionTeamMoneyTransferGameTest {
         game.teams().get(TeamId.BLUE).activate();
         UUID receiver = addPlayer(game, "receiver", TeamId.BLUE, 1, 200);
         UUID sender = addPlayer(game, "sender", TeamId.BLUE, 2, 200);
+        UUID pirate = addPlayer(game, "pirate", TeamId.BLUE, 3, 200);
+        game.players().get(receiver).assignJob(JobRegistry.officialBuilders().getFirst());
+        game.players().get(sender).assignJob(JobRegistry.officialBuilders().getLast());
+        game.players().get(pirate).assignJob(new PirateTowerJob());
+        if (game.requestTeamMoney(pirate, 30).type() != TeamMoneyTransferResultType.BUILDER_RESTRICTED) {
+            throw new AssertionError("A pirate must be rejected before publishing a request");
+        }
 
         TeamMoneyTransferResult request = game.requestTeamMoney(receiver, 30);
+        if (game.acceptTeamMoneyRequest(pirate, request.requestId().orElseThrow()).type() != TeamMoneyTransferResultType.BUILDER_RESTRICTED) {
+            throw new AssertionError("A pirate sender must get a builder restriction, not insufficient funds");
+        }
         TeamMoneyTransferResult accepted = game.acceptTeamMoneyRequest(sender, request.requestId().orElseThrow());
 
         if (request.type() != TeamMoneyTransferResultType.SUCCESS || accepted.type() != TeamMoneyTransferResultType.SUCCESS) {
             throw new AssertionError("Expected request and accept to succeed: " + request.type() + ", " + accepted.type());
         }
-        if (game.players().get(sender).economy().diamond() != 170 || game.players().get(receiver).economy().diamond() != 230) {
+        if (game.players().get(sender).economy().diamond() != 170 || game.players().get(receiver).economy().diamond() != 230
+                || game.players().get(pirate).economy().diamond() != 200) {
             throw new AssertionError("Expected 30 diamonds to move from sender to receiver");
         }
         context.succeed();

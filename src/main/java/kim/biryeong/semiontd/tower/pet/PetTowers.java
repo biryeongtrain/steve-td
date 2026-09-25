@@ -48,7 +48,8 @@ public final class PetTowers {
 
     private static final List<String> DOG_DESC = List.of(
             "<gray>앞에 서서 버티는 반려입니다. 개끼리 붙여 두면 무리로 이어집니다.</gray>",
-            "<green>같은 무리의 다른 개 한 마리당 공격력이 {ability.packDamagePerPackMate:percent} 증가합니다. 상한은 없습니다.</green>"
+            "<green>같은 무리의 다른 개 한 마리당 공격력과 체력이 각각 {ability.packDamagePerPackMate:percent}, {ability.packHealthPerPackMate:percent} 증가합니다. 상한은 없습니다.</green>",
+            "<aqua>성체가 되면 받는 피해가 {ability.adultDamageReduction:percent} 감소합니다.</aqua>"
     );
     public static final TowerType DOG_T1 = companion("t1_pet_dog", "강아지 타워", 45, 180, 2.5, 9, 18, 45,
             WolfVisual.builder().variant(WolfVariants.SPOTTED).tame(true).collarColor(DyeColor.LIME).build(), DOG_DESC);
@@ -59,7 +60,8 @@ public final class PetTowers {
 
     private static final List<String> CAT_DESC = List.of(
             "<gray>혼자일수록 강해지는 반려입니다.</gray>",
-            "<light_purple>같은 마당에 다른 고양이가 없으면 공격력이 {ability.soloDamageBonus:percent} 증가합니다.</light_purple>"
+            "<light_purple>같은 마당에 다른 고양이가 없으면 공격력이 {ability.soloDamageBonus:percent} 증가합니다.</light_purple>",
+            "<aqua>성체가 되면 대상 주변 {ability.adultSplashRadius:blocks} 내 추가로 최대 {ability.adultSplashMaxTargets:integer}마리에게 피해의 {ability.adultSplashDamageRatio:percent} 스플래시 피해를 줍니다.</aqua>"
     );
     public static final TowerType CAT_T1 = companion("t1_pet_cat", "아기 고양이 타워", 50, 95, 3.5, 12, 13, 5,
             CatVisual.builder().variant(CatVariants.TABBY).tame(true).build(), CAT_DESC);

@@ -29,20 +29,20 @@ public class RabbitTower extends AnimalStackTower {
     @Override
     public double modifyAttackDamage(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
         double amount = damageAmount + currentStacks() * value("damagePerStack");
-        return hasLeaderAura() ? amount * (1.0 + leaderValue("leaderDamageBonus")) : amount;
+        return super.modifyAttackDamage(towerEntity, target, amount);
     }
 
     @Override
     public int adjustAttackInterval(int baseIntervalTicks) {
         if ((is(AnimalTowers.T2_RABBIT_TOWER) || isT3OrLeader()) && atMaxStacks()) {
-            return Math.max(1, baseIntervalTicks - ticks("maxStackExtraIntervalReduction"));
+            return super.adjustAttackInterval(baseIntervalTicks - ticks("maxStackExtraIntervalReduction"));
         }
-        return baseIntervalTicks;
+        return super.adjustAttackInterval(baseIntervalTicks);
     }
 
     @Override
     public double adjustAttackRange(double baseRange) {
-        return baseRange + (hasLeaderAura() ? leaderValue("leaderRangeBonus") : 0.0);
+        return super.adjustAttackRange(baseRange);
     }
 
     @Override

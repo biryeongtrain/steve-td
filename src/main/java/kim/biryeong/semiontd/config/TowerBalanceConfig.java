@@ -259,6 +259,7 @@ public record TowerBalanceConfig(
         addBodyTowers(towers);
         addFrostTowers(towers);
         addPetTowers(towers);
+        kim.biryeong.semiontd.tower.augment.AugmentTowers.all().forEach(type -> addTower(towers, type));
         addPirateTowers(towers);
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
@@ -995,12 +996,12 @@ public record TowerBalanceConfig(
         putPetOwnerAbilities(abilities, PetTowers.KEEPER_T1, 8.0, 0.3, 1.0, 0.0, 0.0, 3.0);
         putPetOwnerAbilities(abilities, PetTowers.KEEPER_T2, 11.0, 0.3, 1.0, 0.0, 0.0, 3.0);
 
-        putPetDogAbilities(abilities, PetTowers.DOG_T1, 100.0, 70.0);
-        putPetDogAbilities(abilities, PetTowers.DOG_T2, 200.0, 160.0);
-        putPetDogAbilities(abilities, PetTowers.DOG_T3, 320.0, 0.0);
-        putPetCatAbilities(abilities, PetTowers.CAT_T1, 100.0, 70.0);
-        putPetCatAbilities(abilities, PetTowers.CAT_T2, 200.0, 160.0);
-        putPetCatAbilities(abilities, PetTowers.CAT_T3, 320.0, 0.0);
+        putPetDogAbilities(abilities, PetTowers.DOG_T1, 100.0, 70.0, 0.10);
+        putPetDogAbilities(abilities, PetTowers.DOG_T2, 200.0, 160.0, 0.15);
+        putPetDogAbilities(abilities, PetTowers.DOG_T3, 320.0, 0.0, 0.20);
+        putPetCatAbilities(abilities, PetTowers.CAT_T1, 100.0, 70.0, 1.5, 2, 0.30);
+        putPetCatAbilities(abilities, PetTowers.CAT_T2, 200.0, 160.0, 2.0, 4, 0.30);
+        putPetCatAbilities(abilities, PetTowers.CAT_T3, 320.0, 0.0, 2.5, 6, 0.30);
         putPetBirdAbilities(abilities, PetTowers.BIRD_T1, 100.0, 70.0, 0.50);
         putPetBirdAbilities(abilities, PetTowers.BIRD_T2, 200.0, 160.0, 0.75);
         putPetBirdAbilities(abilities, PetTowers.BIRD_T3, 320.0, 0.0, 1.00);
@@ -1008,7 +1009,7 @@ public record TowerBalanceConfig(
 
     private static void putPirateAbilities(Map<String, Map<String, Double>> abilities) {
         putAbilities(abilities, PirateTowers.ADMIRAL.id(), Map.ofEntries(
-                Map.entry("spendThreshold", 200.0), Map.entry("paybackLow", 50.0),
+                Map.entry("spendThreshold", 300.0), Map.entry("paybackLow", 50.0),
                 Map.entry("paybackHigh", 75.0), Map.entry("maxHealthBonusLow", 2.0),
                 Map.entry("maxHealthBonusHigh", 4.0), Map.entry("damageBonus", 0.5),
                 Map.entry("effectCount", 1.0)));
@@ -1032,7 +1033,7 @@ public record TowerBalanceConfig(
         putAbilities(abilities, PirateTowers.HELMSMAN.id(), Map.of("spendStep", 100.0, "healthPerStep", 2.0, "damagePerStep", 0.5));
         putAbilities(abilities, PirateTowers.GUIDE.id(), Map.of("spendStep", 100.0, "healthPerStep", 3.0, "lostHealthThreshold", 1200.0, "lostHealthRatio", 0.035));
         putAbilities(abilities, PirateTowers.NAVIGATOR.id(), Map.of("spendStep", 75.0, "healthPerStep", 3.0, "damagePerStep", 0.5));
-        putAbilities(abilities, PirateTowers.FIRST_NAVIGATOR.id(), Map.of("spendStep", 50.0, "healthPerStep", 5.0, "damagePerStep", 0.5, "splashRadius", 2.0, "splashRatio", 0.8));
+        putAbilities(abilities, PirateTowers.FIRST_NAVIGATOR.id(), Map.of("spendStep", 75.0, "healthPerStep", 5.0, "damagePerStep", 0.5, "splashRadius", 2.0, "splashRatio", 0.8));
         putAbilities(abilities, PirateTowers.SHABBY_CHEST.id(), Map.of("rounds", 5.0, "cashout", 90.0, "saleHealthBonus", 5.0));
         putAbilities(abilities, PirateTowers.EMPIRE_CHEST.id(), Map.of("rounds", 5.0, "cashout", 200.0, "saleDamageBonus", 1.0));
         putAbilities(abilities, PirateTowers.DEEP_CHEST.id(), Map.of("rounds", 5.0, "cashout", 250.0, "saleHealthBonus", 10.0));
@@ -1066,12 +1067,15 @@ public record TowerBalanceConfig(
             Map<String, Map<String, Double>> abilities,
             TowerType type,
             double bondCap,
-            double bondToUpgrade
+            double bondToUpgrade,
+            double adultDamageReduction
     ) {
         putAbilities(abilities, type.id(), Map.of(
                 PetBalance.KEY_BOND_CAP, bondCap,
                 PetBalance.KEY_BOND_TO_UPGRADE, bondToUpgrade,
-                PetBalance.KEY_PACK_DAMAGE_PER_MATE, 0.12
+                PetBalance.KEY_PACK_DAMAGE_PER_MATE, 0.08,
+                PetBalance.KEY_PACK_HEALTH_PER_MATE, 0.08,
+                PetBalance.KEY_ADULT_DAMAGE_REDUCTION, adultDamageReduction
         ));
     }
 
@@ -1079,12 +1083,18 @@ public record TowerBalanceConfig(
             Map<String, Map<String, Double>> abilities,
             TowerType type,
             double bondCap,
-            double bondToUpgrade
+            double bondToUpgrade,
+            double adultSplashRadius,
+            int adultSplashMaxTargets,
+            double adultSplashDamageRatio
     ) {
         putAbilities(abilities, type.id(), Map.of(
                 PetBalance.KEY_BOND_CAP, bondCap,
                 PetBalance.KEY_BOND_TO_UPGRADE, bondToUpgrade,
-                PetBalance.KEY_SOLO_DAMAGE_BONUS, 0.80
+                PetBalance.KEY_SOLO_DAMAGE_BONUS, 2.00,
+                PetBalance.KEY_ADULT_SPLASH_RADIUS, adultSplashRadius,
+                PetBalance.KEY_ADULT_SPLASH_MAX_TARGETS, (double) adultSplashMaxTargets,
+                PetBalance.KEY_ADULT_SPLASH_DAMAGE_RATIO, adultSplashDamageRatio
         ));
     }
 
@@ -1788,6 +1798,18 @@ public record TowerBalanceConfig(
         validateSuccubusAbilities();
         validateBodyAbilities();
         validateFrostAbilities();
+        validatePetAbilities();
+    }
+
+    private void validatePetAbilities() {
+        for (TowerType dog : List.of(PetTowers.DOG_T1, PetTowers.DOG_T2, PetTowers.DOG_T3)) {
+            validateRatios(dog.id(), PetBalance.KEY_ADULT_DAMAGE_REDUCTION);
+        }
+        for (TowerType cat : List.of(PetTowers.CAT_T1, PetTowers.CAT_T2, PetTowers.CAT_T3)) {
+            validatePositive(cat.id(), PetBalance.KEY_ADULT_SPLASH_RADIUS);
+            validateIntegral(cat.id(), false, PetBalance.KEY_ADULT_SPLASH_MAX_TARGETS);
+            validateRatios(cat.id(), PetBalance.KEY_ADULT_SPLASH_DAMAGE_RATIO);
+        }
     }
 
     private void validateFrostAbilities() {
@@ -3253,13 +3275,23 @@ public record TowerBalanceConfig(
     }
 
     private static void putInsectAbilities(Map<String, Map<String, Double>> abilities) {
-        putAbilities(abilities, InsectBalance.GLOBAL_ID, Map.of(
-                "freshPowerMultiplier", InsectBalance.FRESH_POWER_MULTIPLIER,
-                "freshPowerScale", InsectBalance.FRESH_POWER_SCALE,
-                "reviveBaseTicks", (double) InsectBalance.REVIVE_BASE_TICKS,
-                "reviveIncrementTicks", (double) InsectBalance.REVIVE_INCREMENT_TICKS,
-                "radiusVfxIntervalTicks", (double) InsectBalance.RADIUS_VFX_INTERVAL_TICKS,
-                "deathDamageTakenPerStack", InsectBalance.DEATH_DAMAGE_TAKEN_PER_STACK
+        putAbilities(abilities, InsectBalance.GLOBAL_ID, Map.ofEntries(
+                Map.entry("freshPowerMultiplier", InsectBalance.FRESH_POWER_MULTIPLIER),
+                Map.entry("freshDamageTakenMultiplier", InsectBalance.FRESH_DAMAGE_TAKEN_MULTIPLIER),
+                Map.entry("freshPowerScale", InsectBalance.FRESH_POWER_SCALE),
+                Map.entry("reviveBaseTicks", (double) InsectBalance.REVIVE_BASE_TICKS),
+                Map.entry("reviveIncrementTicks", (double) InsectBalance.REVIVE_INCREMENT_TICKS),
+                Map.entry("beeReviveBaseTicks", (double) InsectBalance.BEE_REVIVE_BASE_TICKS),
+                Map.entry("beeReviveIncrementTicks", (double) InsectBalance.BEE_REVIVE_INCREMENT_TICKS),
+                Map.entry("reviveHealthLossRatio", InsectBalance.REVIVE_HEALTH_LOSS_RATIO),
+                Map.entry("tier1DeathExplosionHealthRatio", InsectBalance.TIER1_DEATH_EXPLOSION_HEALTH_RATIO),
+                Map.entry("tier2DeathExplosionHealthRatio", InsectBalance.TIER2_DEATH_EXPLOSION_HEALTH_RATIO),
+                Map.entry("deathExplosionHealthRatio", InsectBalance.DEATH_EXPLOSION_HEALTH_RATIO),
+                Map.entry("tier1DeathExplosionRadius", InsectBalance.TIER1_DEATH_EXPLOSION_RADIUS),
+                Map.entry("deathExplosionRadius", InsectBalance.DEATH_EXPLOSION_RADIUS),
+                Map.entry("contactDetonationRange", InsectBalance.CONTACT_DETONATION_RANGE),
+                Map.entry("radiusVfxIntervalTicks", (double) InsectBalance.RADIUS_VFX_INTERVAL_TICKS),
+                Map.entry("deathDamageTakenPerStack", InsectBalance.DEATH_DAMAGE_TAKEN_PER_STACK)
         ));
         putAbilities(abilities, InsectTowers.SPAWNER.id(), Map.of(
                 "reviveRadius", InsectBalance.SPAWNER_RADIUS
@@ -3879,12 +3911,19 @@ public record TowerBalanceConfig(
             validateEngineerValues(InsectBalance.GLOBAL_ID, global);
             requireEngineerPositive(global,
                     "freshPowerMultiplier", "freshPowerScale", "reviveBaseTicks", "reviveIncrementTicks",
-                    "radiusVfxIntervalTicks");
-            requireEngineerIntegral(global, "reviveBaseTicks", "reviveIncrementTicks", "radiusVfxIntervalTicks");
+                    "radiusVfxIntervalTicks", "freshDamageTakenMultiplier", "beeReviveBaseTicks",
+                    "beeReviveIncrementTicks", "deathExplosionHealthRatio", "deathExplosionRadius",
+                    "tier1DeathExplosionHealthRatio", "tier2DeathExplosionHealthRatio", "tier1DeathExplosionRadius",
+                    "contactDetonationRange");
+            requireEngineerIntegral(global, "reviveBaseTicks", "reviveIncrementTicks", "radiusVfxIntervalTicks",
+                    "beeReviveBaseTicks", "beeReviveIncrementTicks");
             double power = global.getOrDefault("freshPowerMultiplier", 0.0);
             double scale = global.getOrDefault("freshPowerScale", 0.0);
             double vulnerability = global.getOrDefault("deathDamageTakenPerStack", -1.0);
-            if (power < 1.0 || scale < 1.0 || scale > 1.25 || vulnerability < 0.0 || vulnerability > 1.0) {
+            double healthLoss = global.getOrDefault("reviveHealthLossRatio", -1.0);
+            if (power < 1.0 || scale < 1.0 || scale > 1.25 || vulnerability < 0.0 || vulnerability > 1.0
+                    || healthLoss < 0.0 || healthLoss >= 1.0
+                    || global.getOrDefault("freshDamageTakenMultiplier", 0.0) < 1.0) {
                 throw new IllegalArgumentException("Insect global multipliers are outside their supported range.");
             }
         }

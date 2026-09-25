@@ -13,6 +13,9 @@ public final class TowerRoundMetricsTracker {
     private double magicDamageDealt;
     private double damageTaken;
     private double healingDone;
+    private Double waveStartMaxHealth;
+    private double enemyHpDamage;
+    private double augmentSpecialDamageDealt;
     private long killCount;
     private long survivalTicks;
     private int deathCount;
@@ -22,6 +25,7 @@ public final class TowerRoundMetricsTracker {
     public TowerRoundMetricsTracker(String towerTypeId, boolean presentAtWaveStart) {
         this.towerTypeId = towerTypeId;
         this.presentAtWaveStart = presentAtWaveStart;
+        this.waveStartMaxHealth = presentAtWaveStart ? null : 0.0;
     }
 
     public void setCurrentTick(int currentTick) {
@@ -73,6 +77,27 @@ public final class TowerRoundMetricsTracker {
         }
     }
 
+    public void captureWaveStartMaxHealth(double maxHealth) {
+        if (waveStartMaxHealth == null && Double.isFinite(maxHealth) && maxHealth > 0.0) {
+            waveStartMaxHealth = maxHealth;
+        }
+    }
+
+    public void recordEnemyHealthDamage(double amount) {
+        if (Double.isFinite(amount) && amount > 0.0) {
+            enemyHpDamage += amount;
+            markCombatEvent();
+        }
+    }
+
+    /** Records separately resolved augment secondary HP damage, not bonuses embedded in a basic hit. */
+    public void recordAugmentSpecialDamage(double actualHpDamage) {
+        if (Double.isFinite(actualHpDamage) && actualHpDamage > 0.0) {
+            augmentSpecialDamageDealt += actualHpDamage;
+            markCombatEvent();
+        }
+    }
+
     public void recordKill() {
         killCount++;
         markCombatEvent();
@@ -92,7 +117,10 @@ public final class TowerRoundMetricsTracker {
                 killCount,
                 firstCombatTick,
                 lastCombatTick,
-                survivalTicks
+                survivalTicks,
+                waveStartMaxHealth,
+                enemyHpDamage,
+                augmentSpecialDamageDealt
         );
     }
 

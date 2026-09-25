@@ -85,12 +85,23 @@ public final class AtlantisStates {
      * Called after any change to the turtle roster.
      */
     public static void rebuild(UUID playerId, PlayerLane lane) {
+        rebuild(playerId, lane, null);
+    }
+
+    static void rebuildAfterDeath(UUID playerId, PlayerLane lane, Tower deceased) {
+        rebuild(playerId, lane, deceased);
+    }
+
+    private static void rebuild(UUID playerId, PlayerLane lane, Tower deceased) {
         if (playerId == null || lane == null) {
             return;
         }
         List<Tower> turtles = lane.towers().stream()
                 .filter(tower -> playerId.equals(tower.ownerPlayer()))
                 .filter(tower -> AtlantisTowers.isTurtle(tower.type()))
+                // Scripted lane kills notify death before removing the still-live Minecraft entity.
+                // Do not synchronize its entity health back into the tower during the death callback.
+                .filter(tower -> tower != deceased)
                 .filter(tower -> !tower.isDestroyed(lane))
                 .toList();
         if (turtles.isEmpty()) {
@@ -122,7 +133,14 @@ public final class AtlantisStates {
         // Monsters walk from progress 0 towards 1, so the ground they have yet to cross is the
         // lower side. Zones laid towards 1 sit behind the wave and never get used.
         double step = spacingProgress(pathLane);
-        GridPosition owner = anchorTurtle(lane, turtles, finalDefense).originalPosition();
+        Tower anchorTower = anchorTurtle(lane, turtles, finalDefense);
+        List<GridPosition> owners = new ArrayList<>();
+        List<Tower> orderedTurtles = new ArrayList<>(turtles);
+        orderedTurtles.remove(anchorTower);
+        orderedTurtles.addFirst(anchorTower);
+        for (Tower turtle : orderedTurtles) {
+            for (int slot = 0; slot < zoneCapacity(turtle.type()); slot++) owners.add(turtle.originalPosition());
+        }
         double radius = strongest(turtles, "zoneRadius", 2.5);
         double reduction = strongest(turtles, "zoneAllyDamageReduction", 0.05);
 
@@ -134,7 +152,7 @@ public final class AtlantisStates {
                 break;
             }
             deployed.add(new PressureZone(
-                    owner,
+                    owners.get(index),
                     pathLane.laneLayout().positionAt(progress),
                     radius,
                     reduction

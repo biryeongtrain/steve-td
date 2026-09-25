@@ -16,6 +16,7 @@ import java.nio.file.StandardCopyOption;
 import kim.biryeong.semiontd.persistence.SemionPersistenceConfig;
 import kim.biryeong.semiontd.rating.RatingConfig;
 import kim.biryeong.semiontd.trait.TraitSelectionConfig;
+import kim.biryeong.semiontd.augment.AugmentConfig;
 import org.slf4j.Logger;
 
 public final class SemionConfigLoader {
@@ -52,6 +53,29 @@ public final class SemionConfigLoader {
             TowerBalanceConfig lastKnownGoodTowerBalance,
             JobAvailabilityConfig lastKnownGoodJobAvailability
     ) {
+        return load(configDir, logger, lastKnownGoodTowerBalance, lastKnownGoodJobAvailability, AugmentConfig.defaults());
+    }
+
+    public static LoadedConfigs load(
+            Path configDir,
+            Logger logger,
+            TowerBalanceConfig lastKnownGoodTowerBalance,
+            JobAvailabilityConfig lastKnownGoodJobAvailability,
+            AugmentConfig lastKnownGoodAugments
+    ) {
+        return load(configDir, logger, lastKnownGoodTowerBalance, lastKnownGoodJobAvailability, lastKnownGoodAugments, null);
+    }
+
+    public static LoadedConfigs load(
+            Path configDir,
+            Logger logger,
+            TowerBalanceConfig lastKnownGoodTowerBalance,
+            JobAvailabilityConfig lastKnownGoodJobAvailability,
+            AugmentConfig lastKnownGoodAugments,
+            WaveConfig lastKnownGoodWaves
+    ) {
+        AugmentConfig augmentFallback = lastKnownGoodAugments == null ? AugmentConfig.defaults() : lastKnownGoodAugments;
+        WaveConfig waveFallback = lastKnownGoodWaves == null ? WaveConfig.defaultConfig() : lastKnownGoodWaves;
         TowerBalanceConfig towerBalanceFallback = lastKnownGoodTowerBalance == null
                 ? TowerBalanceConfig.defaultConfig()
                 : lastKnownGoodTowerBalance;
@@ -65,7 +89,7 @@ public final class SemionConfigLoader {
             logger.warn("Failed to create config directory {}; using defaults.", configDir, exception);
             return new LoadedConfigs(
                     EconomyConfig.defaultConfig(),
-                    WaveConfig.defaultConfig(),
+                    waveFallback,
                     MapConfig.defaultConfig(),
                     ProgressionConfig.defaultConfig(),
                     RatingConfig.defaultConfig(),
@@ -81,7 +105,8 @@ public final class SemionConfigLoader {
                     TraitSelectionConfig.defaultConfig(),
                     TraitBalanceConfig.defaultConfig(),
                     WebIntegrationConfig.defaultConfig(),
-                    CombatSpeedConfig.defaultConfig()
+                    CombatSpeedConfig.defaultConfig(),
+                    augmentFallback
             );
         }
 
@@ -90,13 +115,7 @@ public final class SemionConfigLoader {
                 EconomyConfig.defaultConfig(),
                 logger
         );
-        WaveConfig waves = loadOrCreateWithLegacy(
-                configDir.resolve("wave.json"),
-                configDir.resolve("waves.json"),
-                WaveConfig.defaultConfig(),
-                WaveConfig.class,
-                logger
-        );
+        WaveConfig waves = loadWaves(configDir, lastKnownGoodWaves, logger);
         MapConfig map = loadOrCreate(
                 configDir.resolve("map.json"),
                 MapConfig.defaultConfig(),
@@ -186,7 +205,28 @@ public final class SemionConfigLoader {
                 CombatSpeedConfig.class,
                 logger
         );
-        return new LoadedConfigs(economy, waves, map, progression, rating, persistence, jobAvailability, towerBalance, summons, leaderTargeting, incomeLaneRouting, monsterScaling, vfx, tips, traits, traitBalance, webIntegration, combatSpeed);
+        AugmentConfig augments = loadOrCreateAugments(configDir.resolve("augment_balance.json"), augmentFallback, logger);
+        return new LoadedConfigs(economy, waves, map, progression, rating, persistence, jobAvailability, towerBalance, summons, leaderTargeting, incomeLaneRouting, monsterScaling, vfx, tips, traits, traitBalance, webIntegration, combatSpeed, augments);
+    }
+
+    static AugmentConfig loadOrCreateAugments(Path path, AugmentConfig lastKnownGood, Logger logger) {
+        if (Files.notExists(path)) {
+            AugmentConfig defaults = AugmentConfig.defaults();
+            write(path, defaults.toJson(), logger);
+            return defaults;
+        }
+        try (Reader reader = Files.newBufferedReader(path)) {
+            JsonElement json = JsonParser.parseReader(reader);
+            if (!json.isJsonObject()) {
+                throw new IllegalArgumentException("Augment config must be an object");
+            }
+            AugmentConfig value = AugmentConfig.fromJson(json.getAsJsonObject());
+            write(path, value.toJson(), logger);
+            return value;
+        } catch (IOException | RuntimeException exception) {
+            logger.error("Failed to load config {}; retaining last-known-good augments.", path, exception);
+            return lastKnownGood;
+        }
     }
 
     private static JobAvailabilityConfig loadOrCreateJobAvailability(
@@ -235,15 +275,25 @@ public final class SemionConfigLoader {
         }
     }
 
-    private static <T> T loadOrCreateWithLegacy(Path preferred, Path legacy, T defaults, Class<T> type, Logger logger) {
-        if (Files.exists(preferred)) {
-            return loadOrCreate(preferred, defaults, type, logger);
+    static WaveConfig loadWaves(Path configDir, WaveConfig lastKnownGood, Logger logger) {
+        Path preferred = configDir.resolve("wave.json");
+        Path legacy = configDir.resolve("waves.json");
+        Path path = Files.exists(preferred) ? preferred : legacy;
+        if (Files.notExists(path) && lastKnownGood == null) {
+            WaveConfig defaults = WaveConfig.defaultConfig();
+            defaults.validate();
+            write(preferred, defaults, logger);
+            return defaults;
         }
-        if (Files.exists(legacy)) {
-            return loadOrCreate(legacy, defaults, type, logger);
+        try (Reader reader = Files.newBufferedReader(path)) {
+            WaveConfig value = GSON.fromJson(reader, WaveConfig.class);
+            if (value == null) {throw new IllegalArgumentException("Wave config must be an object.");}
+            value.validate();
+            return value;
+        } catch (IOException | RuntimeException exception) {
+            logger.error("Failed to load wave config {}; retaining last-known-good waves.", path, exception);
+            return lastKnownGood == null ? WaveConfig.defaultConfig() : lastKnownGood;
         }
-        write(preferred, defaults, logger);
-        return defaults;
     }
 
     private static RatingConfig loadOrCreateRating(Path path, RatingConfig defaults, Logger logger) {
@@ -738,7 +788,8 @@ public final class SemionConfigLoader {
             TraitSelectionConfig traits,
             TraitBalanceConfig traitBalance,
             WebIntegrationConfig webIntegration,
-            CombatSpeedConfig combatSpeed
+            CombatSpeedConfig combatSpeed,
+            AugmentConfig augments
     ) {
     }
 }

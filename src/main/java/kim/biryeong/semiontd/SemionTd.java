@@ -5,6 +5,7 @@ import eu.pb4.polymer.resourcepack.api.PolymerResourcePackUtils;
 import kim.biryeong.semiontd.api.SemionTdApi;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.balance.BalancePatchNotifier;
+import kim.biryeong.semiontd.balance.manage.BalanceManagementBootstrap;
 import kim.biryeong.semiontd.command.SemionCommands;
 import kim.biryeong.semiontd.config.SemionConfigLoader;
 import kim.biryeong.semiontd.config.SemionConfigLoader.LoadedConfigs;
@@ -60,6 +61,7 @@ public class SemionTd implements ModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     private final SemionGameManager gameManager = new SemionGameManager();
+    private BalanceManagementBootstrap balanceManagement;
 
     @Override
     public void onInitialize() {
@@ -85,6 +87,7 @@ public class SemionTd implements ModInitializer {
         gameManager.configureWebIntegration(configs.webIntegration());
         gameManager.configureCombatSpeed(configs.combatSpeed());
         gameManager.configureJobAvailability(configs.jobAvailability());
+        gameManager.configureAugments(configs.augments());
         gameManager.configure(
                 configs.economy(),
                 configs.waves(),
@@ -104,6 +107,11 @@ public class SemionTd implements ModInitializer {
         gameManager.configureMusic(musicService);
         CosmeticService cosmeticService = new CosmeticService(gameManager, configDir.resolve("cosmetics.json"));
         SemionTipService tipService = new SemionTipService(gameManager);
+        Path bugReportPath = Path.of(configs.persistence().sqlitePath());
+        var bugReports = new kim.biryeong.semiontd.report.BugReportCommands(
+                bugReportPath.isAbsolute() ? bugReportPath : configDir.resolve(bugReportPath).normalize(), gameManager);
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> bugReports.close());
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> bugReports.register(dispatcher));
         AreaVfxStyleRegistryImpl areaVfxStyles = new AreaVfxStyleRegistryImpl();
         BuiltinAreaVfxStyles.register(areaVfxStyles);
         AtlantisVfx.register(areaVfxStyles);
@@ -113,7 +121,12 @@ public class SemionTd implements ModInitializer {
         SemionTdApi.initializeInternal(new AreaEffectService(gameManager), areaVfxStyles);
         TowerVfxService.initialize(configs.vfx(), gameManager, areaVfxStyles);
         ServerLifecycleEvents.SERVER_STARTING.register(server -> areaVfxStyles.freeze());
+        ServerLifecycleEvents.SERVER_STARTED.register(server ->
+                balanceManagement = BalanceManagementBootstrap.start(server, gameManager, configDir));
         ServerLifecycleEvents.SERVER_STARTED.register(balancePatchNotifier::start);
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            if (balanceManagement != null) { balanceManagement.close(); balanceManagement = null; }
+        });
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> balancePatchNotifier.close());
         SemionPlayerLimitBypassService.configure(gameManager);
 

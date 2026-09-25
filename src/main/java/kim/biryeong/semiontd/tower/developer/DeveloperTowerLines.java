@@ -30,6 +30,11 @@ public final class DeveloperTowerLines {
         appendPatchMilestones(tower, lines);
         appendInstability(tower, lines);
         appendBugs(tower, lines);
+        for (DeveloperBug bug : DeveloperTowerData.copiedBugs(tower)) {
+            lines.add("<green>버그 복사기</green> <gray>" + bug.displayName() + " 강화 효과 "
+                    + Math.round(tower.augmentSnapshot().parameter(DeveloperAugments.COPIER, "bonusRatio", .5) * 100)
+                    + "% · 불이익 없음</gray>");
+        }
         appendOptimizations(tower, lines);
         appendStatus(tower, lines);
         return List.copyOf(lines);

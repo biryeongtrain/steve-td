@@ -116,11 +116,15 @@ public final class FrostVanguardTower extends ProductionTower {
     }
 
     void onEmissionWaveHit(PlayerLane lane) {
+        onEmissionWaveHit(lane, FrostBalance.chillPerHit());
+    }
+
+    void onEmissionWaveHit(PlayerLane lane, double amount) {
         if (!FrostTowers.DONGTAE.id().equals(type().id())) {
             return;
         }
         double threshold = Math.max(0.000001, FrostBalance.chillThreshold());
-        chill = Math.min(threshold, chill + Math.max(0.0, FrostBalance.chillPerHit()));
+        chill = Math.min(threshold, chill + Math.max(0.0, amount));
         if (chill + 1.0E-9 < threshold) {
             onStateChanged(lane);
             return;
@@ -140,7 +144,7 @@ public final class FrostVanguardTower extends ProductionTower {
                     AreaVfxSpec.onTrigger(AreaVfxStyles.DEBUFF)
             );
             SemionTdApi.areaEffects().applyToMonsters(request, target -> {
-                FrostMonsterStates.ChillResult result = FrostMonsterStates.applyChill(target);
+                FrostMonsterStates.ChillResult result = FrostMonsterStates.applyChill(source, target, FrostBalance.chillPerHit());
                 return result.currentChill() > result.previousChill() || result.becameRefrigerated()
                         ? AreaEffectOutcome.APPLIED
                         : AreaEffectOutcome.UNCHANGED;

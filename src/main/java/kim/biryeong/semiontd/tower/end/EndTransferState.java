@@ -121,6 +121,7 @@ final class EndTransferState {
         final double periodicHealingPerSecond;
         int elapsedTicks;
         double appliedRatio;
+        double sourceMaxHealth;
 
         Progress(
                 int durationTicks,

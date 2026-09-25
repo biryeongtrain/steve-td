@@ -11,6 +11,8 @@ import java.util.UUID;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.catalog.ProductionTowerDefinitions;
+import kim.biryeong.semiontd.config.TowerBalanceConfig;
+import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 
 public final class ProductionTowerCatalog {
     private static final Map<String, CatalogEntry> ENTRIES = new LinkedHashMap<>();
@@ -34,6 +36,40 @@ public final class ProductionTowerCatalog {
     public static synchronized void clear() {
         ENTRIES.clear();
         UPGRADES.clear();
+    }
+
+    public record Snapshot(Map<String, CatalogEntry> entries, Map<String, List<TowerUpgradeOption>> upgrades) {
+        public Snapshot {
+            entries = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(entries));
+            Map<String, List<TowerUpgradeOption>> copy = new LinkedHashMap<>();
+            upgrades.forEach((id, options) -> copy.put(id, List.copyOf(options)));
+            upgrades = java.util.Collections.unmodifiableMap(copy);
+        }
+    }
+
+    public static synchronized Snapshot snapshot() {
+        return new Snapshot(ENTRIES, UPGRADES);
+    }
+
+    /** Builds every replacement before touching the live registry or runtime configuration. */
+    public static synchronized Snapshot stageBalance(TowerBalanceConfig config) {
+        Map<String, CatalogEntry> entries = new LinkedHashMap<>();
+        for (CatalogEntry entry : ENTRIES.values()) {
+            TowerType type = TowerBalanceRuntime.resolve(entry.type(), config);
+            entries.put(type.id(), new CatalogEntry(type, entry.factory(), entry.tier(), entry.availability(), entry.augmentId()));
+        }
+        Map<String, List<TowerUpgradeOption>> upgrades = new LinkedHashMap<>();
+        UPGRADES.forEach((id, options) -> upgrades.put(id, options.stream().map(option ->
+                new TowerUpgradeOption(option.id(), option.displayName(), entries.get(option.targetType().id()).type(),
+                        config.upgradeCost(id, option.id(), option.mineralCost()))).toList()));
+        return new Snapshot(entries, upgrades);
+    }
+
+    public static synchronized void install(Snapshot snapshot) {
+        ENTRIES.clear();
+        ENTRIES.putAll(snapshot.entries());
+        UPGRADES.clear();
+        snapshot.upgrades().forEach((id, options) -> UPGRADES.put(id, new ArrayList<>(options)));
     }
 
     public static synchronized CatalogEntry registerStarter(TowerType type) {
@@ -99,7 +135,15 @@ public final class ProductionTowerCatalog {
     }
 
     public static synchronized CatalogEntry register(TowerType type, TowerFactory factory, int tier) {
-        CatalogEntry entry = new CatalogEntry(type, factory, tier);
+        return registerEntry(new CatalogEntry(type, factory, tier));
+    }
+
+    public static synchronized CatalogEntry registerAugment(TowerType type, TowerFactory factory, String augmentId) {
+        return registerEntry(new CatalogEntry(type, factory, 1, Availability.AUGMENT, augmentId));
+    }
+
+    private static CatalogEntry registerEntry(CatalogEntry entry) {
+        TowerType type = entry.type();
         CatalogEntry previous = ENTRIES.putIfAbsent(type.id(), entry);
         if (previous != null) {
             throw new IllegalArgumentException("Duplicate production tower id: " + type.id());
@@ -126,12 +170,25 @@ public final class ProductionTowerCatalog {
         );
     }
 
-    public record CatalogEntry(TowerType type, TowerFactory factory, int tier) {
+    public enum Availability { JOB, AUGMENT }
+
+    public record CatalogEntry(TowerType type, TowerFactory factory, int tier, Availability availability, String augmentId) {
+        public CatalogEntry(TowerType type, TowerFactory factory, int tier) {
+            this(type, factory, tier, Availability.JOB, null);
+        }
+
         public CatalogEntry {
             Objects.requireNonNull(type, "type");
             factory = factory == null ? ProductionTowerDefinitions.DEFAULT_TOWER_FACTORY : factory;
             if (tier < 1) {
                 throw new IllegalArgumentException("Tower tier must be positive: " + tier);
+            }
+            Objects.requireNonNull(availability, "availability");
+            if (availability == Availability.AUGMENT && (augmentId == null || augmentId.isBlank())) {
+                throw new IllegalArgumentException("Augment towers require an augment id");
+            }
+            if (availability == Availability.JOB && augmentId != null) {
+                throw new IllegalArgumentException("Job towers cannot require an augment");
             }
         }
 

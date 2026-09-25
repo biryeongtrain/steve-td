@@ -9,7 +9,8 @@ public record IllagerMark(
         double damageTakenBonus,
         int expiresAtMonsterTick,
         GridPosition forceTargetCenter,
-        double forceTargetRadius
+        double forceTargetRadius,
+        int durationTicks
 ) {
     public boolean activeFor(Monster monster, UUID playerId) {
         return monster != null

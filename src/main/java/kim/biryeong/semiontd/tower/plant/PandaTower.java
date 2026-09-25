@@ -35,6 +35,16 @@ import net.minecraft.world.phys.Vec3;
  * 화력이 됩니다.
  */
 public class PandaTower extends ProductionTower {
+    @Override
+    public double modifyAttackDamage(SemionTowerEntity source, SemionMonsterEntity target, double damage) {
+        return super.modifyAttackDamage(source, target, damage) * (1.0 + PlantAugments.worldTreeBonus(this));
+    }
+
+    @Override
+    protected double builderCurrentMaxHealth() {
+        return super.builderCurrentMaxHealth() * (1.0 + PlantAugments.worldTreeBonus(this));
+    }
+
     public PandaTower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
         super(type, ownerPlayer, teamId, laneId, position);
     }

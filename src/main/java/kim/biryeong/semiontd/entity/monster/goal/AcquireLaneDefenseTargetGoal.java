@@ -2,6 +2,9 @@ package kim.biryeong.semiontd.entity.monster.goal;
 
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.List;
+import kim.biryeong.semiontd.augment.AugmentCombat;
+import kim.biryeong.semiontd.tower.augment.AugmentTowers;
 import kim.biryeong.semiontd.entity.defender.LaneDefenseEntity;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
@@ -84,7 +87,7 @@ public final class AcquireLaneDefenseTargetGoal extends Goal {
 
     private LivingEntity findDefenseTarget() {
         AABB searchBox = monster.defenseSearchBox();
-        return monster.level().getEntities(
+        List<LivingEntity> candidates = monster.level().getEntities(
                         monster,
                         searchBox,
                         entity -> entity instanceof LivingEntity livingEntity
@@ -99,10 +102,21 @@ public final class AcquireLaneDefenseTargetGoal extends Goal {
                 .filter(entity -> !(entity instanceof SemionTowerEntity towerEntity)
                         || towerEntity.runtimeTower() == null
                         || towerEntity.runtimeTower().targetableByMonsters())
-                .sorted(Comparator
-                        .comparingInt((LivingEntity entity) -> ((LaneDefenseEntity) entity).aggroPriority()).reversed()
-                        .thenComparingDouble(monster::distanceToSqr))
-                .findFirst()
-                .orElse(null);
+                .toList();
+        Comparator<LivingEntity> priority = Comparator
+                .comparingInt((LivingEntity entity) -> ((LaneDefenseEntity) entity).aggroPriority()).reversed()
+                .thenComparingDouble(monster::distanceToSqr);
+        LivingEntity baseline = candidates.stream().min(priority).orElse(null);
+        if (baseline == null) return null;
+        double distance = monster.distanceToSqr(baseline);
+        return candidates.stream().filter(entity -> prefersEqualDistance(entity)
+                        && Math.abs(monster.distanceToSqr(entity) - distance) < 1.0e-9)
+                .min(priority).orElse(baseline);
+    }
+
+    private static boolean prefersEqualDistance(LivingEntity entity) {
+        if (!(entity instanceof SemionTowerEntity tower) || tower.runtimeTower() == null) return false;
+        return AugmentTowers.is(tower.runtimeTower().type(), AugmentTowers.FOLDING_BARRICADE)
+                || AugmentCombat.prefersEqualDistance(tower.runtimeTower());
     }
 }

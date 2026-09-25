@@ -70,7 +70,7 @@ public final class FrostCoolingTower extends SupportTower {
                 true,
                 (target, damage, killed) -> {
                     if (!killed) {
-                        FrostMonsterStates.applyChill(target);
+                        FrostMonsterStates.applyChill(source, target, FrostAugments.emissionChill(this));
                     }
                 },
                 DamageType.PHYSICAL
@@ -86,7 +86,7 @@ public final class FrostCoolingTower extends SupportTower {
         return List.of(
                 "관통 파동 " + oneDecimal(FrostBalance.coolingWaveWidth(type())) + "×"
                         + oneDecimal(FrostBalance.coolingWaveRange(type())) + "칸",
-                "적중당 한기 +" + percent(FrostBalance.chillPerHit()),
+                "적중당 한기 +" + percent(FrostAugments.emissionChill(this)),
                 "고유 타워 · 1기 제한"
         );
     }
@@ -167,13 +167,13 @@ public final class FrostCoolingTower extends SupportTower {
                         .orElse(false));
         SemionTdApi.areaEffects().applyToTowers(request, target -> {
             if (target.tower() instanceof FrostHealingTower healingTower) {
-                healingTower.onEmissionWaveHit(lane);
+                healingTower.onEmissionWaveHit(lane, FrostAugments.emissionChill(this));
             } else if (target.tower() instanceof FrostEruptionCoolingTower eruptionTower) {
-                eruptionTower.onEmissionWaveHit(lane);
+                eruptionTower.onEmissionWaveHit(lane, FrostAugments.emissionChill(this));
             } else if (target.tower() instanceof FrostVanguardTower vanguardTower) {
-                vanguardTower.onEmissionWaveHit(lane);
+                vanguardTower.onEmissionWaveHit(lane, FrostAugments.emissionChill(this));
             } else if (target.tower() instanceof FrostSplashTower splashTower) {
-                splashTower.onEmissionWaveHit(lane);
+                splashTower.onEmissionWaveHit(lane, FrostAugments.emissionChill(this));
             }
             return AreaEffectOutcome.APPLIED;
         });

@@ -41,6 +41,8 @@ public final class QueenCardTower extends ProductionTower {
     private transient PlayerLane lane;
     private PokerHand pokerHand = PokerHand.HIGH_CARD;
     private double pokerBonus;
+    private double jokerRowBonus;
+    private static final TowerDataKey<Boolean> JOKER_PLACED = TowerDataKey.of(id("queen_joker_placed"), Boolean.class);
     private long lastCombatTick = Long.MIN_VALUE;
     private int heartHealCooldown;
     private boolean waveActive;
@@ -60,13 +62,21 @@ public final class QueenCardTower extends ProductionTower {
         }
     }
 
+    public boolean isJoker() {return type().id().equals(QueenTowers.JOKER.id());}
+
+    @Override public long sellRefundAmount() {return isJoker() ? 0 : super.sellRefundAmount();}
+
     @Override
     public void onPlaced(PlayerLane lane) {
         this.lane = lane;
         if (card().isEmpty()) {
-            assignCard(QueenStates.state(ownerPlayer()).drawNextCard());
+            assignCard(isJoker() ? QueenCard.random() : QueenStates.state(ownerPlayer()).drawNextCard());
         }
         super.onPlaced(lane);
+        if (isJoker() && !getDataOrDefault(JOKER_PLACED, false)) {
+            QueenStates.state(ownerPlayer()).consumeJokerTicket();
+            setData(JOKER_PLACED, true);
+        }
         syncEquipmentVisual();
     }
 
@@ -113,6 +123,7 @@ public final class QueenCardTower extends ProductionTower {
         heartHealCooldown = 0;
         pokerHand = PokerHand.HIGH_CARD;
         pokerBonus = 0.0;
+        jokerRowBonus = 0.0;
         syncMaxHealth(desiredMaxHealth(), false);
         super.resetForRound(lane);
     }
@@ -132,6 +143,11 @@ public final class QueenCardTower extends ProductionTower {
         pokerBonus = QueenBalance.handBonus(pokerHand);
         syncMaxHealth(desiredMaxHealth(), true);
         if (lane != null) onStateChanged(lane);
+    }
+
+    void applyJokerRowBonus(boolean present) {
+        jokerRowBonus = present && augmentSnapshot().has("job_queen_towers_g2")
+                ? augmentSnapshot().parameter("job_queen_towers_g2", "attackSpeedBonus", 0.4) : 0.0;
     }
 
     boolean recentlyActive(long gameTime) {
@@ -157,12 +173,28 @@ public final class QueenCardTower extends ProductionTower {
                 .or(() -> valid.stream()
                         .max(Comparator.comparingDouble(target -> target.runtimeMonster().maxHealth())));
     }
-    @Override public double adjustAttackRange(double baseRange) {return card().map(value -> QueenBalance.cardRange(value.suit())).orElse(baseRange);}
+    @Override public double adjustAttackRange(double baseRange) {return isJoker() ? type().range()
+            : card().map(value -> QueenBalance.cardRange(value.suit())).orElse(baseRange);}
     @Override public int adjustAttackInterval(int baseIntervalTicks) {
-        int interval = card().map(value -> QueenBalance.cardInterval(value.suit())).orElse(baseIntervalTicks);
-        return Math.max(1, (int) Math.ceil(interval / (1.0 + pokerBonus)));
+        int interval = isJoker() ? type().attackIntervalTicks()
+                : card().map(value -> QueenBalance.cardInterval(value.suit())).orElse(baseIntervalTicks);
+        double guardBonus = 0.0;
+        if (lane != null && augmentSnapshot().has("job_queen_towers_g1")) {
+            double radius = augmentSnapshot().parameter("job_queen_towers_g1", "radius", 5);
+            if (lane.towers().stream().anyMatch(tower -> tower instanceof QueenTower
+                    && ownerPlayer().equals(tower.ownerPlayer()) && !tower.isDestroyed(lane)
+                    && squaredDistance(tower.position()) <= radius * radius)) {
+                guardBonus = augmentSnapshot().parameter("job_queen_towers_g1", "attackSpeedBonus", 0.5);
+            }
+        }
+        return Math.max(1, (int) Math.ceil(interval / (1.0 + pokerBonus + jokerRowBonus + guardBonus)));
     }
-    @Override public int aggroPriority() {return card().map(value -> QueenBalance.cardAggro(value.suit())).orElse(super.aggroPriority());}
+
+    private double squaredDistance(GridPosition other) {
+        double dx = position().x() - other.x(), dz = position().z() - other.z();
+        return dx * dx + dz * dz;
+    }
+    @Override protected int builderAggroPriority() {return card().map(value -> QueenBalance.cardAggro(value.suit())).orElse(super.builderAggroPriority());}
 
     @Override
     public double modifyIncomingDamage(SemionTowerEntity source, DamageSource damageSource, double damage) {
@@ -202,7 +234,7 @@ public final class QueenCardTower extends ProductionTower {
         QueenCard value = card().orElse(null);
         if (value == null) return List.of("카드: 추첨 대기");
         return List.of(
-                "카드: " + value.label() + " (" + value.suit().displayName() + ")",
+                "카드: " + (isJoker() ? "조커 → " : "") + value.label() + " (" + value.suit().displayName() + ")",
                 "현재 족보: " + pokerHand.displayName(),
                 "축소 위력: " + oneDecimal(QueenBalance.cardShrinkPoints() * (1.0 + pokerBonus))
                         + "점 (점당 " + percentInteger(1.0 - QueenBalance.shrinkFactorPerPoint()) + " 감소)",
@@ -222,7 +254,8 @@ public final class QueenCardTower extends ProductionTower {
     }
 
     private double desiredMaxHealth() {
-        return card().map(value -> QueenBalance.cardMaxHealth(value.suit()) * (1.0 + pokerBonus)).orElse(type().maxHealth());
+        return isJoker() ? type().maxHealth() * (1.0 + pokerBonus)
+                : card().map(value -> QueenBalance.cardMaxHealth(value.suit()) * (1.0 + pokerBonus)).orElse(type().maxHealth());
     }
 
     private void shrinkNearbyTargets(SemionTowerEntity source, SemionMonsterEntity primary, double points) {
@@ -281,7 +314,7 @@ public final class QueenCardTower extends ProductionTower {
     private void applyAppearance(SemionTowerEntity entity) {
         QueenCard value = card().orElse(null);
         if (value == null) return;
-        entity.setCustomName(Component.literal(value.label() + " 카드병정"));
+        entity.setCustomName(Component.literal((isJoker() ? "조커 → " : "") + value.label() + " 카드병정"));
         entity.setCustomNameVisible(true);
         ItemStack item = switch (value.suit()) {
             case HEART -> new ItemStack(Items.RED_DYE);

@@ -15,6 +15,7 @@ import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
 import kim.biryeong.semiontd.SemionTd;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.api.SemionTdApi;
 import kim.biryeong.semiontd.api.area.AreaEffectOutcome;
 import kim.biryeong.semiontd.api.area.AreaVfxSpec;
@@ -65,6 +66,12 @@ public final class EngineerTrapTower extends EntityBackedTower {
     private int actionCooldown;
     private int fuseTicks = -1;
     private boolean tntUsed;
+    private PendingExplosion pendingExplosion;
+    private int augmentTicks;
+    private final List<PendingShot> pendingShots = new ArrayList<>();
+    private record PendingShot(UUID targetId, double damage, int dueTick) {}
+
+    private record PendingExplosion(Vec3 center, double radius, int cap, double damage, long dueTick) {}
     private boolean poweredLastTick;
     private int activationPlateDistance;
     private EngineerTowers.PlateKind activationPlateKind;
@@ -155,6 +162,9 @@ public final class EngineerTrapTower extends EntityBackedTower {
         actionCooldown = 0;
         fuseTicks = -1;
         tntUsed = false;
+        pendingExplosion = null;
+        pendingShots.clear();
+        augmentTicks = 0;
         poweredLastTick = false;
         activationPlateDistance = 0;
         activationPlateKind = null;
@@ -185,6 +195,35 @@ public final class EngineerTrapTower extends EntityBackedTower {
         if (source == null) {
             return;
         }
+        augmentTicks++;
+        for (var iterator = pendingShots.iterator(); iterator.hasNext();) {
+            PendingShot shot = iterator.next();
+            if (shot.dueTick() > augmentTicks) {continue;}
+            iterator.remove();
+            var target = dispenserTarget(lane, source, shot.targetId());
+            if (target != null) {
+                AugmentCombat.runWithoutTriggers(
+                        () -> fireDispenser(lane, source, target, shot.damage(), false));
+            }
+        }
+        if (augmentSnapshot().has("job_engineer_towers_p")
+                && AugmentCombat.allowsTriggers()
+                && augmentTicks % Math.max(1, (int) augmentSnapshot().parameter("job_engineer_towers_p", "intervalTicks", 120)) == 0) {
+            plateActivation(lane, false).ifPresent(activation -> {
+                if (activeTicks <= 0) {armed = true;}
+                receiveSignal(lane, source, activation);
+            });
+        }
+        if (pendingExplosion != null && lane.arenaWorld().getGameTime() >= pendingExplosion.dueTick()) {
+            PendingExplosion pending = pendingExplosion;
+            pendingExplosion = null;
+            MonsterAreaEffectRequest repeat = new MonsterAreaEffectRequest(
+                    AreaEffectIds.tower(this, "tnt_repeat"), source, pending.center(), pending.radius(),
+                    java.util.Set.of(), null, AreaVfxSpec.onTrigger(AreaVfxStyles.CORPSE_EXPLOSION))
+                    .nearestTargets(pending.cap());
+            AugmentCombat.runWithoutTriggers(() -> TowerAreaDamage.applyResolved(
+                    this, source, repeat, ignored -> pending.damage(), true, (target, amount, killed) -> {}));
+        }
         boolean physicalPower = lane.arenaWorld().hasNeighborSignal(signalPosition());
         Optional<PlateActivation> plateActivation = physicalPower
                 ? recentPlateActivation(lane)
@@ -194,17 +233,7 @@ public final class EngineerTrapTower extends EntityBackedTower {
             armed = true;
         }
         if (powered && !poweredLastTick) {
-            PlateActivation activation = plateActivation.orElseThrow();
-            activationPlateDistance = activation.distance();
-            activationPlateKind = activation.kind();
-            if (activeTicks > 0) {
-                activeTicks = activationDurationTicks();
-                armed = false;
-                updateActiveName(source, true);
-                showActivationVfx(source);
-            } else if (armed) {
-                activate(lane, source);
-            }
+            receiveSignal(lane, source, plateActivation.orElseThrow());
         }
         poweredLastTick = powered;
 
@@ -255,6 +284,9 @@ public final class EngineerTrapTower extends EntityBackedTower {
         }
         if (kind == EngineerTowers.TrapKind.TNT) {
             lines.add("<red>라운드 폭발</red> <white>" + (tntUsed ? "사용함" : "준비됨") + "</white>");
+            if (pendingExplosion != null) {
+                lines.add("<gold>폭발은 예술이다!</gold> <white>재폭발 대기 중</white>");
+            }
             int extraTargets = EngineerBalance.tntExtraTargets(presses);
             lines.add("<green>누적 추가 대상</green> <white>+" + extraTargets + "/"
                     + EngineerBalance.tntExtraTargetCap() + "기 · 현재 최대 "
@@ -273,6 +305,14 @@ public final class EngineerTrapTower extends EntityBackedTower {
                     + "%</green>");
         }
         if (kind == EngineerTowers.TrapKind.DISPENSER) {
+            if (augmentSnapshot().has("job_engineer_towers_s")) {
+                lines.add("<gold>관통 탄환</gold> <white>뒤의 적 "
+                        + (int) augmentSnapshot().parameter("job_engineer_towers_s", "extraTargets", 1) + "기 추가 타격</white>");
+            }
+            if (augmentSnapshot().has("job_engineer_towers_g1")) {
+                lines.add("<gold>무한 회로</gold> <white>신호당 "
+                        + activationDurationTicks() / 20.0 + "초 · 후속 탄환 " + pendingShots.size() + "발 대기</white>");
+            }
             int appliedDistance = Math.min(activationPlateDistance, EngineerBalance.dispenserMaxPlateDistance());
             lines.add("<aqua>적용 회로 거리</aqua> <white>" + appliedDistance + "/"
                     + EngineerBalance.dispenserMaxPlateDistance() + "칸</white>"
@@ -302,6 +342,12 @@ public final class EngineerTrapTower extends EntityBackedTower {
                     + "p · 현재 " + precisePercent(slow) + " / "
                     + precisePercent(EngineerBalance.slimeSlowCap()) + "</white>");
         }
+        if (augmentSnapshot().has("job_engineer_towers_p")) {
+            int interval = Math.max(1, (int) augmentSnapshot().parameter("job_engineer_towers_p", "intervalTicks", 120));
+            lines.add("<gold>전자동 공장</gold> <white>연결 발판 자동 신호 "
+                    + String.format(java.util.Locale.ROOT, "%.1f초", (interval - augmentTicks % interval) / 20.0)
+                    + " 후 · 발판 사용 횟수 증가 없음</white>");
+        }
         return List.copyOf(lines);
     }
 
@@ -311,6 +357,19 @@ public final class EngineerTrapTower extends EntityBackedTower {
 
     public boolean armed() {
         return armed;
+    }
+
+    private void receiveSignal(PlayerLane lane, SemionTowerEntity source, PlateActivation activation) {
+        activationPlateDistance = activation.distance();
+        activationPlateKind = activation.kind();
+        if (activeTicks > 0) {
+            activeTicks = activationDurationTicks();
+            armed = false;
+            updateActiveName(source, true);
+            showActivationVfx(source);
+        } else if (armed) {
+            activate(lane, source);
+        }
     }
 
     private void activate(PlayerLane lane, SemionTowerEntity source) {
@@ -360,21 +419,48 @@ public final class EngineerTrapTower extends EntityBackedTower {
             return;
         }
         actionCooldown = Math.max(1, intAbility("intervalTicks", dispenserInterval(tier))) - 1;
+        SemionMonsterEntity target = dispenserTarget(lane, source, null);
+        if (target != null) {
+            double damage = ability("damage", dispenserDamage(tier))
+                    * EngineerBalance.dispenserDamageMultiplier(activationPlateDistance)
+                    * EngineerBalance.plateDamageMultiplier(activationPlateKind)
+                    * EngineerBalance.dispenserPressDamageMultiplier(pressCount());
+            fireDispenser(lane, source, target, damage, true);
+            if (AugmentCombat.allowsTriggers() && augmentSnapshot().has("job_engineer_towers_g1")) {
+                int gap = (int) augmentSnapshot().parameter("job_engineer_towers_g1", "shotSpacingTicks", 4);
+                double followup = damage * augmentSnapshot().parameter("job_engineer_towers_g1", "followupRatio", .5);
+                pendingShots.add(new PendingShot(target.getUUID(), followup, augmentTicks + gap));
+                pendingShots.add(new PendingShot(target.getUUID(), followup, augmentTicks + gap * 2));
+            }
+        }
+    }
+
+    private SemionMonsterEntity dispenserTarget(PlayerLane lane, SemionTowerEntity source, UUID preferred) {
         double range = ability("range", dispenserRange(tier));
-        liveMonsters(lane).stream()
-                .filter(target -> target.position().distanceToSqr(source.position()) <= range * range)
-                .max(Comparator.comparingDouble(target -> target.runtimeMonster().laneProgress()))
-                .ifPresent(target -> {
-                    double damage = ability("damage", dispenserDamage(tier))
-                            * EngineerBalance.dispenserDamageMultiplier(activationPlateDistance)
-                            * EngineerBalance.plateDamageMultiplier(activationPlateKind)
-                            * EngineerBalance.dispenserPressDamageMultiplier(pressCount());
-                    DamageResult result = damageTargetResult(source, target, damage, DamageType.PHYSICAL);
-                    TowerVfxService.showSecondaryAttack(source, target);
-                    if (result.killed()) {
-                        onKill(source, target, damage);
-                    }
-                });
+        return liveMonsters(lane).stream()
+                .filter(target -> source.isValidAttackTarget(target) && source.distanceToSqr(target) <= range * range)
+                .max(Comparator.<SemionMonsterEntity>comparingInt(target -> target.getUUID().equals(preferred) ? 1 : 0)
+                        .thenComparingDouble(target -> target.runtimeMonster().laneProgress()))
+                .orElse(null);
+    }
+
+    private void fireDispenser(PlayerLane lane, SemionTowerEntity source, SemionMonsterEntity target, double damage, boolean pierce) {
+        Vec3 hit = target.position().add(0, target.getBbHeight() * .5, 0);
+        Vec3 start = source.position().add(0, source.getBbHeight() * .5, 0);
+        DamageResult result = damageTargetResult(source, target, damage, DamageType.PHYSICAL);
+        TowerVfxService.showSecondaryAttack(source, target);
+        if (result.killed()) {onKill(source, target, damage);}
+        if (!pierce || !augmentSnapshot().has("job_engineer_towers_s")
+                || !AugmentCombat.allowsTriggers()) {return;}
+        double range = ability("range", dispenserRange(tier));
+        Vec3 direction = hit.subtract(start).normalize();
+        Vec3 end = start.add(direction.scale(range));
+        var request = new MonsterAreaEffectRequest(AreaEffectIds.tower(this, "piercing_shot"), source, source.position(), range,
+                Set.of(target.getUUID()), other -> other.position().subtract(target.position()).dot(direction) > 0
+                && other.getBoundingBox().clip(hit, end).isPresent(), AreaVfxSpec.onTrigger(AreaVfxStyles.SPLASH))
+                .nearestTargets((int) augmentSnapshot().parameter("job_engineer_towers_s", "extraTargets", 1));
+        AugmentCombat.runWithoutTriggers(() -> TowerAreaDamage.apply(
+                this, source, request, ignored -> damage, true, (other, amount, killed) -> {}, DamageType.PHYSICAL));
     }
 
     private void tickSlime(SemionTowerEntity source, boolean showVfx) {
@@ -398,10 +484,16 @@ public final class EngineerTrapTower extends EntityBackedTower {
                 AreaEffectIds.tower(this, "tnt"), source, radius,
                 AreaVfxSpec.onTrigger(AreaVfxStyles.CORPSE_EXPLOSION)
         ).nearestTargets(cap);
+        double baseDamage = ability("damage", tntDamage(tier)) * EngineerBalance.plateDamageMultiplier(tntPlateKind);
+        String card = "job_engineer_towers_g2";
+        if (AugmentCombat.allowsTriggers() && augmentSnapshot().has(card)) {
+            pendingExplosion = new PendingExplosion(source.position(), radius, cap,
+                    resolveOutgoingDamage(source, null, baseDamage) * augmentSnapshot().parameter(card, "repeatDamageRatio", .80),
+                    source.level().getGameTime() + (int) augmentSnapshot().parameter(card, "delayTicks", 40));
+        }
         TowerAreaDamage.apply(
                 this, source, request,
-                ignored -> ability("damage", tntDamage(tier))
-                        * EngineerBalance.plateDamageMultiplier(tntPlateKind),
+                ignored -> baseDamage,
                 true,
                 (target, amount, killed) -> {}, DamageType.PHYSICAL
         );
@@ -443,6 +535,8 @@ public final class EngineerTrapTower extends EntityBackedTower {
             clearDoorTargets(lane, source);
         }
         waveActive = false;
+        pendingShots.clear();
+        pendingExplosion = null;
         activeTicks = 0;
         actionCooldown = 0;
         fuseTicks = -1;
@@ -495,6 +589,9 @@ public final class EngineerTrapTower extends EntityBackedTower {
     }
 
     private int activationDurationTicks() {
+        if (kind == EngineerTowers.TrapKind.DISPENSER && augmentSnapshot().has("job_engineer_towers_g1")) {
+            return (int) augmentSnapshot().parameter("job_engineer_towers_g1", "activeTicks", 120);
+        }
         return kind == EngineerTowers.TrapKind.DOOR
                 ? EngineerBalance.doorActiveTicks()
                 : EngineerBalance.activeTicks();
@@ -579,6 +676,10 @@ public final class EngineerTrapTower extends EntityBackedTower {
     }
 
     private Optional<PlateActivation> recentPlateActivation(PlayerLane lane) {
+        return plateActivation(lane, true);
+    }
+
+    private Optional<PlateActivation> plateActivation(PlayerLane lane, boolean requireRecentPress) {
         long now = lane.arenaWorld().getGameTime();
         long oldestAccepted = now - EngineerBalance.activeTicks();
         Map<BlockPos, EngineerCircuitTower> circuits = new HashMap<>();
@@ -589,7 +690,7 @@ public final class EngineerTrapTower extends EntityBackedTower {
         }
         return circuits.values().stream()
                 .filter(circuit -> circuit.plateKind() != null)
-                .filter(circuit -> circuit.lastPressedGameTime() >= oldestAccepted
+                .filter(circuit -> !requireRecentPress || circuit.lastPressedGameTime() >= oldestAccepted
                         && circuit.lastPressedGameTime() <= now)
                 .map(circuit -> new PlatePath(
                         circuit.lastPressedGameTime(),

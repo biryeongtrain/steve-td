@@ -3,6 +3,7 @@ package kim.biryeong.semiontd.entity.monster;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.MonsterScalingConfig;
 import kim.biryeong.semiontd.config.WaveMonsterEntry;
+import kim.biryeong.semiontd.config.WaveHealingConfig;
 import kim.biryeong.semiontd.entity.model.SemionBilModelCache;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.summon.SummonBalancePolicy;
@@ -62,6 +63,17 @@ public final class Monster {
     private int survivalScalingStacks;
     private boolean finalDefenseCombat;
     private final Map<MonsterDataKey<?>, Object> data = new HashMap<>();
+    private final UUID logicalId = UUID.randomUUID();
+    private MonsterOrigin origin = MonsterOrigin.BUILDER_PROXY;
+    private UUID transactionId;
+    private long paidEmerald;
+    private long baseIncomeGain;
+    private final MonsterSupportMetrics supportMetrics = new MonsterSupportMetrics();
+    private final MonsterShield physicalShield = new MonsterShield(DamageType.PHYSICAL);
+    private final MonsterShield magicShield = new MonsterShield(DamageType.MAGIC);
+    private long supportGameTime;
+    private WaveHealingConfig waveHealing;
+    private final WaveHealingState waveHealingState = new WaveHealingState();
 
     public Monster(
             String id,
@@ -300,7 +312,11 @@ public final class Monster {
     }
 
     public static Monster fromWaveEntry(WaveMonsterEntry entry, TeamId targetTeam, int targetLaneId) {
-        return new Monster(
+        return fromWaveEntry(entry, targetTeam, targetLaneId, MonsterOrigin.BUILDER_PROXY);
+    }
+
+    public static Monster fromWaveEntry(WaveMonsterEntry entry, TeamId targetTeam, int targetLaneId, MonsterOrigin origin) {
+        Monster monster = new Monster(
                 entry.id(),
                 targetTeam,
                 targetLaneId,
@@ -323,10 +339,99 @@ public final class Monster {
                 entry.attackRange(),
                 entry.attackIntervalTicks()
         );
+        monster.setOrigin(java.util.Objects.requireNonNull(origin, "origin"));
+        monster.waveHealing = entry.healing();
+        return monster;
+    }
+
+    public WaveHealingConfig waveHealing() {
+        return waveHealing;
+    }
+
+    public WaveHealingState waveHealingState() {
+        return waveHealingState;
     }
 
     public String id() {
         return id;
+    }
+
+    public UUID logicalId() {
+        return logicalId;
+    }
+
+    public MonsterOrigin origin() {
+        return origin;
+    }
+
+    public void setOrigin(MonsterOrigin origin) {
+        this.origin = java.util.Objects.requireNonNull(origin, "origin");
+    }
+
+    public Optional<UUID> transactionId() {
+        return Optional.ofNullable(transactionId);
+    }
+
+    public long paidEmerald() {
+        return paidEmerald;
+    }
+
+    public long baseIncomeGain() {
+        return baseIncomeGain;
+    }
+
+    public void setSummonTransaction(UUID transactionId, long paidEmerald, long baseIncomeGain) {
+        if (transactionId == null || paidEmerald < 0 || baseIncomeGain < 0) {
+            throw new IllegalArgumentException("Summon transaction must have an ID and non-negative values.");
+        }
+        if (this.transactionId != null && (!this.transactionId.equals(transactionId)
+                || this.paidEmerald != paidEmerald || this.baseIncomeGain != baseIncomeGain)) {
+            throw new IllegalStateException("A logical monster cannot change purchase transaction.");
+        }
+        this.transactionId = transactionId;
+        this.paidEmerald = paidEmerald;
+        this.baseIncomeGain = baseIncomeGain;
+    }
+
+    public MonsterSupportMetrics supportMetrics() {
+        return supportMetrics;
+    }
+
+    public void expireShields(long gameTime) {
+        supportGameTime = gameTime;
+        physicalShield.expire(gameTime);
+        magicShield.expire(gameTime);
+    }
+
+    public boolean grantShield(DamageType type, double amount, int durationTicks, long gameTime, Monster source) {
+        if (!canReceiveUtilitySupportFrom(source) || type == null || type == DamageType.TRUE) {
+            return false;
+        }
+        supportGameTime = gameTime;
+        return shield(type).grant(amount, gameTime, durationTicks, source);
+    }
+
+    public boolean canReceiveUtilitySupportFrom(Monster source) {
+        return source != null && source.isAlive() && source.health() > 0.0 && !source.laneLeakRecorded()
+                && isAlive() && health > 0.0 && !laneLeakRecorded
+                && origin != MonsterOrigin.BUILDER_PROXY && !id.equals("warden_boss_15")
+                && targetTeam == source.targetTeam() && targetLaneId == source.targetLaneId();
+    }
+
+    public double shieldRemaining(DamageType type, long gameTime) {
+        return type == DamageType.TRUE ? 0.0 : shield(type).remaining(gameTime);
+    }
+
+    public Optional<UUID> shieldBuyer(DamageType type, long gameTime) {
+        return type == DamageType.TRUE ? Optional.empty() : shield(type).buyer(gameTime);
+    }
+
+    private MonsterShield shield(DamageType type) {
+        return switch (type) {
+            case PHYSICAL -> physicalShield;
+            case MAGIC -> magicShield;
+            case TRUE -> throw new IllegalArgumentException("True damage has no shield.");
+        };
     }
 
     public TeamId targetTeam() {
@@ -397,6 +502,17 @@ public final class Monster {
 
     public double permanentStatScale() {
         return permanentStatScale;
+    }
+
+    /** Purchase-time body modifiers survive entity recreation and preserve the health ratio. */
+    public void applyAugmentBodyModifiers(double healthMultiplier, double damageMultiplier) {
+        if (!Double.isFinite(healthMultiplier) || healthMultiplier <= 0
+                || !Double.isFinite(damageMultiplier) || damageMultiplier <= 0) {
+            throw new IllegalArgumentException("Augment body multipliers must be positive and finite.");
+        }
+        maxHealth *= healthMultiplier;
+        health *= healthMultiplier;
+        attackDamage *= damageMultiplier;
     }
 
     public double visualScale() {
@@ -610,8 +726,12 @@ public final class Monster {
     }
 
     public void damage(double amount, DamageType incomingDamageType) {
-        if (amount <= 0 || (!isAlive() && state != MonsterState.REACHED_BOSS)) {
-            return;
+        damageResult(amount, incomingDamageType);
+    }
+
+    public DamageResult damageResult(double amount, DamageType incomingDamageType) {
+        if (!Double.isFinite(amount) || amount <= 0 || (!isAlive() && state != MonsterState.REACHED_BOSS)) {
+            return new DamageResult(0.0, 0.0, 0.0);
         }
         DamageType damageType = incomingDamageType == null ? DamageType.PHYSICAL : incomingDamageType;
         double defense = switch (damageType) {
@@ -622,14 +742,21 @@ public final class Monster {
         double effectiveDamage = damageType == DamageType.TRUE
                 ? amount
                 : amount * 100.0 / (100.0 + Math.max(0.0, defense));
+        double absorbed = damageType == DamageType.TRUE ? 0.0 : shield(damageType).absorb(effectiveDamage, supportGameTime);
+        effectiveDamage -= absorbed;
+        double applied = Math.min(health, effectiveDamage);
         health = Math.max(0, health - effectiveDamage);
         if (health <= 0) {
             state = MonsterState.DEAD;
         }
+        return new DamageResult(effectiveDamage, applied, absorbed);
+    }
+
+    public record DamageResult(double healthDamageAttempted, double appliedDamage, double absorbedDamage) {
     }
 
     public void heal(double amount) {
-        if (amount <= 0 || !isAlive()) {
+        if (!Double.isFinite(amount) || amount <= 0 || !isAlive() || health <= 0.0) {
             return;
         }
         health = Math.min(maxHealth, health + amount);

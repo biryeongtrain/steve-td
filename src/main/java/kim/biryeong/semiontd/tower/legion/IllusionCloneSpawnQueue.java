@@ -60,7 +60,11 @@ public final class IllusionCloneSpawnQueue {
             if (!pending.isValid()) {
                 continue;
             }
-            pending.owner().spawnQueuedClone(pending.lane(), pending.sourceTower(), pending.profile(), pending.offset());
+            if (pending.child != null) {
+                pending.owner().spawnQueuedChild(pending.lane(), pending.sourceTower(), pending.child, pending.offset());
+            } else {
+                pending.owner().spawnQueuedClone(pending.lane(), pending.sourceTower(), pending.profile(), pending.offset());
+            }
             spawnedThisTick++;
         }
         currentTick++;
@@ -73,10 +77,28 @@ public final class IllusionCloneSpawnQueue {
         Iterator<Queue<PendingCloneSpawn>> iterator = PENDING_CLONE_SPAWNS.values().iterator();
         while (iterator.hasNext()) {
             Queue<PendingCloneSpawn> pendingSpawns = iterator.next();
-            pendingSpawns.removeIf(pending -> pending.owner() == owner);
+            pendingSpawns.removeIf(pending -> pending.owner() == owner && pending.child == null);
             if (pendingSpawns.isEmpty()) {
                 iterator.remove();
             }
+        }
+    }
+
+    static void enqueueChild(IllusionSummonerTower owner, PlayerLane lane, Tower parent,
+                             LegionAugments.Material material, Vec3 position, LegionAugments.Wave wave) {
+        PendingCloneSpawn spawn = new PendingCloneSpawn(owner, lane, parent, null, position);
+        spawn.child = material;
+        spawn.wave = wave;
+        PENDING_CLONE_SPAWNS.computeIfAbsent(currentTick + 1, ignored -> new ArrayDeque<>()).add(spawn);
+    }
+
+    static void cancelAugmentChildren(PlayerLane lane, java.util.UUID original) {
+        Iterator<Queue<PendingCloneSpawn>> iterator = PENDING_CLONE_SPAWNS.values().iterator();
+        while (iterator.hasNext()) {
+            Queue<PendingCloneSpawn> pending = iterator.next();
+            pending.removeIf(spawn -> spawn.child != null && spawn.lane == lane
+                    && (original == null || original.equals(spawn.child.original)));
+            if (pending.isEmpty()) iterator.remove();
         }
     }
 
@@ -95,6 +117,8 @@ public final class IllusionCloneSpawnQueue {
         private final Tower sourceTower;
         private final IllusionProfile profile;
         private final Vec3 offset;
+        private LegionAugments.Material child;
+        private LegionAugments.Wave wave;
 
         private PendingCloneSpawn(
                 IllusionSummonerTower owner,
@@ -131,6 +155,7 @@ public final class IllusionCloneSpawnQueue {
         }
 
         private boolean isValid() {
+            if (child != null) return LegionAugments.validChild(lane, wave, child);
             return lane.towers().contains(owner)
                     && sourceTower.health() > 0.0
                     && (sourceTower == owner || lane.towers().contains(sourceTower));

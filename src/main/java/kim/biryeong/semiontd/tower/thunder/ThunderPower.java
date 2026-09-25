@@ -97,11 +97,17 @@ public final class ThunderPower {
         double consumption = 0.0;
 
         for (Tower tower : lane.towers()) {
-            if (!playerId.equals(tower.ownerPlayer()) || tower.isDestroyed(lane)) {
+            if (!playerId.equals(tower.ownerPlayer())) {
                 continue;
             }
             TowerType type = tower.type();
             if (!ThunderTowers.isThunderTower(type)) {
+                continue;
+            }
+            if (tower.isDestroyed(lane)) {
+                if (ThunderTowers.isRod(type) && tower.augmentSnapshot().has("job_thunder_g1")) {
+                    generation += generationOf(playerId, tower);
+                }
                 continue;
             }
             generation += generationOf(playerId, tower);
@@ -121,12 +127,14 @@ public final class ThunderPower {
         String id = type.id();
 
         if (ThunderTowers.isRod(type)) {
+            double multiplier = tower.augmentSnapshot().has("job_thunder_g1")
+                    ? 1.0 + tower.augmentSnapshot().parameter("job_thunder_g1", "generationBonus", 1.0) : 1.0;
             if (ThunderBalance.isStormRod(id)) {
                 double[] range = ThunderBalance.stormRange(id);
                 double roll = ThunderStates.stormRoll(playerId);
-                return range[0] + (range[1] - range[0]) * roll;
+                return (range[0] + (range[1] - range[0]) * roll) * multiplier;
             }
-            return ThunderBalance.powerOutput(id);
+            return ThunderBalance.powerOutput(id) * multiplier;
         }
 
         if (ThunderTowers.isInsulated(type)) {

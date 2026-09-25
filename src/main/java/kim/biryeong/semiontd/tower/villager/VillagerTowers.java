@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import kim.biryeong.semiontd.config.TowerBalanceRuntime;
+import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.entity.visual.CatVisual;
 import kim.biryeong.semiontd.entity.visual.VillagerVisual;
 import kim.biryeong.semiontd.tower.TowerType;
@@ -510,22 +510,22 @@ public final class VillagerTowers {
     }
 
     private static void registerAdvTemplate(TowerType type, List<String> template, List<AdvLine> experienceLines) {
-        TowerDescriptionRegistry.register(type, resolved -> {
-            ArrayList<String> lines = new ArrayList<>(TowerDescriptionTemplate.render(template, resolved));
+        TowerDescriptionRegistry.register(type, (resolved, config) -> {
+            ArrayList<String> lines = new ArrayList<>(TowerDescriptionTemplate.render(template, resolved, config));
             for (AdvLine line : experienceLines) {
-                lines.add(experienceLine(type, line.stat(), line.key()));
+                lines.add(experienceLine(type, line.stat(), line.key(), config));
             }
-            lines.addAll(reputationLines(type));
+            lines.addAll(reputationLines(type, config));
             return List.copyOf(lines);
         });
     }
 
-    private static List<String> reputationLines(TowerType type) {
+    private static List<String> reputationLines(TowerType type, TowerBalanceConfig config) {
         return List.of(
-                reputationLine(type, "공격력", "reputationDamagePerPoint"),
-                reputationLine(type, "공격 속도", "reputationAttackSpeedPerPoint"),
-                reputationLine(type, "최대 체력", "reputationHealthPerPoint"),
-                reputationLine(type, "받는 피해 감소", "reputationDamageReductionPerPoint")
+                reputationLine(type, "공격력", "reputationDamagePerPoint", config),
+                reputationLine(type, "공격 속도", "reputationAttackSpeedPerPoint", config),
+                reputationLine(type, "최대 체력", "reputationHealthPerPoint", config),
+                reputationLine(type, "받는 피해 감소", "reputationDamageReductionPerPoint", config)
         );
     }
 
@@ -533,20 +533,20 @@ public final class VillagerTowers {
         return new AdvLine(stat, key);
     }
 
-    private static String experienceLine(TowerType type, String stat, String key) {
-        return "<green>경험치 " + advInterval(type, key) + "마다 " + stat + "이 " + advPercent(type, key) + "만큼 증가합니다.</green>";
+    private static String experienceLine(TowerType type, String stat, String key, TowerBalanceConfig config) {
+        return "<green>경험치 " + advInterval(type, key, config) + "마다 " + stat + "이 " + advPercent(type, key, config) + "만큼 증가합니다.</green>";
     }
 
-    private static String reputationLine(TowerType type, String stat, String key) {
-        return "<blue>평판 " + advInterval(type, key) + "마다 " + stat + "이 " + advPercent(type, key) + "만큼 증가합니다.</blue>";
+    private static String reputationLine(TowerType type, String stat, String key, TowerBalanceConfig config) {
+        return "<blue>평판 " + advInterval(type, key, config) + "마다 " + stat + "이 " + advPercent(type, key, config) + "만큼 증가합니다.</blue>";
     }
 
-    private static String advPercent(TowerType type, String key) {
-        return PERCENT_FORMAT.format(TowerBalanceRuntime.villagerAdv().buff(type.id(), key));
+    private static String advPercent(TowerType type, String key, TowerBalanceConfig config) {
+        return PERCENT_FORMAT.format(config.villagerAdv().buff(type.id(), key));
     }
 
-    private static String advInterval(TowerType type, String key) {
-        return NUMBER_FORMAT.format(TowerBalanceRuntime.villagerAdv().buffInterval(type.id(), key));
+    private static String advInterval(TowerType type, String key, TowerBalanceConfig config) {
+        return NUMBER_FORMAT.format(config.villagerAdv().buffInterval(type.id(), key));
     }
 
     private record AdvLine(String stat, String key) {

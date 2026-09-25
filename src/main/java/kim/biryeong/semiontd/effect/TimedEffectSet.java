@@ -11,6 +11,23 @@ public final class TimedEffectSet {
     private final EnumMap<TimedEffectType, Map<ResourceLocation, ActiveTimedEffect>> sourcedEffects = new EnumMap<>(TimedEffectType.class);
     private final EnumMap<TimedEffectType, Map<ResourceLocation, Double>> persistentEffects = new EnumMap<>(TimedEffectType.class);
 
+    public record Snapshot(TimedEffectType type, String sourceId, double magnitude,
+                           Integer remainingTicks, boolean persistent) {}
+
+    /** Detached diagnostic values; reading must not refresh or consume effects. */
+    public java.util.List<Snapshot> snapshot() {
+        var result = new java.util.ArrayList<Snapshot>();
+        effects.forEach((type, effect) -> result.add(new Snapshot(type, null, effect.magnitude, effect.remainingTicks, false)));
+        sourcedEffects.forEach((type, sources) -> sources.forEach((source, effect) ->
+                result.add(new Snapshot(type, source.toString(), effect.magnitude, effect.remainingTicks, false))));
+        persistentEffects.forEach((type, sources) -> sources.forEach((source, magnitude) ->
+                result.add(new Snapshot(type, source.toString(), magnitude, null, true))));
+        result.sort(java.util.Comparator.comparing((Snapshot value) -> value.type().name())
+                .thenComparing(value -> value.sourceId() == null ? "" : value.sourceId())
+                .thenComparing(Snapshot::persistent));
+        return java.util.List.copyOf(result);
+    }
+
     public void apply(TimedEffectType type, double magnitude, int durationTicks) {
         if (type == null || durationTicks <= 0) {
             return;

@@ -1,5 +1,77 @@
 {
   "towers": {
+    "augment_folding_barricade": {
+      "mineralCost": 160,
+      "maxHealth": 300.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 0
+    },
+    "augment_pulse_relay": {
+      "mineralCost": 220,
+      "maxHealth": 160.0,
+      "range": 6.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 0
+    },
+    "augment_barrier_core": {
+      "mineralCost": 0,
+      "maxHealth": 1000.0,
+      "range": 6.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 0
+    },
+    "augment_giant_hunter": {
+      "mineralCost": 0,
+      "maxHealth": 320.0,
+      "range": 9.0,
+      "damage": 70.0,
+      "attackIntervalTicks": 60,
+      "aggroPriority": 0
+    },
+    "augment_emergency_bell": {
+      "mineralCost": 120,
+      "maxHealth": 100.0,
+      "range": 6.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 0
+    },
+    "augment_capacitor_post": {
+      "mineralCost": 140,
+      "maxHealth": 180.0,
+      "range": 5.0,
+      "damage": 35.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 0
+    },
+    "augment_ambush_workshop": {
+      "mineralCost": 220,
+      "maxHealth": 180.0,
+      "range": 6.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 5,
+      "aggroPriority": 0
+    },
+    "augment_starlight_cocoon": {
+      "mineralCost": 0,
+      "maxHealth": 260.0,
+      "range": 5.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 30,
+      "aggroPriority": 0
+    },
+    "augment_ordnance_factory": {
+      "mineralCost": 0,
+      "maxHealth": 300.0,
+      "range": 8.0,
+      "damage": 20.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 0
+    },
     "villager_splash_t1": {
       "mineralCost": 50,
       "maxHealth": 40.0,
@@ -2027,24 +2099,24 @@
     "insect_bee_t1": {
       "mineralCost": 40,
       "maxHealth": 50.0,
-      "range": 7.0,
-      "damage": 7.0,
+      "range": 1.5,
+      "damage": 0.0,
       "attackIntervalTicks": 16,
       "aggroPriority": 0
     },
     "insect_bee_t2": {
       "mineralCost": 0,
       "maxHealth": 90.0,
-      "range": 8.0,
-      "damage": 12.0,
+      "range": 1.5,
+      "damage": 0.0,
       "attackIntervalTicks": 13,
       "aggroPriority": 0
     },
     "insect_bee_t3": {
       "mineralCost": 0,
       "maxHealth": 150.0,
-      "range": 9.0,
-      "damage": 21.0,
+      "range": 1.5,
+      "damage": 0.0,
       "attackIntervalTicks": 10,
       "aggroPriority": 0
     },
@@ -2207,6 +2279,14 @@
       "damage": 0.0,
       "attackIntervalTicks": 120,
       "aggroPriority": 1
+    },
+    "queen_joker": {
+      "mineralCost": 0,
+      "maxHealth": 45.0,
+      "range": 8.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 10,
+      "aggroPriority": 0
     },
     "queen_random_card_soldier": {
       "mineralCost": 25,
@@ -4431,7 +4511,7 @@
     "pirate_deep_anchor->pirate_ancient_anchor": 1200
   },
   "abilities": {
-    "pirate_admiral": { "spendThreshold": 200.0, "paybackLow": 50.0, "paybackHigh": 75.0, "maxHealthBonusLow": 2.0, "maxHealthBonusHigh": 4.0, "damageBonus": 0.5, "effectCount": 1.0 },
+    "pirate_admiral": { "spendThreshold": 300.0, "paybackLow": 50.0, "paybackHigh": 75.0, "maxHealthBonusLow": 2.0, "maxHealthBonusHigh": 4.0, "damageBonus": 0.5, "effectCount": 1.0 },
     "pirate_golden_admiral": { "effectCount": 2.0 },
     "pirate_deckhand": { "incomeMin": 1.0, "incomeMax": 3.0, "openingDamageBonus": 0.5, "openingDamageTicks": 120.0 },
     "pirate_lookout_deckhand": { "incomeMin": 2.0, "incomeMax": 3.0, "splashRadius": 1.5, "splashRatio": 0.5, "openingDamageBonus": 0.5, "openingDamageTicks": 120.0 },
@@ -4449,7 +4529,7 @@
     "pirate_helmsman": { "spendStep": 100.0, "healthPerStep": 2.0, "damagePerStep": 0.5 },
     "pirate_guide": { "spendStep": 100.0, "healthPerStep": 3.0, "lostHealthThreshold": 1200.0, "lostHealthRatio": 0.035 },
     "pirate_navigator": { "spendStep": 75.0, "healthPerStep": 3.0, "damagePerStep": 0.5 },
-    "pirate_first_navigator": { "spendStep": 50.0, "healthPerStep": 5.0, "damagePerStep": 0.5, "splashRadius": 2.0, "splashRatio": 0.8 },
+    "pirate_first_navigator": { "spendStep": 75.0, "healthPerStep": 5.0, "damagePerStep": 0.5, "splashRadius": 2.0, "splashRatio": 0.8 },
     "pirate_shabby_chest": { "rounds": 5.0, "cashout": 90.0, "saleHealthBonus": 5.0 },
     "pirate_empire_chest": { "rounds": 5.0, "cashout": 200.0, "saleDamageBonus": 1.0 },
     "pirate_deep_chest": { "rounds": 5.0, "cashout": 250.0, "saleHealthBonus": 10.0 },
@@ -6178,10 +6258,20 @@
     "insect_global": {
       "reviveIncrementTicks": 60.0,
       "deathDamageTakenPerStack": 0.2,
-      "freshPowerMultiplier": 1.75,
+      "freshPowerMultiplier": 2.0,
       "freshPowerScale": 1.2,
-      "reviveBaseTicks": 80.0,
-      "radiusVfxIntervalTicks": 80.0
+      "reviveBaseTicks": 120.0,
+      "radiusVfxIntervalTicks": 80.0,
+      "freshDamageTakenMultiplier": 3.0,
+      "beeReviveBaseTicks": 40.0,
+      "beeReviveIncrementTicks": 30.0,
+      "reviveHealthLossRatio": 0.05,
+      "deathExplosionHealthRatio": 0.5,
+      "deathExplosionRadius": 3.0,
+      "tier1DeathExplosionHealthRatio": 0.25,
+      "tier2DeathExplosionHealthRatio": 0.4,
+      "tier1DeathExplosionRadius": 2.0,
+      "contactDetonationRange": 1.5
     },
     "insect_spawner": {
       "reviveRadius": 6.0
@@ -7761,10 +7851,10 @@
       "firstThreshold": 3.0,
       "secondThreshold": 6.0,
       "thirdThreshold": 9.0,
-      "chillPerHit": 0.20,
+      "chillPerHit": 0.15,
       "chillThreshold": 1.0,
-      "refrigerantDamageReduction": 0.20,
-      "refrigerantAttackSpeedReduction": 0.20,
+      "refrigerantDamageReduction": 0.15,
+      "refrigerantAttackSpeedReduction": 0.15,
       "thawMaxHealthDamage": 0.05,
       "eruptionMaxStacks": 10.0,
       "eruptionStacksAt3": 1.0,
@@ -7920,32 +8010,47 @@
     "t1_pet_dog": {
       "bondCap": 100.0,
       "bondToUpgrade": 70.0,
-      "packDamagePerPackMate": 0.12
+      "packDamagePerPackMate": 0.08,
+      "packHealthPerPackMate": 0.08,
+      "adultDamageReduction": 0.1
     },
     "t2_pet_dog": {
       "bondCap": 200.0,
       "bondToUpgrade": 160.0,
-      "packDamagePerPackMate": 0.12
+      "packDamagePerPackMate": 0.08,
+      "packHealthPerPackMate": 0.08,
+      "adultDamageReduction": 0.15
     },
     "t3_pet_dog": {
       "bondCap": 320.0,
       "bondToUpgrade": 0.0,
-      "packDamagePerPackMate": 0.12
+      "packDamagePerPackMate": 0.08,
+      "packHealthPerPackMate": 0.08,
+      "adultDamageReduction": 0.2
     },
     "t1_pet_cat": {
       "bondCap": 100.0,
       "bondToUpgrade": 70.0,
-      "soloDamageBonus": 0.8
+      "soloDamageBonus": 2.0,
+      "adultSplashRadius": 1.5,
+      "adultSplashMaxTargets": 2.0,
+      "adultSplashDamageRatio": 0.3
     },
     "t2_pet_cat": {
       "bondCap": 200.0,
       "bondToUpgrade": 160.0,
-      "soloDamageBonus": 0.8
+      "soloDamageBonus": 2.0,
+      "adultSplashRadius": 2.0,
+      "adultSplashMaxTargets": 4.0,
+      "adultSplashDamageRatio": 0.3
     },
     "t3_pet_cat": {
       "bondCap": 320.0,
       "bondToUpgrade": 0.0,
-      "soloDamageBonus": 0.8
+      "soloDamageBonus": 2.0,
+      "adultSplashRadius": 2.5,
+      "adultSplashMaxTargets": 6.0,
+      "adultSplashDamageRatio": 0.3
     },
     "t1_pet_bird": {
       "bondCap": 100.0,

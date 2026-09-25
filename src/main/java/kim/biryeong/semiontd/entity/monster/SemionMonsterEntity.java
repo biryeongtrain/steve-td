@@ -10,11 +10,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.config.WaveMonsterEntry;
 import kim.biryeong.semiontd.effect.TimedEffectSet;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.defender.LaneDefenseEntity;
 import kim.biryeong.semiontd.entity.healing.HealingTarget;
+import kim.biryeong.semiontd.entity.goal.NaturalWaveHealGoal;
 import kim.biryeong.semiontd.entity.model.SemionBilModelCache;
 import kim.biryeong.semiontd.entity.monster.goal.AcquireLaneDefenseTargetGoal;
 import kim.biryeong.semiontd.entity.monster.goal.LaneFollowGoal;
@@ -65,6 +67,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
     private EntityDimensions runtimeDimensions = MonsterDimensions.DEFAULT.toEntityDimensions();
     private SemionAnimationState animationState = SemionAnimationState.IDLE;
     private final List<Goal> summonAbilityGoals = new ArrayList<>();
+    private NaturalWaveHealGoal waveAbilityGoal;
     private final TimedEffectSet timedEffects = new TimedEffectSet();
     private IgniteState ignite;
     private final Map<Tower, BeePoisonState> beePoisons = new IdentityHashMap<>();
@@ -126,6 +129,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
                 ? Component.literal(senderName).withStyle(teamColor(senderTeam))
                 : Component.literal(monster.id()));
         setCustomNameVisible(true);
+        refreshSupportProgressName();
         setPolymerEntityType(monster.entityTypeId());
         syncAttributesFromRuntimeMonster();
         getAttribute(Attributes.FOLLOW_RANGE).setBaseValue(followRangeFor(monster));
@@ -134,6 +138,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         setHealth((float) monster.health());
         installBilModel(blockbenchModelId);
         installSummonAbilityGoals();
+        installWaveAbilityGoals();
         playAnimation(SemionAnimationState.IDLE);
     }
 
@@ -177,6 +182,12 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         tickIgnite();
         tickBeePoisons();
         timedEffects.tick();
+        if (runtimeMonster != null) {
+            runtimeMonster.expireShields(level().getGameTime());
+            if (tickCount % 20 == 0) {
+                refreshSupportProgressName();
+            }
+        }
 
         if (getTarget() instanceof LaneDefenseEntity defenseEntity && runtimeMonster != null) {
             if (!getTarget().isAlive() || !defenseEntity.defendsLane(runtimeMonster.targetLaneId())) {
@@ -255,30 +266,55 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         return runtimeMonster;
     }
 
+    private void refreshSupportProgressName() {
+        if (runtimeMonster == null || runtimeMonster.origin() != MonsterOrigin.NORMAL_PAID) {
+            return;
+        }
+        var progress = kim.biryeong.semiontd.augment.AugmentEconomyService.supportProgress(runtimeMonster);
+        if (progress.isEmpty()) {
+            return;
+        }
+        String sender = runtimeMonster.senderName().orElse(null);
+        TeamId team = runtimeMonster.senderTeam().orElse(null);
+        var name = sender != null && team != null
+                ? Component.literal(sender).withStyle(teamColor(team))
+                : Component.literal(runtimeMonster.id());
+        setCustomName(name.append(Component.literal(" · " + progress.get())));
+    }
+
     public boolean applyRuntimeDamage(DamageSource damageSource, double amount, DamageType damageType) {
-        if (amount <= 0.0) {
-            return false;
+        return applySemionDamageResult(damageSource, amount, damageType).killed();
+    }
+
+    public AppliedDamageResult applySemionDamageResult(DamageSource damageSource, double amount, DamageType damageType) {
+        if (!Double.isFinite(amount) || amount <= 0.0) {
+            return new AppliedDamageResult(false, 0.0, 0.0, 0.0);
         }
         if (runtimeMonster == null) {
+            double previous = getHealth();
             hurt(damageSource, (float) amount);
-            return isRemoved() || !isAlive() || getHealth() <= 0.0F;
+            return new AppliedDamageResult(isRemoved() || !isAlive() || getHealth() <= 0.0F,
+                    amount, Math.max(0.0, previous - getHealth()), 0.0);
         }
 
         runtimeMonster.syncHealth(Math.min(runtimeMonster.health(), getHealth()));
-        double previousHealth = runtimeMonster.health();
-        runtimeMonster.damage(amount, damageType);
-        double appliedDamage = previousHealth - runtimeMonster.health();
+        runtimeMonster.expireShields(level().getGameTime());
+        Monster.DamageResult result = runtimeMonster.damageResult(amount, damageType);
+        double appliedDamage = result.appliedDamage();
         if (appliedDamage <= 0.0) {
-            return runtimeMonster.isRemoved();
+            return new AppliedDamageResult(runtimeMonster.isRemoved(), result.healthDamageAttempted(), 0.0, result.absorbedDamage());
         }
 
         hurt(damageSource, (float) appliedDamage);
         if (runtimeMonster.health() <= 0.0) {
             discard();
-            return true;
+            return new AppliedDamageResult(true, result.healthDamageAttempted(), appliedDamage, result.absorbedDamage());
         }
         setHealth((float) runtimeMonster.health());
-        return false;
+        return new AppliedDamageResult(false, result.healthDamageAttempted(), appliedDamage, result.absorbedDamage());
+    }
+
+    public record AppliedDamageResult(boolean killed, double healthDamageAttempted, double appliedDamage, double absorbedDamage) {
     }
 
     public void syncAttributesFromRuntimeMonster() {
@@ -318,7 +354,8 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
 
     @Override
     public boolean receiveHealing(double amount) {
-        if (runtimeMonster == null || amount <= 0 || !runtimeMonster.isAlive()) {
+        if (runtimeMonster == null || !Double.isFinite(amount) || amount <= 0 || !runtimeMonster.isAlive()
+                || runtimeMonster.health() <= 0.0 || !isAlive() || isRemoved()) {
             return false;
         }
         double before = runtimeMonster.health();
@@ -328,6 +365,25 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         }
         setHealth((float) runtimeMonster.health());
         return true;
+    }
+
+    @Override
+    public boolean healTarget(HealingTarget target, double amount) {
+        if (target == null) {
+            return false;
+        }
+        if (runtimeMonster != null) {
+            amount *= kim.biryeong.semiontd.augment.AugmentEconomyService.supportMultiplier(runtimeMonster);
+        }
+        double effective = target.receiveHealingAmount(amount);
+        if (runtimeMonster != null) {
+            runtimeMonster.supportMetrics().recordHealing(amount, effective);
+            if (target instanceof SemionMonsterEntity monsterTarget && monsterTarget.runtimeMonster() != null) {
+                kim.biryeong.semiontd.augment.AugmentEconomyService.recordSupport(runtimeMonster,
+                        monsterTarget.runtimeMonster(), effective);
+            }
+        }
+        return effective > 0.0;
     }
 
     @Override
@@ -393,6 +449,29 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         timedEffects.apply(type, magnitude, durationTicks);
     }
 
+    public boolean isStunned() {
+        return timedEffects.magnitude(TimedEffectType.MONSTER_STUN) > 0.0;
+    }
+
+    public boolean isRooted() {
+        return timedEffects.magnitude(TimedEffectType.MONSTER_ROOT) > 0.0;
+    }
+
+    @Override
+    public void travel(Vec3 movementInput) {
+        // Keep AI timers and forced motion (including Sky Breaker's lift) running.
+        if (isRooted()) {
+            setDeltaMovement(0, getDeltaMovement().y, 0);
+            getNavigation().stop();
+        }
+        super.travel(isStunned() || isRooted() ? Vec3.ZERO : movementInput);
+    }
+
+    @Override
+    public void setJumping(boolean jumping) {
+        super.setJumping(jumping && !isStunned() && !isRooted());
+    }
+
     public boolean applyTimedEffect(TimedEffectType type, ResourceLocation sourceId, double magnitude, int durationTicks) {
         return timedEffects.apply(type, sourceId, magnitude, durationTicks);
     }
@@ -442,7 +521,8 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
                     additiveTraitBonus,
                     finalTraitMultiplier,
                     durationTicks,
-                    ticksUntilDamage
+                    ticksUntilDamage,
+                    !AugmentCombat.allowsTriggers() || sourceTower != null && sourceTower.isTemporaryCopy()
             );
         } else {
             ignite = new IgniteState(
@@ -453,7 +533,8 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
                     ignite.additiveTraitBonus(),
                     ignite.finalTraitMultiplier(),
                     durationTicks,
-                    ticksUntilDamage
+                    ticksUntilDamage,
+                    ignite.suppressAugmentTriggers()
             );
         }
         timedEffects.apply(TimedEffectType.MONSTER_IGNITED, 1.0, durationTicks);
@@ -484,7 +565,9 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
                 sourceTower,
                 Math.max(0.0, damagePerStack),
                 Math.max(1, tickIntervalTicks),
-                sting
+                sting,
+                !AugmentCombat.allowsTriggers() || sourceTower.isTemporaryCopy()
+                        || previous != null && previous.suppressAugmentTriggers()
         ));
     }
 
@@ -539,11 +622,16 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
                 ignite.additiveTraitBonus(),
                 ignite.finalTraitMultiplier(),
                 remainingTicks,
-                ticksUntilDamage
+                ticksUntilDamage,
+                ignite.suppressAugmentTriggers()
         );
     }
 
     private void applyIgniteDamage(IgniteState state) {
+        if (state.suppressAugmentTriggers() && AugmentCombat.allowsTriggers()) {
+            AugmentCombat.runWithoutTriggers(() -> applyIgniteDamage(state));
+            return;
+        }
         TraitVfx.showIgniteTick(this);
         double conditionalBonus = TraitEffects.conditionalTargetDamageBonus(
                 state.sourceLoadout(),
@@ -564,6 +652,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
             if (state.sourceTower() != null) {
                 state.sourceTower().recordDamageDealt(this, dealtDamage, DamageType.MAGIC);
                 if (killed) {
+                    AugmentCombat.recordKillOrigin(state.sourceTower(), runtimeMonster);
                     state.sourceTower().recordKill();
                     state.sourceTower().onIgniteKill(this);
                 }
@@ -600,13 +689,18 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
                         poison.sourceTower(),
                         poison.damagePerStack(),
                         poison.tickIntervalTicks(),
-                        result.state().orElseThrow()
+                        result.state().orElseThrow(),
+                        poison.suppressAugmentTriggers()
                 ));
             }
         }
     }
 
     private void applyBeePoisonDamage(BeePoisonState poison, double outgoingDamage) {
+        if (poison.suppressAugmentTriggers() && AugmentCombat.allowsTriggers()) {
+            AugmentCombat.runWithoutTriggers(() -> applyBeePoisonDamage(poison, outgoingDamage));
+            return;
+        }
         double damageAmount = towerDamageTaken(outgoingDamage);
         if (damageAmount <= 0.0) {
             return;
@@ -617,6 +711,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         if (dealtDamage > 0.0) {
             poison.sourceTower().recordDamageDealt(this, dealtDamage, DamageType.MAGIC);
             if (killed) {
+                AugmentCombat.recordKillOrigin(poison.sourceTower(), runtimeMonster);
                 poison.sourceTower().recordKill();
             }
             runtimeMonster.recordLastHit(poison.sourcePlayer(), KillSourceKind.TOWER);
@@ -635,7 +730,8 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
             double additiveTraitBonus,
             double finalTraitMultiplier,
             int remainingTicks,
-            int ticksUntilDamage
+            int ticksUntilDamage,
+            boolean suppressAugmentTriggers
     ) {
         private IgniteState {
             damagePerTick = Math.max(0.0, damagePerTick);
@@ -651,7 +747,8 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
             Tower sourceTower,
             double damagePerStack,
             int tickIntervalTicks,
-            BeeStingPolicy.State sting
+            BeeStingPolicy.State sting,
+            boolean suppressAugmentTriggers
     ) {
     }
 
@@ -671,6 +768,18 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
                 goalSelector.addGoal(3, goal);
             }
         });
+    }
+
+    private void installWaveAbilityGoals() {
+        if (waveAbilityGoal != null) {
+            goalSelector.removeGoal(waveAbilityGoal);
+            waveAbilityGoal = null;
+        }
+        if (runtimeMonster.origin() == MonsterOrigin.NATURAL_WAVE && runtimeMonster.waveHealing() != null) {
+            waveAbilityGoal = new NaturalWaveHealGoal(this);
+            waveAbilityGoal.updateName();
+            goalSelector.addGoal(3, waveAbilityGoal);
+        }
     }
 
     private void installBilModel(String modelId) {

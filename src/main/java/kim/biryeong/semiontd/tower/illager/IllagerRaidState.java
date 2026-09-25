@@ -5,6 +5,9 @@ public final class IllagerRaidState {
     private boolean active;
     private int roundStartTowerCount;
     private boolean pendingActivationEffects;
+    private int grandRaidThreshold;
+    private int extraGauge;
+    private int pendingVolleys;
 
     public int gauge() {
         return gauge;
@@ -27,6 +30,30 @@ public final class IllagerRaidState {
         this.active = false;
         this.roundStartTowerCount = Math.max(0, roundStartTowerCount);
         this.pendingActivationEffects = false;
+        this.grandRaidThreshold = 0;
+        this.extraGauge = 0;
+        this.pendingVolleys = 0;
+    }
+
+    public void enableGrandRaid(int threshold) {
+        grandRaidThreshold = Math.max(1, threshold);
+    }
+
+    public int extraGauge() {return extraGauge;}
+
+    public int grandRaidThreshold() {return grandRaidThreshold;}
+
+    public void addExtraGauge(int amount) {
+        if (!active || grandRaidThreshold <= 0 || amount <= 0) {return;}
+        extraGauge += amount;
+        pendingVolleys += extraGauge / grandRaidThreshold;
+        extraGauge %= grandRaidThreshold;
+    }
+
+    public int consumePendingVolleys() {
+        int volleys = pendingVolleys;
+        pendingVolleys = 0;
+        return volleys;
     }
 
     public boolean addGauge(int amount, int gaugeMax) {

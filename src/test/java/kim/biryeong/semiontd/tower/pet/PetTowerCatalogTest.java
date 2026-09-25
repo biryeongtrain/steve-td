@@ -109,8 +109,19 @@ class PetTowerCatalogTest {
         assertEquals(0.3, config.ability(PetTowers.KEEPER_T1.id(), PetBalance.KEY_BOND_GRANT_EXPONENT, -1));
         assertEquals(3.0, config.ability(PetTowers.KEEPER_T1.id(), PetBalance.KEY_WALK_BOND_FLAT, -1));
 
-        assertEquals(0.12, config.ability(PetTowers.DOG_T3.id(), PetBalance.KEY_PACK_DAMAGE_PER_MATE, -1));
-        assertEquals(0.8, config.ability(PetTowers.CAT_T3.id(), PetBalance.KEY_SOLO_DAMAGE_BONUS, -1));
+        assertEquals(0.08, config.ability(PetTowers.DOG_T3.id(), PetBalance.KEY_PACK_DAMAGE_PER_MATE, -1));
+        assertEquals(0.08, config.ability(PetTowers.DOG_T3.id(), PetBalance.KEY_PACK_HEALTH_PER_MATE, -1));
+        assertEquals(0.10, PetBalance.adultDamageReduction(PetTowers.DOG_T1));
+        assertEquals(0.15, PetBalance.adultDamageReduction(PetTowers.DOG_T2));
+        assertEquals(0.20, PetBalance.adultDamageReduction(PetTowers.DOG_T3));
+        assertEquals(2.0, config.ability(PetTowers.CAT_T3.id(), PetBalance.KEY_SOLO_DAMAGE_BONUS, -1));
+        assertEquals(1.5, PetBalance.adultSplashRadius(PetTowers.CAT_T1));
+        assertEquals(2.0, PetBalance.adultSplashRadius(PetTowers.CAT_T2));
+        assertEquals(2.5, PetBalance.adultSplashRadius(PetTowers.CAT_T3));
+        assertEquals(2, PetBalance.adultSplashMaxTargets(PetTowers.CAT_T1));
+        assertEquals(4, PetBalance.adultSplashMaxTargets(PetTowers.CAT_T2));
+        assertEquals(6, PetBalance.adultSplashMaxTargets(PetTowers.CAT_T3));
+        assertEquals(0.30, PetBalance.adultSplashDamageRatio(PetTowers.CAT_T3));
         assertEquals(1.0, config.ability(PetTowers.BIRD_T3.id(), PetBalance.KEY_HEAL_RATIO, -1));
 
         // A negative ability value breaks config application for every family, so keep them positive.
@@ -224,6 +235,7 @@ class PetTowerCatalogTest {
 
         // The final tier has nothing left to unlock, so it is always full size.
         PetTower finalTier = new PetTower(PetTowers.CAT_T3, OWNER, TeamId.RED, 1, new GridPosition(1, 80, 0));
+        assertTrue(finalTier.isAdult());
         assertEquals(1.0, finalTier.renderScale(), 1e-9);
         // Owners keep whatever their tower type declares.
         assertEquals(butler.type().visual().scale(), butler.renderScale(), 1e-9);

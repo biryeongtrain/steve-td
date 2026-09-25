@@ -80,9 +80,13 @@ public final class FrostHealingTower extends SupportTower {
     }
 
     void onEmissionWaveHit(PlayerLane lane) {
+        onEmissionWaveHit(lane, FrostBalance.chillPerHit());
+    }
+
+    void onEmissionWaveHit(PlayerLane lane, double amount) {
         reduceCooldownTicks(FrostBalance.healerCoolingAdvanceTicks());
         double threshold = Math.max(0.000001, FrostBalance.chillThreshold());
-        chill = Math.min(threshold, chill + Math.max(0.0, FrostBalance.chillPerHit()));
+        chill = Math.min(threshold, chill + Math.max(0.0, amount));
         if (chill + 1.0E-9 < threshold) {
             return;
         }

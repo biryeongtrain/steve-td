@@ -5,10 +5,13 @@ import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.MonsterDataKey;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
+import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import net.minecraft.resources.ResourceLocation;
 
 /** 몬스터에 귀속되는 한기·냉매 상태와 미래 아이스브레이크용 해동 진입점. */
 public final class FrostMonsterStates {
+    private static final MonsterDataKey<java.util.UUID> REFRIGERANT_OWNER = MonsterDataKey.of(
+            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "frost_refrigerant_owner"), java.util.UUID.class);
     private static final MonsterDataKey<Double> CHILL = MonsterDataKey.of(
             ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "frost_chill"),
             Double.class
@@ -49,6 +52,19 @@ public final class FrostMonsterStates {
         return new ChillResult(previous, current, becameRefrigerated, becameRefrigerated);
     }
 
+    public static ChillResult applyChill(SemionTowerEntity source, SemionMonsterEntity target, double amount) {
+        ChillResult result = applyChill(target, amount);
+        if (result.becameRefrigerated() && source != null && source.ownerPlayer() != null) {
+            target.runtimeMonster().setData(REFRIGERANT_OWNER, source.ownerPlayer());
+        }
+        FrostAugments.onChill(source, target, result);
+        return result;
+    }
+
+    static java.util.UUID refrigerantOwner(Monster monster) {
+        return monster == null ? null : monster.getData(REFRIGERANT_OWNER).orElse(null);
+    }
+
     public static double chill(Monster monster) {
         return monster == null ? 0.0 : monster.getData(CHILL).orElse(0.0);
     }
@@ -67,8 +83,10 @@ public final class FrostMonsterStates {
         }
         Monster monster = target.runtimeMonster();
         double damage = Math.max(0.0, monster.maxHealth() * FrostBalance.thawMaxHealthDamage());
+        FrostAugments.removeRefrigerant(monster);
         monster.removeData(CHILL);
         monster.removeData(REFRIGERATED);
+        monster.removeData(REFRIGERANT_OWNER);
         clearRefrigerantEffects(target);
         return new ThawResult(true, damage);
     }

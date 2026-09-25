@@ -1,0 +1,765 @@
+{
+  "enabled": false,
+  "publicPoolEnabled": false,
+  "rarityWeights": {
+    "GGG": 18,
+    "GGP": 11,
+    "GPP": 7,
+    "PPP": 2,
+    "SGG": 23,
+    "SGP": 22,
+    "SSG": 14,
+    "SSS": 3
+  },
+  "parameters": {
+    "semiontd:job_villager_towers_s": {
+      "inheritRatio": 0.5,
+      "capMultiplier": 3
+    },
+    "semiontd:job_villager_towers_g1": {
+      "initialStacks": 3,
+      "maxExtraAttacks": 5
+    },
+    "semiontd:job_villager_towers_g2": {
+      "radiusBonus": 1,
+      "maxChainDepth": 2
+    },
+    "semiontd:job_villager_towers_p": {
+      "maxHealthBonus": 2,
+      "intervalTicks": 60,
+      "radius": 4,
+      "maxTargets": 12,
+      "healthDamageRatio": 0.12
+    },
+    "semiontd:job_villager_adv_towers_s": {
+      "experienceRatio": 0.5
+    },
+    "semiontd:job_villager_adv_towers_g1": {
+      "upgradeCostBonus": 0.4,
+      "tierExperienceMultiplier": 2
+    },
+    "semiontd:job_villager_adv_towers_g2": {
+      "requiredKinds": 3,
+      "intervalTicks": 120
+    },
+    "semiontd:job_villager_adv_towers_p": {
+      "extraTargets": 2,
+      "damageRatio": 0.6
+    },
+    "semiontd:job_undead_towers_s": {
+      "overflowRatio": 0.1,
+      "radius": 4
+    },
+    "semiontd:job_undead_towers_g1": {
+      "deathsPerCharge": 5,
+      "targetCount": 3,
+      "damageRatio": 0.5
+    },
+    "semiontd:job_undead_towers_g2": {
+      "reviveDelayTicks": 20,
+      "reviveHealthRatio": 0.6,
+      "damageBonus": 0.6
+    },
+    "semiontd:job_undead_towers_p": {
+      "statBonus": 1,
+      "deathsPerSummon": 5,
+      "copyRatio": 0.35,
+      "copiesPerSummon": 2,
+      "maxCopies": 6
+    },
+    "semiontd:job_animal_towers_s": {},
+    "semiontd:job_animal_towers_g1": {
+      "maxHealthBonus": 1,
+      "damageBonus": 0.6,
+      "radius": 2.5,
+      "damageRatio": 0.6
+    },
+    "semiontd:job_animal_towers_g2": {
+      "everyAttacks": 5,
+      "maxAllies": 3,
+      "damageRatio": 1
+    },
+    "semiontd:job_animal_towers_p": {
+      "requiredLeaderKinds": 3,
+      "auraMultiplier": 2
+    },
+    "semiontd:job_warlock_towers_s": {
+      "damageRatio": 3
+    },
+    "semiontd:job_warlock_towers_g1": {
+      "radius": 3,
+      "maxTargets": 12,
+      "healthRatio": 1,
+      "growthBonus": 0.25
+    },
+    "semiontd:job_warlock_towers_g2": {
+      "healthThreshold": 0.6,
+      "damageBonus": 0.2
+    },
+    "semiontd:job_warlock_towers_p": {
+      "secondCoreCost": 700
+    },
+    "semiontd:job_legion_towers_s": {
+      "healRatio": 0.3
+    },
+    "semiontd:job_legion_towers_g1": {
+      "scalePerClone": 0.05,
+      "radius": 2,
+      "damageRatio": 0.25
+    },
+    "semiontd:job_legion_towers_g2": {
+      "attacks": 5,
+      "damageRatio": 3
+    },
+    "semiontd:job_legion_towers_p": {
+      "maxGeneration": 3,
+      "childRatio": 0.8,
+      "maxAdditional": 12
+    },
+    "semiontd:job_resonance_towers_s": {},
+    "semiontd:job_resonance_towers_g1": {
+      "linkRange": 3,
+      "requiredLinks": 3,
+      "damageBonus": 0.5,
+      "maxHealthBonus": 0.5
+    },
+    "semiontd:job_resonance_towers_g2": {
+      "everyAttacks": 3,
+      "radius": 3,
+      "maxTargets": 12,
+      "damageRatio": 2
+    },
+    "semiontd:job_resonance_towers_p": {
+      "intervalTicks": 120,
+      "maxTowers": 5
+    },
+    "semiontd:job_illager_towers_g1": {
+      "attackSpeedBonus": 0.3,
+      "durationTicks": 160
+    },
+    "semiontd:job_illager_towers_g2": {
+      "radius": 3,
+      "targetCount": 3,
+      "damageRatio": 1.5
+    },
+    "semiontd:job_illager_towers_p": {
+      "gaugePerVolley": 50,
+      "damageRatio": 3
+    },
+    "semiontd:job_nether_s": {
+      "healthRatio": 0.2
+    },
+    "semiontd:job_nether_g1": {
+      "healthThreshold": 0.6,
+      "decayReduction": 0.5
+    },
+    "semiontd:job_nether_g2": {
+      "durationTicks": 60,
+      "radius": 3,
+      "damageRatio": 0.5
+    },
+    "semiontd:job_nether_p": {
+      "reviveDelayTicks": 20,
+      "reviveHealthRatio": 0.5,
+      "damageBonus": 1
+    },
+    "semiontd:job_end_towers_s": {
+      "radius": 3,
+      "maxTargets": 8,
+      "healthRatio": 1
+    },
+    "semiontd:job_end_towers_g1": {
+      "durationMultiplier": 0.5,
+      "transfersPerCharge": 3,
+      "damageRatio": 1.5
+    },
+    "semiontd:job_end_towers_g2": {
+      "intervalTicks": 120,
+      "burstIntervalTicks": 4,
+      "shots": 2,
+      "length": 12,
+      "width": 3,
+      "maxTargets": 12,
+      "damageRatio": 0.75
+    },
+    "semiontd:job_end_towers_p": {
+      "statRatio": 0.5
+    },
+    "semiontd:job_ocean_s": {},
+    "semiontd:job_ocean_g1": {
+      "supplyMultiplier": 1.5,
+      "openingWater": 150
+    },
+    "semiontd:job_ocean_g2": {
+      "waterPerCharge": 30,
+      "radius": 3,
+      "targets": 12,
+      "damageRatio": 2
+    },
+    "semiontd:job_ocean_p": {
+      "periodTicks": 240,
+      "durationTicks": 80
+    },
+    "semiontd:job_ancient_city_s": {
+      "radius": 3,
+      "targets": 2
+    },
+    "semiontd:job_ancient_city_g1": {},
+    "semiontd:job_ancient_city_g2": {
+      "extraTargets": 3,
+      "secondaryRatio": 1
+    },
+    "semiontd:job_ancient_city_p": {
+      "centers": 6,
+      "radius": 2,
+      "targets": 8,
+      "damageRatio": 2,
+      "cooldownTicks": 160
+    },
+    "semiontd:job_hero_party_s": {
+      "everyAttacks": 3
+    },
+    "semiontd:job_hero_party_g1": {
+      "effectMultiplier": 1.5
+    },
+    "semiontd:job_hero_party_g2": {
+      "companions": 4,
+      "everyAttacks": 5,
+      "radius": 4,
+      "maxTargets": 12,
+      "damageRatio": 3
+    },
+    "semiontd:job_hero_party_p": {
+      "weaponDamageBonus": 2,
+      "healthBonus": 1.5,
+      "everyAttacks": 3,
+      "length": 12,
+      "width": 3,
+      "maxTargets": 12,
+      "damageRatio": 5
+    },
+    "semiontd:job_succubus_s": {
+      "intervalTicks": 40,
+      "damageRatio": 0.6
+    },
+    "semiontd:job_succubus_g1": {
+      "dreamBonus": 0.5
+    },
+    "semiontd:job_succubus_g2": {
+      "radius": 3,
+      "maxTargets": 2,
+      "durationTicks": 40,
+      "maxDepth": 2
+    },
+    "semiontd:job_succubus_p": {
+      "maxTargets": 3,
+      "intervalTicks": 20,
+      "damageRatio": 1.5
+    },
+    "semiontd:job_adversary_towers_s": {
+      "radius": 3,
+      "healthRatio": 0.25
+    },
+    "semiontd:job_adversary_towers_g2": {
+      "healthRatio": 0.2,
+      "damageRatio": 0.5,
+      "healthCapRatio": 1,
+      "damageCapRatio": 1.5
+    },
+    "semiontd:job_adversary_towers_p": {
+      "damageBonus": 1.2,
+      "healthBonus": 1,
+      "durationTicks": 200,
+      "extraTargets": 2,
+      "secondaryRatio": 1
+    },
+    "semiontd:job_engineer_towers_s": {
+      "extraTargets": 1
+    },
+    "semiontd:job_engineer_towers_g1": {
+      "activeTicks": 120,
+      "shotSpacingTicks": 4,
+      "followupRatio": 0.5
+    },
+    "semiontd:job_engineer_towers_p": {
+      "intervalTicks": 120,
+      "damageBonus": 1
+    },
+    "semiontd:job_queen_towers_s": {
+      "transferRatio": 0.5,
+      "radius": 3
+    },
+    "semiontd:job_queen_towers_g1": {
+      "radius": 5,
+      "attackSpeedBonus": 0.5
+    },
+    "semiontd:job_queen_towers_g2": {
+      "tickets": 3,
+      "attackSpeedBonus": 0.4
+    },
+    "semiontd:job_queen_towers_p": {},
+    "semiontd:job_atlantis_towers_s": {
+      "intervalTicks": 120,
+      "distance": 2
+    },
+    "semiontd:job_atlantis_towers_g1": {
+      "radius": 3,
+      "targets": 2,
+      "stacks": 1,
+      "damageCap": 4
+    },
+    "semiontd:job_atlantis_towers_g2": {
+      "targets": 12
+    },
+    "semiontd:job_atlantis_towers_p": {
+      "radius": 3,
+      "targets": 2,
+      "transferRatio": 0.5,
+      "chainTargets": 12
+    },
+    "semiontd:job_plant_towers_s": {
+      "stunTicks": 20
+    },
+    "semiontd:job_plant_towers_g1": {
+      "growthRounds": 5,
+      "inheritRatio": 0.25
+    },
+    "semiontd:job_plant_towers_g2": {
+      "explosions": 3,
+      "rearmTicks": 60,
+      "repeatDamageRatio": 0.8
+    },
+    "semiontd:job_plant_towers_p": {
+      "radius": 8,
+      "statBonus": 0.8
+    },
+    "semiontd:job_army_s": {
+      "killsRequired": 3
+    },
+    "semiontd:job_army_g1": {
+      "attacksRequired": 3,
+      "damageRatio": 1.5
+    },
+    "semiontd:job_army_g2": {},
+    "semiontd:job_army_p": {
+      "healthRatio": 1,
+      "damageRatio": 1.5
+    },
+    "semiontd:job_thunder_s": {
+      "chargeTicks": 20,
+      "maxShots": 3,
+      "damageRatio": 1
+    },
+    "semiontd:job_thunder_g1": {
+      "generationBonus": 1
+    },
+    "semiontd:job_thunder_g2": {
+      "extraTargets": 3,
+      "damageRatio": 1
+    },
+    "semiontd:job_thunder_p": {
+      "maxRelays": 2,
+      "targetsPerRelay": 5,
+      "damageRatio": 1
+    },
+    "semiontd:job_demon_lord_towers_s": {
+      "windowTicks": 40,
+      "damageRatio": 2
+    },
+    "semiontd:job_demon_lord_towers_g1": {
+      "healthThreshold": 0.3,
+      "healRatio": 0.5,
+      "durationTicks": 200,
+      "damageBonus": 0.8
+    },
+    "semiontd:job_demon_lord_towers_g2": {
+      "windowTicks": 160,
+      "distinctSkills": 3,
+      "cooldownReductionTicks": 80,
+      "durationTicks": 120,
+      "damageBonus": 0.6,
+      "cooldownTicks": 160
+    },
+    "semiontd:job_demon_lord_towers_p": {
+      "windowTicks": 160,
+      "damageRatio": 1.5,
+      "cooldownTicks": 200
+    },
+    "semiontd:job_gamble_s": {
+      "oppositeEffectRatio": 0.5
+    },
+    "semiontd:job_gamble_g1": {},
+    "semiontd:job_gamble_g2": {
+      "failureScoreMultiplier": 2,
+      "statReversalChance": 0.2
+    },
+    "semiontd:job_gamble_p": {
+      "maxAttempts": 3,
+      "jackpotDamageRatio": 6,
+      "jackpotRadius": 3,
+      "maxTargets": 12,
+      "maxCharges": 3,
+      "allFailedScoreLoss": 3
+    },
+    "semiontd:job_body_s": {},
+    "semiontd:job_body_g1": {
+      "normalBeats": 2
+    },
+    "semiontd:job_body_g2": {
+      "healthBonus": 0.8,
+      "healthThreshold": 0.5,
+      "healRatio": 0.3,
+      "fastBeats": 8,
+      "intervalRatio": 0.5
+    },
+    "semiontd:job_body_p": {
+      "healthLossRatio": 0.15,
+      "cooldownTicks": 20
+    },
+    "semiontd:job_pet_towers_s": {
+      "yardRadius": 2
+    },
+    "semiontd:job_pet_towers_g1": {
+      "hitsRequired": 3,
+      "maxAllies": 2,
+      "damageRatio": 1
+    },
+    "semiontd:job_pet_towers_g2": {
+      "healTargets": 1
+    },
+    "semiontd:job_pet_towers_p": {
+      "healTargets": 3
+    },
+    "semiontd:job_developer_towers_s": {
+      "bonusRatio": 0.5
+    },
+    "semiontd:job_developer_towers_g1": {},
+    "semiontd:job_developer_towers_g2": {
+      "statMultiplier": 3
+    },
+    "semiontd:job_developer_towers_p": {},
+    "semiontd:job_frost_s": {
+      "radius": 2,
+      "durationTicks": 80,
+      "slow": 0.3
+    },
+    "semiontd:job_frost_g1": {
+      "chillMultiplier": 2
+    },
+    "semiontd:job_frost_g2": {
+      "radius": 3,
+      "maxTargets": 12,
+      "damageRatio": 3,
+      "cooldownTicks": 60
+    },
+    "semiontd:job_frost_p": {
+      "maxSources": 3,
+      "intervalTicks": 40,
+      "radius": 3,
+      "maxTargets": 8,
+      "chill": 0.25,
+      "stunTicks": 40,
+      "stunCooldownTicks": 160
+    },
+    "semiontd:job_pirate_s": {},
+    "semiontd:job_pirate_g1": {
+      "rewardBonus": 0.5,
+      "roundReduction": 1
+    },
+    "semiontd:job_pirate_g2": {
+      "openingAttacks": 5,
+      "extraShots": 2,
+      "shotSpacingTicks": 4,
+      "radius": 2.5,
+      "maxTargets": 12,
+      "damageRatio": 0.8
+    },
+    "semiontd:job_pirate_p": {
+      "chestsPerStack": 3,
+      "diamondReward": 100,
+      "initialStacks": 1,
+      "intervalTicks": 40,
+      "shots": 5,
+      "radius": 3,
+      "maxTargets": 12,
+      "damageRatio": 1.6
+    },
+    "semiontd:job_mage_towers_s": {
+      "refundRatio": 0.2
+    },
+    "semiontd:job_mage_towers_g1": {
+      "initialMana": 300,
+      "productionMultiplier": 2
+    },
+    "semiontd:job_mage_towers_g2": {
+      "castInterval": 3,
+      "damageRatio": 0.6
+    },
+    "semiontd:job_mage_towers_p": {
+      "manaCost": 300,
+      "maxTargets": 20
+    },
+    "semiontd:job_insect_towers_s": {},
+    "semiontd:job_insect_towers_g1": {
+      "revivalCount": 3,
+      "waitReduction": 0.5,
+      "radius": 6,
+      "maxNeighbors": 2,
+      "neighborReductionTicks": 40
+    },
+    "semiontd:job_insect_towers_g2": {
+      "statRatio": 0.4,
+      "spawnCount": 2,
+      "roundCap": 6
+    },
+    "semiontd:job_insect_towers_p": {},
+    "semiontd:job_future_agency_towers_s": {
+      "windowTicks": 40,
+      "durationTicks": 40,
+      "cooldownTicks": 160
+    },
+    "semiontd:job_future_agency_towers_g1": {
+      "durationTicks": 120,
+      "damageBonus": 0.6
+    },
+    "semiontd:job_future_agency_towers_g2": {
+      "survivorCap": 2,
+      "damageReduction": 0.25
+    },
+    "semiontd:job_future_agency_towers_p": {},
+    "semiontd:job_illager_towers_s": {
+      "markDurationTicks": 80.0,
+      "markDamageBonus": 0.2
+    },
+    "semiontd:job_adversary_towers_g1": {
+      "scoreMultiplier": 2.0,
+      "healRatio": 0.3,
+      "damageBonus": 1.0,
+      "durationTicks": 120.0
+    },
+    "semiontd:job_engineer_towers_g2": {
+      "delayTicks": 40.0,
+      "repeatDamageRatio": 0.8
+    },
+    "semiontd:additional_payload": {
+      "costMultiplier": 1.25,
+      "healthMultiplier": 1.65,
+      "supportMultiplier": 1.65
+    },
+    "semiontd:ambush_workshop_blueprint": {
+      "healthPerTier": 1.0,
+      "powerPerTier": 0.5,
+      "areaPerTier": 0.15,
+      "checkTicks": 5.0,
+      "damageRadius": 2.0,
+      "mineDamage": 240.0,
+      "mineTargets": 4.0,
+      "triggerRadius": 1.25
+    },
+    "semiontd:barrier_core_call": {
+      "healthPerTier": 1.0,
+      "powerPerTier": 0.5,
+      "areaPerTier": 0.15,
+      "redirectRatio": 0.35
+    },
+    "semiontd:battlefield_mastery": {
+      "bonusPerStack": 0.2,
+      "damageThreshold": 0.3,
+      "maxStacks": 4.0
+    },
+    "semiontd:biased_armor": {
+      "oppositeMultiplier": 1.35,
+      "selectedMultiplier": 0.55
+    },
+    "semiontd:capacitor_post_blueprint": {
+      "healthPerTier": 1.0,
+      "powerPerTier": 0.5,
+      "areaPerTier": 0.15,
+      "chargeDamage": 110.0,
+      "chargeTicks": 40.0,
+      "maxCharges": 3.0
+    },
+    "semiontd:cash_settlement": {
+      "diamondMultiplier": 5.0
+    },
+    "semiontd:decisive_delivery": {
+      "attackMultiplier": 1.8,
+      "healthMultiplier": 2.0
+    },
+    "semiontd:domino_fire": {
+      "damageCapRatio": 0.75,
+      "overkillRatio": 0.9,
+      "radius": 4.0
+    },
+    "semiontd:emergency_bell_blueprint": {
+      "healthPerTier": 1.0,
+      "powerPerTier": 0.5,
+      "areaPerTier": 0.15,
+      "checkTicks": 20.0,
+      "healCap": 150.0,
+      "healRatio": 0.4,
+      "healthThreshold": 0.4,
+      "maxHeals": 3.0
+    },
+    "semiontd:emergency_loan": {
+      "advanceCap": 300.0,
+      "advanceMultiplier": 3.0,
+      "debtMultiplier": 1.3333333333333333,
+      "repaymentCount": 4.0
+    },
+    "semiontd:engagement_plan": {
+      "longDamageBonus": 0.25,
+      "longDamageReduction": 0.15,
+      "quickDamageBonus": 0.35,
+      "transitionTicks": 160.0
+    },
+    "semiontd:finishing_fire_1": {
+      "damageBonus": 0.4
+    },
+    "semiontd:finishing_fire_2": {
+      "damageBonus": 0.7
+    },
+    "semiontd:finishing_fire_3": {
+      "damageBonus": 1.1
+    },
+    "semiontd:folding_barricade_blueprint": {
+      "damagePerHitCap": 15.0,
+      "healthPerTier": 1.0,
+      "powerPerTier": 0.5,
+      "areaPerTier": 0.15
+    },
+    "semiontd:forbidden_blueprint": {
+      "payoutMultiplier": 0.9,
+      "ticketCount": 2.0,
+      "ticketValue": 450.0
+    },
+    "semiontd:forecast_offensive": {
+      "echoRatio": 0.5
+    },
+    "semiontd:frontline_specialization": {
+      "artilleryDamageBonus": 1.0,
+      "artilleryIncomingMultiplier": 1.25,
+      "vanguardDamagePenalty": 0.25,
+      "vanguardDamageReduction": 0.5
+    },
+    "semiontd:giant_hunter_call": {
+      "healthPerTier": 1.0,
+      "powerPerTier": 0.5,
+      "areaPerTier": 0.15,
+      "bossMaxHealthDamageRatio": 0.03,
+      "maxHealthDamageRatio": 0.12,
+      "minimumRange": 3.0
+    },
+    "semiontd:independent_position": {
+      "damageBonus": 0.3,
+      "damageReduction": 0.15,
+      "radius": 4.0
+    },
+    "semiontd:low_pressure_high_yield": {
+      "bodyMultiplier": 0.7,
+      "bonusRatio": 0.4,
+      "roundBonusCap": 20.0
+    },
+    "semiontd:one_man_show": {
+      "damageBonus": 2.0,
+      "maxHealthBonus": 1.0,
+      "otherDamagePenalty": 0.2
+    },
+    "semiontd:ordnance_factory_call": {
+      "healthPerTier": 1.0,
+      "powerPerTier": 0.5,
+      "areaPerTier": 0.15,
+      "emeraldPerShell": 100.0,
+      "maxShells": 4.0,
+      "shellDamage": 300.0,
+      "shellIntervalTicks": 100.0,
+      "shellRadius": 3.0,
+      "shellTargets": 8.0
+    },
+    "semiontd:overheat_core": {
+      "damageBonus": 1.0,
+      "maxStacks": 5.0,
+      "penaltyPerStack": 0.06
+    },
+    "semiontd:pulse_relay_blueprint": {
+      "healthPerTier": 1.0,
+      "powerPerTier": 0.5,
+      "areaPerTier": 0.15,
+      "attacksPerCharge": 5.0,
+      "chargedDamageRatio": 2.0
+    },
+    "semiontd:reserve_diamonds_gold": {
+      "amount": 300.0
+    },
+    "semiontd:reserve_diamonds_prismatic": {
+      "amount": 600.0
+    },
+    "semiontd:reserve_diamonds_silver": {
+      "amount": 150.0
+    },
+    "semiontd:reserve_income_gold": {
+      "amount": 30.0
+    },
+    "semiontd:reserve_income_prismatic": {
+      "amount": 60.0
+    },
+    "semiontd:reserve_income_silver": {
+      "amount": 15.0
+    },
+    "semiontd:reserve_production_gold": {
+      "amount": 3.0
+    },
+    "semiontd:reserve_production_prismatic": {
+      "amount": 6.0
+    },
+    "semiontd:reserve_production_silver": {
+      "amount": 2.0
+    },
+    "semiontd:starlight_cocoon_call": {
+      "healthPerTier": 1.0,
+      "powerPerTier": 0.5,
+      "areaPerTier": 0.15,
+      "hatchWaves": 1.0,
+      "hatchedDamage": 200.0,
+      "hatchedHealth": 1000.0,
+      "hatchedIntervalTicks": 30.0,
+      "hatchedRange": 5.0
+    },
+    "semiontd:support_performance": {
+      "incomeBonus": 10.0,
+      "matchIncomeCap": 50.0,
+      "targetCount": 3.0
+    },
+    "semiontd:tactical_designation_1": {
+      "damageBonus": 0.35,
+      "damageReduction": 0.2
+    },
+    "semiontd:tactical_designation_2": {
+      "damageBonus": 0.65,
+      "damageReduction": 0.3
+    },
+    "semiontd:tactical_designation_3": {
+      "damageBonus": 1.0,
+      "damageReduction": 0.4
+    },
+    "semiontd:triangle_formation": {
+      "damageBonus": 0.2,
+      "damageReduction": 0.15,
+      "neighborCount": 2.0,
+      "radius": 4.0
+    },
+    "semiontd:twin_squadron": {
+      "damageBonus": 0.3
+    },
+    "semiontd:wartime_economy": {
+      "damageBonus": 0.65,
+      "maxHealthBonus": 0.4,
+      "payoutMultiplier": 0.65
+    },
+    "semiontd:winning_barrage": {
+      "charges": 3.0,
+      "damageBonus": 0.6
+    }
+  },
+  "disabledIds": []
+}

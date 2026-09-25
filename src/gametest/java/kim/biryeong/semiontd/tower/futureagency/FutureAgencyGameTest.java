@@ -1,14 +1,20 @@
 package kim.biryeong.semiontd.tower.futureagency;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.EconomyConfig;
 import kim.biryeong.semiontd.config.WaveConfig;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
+import kim.biryeong.semiontd.entity.goal.AreaAllyHealGoal;
+import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
+import kim.biryeong.semiontd.entity.monster.goal.MonsterAttackTargetGoal;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.AssignedParticipant;
@@ -30,6 +36,113 @@ import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
 public final class FutureAgencyGameTest {
+    @GameTest
+    public void rescueAugmentsKeepTwoSurvivorsAndRestoreTheStartSnapshotOnlyOnce(GameTestHelper context) {
+        UUID owner = UUID.randomUUID();
+        FutureAgencyStates.clear(owner);
+        FutureAgencyStates.state(owner).reconstruct();
+        PlayerLane lane = testLane(context, owner);
+        GridPosition origin = floor(context, 4, 2, 3), carry = floor(context, 4, 2, 6);
+        prepareFloor(context, origin, carry);
+        lane.assignAugmentSnapshot(augmentSnapshot("job_future_agency_towers_s", "job_future_agency_towers_g1",
+                "job_future_agency_towers_g2", "job_future_agency_towers_p"));
+        FutureAgencyAgentTower original = agent(owner, FutureAgencyRole.COMBAT, origin);
+        ArrayList<SemionMonsterEntity> targets = new ArrayList<>();
+        try {
+            lane.addTower(original);
+            for (int round = 1; round <= 2; round++) {
+                lane.markWaveStarted(round);
+                moveAndDamage(original, lane, carry, 30);
+                finishWave(lane);
+                lane.resetForRound();
+            }
+            require(carried(lane).size() == 2, "Rescue reinforcement must accumulate two living linked survivors.");
+            lane.markWaveStarted(3);
+            List<FutureAgencyAgentTower> survivors = carried(lane);
+            require(survivors.stream().allMatch(survivor -> close(survivor.health(), survivor.currentMaxHealth())),
+                    "Returning survivors must start fully healed.");
+            double startHealth = original.health();
+            double survivorHealth = survivors.getFirst().health();
+            double baselineDamage = original.modifyAttackDamage(null, null, 100);
+            require(close(survivors.getFirst().modifyAttackDamage(null, null, 100), baselineDamage * 1.6),
+                    "Returning survivor damage must increase by sixty percent.");
+            require(survivors.getFirst().adjustAttackRange(1) > 15, "Opening survivor range must cover the lane.");
+            require(close(original.modifyIncomingDamage(towerEntity(lane, original),
+                    context.getLevel().damageSources().generic(), 100), 75), "Living links must reduce original damage by twenty-five percent.");
+
+            SemionMonsterEntity target = spawnRootTarget(context, lane,
+                    towerEntity(lane, original).position().add(0, 0, 1));
+            targets.add(target);
+            original.onAttackResolved(null, target, 1, 1, 1, false);
+            require(close(target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ROOT), 0), "One side alone cannot root.");
+            survivors.getFirst().onAttackResolved(null, target, 1, 1, 1, false);
+            require(close(target.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ROOT), 1)
+                            && !target.isStunned(), "Crossfire must root movement without stunning attacks.");
+            Vec3 beforeMove = target.position();
+            target.setSpeed(1);
+            target.setDeltaMovement(.5, 0, .5);
+            target.travel(new Vec3(1, 0, 0));
+            require(close(target.getX(), beforeMove.x) && close(target.getZ(), beforeMove.z),
+                    "Root must block movement input and existing horizontal momentum.");
+            target.setTarget(towerEntity(lane, original));
+            double beforeAttack = original.health();
+            new MonsterAttackTargetGoal(target, 1).tick();
+            require(original.health() < beforeAttack && target.isRooted() && !target.isStunned(),
+                    "A rooted monster must still execute a real in-range attack.");
+            SemionMonsterEntity patient = spawnRootTarget(context, lane, target.position().add(1, 0, 0));
+            targets.add(patient);
+            patient.runtimeMonster().syncHealth(100);
+            patient.setHealth(100);
+            new AreaAllyHealGoal<>(target, SemionMonsterEntity.class, 1.5, 10, 1, 4, 1).tick();
+            require(close(patient.runtimeMonster().health(), 110) && target.isRooted(),
+                    "Root must allow the normal cooldown ability path to heal an ally.");
+            SemionMonsterEntity repeatedTarget = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
+            repeatedTarget.setUUID(target.getUUID());
+            survivors.getLast().onAttackResolved(null, repeatedTarget, 1, 1, 1, false);
+            require(close(repeatedTarget.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ROOT), 0),
+                    "The second survivor must share the original-target eight-second cooldown.");
+
+            towerEntity(lane, survivors.getFirst()).setHealth(0);
+            moveAndDamage(survivors.getLast(), lane, survivors.getLast().position(), 5);
+            moveAndDamage(original, lane, original.position(), 10);
+            SemionTowerEntity originalEntity = towerEntity(lane, original);
+            originalEntity.hurtIgnoringReductions(context.getLevel().damageSources().generic(), 10000);
+            require(originalEntity.isAlive() && close(original.health(), startHealth), "First lethal hit must restore original start health.");
+            require(carried(lane).size() == 2 && survivors.stream().allMatch(survivor ->
+                            towerEntity(lane, survivor).isAlive() && close(survivor.health(), survivorHealth)),
+                    "Time loop must restore both damaged and dead captured survivors without producing new links.");
+            for (int tick = 0; tick < 120; tick++) survivors.forEach(survivor -> survivor.tick(lane));
+            require(close(survivors.getFirst().modifyAttackDamage(null, null, 100), baselineDamage)
+                            && survivors.getFirst().adjustAttackRange(1) == 1,
+                    "Return damage and range must end at six seconds; time loop cannot restart them.");
+            originalEntity.hurtIgnoringReductions(context.getLevel().damageSources().generic(), 10000);
+            require(!originalEntity.isAlive(), "The same original may not loop a second time in this wave.");
+            context.succeed();
+        } finally {targets.forEach(SemionMonsterEntity::discard); lane.clearTowers(); FutureAgencyStates.clear(owner);}
+    }
+
+    private static SemionMonsterEntity spawnRootTarget(GameTestHelper context, PlayerLane lane, Vec3 position) {
+        Monster runtime = new Monster("future-root-target", TeamId.RED, 1, Optional.empty(), Optional.empty(),
+                500, 0, 10, AttackKind.MELEE, "minecraft:zombie", 0L);
+        SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
+        entity.configureFrom(runtime, lane.laneLayout());
+        entity.setNoAi(true);
+        entity.setNoGravity(true);
+        entity.setPos(position);
+        require(context.getLevel().addFreshEntity(entity), "Root test monster must spawn.");
+        runtime.markMinecraftEntitySpawned(entity.getId(), position.x, position.y, position.z);
+        lane.activeMonsters().add(runtime);
+        return entity;
+    }
+
+    private static kim.biryeong.semiontd.augment.AugmentSnapshot augmentSnapshot(String... cards) {
+        return new kim.biryeong.semiontd.augment.AugmentSnapshot(kim.biryeong.semiontd.augment.AugmentConfig.defaults(),
+                java.util.Arrays.stream(cards).map(card -> new kim.biryeong.semiontd.augment.PlayerAugmentState.Selection(
+                        5, kim.biryeong.semiontd.augment.AugmentRarity.GOLD, "semiontd:" + card,
+                        kim.biryeong.semiontd.augment.PlayerAugmentState.Outcome.SELECTED, null,
+                        kim.biryeong.semiontd.augment.AugmentChoice.none())).toList());
+    }
+
     @GameTest
     public void cleanLaneRecordGrantsTwoPolicyChoicesNextRound(GameTestHelper context) {
         UUID owner = UUID.nameUUIDFromBytes("future-agency-clean-lane".getBytes(StandardCharsets.UTF_8));

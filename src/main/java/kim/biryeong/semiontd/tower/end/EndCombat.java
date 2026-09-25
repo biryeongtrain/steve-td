@@ -1,5 +1,7 @@
 package kim.biryeong.semiontd.tower.end;
 
+import java.util.ArrayList;
+import java.util.List;
 import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
@@ -97,7 +99,7 @@ final class EndCombat {
         return state == EndTowerState.DRAGON ? config.dragon().rangeBonus() : 0.0;
     }
 
-    void resolveAttack(
+    List<SemionMonsterEntity> resolveAttack(
             EndTower tower,
             SemionTowerEntity towerEntity,
             SemionMonsterEntity target,
@@ -106,8 +108,9 @@ final class EndCombat {
             double dealtDamage,
             EndTransferStacks stacks
     ) {
-        applySplashDamage(tower, towerEntity, target, attemptedDamage, resolvedOutgoingDamage, stacks);
+        List<SemionMonsterEntity> secondaries = applySplashDamage(tower, towerEntity, target, attemptedDamage, resolvedOutgoingDamage, stacks);
         heal(towerEntity, dealtDamage * lifeStealRatio(stacks));
+        return secondaries;
     }
 
     private double splashRadiusForSteps(int unlockedSteps) {
@@ -115,7 +118,7 @@ final class EndCombat {
         return Math.min(splash.maximumRadius(), unlockedSteps * splash.radiusPerStep());
     }
 
-    private void applySplashDamage(
+    private List<SemionMonsterEntity> applySplashDamage(
             EndTower tower,
             SemionTowerEntity towerEntity,
             SemionMonsterEntity target,
@@ -126,7 +129,8 @@ final class EndCombat {
         double radius = splashRadius(tower.state(), stacks);
         double splashDamage = resolvedSplashDamage(resolvedOutgoingDamage);
         double igniteAttackDamage = resolvedSplashDamage(attemptedDamage);
-        if (radius <= 0.0 || splashDamage <= 0.0) {return;}
+        if (radius <= 0.0 || splashDamage <= 0.0) {return List.of();}
+        List<SemionMonsterEntity> secondaries = new ArrayList<>();
         MonsterAreaEffectRequest request = MonsterAreaEffectRequest.aroundTarget(
                 AreaEffectIds.tower(tower, "splash"),
                 towerEntity,
@@ -141,6 +145,7 @@ final class EndCombat {
                 ignored -> splashDamage,
                 true,
                 (splashTarget, dealtSplashDamage, killed) -> {
+                    secondaries.add(splashTarget);
                     heal(towerEntity, dealtSplashDamage * lifeStealRatio(stacks));
                     towerEntity.applyIgniteFromBasicAttack(
                             splashTarget,
@@ -149,6 +154,7 @@ final class EndCombat {
                     );
                 }
         );
+        return secondaries;
     }
 
     private int reducedAttackInterval(

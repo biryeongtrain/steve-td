@@ -56,4 +56,13 @@ public final class GambleRewards {
         }
         return delta * Math.max(0.0, 1.0 - GambleBalance.lossInsuranceReduction());
     }
+
+    public static double settledScore(double score, double failureMultiplier) {
+        return score < 0.0 ? score * failureMultiplier : score;
+    }
+
+    public static double settledStatDelta(GambleState state, double delta, boolean reverseLoss) {
+        double insured = insuredDelta(state, delta);
+        return reverseLoss && insured < 0.0 ? -insured : insured;
+    }
 }

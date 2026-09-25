@@ -5,6 +5,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import kim.biryeong.semiontd.augment.AugmentChoice;
+import kim.biryeong.semiontd.augment.AugmentCombat;
+import kim.biryeong.semiontd.augment.AugmentConfig;
+import kim.biryeong.semiontd.augment.AugmentRarity;
+import kim.biryeong.semiontd.augment.AugmentSnapshot;
+import kim.biryeong.semiontd.augment.PlayerAugmentState;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
@@ -730,6 +736,200 @@ public final class EngineerGameTest {
             AreaEffectLaneIndex.unregister(lane);
             EngineerPressStates.clear(owner);
         }
+    }
+
+    @GameTest
+    public void augmentBurstPiercesOnlyPrimaryAndReselectsFourTickFollowups(GameTestHelper context) {
+        UUID owner = stableUuid("engineer-augment-burst");
+        PlayerLane lane = testLane(context, owner);
+        lane.assignAugmentSnapshot(augmentSnapshot("job_engineer_towers_s", "job_engineer_towers_g1"));
+        GridPosition trapPosition = floor(context, 7, 2, 7);
+        GridPosition platePosition = floor(context, 6, 2, 7);
+        prepareFloor(context, trapPosition, platePosition);
+        var trap = new EngineerTrapTower(EngineerTowers.trap(EngineerTowers.TrapKind.DISPENSER, 1),
+                owner, TeamId.RED, 1, trapPosition, trapPosition);
+        var plate = new EngineerCircuitTower(EngineerTowers.plate(EngineerTowers.PlateKind.WOOD),
+                owner, TeamId.RED, 1, platePosition, platePosition);
+        List<SemionMonsterEntity> targets = new ArrayList<>();
+        try {
+            AreaEffectLaneIndex.register(lane);
+            lane.addTower(trap);
+            lane.addTower(plate);
+            SemionTowerEntity source = trap.runtimeEntity(lane).orElseThrow();
+            source.setNoAi(true);
+            for (int distance : new int[]{2, 4, 5}) {
+                SemionMonsterEntity target = spawnMonster(context, lane, "burst_" + distance,
+                        source.position().add(0, 0, distance));
+                target.setNoAi(true);
+                target.runtimeMonster().syncLaneProgress(100 - distance);
+                targets.add(target);
+            }
+            lane.markWaveStarted(5);
+            require(plate.pressPlate(lane), "The plate sends a native signal.");
+            trap.tick(lane);
+            double firstDamage = 1000 - targets.get(0).runtimeMonster().health();
+            require(firstDamage > 0, "The main bullet fires on activation.");
+            requireClose(1000 - firstDamage, targets.get(1).runtimeMonster().health(), "One enemy behind the primary receives equal piercing damage.");
+            requireClose(1000, targets.get(2).runtimeMonster().health(), "Piercing stops after one extra target.");
+            require(trap.activeTicksRemaining() == 119, "Infinite circuit lasts six seconds per signal.");
+            targets.get(0).setPos(source.position().add(100, 0, 0));
+            for (int i = 0; i < 3; i++) {trap.tick(lane);}
+            requireClose(1000 - firstDamage, targets.get(1).runtimeMonster().health(), "Followup waits four ticks.");
+            trap.tick(lane);
+            requireClose(1000 - firstDamage * 1.5, targets.get(1).runtimeMonster().health(), "Second bullet reselects a native-range target for half damage.");
+            for (int i = 0; i < 4; i++) {trap.tick(lane);}
+            requireClose(1000 - firstDamage * 2, targets.get(1).runtimeMonster().health(), "Third bullet deals half damage four ticks later.");
+            requireClose(1000, targets.get(2).runtimeMonster().health(), "Augment bullets do not trigger piercing again.");
+            trap.resetForRound(lane);
+            double health = targets.get(1).runtimeMonster().health();
+            for (int i = 0; i < 10; i++) {trap.tick(lane);}
+            requireClose(health, targets.get(1).runtimeMonster().health(), "Preparation cancels queued attacks.");
+            context.succeed();
+        } finally {
+            targets.forEach(SemionMonsterEntity::discard);
+            lane.clearTowers();
+            AreaEffectLaneIndex.unregister(lane);
+            EngineerPressStates.clear(owner);
+        }
+    }
+
+    @GameTest
+    public void automaticFactoryRequiresConnectedOwnPlateWithoutCountingPresses(GameTestHelper context) {
+        UUID owner = stableUuid("engineer-augment-factory");
+        PlayerLane lane = testLane(context, owner);
+        lane.assignAugmentSnapshot(augmentSnapshot("job_engineer_towers_p"));
+        GridPosition trapPosition = floor(context, 7, 2, 7);
+        GridPosition platePosition = floor(context, 6, 2, 7);
+        prepareFloor(context, trapPosition, platePosition);
+        var trap = new EngineerTrapTower(EngineerTowers.trap(EngineerTowers.TrapKind.TNT, 1),
+                owner, TeamId.RED, 1, trapPosition, trapPosition);
+        var plate = new EngineerCircuitTower(EngineerTowers.plate(EngineerTowers.PlateKind.WOOD),
+                owner, TeamId.RED, 1, platePosition, platePosition);
+        SemionMonsterEntity target = null;
+        try {
+            AreaEffectLaneIndex.register(lane);
+            lane.addTower(trap);
+            lane.markWaveStarted(5);
+            SemionTowerEntity source = trap.runtimeEntity(lane).orElseThrow();
+            source.setNoAi(true);
+            target = spawnMonster(context, lane, "factory_target", source.position().add(1, 0, 0));
+            target.setNoAi(true);
+            for (int i = 0; i < 120; i++) {trap.tick(lane);}
+            require(trap.activeTicksRemaining() == 0, "A disconnected trap receives no automatic signal.");
+            lane.addTower(plate);
+            for (int i = 0; i < 119; i++) {trap.tick(lane);}
+            require(trap.activeTicksRemaining() == 0, "Automatic signals retain the six-second period.");
+            trap.tick(lane);
+            require(trap.activeTicksRemaining() > 0, "A connected unpressed plate starts the TNT fuse.");
+            require(EngineerPressStates.count(owner) == 0 && plate.lastPressedGameTime() == Long.MIN_VALUE,
+                    "Automation does not forge a plate press or permanent growth.");
+            for (int i = 0; i < EngineerBalance.tntFuseTicks(); i++) {trap.tick(lane);}
+            requireClose(760, target.runtimeMonster().health(), "Factory doubles native TNT damage.");
+            for (int i = 0; i < 240; i++) {trap.tick(lane);}
+            requireClose(760, target.runtimeMonster().health(), "Later automatic signals preserve TNT's one-use-per-round limit.");
+            context.succeed();
+        } finally {
+            if (target != null) {target.discard();}
+            lane.clearTowers();
+            AreaEffectLaneIndex.unregister(lane);
+            EngineerPressStates.clear(owner);
+        }
+    }
+
+    @GameTest
+    public void suppressedDispenserSignalCannotQueueAugmentBullets(GameTestHelper context) {
+        UUID owner = stableUuid("engineer-augment-suppression");
+        PlayerLane lane = testLane(context, owner);
+        lane.assignAugmentSnapshot(augmentSnapshot("job_engineer_towers_g1"));
+        GridPosition trapPosition = floor(context, 7, 2, 7);
+        GridPosition platePosition = floor(context, 6, 2, 7);
+        prepareFloor(context, trapPosition, platePosition);
+        var trap = new EngineerTrapTower(EngineerTowers.trap(EngineerTowers.TrapKind.DISPENSER, 1),
+                owner, TeamId.RED, 1, trapPosition, trapPosition);
+        var plate = new EngineerCircuitTower(EngineerTowers.plate(EngineerTowers.PlateKind.WOOD),
+                owner, TeamId.RED, 1, platePosition, platePosition);
+        SemionMonsterEntity target = null;
+        try {
+            lane.addTower(trap);
+            lane.addTower(plate);
+            lane.markWaveStarted(5);
+            SemionTowerEntity source = trap.runtimeEntity(lane).orElseThrow();
+            source.setNoAi(true);
+            target = spawnMonster(context, lane, "suppressed_target", source.position().add(0, 0, 2));
+            target.setNoAi(true);
+            require(plate.pressPlate(lane), "The physical signal is available.");
+            AugmentCombat.runWithoutTriggers(() -> trap.tick(lane));
+            double health = target.runtimeMonster().health();
+            require(health < 1000, "Native firing remains active during suppressed callbacks.");
+            for (int i = 0; i < 8; i++) {trap.tick(lane);}
+            requireClose(health, target.runtimeMonster().health(), "Suppressed firing never reserves second or third bullets.");
+            context.succeed();
+        } finally {
+            if (target != null) {target.discard();}
+            lane.clearTowers();
+            EngineerPressStates.clear(owner);
+        }
+    }
+
+    @GameTest(maxTicks = 80)
+    public void tntRepeatSuppressesKillTriggersAndSuppressedExplosionCannotRepeat(GameTestHelper context) {
+        UUID owner = stableUuid("engineer-augment-repeat-origin");
+        PlayerLane lane = testLane(context, owner);
+        lane.assignAugmentSnapshot(augmentSnapshot("job_engineer_towers_g2"));
+        GridPosition trapPosition = floor(context, 7, 2, 7);
+        GridPosition platePosition = floor(context, 6, 2, 7);
+        prepareFloor(context, trapPosition, platePosition);
+        var trap = new EngineerTrapTower(EngineerTowers.trap(EngineerTowers.TrapKind.TNT, 1),
+                owner, TeamId.RED, 1, trapPosition, trapPosition);
+        var plate = new EngineerCircuitTower(EngineerTowers.plate(EngineerTowers.PlateKind.WOOD),
+                owner, TeamId.RED, 1, platePosition, platePosition);
+        AreaEffectLaneIndex.register(lane);
+        lane.addTower(trap);
+        lane.addTower(plate);
+        lane.markWaveStarted(5);
+        SemionTowerEntity source = trap.runtimeEntity(lane).orElseThrow();
+        source.setNoAi(true);
+        source.setNoGravity(true);
+        require(plate.pressPlate(lane), "Native TNT receives its first signal.");
+        for (int i = 0; i <= EngineerBalance.tntFuseTicks(); i++) {trap.tick(lane);}
+        require(trap.runtimeDetailLines().stream().anyMatch(line -> line.contains("재폭발 대기")), "Native explosion reserves one repeat.");
+        SemionMonsterEntity target = spawnMonster(context, lane, "repeat_kill_target", source.position().add(1, 0, 0));
+        target.setNoAi(true);
+        target.setNoGravity(true);
+        target.setInvulnerable(true);
+        target.runtimeMonster().syncHealth(1);
+        target.setHealth(1);
+        context.runAfterDelay(40, () -> {
+            try {
+                trap.tick(lane);
+                require(target.runtimeMonster().health() == 0, "The stored repeat kills the entering target.");
+                AugmentCombat.withKillOrigin(target.runtimeMonster(), () ->
+                        require(!AugmentCombat.allowsTriggers(), "The delayed repeat preserves suppressed kill origin."));
+                require(AugmentCombat.allowsTriggers(), "Suppression is restored after the repeat.");
+                trap.onWaveStarted(lane, 6);
+                require(plate.pressPlate(lane), "The next wave can ignite TNT again.");
+                AugmentCombat.runWithoutTriggers(() -> {
+                    for (int i = 0; i <= EngineerBalance.tntFuseTicks(); i++) {trap.tick(lane);}
+                });
+                require(trap.runtimeDetailLines().stream().noneMatch(line -> line.contains("재폭발 대기")),
+                        "An augment-generated explosion cannot reserve another augment repeat.");
+                context.succeed();
+            } finally {
+                target.discard();
+                lane.clearTowers();
+                AreaEffectLaneIndex.unregister(lane);
+                EngineerPressStates.clear(owner);
+            }
+        });
+    }
+
+    private static AugmentSnapshot augmentSnapshot(String... ids) {
+        List<PlayerAugmentState.Selection> selections = new ArrayList<>();
+        for (int index = 0; index < ids.length; index++) {
+            selections.add(new PlayerAugmentState.Selection(5 + index * 10, AugmentRarity.GOLD,
+                    ids[index], PlayerAugmentState.Outcome.SELECTED, null, AugmentChoice.none()));
+        }
+        return new AugmentSnapshot(AugmentConfig.defaults(), selections);
     }
 
     private static PlayerLane testLane(GameTestHelper context, UUID owner) {

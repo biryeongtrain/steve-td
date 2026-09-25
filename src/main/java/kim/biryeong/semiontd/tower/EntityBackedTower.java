@@ -3,6 +3,7 @@ package kim.biryeong.semiontd.tower;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
+import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.SemionEntityTypes;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
@@ -77,6 +78,14 @@ public abstract class EntityBackedTower extends Tower {
     }
 
     protected void configureEntityAfterSpawn(SemionTowerEntity entity, PlayerLane lane) {
+    }
+
+    @Override
+    protected void refreshAugmentMaxHealth(PlayerLane lane, double baseDelta) {
+        SemionTowerEntity currentEntity = runtimeEntity(lane == null ? attachedLane() : lane).orElse(null);
+        double multiplier = currentEntity == null ? 1.0
+                : 1.0 + currentEntity.activeEffectMagnitude(TimedEffectType.TOWER_MAX_HEALTH_BONUS);
+        super.refreshAugmentMaxHealth(lane, baseDelta * multiplier);
     }
 
     @Override

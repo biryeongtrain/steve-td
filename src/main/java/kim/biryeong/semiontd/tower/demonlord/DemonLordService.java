@@ -179,7 +179,15 @@ public final class DemonLordService {
             }
             // 체력은 보스바 풀에서만 관리합니다. 바닐라 체력은 건드리지 않습니다.
             state.expireShieldIfNeeded(player.level().getGameTime());
-            boolean knockedOut = state.applyDamage(amount);
+            PlayerLane lane = gameManager.playableGame(player.getUUID())
+                    .flatMap(game -> game.playerLane(player.getUUID())).orElse(null);
+            boolean knockedOut = state.applyDamage(amount,
+                    lane == null ? kim.biryeong.semiontd.augment.AugmentSnapshot.none() : lane.augmentSnapshot(),
+                    player.level().getGameTime(), source.getEntity() instanceof SemionMonsterEntity monster
+                            && kim.biryeong.semiontd.augment.AugmentCombat.canBuildCondition(monster.runtimeMonster()));
+            if (state.augments().consumeCooldownChanges()) {
+                syncSkillCooldowns(player, state, player.level().getGameTime());
+            }
             // 바닐라 피해를 막으면 연출도 같이 사라지므로 피격 패킷을 직접 보냅니다.
             sendHitFeedback(player, source, amount);
             if (knockedOut) {
@@ -211,8 +219,16 @@ public final class DemonLordService {
             List<DemonLordSkillTower> altars = lane == null
                     ? List.of()
                     : orderedAltars(lane, attacker.getUUID());
-            dealDamage(attacker, lane, altars.isEmpty() ? null : altars.getFirst(), monsterEntity,
+            DemonLordSkillTower altar = altars.isEmpty() ? null : altars.getFirst();
+            Tower.DamageResult result = dealDamage(attacker, lane, altar, monsterEntity,
                     state.bladeDamage() * (0.2 + charge * charge * 0.8), DamageType.PHYSICAL);
+            if (result.dealtDamage() > 0.0 && lane != null) {
+                double ratio = state.augments().consumeFinisher(lane.augmentSnapshot(), now);
+                if (ratio > 0.0) {
+                    kim.biryeong.semiontd.augment.AugmentCombat.runWithoutTriggers(() -> dealDamage(
+                            attacker, lane, altar, monsterEntity, state.bladeDamage() * ratio, DamageType.PHYSICAL));
+                }
+            }
             playSwing(attacker, charge);
             return InteractionResult.SUCCESS;
         });
@@ -241,8 +257,10 @@ public final class DemonLordService {
             return;
         }
         DemonLordState state = DemonLordStates.getOrCreate(owner);
+        state.syncAugments(lane.augmentSnapshot());
         state.setLaneId(lane.laneId());
         long gameTime = lane.arenaWorld().getGameTime();
+        state.augments().tickVisuals(gameTime);
 
         // 초당 한 번 강제로 다시 깔아, 인벤토리에서 스킬이나 마검을 옮겨도 제자리로 돌아옵니다.
         if (gameTime % 20 == 0) {
@@ -375,6 +393,15 @@ public final class DemonLordService {
         DemonLordState state = DemonLordStates.get(playerId);
         if (state != null) {
             state.enterCombat();
+        }
+    }
+
+    public static void beginWave(PlayerLane lane, int round) {
+        DemonLordState state = DemonLordStates.get(lane.ownerPlayer());
+        if (state != null) {
+            state.syncAugments(lane.augmentSnapshot());
+            state.enterCombat();
+            state.augments().beginTargeted(lane.augmentSnapshot(), round, state.maxHealth());
         }
     }
 
@@ -777,13 +804,26 @@ public final class DemonLordService {
         if (!state.isSkillReady(skill, gameTime)) {
             return true;
         }
-        int refund = DemonLordSkills.cast(player, lane, state, skill, altar, gameTime);
         // 쿨감 스탯은 곱연산이라 0 에 닿지 않고, 환급은 그 뒤에 뺍니다.
         int base = (int) Math.round(altar.cooldownTicks() * state.cooldownMultiplier());
-        int cooldown = Math.max(1, base - Math.max(0, refund));
-        state.startCooldown(skill, gameTime, cooldown);
-        player.getCooldowns().addCooldown(new ItemStack(skill.item()), cooldown);
+        state.startCooldown(skill, gameTime, Math.max(1, base));
+        int refund = DemonLordSkills.cast(player, lane, state, skill, altar, gameTime);
+        state.refundCooldown(skill, Math.min(Math.max(0, base - 1), Math.max(0, refund)));
+        int remaining = state.remainingCooldownTicks(skill, gameTime);
+        if (remaining > 0) {player.getCooldowns().addCooldown(new ItemStack(skill.item()), remaining);}
         return true;
+    }
+
+    static void syncSkillCooldowns(ServerPlayer player, DemonLordState state, long now) {
+        for (DemonLordSkill skill : DemonLordSkill.values()) {
+            ItemStack item = new ItemStack(skill.item());
+            int remaining = state.remainingCooldownTicks(skill, now);
+            if (remaining > 0) {
+                player.getCooldowns().addCooldown(item, remaining);
+            } else {
+                player.getCooldowns().removeCooldown(player.getCooldowns().getCooldownGroup(item));
+            }
+        }
     }
 
     /**
@@ -975,7 +1015,7 @@ public final class DemonLordService {
             return Tower.DamageResult.NONE;
         }
         Monster monster = monsterEntity.runtimeMonster();
-        if (monster == null || !monster.isAlive()) {
+        if (monster == null || monster.isRemoved() || monster.health() <= 0.0) {
             return Tower.DamageResult.NONE;
         }
         if (attacker != null) {
@@ -984,12 +1024,18 @@ public final class DemonLordService {
                 return Tower.DamageResult.NONE;
             }
         }
+        DemonLordState augmentState = attacker == null ? null : DemonLordStates.get(attacker.getUUID());
+        double originalAmount = amount;
+        if (augmentState != null && lane != null) {
+            amount *= augmentState.augments().damageMultiplier(lane.augmentSnapshot(), attacker.level().getGameTime());
+        }
         SemionTowerEntity source = altar == null ? null : altar.entity(lane);
         if (source != null) {
             Tower.DamageResult result = altar.damageTargetResult(source, monsterEntity, amount, type);
             if (result.dealtDamage() > 0.0) {
                 DemonLordState state = attacker == null ? null : DemonLordStates.get(attacker.getUUID());
                 if (state != null) {
+                    state.augments().recordHit(monsterEntity, originalAmount, type);
                     state.recordDamageDealt(result.dealtDamage(), type);
                     if (result.killed()) {
                         state.recordKill();
@@ -1010,6 +1056,7 @@ public final class DemonLordService {
             monster.recordLastHit(attacker.getUUID(), KillSourceKind.TOWER);
             DemonLordState state = DemonLordStates.get(attacker.getUUID());
             if (state != null) {
+                state.augments().recordHit(monsterEntity, originalAmount, type);
                 state.recordDamageDealt(dealtDamage, type);
                 if (killed) {
                     state.recordKill();

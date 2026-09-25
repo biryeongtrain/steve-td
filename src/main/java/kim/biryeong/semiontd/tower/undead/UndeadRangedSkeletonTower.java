@@ -36,7 +36,12 @@ public class UndeadRangedSkeletonTower extends EntityBackedTower {
 
     @Override
     public double modifyAttackDamage(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
-        return damageAmount + killStackDamage;
+        return UndeadAugments.copyDamage(this, damageAmount + killStackDamage);
+    }
+
+    @Override
+    protected double builderCurrentMaxHealth() {
+        return UndeadAugments.copyHealth(this, super.builderCurrentMaxHealth());
     }
 
     @Override
@@ -65,15 +70,24 @@ public class UndeadRangedSkeletonTower extends EntityBackedTower {
     }
 
     @Override
+    public void onAttackResolved(SemionTowerEntity entity, SemionMonsterEntity target, double attempted,
+                                 double outgoing, double dealt, boolean killed) {
+        super.onAttackResolved(entity, target, attempted, outgoing, dealt, killed);
+        UndeadAugments.onBasicAttack(this, entity, target, dealt);
+    }
+
+    @Override
     public void onNearbyMonsterDeath(PlayerLane lane, Monster monster, Vec3 deathPosition) {
-        if (isWithinDeathStackRange(deathPosition)) {
+        if (!isTemporaryCopy() && isWithinDeathStackRange(deathPosition)) {
+            UndeadAugments.onMonsterDeath(this, lane, monster, killStackDamage >= stackDamageCap());
             incrementDeathStack();
         }
     }
 
     @Override
     public void onNearbyTowerDeath(PlayerLane lane, Tower destroyedTower) {
-        if (destroyedTower != null && isWithinDeathStackRange(destroyedTower.position())) {
+        if (!isTemporaryCopy() && destroyedTower != null && destroyedTower.triggersNearbyDeathEffects()
+                && isWithinDeathStackRange(destroyedTower.position())) {
             incrementDeathStack();
         }
     }
@@ -113,7 +127,7 @@ public class UndeadRangedSkeletonTower extends EntityBackedTower {
 
     private void heal(SemionTowerEntity towerEntity, double damageAmount) {
         if (towerEntity != null && damageAmount > 0.0) {
-            towerEntity.healTarget(towerEntity, damageAmount * lifeStealRatio());
+            UndeadAugments.healFromLifeSteal(towerEntity, damageAmount * lifeStealRatio());
         }
     }
 

@@ -55,6 +55,16 @@ public final class DemonLordSkills {
             DemonLordSkillTower altar,
             long gameTime
     ) {
+        state.augments().beginSpell(altar);
+        try {
+            return castNative(player, lane, state, skill, altar, gameTime);
+        } finally {
+            state.augments().finishSpell(player, lane, state, gameTime);
+        }
+    }
+
+    private static int castNative(ServerPlayer player, PlayerLane lane, DemonLordState state,
+            DemonLordSkill skill, DemonLordSkillTower altar, long gameTime) {
         switch (skill) {
             case WAVE_OF_MALICE -> castWaveOfMalice(player, lane, state, altar);
             case DEMON_WINGS -> castDemonWings(player, lane, state, altar);
@@ -362,10 +372,7 @@ public final class DemonLordSkills {
                     player, lane, altar, monster, damage, DamageType.PHYSICAL);
             monster.setDeltaMovement(monster.getDeltaMovement().x, lift, monster.getDeltaMovement().z);
             monster.hurtMarked = true;
-            // 기절: 이동·공격 속도·공격력을 모두 100% 깎아 아무것도 못 하게 만듭니다.
-            monster.applyTimedEffect(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION, 1.0, stunTicks);
-            monster.applyTimedEffect(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION, 1.0, stunTicks);
-            monster.applyTimedEffect(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION, 1.0, stunTicks);
+            monster.applyTimedEffect(TimedEffectType.MONSTER_STUN, 1.0, stunTicks);
             return damageOutcome(result);
         });
         player.teleportTo(end.x, end.y, end.z);
@@ -448,9 +455,14 @@ public final class DemonLordSkills {
         Vec3 impact = clip.getType() == HitResult.Type.MISS ? target : clip.getLocation();
 
         DemonLordSkillTower sourceAltar = DemonLordService.altarFor(lane, player.getUUID(), altar);
-        applyArea(sourceAltar, lane, impact, blastRadius, ignored -> true, AreaVfxStyles.PULSE,
+        state.augments().beginSpell(sourceAltar);
+        try {
+            applyArea(sourceAltar, lane, impact, blastRadius, ignored -> true, AreaVfxStyles.PULSE,
                 monster -> damageOutcome(DemonLordService.dealDamage(
                         player, lane, sourceAltar, monster, damage, DamageType.MAGIC)));
+        } finally {
+            state.augments().finishSpell(player, lane, state, gameTime);
+        }
         sound(player, SoundEvents.GENERIC_EXPLODE.value(), 1.0f, 1.1f);
     }
 
@@ -474,7 +486,9 @@ public final class DemonLordSkills {
         }
         DemonLordSkillTower sourceAltar = DemonLordService.altarFor(
                 lane, player.getUUID(), zone.altarType());
-        applyArea(sourceAltar, lane, zone.centre(), zone.radius(), ignored -> true,
+        state.augments().beginSpell(sourceAltar);
+        try {
+            applyArea(sourceAltar, lane, zone.centre(), zone.radius(), ignored -> true,
                 AreaVfxStyles.DEBUFF, monster -> {
             Tower.DamageResult result = DemonLordService.dealDamage(
                     player, lane, sourceAltar, monster, zone.damage(), DamageType.MAGIC);
@@ -485,6 +499,9 @@ public final class DemonLordSkills {
             );
             return damageOutcome(result);
         });
+        } finally {
+            state.augments().finishSpell(player, lane, state, gameTime);
+        }
         state.placeZone(new DemonLordState.HellfireZone(
                 zone.altarType(),
                 zone.centre(),
@@ -586,7 +603,6 @@ public final class DemonLordSkills {
                 entity.isAlive()
                         && !entity.isRemoved()
                         && entity.runtimeMonster() != null
-                        && entity.runtimeMonster().isAlive()
                         && state.canFight(entity.runtimeMonster())
                         && entity.position().distanceToSqr(center) <= radiusSqr);
     }

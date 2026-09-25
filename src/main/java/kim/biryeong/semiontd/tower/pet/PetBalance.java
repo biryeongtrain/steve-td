@@ -28,7 +28,12 @@ public final class PetBalance {
     public static final String KEY_BOND_CAP = "bondCap";
     public static final String KEY_BOND_TO_UPGRADE = "bondToUpgrade";
     public static final String KEY_PACK_DAMAGE_PER_MATE = "packDamagePerPackMate";
+    public static final String KEY_PACK_HEALTH_PER_MATE = "packHealthPerPackMate";
+    public static final String KEY_ADULT_DAMAGE_REDUCTION = "adultDamageReduction";
     public static final String KEY_SOLO_DAMAGE_BONUS = "soloDamageBonus";
+    public static final String KEY_ADULT_SPLASH_RADIUS = "adultSplashRadius";
+    public static final String KEY_ADULT_SPLASH_MAX_TARGETS = "adultSplashMaxTargets";
+    public static final String KEY_ADULT_SPLASH_DAMAGE_RATIO = "adultSplashDamageRatio";
     public static final String KEY_HEAL_RATIO = "healRatio";
 
     private PetBalance() {
@@ -130,8 +135,44 @@ public final class PetBalance {
         return mates * Math.max(0.0, ability(dogType, KEY_PACK_DAMAGE_PER_MATE, 0.0));
     }
 
+    public static double packHealthBonus(TowerType dogType, int packSize) {
+        int mates = Math.max(0, packSize - 1);
+        return mates * Math.max(0.0, ability(dogType, KEY_PACK_HEALTH_PER_MATE, 0.0));
+    }
+
+    public static double adultDamageReduction(TowerType dogType) {
+        double fallback = switch (PetTowers.tier(dogType)) {
+            case 1 -> 0.10;
+            case 2 -> 0.15;
+            default -> 0.20;
+        };
+        return clamp(ability(dogType, KEY_ADULT_DAMAGE_REDUCTION, fallback), 0.0, 1.0);
+    }
+
     public static double soloBonus(TowerType catType) {
         return Math.max(0.0, ability(catType, KEY_SOLO_DAMAGE_BONUS, 0.0));
+    }
+
+    public static double adultSplashRadius(TowerType catType) {
+        double fallback = switch (PetTowers.tier(catType)) {
+            case 1 -> 1.5;
+            case 2 -> 2.0;
+            default -> 2.5;
+        };
+        return Math.max(0.0, ability(catType, KEY_ADULT_SPLASH_RADIUS, fallback));
+    }
+
+    public static int adultSplashMaxTargets(TowerType catType) {
+        int fallback = switch (PetTowers.tier(catType)) {
+            case 1 -> 2;
+            case 2 -> 4;
+            default -> 6;
+        };
+        return Math.max(0, abilityInt(catType, KEY_ADULT_SPLASH_MAX_TARGETS, fallback));
+    }
+
+    public static double adultSplashDamageRatio(TowerType catType) {
+        return clamp(ability(catType, KEY_ADULT_SPLASH_DAMAGE_RATIO, 0.30), 0.0, 1.0);
     }
 
     public static double healRatio(TowerType birdType) {

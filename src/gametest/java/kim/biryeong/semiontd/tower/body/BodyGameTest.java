@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import kim.biryeong.semiontd.augment.*;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
@@ -22,11 +23,109 @@ import kim.biryeong.semiontd.tower.area.AreaEffectLaneIndex;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
 public final class BodyGameTest {
+    @GameTest(maxTicks = 120)
+    public void augmentNormalHeartbeatAddsExactlyOneNativeOrganAction(GameTestHelper context) {
+        TestSetup setup = augmentSetup(context, "body-augment-beats");
+        BodyTower heart = tower(BodyTowers.HEART_T1, setup.owner(), context, new BlockPos(3, 2, 3));
+        BodyTower skin = tower(BodyTowers.SKIN_T2, setup.owner(), context, new BlockPos(5, 2, 3));
+        try {
+            setup.lane().addTower(heart);
+            setup.lane().addTower(skin);
+            setup.lane().assignAugmentSnapshot(augment("job_body_g1"));
+            setup.lane().markWaveStarted(1);
+            require(heart.execute(setup.lane()), "First normal heartbeat must run.");
+            require(heart.execute(setup.lane()), "Second normal heartbeat must run.");
+            requireClose(0.18, towerEntity(context, skin).activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_REDUCTION),
+                    "Two normal heartbeats must deliver three native skin actions without recursion.");
+            context.succeed();
+        } finally {cleanup(setup, List.of());}
+    }
+
+    @GameTest(maxTicks = 120)
+    public void augmentEyeFacesNearestEnemyAndAdrenalineHealsOnce(GameTestHelper context) {
+        TestSetup setup = augmentSetup(context, "body-augment-eye-heart");
+        BodyTower heart = tower(BodyTowers.HEART_T1, setup.owner(), context, new BlockPos(1, 2, 1));
+        BodyTower eye = tower(BodyTowers.EYE_T1, setup.owner(), context, new BlockPos(4, 2, 4));
+        List<SpawnedTarget> targets = new ArrayList<>();
+        try {
+            setup.lane().addTower(heart);
+            setup.lane().addTower(eye);
+            setup.lane().assignAugmentSnapshot(augment("job_body_s", "job_body_g2"));
+            setup.lane().markWaveStarted(1);
+            SemionTowerEntity eyeEntity = towerEntity(context, eye);
+            targets.add(spawnTarget(context, setup.lane(), eyeEntity.position().add(2, 0, 0), "eye-nearest", 1000));
+            targets.add(spawnTarget(context, setup.lane(), eyeEntity.position().add(0, 0, 3), "eye-farther", 1000));
+            eye.actOnHeartbeat(setup.lane());
+            require(targets.getFirst().runtime().health() < 1000, "Eye must hit the closest target to the side.");
+            requireClose(1000, targets.getLast().runtime().health(), "Eye must not keep its old facing.");
+            SemionTowerEntity heartEntity = towerEntity(context, heart);
+            double max = heart.currentMaxHealth();
+            heartEntity.hurtIgnoringReductions(heartEntity.damageSources().mobAttack(targets.getFirst().entity()), max * 0.55);
+            requireClose(max * 0.75, heart.health(), "Adrenaline restores 30% after crossing 50%.");
+            int base = heart.type().attackIntervalTicks();
+            for (int index = 0; index < 8; index++) {
+                require(heart.cooldownTicksAfterExecute(setup.lane()) == Math.max(1, (int) Math.round(base * 0.5)),
+                        "Exactly eight scheduled intervals must be halved.");
+            }
+            require(heart.cooldownTicksAfterExecute(setup.lane()) == base, "Ninth interval must return to normal.");
+            heartEntity.hurtIgnoringReductions(heartEntity.damageSources().mobAttack(targets.getFirst().entity()), max * 0.3);
+            requireClose(max * 0.45, heart.health(), "Adrenaline must not heal twice in a wave.");
+            context.succeed();
+        } catch (Throwable failure) {
+            context.fail(Component.literal(failure.toString()));
+        } finally {cleanup(setup, targets);}
+    }
+
+    @GameTest(maxTicks = 120)
+    public void augmentSkinIgnoresAbsorptionAndSelfDamageAndCapsEachLinkedHeart(GameTestHelper context) {
+        TestSetup setup = augmentSetup(context, "body-augment-skin");
+        BodyTower first = tower(BodyTowers.HEART_T1, setup.owner(), context, new BlockPos(2, 2, 2));
+        BodyTower second = tower(BodyTowers.HEART_T1, setup.owner(), context, new BlockPos(3, 2, 2));
+        BodyTower skin = tower(BodyTowers.SKIN_T2, setup.owner(), context, new BlockPos(5, 2, 5));
+        SpawnedTarget enemy = null;
+        try {
+            setup.lane().addTower(first);
+            setup.lane().addTower(second);
+            setup.lane().addTower(skin);
+            setup.lane().assignAugmentSnapshot(augment("job_body_p"));
+            setup.lane().markWaveStarted(1);
+            SemionTowerEntity entity = towerEntity(context, skin);
+            enemy = spawnTarget(context, setup.lane(), entity.position().add(0, 0, 1), "skin-damage-source", 10000);
+            double threshold = skin.currentMaxHealth() * 0.15;
+            entity.getAttribute(Attributes.MAX_ABSORPTION).setBaseValue(threshold);
+            entity.setAbsorptionAmount((float) threshold);
+            requireClose(threshold, entity.getAbsorptionAmount(), "Fixture must provide a real absorption shield.");
+            entity.hurtIgnoringReductions(entity.damageSources().mobAttack(enemy.entity()), threshold);
+            requireClose(0, entity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_REDUCTION),
+                    "Absorbed damage must not charge skin.");
+            entity.hurtIgnoringReductions(entity.damageSources().mobAttack(entity), threshold);
+            requireClose(0, entity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_REDUCTION),
+                    "Self damage must not charge skin.");
+            entity.hurtIgnoringReductions(entity.damageSources().mobAttack(enemy.entity()), threshold * 2.0);
+            requireClose(0.12, entity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_REDUCTION),
+                    "Two linked hearts must each pulse once despite multiple crossed thresholds.");
+            entity.hurtIgnoringReductions(entity.damageSources().mobAttack(enemy.entity()), threshold);
+            requireClose(0.12, entity.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_REDUCTION),
+                    "Further damage inside one second must not bank or replay heartbeats.");
+            context.succeed();
+        } catch (Throwable failure) {
+            context.fail(Component.literal(failure.toString()));
+        } finally {cleanup(setup, enemy == null ? List.of() : List.of(enemy));}
+    }
+
+    private static AugmentSnapshot augment(String... ids) {
+        return new AugmentSnapshot(AugmentConfig.defaults(), java.util.Arrays.stream(ids).map(id ->
+                new PlayerAugmentState.Selection(5, AugmentRarity.GOLD, id,
+                        PlayerAugmentState.Outcome.SELECTED, null, AugmentChoice.none())).toList());
+    }
+
     @GameTest(maxTicks = 120)
     public void heartPulseMakesSkinActAndGainArmor(GameTestHelper context) {
         TestSetup setup = setup(context, "body-heart-owner");
@@ -243,6 +342,23 @@ public final class BodyGameTest {
         }
     }
 
+    private static TestSetup augmentSetup(GameTestHelper context, String ownerSeed) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        prepareFloor(context, 7);
+        UUID owner = stableUuid(ownerSeed);
+        BlockPos min = context.absolutePos(new BlockPos(0, 1, 0));
+        BlockPos max = context.absolutePos(new BlockPos(7, 6, 7));
+        LaneRegionLayout layout = new LaneRegionLayout(
+                1, Vec3.atCenterOf(context.absolutePos(new BlockPos(2, 2, 2))),
+                List.of(Vec3.atCenterOf(context.absolutePos(new BlockPos(6, 2, 2)))),
+                Vec3.atCenterOf(context.absolutePos(new BlockPos(6, 2, 6))),
+                BlockBounds.of(min, max),
+                List.of(GridPosition.from(context.absolutePos(new BlockPos(5, 2, 6)))));
+        PlayerLane lane = new PlayerLane(TeamId.RED, 1, owner, context.getLevel(), layout);
+        AreaEffectLaneIndex.register(lane);
+        return new TestSetup(owner, lane);
+    }
+
     private static TestSetup setup(GameTestHelper context, String ownerSeed) {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
         prepareFloor(context);
@@ -312,8 +428,12 @@ public final class BodyGameTest {
     }
 
     private static void prepareFloor(GameTestHelper context) {
-        for (int x = 0; x <= 14; x++) {
-            for (int z = 0; z <= 14; z++) {
+        prepareFloor(context, 14);
+    }
+
+    private static void prepareFloor(GameTestHelper context, int max) {
+        for (int x = 0; x <= max; x++) {
+            for (int z = 0; z <= max; z++) {
                 BlockPos floor = context.absolutePos(new BlockPos(x, 1, z));
                 context.getLevel().setBlock(floor, Blocks.STONE.defaultBlockState(), 3);
                 context.getLevel().setBlock(floor.above(), Blocks.AIR.defaultBlockState(), 3);

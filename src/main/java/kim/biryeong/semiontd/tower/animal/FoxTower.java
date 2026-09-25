@@ -55,13 +55,11 @@ public class FoxTower extends AnimalStackTower {
     public double modifyAttackDamage(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
         double adjustedDamage = damageAmount + killBonusDamage;
         if (target == null || target.getMaxHealth() <= 0.0F || target.getHealth() / target.getMaxHealth() > effectiveExecuteThreshold()) {
-            return adjustedDamage;
+            return super.modifyAttackDamage(towerEntity, target, adjustedDamage);
         }
         double bonusRatio = value("executeDamageBonusRatio") + currentStacks() * value("executeDamageBonusPerStack");
-        if (hasLeaderAura()) {
-            bonusRatio += leaderValue("leaderExecuteDamageBonus");
-        }
-        return adjustedDamage * (1.0 + Math.max(0.0, bonusRatio));
+        bonusRatio += auraValue(AnimalTowers.T4_FOX_LEADER_TOWER, "leaderExecuteDamageBonus");
+        return super.modifyAttackDamage(towerEntity, target, adjustedDamage * (1.0 + Math.max(0.0, bonusRatio)));
     }
 
     @Override
@@ -125,11 +123,8 @@ public class FoxTower extends AnimalStackTower {
                 value("executeThresholdPerStack"),
                 value("maxExecuteHealthThreshold")
         );
-        if (!hasLeaderAura()) {
-            return threshold;
-        }
-        return Math.min(leaderValue("leaderExecuteThresholdCap"),
-                threshold + leaderValue("leaderExecuteThresholdBonus"));
+        double bonus = auraValue(AnimalTowers.T4_FOX_LEADER_TOWER, "leaderExecuteThresholdBonus");
+        return bonus <= 0.0 ? threshold : Math.min(leaderValue("leaderExecuteThresholdCap"), threshold + bonus);
     }
 
     private double value(String key) {

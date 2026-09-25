@@ -11,18 +11,22 @@ import kim.biryeong.semiontd.game.SemionPlayer;
 public final class PirateStates {
     private static final ConcurrentMap<UUID, State> STATES = new ConcurrentHashMap<>();
     private PirateStates() { }
-    public static void open(SemionGame game, SemionPlayer player) { if (game != null && player != null) STATES.put(player.uuid(), new State(game, player)); }
-    public static void close(UUID id) { if (id != null) STATES.remove(id); }
+    public static void open(SemionGame game, SemionPlayer player) { if (game != null && player != null) { PirateAugments.clearPlayer(player.uuid()); STATES.put(player.uuid(), new State(game, player)); } }
+    public static void close(UUID id) { if (id != null) { STATES.remove(id); PirateAugments.clearPlayer(id); } }
     public static void startRound(UUID id) { State state = STATES.get(id); if (state != null) { state.diamondSpent = 0; state.emeraldSpent = 0; } }
     public static long diamondSpent(UUID id) { State state = STATES.get(id); return state == null ? 0 : state.diamondSpent; }
     public static long emeraldSpent(UUID id) { State state = STATES.get(id); return state == null ? 0 : state.emeraldSpent; }
     public static long admiralProgress(UUID id) { State state = STATES.get(id); return state == null ? 0 : state.admiralRemainder; }
     public static SemionPlayer player(UUID id) { State state = STATES.get(id); return state == null ? null : state.player; }
+    static java.util.List<kim.biryeong.semiontd.game.PlayerLane> combatLanes(kim.biryeong.semiontd.game.PlayerLane lane) {
+        State state = STATES.get(lane.ownerPlayer());
+        return state == null ? java.util.List.of(lane) : state.game.teams().get(lane.teamId()).laneGroup().lanes();
+    }
     public static void recordDiamondSpend(SemionPlayer player, long amount) {
         State state = player == null ? null : STATES.get(player.uuid());
         if (state == null || amount <= 0) return;
         state.diamondSpent += amount;
-        int threshold = Math.max(1, TowerBalanceRuntime.abilityInt(PirateTowers.ADMIRAL.id(), "spendThreshold", 200));
+        int threshold = Math.max(1, TowerBalanceRuntime.abilityInt(PirateTowers.ADMIRAL.id(), "spendThreshold", 300));
         long total = state.admiralRemainder + amount;
         int triggerCount = (int) (total / threshold);
         state.admiralRemainder = total % threshold;

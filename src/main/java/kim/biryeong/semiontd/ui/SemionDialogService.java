@@ -77,6 +77,9 @@ import kim.biryeong.semiontd.game.PlayerEconomy;
 import kim.biryeong.semiontd.game.SemionGame;
 import kim.biryeong.semiontd.game.SemionPlayer;
 import kim.biryeong.semiontd.game.SemionTeam;
+import kim.biryeong.semiontd.augment.AugmentService;
+import kim.biryeong.semiontd.augment.AugmentEconomyService;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.progression.MatchProgressionReward;
 import kim.biryeong.semiontd.progression.SemionPlayerProfile;
@@ -102,12 +105,16 @@ import net.minecraft.server.dialog.NoticeDialog;
 import net.minecraft.server.dialog.action.StaticAction;
 import net.minecraft.server.dialog.body.DialogBody;
 import net.minecraft.server.dialog.body.PlainMessage;
+import net.minecraft.server.dialog.body.ItemBody;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ItemStack;
 import static kim.biryeong.semiontd.tower.description.TowerDescriptionTemplate.*;
 import static kim.biryeong.semiontd.ui.dialog.body.HeaderMessage.dividerComponent;
 
 public final class SemionDialogService {
     private static final int BODY_WIDTH = 256;
+    private static final int AUGMENT_BODY_WIDTH = 360;
     private static final int TITLE_HEADER_WIDTH = 200;
     private static final int PLAYER_STATUS_WIDTH = 480;
     private static final int JOB_STATISTICS_WIDTH = 460;
@@ -744,7 +751,12 @@ public final class SemionDialogService {
             }
         } else if (selectedTower == null) {
             for (ProductionTowerCatalog.CatalogEntry entry : entries) {
-                long mineralCost = Math.max(0, entry.type().mineralCost());
+                long mineralCost = ProductionTowerService.placementCost(
+                        game.playerLane(player.getUUID()).orElse(null), entry.type());
+                String augmentPreview = AugmentService.placementPreview(game, player, entry.type());
+                if (!augmentPreview.isEmpty()) {
+                    body.append("<gray>").append(augmentPreview).append("</gray>\n");
+                }
                 boolean recommended = buildGuideService != null && TowerPlacementPositions.resolveGrid(game.playerLane(player.getUUID()).orElse(null), player.blockPosition())
                         .map(position -> buildGuideService.isRecommendedTower(game, player.getUUID(), game.currentRound(), position, entry.type().id()))
                         .orElse(false);
@@ -764,7 +776,7 @@ public final class SemionDialogService {
             }
         } else {
             for (TowerUpgradeOption option : upgrades) {
-                boolean mineralAffordable = economy.diamond() >= option.mineralCost();
+                boolean mineralAffordable = economy.diamond() >= ProductionTowerService.upgradeCost(selectedTower, option);
                 boolean requirementsMet = selectedTower.meetsUpgradeRequirements(
                         game.playerLane(player.getUUID()).orElse(null), option);
                 boolean recommended = buildGuideService != null
@@ -776,6 +788,8 @@ public final class SemionDialogService {
                         upgradeTooltip(option, mineralAffordable, recommended, selectedTower),
                         COMPACT_BUTTON_WIDTH
                 ));
+                AugmentService.upgradeAction(game, game.players().get(player.getUUID()), selectedTower, option)
+                        .ifPresent(button -> actions.add(actionButton(button.label(), button.command(), button.description())));
             }
         }
         showActions(player, "세미온 TD 타워", body.toString(), actions, 3);
@@ -866,7 +880,7 @@ public final class SemionDialogService {
             var managementPosition = tower.managementPosition();
             List<TowerUpgradeOption> upgrades = ProductionTowerService.availableUpgrades(game, player.getUUID(), managementPosition);
             for (TowerUpgradeOption option : upgrades) {
-                boolean mineralAffordable = semionPlayer.economy().diamond() >= option.mineralCost();
+                boolean mineralAffordable = semionPlayer.economy().diamond() >= ProductionTowerService.upgradeCost(tower, option);
                 boolean requirementsMet = tower.meetsUpgradeRequirements(
                         game.playerLane(player.getUUID()).orElse(null), option);
                 boolean recommended = buildGuideService != null
@@ -882,6 +896,8 @@ public final class SemionDialogService {
                         upgradeTooltip(option, mineralAffordable, recommended, tower),
                         COMPACT_BUTTON_WIDTH
                 ));
+                AugmentService.upgradeAction(game, semionPlayer, tower, option)
+                        .ifPresent(button -> actions.add(actionButton(button.label(), button.command(), button.description())));
             }
             if (tower instanceof FutureAgencyLeaderTower) {
                 List<ActionButton> upgradeActions = List.copyOf(actions);
@@ -908,7 +924,7 @@ public final class SemionDialogService {
                         BUTTON_WIDTH
                 ));
             }
-            if (tower.canBeSold()) {
+            if (!tower.isTemporaryCopy() && tower.canBeSold()) {
                 actions.add(actionButton(
                         tower.saleActionLabel(),
                         "/semiontd tower sell "
@@ -945,7 +961,8 @@ public final class SemionDialogService {
         String body = "<yellow><bold>" + role.displayName() + "</bold></yellow>를 동료로 선택합니다.\n\n"
                 + "<gray>설치에 성공하면 이 경기에서는 판매해도 동료 종류가 유지됩니다.</gray>\n"
                 + "<gray>타워 수</gray> <yellow>" + TowerCapacity.slotCost(type) + "</yellow> <dark_gray>|</dark_gray> <gray>가격</gray> <aqua>"
-                + type.mineralCost() + " 다이아</aqua>\n\n"
+                + ProductionTowerService.placementCost(game.playerLane(player.getUUID()).orElse(null), type)
+                + " 다이아</aqua>\n\n"
                 + "<red>최대 네 종류만 선택할 수 있습니다.</red>";
         List<ActionButton> actions = List.of(
                 actionButton("선택 확정", "/semiontd tower build " + type.id(), "현재 위치에 설치하며, 성공 시 동료가 확정됩니다."),
@@ -1270,15 +1287,25 @@ public final class SemionDialogService {
                 .skip((long) (safePage - 1) * SUMMON_PAGE_SIZE)
                 .limit(SUMMON_PAGE_SIZE)
                 .map(type -> {
-                    boolean affordable = freeSummons || emerald >= type.gasCost();
+                    var quote = game.augmentsEnabled() && !freeSummons && semionPlayer != null
+                            ? AugmentEconomyService.previewPurchase(game, semionPlayer, type).orElse(null) : null;
+                    boolean affordable = freeSummons || emerald >= (quote == null ? type.gasCost() : quote.emeraldCost());
+                    Component label = summonButtonLabel(type, affordable);
+                    if (quote != null) {
+                        label = label.copy().append(Component.literal(" · " + quote.emeraldCost() + "◆"));
+                    }
                     return actionButton(
-                            summonButtonLabel(type, affordable),
+                            label,
                             "/semiontd summon " + type.id(),
-                            summonTooltip(type, affordable, freeSummons),
+                            summonTooltip(type, affordable, freeSummons, quote),
                             SUMMON_BUTTON_WIDTH
                     );
                 })
                 .collect(Collectors.toCollection(ArrayList::new));
+        if (game.augmentsEnabled() && game.phase() == kim.biryeong.semiontd.game.RoundPhase.PREPARE_AND_SUMMON
+                && AugmentEconomyService.hasPurchaseOptions(semionPlayer)) {
+            actions.add(actionButton("인컴 계약", "/semiontd augment ui contracts", "다음 적격 구매에 적용할 증강 계약을 설정합니다."));
+        }
         showActions(player, "세미온 TD 소환", body.toString(), actions, SUMMON_COLUMNS);
     }
 
@@ -1457,6 +1484,7 @@ public final class SemionDialogService {
         }
         lines.addAll(SuccubusDreams.detailLines(tower));
         lines.addAll(tower.runtimeDetailLines());
+        lines.addAll(AugmentCombat.detailLines(tower));
         return lines;
     }
 
@@ -1492,7 +1520,7 @@ public final class SemionDialogService {
         return primaryDamage(tower.type(), tower.primaryDamageType());
     }
 
-    static double currentTowerPrimaryDamage(Tower tower, SemionTowerEntity towerEntity) {
+    public static double currentTowerPrimaryDamage(Tower tower, SemionTowerEntity towerEntity) {
         if (tower == null) {
             return 0.0;
         }
@@ -1599,6 +1627,28 @@ public final class SemionDialogService {
         player.connection.send(new ClientboundShowDialogPacket(Holder.direct(dialog)));
     }
 
+    public void showAugment(ServerPlayer player, AugmentService.Screen screen) {
+        List<DialogBody> bodies = new ArrayList<>();
+        if (!screen.body().isBlank()) {
+            bodies.add(new PlainMessage(miniMessage(screen.body()), AUGMENT_BODY_WIDTH));
+        }
+        for (AugmentService.CardLine card : screen.cards()) {
+            ItemStack icon = new ItemStack(switch (card.category()) {
+                case "TRADE_OFF" -> Items.CHAIN;
+                case "TOWER" -> Items.SCAFFOLDING;
+                case "GAME_CHANGER" -> Items.NETHER_STAR;
+                case "INCOME" -> Items.EMERALD;
+                default -> Items.COMPASS;
+            });
+            bodies.add(new ItemBody(icon, Optional.of(new PlainMessage(miniMessage(card.text()), AUGMENT_BODY_WIDTH - 24)),
+                    false, false, 16, 16));
+        }
+        List<ActionButton> actions = screen.buttons().stream()
+                .map(button -> actionButton(Component.literal(button.label()), button.command(), Component.literal(button.description()), COMPACT_BUTTON_WIDTH))
+                .toList();
+        showActions(player, miniMessage(screen.title()), bodies, actions, screen.columns());
+    }
+
     private void showActions(ServerPlayer player, String title, String body, List<ActionButton> actions) {
         showActions(player, title, body, actions, 2);
     }
@@ -1637,10 +1687,14 @@ public final class SemionDialogService {
     }
 
     private void showActions(ServerPlayer player, String title, List<DialogBody> bodies, List<ActionButton> actions, int columns) {
+        showActions(player, Component.literal(title), bodies, actions, columns);
+    }
+
+    private void showActions(ServerPlayer player, Component title, List<DialogBody> bodies, List<ActionButton> actions, int columns) {
         if (actions.isEmpty()) {
             Dialog dialog = new NoticeDialog(
                     new CommonDialogData(
-                            Component.literal(title),
+                            title,
                             Optional.empty(),
                             true,
                             false,
@@ -1655,7 +1709,7 @@ public final class SemionDialogService {
         }
         Dialog dialog = new MultiActionDialog(
                 new CommonDialogData(
-                        Component.literal(title),
+                        title,
                         Optional.empty(),
                         true,
                         false,
@@ -1933,9 +1987,10 @@ public final class SemionDialogService {
     }
 
     private static Component upgradeTooltip(TowerUpgradeOption option, boolean affordable, boolean recommended, Tower currentTower) {
+        long mineralCost = ProductionTowerService.upgradeCost(currentTower, option);
         Optional<ProductionTowerCatalog.CatalogEntry> target = ProductionTowerCatalog.entry(option.targetType());
         if (target.isEmpty()) {
-            return Component.literal("대상 타워를 찾을 수 없습니다.\n비용 " + option.mineralCost() + " 다이아");
+            return Component.literal("대상 타워를 찾을 수 없습니다.\n비용 " + mineralCost + " 다이아");
         }
         var entry = target.get();
         var type = entry.type();
@@ -1944,7 +1999,7 @@ public final class SemionDialogService {
         double attacksPerSecond = 20.0 / Math.max(1, type.attackIntervalTicks());
         int capacityDelta = TowerCapacity.slotCost(type) - TowerCapacity.slotCost(currentTower.type());
         String capacityLine = capacityDelta == 0 ? "" : "<yellow>타워 수 +" + capacityDelta + "</yellow>\n";
-        MutableComponent tooltip = mutableMiniMessage("<yellow><bold>" + option.displayName() + "</bold></yellow>\n" + (recommended ? "<blue>빌드 추천</blue>\n" : "") + "<gray>대상</gray> <white>" + type.displayName() + "</white>\n" + DIAMOND_GRADIENT + "\uD83D\uDC8E " + option.mineralCost() + " 다이아" + GRADIENT_CLOSE + (affordable ? " <green>(구매 가능)</green>" : " <red>(부족)</red>") + "\n" + capacityLine + advExperienceRequirementLine(currentTower, option));
+        MutableComponent tooltip = mutableMiniMessage("<yellow><bold>" + option.displayName() + "</bold></yellow>\n" + (recommended ? "<blue>빌드 추천</blue>\n" : "") + "<gray>대상</gray> <white>" + type.displayName() + "</white>\n" + DIAMOND_GRADIENT + "\uD83D\uDC8E " + mineralCost + " 다이아" + GRADIENT_CLOSE + (affordable ? " <green>(구매 가능)</green>" : " <red>(부족)</red>") + "\n" + capacityLine + advExperienceRequirementLine(currentTower, option));
         if (!actionOnly) {
             tooltip.append(dividerComponent(160)).append(Component.literal("\n"));
             tooltip.append(mutableMiniMessage(formatHealth(type.maxHealth(), "") + "\n" + formatTowerTypePrimaryDamage(type) + "\n" + formatAttackSpeed(attacksPerSecond, type.attackIntervalTicks(), "") + "\n" + formatAttackRange(type.range(), "") + " <dark_gray>|</dark_gray> " + formatAggroPriority(type.aggroPriority(), "") + "\n"));
@@ -1975,7 +2030,8 @@ public final class SemionDialogService {
     }
 
     private static double advExperienceRequirement(Tower tower, TowerUpgradeOption option) {
-        if (!VillagerAdvStates.isAdvTower(tower) || option == null) {
+        if (!VillagerAdvStates.isAdvTower(tower) || option == null
+                || tower.augmentSnapshot().has("job_villager_adv_towers_g1")) {
             return 0.0;
         }
         return TowerBalanceRuntime.villagerAdvUpgradeRequirement(tower.type(), option.id());
@@ -2078,11 +2134,18 @@ public final class SemionDialogService {
     }
 
     private static Component summonTooltip(SummonMonsterType type, boolean affordable, boolean sandbox) {
+        return summonTooltip(type, affordable, sandbox, null);
+    }
+
+    private static Component summonTooltip(SummonMonsterType type, boolean affordable, boolean sandbox, AugmentEconomyService.PurchasePlan quote) {
         double attacksPerSecond = 20.0 / 13.0;
         MutableComponent tooltip = mutableMiniMessage("<yellow><bold>" + type.displayName() + "</bold></yellow> <dark_gray>|</dark_gray> <gray>" + roleList(type) + "</gray>\n");
         tooltip.append(dividerComponent(160)).append(Component.literal("\n"));
         if (sandbox) {
             tooltip.append(mutableMiniMessage("<green>◆ 무료</green>\n<gray>수입 증가 없음</gray>\n" + formatKillReward(type.mineralReward(), "") + "\n"));
+        } else if (quote != null) {
+            tooltip.append(Component.literal(AugmentService.purchaseSummary(quote) + "\n"));
+            tooltip.append(Component.literal("아래 능력치는 증강 배율 적용 전 기본값입니다.\n").withStyle(ChatFormatting.GRAY));
         } else {
             tooltip.append(mutableMiniMessage(formatEmerald(type.gasCost(), affordable, "") + "\n" + formatKillReward(type.mineralReward(), "") + "\n" + formatIncome(type.incomeGain(), type.incomeRatio(), "") + "\n"));
         }

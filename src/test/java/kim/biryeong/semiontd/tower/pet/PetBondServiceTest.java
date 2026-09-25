@@ -154,7 +154,8 @@ class PetBondServiceTest {
         assertEquals(3, above.packSize());
         assertEquals(3, below.packSize());
         assertEquals(0, cat.packSize(), "only dogs form packs");
-        assertEquals(0.24, PetBalance.packBonus(PetTowers.DOG_T1, centre.packSize()), 1e-9);
+        assertEquals(0.16, PetBalance.packBonus(PetTowers.DOG_T1, centre.packSize()), 1e-9);
+        assertEquals(0.16, PetBalance.packHealthBonus(PetTowers.DOG_T1, centre.packSize()), 1e-9);
     }
 
     @Test
@@ -173,7 +174,8 @@ class PetBondServiceTest {
         for (Tower tower : board) {
             if (tower instanceof PetTower pet && pet.role() == PetRole.DOG) {
                 assertEquals(5, pet.packSize());
-                assertEquals(0.48, PetBalance.packBonus(pet.type(), pet.packSize()), 1e-9);
+                assertEquals(0.32, PetBalance.packBonus(pet.type(), pet.packSize()), 1e-9);
+                assertEquals(0.32, PetBalance.packHealthBonus(pet.type(), pet.packSize()), 1e-9);
             }
         }
     }
@@ -212,8 +214,8 @@ class PetBondServiceTest {
             }
         }
         // No cap: seven dogs pay six mates.
-        assertEquals(0.72, PetBalance.packBonus(PetTowers.DOG_T1, 7), 1e-9);
-        assertEquals(1.20, PetBalance.packBonus(PetTowers.DOG_T1, 11), 1e-9);
+        assertEquals(0.48, PetBalance.packBonus(PetTowers.DOG_T1, 7), 1e-9);
+        assertEquals(0.80, PetBalance.packBonus(PetTowers.DOG_T1, 11), 1e-9);
     }
 
     @Test

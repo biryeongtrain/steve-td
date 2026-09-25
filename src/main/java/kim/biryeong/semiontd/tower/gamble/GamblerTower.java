@@ -8,6 +8,7 @@ import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.api.area.AreaVfxSpec;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
+import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.visual.TowerEquipmentVisual;
@@ -26,6 +27,7 @@ import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.item.ItemStack;
@@ -39,6 +41,8 @@ public final class GamblerTower extends ProductionTower {
     private transient PlayerLane lane;
     private transient ArmorStand equipmentVisual;
     private double copiedHealthRatio = 1.0;
+    private int jackpotCharges;
+    private boolean lastPurchaseSucceeded;
 
     public GamblerTower(
             TowerType type, UUID ownerPlayer, TeamId teamId, int laneId,
@@ -104,6 +108,15 @@ public final class GamblerTower extends ProductionTower {
     @Override
     protected void copyRuntimeStateFrom(Tower previousTower) {
         copiedHealthRatio = previousTower.health() / Math.max(1.0, previousTower.currentMaxHealth());
+        if (previousTower instanceof GamblerTower previous) {
+            jackpotCharges = previous.jackpotCharges;
+        }
+    }
+
+    @Override
+    public void resetForRound(PlayerLane lane) {
+        jackpotCharges = 0;
+        super.resetForRound(lane);
     }
 
     @Override
@@ -134,6 +147,20 @@ public final class GamblerTower extends ProductionTower {
             double resolvedOutgoingDamage, double dealtDamage, boolean killedTarget
     ) {
         applyBasicSplash(source, target, resolvedOutgoingDamage);
+        if (AugmentCombat.allowsTriggers() && jackpotCharges > 0 && source != null && target != null
+                && dealtDamage > 0.0 && augmentSnapshot().has("job_gamble_p")) {
+            jackpotCharges--;
+            double damage = source.attackDamageAmount(target)
+                    * augmentSnapshot().parameter("job_gamble_p", "jackpotDamageRatio", 6.0);
+            MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
+                    AreaEffectIds.tower(this, "jackpot"), source, target.position(),
+                    augmentSnapshot().parameter("job_gamble_p", "jackpotRadius", 3.0),
+                    Set.of(), null, AreaVfxSpec.onTrigger(AreaVfxStyles.SPLASH))
+                    .nearestTargets((int) augmentSnapshot().parameter("job_gamble_p", "maxTargets", 12));
+            AugmentCombat.runWithoutTriggers(() -> TowerAreaDamage.applyResolved(this, source, request,
+                    monster -> resolveBasicAttackOutgoingDamage(source, monster, damage), true,
+                    (monster, amount, killed) -> {}, primaryDamageType()));
+        }
     }
 
     @Override
@@ -160,9 +187,10 @@ public final class GamblerTower extends ProductionTower {
 
     @Override
     public List<String> upgradeTooltipLines(TowerUpgradeOption option) {
-        return GambleBet.fromUpgradeId(option.id()).map(bet -> switch (bet) {
+        boolean bottomKing = augmentSnapshot().has("job_gamble_g2");
+        ArrayList<String> lines = new ArrayList<>(GambleBet.fromUpgradeId(option.id()).map(bet -> switch (bet) {
             case ODD -> List.of(
-                    "주사위 한 개를 굴려 홀수가 나오면 능력치가 오르고, 짝수가 나오면 내려갑니다.",
+                    "주사위 한 개를 굴려 홀수가 나오면 성공, 짝수가 나오면 실패합니다.",
                     "성공하면 " + statRewardSummary(GambleBalance.oddEvenWinScore()) + " 중 하나를 얻습니다.",
                     "실패하면 " + statRewardSummary(-GambleBalance.oddEvenLossScore())
                             + " 중 하나가 적용됩니다.",
@@ -171,7 +199,7 @@ public final class GamblerTower extends ProductionTower {
                     "비용은 판매 환불가에 포함되지 않습니다."
             );
             case EVEN -> List.of(
-                    "주사위 한 개를 굴려 짝수가 나오면 능력치가 오르고, 홀수가 나오면 내려갑니다.",
+                    "주사위 한 개를 굴려 짝수가 나오면 성공, 홀수가 나오면 실패합니다.",
                     "성공하면 " + statRewardSummary(GambleBalance.oddEvenWinScore()) + " 중 하나를 얻습니다.",
                     "실패하면 " + statRewardSummary(-GambleBalance.oddEvenLossScore())
                             + " 중 하나가 적용됩니다.",
@@ -188,7 +216,19 @@ public final class GamblerTower extends ProductionTower {
                             + " 중 하나를 줍니다.",
                     "같은 눈이 나오면 변화량이 두 배가 되며 비용은 판매 환불가에 포함되지 않습니다."
             );
-        }).orElseGet(List::of);
+        }).orElseGet(List::of));
+        if (bottomKing) {
+            lines.add("바닥의 왕: 실패마다 점수 손실 "
+                    + oneDecimal(augmentSnapshot().parameter("job_gamble_g2", "failureScoreMultiplier", 2))
+                    + "배. " + oneDecimal(augmentSnapshot().parameter("job_gamble_g2", "statReversalChance", .2) * 100)
+                    + "% 확률로 능력치 감소가 같은 양의 증가로 바뀝니다.");
+        }
+        if (augmentSnapshot().has("job_gamble_p")) {
+            lines.add("끝장을 보자: 한 번 결제하고 성공할 때까지 최대 "
+                    + (int) augmentSnapshot().parameter("job_gamble_p", "maxAttempts", 3)
+                    + "회 시도하며 매 시도를 정산합니다.");
+        }
+        return List.copyOf(lines);
     }
 
     @Override
@@ -216,6 +256,10 @@ public final class GamblerTower extends ProductionTower {
             }
         }
         lines.add("최근 결과: " + state.lastResult());
+        if (augmentSnapshot().has("job_gamble_p")) {
+            lines.add("잭팟 폭발: " + jackpotCharges + "/"
+                    + (int) augmentSnapshot().parameter("job_gamble_p", "maxCharges", 3));
+        }
         return List.copyOf(lines);
     }
 
@@ -235,45 +279,82 @@ public final class GamblerTower extends ProductionTower {
         if (source == null) {
             return;
         }
-        int first = source.getRandom().nextInt(6) + 1;
-        int second = bet == GambleBet.TWO_DICE ? source.getRandom().nextInt(6) + 1 : 0;
+        double healthRatio = health() / Math.max(1.0, currentMaxHealth());
+        int attempts = resolvePurchase(bet, source.getRandom());
+        syncMaxHealth(effectBaseMaxHealth(), false);
+        syncHealth(currentMaxHealth() * healthRatio);
+        onStateChanged(lane);
+        showBetResult(source, attempts + "회 시도 · " + state().lastResult(), lastPurchaseSucceeded);
+    }
+
+    int resolvePurchase(GambleBet bet, RandomSource random) {
+        if (state().atScoreCap()) return 0;
+        boolean allIn = AugmentCombat.allowsTriggers() && augmentSnapshot().has("job_gamble_p");
+        int maximum = allIn ? (int) augmentSnapshot().parameter("job_gamble_p", "maxAttempts", 3) : 1;
+        lastPurchaseSucceeded = false;
+        for (int attempt = 1; attempt <= maximum; attempt++) {
+            if (resolveAttempt(bet, random)) {
+                lastPurchaseSucceeded = true;
+                if (allIn) {
+                    jackpotCharges = Math.min(jackpotCharges + 1,
+                            (int) augmentSnapshot().parameter("job_gamble_p", "maxCharges", 3));
+                }
+                return attempt;
+            }
+        }
+        if (allIn) {
+            double loss = augmentSnapshot().parameter("job_gamble_p", "allFailedScoreLoss", 3);
+            setData(STATE, state().adjustScore(-loss, state().lastResult() + " · 전부 실패, 점수 -" + oneDecimal(loss)));
+        }
+        return maximum;
+    }
+
+    int jackpotCharges() {
+        return jackpotCharges;
+    }
+
+    private boolean resolveAttempt(GambleBet bet, RandomSource random) {
+        int first = random.nextInt(6) + 1;
+        int second = bet == GambleBet.TWO_DICE ? random.nextInt(6) + 1 : 0;
         double score = bet == GambleBet.TWO_DICE
                 ? GambleRolls.twoDiceDelta(first, second)
                 : GambleRolls.oddEvenDelta(bet, first);
         GambleState before = state();
-        double healthRatio = health() / Math.max(1.0, currentMaxHealth());
+        boolean bottomKing = AugmentCombat.allowsTriggers() && augmentSnapshot().has("job_gamble_g2");
+        double settledScore = GambleRewards.settledScore(score, bottomKing
+                ? augmentSnapshot().parameter("job_gamble_g2", "failureScoreMultiplier", 2.0) : 1.0);
+        boolean reverseLoss = bottomKing && score < 0.0
+                && random.nextDouble() < augmentSnapshot().parameter("job_gamble_g2", "statReversalChance", .2);
         String roll = GambleRolls.formatResultRoll(bet, first, second);
         GambleState after;
-        if (GambleRewards.awardsAbility(before, score, source.getRandom().nextDouble())) {
+        if (GambleRewards.awardsAbility(before, score, random.nextDouble())) {
             GambleAbility ability = GambleRewards.chooseMissing(
-                    before, source.getRandom().nextInt(GambleRewards.missingAbilities(before).size())
+                    before, random.nextInt(GambleRewards.missingAbilities(before).size())
             );
             after = before.recordAbility(
-                    ability, score, bet.displayName() + " " + roll + " → " + ability.detailLine());
+                    ability, settledScore, bet.displayName() + " " + roll + " → " + ability.detailLine());
         } else {
             List<GambleStat> stats = bet == GambleBet.TWO_DICE
                     && GambleRolls.twoDiceStatRewardCount(first, second) == 2
                     ? GambleRewards.chooseDistinctStats(
-                            source.getRandom().nextInt(GambleRewards.rollableStatCount()),
-                            source.getRandom().nextInt(GambleRewards.rollableStatCount() - 1))
+                            random.nextInt(GambleRewards.rollableStatCount()),
+                            random.nextInt(GambleRewards.rollableStatCount() - 1))
                     : List.of(GambleRewards.chooseStat(
-                            source.getRandom().nextInt(GambleRewards.rollableStatCount())));
+                            random.nextInt(GambleRewards.rollableStatCount())));
             ArrayList<GambleState.StatChange> changes = new ArrayList<>(stats.size());
             ArrayList<String> results = new ArrayList<>(stats.size());
             double scorePerStat = score / stats.size();
             for (GambleStat stat : stats) {
-                double delta = GambleRewards.insuredDelta(before, GambleBalance.statDelta(stat, scorePerStat));
+                double delta = GambleRewards.settledStatDelta(
+                        before, GambleBalance.statDelta(stat, scorePerStat), reverseLoss);
                 changes.add(new GambleState.StatChange(stat, delta, baseValue(stat)));
                 results.add(stat.displayName() + " " + signed(delta));
             }
             String result = bet.displayName() + " " + roll + " → " + String.join(", ", results);
-            after = before.recordStats(changes, score, result);
+            after = before.recordStats(changes, settledScore, result);
         }
         setData(STATE, after);
-        syncMaxHealth(effectBaseMaxHealth(), false);
-        syncHealth(currentMaxHealth() * healthRatio);
-        onStateChanged(lane);
-        showBetResult(source, after.lastResult(), score > 0.0);
+        return score > 0.0;
     }
 
     private double baseValue(GambleStat stat) {

@@ -1,0 +1,2071 @@
+[
+  {
+    "status": "INTERNAL_OBSERVATION_ONLY",
+    "board": "villager",
+    "matchMode": "NORMAL",
+    "logicalParticipants": 4,
+    "initialTowers": 24,
+    "towerBalanceSha256": "a9807b405f2622bb84990816827849d289f64f8063758543c3b7f89427bede47",
+    "augmentConfigSha256": "c893eb610618b277d0dbbf723acccbf296edbae6c267a5bc0bef51d9930eb08a",
+    "waveConfigSha256": "7e49a87fec9178d3a4fa83ff2c674ae9961ab3ba5fa1b573ceb356553e51b462",
+    "initialBoard": [
+      "t3_golem_tower",
+      "t3_golem_tower",
+      "villager_splash_t3",
+      "villager_splash_t3",
+      "villager_splash_t2",
+      "t2_allay_tower"
+    ],
+    "fixedInvestmentPriority": [
+      {
+        "slot": 4,
+        "from": "villager_splash_t2",
+        "upgradeId": "villager_splash_t3"
+      },
+      {
+        "slot": 5,
+        "from": "t2_allay_tower",
+        "upgradeId": "t3_armorer_tower"
+      }
+    ],
+    "limits": [
+      "INTERNAL_CHECKPOINT_NOT_FULL_MATCH",
+      "NO_R1_R14_HISTORY",
+      "ONE_R5_GOLD_SELECTION_NO_R15_SELECTION",
+      "FIXED_FACTORY_BOARD_WITHOUT_PRIOR_STACKS",
+      "SINGLE_FIXED_REINVESTMENT_POLICY",
+      "ONE_SHARED_BOSS_PER_TEAM",
+      "CROSS_LANE_FINAL_DEFENSE_ATTRIBUTION",
+      "CORRELATED_FOUR_PLAYER_FIXTURE",
+      "CUSTOM_SYMMETRIC_ARENA_NOT_PUBLIC_MAP",
+      "UNSEEDED_ENTITY_AI",
+      "NO_CLIENT_OR_GUI_EVIDENCE",
+      "NO_SURVIVAL_OR_FUTURE_PAYOUT_ASSUMPTION"
+    ],
+    "endpointRound": 15,
+    "observedCombatTicks": 632,
+    "wallSeconds": 0.617862791,
+    "subjects": [
+      {
+        "group": "CASH",
+        "team": "RED",
+        "lane": 1,
+        "selections": [
+          {
+            "milestoneRound": 5,
+            "rarity": "GOLD",
+            "augmentId": "semiontd:cash_settlement",
+            "outcome": "SELECTED",
+            "skipReason": null,
+            "choice": {
+              "primaryTargetId": null,
+              "secondaryTargetId": null,
+              "mode": ""
+            }
+          }
+        ],
+        "startingBalance": {
+          "diamonds": 140,
+          "emeralds": 460,
+          "income": 80,
+          "emeraldPerSecond": 1
+        },
+        "purchase": {
+          "summonId": "iron_golem",
+          "round": 15,
+          "baseEmeraldCost": 460,
+          "actualEmeraldPaid": 460,
+          "normalIncomeGain": 20,
+          "actualIncomeGain": 0,
+          "instantDiamonds": 60,
+          "incomeForgone": 20,
+          "targetTeam": "BLUE",
+          "targetLane": 1
+        },
+        "upgrades": [
+          {
+            "round": 15,
+            "slot": 4,
+            "from": "villager_splash_t2",
+            "upgradeId": "villager_splash_t3",
+            "quotedCost": 150,
+            "result": "SUCCESS",
+            "actualDiamondPaid": 150
+          },
+          {
+            "round": 15,
+            "slot": 5,
+            "from": "t2_allay_tower",
+            "upgradeId": "t3_armorer_tower",
+            "quotedCost": 200,
+            "result": "NOT_ENOUGH_MINERAL",
+            "actualDiamondPaid": 0
+          }
+        ],
+        "payouts": [],
+        "endingBalance": {
+          "diamonds": 50,
+          "emeralds": 56,
+          "income": 80,
+          "emeraldPerSecond": 1
+        },
+        "battles": [
+          {
+            "round": 15,
+            "status": "TEAM_ELIMINATED",
+            "observedTicks": 632,
+            "expectedNaturalSpawns": 4,
+            "observedNaturalSpawns": 4,
+            "initialNaturalHealth": 4400,
+            "observedPaidSpawns": 1,
+            "observedHealers": 0,
+            "leaks": 3,
+            "leakedThreat": 3223.25,
+            "laneCleared": false,
+            "defenseBroken": true,
+            "teamSurvived": false,
+            "teamBossHealth": 0,
+            "aliveMonsters": 0,
+            "firstClearTick": null,
+            "rewardedKills": 0,
+            "towers": [
+              {
+                "towerTypeId": "t2_allay_tower",
+                "sampleCount": 1,
+                "startCount": 1,
+                "endAliveCount": 0,
+                "deathCount": 1,
+                "physicalDamageDealt": 24.961479198767847,
+                "magicDamageDealt": 0,
+                "damageTaken": 50,
+                "healingDone": 100,
+                "killCount": 0,
+                "firstCombatTick": 36,
+                "lastCombatTick": 227,
+                "survivalTicks": 227,
+                "waveStartMaxHealth": 50,
+                "enemyHpDamage": 50,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "t3_golem_tower",
+                "sampleCount": 2,
+                "startCount": 2,
+                "endAliveCount": 0,
+                "deathCount": 2,
+                "physicalDamageDealt": 185.97845731714602,
+                "magicDamageDealt": 0,
+                "damageTaken": 960,
+                "healingDone": 0,
+                "killCount": 0,
+                "firstCombatTick": 18,
+                "lastCombatTick": 154,
+                "survivalTicks": 259,
+                "waveStartMaxHealth": 960,
+                "enemyHpDamage": 960,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "villager_splash_t3",
+                "sampleCount": 3,
+                "startCount": 3,
+                "endAliveCount": 0,
+                "deathCount": 3,
+                "physicalDamageDealt": 626.2415066147432,
+                "magicDamageDealt": 0,
+                "damageTaken": 340,
+                "healingDone": 0,
+                "killCount": 0,
+                "firstCombatTick": 17,
+                "lastCombatTick": 213,
+                "survivalTicks": 594,
+                "waveStartMaxHealth": 240,
+                "enemyHpDamage": 340,
+                "augmentSpecialDamageDealt": 0
+              }
+            ],
+            "healing": {
+              "attempts": 0,
+              "successfulCasts": 0,
+              "noEligibleTarget": 0,
+              "insufficientInjury": 0,
+              "zeroEffectiveHealing": 0,
+              "eligibleTargets": 0,
+              "recoverableInjury": 0,
+              "requestedHealing": 0,
+              "healingReduction": 0,
+              "overhealing": 0,
+              "effectiveHealing": 0
+            },
+            "naturalSupport": {
+              "healingAttempts": 0,
+              "requestedHealing": 0,
+              "effectiveHealing": 0,
+              "overhealing": 0,
+              "physicalShieldGranted": 0,
+              "physicalShieldAbsorbed": 0,
+              "physicalShieldExpired": 0,
+              "magicShieldGranted": 0,
+              "magicShieldAbsorbed": 0,
+              "magicShieldExpired": 0
+            },
+            "rawLaneCleared": true,
+            "accounting": {
+              "observedLogical": 5,
+              "entityConfirmed": 5,
+              "playerKilled": 0,
+              "bossKilled": 0,
+              "leakedNotKilled": 0,
+              "activeUnleaked": 0,
+              "endpointCleanup": 5,
+              "unaccounted": 0,
+              "uncreditedDeaths": 0,
+              "belowPlatform": 0,
+              "outsidePlatform": 0,
+              "missing": []
+            }
+          }
+        ],
+        "round16Status": "NOT_REACHED",
+        "economyEvents": [
+          {
+            "round": 15,
+            "tick": 80,
+            "augmentId": "semiontd:cash_settlement",
+            "eventType": "PURCHASE_COMMIT",
+            "towerRef": null,
+            "baseEmeraldCost": 460,
+            "emeraldPaid": 460,
+            "diamondPaid": null,
+            "diamondGranted": 60,
+            "incomeGranted": null,
+            "incomeForgone": 20,
+            "payoutWithheld": null,
+            "units": 1,
+            "relatedAugmentIds": [
+              "semiontd:cash_settlement"
+            ],
+            "incomeDeferred": null
+          }
+        ]
+      },
+      {
+        "group": "ATTACK",
+        "team": "RED",
+        "lane": 2,
+        "selections": [
+          {
+            "milestoneRound": 5,
+            "rarity": "GOLD",
+            "augmentId": "semiontd:tactical_designation_2",
+            "outcome": "SELECTED",
+            "skipReason": null,
+            "choice": {
+              "primaryTargetId": "f558b5db-93a4-462a-9a2b-03f0cd76a0d9",
+              "secondaryTargetId": null,
+              "mode": "ASSAULT"
+            }
+          }
+        ],
+        "startingBalance": {
+          "diamonds": 140,
+          "emeralds": 460,
+          "income": 80,
+          "emeraldPerSecond": 1
+        },
+        "purchase": {
+          "summonId": "iron_golem",
+          "round": 15,
+          "baseEmeraldCost": 460,
+          "actualEmeraldPaid": 460,
+          "normalIncomeGain": 20,
+          "actualIncomeGain": 20,
+          "instantDiamonds": 0,
+          "incomeForgone": 0,
+          "targetTeam": "BLUE",
+          "targetLane": 2
+        },
+        "upgrades": [
+          {
+            "round": 15,
+            "slot": 4,
+            "from": "villager_splash_t2",
+            "upgradeId": "villager_splash_t3",
+            "quotedCost": 150,
+            "result": "NOT_ENOUGH_MINERAL",
+            "actualDiamondPaid": 0
+          },
+          {
+            "round": 15,
+            "slot": 5,
+            "from": "t2_allay_tower",
+            "upgradeId": "t3_armorer_tower",
+            "quotedCost": 200,
+            "result": "NOT_ENOUGH_MINERAL",
+            "actualDiamondPaid": 0
+          }
+        ],
+        "payouts": [],
+        "endingBalance": {
+          "diamonds": 140,
+          "emeralds": 56,
+          "income": 100,
+          "emeraldPerSecond": 1
+        },
+        "battles": [
+          {
+            "round": 15,
+            "status": "TEAM_ELIMINATED",
+            "observedTicks": 632,
+            "expectedNaturalSpawns": 4,
+            "observedNaturalSpawns": 4,
+            "initialNaturalHealth": 4400,
+            "observedPaidSpawns": 1,
+            "observedHealers": 0,
+            "leaks": 3,
+            "leakedThreat": 3390,
+            "laneCleared": false,
+            "defenseBroken": true,
+            "teamSurvived": false,
+            "teamBossHealth": 0,
+            "aliveMonsters": 0,
+            "firstClearTick": null,
+            "rewardedKills": 0,
+            "towers": [
+              {
+                "towerTypeId": "t2_allay_tower",
+                "sampleCount": 1,
+                "startCount": 1,
+                "endAliveCount": 0,
+                "deathCount": 1,
+                "physicalDamageDealt": 20.58551617873661,
+                "magicDamageDealt": 0,
+                "damageTaken": 50,
+                "healingDone": 60,
+                "killCount": 0,
+                "firstCombatTick": 40,
+                "lastCombatTick": 216,
+                "survivalTicks": 216,
+                "waveStartMaxHealth": 50,
+                "enemyHpDamage": 50,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "t3_golem_tower",
+                "sampleCount": 2,
+                "startCount": 2,
+                "endAliveCount": 0,
+                "deathCount": 2,
+                "physicalDamageDealt": 202.31125362261042,
+                "magicDamageDealt": 0,
+                "damageTaken": 960,
+                "healingDone": 0,
+                "killCount": 0,
+                "firstCombatTick": 18,
+                "lastCombatTick": 155,
+                "survivalTicks": 307,
+                "waveStartMaxHealth": 960,
+                "enemyHpDamage": 960,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "villager_splash_t2",
+                "sampleCount": 1,
+                "startCount": 1,
+                "endAliveCount": 0,
+                "deathCount": 1,
+                "physicalDamageDealt": 82.64098613251144,
+                "magicDamageDealt": 0,
+                "damageTaken": 90,
+                "healingDone": 0,
+                "killCount": 0,
+                "firstCombatTick": 17,
+                "lastCombatTick": 208,
+                "survivalTicks": 208,
+                "waveStartMaxHealth": 60,
+                "enemyHpDamage": 90,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "villager_splash_t3",
+                "sampleCount": 2,
+                "startCount": 2,
+                "endAliveCount": 0,
+                "deathCount": 2,
+                "physicalDamageDealt": 713.1245307628476,
+                "magicDamageDealt": 0,
+                "damageTaken": 190,
+                "healingDone": 0,
+                "killCount": 0,
+                "firstCombatTick": 18,
+                "lastCombatTick": 188,
+                "survivalTicks": 363,
+                "waveStartMaxHealth": 160,
+                "enemyHpDamage": 190,
+                "augmentSpecialDamageDealt": 0
+              }
+            ],
+            "healing": {
+              "attempts": 0,
+              "successfulCasts": 0,
+              "noEligibleTarget": 0,
+              "insufficientInjury": 0,
+              "zeroEffectiveHealing": 0,
+              "eligibleTargets": 0,
+              "recoverableInjury": 0,
+              "requestedHealing": 0,
+              "healingReduction": 0,
+              "overhealing": 0,
+              "effectiveHealing": 0
+            },
+            "naturalSupport": {
+              "healingAttempts": 0,
+              "requestedHealing": 0,
+              "effectiveHealing": 0,
+              "overhealing": 0,
+              "physicalShieldGranted": 0,
+              "physicalShieldAbsorbed": 0,
+              "physicalShieldExpired": 0,
+              "magicShieldGranted": 0,
+              "magicShieldAbsorbed": 0,
+              "magicShieldExpired": 0
+            },
+            "rawLaneCleared": true,
+            "accounting": {
+              "observedLogical": 5,
+              "entityConfirmed": 5,
+              "playerKilled": 0,
+              "bossKilled": 1,
+              "leakedNotKilled": 0,
+              "activeUnleaked": 0,
+              "endpointCleanup": 4,
+              "unaccounted": 0,
+              "uncreditedDeaths": 0,
+              "belowPlatform": 0,
+              "outsidePlatform": 0,
+              "missing": []
+            }
+          }
+        ],
+        "round16Status": "NOT_REACHED",
+        "economyEvents": []
+      },
+      {
+        "group": "ATTACK",
+        "team": "BLUE",
+        "lane": 1,
+        "selections": [
+          {
+            "milestoneRound": 5,
+            "rarity": "GOLD",
+            "augmentId": "semiontd:tactical_designation_2",
+            "outcome": "SELECTED",
+            "skipReason": null,
+            "choice": {
+              "primaryTargetId": "4e21f842-ed0e-4aab-82df-06a6179564f9",
+              "secondaryTargetId": null,
+              "mode": "ASSAULT"
+            }
+          }
+        ],
+        "startingBalance": {
+          "diamonds": 140,
+          "emeralds": 460,
+          "income": 80,
+          "emeraldPerSecond": 1
+        },
+        "purchase": {
+          "summonId": "iron_golem",
+          "round": 15,
+          "baseEmeraldCost": 460,
+          "actualEmeraldPaid": 460,
+          "normalIncomeGain": 20,
+          "actualIncomeGain": 20,
+          "instantDiamonds": 0,
+          "incomeForgone": 0,
+          "targetTeam": "RED",
+          "targetLane": 1
+        },
+        "upgrades": [
+          {
+            "round": 15,
+            "slot": 4,
+            "from": "villager_splash_t2",
+            "upgradeId": "villager_splash_t3",
+            "quotedCost": 150,
+            "result": "NOT_ENOUGH_MINERAL",
+            "actualDiamondPaid": 0
+          },
+          {
+            "round": 15,
+            "slot": 5,
+            "from": "t2_allay_tower",
+            "upgradeId": "t3_armorer_tower",
+            "quotedCost": 200,
+            "result": "NOT_ENOUGH_MINERAL",
+            "actualDiamondPaid": 0
+          }
+        ],
+        "payouts": [],
+        "endingBalance": {
+          "diamonds": 140,
+          "emeralds": 56,
+          "income": 100,
+          "emeraldPerSecond": 1
+        },
+        "battles": [
+          {
+            "round": 15,
+            "status": "OBSERVED_ROUND_ENDPOINT",
+            "observedTicks": 632,
+            "expectedNaturalSpawns": 4,
+            "observedNaturalSpawns": 4,
+            "initialNaturalHealth": 4400,
+            "observedPaidSpawns": 1,
+            "observedHealers": 0,
+            "leaks": 3,
+            "leakedThreat": 3390,
+            "laneCleared": false,
+            "defenseBroken": true,
+            "teamSurvived": true,
+            "teamBossHealth": 427,
+            "aliveMonsters": 4,
+            "firstClearTick": null,
+            "rewardedKills": 0,
+            "towers": [
+              {
+                "towerTypeId": "t2_allay_tower",
+                "sampleCount": 1,
+                "startCount": 1,
+                "endAliveCount": 0,
+                "deathCount": 1,
+                "physicalDamageDealt": 24.961479198767847,
+                "magicDamageDealt": 0,
+                "damageTaken": 50,
+                "healingDone": 100,
+                "killCount": 0,
+                "firstCombatTick": 36,
+                "lastCombatTick": 216,
+                "survivalTicks": 216,
+                "waveStartMaxHealth": 50,
+                "enemyHpDamage": 50,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "t3_golem_tower",
+                "sampleCount": 2,
+                "startCount": 2,
+                "endAliveCount": 0,
+                "deathCount": 2,
+                "physicalDamageDealt": 185.97842835130905,
+                "magicDamageDealt": 0,
+                "damageTaken": 960,
+                "healingDone": 0,
+                "killCount": 0,
+                "firstCombatTick": 18,
+                "lastCombatTick": 154,
+                "survivalTicks": 259,
+                "waveStartMaxHealth": 960,
+                "enemyHpDamage": 960,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "villager_splash_t2",
+                "sampleCount": 1,
+                "startCount": 1,
+                "endAliveCount": 0,
+                "deathCount": 1,
+                "physicalDamageDealt": 71.18644067796595,
+                "magicDamageDealt": 0,
+                "damageTaken": 100,
+                "healingDone": 0,
+                "killCount": 0,
+                "firstCombatTick": 17,
+                "lastCombatTick": 210,
+                "survivalTicks": 210,
+                "waveStartMaxHealth": 60,
+                "enemyHpDamage": 100,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "villager_splash_t3",
+                "sampleCount": 2,
+                "startCount": 2,
+                "endAliveCount": 0,
+                "deathCount": 2,
+                "physicalDamageDealt": 594.9355547277513,
+                "magicDamageDealt": 0,
+                "damageTaken": 220,
+                "healingDone": 0,
+                "killCount": 0,
+                "firstCombatTick": 18,
+                "lastCombatTick": 189,
+                "survivalTicks": 364,
+                "waveStartMaxHealth": 160,
+                "enemyHpDamage": 220,
+                "augmentSpecialDamageDealt": 0
+              }
+            ],
+            "healing": {
+              "attempts": 0,
+              "successfulCasts": 0,
+              "noEligibleTarget": 0,
+              "insufficientInjury": 0,
+              "zeroEffectiveHealing": 0,
+              "eligibleTargets": 0,
+              "recoverableInjury": 0,
+              "requestedHealing": 0,
+              "healingReduction": 0,
+              "overhealing": 0,
+              "effectiveHealing": 0
+            },
+            "naturalSupport": {
+              "healingAttempts": 0,
+              "requestedHealing": 0,
+              "effectiveHealing": 0,
+              "overhealing": 0,
+              "physicalShieldGranted": 0,
+              "physicalShieldAbsorbed": 0,
+              "physicalShieldExpired": 0,
+              "magicShieldGranted": 0,
+              "magicShieldAbsorbed": 0,
+              "magicShieldExpired": 0
+            },
+            "rawLaneCleared": false,
+            "accounting": {
+              "observedLogical": 5,
+              "entityConfirmed": 5,
+              "playerKilled": 0,
+              "bossKilled": 1,
+              "leakedNotKilled": 3,
+              "activeUnleaked": 1,
+              "endpointCleanup": 0,
+              "unaccounted": 0,
+              "uncreditedDeaths": 0,
+              "belowPlatform": 0,
+              "outsidePlatform": 0,
+              "missing": []
+            }
+          }
+        ],
+        "round16Status": "NOT_REACHED",
+        "economyEvents": []
+      },
+      {
+        "group": "CASH",
+        "team": "BLUE",
+        "lane": 2,
+        "selections": [
+          {
+            "milestoneRound": 5,
+            "rarity": "GOLD",
+            "augmentId": "semiontd:cash_settlement",
+            "outcome": "SELECTED",
+            "skipReason": null,
+            "choice": {
+              "primaryTargetId": null,
+              "secondaryTargetId": null,
+              "mode": ""
+            }
+          }
+        ],
+        "startingBalance": {
+          "diamonds": 140,
+          "emeralds": 460,
+          "income": 80,
+          "emeraldPerSecond": 1
+        },
+        "purchase": {
+          "summonId": "iron_golem",
+          "round": 15,
+          "baseEmeraldCost": 460,
+          "actualEmeraldPaid": 460,
+          "normalIncomeGain": 20,
+          "actualIncomeGain": 0,
+          "instantDiamonds": 60,
+          "incomeForgone": 20,
+          "targetTeam": "RED",
+          "targetLane": 2
+        },
+        "upgrades": [
+          {
+            "round": 15,
+            "slot": 4,
+            "from": "villager_splash_t2",
+            "upgradeId": "villager_splash_t3",
+            "quotedCost": 150,
+            "result": "SUCCESS",
+            "actualDiamondPaid": 150
+          },
+          {
+            "round": 15,
+            "slot": 5,
+            "from": "t2_allay_tower",
+            "upgradeId": "t3_armorer_tower",
+            "quotedCost": 200,
+            "result": "NOT_ENOUGH_MINERAL",
+            "actualDiamondPaid": 0
+          }
+        ],
+        "payouts": [],
+        "endingBalance": {
+          "diamonds": 50,
+          "emeralds": 56,
+          "income": 80,
+          "emeraldPerSecond": 1
+        },
+        "battles": [
+          {
+            "round": 15,
+            "status": "OBSERVED_ROUND_ENDPOINT",
+            "observedTicks": 632,
+            "expectedNaturalSpawns": 4,
+            "observedNaturalSpawns": 4,
+            "initialNaturalHealth": 4400,
+            "observedPaidSpawns": 1,
+            "observedHealers": 0,
+            "leaks": 4,
+            "leakedThreat": 4520,
+            "laneCleared": false,
+            "defenseBroken": true,
+            "teamSurvived": true,
+            "teamBossHealth": 427,
+            "aliveMonsters": 4,
+            "firstClearTick": null,
+            "rewardedKills": 0,
+            "towers": [
+              {
+                "towerTypeId": "t2_allay_tower",
+                "sampleCount": 1,
+                "startCount": 1,
+                "endAliveCount": 0,
+                "deathCount": 1,
+                "physicalDamageDealt": 23.975346687211186,
+                "magicDamageDealt": 0,
+                "damageTaken": 50,
+                "healingDone": 70,
+                "killCount": 0,
+                "firstCombatTick": 40,
+                "lastCombatTick": 220,
+                "survivalTicks": 220,
+                "waveStartMaxHealth": 50,
+                "enemyHpDamage": 50,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "t3_golem_tower",
+                "sampleCount": 2,
+                "startCount": 2,
+                "endAliveCount": 0,
+                "deathCount": 2,
+                "physicalDamageDealt": 202.31125362261042,
+                "magicDamageDealt": 0,
+                "damageTaken": 960,
+                "healingDone": 0,
+                "killCount": 0,
+                "firstCombatTick": 18,
+                "lastCombatTick": 155,
+                "survivalTicks": 307,
+                "waveStartMaxHealth": 960,
+                "enemyHpDamage": 960,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "villager_splash_t3",
+                "sampleCount": 3,
+                "startCount": 3,
+                "endAliveCount": 0,
+                "deathCount": 3,
+                "physicalDamageDealt": 857.1223503782851,
+                "magicDamageDealt": 0,
+                "damageTaken": 310,
+                "healingDone": 0,
+                "killCount": 0,
+                "firstCombatTick": 18,
+                "lastCombatTick": 211,
+                "survivalTicks": 593,
+                "waveStartMaxHealth": 240,
+                "enemyHpDamage": 310,
+                "augmentSpecialDamageDealt": 0
+              }
+            ],
+            "healing": {
+              "attempts": 0,
+              "successfulCasts": 0,
+              "noEligibleTarget": 0,
+              "insufficientInjury": 0,
+              "zeroEffectiveHealing": 0,
+              "eligibleTargets": 0,
+              "recoverableInjury": 0,
+              "requestedHealing": 0,
+              "healingReduction": 0,
+              "overhealing": 0,
+              "effectiveHealing": 0
+            },
+            "naturalSupport": {
+              "healingAttempts": 0,
+              "requestedHealing": 0,
+              "effectiveHealing": 0,
+              "overhealing": 0,
+              "physicalShieldGranted": 0,
+              "physicalShieldAbsorbed": 0,
+              "physicalShieldExpired": 0,
+              "magicShieldGranted": 0,
+              "magicShieldAbsorbed": 0,
+              "magicShieldExpired": 0
+            },
+            "rawLaneCleared": false,
+            "accounting": {
+              "observedLogical": 5,
+              "entityConfirmed": 5,
+              "playerKilled": 0,
+              "bossKilled": 1,
+              "leakedNotKilled": 4,
+              "activeUnleaked": 0,
+              "endpointCleanup": 0,
+              "unaccounted": 0,
+              "uncreditedDeaths": 0,
+              "belowPlatform": 0,
+              "outsidePlatform": 0,
+              "missing": []
+            }
+          }
+        ],
+        "round16Status": "NOT_REACHED",
+        "economyEvents": [
+          {
+            "round": 15,
+            "tick": 80,
+            "augmentId": "semiontd:cash_settlement",
+            "eventType": "PURCHASE_COMMIT",
+            "towerRef": null,
+            "baseEmeraldCost": 460,
+            "emeraldPaid": 460,
+            "diamondPaid": null,
+            "diamondGranted": 60,
+            "incomeGranted": null,
+            "incomeForgone": 20,
+            "payoutWithheld": null,
+            "units": 1,
+            "relatedAugmentIds": [
+              "semiontd:cash_settlement"
+            ],
+            "incomeDeferred": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "status": "INTERNAL_OBSERVATION_ONLY",
+    "board": "animal",
+    "matchMode": "NORMAL",
+    "logicalParticipants": 4,
+    "initialTowers": 24,
+    "towerBalanceSha256": "a9807b405f2622bb84990816827849d289f64f8063758543c3b7f89427bede47",
+    "augmentConfigSha256": "c893eb610618b277d0dbbf723acccbf296edbae6c267a5bc0bef51d9930eb08a",
+    "waveConfigSha256": "7e49a87fec9178d3a4fa83ff2c674ae9961ab3ba5fa1b573ceb356553e51b462",
+    "initialBoard": [
+      "t3_pig_tower",
+      "t3_pig_tower",
+      "t3_pig_tower",
+      "t3_wolf_dps_tower",
+      "t3_wolf_dps_tower",
+      "t2_wolf_dps_tower"
+    ],
+    "fixedInvestmentPriority": [
+      {
+        "slot": 5,
+        "from": "t2_wolf_dps_tower",
+        "upgradeId": "t3_wolf_dps_tower"
+      }
+    ],
+    "limits": [
+      "INTERNAL_CHECKPOINT_NOT_FULL_MATCH",
+      "NO_R1_R14_HISTORY",
+      "ONE_R5_GOLD_SELECTION_NO_R15_SELECTION",
+      "FIXED_FACTORY_BOARD_WITHOUT_PRIOR_STACKS",
+      "SINGLE_FIXED_REINVESTMENT_POLICY",
+      "ONE_SHARED_BOSS_PER_TEAM",
+      "CROSS_LANE_FINAL_DEFENSE_ATTRIBUTION",
+      "CORRELATED_FOUR_PLAYER_FIXTURE",
+      "CUSTOM_SYMMETRIC_ARENA_NOT_PUBLIC_MAP",
+      "UNSEEDED_ENTITY_AI",
+      "NO_CLIENT_OR_GUI_EVIDENCE",
+      "NO_SURVIVAL_OR_FUTURE_PAYOUT_ASSUMPTION"
+    ],
+    "endpointRound": 16,
+    "observedCombatTicks": 1297,
+    "wallSeconds": 1.120143708,
+    "subjects": [
+      {
+        "group": "CASH",
+        "team": "RED",
+        "lane": 1,
+        "selections": [
+          {
+            "milestoneRound": 5,
+            "rarity": "GOLD",
+            "augmentId": "semiontd:cash_settlement",
+            "outcome": "SELECTED",
+            "skipReason": null,
+            "choice": {
+              "primaryTargetId": null,
+              "secondaryTargetId": null,
+              "mode": ""
+            }
+          }
+        ],
+        "startingBalance": {
+          "diamonds": 140,
+          "emeralds": 460,
+          "income": 80,
+          "emeraldPerSecond": 1
+        },
+        "purchase": {
+          "summonId": "iron_golem",
+          "round": 15,
+          "baseEmeraldCost": 460,
+          "actualEmeraldPaid": 460,
+          "normalIncomeGain": 20,
+          "actualIncomeGain": 0,
+          "instantDiamonds": 60,
+          "incomeForgone": 20,
+          "targetTeam": "BLUE",
+          "targetLane": 1
+        },
+        "upgrades": [
+          {
+            "round": 15,
+            "slot": 5,
+            "from": "t2_wolf_dps_tower",
+            "upgradeId": "t3_wolf_dps_tower",
+            "quotedCost": 180,
+            "result": "SUCCESS",
+            "actualDiamondPaid": 180
+          }
+        ],
+        "payouts": [
+          {
+            "round": 15,
+            "incomeBeforePayout": 80,
+            "actualDiamondGranted": 80
+          }
+        ],
+        "endingBalance": {
+          "diamonds": 816,
+          "emeralds": 114,
+          "income": 80,
+          "emeraldPerSecond": 1
+        },
+        "battles": [
+          {
+            "round": 15,
+            "status": "OBSERVED_ROUND_ENDPOINT",
+            "observedTicks": 972,
+            "expectedNaturalSpawns": 4,
+            "observedNaturalSpawns": 4,
+            "initialNaturalHealth": 4400,
+            "observedPaidSpawns": 1,
+            "observedHealers": 0,
+            "leaks": 0,
+            "leakedThreat": 0,
+            "laneCleared": true,
+            "defenseBroken": true,
+            "teamSurvived": true,
+            "teamBossHealth": 760,
+            "aliveMonsters": 0,
+            "firstClearTick": 580,
+            "rewardedKills": 5,
+            "towers": [
+              {
+                "towerTypeId": "t3_pig_tower",
+                "sampleCount": 3,
+                "startCount": 3,
+                "endAliveCount": 0,
+                "deathCount": 3,
+                "physicalDamageDealt": 1529.5836479763038,
+                "magicDamageDealt": 0,
+                "damageTaken": 1740,
+                "healingDone": 0,
+                "killCount": 1,
+                "firstCombatTick": 19,
+                "lastCombatTick": 517,
+                "survivalTicks": 1062,
+                "waveStartMaxHealth": 1740,
+                "enemyHpDamage": 1740,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "t3_wolf_dps_tower",
+                "sampleCount": 3,
+                "startCount": 3,
+                "endAliveCount": 0,
+                "deathCount": 3,
+                "physicalDamageDealt": 3907.687519534892,
+                "magicDamageDealt": 0,
+                "damageTaken": 270,
+                "healingDone": 0,
+                "killCount": 4,
+                "firstCombatTick": 19,
+                "lastCombatTick": 733,
+                "survivalTicks": 2007,
+                "waveStartMaxHealth": 270,
+                "enemyHpDamage": 270,
+                "augmentSpecialDamageDealt": 0
+              }
+            ],
+            "healing": {
+              "attempts": 0,
+              "successfulCasts": 0,
+              "noEligibleTarget": 0,
+              "insufficientInjury": 0,
+              "zeroEffectiveHealing": 0,
+              "eligibleTargets": 0,
+              "recoverableInjury": 0,
+              "requestedHealing": 0,
+              "healingReduction": 0,
+              "overhealing": 0,
+              "effectiveHealing": 0
+            },
+            "naturalSupport": {
+              "healingAttempts": 0,
+              "requestedHealing": 0,
+              "effectiveHealing": 0,
+              "overhealing": 0,
+              "physicalShieldGranted": 0,
+              "physicalShieldAbsorbed": 0,
+              "physicalShieldExpired": 0,
+              "magicShieldGranted": 0,
+              "magicShieldAbsorbed": 0,
+              "magicShieldExpired": 0
+            },
+            "rawLaneCleared": true,
+            "accounting": {
+              "observedLogical": 5,
+              "entityConfirmed": 5,
+              "playerKilled": 5,
+              "bossKilled": 0,
+              "leakedNotKilled": 0,
+              "activeUnleaked": 0,
+              "endpointCleanup": 0,
+              "unaccounted": 0,
+              "uncreditedDeaths": 0,
+              "belowPlatform": 0,
+              "outsidePlatform": 0,
+              "missing": []
+            }
+          },
+          {
+            "round": 16,
+            "status": "OBSERVED_ROUND_ENDPOINT",
+            "observedTicks": 325,
+            "expectedNaturalSpawns": 60,
+            "observedNaturalSpawns": 60,
+            "initialNaturalHealth": 4500,
+            "observedPaidSpawns": 0,
+            "observedHealers": 1,
+            "leaks": 0,
+            "leakedThreat": 0,
+            "laneCleared": true,
+            "defenseBroken": false,
+            "teamSurvived": true,
+            "teamBossHealth": 760,
+            "aliveMonsters": 0,
+            "firstClearTick": 308,
+            "rewardedKills": 60,
+            "towers": [
+              {
+                "towerTypeId": "t3_pig_tower",
+                "sampleCount": 3,
+                "startCount": 3,
+                "endAliveCount": 2,
+                "deathCount": 1,
+                "physicalDamageDealt": 951.6945851467818,
+                "magicDamageDealt": 0,
+                "damageTaken": 874.7000122070312,
+                "healingDone": 0,
+                "killCount": 24,
+                "firstCombatTick": 14,
+                "lastCombatTick": 307,
+                "survivalTicks": 894,
+                "waveStartMaxHealth": 1740,
+                "enemyHpDamage": 874.7000122070312,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "t3_wolf_dps_tower",
+                "sampleCount": 3,
+                "startCount": 3,
+                "endAliveCount": 3,
+                "deathCount": 0,
+                "physicalDamageDealt": 3788.3053595275865,
+                "magicDamageDealt": 0,
+                "damageTaken": 0,
+                "healingDone": 0,
+                "killCount": 36,
+                "firstCombatTick": 18,
+                "lastCombatTick": 304,
+                "survivalTicks": 975,
+                "waveStartMaxHealth": 270,
+                "enemyHpDamage": 0,
+                "augmentSpecialDamageDealt": 0
+              }
+            ],
+            "healing": {
+              "attempts": 3,
+              "successfulCasts": 1,
+              "noEligibleTarget": 1,
+              "insufficientInjury": 1,
+              "zeroEffectiveHealing": 0,
+              "eligibleTargets": 25,
+              "recoverableInjury": 334.61606701600897,
+              "requestedHealing": 240,
+              "healingReduction": 0,
+              "overhealing": 0,
+              "effectiveHealing": 240
+            },
+            "naturalSupport": {
+              "healingAttempts": 3,
+              "requestedHealing": 240,
+              "effectiveHealing": 240,
+              "overhealing": 0,
+              "physicalShieldGranted": 0,
+              "physicalShieldAbsorbed": 0,
+              "physicalShieldExpired": 0,
+              "magicShieldGranted": 0,
+              "magicShieldAbsorbed": 0,
+              "magicShieldExpired": 0
+            },
+            "rawLaneCleared": true,
+            "accounting": {
+              "observedLogical": 60,
+              "entityConfirmed": 60,
+              "playerKilled": 60,
+              "bossKilled": 0,
+              "leakedNotKilled": 0,
+              "activeUnleaked": 0,
+              "endpointCleanup": 0,
+              "unaccounted": 0,
+              "uncreditedDeaths": 0,
+              "belowPlatform": 0,
+              "outsidePlatform": 0,
+              "missing": []
+            }
+          }
+        ],
+        "round16Status": "OBSERVED",
+        "economyEvents": [
+          {
+            "round": 15,
+            "tick": 80,
+            "augmentId": "semiontd:cash_settlement",
+            "eventType": "PURCHASE_COMMIT",
+            "towerRef": null,
+            "baseEmeraldCost": 460,
+            "emeraldPaid": 460,
+            "diamondPaid": null,
+            "diamondGranted": 60,
+            "incomeGranted": null,
+            "incomeForgone": 20,
+            "payoutWithheld": null,
+            "units": 1,
+            "relatedAugmentIds": [
+              "semiontd:cash_settlement"
+            ],
+            "incomeDeferred": null
+          },
+          {
+            "round": 15,
+            "tick": 1553,
+            "augmentId": "semiontd:cash_settlement",
+            "eventType": "PERIODIC_PAYOUT",
+            "towerRef": null,
+            "baseEmeraldCost": null,
+            "emeraldPaid": null,
+            "diamondPaid": null,
+            "diamondGranted": 80,
+            "incomeGranted": null,
+            "incomeForgone": null,
+            "payoutWithheld": 0,
+            "units": 1,
+            "relatedAugmentIds": [
+              "semiontd:cash_settlement"
+            ],
+            "incomeDeferred": null
+          }
+        ]
+      },
+      {
+        "group": "ATTACK",
+        "team": "RED",
+        "lane": 2,
+        "selections": [
+          {
+            "milestoneRound": 5,
+            "rarity": "GOLD",
+            "augmentId": "semiontd:tactical_designation_2",
+            "outcome": "SELECTED",
+            "skipReason": null,
+            "choice": {
+              "primaryTargetId": "412fc0ed-01d5-4274-9d45-1a885cc46479",
+              "secondaryTargetId": null,
+              "mode": "ASSAULT"
+            }
+          }
+        ],
+        "startingBalance": {
+          "diamonds": 140,
+          "emeralds": 460,
+          "income": 80,
+          "emeraldPerSecond": 1
+        },
+        "purchase": {
+          "summonId": "iron_golem",
+          "round": 15,
+          "baseEmeraldCost": 460,
+          "actualEmeraldPaid": 460,
+          "normalIncomeGain": 20,
+          "actualIncomeGain": 20,
+          "instantDiamonds": 0,
+          "incomeForgone": 0,
+          "targetTeam": "BLUE",
+          "targetLane": 2
+        },
+        "upgrades": [
+          {
+            "round": 15,
+            "slot": 5,
+            "from": "t2_wolf_dps_tower",
+            "upgradeId": "t3_wolf_dps_tower",
+            "quotedCost": 180,
+            "result": "NOT_ENOUGH_MINERAL",
+            "actualDiamondPaid": 0
+          },
+          {
+            "round": 16,
+            "slot": 5,
+            "from": "t2_wolf_dps_tower",
+            "upgradeId": "t3_wolf_dps_tower",
+            "quotedCost": 180,
+            "result": "SUCCESS",
+            "actualDiamondPaid": 180
+          }
+        ],
+        "payouts": [
+          {
+            "round": 15,
+            "incomeBeforePayout": 100,
+            "actualDiamondGranted": 100
+          }
+        ],
+        "endingBalance": {
+          "diamonds": 576,
+          "emeralds": 114,
+          "income": 100,
+          "emeraldPerSecond": 1
+        },
+        "battles": [
+          {
+            "round": 15,
+            "status": "OBSERVED_ROUND_ENDPOINT",
+            "observedTicks": 972,
+            "expectedNaturalSpawns": 4,
+            "observedNaturalSpawns": 4,
+            "initialNaturalHealth": 4400,
+            "observedPaidSpawns": 1,
+            "observedHealers": 0,
+            "leaks": 0,
+            "leakedThreat": 0,
+            "laneCleared": true,
+            "defenseBroken": true,
+            "teamSurvived": true,
+            "teamBossHealth": 760,
+            "aliveMonsters": 0,
+            "firstClearTick": 933,
+            "rewardedKills": 3,
+            "towers": [
+              {
+                "towerTypeId": "t2_wolf_dps_tower",
+                "sampleCount": 1,
+                "startCount": 1,
+                "endAliveCount": 0,
+                "deathCount": 1,
+                "physicalDamageDealt": 416.47134014417634,
+                "magicDamageDealt": 0,
+                "damageTaken": 70,
+                "healingDone": 0,
+                "killCount": 1,
+                "firstCombatTick": 34,
+                "lastCombatTick": 517,
+                "survivalTicks": 517,
+                "waveStartMaxHealth": 70,
+                "enemyHpDamage": 70,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "t3_pig_tower",
+                "sampleCount": 3,
+                "startCount": 3,
+                "endAliveCount": 0,
+                "deathCount": 3,
+                "physicalDamageDealt": 1240.4468412942988,
+                "magicDamageDealt": 0,
+                "damageTaken": 1740,
+                "healingDone": 0,
+                "killCount": 0,
+                "firstCombatTick": 19,
+                "lastCombatTick": 466,
+                "survivalTicks": 1005,
+                "waveStartMaxHealth": 1740,
+                "enemyHpDamage": 1740,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "t3_wolf_dps_tower",
+                "sampleCount": 2,
+                "startCount": 2,
+                "endAliveCount": 0,
+                "deathCount": 2,
+                "physicalDamageDealt": 3143.9903237073913,
+                "magicDamageDealt": 0,
+                "damageTaken": 180,
+                "healingDone": 0,
+                "killCount": 2,
+                "firstCombatTick": 19,
+                "lastCombatTick": 595,
+                "survivalTicks": 1141,
+                "waveStartMaxHealth": 180,
+                "enemyHpDamage": 180,
+                "augmentSpecialDamageDealt": 0
+              }
+            ],
+            "healing": {
+              "attempts": 0,
+              "successfulCasts": 0,
+              "noEligibleTarget": 0,
+              "insufficientInjury": 0,
+              "zeroEffectiveHealing": 0,
+              "eligibleTargets": 0,
+              "recoverableInjury": 0,
+              "requestedHealing": 0,
+              "healingReduction": 0,
+              "overhealing": 0,
+              "effectiveHealing": 0
+            },
+            "naturalSupport": {
+              "healingAttempts": 0,
+              "requestedHealing": 0,
+              "effectiveHealing": 0,
+              "overhealing": 0,
+              "physicalShieldGranted": 0,
+              "physicalShieldAbsorbed": 0,
+              "physicalShieldExpired": 0,
+              "magicShieldGranted": 0,
+              "magicShieldAbsorbed": 0,
+              "magicShieldExpired": 0
+            },
+            "rawLaneCleared": true,
+            "accounting": {
+              "observedLogical": 5,
+              "entityConfirmed": 5,
+              "playerKilled": 3,
+              "bossKilled": 2,
+              "leakedNotKilled": 0,
+              "activeUnleaked": 0,
+              "endpointCleanup": 0,
+              "unaccounted": 0,
+              "uncreditedDeaths": 0,
+              "belowPlatform": 0,
+              "outsidePlatform": 0,
+              "missing": []
+            }
+          },
+          {
+            "round": 16,
+            "status": "OBSERVED_ROUND_ENDPOINT",
+            "observedTicks": 325,
+            "expectedNaturalSpawns": 60,
+            "observedNaturalSpawns": 60,
+            "initialNaturalHealth": 4500,
+            "observedPaidSpawns": 0,
+            "observedHealers": 1,
+            "leaks": 0,
+            "leakedThreat": 0,
+            "laneCleared": true,
+            "defenseBroken": false,
+            "teamSurvived": true,
+            "teamBossHealth": 760,
+            "aliveMonsters": 0,
+            "firstClearTick": 289,
+            "rewardedKills": 60,
+            "towers": [
+              {
+                "towerTypeId": "t3_pig_tower",
+                "sampleCount": 3,
+                "startCount": 3,
+                "endAliveCount": 3,
+                "deathCount": 0,
+                "physicalDamageDealt": 987.0123107376503,
+                "magicDamageDealt": 0,
+                "damageTaken": 891.8000335693359,
+                "healingDone": 0,
+                "killCount": 21,
+                "firstCombatTick": 13,
+                "lastCombatTick": 273,
+                "survivalTicks": 975,
+                "waveStartMaxHealth": 1740,
+                "enemyHpDamage": 891.8000335693359,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "t3_wolf_dps_tower",
+                "sampleCount": 3,
+                "startCount": 3,
+                "endAliveCount": 3,
+                "deathCount": 0,
+                "physicalDamageDealt": 3722.533068528137,
+                "magicDamageDealt": 0,
+                "damageTaken": 0,
+                "healingDone": 0,
+                "killCount": 39,
+                "firstCombatTick": 16,
+                "lastCombatTick": 288,
+                "survivalTicks": 975,
+                "waveStartMaxHealth": 270,
+                "enemyHpDamage": 0,
+                "augmentSpecialDamageDealt": 0
+              }
+            ],
+            "healing": {
+              "attempts": 3,
+              "successfulCasts": 1,
+              "noEligibleTarget": 1,
+              "insufficientInjury": 1,
+              "zeroEffectiveHealing": 0,
+              "eligibleTargets": 10,
+              "recoverableInjury": 267.797887802124,
+              "requestedHealing": 240,
+              "healingReduction": 0,
+              "overhealing": 30.454540252685547,
+              "effectiveHealing": 209.54545974731445
+            },
+            "naturalSupport": {
+              "healingAttempts": 3,
+              "requestedHealing": 240,
+              "effectiveHealing": 209.54545974731445,
+              "overhealing": 30.454540252685547,
+              "physicalShieldGranted": 0,
+              "physicalShieldAbsorbed": 0,
+              "physicalShieldExpired": 0,
+              "magicShieldGranted": 0,
+              "magicShieldAbsorbed": 0,
+              "magicShieldExpired": 0
+            },
+            "rawLaneCleared": true,
+            "accounting": {
+              "observedLogical": 60,
+              "entityConfirmed": 60,
+              "playerKilled": 60,
+              "bossKilled": 0,
+              "leakedNotKilled": 0,
+              "activeUnleaked": 0,
+              "endpointCleanup": 0,
+              "unaccounted": 0,
+              "uncreditedDeaths": 0,
+              "belowPlatform": 0,
+              "outsidePlatform": 0,
+              "missing": []
+            }
+          }
+        ],
+        "round16Status": "OBSERVED",
+        "economyEvents": []
+      },
+      {
+        "group": "ATTACK",
+        "team": "BLUE",
+        "lane": 1,
+        "selections": [
+          {
+            "milestoneRound": 5,
+            "rarity": "GOLD",
+            "augmentId": "semiontd:tactical_designation_2",
+            "outcome": "SELECTED",
+            "skipReason": null,
+            "choice": {
+              "primaryTargetId": "b6b699dd-592e-4720-967d-c8d22bb61d25",
+              "secondaryTargetId": null,
+              "mode": "ASSAULT"
+            }
+          }
+        ],
+        "startingBalance": {
+          "diamonds": 140,
+          "emeralds": 460,
+          "income": 80,
+          "emeraldPerSecond": 1
+        },
+        "purchase": {
+          "summonId": "iron_golem",
+          "round": 15,
+          "baseEmeraldCost": 460,
+          "actualEmeraldPaid": 460,
+          "normalIncomeGain": 20,
+          "actualIncomeGain": 20,
+          "instantDiamonds": 0,
+          "incomeForgone": 0,
+          "targetTeam": "RED",
+          "targetLane": 1
+        },
+        "upgrades": [
+          {
+            "round": 15,
+            "slot": 5,
+            "from": "t2_wolf_dps_tower",
+            "upgradeId": "t3_wolf_dps_tower",
+            "quotedCost": 180,
+            "result": "NOT_ENOUGH_MINERAL",
+            "actualDiamondPaid": 0
+          },
+          {
+            "round": 16,
+            "slot": 5,
+            "from": "t2_wolf_dps_tower",
+            "upgradeId": "t3_wolf_dps_tower",
+            "quotedCost": 180,
+            "result": "SUCCESS",
+            "actualDiamondPaid": 180
+          }
+        ],
+        "payouts": [
+          {
+            "round": 15,
+            "incomeBeforePayout": 100,
+            "actualDiamondGranted": 100
+          }
+        ],
+        "endingBalance": {
+          "diamonds": 476,
+          "emeralds": 114,
+          "income": 100,
+          "emeraldPerSecond": 1
+        },
+        "battles": [
+          {
+            "round": 15,
+            "status": "OBSERVED_ROUND_ENDPOINT",
+            "observedTicks": 972,
+            "expectedNaturalSpawns": 4,
+            "observedNaturalSpawns": 4,
+            "initialNaturalHealth": 4400,
+            "observedPaidSpawns": 1,
+            "observedHealers": 0,
+            "leaks": 0,
+            "leakedThreat": 0,
+            "laneCleared": true,
+            "defenseBroken": true,
+            "teamSurvived": true,
+            "teamBossHealth": 730,
+            "aliveMonsters": 0,
+            "firstClearTick": 972,
+            "rewardedKills": 2,
+            "towers": [
+              {
+                "towerTypeId": "t2_wolf_dps_tower",
+                "sampleCount": 1,
+                "startCount": 1,
+                "endAliveCount": 0,
+                "deathCount": 1,
+                "physicalDamageDealt": 392.6040061633281,
+                "magicDamageDealt": 0,
+                "damageTaken": 70,
+                "healingDone": 0,
+                "killCount": 0,
+                "firstCombatTick": 36,
+                "lastCombatTick": 492,
+                "survivalTicks": 492,
+                "waveStartMaxHealth": 70,
+                "enemyHpDamage": 70,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "t3_pig_tower",
+                "sampleCount": 3,
+                "startCount": 3,
+                "endAliveCount": 0,
+                "deathCount": 3,
+                "physicalDamageDealt": 1405.2230532841622,
+                "magicDamageDealt": 0,
+                "damageTaken": 1740,
+                "healingDone": 0,
+                "killCount": 2,
+                "firstCombatTick": 19,
+                "lastCombatTick": 466,
+                "survivalTicks": 1011,
+                "waveStartMaxHealth": 1740,
+                "enemyHpDamage": 1740,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "t3_wolf_dps_tower",
+                "sampleCount": 2,
+                "startCount": 2,
+                "endAliveCount": 0,
+                "deathCount": 2,
+                "physicalDamageDealt": 2880.354418268189,
+                "magicDamageDealt": 0,
+                "damageTaken": 180,
+                "healingDone": 0,
+                "killCount": 0,
+                "firstCombatTick": 19,
+                "lastCombatTick": 544,
+                "survivalTicks": 1062,
+                "waveStartMaxHealth": 180,
+                "enemyHpDamage": 180,
+                "augmentSpecialDamageDealt": 0
+              }
+            ],
+            "healing": {
+              "attempts": 0,
+              "successfulCasts": 0,
+              "noEligibleTarget": 0,
+              "insufficientInjury": 0,
+              "zeroEffectiveHealing": 0,
+              "eligibleTargets": 0,
+              "recoverableInjury": 0,
+              "requestedHealing": 0,
+              "healingReduction": 0,
+              "overhealing": 0,
+              "effectiveHealing": 0
+            },
+            "naturalSupport": {
+              "healingAttempts": 0,
+              "requestedHealing": 0,
+              "effectiveHealing": 0,
+              "overhealing": 0,
+              "physicalShieldGranted": 0,
+              "physicalShieldAbsorbed": 0,
+              "physicalShieldExpired": 0,
+              "magicShieldGranted": 0,
+              "magicShieldAbsorbed": 0,
+              "magicShieldExpired": 0
+            },
+            "rawLaneCleared": true,
+            "accounting": {
+              "observedLogical": 5,
+              "entityConfirmed": 5,
+              "playerKilled": 2,
+              "bossKilled": 3,
+              "leakedNotKilled": 0,
+              "activeUnleaked": 0,
+              "endpointCleanup": 0,
+              "unaccounted": 0,
+              "uncreditedDeaths": 0,
+              "belowPlatform": 0,
+              "outsidePlatform": 0,
+              "missing": []
+            }
+          },
+          {
+            "round": 16,
+            "status": "OBSERVED_ROUND_ENDPOINT",
+            "observedTicks": 325,
+            "expectedNaturalSpawns": 60,
+            "observedNaturalSpawns": 60,
+            "initialNaturalHealth": 4500,
+            "observedPaidSpawns": 0,
+            "observedHealers": 1,
+            "leaks": 0,
+            "leakedThreat": 0,
+            "laneCleared": true,
+            "defenseBroken": false,
+            "teamSurvived": true,
+            "teamBossHealth": 730,
+            "aliveMonsters": 0,
+            "firstClearTick": 268,
+            "rewardedKills": 60,
+            "towers": [
+              {
+                "towerTypeId": "t3_pig_tower",
+                "sampleCount": 3,
+                "startCount": 3,
+                "endAliveCount": 3,
+                "deathCount": 0,
+                "physicalDamageDealt": 892.5551446696245,
+                "magicDamageDealt": 0,
+                "damageTaken": 783.2999420166016,
+                "healingDone": 0,
+                "killCount": 18,
+                "firstCombatTick": 14,
+                "lastCombatTick": 267,
+                "survivalTicks": 975,
+                "waveStartMaxHealth": 1740,
+                "enemyHpDamage": 783.2999420166016,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "t3_wolf_dps_tower",
+                "sampleCount": 3,
+                "startCount": 3,
+                "endAliveCount": 3,
+                "deathCount": 0,
+                "physicalDamageDealt": 3847.444788709217,
+                "magicDamageDealt": 0,
+                "damageTaken": 0,
+                "healingDone": 0,
+                "killCount": 42,
+                "firstCombatTick": 18,
+                "lastCombatTick": 258,
+                "survivalTicks": 975,
+                "waveStartMaxHealth": 270,
+                "enemyHpDamage": 0,
+                "augmentSpecialDamageDealt": 0
+              }
+            ],
+            "healing": {
+              "attempts": 3,
+              "successfulCasts": 1,
+              "noEligibleTarget": 1,
+              "insufficientInjury": 1,
+              "zeroEffectiveHealing": 0,
+              "eligibleTargets": 26,
+              "recoverableInjury": 358.27007943512797,
+              "requestedHealing": 240,
+              "healingReduction": 0,
+              "overhealing": 0,
+              "effectiveHealing": 240
+            },
+            "naturalSupport": {
+              "healingAttempts": 3,
+              "requestedHealing": 240,
+              "effectiveHealing": 240,
+              "overhealing": 0,
+              "physicalShieldGranted": 0,
+              "physicalShieldAbsorbed": 0,
+              "physicalShieldExpired": 0,
+              "magicShieldGranted": 0,
+              "magicShieldAbsorbed": 0,
+              "magicShieldExpired": 0
+            },
+            "rawLaneCleared": true,
+            "accounting": {
+              "observedLogical": 60,
+              "entityConfirmed": 60,
+              "playerKilled": 60,
+              "bossKilled": 0,
+              "leakedNotKilled": 0,
+              "activeUnleaked": 0,
+              "endpointCleanup": 0,
+              "unaccounted": 0,
+              "uncreditedDeaths": 0,
+              "belowPlatform": 0,
+              "outsidePlatform": 0,
+              "missing": []
+            }
+          }
+        ],
+        "round16Status": "OBSERVED",
+        "economyEvents": []
+      },
+      {
+        "group": "CASH",
+        "team": "BLUE",
+        "lane": 2,
+        "selections": [
+          {
+            "milestoneRound": 5,
+            "rarity": "GOLD",
+            "augmentId": "semiontd:cash_settlement",
+            "outcome": "SELECTED",
+            "skipReason": null,
+            "choice": {
+              "primaryTargetId": null,
+              "secondaryTargetId": null,
+              "mode": ""
+            }
+          }
+        ],
+        "startingBalance": {
+          "diamonds": 140,
+          "emeralds": 460,
+          "income": 80,
+          "emeraldPerSecond": 1
+        },
+        "purchase": {
+          "summonId": "iron_golem",
+          "round": 15,
+          "baseEmeraldCost": 460,
+          "actualEmeraldPaid": 460,
+          "normalIncomeGain": 20,
+          "actualIncomeGain": 0,
+          "instantDiamonds": 60,
+          "incomeForgone": 20,
+          "targetTeam": "RED",
+          "targetLane": 2
+        },
+        "upgrades": [
+          {
+            "round": 15,
+            "slot": 5,
+            "from": "t2_wolf_dps_tower",
+            "upgradeId": "t3_wolf_dps_tower",
+            "quotedCost": 180,
+            "result": "SUCCESS",
+            "actualDiamondPaid": 180
+          }
+        ],
+        "payouts": [
+          {
+            "round": 15,
+            "incomeBeforePayout": 80,
+            "actualDiamondGranted": 80
+          }
+        ],
+        "endingBalance": {
+          "diamonds": 816,
+          "emeralds": 114,
+          "income": 80,
+          "emeraldPerSecond": 1
+        },
+        "battles": [
+          {
+            "round": 15,
+            "status": "OBSERVED_ROUND_ENDPOINT",
+            "observedTicks": 972,
+            "expectedNaturalSpawns": 4,
+            "observedNaturalSpawns": 4,
+            "initialNaturalHealth": 4400,
+            "observedPaidSpawns": 1,
+            "observedHealers": 0,
+            "leaks": 0,
+            "leakedThreat": 0,
+            "laneCleared": true,
+            "defenseBroken": true,
+            "teamSurvived": true,
+            "teamBossHealth": 730,
+            "aliveMonsters": 0,
+            "firstClearTick": 647,
+            "rewardedKills": 5,
+            "towers": [
+              {
+                "towerTypeId": "t3_pig_tower",
+                "sampleCount": 3,
+                "startCount": 3,
+                "endAliveCount": 0,
+                "deathCount": 3,
+                "physicalDamageDealt": 1222.1721285686285,
+                "magicDamageDealt": 0,
+                "damageTaken": 1740,
+                "healingDone": 0,
+                "killCount": 2,
+                "firstCombatTick": 19,
+                "lastCombatTick": 542,
+                "survivalTicks": 1082,
+                "waveStartMaxHealth": 1740,
+                "enemyHpDamage": 1740,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "t3_wolf_dps_tower",
+                "sampleCount": 3,
+                "startCount": 3,
+                "endAliveCount": 0,
+                "deathCount": 3,
+                "physicalDamageDealt": 4196.917426203356,
+                "magicDamageDealt": 0,
+                "damageTaken": 270,
+                "healingDone": 0,
+                "killCount": 3,
+                "firstCombatTick": 19,
+                "lastCombatTick": 770,
+                "survivalTicks": 2091,
+                "waveStartMaxHealth": 270,
+                "enemyHpDamage": 270,
+                "augmentSpecialDamageDealt": 0
+              }
+            ],
+            "healing": {
+              "attempts": 0,
+              "successfulCasts": 0,
+              "noEligibleTarget": 0,
+              "insufficientInjury": 0,
+              "zeroEffectiveHealing": 0,
+              "eligibleTargets": 0,
+              "recoverableInjury": 0,
+              "requestedHealing": 0,
+              "healingReduction": 0,
+              "overhealing": 0,
+              "effectiveHealing": 0
+            },
+            "naturalSupport": {
+              "healingAttempts": 0,
+              "requestedHealing": 0,
+              "effectiveHealing": 0,
+              "overhealing": 0,
+              "physicalShieldGranted": 0,
+              "physicalShieldAbsorbed": 0,
+              "physicalShieldExpired": 0,
+              "magicShieldGranted": 0,
+              "magicShieldAbsorbed": 0,
+              "magicShieldExpired": 0
+            },
+            "rawLaneCleared": true,
+            "accounting": {
+              "observedLogical": 5,
+              "entityConfirmed": 5,
+              "playerKilled": 5,
+              "bossKilled": 0,
+              "leakedNotKilled": 0,
+              "activeUnleaked": 0,
+              "endpointCleanup": 0,
+              "unaccounted": 0,
+              "uncreditedDeaths": 0,
+              "belowPlatform": 0,
+              "outsidePlatform": 0,
+              "missing": []
+            }
+          },
+          {
+            "round": 16,
+            "status": "OBSERVED_ROUND_ENDPOINT",
+            "observedTicks": 325,
+            "expectedNaturalSpawns": 60,
+            "observedNaturalSpawns": 60,
+            "initialNaturalHealth": 4500,
+            "observedPaidSpawns": 0,
+            "observedHealers": 1,
+            "leaks": 0,
+            "leakedThreat": 0,
+            "laneCleared": true,
+            "defenseBroken": false,
+            "teamSurvived": true,
+            "teamBossHealth": 730,
+            "aliveMonsters": 0,
+            "firstClearTick": 325,
+            "rewardedKills": 60,
+            "towers": [
+              {
+                "towerTypeId": "t3_pig_tower",
+                "sampleCount": 3,
+                "startCount": 3,
+                "endAliveCount": 2,
+                "deathCount": 1,
+                "physicalDamageDealt": 1052.0123332044454,
+                "magicDamageDealt": 0,
+                "damageTaken": 1055.3001708984375,
+                "healingDone": 0,
+                "killCount": 16,
+                "firstCombatTick": 13,
+                "lastCombatTick": 320,
+                "survivalTicks": 843,
+                "waveStartMaxHealth": 1740,
+                "enemyHpDamage": 1055.3001708984375,
+                "augmentSpecialDamageDealt": 0
+              },
+              {
+                "towerTypeId": "t3_wolf_dps_tower",
+                "sampleCount": 3,
+                "startCount": 3,
+                "endAliveCount": 3,
+                "deathCount": 0,
+                "physicalDamageDealt": 3658.9673196500316,
+                "magicDamageDealt": 0,
+                "damageTaken": 0,
+                "healingDone": 0,
+                "killCount": 44,
+                "firstCombatTick": 16,
+                "lastCombatTick": 324,
+                "survivalTicks": 975,
+                "waveStartMaxHealth": 270,
+                "enemyHpDamage": 0,
+                "augmentSpecialDamageDealt": 0
+              }
+            ],
+            "healing": {
+              "attempts": 4,
+              "successfulCasts": 1,
+              "noEligibleTarget": 2,
+              "insufficientInjury": 1,
+              "zeroEffectiveHealing": 0,
+              "eligibleTargets": 17,
+              "recoverableInjury": 290.9797034155239,
+              "requestedHealing": 240,
+              "healingReduction": 0,
+              "overhealing": 29.020296584476114,
+              "effectiveHealing": 210.9797034155239
+            },
+            "naturalSupport": {
+              "healingAttempts": 3,
+              "requestedHealing": 240,
+              "effectiveHealing": 210.9797034155239,
+              "overhealing": 29.020296584476114,
+              "physicalShieldGranted": 0,
+              "physicalShieldAbsorbed": 0,
+              "physicalShieldExpired": 0,
+              "magicShieldGranted": 0,
+              "magicShieldAbsorbed": 0,
+              "magicShieldExpired": 0
+            },
+            "rawLaneCleared": true,
+            "accounting": {
+              "observedLogical": 60,
+              "entityConfirmed": 60,
+              "playerKilled": 60,
+              "bossKilled": 0,
+              "leakedNotKilled": 0,
+              "activeUnleaked": 0,
+              "endpointCleanup": 0,
+              "unaccounted": 0,
+              "uncreditedDeaths": 0,
+              "belowPlatform": 0,
+              "outsidePlatform": 0,
+              "missing": []
+            }
+          }
+        ],
+        "round16Status": "OBSERVED",
+        "economyEvents": [
+          {
+            "round": 15,
+            "tick": 80,
+            "augmentId": "semiontd:cash_settlement",
+            "eventType": "PURCHASE_COMMIT",
+            "towerRef": null,
+            "baseEmeraldCost": 460,
+            "emeraldPaid": 460,
+            "diamondPaid": null,
+            "diamondGranted": 60,
+            "incomeGranted": null,
+            "incomeForgone": 20,
+            "payoutWithheld": null,
+            "units": 1,
+            "relatedAugmentIds": [
+              "semiontd:cash_settlement"
+            ],
+            "incomeDeferred": null
+          },
+          {
+            "round": 15,
+            "tick": 1553,
+            "augmentId": "semiontd:cash_settlement",
+            "eventType": "PERIODIC_PAYOUT",
+            "towerRef": null,
+            "baseEmeraldCost": null,
+            "emeraldPaid": null,
+            "diamondPaid": null,
+            "diamondGranted": 80,
+            "incomeGranted": null,
+            "incomeForgone": null,
+            "payoutWithheld": 0,
+            "units": 1,
+            "relatedAugmentIds": [
+              "semiontd:cash_settlement"
+            ],
+            "incomeDeferred": null
+          }
+        ]
+      }
+    ]
+  }
+]

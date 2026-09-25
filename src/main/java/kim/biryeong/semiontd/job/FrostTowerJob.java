@@ -59,6 +59,7 @@ public final class FrostTowerJob extends SemionJob {
 
     @Override
     public void onMatchStarted(JobContext context) {
+        kim.biryeong.semiontd.tower.frost.FrostAugments.clearPlayer(context.player().uuid());
         FrostFullOperationService.clearPlayer(context.player().uuid());
         var team = context.game().teams().get(context.player().teamId());
         if (team != null) {
@@ -68,12 +69,14 @@ public final class FrostTowerJob extends SemionJob {
 
     @Override
     public void onEliminated(JobContext context) {
+        kim.biryeong.semiontd.tower.frost.FrostAugments.clearPlayer(context.player().uuid());
         FrostTeamEffects.unregisterPlayer(context.player().uuid());
         FrostFullOperationService.clearPlayer(context.player().uuid());
     }
 
     @Override
     public void onMatchClosed(JobContext context) {
+        kim.biryeong.semiontd.tower.frost.FrostAugments.clearPlayer(context.player().uuid());
         FrostTeamEffects.unregisterPlayer(context.player().uuid());
         FrostFullOperationService.clearPlayer(context.player().uuid());
     }

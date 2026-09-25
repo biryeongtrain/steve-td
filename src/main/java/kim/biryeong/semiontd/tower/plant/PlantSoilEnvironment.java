@@ -12,6 +12,9 @@ import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.Tower;
+import kim.biryeong.semiontd.entity.monster.MonsterDataKey;
+import kim.biryeong.semiontd.augment.AugmentCombat;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 
 /**
@@ -37,10 +40,12 @@ public final class PlantSoilEnvironment {
             return;
         }
         int interval = Math.max(1, globalTicks("environmentTickIntervalTicks"));
-        if (gameTime % interval != 0) {
+        boolean pulse = gameTime % interval == 0;
+        boolean roots = lane.augmentSnapshot().has("job_plant_towers_s") && AugmentCombat.allowsTriggers();
+        if (!pulse && !roots) {
             return;
         }
-        applyMeadowGrowthShare(lane, interval);
+        if (pulse) applyMeadowGrowthShare(lane, interval);
 
         for (Monster monster : List.copyOf(lane.activeMonsters())) {
             if (monster == null || !monster.isAlive() || !monster.hasMinecraftEntity()) {
@@ -54,7 +59,17 @@ public final class PlantSoilEnvironment {
             if (soil == null) {
                 continue;
             }
-            applyEnvironment(lane, owner, monster, entity, soil, interval);
+            if (roots) {
+                MonsterDataKey<Integer> stunnedRound = new MonsterDataKey<>(ResourceLocation.fromNamespaceAndPath(
+                        "semiontd", "plant_root_entry/" + owner), Integer.class);
+                int round = lane.towers().stream().findFirst().map(Tower::currentRound).orElse(0);
+                if (monster.getData(stunnedRound).orElse(-1) != round) {
+                    monster.setData(stunnedRound, round);
+                    entity.applyTimedEffect(TimedEffectType.MONSTER_STUN, 1.0,
+                            (int) lane.augmentSnapshot().parameter("job_plant_towers_s", "stunTicks", 20));
+                }
+            }
+            if (pulse) applyEnvironment(lane, owner, monster, entity, soil, interval);
         }
     }
 
