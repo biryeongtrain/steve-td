@@ -26,7 +26,7 @@ public final class PirateStates {
         State state = player == null ? null : STATES.get(player.uuid());
         if (state == null || amount <= 0) return;
         state.diamondSpent += amount;
-        int threshold = Math.max(1, TowerBalanceRuntime.abilityInt(PirateTowers.ADMIRAL.id(), "spendThreshold", 200));
+        int threshold = Math.max(1, TowerBalanceRuntime.abilityInt(PirateTowers.ADMIRAL.id(), "spendThreshold", 300));
         long total = state.admiralRemainder + amount;
         int triggerCount = (int) (total / threshold);
         state.admiralRemainder = total % threshold;

@@ -40,7 +40,7 @@ public final class PirateAugmentGameTest {
             List<SemionMonsterEntity> targets = new ArrayList<>();
             for (int index = 0; index < 13; index++) targets.add(target(context, lane, source.position().add(2 + index * .02, 0, 0)));
             SemionMonsterEntity primary = targets.getFirst();
-            double damage = source.attackDamageAmount(primary);
+            double damage = source.attackDamageAmount(primary) * .8;
             for (int index = 0; index < 6; index++) PirateAugments.onAttack(tower, source, primary, 1);
             AugmentCombat.runWithoutTriggers(() -> PirateAugments.onAttack(tower, source, primary, 1));
             check(PirateAugments.pendingShells(lane.ownerPlayer()) == 10, "Only five basic attacks may schedule two shells each");
@@ -73,7 +73,7 @@ public final class PirateAugmentGameTest {
             long now = context.getLevel().getGameTime();
             PirateAugments.tick(lane, now + 4);
             close(100_000, original.runtimeMonster().health(), "Out of range target is not hit");
-            close(100_000 - source.attackDamageAmount(replacement), replacement.runtimeMonster().health(), "First shell selects another target in range");
+            close(100_000 - source.attackDamageAmount(replacement) * .8, replacement.runtimeMonster().health(), "First shell selects another target in range");
             replacement.discard();
             PirateAugments.tick(lane, now + 8);
             check(PirateAugments.pendingShells(lane.ownerPlayer()) == 0, "Missing-target shell is consumed");
@@ -105,7 +105,7 @@ public final class PirateAugmentGameTest {
             close(100_000, targets.getFirst().runtimeMonster().health(), "No cannon before two seconds");
             for (int shot = 1; shot <= 5; shot++) {
                 PirateAugments.tick(lane, now + shot * 40L);
-                close(100_000 - shot * expected * 2, targets.getFirst().runtimeMonster().health(), "Cannon preserves initial attack for all five shots");
+                close(100_000 - shot * expected * 1.6, targets.getFirst().runtimeMonster().health(), "Cannon preserves initial attack for all five shots");
             }
             check(targets.stream().filter(enemy -> enemy.runtimeMonster().health() < 100_000).count() == 12, "Cannon caps targets at twelve");
             close(100_000, outside.runtimeMonster().health(), "Cannon radius is three blocks");

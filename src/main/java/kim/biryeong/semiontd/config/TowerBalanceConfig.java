@@ -1009,7 +1009,7 @@ public record TowerBalanceConfig(
 
     private static void putPirateAbilities(Map<String, Map<String, Double>> abilities) {
         putAbilities(abilities, PirateTowers.ADMIRAL.id(), Map.ofEntries(
-                Map.entry("spendThreshold", 200.0), Map.entry("paybackLow", 50.0),
+                Map.entry("spendThreshold", 300.0), Map.entry("paybackLow", 50.0),
                 Map.entry("paybackHigh", 75.0), Map.entry("maxHealthBonusLow", 2.0),
                 Map.entry("maxHealthBonusHigh", 4.0), Map.entry("damageBonus", 0.5),
                 Map.entry("effectCount", 1.0)));
@@ -1033,7 +1033,7 @@ public record TowerBalanceConfig(
         putAbilities(abilities, PirateTowers.HELMSMAN.id(), Map.of("spendStep", 100.0, "healthPerStep", 2.0, "damagePerStep", 0.5));
         putAbilities(abilities, PirateTowers.GUIDE.id(), Map.of("spendStep", 100.0, "healthPerStep", 3.0, "lostHealthThreshold", 1200.0, "lostHealthRatio", 0.035));
         putAbilities(abilities, PirateTowers.NAVIGATOR.id(), Map.of("spendStep", 75.0, "healthPerStep", 3.0, "damagePerStep", 0.5));
-        putAbilities(abilities, PirateTowers.FIRST_NAVIGATOR.id(), Map.of("spendStep", 50.0, "healthPerStep", 5.0, "damagePerStep", 0.5, "splashRadius", 2.0, "splashRatio", 0.8));
+        putAbilities(abilities, PirateTowers.FIRST_NAVIGATOR.id(), Map.of("spendStep", 75.0, "healthPerStep", 5.0, "damagePerStep", 0.5, "splashRadius", 2.0, "splashRatio", 0.8));
         putAbilities(abilities, PirateTowers.SHABBY_CHEST.id(), Map.of("rounds", 5.0, "cashout", 90.0, "saleHealthBonus", 5.0));
         putAbilities(abilities, PirateTowers.EMPIRE_CHEST.id(), Map.of("rounds", 5.0, "cashout", 200.0, "saleDamageBonus", 1.0));
         putAbilities(abilities, PirateTowers.DEEP_CHEST.id(), Map.of("rounds", 5.0, "cashout", 250.0, "saleHealthBonus", 10.0));

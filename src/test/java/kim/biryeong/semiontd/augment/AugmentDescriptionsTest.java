@@ -56,7 +56,8 @@ final class AugmentDescriptionsTest {
         assertFalse(heat.contains("공격 간격"));
         String mastery = describe("battlefield_mastery", defaults);
         assertTrue(mastery.contains("체력 피해를 받고 생존"));
-        assertTrue(mastery.contains("최종 피해와 최대 체력 +15%"));
+        assertTrue(mastery.contains("최종 피해와 최대 체력 +20%"));
+        assertTrue(mastery.contains("최대 체력의 30%"));
         assertTrue(describe("twin_squadron", defaults).contains("정확히 두 기"));
         String barricade = describe("folding_barricade_blueprint", defaults);
         assertTrue(barricade.contains("한 번에 받는 피해 최대 15"));
@@ -65,7 +66,9 @@ final class AugmentDescriptionsTest {
                 .addProperty("damagePerHitCap", 12);
         assertTrue(describe("folding_barricade_blueprint", AugmentConfig.fromJson(json)).contains("최대 12"));
         assertTrue(barricade.contains("R15/R25 자동 강화"));
-        assertTrue(describe("pulse_relay_blueprint", defaults).contains("다음 기본 공격에 추가 피해 100%"));
+        assertTrue(describe("pulse_relay_blueprint", defaults).contains("다음 기본 공격에 추가 피해 200%"));
+        assertTrue(describe("starlight_cocoon_call", defaults).contains("1웨이브"));
+        assertTrue(describe("support_performance", defaults).contains("경기 합계 최대 +50"));
         assertTrue(describe("giant_hunter_call", defaults).contains("추가 피해: 적 최대 체력의 12%(자연 웨이브 보스 3%)"));
         assertTrue(describe("capacitor_post_blueprint", defaults).contains("충전당 추가 피해 110"));
         assertTrue(describe("decisive_delivery", defaults).startsWith("다음 인컴의 영구 인컴 증가를 포기하고"));

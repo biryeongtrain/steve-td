@@ -48,6 +48,47 @@ import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
 public final class DemonLordGameTest {
+    @GameTest
+    public void selfDesignationsBoostBladeAndAltarDamageExactlyOnce(GameTestHelper context) {
+        net.minecraft.world.level.ChunkPos.rangeClosed(new net.minecraft.world.level.ChunkPos(context.getLevel().getSharedSpawnPos()), 2)
+                .forEach(pos -> context.getLevel().getChunk(pos.x, pos.z));
+        context.runAfterDelay(10, () -> checkSelfDesignationDamage(context));
+    }
+
+    private static void checkSelfDesignationDamage(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        ServerPlayer player = context.makeMockServerPlayerInLevel();
+        PlayerLane lane = augmentLane(context, player.getUUID());
+        DemonLordSkillTower altar = altar(context, player.getUUID(), DemonLordSkill.WAVE_OF_MALICE, 1, 3, 3);
+        SpawnedTarget target = null;
+        try {
+            lane.addTower(altar);
+            DemonLordState state = DemonLordStates.getOrCreate(player.getUUID());
+            state.setLaneId(1);
+            double baseline = state.maxHealth();
+            lane.assignAugmentSnapshot(new AugmentSnapshot(AugmentConfig.defaults(), List.of(
+                    new PlayerAugmentState.Selection(5, AugmentRarity.PRISMATIC, "one_man_show",
+                            PlayerAugmentState.Outcome.SELECTED, null, AugmentChoice.none()),
+                    new PlayerAugmentState.Selection(15, AugmentRarity.PRISMATIC, "tactical_designation_3_assault",
+                            PlayerAugmentState.Outcome.SELECTED, null, AugmentChoice.none()))));
+            lane.markWaveStarted(15);
+            requireClose(baseline * 2, state.maxHealth(), "The chosen health bonus belongs to the Demon Lord, not the altar.");
+            target = spawnTarget(context, lane, new BlockPos(5, 2, 5), 10000, 0);
+            for (DemonLordSkillTower source : java.util.Arrays.asList(null, altar)) {
+                double health = target.runtime().health();
+                target.entity().invulnerableTime = 0;
+                var result = DemonLordService.dealDamage(player, lane, source, target.entity(), 20, DamageType.MAGIC);
+                requireClose(80, result.dealtDamage(), "Blade and skill damage must each receive the same 4x modifier once.");
+                requireClose(health - 80, target.runtime().health(), "Actual enemy HP must match the reported damage.");
+            }
+        } finally {
+            if (target != null) target.entity().discard();
+            lane.clearTowers();
+            DemonLordStates.clearAllForTesting();
+        }
+        context.succeed();
+    }
+
     @GameTest(maxTicks = 120)
     public void augmentThronesReplayDamageOnlyWithoutCombatTowersOrCooldowns(GameTestHelper context) {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());

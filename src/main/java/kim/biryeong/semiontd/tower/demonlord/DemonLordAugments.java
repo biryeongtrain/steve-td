@@ -38,6 +38,65 @@ final class DemonLordAugments {
     private boolean phaseUsed;
     private boolean replaying;
     private boolean cooldownsDirty;
+    private TargetedProgress targeted = new TargetedProgress(0, 0, 0, 0, 0, 0, false);
+
+    // Kept separately from spell state: death/reset must not discard a pending heat settlement.
+    record TargetedProgress(int heat, int mastery, int round, int settledRound,
+                            double openingHealth, double enemyDamage, boolean overheated) {}
+
+    TargetedProgress targetedProgress() {return targeted;}
+    void restoreTargetedProgress(TargetedProgress progress) {targeted = progress;}
+
+    void beginTargeted(AugmentSnapshot snapshot, int round, double openingHealth) {
+        if (round <= targeted.settledRound() || round == targeted.round()) return;
+        targeted = new TargetedProgress(targeted.heat(), targeted.mastery(), round, targeted.settledRound(),
+                openingHealth, 0, snapshot.has("overheat_core")
+                && targeted.heat() < snapshot.parameter("overheat_core", "maxStacks", 5));
+    }
+
+    void recordEnemyDamage(double amount) {
+        if (targeted.round() <= targeted.settledRound() || amount <= 0 || !Double.isFinite(amount)) return;
+        targeted = new TargetedProgress(targeted.heat(), targeted.mastery(), targeted.round(), targeted.settledRound(),
+                targeted.openingHealth(), targeted.enemyDamage() + amount, targeted.overheated());
+    }
+
+    void settleTargeted(AugmentSnapshot snapshot, int round, boolean survived) {
+        if (targeted.round() != round || targeted.settledRound() >= round) return;
+        int mastery = targeted.mastery();
+        if (snapshot.has("battlefield_mastery") && survived && targeted.openingHealth() > 0
+                && targeted.enemyDamage() + 1e-9 >= targeted.openingHealth()
+                * snapshot.parameter("battlefield_mastery", "damageThreshold", .40)) {
+            mastery = Math.min((int) snapshot.parameter("battlefield_mastery", "maxStacks", 4), mastery + 1);
+        }
+        int heat = targeted.overheated()
+                ? Math.min((int) snapshot.parameter("overheat_core", "maxStacks", 5), targeted.heat() + 1) : targeted.heat();
+        targeted = new TargetedProgress(heat, mastery, round, round, targeted.openingHealth(), targeted.enemyDamage(), false);
+    }
+
+    double maxHealthBonus(AugmentSnapshot snapshot) {
+        return masteryBonus(snapshot) + (snapshot.has("one_man_show")
+                ? snapshot.parameter("one_man_show", "maxHealthBonus", .30) : 0);
+    }
+
+    private double masteryBonus(AugmentSnapshot snapshot) {
+        return snapshot.has("battlefield_mastery")
+                ? targeted.mastery() * snapshot.parameter("battlefield_mastery", "bonusPerStack", .04) : 0;
+    }
+
+    private static double tacticalBonus(AugmentSnapshot snapshot, String mode) {
+        double bonus = 0;
+        for (int tier = 1; tier <= 3; tier++) {
+            String id = "tactical_designation_" + tier;
+            if (snapshot.has(id) && mode.equals(snapshot.choice(id).mode())) {
+                bonus += snapshot.parameter(id, mode.equals("ASSAULT") ? "damageBonus" : "damageReduction", 0);
+            }
+        }
+        return bonus;
+    }
+
+    double damageReduction(AugmentSnapshot snapshot) {
+        return Math.min(.60, tacticalBonus(snapshot, "COVER"));
+    }
 
     record Hit(UUID target, double amount, DamageType type) {}
     record Spell(DemonLordSkillTower altar, long tick, List<Hit> hits) {}
@@ -67,7 +126,12 @@ final class DemonLordAugments {
     }
 
     double damageMultiplier(AugmentSnapshot snapshot, long now) {
-        double multiplier = now < phaseUntil ? 1.0 + snapshot.parameter(PHASE, "damageBonus", 0.8) : 1.0;
+        double bonus = tacticalBonus(snapshot, "ASSAULT") + masteryBonus(snapshot)
+                - targeted.heat() * snapshot.parameter("overheat_core", "penaltyPerStack", .06);
+        if (targeted.overheated()) bonus += snapshot.parameter("overheat_core", "damageBonus", .40);
+        if (snapshot.has("one_man_show")) bonus += snapshot.parameter("one_man_show", "damageBonus", 1.0);
+        double multiplier = Math.max(0, 1.0 + bonus)
+                * (now < phaseUntil ? 1.0 + snapshot.parameter(PHASE, "damageBonus", 0.8) : 1.0);
         if ((currentAltar != null || replaying) && now < comboUntil) {
             multiplier *= 1.0 + snapshot.parameter(COMBO, "damageBonus", 0.6);
         }

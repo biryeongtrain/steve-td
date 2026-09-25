@@ -49,7 +49,7 @@ class AugmentServiceTest {
     @Test
     void offerHeaderOnlyShowsCompactAcquisitionAndTargetToolGuidance() {
         var state = new PlayerAugmentState(java.util.UUID.randomUUID());
-        assertEquals("선택한 증강 0/3 · 리롤 1회\n증강은 즉시 획득합니다."
+        assertEquals("선택한 증강 0/3 · 전체 리롤 5/5회\n증강은 즉시 획득합니다."
                         + "\n지정형 증강은 도구로 타워를 선택할 수 있습니다.",
                 SemionText.mini(AugmentService.offerHeader(state)).getString());
     }

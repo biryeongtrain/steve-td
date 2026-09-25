@@ -297,7 +297,8 @@ public final class AugmentService {
         return switch (id) {
             case "job_illager_towers_s", "job_adversary_towers_g1", "job_engineer_towers_g2" -> true;
             case "tactical_designation_1", "tactical_designation_2", "tactical_designation_3",
-                    "overheat_core", "battlefield_mastery", "one_man_show", "frontline_specialization" -> true;
+                    "overheat_core", "battlefield_mastery", "one_man_show" -> true;
+            case "frontline_specialization" -> !isDemonLord(player);
             case "finishing_fire_1", "finishing_fire_2", "finishing_fire_3", "winning_barrage", "domino_fire" ->
                     towers(game, player).stream().anyMatch(AugmentCombat::isNormalAttacker);
             case "independent_position" -> game.playerLane(player.uuid()).map(AugmentCombat::independentEligibleCount).orElse(0) > 0;
@@ -320,7 +321,7 @@ public final class AugmentService {
 
     public List<Tower> eligibleTargets(SemionGame game, SemionPlayer player, String cardId) {
         String id = shortId(cardId);
-        if (targetCount(cardId) == 0) {
+        if (targetCount(cardId) == 0 || isDemonLord(player)) {
             return List.of();
         }
         AugmentSnapshot snapshot = player.augments().snapshot();
@@ -340,11 +341,20 @@ public final class AugmentService {
                     case "job_pet_towers_g1" -> tower instanceof kim.biryeong.semiontd.tower.pet.PetTower pet && pet.isCompanion();
                     case "overheat_core" -> AugmentCombat.isOverheatEligible(tower);
                     case "battlefield_mastery" -> AugmentCombat.isMasteryEligible(tower);
-                    case "one_man_show" -> AugmentCombat.isNormalAttacker(tower);
-                    case "frontline_specialization" -> AugmentCombat.isNormalAttacker(tower) && !designated.contains(tower.logicalId());
-                    default -> AugmentCombat.isNormalPermanent(tower)
+                    case "one_man_show" -> AugmentCombat.isDesignatableAttacker(tower);
+                    case "frontline_specialization" -> AugmentCombat.isDesignatableAttacker(tower) && !designated.contains(tower.logicalId());
+                    default -> AugmentCombat.isDesignatable(tower)
                             && !tower.logicalId().equals(roles.primaryTargetId()) && !tower.logicalId().equals(roles.secondaryTargetId());
                 }).sorted(towerOrder()).toList();
+    }
+
+    private static boolean isDemonLord(SemionPlayer player) {
+        return player.job().map(job -> kim.biryeong.semiontd.job.DemonLordTowerJob.ID.equals(job.id())).orElse(false);
+    }
+
+    static boolean selfTargeted(SemionPlayer player, String cardId) {
+        return isDemonLord(player) && targetCount(cardId) == 1
+                && AugmentCatalog.find(cardId).map(card -> card.requiredJobId() == null).orElse(false);
     }
 
     public static boolean hasAffordableSummon(SemionGame game, SemionPlayer player, String kind) {
@@ -399,7 +409,8 @@ public final class AugmentService {
                     COMMAND + "draft " + offer.revision() + " " + slot + " " + requestId(),
                     SemionText.mini(preview(game, player, card, AugmentChoice.none())).getString() + "\n\n"
                             + (modes(card.id()).isEmpty()
-                            ? targetCount(card.id()) > 0 ? "누르면 바로 획득합니다. 이후 지정 도구로 타워를 고르세요."
+                            ? selfTargeted(player, card.id()) ? "마왕 자신에게 자동 적용됩니다."
+                            : targetCount(card.id()) > 0 ? "누르면 바로 획득합니다. 이후 지정 도구로 타워를 고르세요."
                             : "누르면 바로 획득합니다. 선택은 되돌릴 수 없습니다."
                             : "방식을 고르면 바로 획득합니다. 별도 확정 화면은 없습니다.")));
         }
@@ -408,13 +419,15 @@ public final class AugmentService {
         buttons.add(button("도움말", "ui help"));
         buttons.add(button("건너뛰기", "ui skip"));
         render(online, new Screen("R" + offer.milestoneRound() + " 증강 선택 · " + rarityLabel(offer.rarity()),
-                offerHeader(player.augments()),
+                isDemonLord(player) ? offerHeader(player.augments()).replace("지정형 증강은 도구로 타워를 선택할 수 있습니다.",
+                        "지정형 증강은 마왕 자신에게 자동 적용됩니다.") : offerHeader(player.augments()),
                 cards, buttons, 3));
         recordShown(game, player, offer);
     }
 
     static String offerHeader(PlayerAugmentState state) {
-        return selectionCountLabel(state) + " · 리롤 1회\n증강은 즉시 획득합니다."
+        return selectionCountLabel(state) + " · 전체 리롤 " + state.rerollsRemaining() + "/" + PlayerAugmentState.MAX_REROLLS
+                + "회\n증강은 즉시 획득합니다."
                 + "\n지정형 증강은 도구로 타워를 선택할 수 있습니다.";
     }
 
@@ -493,6 +506,15 @@ public final class AugmentService {
 
     private String preview(SemionGame game, SemionPlayer player, AugmentDefinition card, AugmentChoice choice) {
         StringBuilder body = new StringBuilder(AugmentDescriptions.describe(card, game.augmentConfig()));
+        if (selfTargeted(player, card.id())) {
+            body.append("\n대상: 마왕 자신 · 자동 적용");
+            var demonLord = kim.biryeong.semiontd.tower.demonlord.DemonLordStates.get(player.uuid());
+            if (demonLord != null) {
+                String details = demonLord.targetedAugmentDetails(shortId(card.id()));
+                if (!details.isBlank()) body.append('\n').append(details);
+            }
+            return MiniMessage.miniMessage().escapeTags(body.toString());
+        }
         List<Tower> targets = eligibleTargets(game, player, card.id());
         if (targetCount(card.id()) > 0) {
             body.append("\n선택 가능 ").append(targets.size()).append("기");
@@ -823,9 +845,9 @@ public final class AugmentService {
                             choice, checkedRequest(args[3]), game.currentTick(), eligible);
                 }
                 case "reroll" -> {
-                    requireArity(args, 4);
-                    result = state.reroll(offer.milestoneRound(), Integer.parseInt(args[2]), Long.parseLong(args[1]),
-                            checkedRequest(args[3]), game.currentTick(), eligible);
+                    requireArity(args, 3);
+                    result = state.reroll(offer.milestoneRound(), Long.parseLong(args[1]),
+                            checkedRequest(args[2]), game.currentTick(), eligible);
                 }
                 case "target", "mode" -> {
                     requireArity(args, args[0].equals("target") ? new int[]{4, 5} : new int[]{4});
@@ -886,9 +908,8 @@ public final class AugmentService {
             }
             if (args[0].equals("reroll") && result.successful()) {
                 var current = state.currentOffer().orElseThrow();
-                int slot = Integer.parseInt(args[2]);
-                resultingContext = new GuiContext(current.milestoneRound(), current.revision(), slot,
-                        current.cardIds().get(slot), AugmentChoice.none());
+                resultingContext = new GuiContext(current.milestoneRound(), current.revision(), null,
+                        null, AugmentChoice.none());
             }
             boolean selectionConfirmed = args[0].equals("confirm") && result.successful();
             if (result.successful() && List.of("draft", "target", "mode").contains(route)) {
@@ -920,6 +941,7 @@ public final class AugmentService {
             if (selectionConfirmed) {
                 activateTargetTool(game, online, player);
                 announceSelection(game, online, player);
+                return 1;
             }
             if (args[0].equals("reroll")) {
                 showOffer(game, online, player);
@@ -1159,6 +1181,7 @@ public final class AugmentService {
     }
 
     private void activateTargetTool(SemionGame game, ServerPlayer online, SemionPlayer player) {
+        if (isDemonLord(player)) return;
         var selected = player.augments().selections().getLast();
         if (selected.outcome() == PlayerAugmentState.Outcome.SELECTED && targetCount(selected.augmentId()) > 0) {
             player.augments().selectTargetTool(selected.milestoneRound());
@@ -1167,6 +1190,7 @@ public final class AugmentService {
     }
 
     private void grantTargetTool(SemionGame game, ServerPlayer online, SemionPlayer player) {
+        if (isDemonLord(player)) return;
         if (!player.augments().targetedSelections().isEmpty()
                 && !AugmentTargetTool.grant(online, player.augments(), game.playerLane(player.uuid()).orElse(null))) {
             error(online, "인벤토리에 빈칸이 없습니다. 빈칸을 만든 뒤 /증강에서 지정 도구를 다시 받으세요.");
@@ -1189,6 +1213,10 @@ public final class AugmentService {
         SemionPlayer player = game.players().get(online.getUUID());
         if (!game.augmentsEnabled() || !game.isActiveParticipant(online.getUUID()) || !alive(game, player)
                 || online.hasDisconnected() || game.phase() == RoundPhase.WAITING || game.phase() == RoundPhase.ENDED) {return true;}
+        if (isDemonLord(player)) {
+            online.displayClientMessage(Component.literal("지정형 증강은 마왕 자신에게 자동 적용됩니다."), true);
+            return true;
+        }
         var state = player.augments();
         var lane = game.playerLane(player.uuid()).orElse(null);
         var selection = state.targetToolSelection().orElse(null);
@@ -1205,7 +1233,8 @@ public final class AugmentService {
                 next = new AugmentChoice(null, null, old.mode());
             } else {
                 if (target == null || target.health() <= 0 || eligibleTargets(game, player, selection.augmentId()).stream().noneMatch(tower -> tower == target)) {
-                    error(online, "이 증강을 적용할 수 있는 내 타워를 클릭하세요.");
+                    error(online, AugmentCatalog.find(selection.augmentId()).orElseThrow().displayName() + " · "
+                            + targetRequirement(selection.augmentId()));
                     return true;
                 }
                 UUID id = target.logicalId();
@@ -1241,6 +1270,20 @@ public final class AugmentService {
         return true;
     }
 
+    static String targetRequirement(String cardId) {
+        return switch (shortId(cardId)) {
+            case "battlefield_mastery" -> "살아 있는 내 공격 타워를 지정하세요. 흑마법사·엔드도 가능합니다. 피해·생존 조건은 숙련을 쌓을 때 적용됩니다.";
+            case "overheat_core" -> "열화 상한 미만의 내 타워를 지정하세요. 흑마법사·엔드도 가능합니다. 계급병·식물 지뢰·가격표 버그 타워는 제외됩니다.";
+            case "job_villager_towers_p" -> "내 T3 철 골렘을 지정하세요.";
+            case "job_undead_towers_p" -> "내 스켈레톤 계열 타워를 지정하세요.";
+            case "job_plant_towers_p" -> "내 지형 생성 식물을 지정하세요.";
+            case "job_pet_towers_g1" -> "집사가 아닌 내 반려동물 타워를 지정하세요.";
+            case "frontline_specialization" -> "전술 지명이 없는 내 공격 타워를 지정하세요. 흑마법사·엔드도 가능합니다. 좌클릭은 선봉, 우클릭은 포대입니다.";
+            case "one_man_show" -> "내 공격 타워를 지정하세요. 흑마법사·엔드도 가능합니다.";
+            default -> "영혼 결속이 없는 내 타워를 지정하세요. 흑마법사·엔드도 가능합니다.";
+        };
+    }
+
     public static String hudHint(SemionGame game, SemionPlayer player) {
         if (!game.augmentsEnabled() || game.phase() != RoundPhase.PREPARE_AND_SUMMON || !alive(game, player)) {
             return "";
@@ -1257,6 +1300,10 @@ public final class AugmentService {
             }
             var card = AugmentCatalog.find(selection.augmentId()).orElseThrow();
             AugmentChoice choice = selection.choice();
+            if (selfTargeted(player, card.id())) {
+                settings.add(card.displayName() + ": 마왕 자신");
+                continue;
+            }
             boolean targetMissing = targetCount(card.id()) > 0 && (choice.primaryTargetId() == null
                     || towers(game, player).stream().noneMatch(tower -> tower.logicalId().equals(choice.primaryTargetId()))
                     || targetCount(card.id()) == 2 && (choice.secondaryTargetId() == null
@@ -1292,7 +1339,7 @@ public final class AugmentService {
             case "help" -> show(online, "증강 도움말",
                     "R5·R15·R25에 같은 등급의 세 장 중 하나를 고릅니다.\n경기마다 등급 순서는 모두 같고 카드 후보는 개인마다 다릅니다.\n"
                             + "카드를 누르면 바로 획득하며 되돌릴 수 없습니다. 지정형 증강은 받은 뒤 지정 도구로 타워를 고르세요.\n"
-                            + "경기당 리롤 한 번으로 한 칸만 바꿀 수 있습니다.\n닫아도 진행 중인 설정이 유지됩니다. " + PREPARE_TICKS / 20 + "초 안에 선택하지 않으면 유효 후보 중 하나를 무작위로 받습니다.\n"
+                            + "경기 전체에서 리롤 " + PlayerAugmentState.MAX_REROLLS + "회로 선택지 세 장을 모두 바꿀 수 있습니다.\n닫아도 진행 중인 설정이 유지됩니다. " + PREPARE_TICKS / 20 + "초 안에 선택하지 않으면 유효 후보 중 하나를 무작위로 받습니다.\n"
                             + "선택 시간에는 전원의 에메랄드 자동 생산을 멈춥니다. 이후 일반 준비 25초 동안 다시 생산합니다.\n"
                             + "전용 타워 증강은 경기당 한 장만 고를 수 있습니다.\n후보가 부족하면 즉시 다이아·정기 인컴·생산 보너스로 빈 칸을 채웁니다.",
                     List.of(button("돌아가기", "ui current back")), 1);
@@ -1308,18 +1355,16 @@ public final class AugmentService {
             return;
         }
         List<Button> buttons = new ArrayList<>();
-        StringBuilder body = new StringBuilder("이번에 사용하면 이후에는 리롤이 남지 않습니다.\n다른 두 장은 그대로 유지됩니다.\n");
-        for (int slot = 0; slot < offer.cardIds().size(); slot++) {
-            var card = AugmentCatalog.find(offer.cardIds().get(slot)).orElseThrow();
-            body.append("\n").append(slot + 1).append("번: ").append(cardLabel(card));
-            if (state.canReroll(offer.milestoneRound(), slot, candidate -> isEligible(game, player, candidate.id()))) {
-                buttons.add(button((slot + 1) + "번만 리롤 · 1회 즉시 소비", "reroll " + offer.revision() + " " + slot + " " + requestId()));
-            } else {
-                body.append(" · 교체 불가: 리롤을 사용했거나 유효한 대체 카드가 없습니다.");
-            }
+        String body = "같은 등급의 선택지 세 장을 모두 다시 뽑습니다.\n경기 전체 리롤: " + state.rerollsRemaining()
+                + "/" + PlayerAugmentState.MAX_REROLLS + "회 남음";
+        if (state.canReroll(offer.milestoneRound(), candidate -> isEligible(game, player, candidate.id()))) {
+            buttons.add(button("세 장 모두 리롤 · 1회 소비", "reroll " + offer.revision() + " " + requestId()));
+        } else {
+            body += state.rerollsRemaining() == 0 ? "\n남은 리롤이 없습니다."
+                    : "\n새 후보가 없어 리롤할 수 없습니다. 횟수는 유지됩니다.";
         }
         buttons.add(button("카드로 돌아가기", "ui offer back"));
-        show(online, "카드 한 칸 리롤", body.toString(), buttons, 3);
+        show(online, "선택지 전체 리롤", body, buttons, 2);
     }
 
     static String historyMilestoneLabel(PlayerAugmentState state, int milestone) {
@@ -1361,11 +1406,13 @@ public final class AugmentService {
                 .append(number(parameter(game, "support_performance", "matchIncomeCap", 8))).append('\n');
         appendForecasts(body, game, player);
         body.append("설계도·호출 타워는 기존 타워 설치 화면에서 배치합니다.");
-        if (!player.augments().targetedSelections().isEmpty()) {
+        if (!isDemonLord(player) && !player.augments().targetedSelections().isEmpty()) {
             body.append("\n지정 도구로 타워를 클릭하세요. 웅크리고 우클릭하면 설정할 증강이 바뀝니다.");
             buttons.add(button("지정 도구 다시 받기", "ui target-tool"));
         }
-        buttons.add(button("인컴 계약", "ui contracts"));
+        if (AugmentEconomyService.hasPurchaseOptions(player)) {
+            buttons.add(button("인컴 계약", "ui contracts"));
+        }
         if (player.augments().currentOffer().isPresent()) {
             buttons.add(button("제안 카드로", "ui offer back"));
         }
@@ -1465,6 +1512,10 @@ public final class AugmentService {
     }
 
     private void showContracts(SemionGame game, ServerPlayer online, SemionPlayer player) {
+        if (!AugmentEconomyService.hasPurchaseOptions(player)) {
+            error(online, "인컴 구매를 설정하는 증강이 없습니다.");
+            return;
+        }
         if (game.phase() != RoundPhase.PREPARE_AND_SUMMON) {
             show(online, "인컴 계약", "인컴 계약은 준비 단계에서만 적용합니다. 전투 중 예약 소환에는 적용하지 않습니다.",
                     List.of(new Button("소환 상점으로", "/semiontd summonui", "소환 상점을 엽니다.")), 1);
@@ -1541,7 +1592,7 @@ public final class AugmentService {
             case EXPIRED -> "선택 시간이 끝났습니다. /증강에서 자동 선택 결과를 확인하세요.";
             case ALREADY_RESOLVED -> "이미 처리된 선택입니다. /증강에서 선택 기록을 확인하세요.";
             case NO_REPLACEMENT -> "바꿀 수 있는 후보가 없습니다. 리롤 횟수는 유지됩니다.";
-            case REROLL_SPENT -> "이번 경기의 리롤을 이미 사용했습니다.";
+            case REROLL_SPENT -> "이번 경기의 리롤 " + PlayerAugmentState.MAX_REROLLS + "회를 모두 사용했습니다.";
             case CONFIGURED_THIS_ROUND -> "이번 준비 단계의 설정 변경을 이미 확정했습니다.";
             default -> "선택 상태가 달라졌습니다. /증강에서 다시 선택해 주세요.";
         };

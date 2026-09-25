@@ -49,6 +49,31 @@ public final class DemonLordState {
     private TowerRoundMetricsTracker roundMetricsTracker;
     private int roundMetricsTick;
     private final DemonLordAugments augments = new DemonLordAugments();
+    private AugmentSnapshot augmentSnapshot = AugmentSnapshot.none();
+
+    public void syncAugments(AugmentSnapshot snapshot) {
+        if (augmentSnapshot == snapshot) return;
+        double ratio = healthRatio();
+        augmentSnapshot = snapshot == null ? AugmentSnapshot.none() : snapshot;
+        health = maxHealth() * ratio;
+    }
+
+    public void settleTargetedAugments(int round) {
+        double ratio = healthRatio();
+        augments.settleTargeted(augmentSnapshot, round, inCombat && health > 0);
+        health = maxHealth() * ratio;
+    }
+
+    public String targetedAugmentDetails(String id) {
+        var progress = augments.targetedProgress();
+        return switch (id) {
+            case "overheat_core" -> "열화 " + progress.heat() + "/" + (int) augmentSnapshot.parameter(id, "maxStacks", 5);
+            case "battlefield_mastery" -> "숙련 " + progress.mastery() + "/" + (int) augmentSnapshot.parameter(id, "maxStacks", 4)
+                    + " · 조건 피해 " + Math.round(progress.enemyDamage()) + "/"
+                    + Math.round(progress.openingHealth() * augmentSnapshot.parameter(id, "damageThreshold", .40));
+            default -> "";
+        };
+    }
 
     DemonLordAugments augments() {
         return augments;
@@ -78,7 +103,7 @@ public final class DemonLordState {
                 global("healthBonusThreshold", 500.0),
                 global("healthBonusScale", 500.0)
         );
-        return Math.max(1.0, base + scaledLevelBonus + allocated);
+        return Math.max(1.0, (base + scaledLevelBonus + allocated) * (1.0 + augments.maxHealthBonus(augmentSnapshot)));
     }
 
     // ------------------------------------------------------------------ 스탯
@@ -156,14 +181,18 @@ public final class DemonLordState {
      * @return {@code true} when this hit emptied the pool and the player drops out of combat
      */
     public boolean applyDamage(double amount) {
-        return applyDamage(amount, AugmentSnapshot.none(), 0L);
+        return applyDamage(amount, augmentSnapshot, 0L);
     }
 
     boolean applyDamage(double amount, AugmentSnapshot snapshot, long gameTime) {
+        return applyDamage(amount, snapshot, gameTime, false);
+    }
+
+    boolean applyDamage(double amount, AugmentSnapshot snapshot, long gameTime, boolean enemyDamage) {
         if (amount <= 0.0 || !inCombat) {
             return false;
         }
-        double remaining = amount * (1.0 - damageReduction());
+        double remaining = amount * (1.0 - damageReduction()) * (1.0 - augments.damageReduction(snapshot));
         if (shield > 0.0) {
             double absorbed = Math.min(shield, remaining);
             shield -= absorbed;
@@ -174,6 +203,7 @@ public final class DemonLordState {
         }
         double before = health;
         health = Math.max(0.0, health - remaining);
+        if (enemyDamage) augments.recordEnemyDamage(before - health);
         if (roundMetricsTracker != null) {
             roundMetricsTracker.recordDamageTaken(before - health);
             roundMetricsTracker.updateAlive(health > 0.0);

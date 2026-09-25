@@ -45,6 +45,15 @@ public final class AugmentEconomyService {
 
     private AugmentEconomyService() {}
 
+    public static boolean hasPurchaseOptions(SemionPlayer player) {
+        if (player == null) {return false;}
+        if (player.augments().hasSelected("additional_payload")) {return true;}
+        for (Contract contract : Contract.values()) {
+            if (contract.card != null && player.augments().hasSelected(contract.card)) {return true;}
+        }
+        return false;
+    }
+
     public static void beginPrepare(SemionPlayer player, int round) {
         AugmentEconomyState state = player.economyAugments();
         if (state.closed || round <= state.prepareRound) { return; }

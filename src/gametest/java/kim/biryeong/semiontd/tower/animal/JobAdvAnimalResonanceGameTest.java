@@ -232,18 +232,23 @@ public final class JobAdvAnimalResonanceGameTest {
         });
     }
 
-    @GameTest(maxTicks = 160)
+    @GameTest(maxTicks = 160, structure = "semion-td-gametest:combat_arena")
     public void cycleSkipsOutOfRangeEnemiesAndDoesNotDeferAMissedAttack(GameTestHelper context) {
         PlayerLane lane = lane(context, "job_resonance_towers_p");
-        GridPosition pos = position(context);
+        // Keep the eight-block attack radius and its outside target within this test, including rotations.
+        GridPosition pos = GridPosition.from(context.absolutePos(new BlockPos(12, 2, 12)));
         ResonanceTower tower = new ResonanceTower(ResonanceTowers.FOCUS_CRYSTAL,
                 lane.ownerPlayer(), TeamId.RED, 1, pos, pos);
         lane.addTower(tower);
         SemionTowerEntity source = entity(context, tower);
         lane.markWaveStarted(5);
         SemionMonsterEntity outside = monster(context, lane, source.position().add(source.attackRange() + .5, 0, 0));
+        require(context.getBounds().contains(outside.position()), "The outside-range target must remain inside this test arena.");
         context.runAfterDelay(120, () -> {
             try {
+                close(10_000, outside.runtimeMonster().health(), "Range-test target must remain undamaged before the cycle.");
+                require(source.distanceToSqr(outside) > source.attackRange() * source.attackRange(),
+                        "The target must still be outside attack range when the cycle fires.");
                 ResonanceService.tickAugments(lane);
                 close(10_000, outside.runtimeMonster().health(), "An immediate cycle attack must respect actual attack range.");
                 close(0, tower.roundDamageDealt(), "No target in range means no dealt damage.");
@@ -297,8 +302,9 @@ public final class JobAdvAnimalResonanceGameTest {
         ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
         Vec3 spawn = Vec3.atCenterOf(context.absolutePos(new BlockPos(2, 2, 2)));
         Vec3 goal = Vec3.atCenterOf(context.absolutePos(new BlockPos(6, 2, 6)));
+        int edge = (int) context.getBounds().getXsize() - 1;
         LaneRegionLayout layout = new LaneRegionLayout(1, spawn, List.of(goal), goal,
-                BlockBounds.of(context.absolutePos(new BlockPos(0, 1, 0)), context.absolutePos(new BlockPos(7, 6, 7))),
+                BlockBounds.of(context.absolutePos(new BlockPos(0, 1, 0)), context.absolutePos(new BlockPos(edge, 6, edge))),
                 List.of(GridPosition.from(context.absolutePos(new BlockPos(6, 2, 6)))));
         PlayerLane lane = new PlayerLane(TeamId.RED, 1, UUID.randomUUID(), context.getLevel(), layout);
         lane.assignAugmentSnapshot(new AugmentSnapshot(AugmentConfig.defaults(), Arrays.stream(cards)

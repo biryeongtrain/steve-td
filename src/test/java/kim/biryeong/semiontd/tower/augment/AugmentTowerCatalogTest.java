@@ -28,7 +28,7 @@ class AugmentTowerCatalogTest {
                 tower.beginPrepare(null, round);
                 assertEquals(AugmentTowers.tierForRound(round), tower.growthTier());
                 assertEquals(type.maxHealth() * tower.growthTier(), tower.currentMaxHealth(), .001, type.id());
-                double mineDamage = AugmentTowers.is(type, AugmentTowers.AMBUSH_WORKSHOP) ? 170 : 100;
+                double mineDamage = AugmentTowers.is(type, AugmentTowers.AMBUSH_WORKSHOP) ? 240 : 100;
                 assertEquals(mineDamage * (1 + (tower.growthTier() - 1) * .5), tower.value("mineDamage", 100), .001);
                 assertEquals(2 * (1 + (tower.growthTier() - 1) * .15), tower.value("damageRadius", 2), .001);
                 double health = tower.health() - 10;

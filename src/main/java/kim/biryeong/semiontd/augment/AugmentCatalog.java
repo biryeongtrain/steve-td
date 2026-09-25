@@ -13,7 +13,7 @@ import static kim.biryeong.semiontd.augment.AugmentRarity.*;
 
 /** Forty common cards, 124 job cards and nine fallback rewards; old stance IDs remain readable. */
 public final class AugmentCatalog {
-    public static final int OFFER_RULES_VERSION = 3;
+    public static final int OFFER_RULES_VERSION = 4;
     public static final List<Integer> MILESTONES = List.of(5, 15, 25);
     private static final Set<Integer> ALL_ROUNDS = Set.of(5, 15, 25);
     private static final Map<String, List<String>> STANCES = Map.of(
@@ -174,7 +174,7 @@ public final class AugmentCatalog {
         cards.add(card("ambush_workshop_blueprint", "지뢰 생성기", GOLD, TOWER, null, false,
                 "220다이아·한 슬롯. 설치 방향 앞에 지뢰 세 개를 준비하고 매 웨이브 다시 장전합니다."));
         cards.add(card("starlight_cocoon_call", "별빛 고치 호출", PRISMATIC, TOWER, null, false,
-                "두 슬롯의 무료 고치 배치권. 두 웨이브를 파괴 없이 끝내면 다음 준비 단계에 파수꾼으로 부화합니다."));
+                "두 슬롯의 무료 고치 배치권. 파괴 없이 웨이브를 버티면 다음 준비 단계에 파수꾼으로 부화합니다."));
         cards.add(card("ordnance_factory_call", "인컴 대포", PRISMATIC, TOWER, null, false,
                 "한 슬롯의 무료 공장 배치권. 인컴 구매에 쓴 100에메랄드마다 다음 전투 포탄 한 발, 최대 네 발."));
         cards.addAll(JobAugmentCatalog.definitions());

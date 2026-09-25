@@ -47,6 +47,34 @@ import xyz.nucleoid.map_templates.BlockBounds;
 
 public final class FrostGameTest {
     @GameTest(maxTicks = 120)
+    public void refrigerantRequiresSevenHitsAndReducesAttackAndSpeedByFifteenPercent(GameTestHelper context) {
+        TestSetup setup = setup(context, "frost-refrigerant-nerf");
+        SemionMonsterEntity enemy = spawnTarget(context, Vec3.atCenterOf(context.absolutePos(new BlockPos(6, 2, 6))));
+        try {
+            for (int hit = 0; hit < 6; hit++) {
+                FrostMonsterStates.applyChill(enemy, FrostBalance.chillPerHit());
+            }
+            if (FrostMonsterStates.isRefrigerated(enemy.runtimeMonster())) {
+                throw new AssertionError("Six hits must not refrigerate the target.");
+            }
+            requireClose(.9, FrostMonsterStates.chill(enemy.runtimeMonster()), "Six hits store 90% chill");
+            FrostMonsterStates.applyChill(enemy, FrostBalance.chillPerHit());
+            if (!FrostMonsterStates.isRefrigerated(enemy.runtimeMonster())) {
+                throw new AssertionError("The seventh hit must refrigerate the target.");
+            }
+            requireClose(.15, enemy.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION), "Refrigerant damage reduction");
+            requireClose(.15, enemy.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION), "Refrigerant attack speed reduction");
+            FrostMonsterStates.thaw(enemy);
+            requireClose(0, enemy.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_DAMAGE_REDUCTION), "Thaw clears the damage debuff");
+            requireClose(0, enemy.activeTimedEffectMagnitude(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION), "Thaw clears the speed debuff");
+            context.succeed();
+        } finally {
+            enemy.discard();
+            cleanup(setup);
+        }
+    }
+
+    @GameTest(maxTicks = 120)
     public void rapidFreezeDoublesActualEmissionForEnemiesAndAllies(GameTestHelper context) {
         TestSetup setup = augmentSetup(context, "frost-augment-emission");
         try {
@@ -86,7 +114,7 @@ public final class FrostGameTest {
             FrostVanguardTower dongtae = vanguard(FrostTowers.DONGTAE, setup.owner(), context, new BlockPos(4, 2, 4));
             setup.lane().addTower(dongtae);
             double beforeSpread = FrostMonsterStates.chill(enemy.runtimeMonster());
-            for (int hit = 0; hit < 5; hit++) dongtae.onEmissionWaveHit(setup.lane());
+            for (int hit = 0; hit < 7; hit++) dongtae.onEmissionWaveHit(setup.lane());
             requireClose(FrostBalance.chillPerHit(), FrostMonsterStates.chill(enemy.runtimeMonster()) - beforeSpread,
                     "Selected rapid freeze must not double Dongtae's non-emission chill spread");
             requireClose(0, dongtae.chillForTest(), "Dongtae must consume its chill for the real spread");
@@ -277,7 +305,7 @@ public final class FrostGameTest {
             SemionTowerEntity breakerEntity = towerEntity(context, breaker);
             SemionMonsterEntity normal = spawnTarget(context, breakerEntity.position().add(2.0, 0.0, 0.0));
             SemionMonsterEntity refrigerated = spawnTarget(context, breakerEntity.position().add(4.0, 0.0, 0.0));
-            for (int hit = 0; hit < 5; hit++) {
+            for (int hit = 0; hit < 7; hit++) {
                 FrostMonsterStates.applyChill(refrigerated);
             }
 
@@ -545,7 +573,7 @@ public final class FrostGameTest {
     }
 
     @GameTest(maxTicks = 120)
-    public void fifthEmissionHitReleasesTheRefrigerantHealingPulse(GameTestHelper context) {
+    public void seventhEmissionHitReleasesTheRefrigerantHealingPulse(GameTestHelper context) {
         TestSetup setup = setup(context, "frost-icebox-refrigerant-owner");
         FrostHealingTower healer = healer(FrostTowers.ICEBOX_T3, setup.owner(), context, new BlockPos(6, 2, 6));
         FrostVanguardTower target = vanguard(FrostTowers.DONGTAE, setup.owner(), context, new BlockPos(8, 2, 6));
@@ -554,15 +582,15 @@ public final class FrostGameTest {
             setup.lane().addTower(target);
             setHealth(context, target, 100.0);
 
-            for (int hit = 0; hit < 4; hit++) {
+            for (int hit = 0; hit < 6; hit++) {
                 healer.onEmissionWaveHit(setup.lane());
             }
-            requireClose(100.0, target.health(), "Four emission hits must not release the special pulse.");
-            requireClose(0.80, healer.chillForTest(), "Four emission hits must store 80% chill.");
+            requireClose(100.0, target.health(), "Six emission hits must not release the special pulse.");
+            requireClose(0.90, healer.chillForTest(), "Six emission hits must store 90% chill.");
 
             healer.onEmissionWaveHit(setup.lane());
 
-            requireClose(269.2, target.health(), "The fifth hit must heal 120 x 1.41 health.");
+            requireClose(269.2, target.health(), "The seventh hit must heal 120 x 1.41 health.");
             requireClose(0.0, healer.chillForTest(), "The special pulse must consume all stored chill.");
             context.succeed();
         } finally {
@@ -602,13 +630,13 @@ public final class FrostGameTest {
 
             cooling.tick(setup.lane());
 
-            requireClose(0.20, healer.chillForTest(),
+            requireClose(0.15, healer.chillForTest(),
                     "The real emission wave must hit an icebox positioned inside its lane-wide path.");
-            requireClose(0.20, food.chill(),
+            requireClose(0.15, food.chill(),
                     "The real emission wave must also hit frozen food inside its lane-wide path.");
-            requireClose(0.20, dongtae.chillForTest(),
+            requireClose(0.15, dongtae.chillForTest(),
                     "The real emission wave must hit Dongtae for its fully-frozen cycle.");
-            requireClose(0.20, eruption.operationChill(),
+            requireClose(0.15, eruption.operationChill(),
                     "The real emission wave must charge the eruption device beyond refrigerant rules.");
             context.succeed();
         } finally {
@@ -617,7 +645,7 @@ public final class FrostGameTest {
     }
 
     @GameTest(maxTicks = 120)
-    public void fifthEmissionHitFullyFreezesDongtaeAndSpreadsChill(GameTestHelper context) {
+    public void seventhEmissionHitFullyFreezesDongtaeAndSpreadsChill(GameTestHelper context) {
         TestSetup setup = setup(context, "frost-dongtae-fully-frozen-owner");
         FrostVanguardTower dongtae = vanguard(
                 FrostTowers.DONGTAE,
@@ -631,16 +659,16 @@ public final class FrostGameTest {
             SemionMonsterEntity target = spawnTarget(
                     context, source.position().add(2.0, 0.0, 0.0), 10_000.0, true);
 
-            for (int hit = 0; hit < 5; hit++) {
+            for (int hit = 0; hit < 7; hit++) {
                 dongtae.onEmissionWaveHit(setup.lane());
             }
 
             requireClose(0.0, dongtae.chillForTest(),
-                    "The fifth emission hit must consume Dongtae's chill.");
+                    "The seventh emission hit must consume Dongtae's chill.");
             requireClose(0.10, source.activeTimedEffectMagnitude(TimedEffectType.TOWER_DAMAGE_REDUCTION),
                     "Fully frozen Dongtae must receive 10% damage reduction for one second.");
-            requireClose(0.20, FrostMonsterStates.chill(target.runtimeMonster()),
-                    "Fully frozen Dongtae must spread 20% chill within three blocks.");
+            requireClose(0.15, FrostMonsterStates.chill(target.runtimeMonster()),
+                    "Fully frozen Dongtae must spread 15% chill within three blocks.");
             context.succeed();
         } finally {
             cleanup(setup);
@@ -698,7 +726,7 @@ public final class FrostGameTest {
     }
 
     @GameTest(maxTicks = 120)
-    public void fifthEmissionHitFiresThreeAttacksWithoutChangingTheNormalCooldown(GameTestHelper context) {
+    public void seventhEmissionHitFiresThreeAttacksWithoutChangingTheNormalCooldown(GameTestHelper context) {
         TestSetup setup = setup(context, "frost-frozen-food-refrigerant-owner");
         FrostSplashTower food = splash(
                 FrostTowers.FROZEN_DUMPLING_T1,
@@ -714,14 +742,17 @@ public final class FrostGameTest {
             TowerAttackMonsterGoal normalAttack = new TowerAttackMonsterGoal(source);
             normalAttack.tick();
 
-            for (int hit = 0; hit < 4; hit++) {
+            double beforeCooling = target.runtimeMonster().health();
+            for (int hit = 0; hit < 6; hit++) {
                 food.onEmissionWaveHit(setup.lane());
             }
-            double beforeFifthHit = target.runtimeMonster().health();
+            requireClose(beforeCooling, target.runtimeMonster().health(), "Six hits must not trigger bonus attacks.");
+            requireClose(0.9, food.chill(), "Six hits store 90% chill.");
+            double beforeSeventhHit = target.runtimeMonster().health();
             food.onEmissionWaveHit(setup.lane());
-            requireClose(beforeFifthHit - 36.0, target.runtimeMonster().health(),
-                    "The fifth wave hit must immediately fire exactly three 12-damage attacks.");
-            requireClose(0.0, food.chill(), "The fifth wave hit must consume all stored chill.");
+            requireClose(beforeSeventhHit - 36.0, target.runtimeMonster().health(),
+                    "The seventh wave hit must immediately fire exactly three 12-damage attacks.");
+            requireClose(0.0, food.chill(), "The seventh wave hit must consume all stored chill.");
 
             double afterBonusAttacks = target.runtimeMonster().health();
             for (int tick = 0; tick < 19; tick++) {

@@ -71,7 +71,7 @@ public final class OffensiveAugmentTowerGameTest {
             var next = fixture.tower.damagePrimaryAttackTargetResult(source, normal, source.attackDamageAmount(normal));
             fixture.tower.onPrimaryAttack(normal, next.outgoingDamage(), DamageType.PHYSICAL, normal.position());
             require(fixture.tower.preparedShells() == 0, "A normal primary can fire the preserved shell.");
-            requireClose(670, weak.runtimeMonster().health(), "Low-pressure income still takes T2 collateral shell damage.");
+            requireClose(520, weak.runtimeMonster().health(), "Low-pressure income still takes T2 collateral shell damage.");
             context.succeed();
         }
     }
@@ -156,54 +156,49 @@ public final class OffensiveAugmentTowerGameTest {
             requireClose(0, fixture.source().attackRange(), "A cocoon must not have a basic attack.");
             require(TowerCapacity.slotCost(fixture.tower) == 2, "The cocoon must reserve two slots before hatching.");
             fixture.start(15);
+            fixture.lane.killTower(fixture.tower);
             fixture.tower.settleRound(fixture.lane, 15, true);
-            require(fixture.tower.telemetrySample(15, 10, 1, "ROUND_END").cocoonSuccesses() == 1,
-                    "A completed protected wave records one persistent cocoon success.");
+            require(fixture.tower.telemetrySample(15, 10, 1, "ROUND_END").cocoonSuccesses() == 0,
+                    "A destroyed wave cannot earn hatch progress.");
             fixture.lane.resetForRound();
             fixture.tower.beginPrepare(fixture.lane, 16);
+            require(!fixture.tower.hatched(), "A failed wave must not hatch the cocoon on preparation.");
             fixture.start(16);
-            fixture.lane.killTower(fixture.tower);
             fixture.tower.settleRound(fixture.lane, 16, true);
-            require(fixture.tower.telemetrySample(16, 20, 1, "ROUND_END").cocoonSuccesses() == 1,
-                    "A destroyed wave neither earns a success nor loses earlier successes.");
-            fixture.lane.resetForRound();
-            fixture.tower.beginPrepare(fixture.lane, 17);
-            fixture.start(17);
-            fixture.tower.settleRound(fixture.lane, 17, true);
-            fixture.tower.settleRound(fixture.lane, 17, true);
+            fixture.tower.settleRound(fixture.lane, 16, true);
             require(!fixture.tower.hatched(), "Settlement alone must not hatch the cocoon.");
-            var awaiting = fixture.tower.telemetrySample(17, 30, 1, "ROUND_END");
-            require(awaiting.cocoonSuccesses() == 2 && !awaiting.hatched(),
-                    "Repeated settlement records two successes and no premature hatch.");
+            var awaiting = fixture.tower.telemetrySample(16, 30, 1, "ROUND_END");
+            require(awaiting.cocoonSuccesses() == 1 && !awaiting.hatched(),
+                    "Repeated settlement records one success and no premature hatch.");
             fixture.lane.resetForRound();
-            fixture.phaseRound = 18;
-            fixture.tower.beginPrepare(fixture.lane, 18);
-            fixture.tower.beginPrepare(fixture.lane, 18);
-            require(fixture.tower.hatched(), "Two survived waves must hatch on the real next preparation.");
+            fixture.phaseRound = 17;
+            fixture.tower.beginPrepare(fixture.lane, 17);
+            fixture.tower.beginPrepare(fixture.lane, 17);
+            require(fixture.tower.hatched(), "One survived wave must hatch on the real next preparation.");
             require(fixture.tower.logicalId().equals(logicalId), "Hatching must preserve logical identity.");
             require(fixture.tower.originalPosition().equals(original), "Hatching must preserve the original position.");
-            requireClose(1600, fixture.tower.health(), "The hatched T2 body starts at full 1600 health.");
-            requireClose(1600, fixture.source().getMaxHealth(), "Entity and logical maximum health must agree.");
+            requireClose(2000, fixture.tower.health(), "The hatched T2 body starts at full 2000 health.");
+            requireClose(2000, fixture.source().getMaxHealth(), "Entity and logical maximum health must agree.");
             requireClose(5, fixture.source().attackRange(), "The sentinel must gain its five-block range.");
-            requireClose(255, fixture.source().attackDamageAmount(null), "The sentinel must gain its T2 magic attack.");
+            requireClose(300, fixture.source().attackDamageAmount(null), "The sentinel must gain its T2 magic attack.");
             require(fixture.tower.primaryDamageType() == DamageType.MAGIC, "The sentinel must remain magical.");
             require(fixture.tower.visual().entityTypeId().equals("minecraft:iron_golem"), "Hatching must change the visible body.");
-            var hatched = fixture.tower.telemetrySample(18, 31, 1, "HATCHED");
-            require(hatched.cocoonSuccesses() == 2 && hatched.hatched() && hatched.slotWeight() == 2,
+            var hatched = fixture.tower.telemetrySample(17, 31, 1, "HATCHED");
+            require(hatched.cocoonSuccesses() == 1 && hatched.hatched() && hatched.slotWeight() == 2,
                     "Hatching records persistent progress and the existing two occupied slots.");
-            var copied = copy(fixture.tower).telemetrySample(18, 31, 1, "HATCHED");
+            var copied = copy(fixture.tower).telemetrySample(17, 31, 1, "HATCHED");
             require(copied.equals(hatched), "State copies preserve the complete hatched observation.");
             var hatchEvents = fixture.telemetry.snapshot().towerSamples().stream()
                     .filter(sample -> sample.eventType().equals("HATCHED")).toList();
-            require(hatchEvents.size() == 1 && hatchEvents.getFirst().round() == 18 && hatchEvents.getFirst().hatched()
-                            && hatchEvents.getFirst().cocoonSuccesses() == 2,
-                    "The real transition records one HATCHED event after two successful waves, never on failed or repeated transitions.");
+            require(hatchEvents.size() == 1 && hatchEvents.getFirst().round() == 17 && hatchEvents.getFirst().hatched()
+                            && hatchEvents.getFirst().cocoonSuccesses() == 1,
+                    "The real transition records one HATCHED event after one successful wave, never on failed or repeated transitions.");
             context.succeed();
         }
     }
 
     @GameTest
-    public void factoryShellIncludesPrimaryAndAtMostFourOtherEnemies(GameTestHelper context) {
+    public void factoryShellIncludesPrimaryAndAtMostSevenOtherEnemies(GameTestHelper context) {
         try (Fixture fixture = new Fixture(context, AugmentTowers.ORDNANCE_FACTORY)) {
             fixture.tower.beginPrepare(fixture.lane, 15);
             UUID transaction = UUID.randomUUID();
@@ -217,12 +212,12 @@ public final class OffensiveAugmentTowerGameTest {
             var result = fixture.tower.damagePrimaryAttackTargetResult(source, primary, source.attackDamageAmount(primary));
             primary.setPos(center.add(2.9, 0, 0));
             List<SemionMonsterEntity> others = new ArrayList<>();
-            for (int i = 1; i <= 6; i++) others.add(fixture.target("factory_other_" + i, center.add(i * .2, 0, 0), 1000));
+            for (int i = 1; i <= 9; i++) others.add(fixture.target("factory_other_" + i, center.add(i * .2, 0, 0), 1000));
             fixture.tower.onPrimaryAttack(primary, result.outgoingDamage(), DamageType.PHYSICAL, center);
-            requireClose(670, primary.runtimeMonster().health(), "The surviving primary receives the T2 shell after its basic hit.");
-            require(others.stream().filter(target -> target.runtimeMonster().health() < 1000).count() == 4,
-                    "Only four additional targets may receive one shell.");
-            requireClose(1500, fixture.tower.specialDamageDealt(), "Five T2 shell hits must be attributed as separate special damage.");
+            requireClose(520, primary.runtimeMonster().health(), "The surviving primary receives the T2 shell after its basic hit.");
+            require(others.stream().filter(target -> target.runtimeMonster().health() < 1000).count() == 7,
+                    "Only seven additional targets may receive one shell.");
+            requireClose(3600, fixture.tower.specialDamageDealt(), "Eight T2 shell hits must be attributed as separate special damage.");
             require(fixture.tower.preparedShells() == 1, "Exactly one shell must be consumed by the first attack.");
             fixture.tower.onPrimaryAttack(primary, result.outgoingDamage(), DamageType.PHYSICAL, center);
             require(fixture.tower.preparedShells() == 1, "Another attack in the same tick must not fire a second shell.");

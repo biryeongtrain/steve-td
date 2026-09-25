@@ -80,7 +80,7 @@ public final class PirateAugments {
                 state.opened -= threshold;
                 state.cannons++;
                 var player = PirateStates.player(chest.ownerPlayer());
-                if (player != null) player.economy().addDiamond((long) chest.augmentSnapshot().parameter(CANNON, "diamondReward", 200));
+                if (player != null) player.economy().addDiamond((long) chest.augmentSnapshot().parameter(CANNON, "diamondReward", 100));
             }
         }
         if (chest.augmentSnapshot().has(LOCKSMITH) && state.locksmithRound != round) {
@@ -166,7 +166,7 @@ public final class PirateAugments {
                 .filter(cannonSource::isValidAttackTarget)
                 .max(Comparator.comparingDouble(enemy -> enemy.runtimeMonster().laneProgress())).orElse(null);
         if (target == null) return;
-        double damage = state.bombardmentDamage * lane.augmentSnapshot().parameter(CANNON, "damageRatio", 2);
+        double damage = state.bombardmentDamage * lane.augmentSnapshot().parameter(CANNON, "damageRatio", 1.6);
         var request = MonsterAreaEffectRequest.aroundTarget(AreaEffectIds.tower(source.runtimeTower(), "augment_cannon"),
                 source, target, lane.augmentSnapshot().parameter(CANNON, "radius", 3), AreaVfxSpec.onTrigger(AreaVfxStyles.SPLASH))
                 .including(target.getUUID()).nearestTargets((int) lane.augmentSnapshot().parameter(CANNON, "maxTargets", 12));
@@ -193,7 +193,7 @@ public final class PirateAugments {
         }
         if (target == null) return;
         SemionMonsterEntity primary = target;
-        double ratio = tower.augmentSnapshot().parameter(FLEET, "damageRatio", 1);
+        double ratio = tower.augmentSnapshot().parameter(FLEET, "damageRatio", .8);
         double damage = source.attackDamageAmount(primary) * ratio;
         int cap = (int) tower.augmentSnapshot().parameter(FLEET, "maxTargets", 12);
         var request = MonsterAreaEffectRequest.aroundTarget(AreaEffectIds.tower(tower, "augment_shell"), source, primary,

@@ -500,11 +500,14 @@ public final class AugmentCombatGameTest {
         SemionTowerEntity source = entity(context, tower);
         SemionMonsterEntity attacker = monster(context, lane, source.position().add(1, 0, 0), 1000);
         try {
-            source.hurt(attacker.damageSources().mobAttack(attacker), 40);
+            source.hurt(attacker.damageSources().mobAttack(attacker), 30);
+            if (AugmentCombat.detailLines(tower).stream().noneMatch(line -> line.contains("조건 피해 30/30"))) {
+                throw new AssertionError("Mastery details must display the configured thirty-percent threshold.");
+            }
             AugmentCombat.settleWave(lane, 5);
-            close(1, AugmentCombat.masteryStacks(tower), "Forty percent actual enemy HP damage and survival grants one stack.");
-            close(115, tower.currentMaxHealth(), "One mastery stack grants fifteen percent maximum HP.");
-            close(69, tower.health(), "Growing maximum HP preserves the sixty-percent HP ratio.");
+            close(1, AugmentCombat.masteryStacks(tower), "Thirty percent actual enemy HP damage and survival grants one stack.");
+            close(120, tower.currentMaxHealth(), "One mastery stack grants twenty percent maximum HP.");
+            close(84, tower.health(), "Growing maximum HP preserves the seventy-percent HP ratio.");
             lane.markWaveStarted(6);
             source.applyTransferredDamage(42);
             AugmentCombat.settleWave(lane, 6);
@@ -569,7 +572,6 @@ public final class AugmentCombatGameTest {
             close(40, combatEnd(lane, tower).enemyHpDamage(), "Telemetry retains all actual enemy HP damage.");
             close(0, combatEnd(lane, tower).masteryEligibleHpDamage(), "Telemetry separates the low-pressure-excluded mastery input.");
             close(0, AugmentCombat.masteryStacks(tower), "Low-pressure damage cannot grant a mastery stack.");
-            if (AugmentCombat.isMasteryEligible(tower)) throw new AssertionError("It must not unlock mastery selection either.");
 
             lane.markWaveStarted(6);
             SemionMonsterEntity ordinary = monster(context, lane, source.position().add(2, 0, 0), 100);

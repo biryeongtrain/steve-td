@@ -128,9 +128,9 @@ public final class AugmentTowerGameTest {
             for (int i = 0; i < 5; i++) relay.onLinkedPrimaryAttack(first, enemy, 100, DamageType.PHYSICAL);
             double before = enemy.runtimeMonster().health();
             relay.onLinkedPrimaryAttack(second, enemy, 200, DamageType.PHYSICAL);
-            close(before - 200, enemy.runtimeMonster().health(), "Charge adds the other tower's full resolved basic damage");
+            close(before - 400, enemy.runtimeMonster().health(), "Charge adds twice the other tower's resolved basic damage");
             relay.onLinkedPrimaryAttack(second, enemy, 200, DamageType.PHYSICAL);
-            close(before - 200, enemy.runtimeMonster().health(), "An uncharged hit cannot repeat the extra damage");
+            close(before - 400, enemy.runtimeMonster().health(), "An uncharged hit cannot repeat the extra damage");
             health(lane, first, 0); relay.onNearbyTowerDeath(lane, first);
             require(relay.runtimeDetailLines().contains("연결 0/2"), "Death disconnects the whole relay for this wave");
             var sample = relay.telemetrySample(5, 0, 1, "ROUND_END");
@@ -140,7 +140,8 @@ public final class AugmentTowerGameTest {
         } finally { cleanup(lane); }
     }
 
-    @GameTest public void minesUseFixedPathGroundAndLogicalHitLimit(GameTestHelper context) {
+    @GameTest(structure = "semion-td-gametest:combat_arena")
+    public void minesUseFixedPathGroundAndLogicalHitLimit(GameTestHelper context) {
         PlayerLane lane = lane(context);
         try {
             for (int x = 0; x <= 12; x++) for (int z = 0; z <= 14; z++) {
@@ -153,16 +154,19 @@ public final class AugmentTowerGameTest {
             workshop.markWaveStarted(5); workshop.onWaveStarted(lane, 5);
             List<Vec3> points = AmbushMines.preview(lane, position);
             require(points.size() == 3, "Preview contains all three points");
+            require(points.stream().allMatch(context.getBounds()::contains), "Every mine must remain inside this test arena");
             SemionMonsterEntity enemy = monster(context, lane, points.getFirst());
             enemy.setNoGravity(false); enemy.setOnGround(true);
             workshop.execute(lane);
-            close(830, enemy.runtimeMonster().health(), "First mine deals one physical hit");
+            close(760, enemy.runtimeMonster().health(), "First mine deals one physical hit");
             enemy.setPos(points.get(1)); enemy.setOnGround(true); workshop.execute(lane);
-            close(830, enemy.runtimeMonster().health(), "Logical enemy cannot consume a second mine");
+            close(760, enemy.runtimeMonster().health(), "Logical enemy cannot consume a second mine");
             require(workshop.runtimeDetailLines().contains("지뢰 2/3"), "Unused mines remain available");
             require(workshop.telemetrySample(5, 0, 1, "ROUND_END").mineExplosions() == 1,
                     "A used mine records one explosion, independent of target count");
             context.succeed();
+        } catch (AssertionError failure) {
+            context.fail(Component.literal("Mine regression: " + failure.getMessage()));
         } finally { cleanup(lane); }
     }
 
@@ -234,7 +238,7 @@ public final class AugmentTowerGameTest {
             close(1000, weak.runtimeMonster().health(), "Low-pressure income cannot trigger relay secondary damage");
             require(charged.equals(relay.runtimeDetailLines()), "Blocked relay procs must preserve charge and counters");
             relay.onLinkedPrimaryAttack(second, normal, 200, DamageType.PHYSICAL);
-            close(800, normal.runtimeMonster().health(), "A normal hit may use the preserved relay charge");
+            close(600, normal.runtimeMonster().health(), "A normal hit may use the preserved relay charge");
             context.succeed();
         } finally { cleanup(lane); }
     }
@@ -258,8 +262,8 @@ public final class AugmentTowerGameTest {
             SemionMonsterEntity normal = monster(context, lane, point.add(.25, 0, 0));
             normal.setNoGravity(false); normal.setOnGround(true);
             workshop.execute(lane);
-            close(745, normal.runtimeMonster().health(), "A normal enemy triggers the R15 T2 mine");
-            close(745, weak.runtimeMonster().health(), "Low-pressure income is not immune to T2 collateral mine damage");
+            close(640, normal.runtimeMonster().health(), "A normal enemy triggers the R15 T2 mine");
+            close(640, weak.runtimeMonster().health(), "Low-pressure income is not immune to T2 collateral mine damage");
             require(workshop.runtimeDetailLines().contains("지뢰 2/3"), "One real trigger consumes only one mine");
             context.succeed();
         } catch (Throwable failure) {

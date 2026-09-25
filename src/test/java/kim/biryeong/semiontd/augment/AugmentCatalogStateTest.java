@@ -136,9 +136,29 @@ class AugmentCatalogStateTest {
         assertEquals(.35, defaults.parameter("tactical_designation_1", "damageBonus", -1));
         assertEquals(.65, defaults.parameter("tactical_designation_2", "damageBonus", -1));
         assertEquals(1.0, defaults.parameter("tactical_designation_3", "damageBonus", -1));
-        assertEquals(.15, defaults.parameter("battlefield_mastery", "bonusPerStack", -1));
+        assertEquals(.20, defaults.parameter("battlefield_mastery", "bonusPerStack", -1));
+        assertEquals(.30, defaults.parameter("battlefield_mastery", "damageThreshold", -1));
+        assertEquals(4, defaults.parameter("battlefield_mastery", "maxStacks", -1));
+        assertEquals(2, defaults.parameter("pulse_relay_blueprint", "chargedDamageRatio", -1));
+        assertEquals(5, defaults.parameter("pulse_relay_blueprint", "attacksPerCharge", -1));
+        assertEquals(1, defaults.parameter("frontline_specialization", "artilleryDamageBonus", -1));
+        assertEquals(.5, defaults.parameter("frontline_specialization", "vanguardDamageReduction", -1));
+        assertEquals(1.25, defaults.parameter("frontline_specialization", "artilleryIncomingMultiplier", -1));
+        assertEquals(.25, defaults.parameter("frontline_specialization", "vanguardDamagePenalty", -1));
+        assertEquals(10, defaults.parameter("support_performance", "incomeBonus", -1));
+        assertEquals(50, defaults.parameter("support_performance", "matchIncomeCap", -1));
+        assertEquals(240, defaults.parameter("ambush_workshop_blueprint", "mineDamage", -1));
+        assertEquals(4, defaults.parameter("ambush_workshop_blueprint", "mineTargets", -1));
+        assertEquals(2, defaults.parameter("one_man_show", "damageBonus", -1));
+        assertEquals(1, defaults.parameter("one_man_show", "maxHealthBonus", -1));
+        assertEquals(.2, defaults.parameter("one_man_show", "otherDamagePenalty", -1));
+        assertEquals(1, defaults.parameter("starlight_cocoon_call", "hatchWaves", -1));
+        assertEquals(200, defaults.parameter("starlight_cocoon_call", "hatchedDamage", -1));
+        assertEquals(1000, defaults.parameter("starlight_cocoon_call", "hatchedHealth", -1));
         assertEquals(450, defaults.parameter("forbidden_blueprint", "ticketValue", -1));
-        assertEquals(200, defaults.parameter("ordnance_factory_call", "shellDamage", -1));
+        assertEquals(300, defaults.parameter("ordnance_factory_call", "shellDamage", -1));
+        assertEquals(8, defaults.parameter("ordnance_factory_call", "shellTargets", -1));
+        assertEquals(4, defaults.parameter("ordnance_factory_call", "maxShells", -1));
         assertEquals(.65, defaults.parameter("wartime_economy", "payoutMultiplier", -1));
         assertEquals(300, defaults.parameter("emergency_loan", "advanceCap", -1));
         AugmentConfig legacy = AugmentConfig.fromJson(JsonParser.parseString("""
@@ -290,36 +310,68 @@ class AugmentCatalogStateTest {
         var offer = state.offer(5, 5, 600, unsafeOnly);
         int diamondSlot = offer.cardIds().indexOf("semiontd:reserve_diamonds_gold");
         assertTrue(diamondSlot >= 0);
-        assertFalse(state.canReroll(5, diamondSlot, unsafeOnly));
-        assertEquals(NO_REPLACEMENT, state.reroll(5, diamondSlot, offer.revision(), UUID.randomUUID(), 20, unsafeOnly).status());
-        assertFalse(state.rerollSpent());
+        assertTrue(state.canReroll(5, unsafeOnly));
+        assertEquals(SUCCESS, state.reroll(5, offer.revision(), UUID.randomUUID(), 20, unsafeOnly).status());
+        var rerolled = state.currentOffer().orElseThrow();
+        assertTrue(rerolled.cardIds().contains("semiontd:reserve_diamonds_gold"));
+        assertOffer(rerolled);
+        assertEquals(4, state.rerollsRemaining());
     }
 
     @Test
     void noReplacementDoesNotSpendRerollOrChangeOffer() {
         PlayerAugmentState state = state(2, SILVER);
         var offer = state.offer(5, 5, 600, card -> false);
-        for (int slot = 0; slot < 3; slot++) {
-            assertEquals(NO_REPLACEMENT, state.reroll(5, slot, offer.revision(), UUID.randomUUID(), 20, card -> false).status());
-        }
+        assertFalse(state.canReroll(5, card -> false));
+        assertEquals(NO_REPLACEMENT, state.reroll(5, offer.revision(), UUID.randomUUID(), 20, card -> false).status());
         assertEquals(offer, state.currentOffer().orElseThrow());
-        assertFalse(state.rerollSpent());
+        assertEquals(5, state.rerollsRemaining());
     }
 
     @Test
-    void rerollChangesOnlyOneSlotAndReplayCannotSpendAnother() {
+    void rerollReplacesAllThreeAndOnlySpendsFiveTimesAcrossTheMatch() {
         PlayerAugmentState state = state(2, GOLD);
+        PlayerAugmentState replayedState = state(2, GOLD);
         var offer = state.offer(5, 5, 600, ALL);
-        int slot = 0;
-        UUID request = UUID.randomUUID();
-        assertEquals(SUCCESS, state.reroll(5, slot, offer.revision(), request, 20, ALL).status());
-        var rerolled = state.currentOffer().orElseThrow();
-        assertNotEquals(offer.cardIds().get(slot), rerolled.cardIds().get(slot));
-        assertEquals(offer.cardIds().subList(1, 3), rerolled.cardIds().subList(1, 3));
-        assertOffer(rerolled);
-        assertEquals(SUCCESS, state.reroll(5, slot, offer.revision(), request, 20, ALL).status());
-        assertEquals(rerolled, state.currentOffer().orElseThrow());
-        assertEquals(REROLL_SPENT, state.reroll(5, 1, rerolled.revision(), UUID.randomUUID(), 20, ALL).status());
+        replayedState.offer(5, 5, 600, ALL);
+        for (var current : List.of(state, replayedState)) {
+            assertEquals(SUCCESS, current.draft(5, 0, offer.revision(), 0, AugmentChoice.none(),
+                    UUID.randomUUID(), 20, ALL).status());
+        }
+        Set<String> shown = new HashSet<>(offer.cardIds());
+        for (int used = 1; used <= 5; used++) {
+            var before = state.currentOffer().orElseThrow();
+            int milestone = before.milestoneRound();
+            UUID request = UUID.randomUUID();
+            assertEquals(SUCCESS, state.reroll(milestone, before.revision(), request, 20, ALL).status());
+            assertEquals(SUCCESS, replayedState.reroll(milestone, before.revision(), UUID.randomUUID(), 20, ALL).status());
+            var rerolled = state.currentOffer().orElseThrow();
+            assertEquals(replayedState.currentOffer().orElseThrow(), rerolled);
+            assertTrue(rerolled.cardIds().stream().noneMatch(shown::contains));
+            shown.addAll(rerolled.cardIds());
+            assertOffer(rerolled);
+            assertNull(rerolled.draft());
+            assertEquals(before.deadlineTickExclusive(), rerolled.deadlineTickExclusive());
+            assertEquals(5 - used, state.rerollsRemaining());
+            assertEquals(SUCCESS, state.reroll(milestone, before.revision(), request, 20, ALL).status());
+            assertEquals(STALE_REVISION, state.reroll(milestone, before.revision(), UUID.randomUUID(), 20, ALL).status());
+            assertEquals(5 - used, state.rerollsRemaining());
+            assertEquals(rerolled, state.currentOffer().orElseThrow());
+            assertEquals(rerolled, state.offer(milestone, milestone, 600, ALL));
+            if (used == 2 || used == 4) {
+                for (var current : List.of(state, replayedState)) {
+                    choose(current, current.currentOffer().orElseThrow(), 0, AugmentChoice.none(), 20);
+                    current.offer(milestone + 10, milestone + 10, 600, ALL);
+                }
+                shown = new HashSet<>(state.currentOffer().orElseThrow().cardIds());
+                assertEquals(5 - used, state.rerollsRemaining());
+            }
+        }
+        var last = state.currentOffer().orElseThrow();
+        assertFalse(state.canReroll(25, ALL));
+        assertEquals(REROLL_SPENT, state.reroll(25, last.revision(), UUID.randomUUID(), 20, ALL).status());
+        assertEquals(last, state.currentOffer().orElseThrow());
+        assertEquals(5, state.offerEvents().stream().filter(event -> event.eventType().equals("REROLLED")).count());
     }
 
     @Test
@@ -527,8 +579,8 @@ class AugmentCatalogStateTest {
         assertThrows(UnsupportedOperationException.class, () -> initialHistory.clear());
         assertThrows(UnsupportedOperationException.class, () -> initial.after().clear());
         UUID requestId = UUID.randomUUID();
-        assertEquals(SUCCESS, state.reroll(5, 0, offer.revision(), requestId, 20, ALL).status());
-        assertEquals(SUCCESS, state.reroll(5, 0, offer.revision(), requestId, 20, ALL).status());
+        assertEquals(SUCCESS, state.reroll(5, offer.revision(), requestId, 20, ALL).status());
+        assertEquals(SUCCESS, state.reroll(5, offer.revision(), requestId, 20, ALL).status());
         assertEquals(1, initialHistory.size());
         assertEquals(2, state.offerEvents().size());
         var rerolled = state.offerEvents().getLast();
@@ -539,7 +591,7 @@ class AugmentCatalogStateTest {
         assertThrows(UnsupportedOperationException.class, () -> rerolled.before().clear());
         assertThrows(UnsupportedOperationException.class, () -> rerolled.after().clear());
         var current = state.currentOffer().orElseThrow();
-        assertEquals(REROLL_SPENT, state.reroll(5, 1, current.revision(), UUID.randomUUID(), 20, ALL).status());
+        assertEquals(EXPIRED, state.reroll(5, current.revision(), UUID.randomUUID(), 600, ALL).status());
         assertEquals(2, state.offerEvents().size());
         choose(state, current, 0, AugmentChoice.none(), 20);
         state.offer(15, 15, 600, ALL);
@@ -552,7 +604,7 @@ class AugmentCatalogStateTest {
     void failedRerollAndReopenedDraftNeverAddExposureEvents() {
         PlayerAugmentState state = state(2, SILVER);
         var offer = state.offer(5, 5, 600, card -> false);
-        assertEquals(NO_REPLACEMENT, state.reroll(5, 0, offer.revision(), UUID.randomUUID(), 20, card -> false).status());
+        assertEquals(NO_REPLACEMENT, state.reroll(5, offer.revision(), UUID.randomUUID(), 20, card -> false).status());
         assertTrue(state.draft(5, 0, offer.revision(), 0, AugmentChoice.none(), UUID.randomUUID(), 20, ALL).successful());
         var draft = state.currentOffer().orElseThrow();
         assertEquals(UNCHANGED, state.draft(5, 0, draft.revision(), draft.draftRevision(),
@@ -570,11 +622,11 @@ class AugmentCatalogStateTest {
         assertTrue(next.revision() > first.revision());
         assertEquals(STALE_REVISION, state.draft(15, 0, first.revision(), 0,
                 AugmentChoice.none(), UUID.randomUUID(), 20, ALL).status());
-        assertEquals(STALE_REVISION, state.reroll(15, 0, first.revision(), UUID.randomUUID(), 20, ALL).status());
+        assertEquals(STALE_REVISION, state.reroll(15, first.revision(), UUID.randomUUID(), 20, ALL).status());
         assertEquals(STALE_REVISION, state.skip(15, first.revision(), UUID.randomUUID(), 20,
                 PlayerAugmentState.SkipReason.EXPLICIT).status());
         assertEquals(next, state.currentOffer().orElseThrow());
-        assertFalse(state.rerollSpent());
+        assertEquals(5, state.rerollsRemaining());
     }
 
     @Test

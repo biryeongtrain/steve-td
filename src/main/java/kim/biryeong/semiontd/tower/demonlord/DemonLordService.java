@@ -183,7 +183,8 @@ public final class DemonLordService {
                     .flatMap(game -> game.playerLane(player.getUUID())).orElse(null);
             boolean knockedOut = state.applyDamage(amount,
                     lane == null ? kim.biryeong.semiontd.augment.AugmentSnapshot.none() : lane.augmentSnapshot(),
-                    player.level().getGameTime());
+                    player.level().getGameTime(), source.getEntity() instanceof SemionMonsterEntity monster
+                            && kim.biryeong.semiontd.augment.AugmentCombat.canBuildCondition(monster.runtimeMonster()));
             if (state.augments().consumeCooldownChanges()) {
                 syncSkillCooldowns(player, state, player.level().getGameTime());
             }
@@ -256,6 +257,7 @@ public final class DemonLordService {
             return;
         }
         DemonLordState state = DemonLordStates.getOrCreate(owner);
+        state.syncAugments(lane.augmentSnapshot());
         state.setLaneId(lane.laneId());
         long gameTime = lane.arenaWorld().getGameTime();
         state.augments().tickVisuals(gameTime);
@@ -391,6 +393,15 @@ public final class DemonLordService {
         DemonLordState state = DemonLordStates.get(playerId);
         if (state != null) {
             state.enterCombat();
+        }
+    }
+
+    public static void beginWave(PlayerLane lane, int round) {
+        DemonLordState state = DemonLordStates.get(lane.ownerPlayer());
+        if (state != null) {
+            state.syncAugments(lane.augmentSnapshot());
+            state.enterCombat();
+            state.augments().beginTargeted(lane.augmentSnapshot(), round, state.maxHealth());
         }
     }
 

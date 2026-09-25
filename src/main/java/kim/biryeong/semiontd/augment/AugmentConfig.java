@@ -259,11 +259,11 @@ public record AugmentConfig(boolean enabled, boolean publicPoolEnabled,
         put(cards, "additional_payload", "costMultiplier", 1.25, "healthMultiplier", 1.65, "supportMultiplier", 1.65);
         put(cards, "twin_squadron", "damageBonus", .30);
         put(cards, "overheat_core", "damageBonus", 1.0, "penaltyPerStack", .06, "maxStacks", 5);
-        put(cards, "frontline_specialization", "vanguardDamagePenalty", .25, "vanguardDamageReduction", .45,
-                "artilleryDamageBonus", .70, "artilleryIncomingMultiplier", 1.25);
+        put(cards, "frontline_specialization", "vanguardDamagePenalty", .25, "vanguardDamageReduction", .50,
+                "artilleryDamageBonus", 1.0, "artilleryIncomingMultiplier", 1.25);
         put(cards, "forecast_offensive", "echoRatio", .50);
-        put(cards, "support_performance", "targetCount", 3, "incomeBonus", 6, "matchIncomeCap", 24);
-        put(cards, "battlefield_mastery", "bonusPerStack", .15, "maxStacks", 4, "damageThreshold", .40);
+        put(cards, "support_performance", "targetCount", 3, "incomeBonus", 10, "matchIncomeCap", 50);
+        put(cards, "battlefield_mastery", "bonusPerStack", .20, "maxStacks", 4, "damageThreshold", .30);
         put(cards, "biased_armor", "selectedMultiplier", .55, "oppositeMultiplier", 1.35);
         put(cards, "cash_settlement", "diamondMultiplier", 5);
         put(cards, "forbidden_blueprint", "ticketCount", 2, "ticketValue", 450, "payoutMultiplier", .90);
@@ -275,17 +275,17 @@ public record AugmentConfig(boolean enabled, boolean publicPoolEnabled,
         put(cards, "winning_barrage", "damageBonus", .60, "charges", 3);
         put(cards, "decisive_delivery", "healthMultiplier", 2.0, "attackMultiplier", 1.80);
         put(cards, "domino_fire", "overkillRatio", .90, "damageCapRatio", .75, "radius", 4);
-        put(cards, "one_man_show", "damageBonus", 1.75, "maxHealthBonus", .60, "otherDamagePenalty", .20);
+        put(cards, "one_man_show", "damageBonus", 2.0, "maxHealthBonus", 1.0, "otherDamagePenalty", .20);
         put(cards, "wartime_economy", "payoutMultiplier", .65, "damageBonus", .65, "maxHealthBonus", .40);
         put(cards, "giant_hunter_call", "minimumRange", 3, "maxHealthDamageRatio", .12, "bossMaxHealthDamageRatio", .03);
         put(cards, "capacitor_post_blueprint", "chargeTicks", 40, "maxCharges", 3, "chargeDamage", 110);
-        put(cards, "starlight_cocoon_call", "hatchWaves", 2, "hatchedHealth", 800, "hatchedRange", 5, "hatchedDamage", 170, "hatchedIntervalTicks", 30);
-        put(cards, "ordnance_factory_call", "emeraldPerShell", 100, "maxShells", 4, "shellDamage", 200, "shellRadius", 3,
-                "shellTargets", 5, "shellIntervalTicks", 100);
+        put(cards, "starlight_cocoon_call", "hatchWaves", 1, "hatchedHealth", 1000, "hatchedRange", 5, "hatchedDamage", 200, "hatchedIntervalTicks", 30);
+        put(cards, "ordnance_factory_call", "emeraldPerShell", 100, "maxShells", 4, "shellDamage", 300, "shellRadius", 3,
+                "shellTargets", 8, "shellIntervalTicks", 100);
         put(cards, "emergency_bell_blueprint", "healRatio", .40, "healCap", 150, "healthThreshold", .40, "maxHeals", 3, "checkTicks", 20);
-        put(cards, "pulse_relay_blueprint", "attacksPerCharge", 5, "chargedDamageRatio", 1.0);
+        put(cards, "pulse_relay_blueprint", "attacksPerCharge", 5, "chargedDamageRatio", 2.0);
         put(cards, "barrier_core_call", "redirectRatio", .35);
-        put(cards, "ambush_workshop_blueprint", "triggerRadius", 1.25, "damageRadius", 2, "mineDamage", 170, "mineTargets", 2, "checkTicks", 5);
+        put(cards, "ambush_workshop_blueprint", "triggerRadius", 1.25, "damageRadius", 2, "mineDamage", 240, "mineTargets", 4, "checkTicks", 5);
         AugmentCatalog.definitions().stream().filter(AugmentDefinition::towerAugment).forEach(card -> {
             Map<String, Double> values = new TreeMap<>(cards.get(card.id()));
             values.put("healthPerTier", 1.0);

@@ -247,6 +247,8 @@ public final class PlayerLane {
 
     public void assignAugmentSnapshot(AugmentSnapshot snapshot) {
         augmentSnapshot = snapshot == null ? AugmentSnapshot.none() : snapshot;
+        var demonLord = kim.biryeong.semiontd.tower.demonlord.DemonLordStates.get(ownerPlayer);
+        if (demonLord != null) demonLord.syncAugments(augmentSnapshot);
         for (Tower tower : towers) {
             tower.syncAugments(augmentSnapshot, this);
         }
@@ -566,7 +568,7 @@ public final class PlayerLane {
         kim.biryeong.semiontd.tower.army.ArmyStates.spawnReserves(this, currentRound);
         // 마왕은 여기서 전투 상태가 됩니다. 라운드 시작(준비 단계)에 걸면 상점을 열 수 없는
         // 채로 준비 시간을 보내게 되고, 스스로 물러난 뒤 웨이브가 시작돼도 복귀하지 못합니다.
-        DemonLordService.beginWave(ownerPlayer);
+        DemonLordService.beginWave(this, currentRound);
         TowerRoundMetricsTracker demonLordTracker = DemonLordService.roundMetricsTracker(ownerPlayer);
         if (demonLordTracker != null) {
             roundTowerTrackers.add(demonLordTracker);

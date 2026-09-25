@@ -390,7 +390,8 @@
     },
     "semiontd:job_gamble_g1": {},
     "semiontd:job_gamble_g2": {
-      "failureScoreMultiplier": 2
+      "failureScoreMultiplier": 2,
+      "statReversalChance": 0.2
     },
     "semiontd:job_gamble_p": {
       "maxAttempts": 3,
@@ -471,17 +472,17 @@
       "shotSpacingTicks": 4,
       "radius": 2.5,
       "maxTargets": 12,
-      "damageRatio": 1
+      "damageRatio": 0.8
     },
     "semiontd:job_pirate_p": {
       "chestsPerStack": 3,
-      "diamondReward": 200,
+      "diamondReward": 100,
       "initialStacks": 1,
       "intervalTicks": 40,
       "shots": 5,
       "radius": 3,
       "maxTargets": 12,
-      "damageRatio": 2
+      "damageRatio": 1.6
     },
     "semiontd:job_mage_towers_s": {
       "refundRatio": 0.2
@@ -551,8 +552,8 @@
       "areaPerTier": 0.15,
       "checkTicks": 5.0,
       "damageRadius": 2.0,
-      "mineDamage": 170.0,
-      "mineTargets": 2.0,
+      "mineDamage": 240.0,
+      "mineTargets": 4.0,
       "triggerRadius": 1.25
     },
     "semiontd:barrier_core_call": {
@@ -562,8 +563,8 @@
       "redirectRatio": 0.35
     },
     "semiontd:battlefield_mastery": {
-      "bonusPerStack": 0.15,
-      "damageThreshold": 0.4,
+      "bonusPerStack": 0.2,
+      "damageThreshold": 0.3,
       "maxStacks": 4.0
     },
     "semiontd:biased_armor": {
@@ -636,10 +637,10 @@
       "echoRatio": 0.5
     },
     "semiontd:frontline_specialization": {
-      "artilleryDamageBonus": 0.7,
+      "artilleryDamageBonus": 1.0,
       "artilleryIncomingMultiplier": 1.25,
       "vanguardDamagePenalty": 0.25,
-      "vanguardDamageReduction": 0.45
+      "vanguardDamageReduction": 0.5
     },
     "semiontd:giant_hunter_call": {
       "healthPerTier": 1.0,
@@ -660,8 +661,8 @@
       "roundBonusCap": 20.0
     },
     "semiontd:one_man_show": {
-      "damageBonus": 1.75,
-      "maxHealthBonus": 0.6,
+      "damageBonus": 2.0,
+      "maxHealthBonus": 1.0,
       "otherDamagePenalty": 0.2
     },
     "semiontd:ordnance_factory_call": {
@@ -670,10 +671,10 @@
       "areaPerTier": 0.15,
       "emeraldPerShell": 100.0,
       "maxShells": 4.0,
-      "shellDamage": 200.0,
+      "shellDamage": 300.0,
       "shellIntervalTicks": 100.0,
       "shellRadius": 3.0,
-      "shellTargets": 5.0
+      "shellTargets": 8.0
     },
     "semiontd:overheat_core": {
       "damageBonus": 1.0,
@@ -685,7 +686,7 @@
       "powerPerTier": 0.5,
       "areaPerTier": 0.15,
       "attacksPerCharge": 5.0,
-      "chargedDamageRatio": 1.0
+      "chargedDamageRatio": 2.0
     },
     "semiontd:reserve_diamonds_gold": {
       "amount": 300.0
@@ -718,15 +719,15 @@
       "healthPerTier": 1.0,
       "powerPerTier": 0.5,
       "areaPerTier": 0.15,
-      "hatchWaves": 2.0,
-      "hatchedDamage": 170.0,
-      "hatchedHealth": 800.0,
+      "hatchWaves": 1.0,
+      "hatchedDamage": 200.0,
+      "hatchedHealth": 1000.0,
       "hatchedIntervalTicks": 30.0,
       "hatchedRange": 5.0
     },
     "semiontd:support_performance": {
-      "incomeBonus": 6.0,
-      "matchIncomeCap": 24.0,
+      "incomeBonus": 10.0,
+      "matchIncomeCap": 50.0,
       "targetCount": 3.0
     },
     "semiontd:tactical_designation_1": {

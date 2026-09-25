@@ -59,7 +59,7 @@ class GambleAugmentsTest {
     }
 
     @Test
-    void bottomKingDoublesOnlyScoreLossAndReversesTheInsuredStatLoss() {
+    void reversalPreservesInsuranceAndScoreLoss() {
         GambleState insured = GambleState.EMPTY.recordAbility(GambleAbility.LOSS_INSURANCE, 0, "insurance");
         assertEquals(-80, GambleRewards.settledScore(-40, 2), 1e-9);
         assertEquals(70, GambleRewards.settledScore(70, 2), 1e-9);
@@ -67,6 +67,38 @@ class GambleAugmentsTest {
         assertEquals(-20, GambleRewards.settledStatDelta(GambleState.EMPTY, -20, false), 1e-9);
         assertEquals(20 * (1 - GambleBalance.lossInsuranceReduction()),
                 GambleRewards.settledStatDelta(insured, -20, true), 1e-9);
+    }
+
+    @Test
+    void bottomKingReversesOnlyTwentyPercentOfFailedAttemptsAndDoesNotRerollSuccess() {
+        int failures = 0;
+        int reversals = 0;
+        for (int seed = 0; seed < 1000; seed++) {
+            RandomSource expected = RandomSource.create(seed);
+            boolean failed = (expected.nextInt(6) + 1) % 2 == 0;
+            boolean reversed = failed && expected.nextDouble() < .2;
+            GamblerTower tower = tower("job_gamble_g2");
+            assertEquals(1, tower.resolvePurchase(GambleBet.ODD, RandomSource.create(seed)));
+            if (!failed) {
+                GamblerTower normal = tower();
+                normal.resolvePurchase(GambleBet.ODD, RandomSource.create(seed));
+                assertEquals(normal.state(), tower.state(), "Successful rolls must not consume an extra chance roll");
+                continue;
+            }
+            failures++;
+            if (reversed) reversals++;
+            assertEquals(-80, tower.gambleScore(), 1e-9);
+            boolean increased = tower.state().damageDelta() > 0 || tower.state().maxHealthDelta() > 0
+                    || tower.state().rangeDelta() > 0;
+            assertEquals(reversed, increased, "seed=" + seed);
+            if (!reversed) assertTrue(tower.state().damageDelta() < 0 || tower.state().maxHealthDelta() < 0
+                    || tower.state().rangeDelta() < 0, "The remaining failures keep their stat loss");
+        }
+        assertTrue(failures > 400 && reversals > failures * .15 && reversals < failures * .25);
+        assertEquals(.2, AugmentConfig.defaults().parameter("job_gamble_g2", "statReversalChance", -1));
+        String description = kim.biryeong.semiontd.augment.AugmentDescriptions.describe(
+                kim.biryeong.semiontd.augment.AugmentCatalog.find("job_gamble_g2").orElseThrow(), AugmentConfig.defaults());
+        assertTrue(description.contains("20%"));
     }
 
     @Test
@@ -85,8 +117,6 @@ class GambleAugmentsTest {
                 sawAllFailure = true;
                 assertEquals(3, attempts);
                 assertEquals(-243, tower.gambleScore(), 1e-9);
-                assertTrue(tower.state().damageDelta() > 0 || tower.state().maxHealthDelta() > 0
-                        || tower.state().rangeDelta() > 0);
             }
         }
         assertEquals(Set.of(1, 2, 3), successfulAttempts);

@@ -43,6 +43,47 @@ class AugmentCombatTest {
     }
 
     @Test
+    void warlockAndEndDesignationsApplyWithoutEnablingOtherCommonEffects() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        var types = new ArrayList<>(kim.biryeong.semiontd.tower.end.EndTowers.all());
+        types.addAll(kim.biryeong.semiontd.tower.warlock.WarlockTowers.all().stream()
+                .filter(kim.biryeong.semiontd.tower.warlock.WarlockTowers::isWarlockCore).toList());
+        for (var type : types) {
+            PlayerLane lane = lane();
+            Tower tower = ProductionTowerCatalog.entry(type).orElseThrow().create(OWNER, TeamId.RED, 1, new GridPosition(0, 0, 0));
+            lane.addTower(tower);
+            assertTrue(AugmentCombat.isDesignatable(tower), type.id());
+            assertEquals(tower.type().damage() > 0 && tower.type().range() > 0,
+                    AugmentCombat.isDesignatableAttacker(tower), type.id());
+            assertFalse(AugmentCombat.isNormalPermanent(tower), type.id());
+            lane.assignAugmentSnapshot(snapshot("tactical_designation_3_assault", choice(tower, "")));
+            assertEquals(1, AugmentCombat.damageBonus(tower, null), 1e-9, type.id());
+            lane.assignAugmentSnapshot(snapshot("tactical_designation_3_cover", choice(tower, "")));
+            assertEquals(60, AugmentCombat.incomingDamage(tower, null, null, 100, 100), 1e-9, type.id());
+            if (!AugmentCombat.isDesignatableAttacker(tower)) continue;
+            double baseline = tower.currentMaxHealth();
+            lane.assignAugmentSnapshot(snapshot("one_man_show", choice(tower, ""), "wartime_economy", AugmentChoice.none()));
+            assertEquals(baseline * 2, tower.currentMaxHealth(), 1e-6, type.id());
+            assertEquals(2, AugmentCombat.damageBonus(tower, null), 1e-9, type.id());
+            lane.assignAugmentSnapshot(snapshot("overheat_core", choice(tower, ""), "battlefield_mastery", choice(tower, "")));
+            startCombat(lane, 5);
+            setRecordedEnemyDamage(tower, tower.currentMaxHealth() * .5);
+            assertEquals(1, AugmentCombat.damageBonus(tower, null), 1e-9, type.id());
+            AugmentCombat.settleWave(lane, 5);
+            AugmentCombat.settleWave(lane, 5);
+            assertEquals(1, AugmentCombat.heatStacks(tower), type.id());
+            assertEquals(1, AugmentCombat.masteryStacks(tower), type.id());
+            Tower upgraded = ProductionTowerCatalog.entry(type).orElseThrow().create(OWNER, TeamId.RED, 1, tower.originalPosition());
+            upgraded.copyFrom(tower, 0);
+            lane.replaceTower(tower, upgraded);
+            assertEquals(1, AugmentCombat.masteryStacks(upgraded), type.id());
+            assertEquals(1, AugmentCombat.heatStacks(upgraded), type.id());
+            upgraded.markTemporaryCopy(UUID.randomUUID());
+            assertFalse(AugmentCombat.isDesignatable(upgraded), type.id());
+        }
+    }
+
+    @Test
     void tacticalTiersChooseDamageOrCoverWithoutCombiningModes() {
         for (int tier = 1; tier <= 3; tier++) {
             PlayerLane lane = lane();
@@ -102,7 +143,7 @@ class AugmentCombatTest {
         lane.assignAugmentSnapshot(snapshot("frontline_specialization", new AugmentChoice(front.logicalId(), artillery.logicalId(), "")));
         AugmentCombat.startWave(lane, 15);
         assertEquals(-.25, AugmentCombat.damageBonus(front, null), 1e-9);
-        assertEquals(.70, AugmentCombat.damageBonus(artillery, null), 1e-9);
+        assertEquals(1.0, AugmentCombat.damageBonus(artillery, null), 1e-9);
         assertEquals(front.type().aggroPriority(), front.aggroPriority());
         assertTrue(AugmentCombat.prefersEqualDistance(front));
         assertFalse(AugmentCombat.prefersEqualDistance(artillery));
@@ -142,10 +183,10 @@ class AugmentCombatTest {
         Tower other = add(lane, "other", 8);
         main.syncHealth(50);
         lane.assignAugmentSnapshot(snapshot("one_man_show", choice(main, ""), "wartime_economy", AugmentChoice.none()));
-        assertEquals(200, main.currentMaxHealth(), 1e-9);
-        assertEquals(100, main.health(), 1e-9);
+        assertEquals(240, main.currentMaxHealth(), 1e-9);
+        assertEquals(120, main.health(), 1e-9);
         assertEquals(140, other.currentMaxHealth(), 1e-9);
-        assertEquals(2.40, AugmentCombat.damageBonus(main, null), 1e-9);
+        assertEquals(2.65, AugmentCombat.damageBonus(main, null), 1e-9);
         assertEquals(.45, AugmentCombat.damageBonus(other, null), 1e-9);
         lane.removeTower(main);
         assertEquals(.45, AugmentCombat.damageBonus(other, null), 1e-9);
@@ -227,7 +268,7 @@ class AugmentCombatTest {
         assertEquals(upgraded.type().id(), nextStart.towerTypeId());
         assertEquals(1, nextStart.state().masteryStacks());
         assertEquals(1, nextStart.state().heatStacks());
-        assertEquals(115.0, nextStart.state().startingMaxHealth(), 1e-9);
+        assertEquals(120.0, nextStart.state().startingMaxHealth(), 1e-9);
 
         assertTrue(lane.removeTower(upgraded));
         assertFalse(lane.removeTower(upgraded));

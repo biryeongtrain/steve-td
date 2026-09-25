@@ -125,7 +125,13 @@ public final class JobAugmentSelectionGameTest {
                 game.augmentService().useTargetTool(game, online, wrongClass, false, false);
                 require(state.snapshot().choice(test.cardId()).primaryTargetId() == null,
                         "Wrong-class designation must leave the unassigned choice intact.");
-                require(game.augmentService().useTargetTool(game, online, valid, false, false), "The held designation tool must handle a valid tower.");
+                var manager = new kim.biryeong.semiontd.game.SemionGameManager();
+                setField(manager, "activeGame", game);
+                var entity = ((kim.biryeong.semiontd.tower.EntityBackedTower) valid).runtimeEntity(lane).orElseThrow();
+                require(kim.biryeong.semiontd.ui.SemionTowerInteractionService.handleUse(manager, online, online.level(),
+                                net.minecraft.world.InteractionHand.MAIN_HAND, entity, new net.minecraft.world.phys.EntityHitResult(entity))
+                                == net.minecraft.world.InteractionResult.SUCCESS,
+                        "The physical right click must resolve and designate the job tower.");
                 require(valid.logicalId().equals(state.snapshot().choice(test.cardId()).primaryTargetId()),
                         "A valid tower must be selected by the real tool path.");
                 for (Tower rejected : List.of(wrongClass, foreign, copy)) {

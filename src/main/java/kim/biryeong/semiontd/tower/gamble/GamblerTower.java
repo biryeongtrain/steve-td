@@ -188,30 +188,28 @@ public final class GamblerTower extends ProductionTower {
     @Override
     public List<String> upgradeTooltipLines(TowerUpgradeOption option) {
         boolean bottomKing = augmentSnapshot().has("job_gamble_g2");
-        double lossDirection = bottomKing ? 1.0 : -1.0;
         ArrayList<String> lines = new ArrayList<>(GambleBet.fromUpgradeId(option.id()).map(bet -> switch (bet) {
             case ODD -> List.of(
                     "주사위 한 개를 굴려 홀수가 나오면 성공, 짝수가 나오면 실패합니다.",
                     "성공하면 " + statRewardSummary(GambleBalance.oddEvenWinScore()) + " 중 하나를 얻습니다.",
-                    "실패하면 " + statRewardSummary(lossDirection * GambleBalance.oddEvenLossScore())
+                    "실패하면 " + statRewardSummary(-GambleBalance.oddEvenLossScore())
                             + " 중 하나가 적용됩니다.",
-                    "손실 보험 보유 시 실패 수치는 " + statRewardSummary(lossDirection * GambleBalance.oddEvenLossScore()
+                    "손실 보험 보유 시 실패 수치는 " + statRewardSummary(-GambleBalance.oddEvenLossScore()
                             * (1.0 - GambleBalance.lossInsuranceReduction())) + "로 완화됩니다.",
                     "비용은 판매 환불가에 포함되지 않습니다."
             );
             case EVEN -> List.of(
                     "주사위 한 개를 굴려 짝수가 나오면 성공, 홀수가 나오면 실패합니다.",
                     "성공하면 " + statRewardSummary(GambleBalance.oddEvenWinScore()) + " 중 하나를 얻습니다.",
-                    "실패하면 " + statRewardSummary(lossDirection * GambleBalance.oddEvenLossScore())
+                    "실패하면 " + statRewardSummary(-GambleBalance.oddEvenLossScore())
                             + " 중 하나가 적용됩니다.",
-                    "손실 보험 보유 시 실패 수치는 " + statRewardSummary(lossDirection * GambleBalance.oddEvenLossScore()
+                    "손실 보험 보유 시 실패 수치는 " + statRewardSummary(-GambleBalance.oddEvenLossScore()
                             * (1.0 - GambleBalance.lossInsuranceReduction())) + "로 완화됩니다.",
                     "비용은 판매 환불가에 포함되지 않습니다."
             );
             case TWO_DICE -> List.of(
                     "주사위 두 개를 굴려 눈금의 합에 비례해 유닛을 업그레이드합니다.",
-                    bottomKing ? "합이 2~5면 실패하지만 능력치는 원래 감소량만큼 증가합니다. 6~12면 성공합니다."
-                            : "합이 2~5면 능력치가 크게 내려가고, 6~12면 크게 올라갑니다.",
+                    "합이 2~5면 능력치가 크게 내려가고, 6~12면 크게 올라갑니다.",
                     "합이 " + GambleBalance.twoDiceCompoundMinSum()
                             + " 이상이면 보상을 서로 다른 능력치 두 개가 절반씩 나눠 받습니다.",
                     "가장 자주 나오는 합 7은 " + statRewardSummary(GambleBalance.twoDiceScore(7))
@@ -222,7 +220,8 @@ public final class GamblerTower extends ProductionTower {
         if (bottomKing) {
             lines.add("바닥의 왕: 실패마다 점수 손실 "
                     + oneDecimal(augmentSnapshot().parameter("job_gamble_g2", "failureScoreMultiplier", 2))
-                    + "배, 능력치는 원래 감소할 양만큼 증가합니다.");
+                    + "배. " + oneDecimal(augmentSnapshot().parameter("job_gamble_g2", "statReversalChance", .2) * 100)
+                    + "% 확률로 능력치 감소가 같은 양의 증가로 바뀝니다.");
         }
         if (augmentSnapshot().has("job_gamble_p")) {
             lines.add("끝장을 보자: 한 번 결제하고 성공할 때까지 최대 "
@@ -324,6 +323,8 @@ public final class GamblerTower extends ProductionTower {
         boolean bottomKing = AugmentCombat.allowsTriggers() && augmentSnapshot().has("job_gamble_g2");
         double settledScore = GambleRewards.settledScore(score, bottomKing
                 ? augmentSnapshot().parameter("job_gamble_g2", "failureScoreMultiplier", 2.0) : 1.0);
+        boolean reverseLoss = bottomKing && score < 0.0
+                && random.nextDouble() < augmentSnapshot().parameter("job_gamble_g2", "statReversalChance", .2);
         String roll = GambleRolls.formatResultRoll(bet, first, second);
         GambleState after;
         if (GambleRewards.awardsAbility(before, score, random.nextDouble())) {
@@ -345,7 +346,7 @@ public final class GamblerTower extends ProductionTower {
             double scorePerStat = score / stats.size();
             for (GambleStat stat : stats) {
                 double delta = GambleRewards.settledStatDelta(
-                        before, GambleBalance.statDelta(stat, scorePerStat), bottomKing);
+                        before, GambleBalance.statDelta(stat, scorePerStat), reverseLoss);
                 changes.add(new GambleState.StatChange(stat, delta, baseValue(stat)));
                 results.add(stat.displayName() + " " + signed(delta));
             }

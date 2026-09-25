@@ -1302,7 +1302,8 @@ public final class SemionDialogService {
                     );
                 })
                 .collect(Collectors.toCollection(ArrayList::new));
-        if (game.augmentsEnabled() && game.phase() == kim.biryeong.semiontd.game.RoundPhase.PREPARE_AND_SUMMON && semionPlayer != null) {
+        if (game.augmentsEnabled() && game.phase() == kim.biryeong.semiontd.game.RoundPhase.PREPARE_AND_SUMMON
+                && AugmentEconomyService.hasPurchaseOptions(semionPlayer)) {
             actions.add(actionButton("인컴 계약", "/semiontd augment ui contracts", "다음 적격 구매에 적용할 증강 계약을 설정합니다."));
         }
         showActions(player, "세미온 TD 소환", body.toString(), actions, SUMMON_COLUMNS);
@@ -1519,7 +1520,7 @@ public final class SemionDialogService {
         return primaryDamage(tower.type(), tower.primaryDamageType());
     }
 
-    static double currentTowerPrimaryDamage(Tower tower, SemionTowerEntity towerEntity) {
+    public static double currentTowerPrimaryDamage(Tower tower, SemionTowerEntity towerEntity) {
         if (tower == null) {
             return 0.0;
         }

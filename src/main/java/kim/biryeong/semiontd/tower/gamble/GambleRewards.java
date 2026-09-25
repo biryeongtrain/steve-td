@@ -61,8 +61,8 @@ public final class GambleRewards {
         return score < 0.0 ? score * failureMultiplier : score;
     }
 
-    public static double settledStatDelta(GambleState state, double delta, boolean bottomKing) {
+    public static double settledStatDelta(GambleState state, double delta, boolean reverseLoss) {
         double insured = insuredDelta(state, delta);
-        return bottomKing && insured < 0.0 ? -insured : insured;
+        return reverseLoss && insured < 0.0 ? -insured : insured;
     }
 }

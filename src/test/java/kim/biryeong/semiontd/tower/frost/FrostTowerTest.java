@@ -187,6 +187,9 @@ class FrostTowerTest {
     @Test
     void bundledStatsAndDescriptionsMatchTheLockedDesign() {
         TowerBalanceConfig config = TowerBalanceConfig.defaultConfig();
+        assertEquals(0.15, config.ability(FrostBalance.CONFIG_ID, "chillPerHit", -1.0));
+        assertEquals(0.15, config.ability(FrostBalance.CONFIG_ID, "refrigerantDamageReduction", -1.0));
+        assertEquals(0.15, config.ability(FrostBalance.CONFIG_ID, "refrigerantAttackSpeedReduction", -1.0));
         assertStats(config, FrostTowers.ICE_VANGUARD, 40, 80.0, 5.0, 20);
         assertStats(config, FrostTowers.STURDY_ICE_VANGUARD, 0, 180.0, 9.0, 20);
         assertStats(config, FrostTowers.DONGTAE, 0, 400.0, 16.0, 20);
@@ -310,7 +313,7 @@ class FrostTowerTest {
     }
 
     @Test
-    void iceboxConsumesRefrigerantImmediatelyAfterFiveCoolingWaveHits() {
+    void iceboxConsumesRefrigerantImmediatelyAfterSevenCoolingWaveHits() {
         FrostHealingTower healer = new FrostHealingTower(
                 FrostTowers.ICEBOX_T1,
                 OWNER,
@@ -319,16 +322,16 @@ class FrostTowerTest {
                 new GridPosition(0, 64, 0)
         );
 
-        for (int hit = 1; hit < 5; hit++) {
+        for (int hit = 1; hit < 7; hit++) {
             healer.onEmissionWaveHit(null);
-            assertEquals(hit * 0.20, healer.chillForTest(), 0.0001);
+            assertEquals(hit * 0.15, healer.chillForTest(), 0.0001);
         }
         healer.onEmissionWaveHit(null);
         assertEquals(0.0, healer.chillForTest(), 0.0001);
     }
 
     @Test
-    void fullOperationGainsThreeStacksEveryFiveHitCycleAndNineAfterFifteenHits() {
+    void fullOperationGainsThreeStacksPerActivationCycleAndCapsEachFamilyAtThree() {
         FrostFullOperationService.clearPlayer(OWNER);
         FrostFullOperationService.PlayerState state = FrostFullOperationService.stateForTest(OWNER);
         state.beginWave();
@@ -340,7 +343,7 @@ class FrostTowerTest {
                     : FrostFullOperationService.TriggerFamily.values()) {
                 assertTrue(state.record(family, tick));
                 assertFalse(state.record(family, tick),
-                        "Multiple towers in one family must count only once in the same five-hit cycle.");
+                        "Multiple towers in one family must count only once in the same activation cycle.");
             }
             assertEquals((cycle + 1) * 3, state.totalActivations());
         }

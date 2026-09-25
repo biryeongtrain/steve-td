@@ -25,6 +25,33 @@ import org.junit.jupiter.api.Test;
 
 final class AugmentEconomyServiceTest {
     @Test
+    void purchaseOptionsRequireAnOwnedPurchaseAugment() {
+        assertFalse(AugmentEconomyService.hasPurchaseOptions(null));
+        assertFalse(AugmentEconomyService.hasPurchaseOptions(player(10)));
+        var purchaseCards = java.util.Set.of("additional_payload", "forecast_offensive", "cash_settlement",
+                "low_pressure_high_yield", "decisive_delivery");
+        for (var card : AugmentCatalog.definitions()) {
+            SemionPlayer player = player(10);
+            var state = player.augments();
+            int round = card.milestoneRounds().stream().min(Integer::compare).orElseThrow();
+            state.initialize(1, AugmentConfig.defaults(), List.of(card.rarity(), card.rarity(), card.rarity()));
+            var ids = new java.util.ArrayList<String>();
+            ids.add(card.id());
+            AugmentCatalog.reserveDefinitions().stream().filter(candidate -> candidate.rarity() == card.rarity()
+                    && !candidate.id().equals(card.id())).limit(2).forEach(candidate -> ids.add(candidate.id()));
+            var offer = state.forceOffer(round, round, 1200, ids);
+            assertTrue(state.draft(round, 0, offer.revision(), offer.draftRevision(), AugmentChoice.none(),
+                    UUID.randomUUID(), 20, candidate -> true).successful());
+            offer = state.currentOffer().orElseThrow();
+            assertFalse(AugmentEconomyService.hasPurchaseOptions(player), "An unconfirmed card is not owned.");
+            assertTrue(state.confirm(round, offer.revision(), offer.draftRevision(), UUID.randomUUID(), 20,
+                    candidate -> true, (candidate, choice) -> true).successful());
+            assertEquals(purchaseCards.contains(AugmentService.shortId(card.id())),
+                    AugmentEconomyService.hasPurchaseOptions(player), card.id());
+        }
+    }
+
+    @Test
     void betaConfiguredPayloadAndCashUseBuffedValuesWithoutChangingCostOrPayingTwice() {
         SemionPlayer player = player(10);
         AugmentEconomyService.beginPrepare(player, 5);

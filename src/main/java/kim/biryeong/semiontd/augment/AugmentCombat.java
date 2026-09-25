@@ -45,7 +45,6 @@ public final class AugmentCombat {
     private static final TowerDataKey<Integer> HEAT = key("heat", Integer.class);
     private static final TowerDataKey<Integer> MASTERY = key("mastery", Integer.class);
     private static final TowerDataKey<Integer> LAST_SETTLED = key("last_settled", Integer.class);
-    private static final TowerDataKey<Boolean> MASTERY_ELIGIBLE = key("mastery_eligible", Boolean.class);
     private static final TowerDataKey<Double> ENEMY_DAMAGE = key("enemy_damage", Double.class);
     private static final TowerDataKey<Integer> BARRAGE = key("barrage", Integer.class);
     private static final TowerDataKey<Integer> FINISHING_HITS = key("finishing_hits", Integer.class);
@@ -126,7 +125,7 @@ public final class AugmentCombat {
                 && tower.slotWeight() > 0 && tower.canBeSold()
                 && ProductionTowerCatalog.entry(tower.type()).isPresent()
                 && !(tower instanceof HeroTower) && !(tower instanceof WarlockTower)
-                && !(tower instanceof QueenCardTower) && !(tower instanceof InsectUnitTower)
+                && !(tower instanceof QueenCardTower)
                 && !(tower instanceof IllusionRuntimeTower)
                 && !EndTowers.isBaseEndTower(tower.type()) && !EndTowers.isTransferableTower(tower.type())
                 && !MageTowers.isCore(tower.type()) && !DemonLordTowers.isDemonLordTower(tower.type());
@@ -136,8 +135,24 @@ public final class AugmentCombat {
         return isNormalPermanent(tower) && tower.type().damage() > 0.0 && tower.type().range() > 0.0;
     }
 
+    /** Designations also support permanent warlock/end bodies, without widening formation effects. */
+    private static boolean isDesignatableType(Tower tower) {
+        return isNormalPermanentType(tower) || tower != null && !tower.isTemporaryCopy()
+                && !tower.invulnerable() && tower.canBeSold() && tower.slotWeight() > 0
+                && ProductionTowerCatalog.entry(tower.type()).isPresent()
+                && (tower instanceof WarlockTower || tower instanceof kim.biryeong.semiontd.tower.end.EndTower);
+    }
+
+    public static boolean isDesignatable(Tower tower) {
+        return isDesignatableType(tower) && tower.attachedLane() != null && tower.attachedLane().towers().contains(tower);
+    }
+
+    public static boolean isDesignatableAttacker(Tower tower) {
+        return isDesignatable(tower) && tower.type().damage() > 0.0 && tower.type().range() > 0.0;
+    }
+
     public static boolean isOverheatEligible(Tower tower) {
-        return isNormalPermanent(tower) && !(tower instanceof ArmyTower army && army.ranks())
+        return isDesignatable(tower) && !(tower instanceof ArmyTower army && army.ranks())
                 && !(tower instanceof PlantMineTower)
                 && !(tower instanceof DeveloperTower developer && developer.hasBug(DeveloperBug.PRICE_TAG))
                 && heatStacks(tower) < integer(tower, "overheat_core", "maxStacks", 5);
@@ -165,8 +180,7 @@ public final class AugmentCombat {
     }
 
     public static boolean isMasteryEligible(Tower tower) {
-        return isNormalAttacker(tower) && tower.health() > 0.0
-                && tower.getDataOrDefault(MASTERY_ELIGIBLE, false);
+        return isDesignatableAttacker(tower) && tower.health() > 0.0;
     }
 
     public static int triangleEligibleCount(PlayerLane lane) {
@@ -228,6 +242,8 @@ public final class AugmentCombat {
     }
 
     public static void settleWave(PlayerLane lane, int round) {
+        var demonLord = kim.biryeong.semiontd.tower.demonlord.DemonLordStates.get(lane.ownerPlayer());
+        if (demonLord != null) demonLord.settleTargetedAugments(round);
         for (Tower tower : lane.towers()) {
             if (tower.getDataOrDefault(LAST_SETTLED, 0) >= round || wave(tower).round() != round) {
                 continue;
@@ -236,7 +252,6 @@ public final class AugmentCombat {
             boolean survived = tower.health() > 0.0;
             boolean qualified = survived && wave(tower).openingHealth() > 0.0
                     && tower.getDataOrDefault(ENEMY_DAMAGE, 0.0) + 1.0e-9 >= wave(tower).openingHealth() * threshold;
-            tower.setData(MASTERY_ELIGIBLE, qualified);
             int previousMastery = masteryStacks(tower);
             if (selected(tower, "battlefield_mastery") && qualified) {
                 double ratio = tower.health() / Math.max(1.0, tower.currentMaxHealth());
@@ -278,9 +293,9 @@ public final class AugmentCombat {
 
     public static double maxHealthBonus(Tower tower) {
         double bonus = kim.biryeong.semiontd.tower.undead.UndeadAugments.maxHealthBonus(tower);
-        if (tower.augmentSnapshot().selections().isEmpty() || !isNormalPermanentType(tower)) return bonus;
+        if (tower.augmentSnapshot().selections().isEmpty() || !isDesignatableType(tower)) return bonus;
         if (selected(tower, "one_man_show")) bonus += parameter(tower, "one_man_show", "maxHealthBonus", .30);
-        if (tower.augmentSnapshot().has("wartime_economy")) bonus += parameter(tower, "wartime_economy", "maxHealthBonus", .20);
+        if (isNormalPermanentType(tower) && tower.augmentSnapshot().has("wartime_economy")) bonus += parameter(tower, "wartime_economy", "maxHealthBonus", .20);
         if (selected(tower, "battlefield_mastery")) bonus += masteryStacks(tower) * parameter(tower, "battlefield_mastery", "bonusPerStack", .04);
         return bonus;
     }
@@ -291,7 +306,7 @@ public final class AugmentCombat {
                 && tower.augmentSnapshot().has("job_engineer_towers_p")) {
             jobBonus += parameter(tower, "job_engineer_towers_p", "damageBonus", 1.0);
         }
-        if (tower.augmentSnapshot().selections().isEmpty() || !isNormalPermanent(tower)) return jobBonus;
+        if (tower.augmentSnapshot().selections().isEmpty() || !isDesignatable(tower)) return jobBonus;
         AugmentSnapshot snapshot = tower.augmentSnapshot();
         double bonus = jobBonus - heatStacks(tower) * parameter(tower, "overheat_core", "penaltyPerStack", .06);
         for (int tier = 1; tier <= 3; tier++) {
@@ -305,8 +320,8 @@ public final class AugmentCombat {
         if (wave.twin()) bonus += parameter(tower, "twin_squadron", "damageBonus", .10);
         if (wave.independent()) bonus += parameter(tower, "independent_position", "damageBonus", .12);
         if (wave.overheated()) bonus += parameter(tower, "overheat_core", "damageBonus", .40);
-        if (engagementActive(tower, entity, "QUICK")) bonus += parameter(tower, "engagement_plan", "quickDamageBonus", .18);
-        if (engagementActive(tower, entity, "LONG")) bonus += parameter(tower, "engagement_plan", "longDamageBonus", .10);
+        if (isNormalPermanent(tower) && engagementActive(tower, entity, "QUICK")) bonus += parameter(tower, "engagement_plan", "quickDamageBonus", .18);
+        if (isNormalPermanent(tower) && engagementActive(tower, entity, "LONG")) bonus += parameter(tower, "engagement_plan", "longDamageBonus", .10);
         if (rolesActive(tower)) {
             bonus += isVanguard(tower)
                     ? -parameter(tower, FRONTLINE, "vanguardDamagePenalty", .25)
@@ -315,7 +330,7 @@ public final class AugmentCombat {
         if (selected(tower, "battlefield_mastery")) bonus += masteryStacks(tower) * parameter(tower, "battlefield_mastery", "bonusPerStack", .04);
         if (snapshot.has("one_man_show")) bonus += selected(tower, "one_man_show")
                 ? parameter(tower, "one_man_show", "damageBonus", 1.0) : -parameter(tower, "one_man_show", "otherDamagePenalty", .20);
-        if (snapshot.has("wartime_economy")) bonus += parameter(tower, "wartime_economy", "damageBonus", .35);
+        if (isNormalPermanent(tower) && snapshot.has("wartime_economy")) bonus += parameter(tower, "wartime_economy", "damageBonus", .35);
         return bonus;
     }
 
@@ -389,7 +404,7 @@ public final class AugmentCombat {
     }
 
     public static double incomingDamage(Tower tower, SemionTowerEntity entity, DamageSource source, double original, double reduced) {
-        if (tower.augmentSnapshot().selections().isEmpty() || !isNormalPermanent(tower)) return reduced;
+        if (tower.augmentSnapshot().selections().isEmpty() || !isDesignatable(tower)) return reduced;
         double reduction = 0.0;
         for (int tier = 1; tier <= 3; tier++) {
             String id = "tactical_designation_" + tier;
@@ -400,10 +415,10 @@ public final class AugmentCombat {
         Wave wave = wave(tower);
         if (wave.triangle()) reduction += parameter(tower, "triangle_formation", "damageReduction", .08);
         if (wave.independent()) reduction += parameter(tower, "independent_position", "damageReduction", .08);
-        if (engagementActive(tower, entity, "LONG")) reduction += parameter(tower, "engagement_plan", "longDamageReduction", .10);
+        if (isNormalPermanent(tower) && engagementActive(tower, entity, "LONG")) reduction += parameter(tower, "engagement_plan", "longDamageReduction", .10);
         if (rolesActive(tower) && isVanguard(tower)) reduction += parameter(tower, FRONTLINE, "vanguardDamageReduction", .30);
         double result = reduced * (1.0 - Math.min(.60, reduction));
-        if (wave.round() > 0 && tower.augmentSnapshot().has("biased_armor")
+        if (isNormalPermanent(tower) && wave.round() > 0 && tower.augmentSnapshot().has("biased_armor")
                 && source.getEntity() instanceof SemionMonsterEntity monster && source.getDirectEntity() == monster
                 && monster.runtimeMonster() != null && monster.runtimeMonster().damageType() != DamageType.TRUE) {
             boolean selectedType = mode(tower, "biased_armor", monster.runtimeMonster().damageType().name());
@@ -514,10 +529,12 @@ public final class AugmentCombat {
         lines.addAll(kim.biryeong.semiontd.tower.undead.UndeadAugments.detailLines(tower));
         lines.addAll(kim.biryeong.semiontd.tower.legion.LegionAugments.detailLines(tower));
         lines.addAll(kim.biryeong.semiontd.tower.villager.VillagerAdvAugments.runtimeDetails(tower));
-        if (!isNormalPermanent(tower)) return List.copyOf(lines);
+        if (!isDesignatable(tower)) return List.copyOf(lines);
         if (heatStacks(tower) > 0) lines.add("열화 " + heatStacks(tower) + "/5");
-        if (selected(tower, "battlefield_mastery")) lines.add("숙련 " + masteryStacks(tower) + "/4 · 조건 피해 "
-                + Math.round(tower.getDataOrDefault(ENEMY_DAMAGE, 0.0)) + "/" + Math.round(wave(tower).openingHealth() * .40));
+        if (selected(tower, "battlefield_mastery")) lines.add("숙련 " + masteryStacks(tower) + "/"
+                + integer(tower, "battlefield_mastery", "maxStacks", 4) + " · 조건 피해 "
+                + Math.round(tower.getDataOrDefault(ENEMY_DAMAGE, 0.0)) + "/"
+                + Math.round(wave(tower).openingHealth() * parameter(tower, "battlefield_mastery", "damageThreshold", .40)));
         if (tower.augmentSnapshot().has("winning_barrage")) lines.add("칼날비 " + tower.getDataOrDefault(BARRAGE, 0) + "/3");
         if (tower.getDataOrDefault(FINISHING_HITS, 0) > 0) lines.add("마무리 사격 " + tower.getDataOrDefault(FINISHING_HITS, 0) + "회");
         if (wave(tower).triangle()) lines.add("삼각진 활성");
@@ -527,7 +544,7 @@ public final class AugmentCombat {
     }
 
     public static String nameplateSuffix(Tower tower) {
-        if (tower == null || tower.augmentSnapshot().selections().isEmpty() || !isNormalPermanent(tower)) return "";
+        if (tower == null || tower.augmentSnapshot().selections().isEmpty() || !isDesignatable(tower)) return "";
         List<String> counters = new ArrayList<>();
         if (selected(tower, "battlefield_mastery")) counters.add("숙련 " + masteryStacks(tower) + "/"
                 + integer(tower, "battlefield_mastery", "maxStacks", 4) + " · 조건 피해 "
