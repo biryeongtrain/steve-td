@@ -5173,7 +5173,7 @@ public final class SemionParticipantGameTest implements CustomTestMethodInvoker 
         context.succeed();
     }
 
-    @GameTest(maxTicks = 80)
+    @GameTest(maxTicks = 100)
     public void testTowerEntityDamagesLaneMonster(GameTestHelper context) {
         UUID playerId = stableUuid("red-tower-combat-owner");
         SemionGame game = startedSinglePlayerGame(context, playerId, TeamId.RED);

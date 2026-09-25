@@ -127,6 +127,24 @@ public abstract class Tower {
         onStateChanged(lane);
     }
 
+    public record BalanceSnapshot(TowerType type, double maxHealth, double health, double traitMaxHealthBonus) {
+    }
+
+    public final BalanceSnapshot captureBalanceState() {
+        return new BalanceSnapshot(type, maxHealth, health, traitMaxHealthBonus);
+    }
+
+    /** Restores a failed stat refresh without replaying family refresh, growth, or reward hooks. */
+    public final void restoreBalanceState(BalanceSnapshot snapshot, PlayerLane lane) {
+        type = snapshot.type();
+        maxHealth = snapshot.maxHealth();
+        traitMaxHealthBonus = snapshot.traitMaxHealthBonus();
+        syncHealth(snapshot.health());
+        if (this instanceof EntityBackedTower entityBacked) {
+            entityBacked.runtimeEntity(lane).ifPresent(entity -> entity.syncTowerState(this));
+        }
+    }
+
     protected void refreshMaxHealthAfterTypeChange(PlayerLane lane) {
         this.maxHealth = type.maxHealth();
     }
@@ -389,6 +407,27 @@ public abstract class Tower {
 
     public boolean hasData(TowerDataKey<?> key) {
         return key != null && data.containsKey(key);
+    }
+
+    public record DiagnosticState(Map<String, Object> values, List<String> omittedKeys) {}
+
+    /** Only detached scalar state, never live entities, callbacks or arbitrary object graphs. */
+    public final DiagnosticState diagnosticState() {
+        Map<String, Object> values = new java.util.TreeMap<>();
+        List<String> omitted = new java.util.ArrayList<>();
+        data.forEach((key, value) -> {
+            if (value instanceof String || value instanceof Boolean || value instanceof Integer || value instanceof Long
+                    || value instanceof Double number && Double.isFinite(number)
+                    || value instanceof Float number && Float.isFinite(number)) {
+                values.put(key.id().toString(), value);
+            } else if (value instanceof UUID || value instanceof net.minecraft.resources.ResourceLocation || value instanceof Enum<?>) {
+                values.put(key.id().toString(), value.toString());
+            } else {
+                omitted.add(key.id().toString());
+            }
+        });
+        omitted.sort(String::compareTo);
+        return new DiagnosticState(Map.copyOf(values), List.copyOf(omitted));
     }
 
     public <T> Optional<T> getData(TowerDataKey<T> key) {

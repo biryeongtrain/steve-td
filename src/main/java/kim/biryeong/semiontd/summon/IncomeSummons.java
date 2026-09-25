@@ -11,13 +11,17 @@ public final class IncomeSummons {
     }
 
     public static void reloadBuiltIns(SummonConfig config) {
+        SummonRegistry.reload(build(config));
+    }
+
+    public static List<SummonMonsterType> build(SummonConfig config) {
         SummonConfig safeConfig = config == null ? SummonConfig.defaultConfig() : config;
         ArrayList<SummonMonsterType> summons = new ArrayList<>();
         safeConfig.summons().values().stream()
                 .filter(SummonConfig.SummonDefinition::enabled)
                 .sorted(Comparator.comparingInt(definition -> definition.tier().ordinal()))
                 .forEach(definition -> summons.add(create(definition)));
-        SummonRegistry.reload(summons);
+        return List.copyOf(summons);
     }
 
     private static SummonMonsterType create(SummonConfig.SummonDefinition definition) {

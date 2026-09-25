@@ -11,6 +11,8 @@ import java.util.UUID;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.catalog.ProductionTowerDefinitions;
+import kim.biryeong.semiontd.config.TowerBalanceConfig;
+import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 
 public final class ProductionTowerCatalog {
     private static final Map<String, CatalogEntry> ENTRIES = new LinkedHashMap<>();
@@ -34,6 +36,40 @@ public final class ProductionTowerCatalog {
     public static synchronized void clear() {
         ENTRIES.clear();
         UPGRADES.clear();
+    }
+
+    public record Snapshot(Map<String, CatalogEntry> entries, Map<String, List<TowerUpgradeOption>> upgrades) {
+        public Snapshot {
+            entries = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(entries));
+            Map<String, List<TowerUpgradeOption>> copy = new LinkedHashMap<>();
+            upgrades.forEach((id, options) -> copy.put(id, List.copyOf(options)));
+            upgrades = java.util.Collections.unmodifiableMap(copy);
+        }
+    }
+
+    public static synchronized Snapshot snapshot() {
+        return new Snapshot(ENTRIES, UPGRADES);
+    }
+
+    /** Builds every replacement before touching the live registry or runtime configuration. */
+    public static synchronized Snapshot stageBalance(TowerBalanceConfig config) {
+        Map<String, CatalogEntry> entries = new LinkedHashMap<>();
+        for (CatalogEntry entry : ENTRIES.values()) {
+            TowerType type = TowerBalanceRuntime.resolve(entry.type(), config);
+            entries.put(type.id(), new CatalogEntry(type, entry.factory(), entry.tier(), entry.availability(), entry.augmentId()));
+        }
+        Map<String, List<TowerUpgradeOption>> upgrades = new LinkedHashMap<>();
+        UPGRADES.forEach((id, options) -> upgrades.put(id, options.stream().map(option ->
+                new TowerUpgradeOption(option.id(), option.displayName(), entries.get(option.targetType().id()).type(),
+                        config.upgradeCost(id, option.id(), option.mineralCost()))).toList()));
+        return new Snapshot(entries, upgrades);
+    }
+
+    public static synchronized void install(Snapshot snapshot) {
+        ENTRIES.clear();
+        ENTRIES.putAll(snapshot.entries());
+        UPGRADES.clear();
+        snapshot.upgrades().forEach((id, options) -> UPGRADES.put(id, new ArrayList<>(options)));
     }
 
     public static synchronized CatalogEntry registerStarter(TowerType type) {

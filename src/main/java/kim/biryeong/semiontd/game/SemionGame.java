@@ -138,6 +138,11 @@ public final class SemionGame {
     private boolean emeraldIncomeBoostAnnounced;
     private boolean lateJoinDisabledAnnounced;
     private String catalogVersion;
+    private String startBalanceRevision;
+    private final List<BalancePatchEvent> balancePatchEvents = new ArrayList<>();
+    private Runnable beforeBalanceMatch = () -> {};
+    private Runnable beforeBalancePrepare = () -> {};
+    private java.util.function.Supplier<String> balanceRevision = () -> null;
     private RoundWaveConfig selectedRoundWave;
     private AugmentConfig augmentConfig = AugmentConfig.defaults();
     private final AugmentService augmentService = new AugmentService();
@@ -244,6 +249,10 @@ public final class SemionGame {
 
     public long currentTick() {
         return tickCounter;
+    }
+
+    public MatchId matchId() {
+        return matchId;
     }
 
     public void extendAugmentPreparation(long deadlineTickExclusive) {
@@ -462,6 +471,47 @@ public final class SemionGame {
                 }
             }
         }
+    }
+
+    public void configureBalanceHooks(Runnable beforeMatch, Runnable beforePrepare,
+                                      java.util.function.Supplier<String> revision) {
+        beforeBalanceMatch = beforeMatch;
+        beforeBalancePrepare = beforePrepare;
+        balanceRevision = revision;
+    }
+
+    public void applyBalanceBeforeMatch(EconomyConfig economy, WaveConfig waves,
+                                       MonsterScalingConfig scaling, AugmentConfig augments) {
+        if (rosterLocked) {
+            throw new IllegalStateException("Cannot replace balance snapshots in a started match");
+        }
+        economyConfig = economy;
+        waveConfig = waves;
+        monsterScalingConfig = scaling;
+        economyService.configure(economy);
+        configureAugments(augments);
+        refreshSummonShop();
+    }
+
+    public void applyNonBalanceConfigs(LeaderTargetingConfig targeting, IncomeLaneRoutingConfig routing) {
+        leaderTargetingConfig = targeting;
+        incomeLaneRoutingConfig = routing;
+        incomeLaneRoutingPolicy = new IncomeLaneRoutingPolicy(routing, random);
+    }
+
+    public void recordBalancePatch(String requestId, String previousRevision, String effectiveRevision, String mode) {
+        if (rosterLocked && phase != RoundPhase.ENDED) {
+            balancePatchEvents.add(new BalancePatchEvent(requestId, previousRevision, effectiveRevision,
+                    currentRound, tickCounter, mode));
+        }
+    }
+
+    public List<BalancePatchEvent> balancePatchEvents() {
+        return List.copyOf(balancePatchEvents);
+    }
+
+    public String startBalanceRevision() {
+        return startBalanceRevision;
     }
 
     public void refreshSummonShop() {
@@ -854,7 +904,9 @@ public final class SemionGame {
                 currentRound,
                 matchMode,
                 catalogVersion,
-                augmentsEnabled() ? augmentConfig.version() : null
+                augmentsEnabled() ? augmentConfig.version() : null,
+                startBalanceRevision,
+                balancePatchEvents
         ));
     }
 
@@ -874,6 +926,10 @@ public final class SemionGame {
         if (!canConfigureRoster() || plan.activeParticipants().isEmpty()) {
             return false;
         }
+
+        beforeBalanceMatch.run();
+        startBalanceRevision = balanceRevision.get();
+        balancePatchEvents.clear();
 
         matchMode = plan.mode();
         if (!augmentsEnabled() || !augmentConfig.publicPoolEnabled()) {
@@ -1502,6 +1558,7 @@ public final class SemionGame {
     }
 
     private void startPreparePhase(MinecraftServer server) {
+        beforeBalancePrepare.run();
         phase = RoundPhase.PREPARE_AND_SUMMON;
         phaseTicks = 0;
         augmentSelectionDurationTicks = 0;

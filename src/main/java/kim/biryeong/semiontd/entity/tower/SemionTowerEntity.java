@@ -767,6 +767,10 @@ public final class SemionTowerEntity extends PathfinderMob implements AnimatedEn
         return timedEffects.magnitude(type);
     }
 
+    public java.util.List<TimedEffectSet.Snapshot> effectSnapshot() {
+        return timedEffects.snapshot();
+    }
+
     public double activeTimedEffectMagnitude(TimedEffectType type) {
         return activeEffectMagnitude(type);
     }

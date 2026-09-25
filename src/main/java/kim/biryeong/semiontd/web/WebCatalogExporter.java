@@ -51,7 +51,7 @@ public final class WebCatalogExporter {
         return writeDocument(configDir, document);
     }
 
-    private static CatalogDocument writeDocument(Path configDir, CatalogDocument document) throws IOException {
+    public static synchronized CatalogDocument writeDocument(Path configDir, CatalogDocument document) throws IOException {
         if (configDir != null) {
             Path catalogDir = configDir.resolve("web_catalog");
             Path versionsDir = catalogDir.resolve("versions");
@@ -64,6 +64,10 @@ public final class WebCatalogExporter {
         }
         currentVersion = document.versionHash();
         return document;
+    }
+
+    public static void useSnapshot(CatalogDocument document) {
+        currentVersion = document.versionHash();
     }
 
     public static synchronized CatalogDocument snapshot(long generatedAtEpochMillis) {

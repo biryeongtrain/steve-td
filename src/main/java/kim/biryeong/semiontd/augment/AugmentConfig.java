@@ -213,15 +213,20 @@ public record AugmentConfig(boolean enabled, boolean publicPoolEnabled,
     }
 
     private static void validateParameter(String key, Double value) {
-        if (value == null || !Double.isFinite(value) || value < 0 || value > 1_000_000) {
+        ParameterLimits limits = parameterLimits(key);
+        if (value == null || !Double.isFinite(value) || value < limits.min() || value > limits.max()
+                || limits.integer() && value != Math.rint(value)) {
             throw new IllegalArgumentException("Invalid augment parameter: " + key);
         }
+    }
+
+    /** Shared by config validation and the balance editor; does not authorize unknown keys. */
+    public static ParameterLimits parameterLimits(String key) {
         boolean fraction = Set.of("damageReduction", "longDamageReduction", "vanguardDamageReduction", "vanguardDamagePenalty",
                 "otherDamagePenalty", "damageThreshold", "healthThreshold", "redirectRatio", "payoutMultiplier", "bodyMultiplier",
                 "echoRatio", "bonusRatio", "healRatio", "repeatDamageRatio", "inheritRatio", "copyRatio", "childRatio",
                 "statRatio", "healthRatio", "healthLossRatio", "healthCapRatio", "reviveHealthRatio", "intervalRatio",
-                "refundRatio", "transferRatio", "decayReduction", "waitReduction", "slow", "chill").contains(key);
-        if (fraction && value > 1) {throw new IllegalArgumentException(key + " must be in [0,1].");}
+                "refundRatio", "transferRatio", "decayReduction", "waitReduction", "slow", "chill", "statReversalChance").contains(key);
         boolean positiveInteger = key.endsWith("Ticks") || Set.of("maxStacks", "charges", "ticketCount", "repaymentCount",
                 "targetCount", "maxCharges", "hatchWaves", "maxShells", "shellTargets", "maxHeals", "attacksPerCharge", "mineTargets", "scoreMultiplier",
                 "attacks", "attacksRequired", "centers", "chainTargets", "chestsPerStack", "companions", "copiesPerSummon",
@@ -232,16 +237,13 @@ public record AugmentConfig(boolean enabled, boolean publicPoolEnabled,
                 "normalBeats", "openingAttacks", "openingWater", "requiredKinds", "requiredLeaderKinds", "requiredLinks",
                 "revivalCount", "roundCap", "roundReduction", "shots", "spawnCount", "stacks", "survivorCap",
                 "targets", "targetsPerRelay", "tickets", "transfersPerCharge", "waterPerCharge", "yardRadius", "gaugePerVolley").contains(key);
-        if (positiveInteger && (value < 1 || value != Math.rint(value))) {
-            throw new IllegalArgumentException(key + " must be a positive integer.");
-        }
-        if (key.equals("emeraldPerShell") && value < 1) {throw new IllegalArgumentException("emeraldPerShell must be positive.");}
-        if (Set.of("echoRatio", "bodyMultiplier", "healthMultiplier", "attackMultiplier", "costMultiplier", "damagePerHitCap").contains(key) && value <= 0) {
-            throw new IllegalArgumentException(key + " must be positive.");
-        }
-        if (Set.of("amount", "ticketValue", "advanceCap", "incomeBonus", "matchIncomeCap", "roundBonusCap", "neighborCount").contains(key)
-                && value != Math.rint(value)) {throw new IllegalArgumentException(key + " must be an integer.");}
+        boolean positive = Set.of("echoRatio", "bodyMultiplier", "healthMultiplier", "attackMultiplier", "costMultiplier", "damagePerHitCap").contains(key);
+        boolean integer = positiveInteger || Set.of("amount", "ticketValue", "advanceCap", "incomeBonus", "matchIncomeCap", "roundBonusCap", "neighborCount").contains(key);
+        double min = positiveInteger || key.equals("emeraldPerShell") ? 1 : positive ? Double.MIN_VALUE : 0;
+        return new ParameterLimits(min, fraction ? 1 : 1_000_000, integer);
     }
+
+    public record ParameterLimits(double min, double max, boolean integer) {}
 
     private static Map<String, Map<String, Double>> defaultParameters() {
         Map<String, Map<String, Double>> cards = new TreeMap<>();

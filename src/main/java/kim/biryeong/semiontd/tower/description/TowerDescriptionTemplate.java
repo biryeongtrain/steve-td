@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
+import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.tower.TowerType;
 
 public final class TowerDescriptionTemplate {
@@ -33,45 +34,49 @@ public final class TowerDescriptionTemplate {
 
     public static TowerDescriptionFactory of(List<String> template) {
         List<String> lines = template == null ? List.of() : List.copyOf(template);
-        return type -> render(lines, type);
+        return (type, config) -> render(lines, type, config);
     }
 
     public static List<String> render(List<String> template, TowerType type) {
+        return render(template, type, TowerBalanceRuntime.current());
+    }
+
+    public static List<String> render(List<String> template, TowerType type, TowerBalanceConfig config) {
         if (template == null || template.isEmpty()) {
             return List.of();
         }
         List<String> rendered = new ArrayList<>(template.size());
         for (String line : template) {
-            rendered.add(renderLine(line, type));
+            rendered.add(renderLine(line, type, config));
         }
         return List.copyOf(rendered);
     }
 
-    private static String renderLine(String line, TowerType type) {
+    private static String renderLine(String line, TowerType type, TowerBalanceConfig config) {
         if (line == null || line.isEmpty()) {
             return "";
         }
         Matcher matcher = PLACEHOLDER.matcher(line);
         StringBuilder rendered = new StringBuilder();
         while (matcher.find()) {
-            matcher.appendReplacement(rendered, Matcher.quoteReplacement(renderPlaceholder(matcher.group(1), type)));
+            matcher.appendReplacement(rendered, Matcher.quoteReplacement(renderPlaceholder(matcher.group(1), type, config)));
         }
         matcher.appendTail(rendered);
         return rendered.toString();
     }
 
-    private static String renderPlaceholder(String placeholder, TowerType type) {
+    private static String renderPlaceholder(String placeholder, TowerType type, TowerBalanceConfig config) {
         int formatSeparator = placeholder.lastIndexOf(':');
         String expression = formatSeparator < 0 ? placeholder.trim() : placeholder.substring(0, formatSeparator).trim();
         String format = formatSeparator < 0 ? "number" : placeholder.substring(formatSeparator + 1).trim();
         try {
-            return format(evaluate(expression, type), format);
+            return format(evaluate(expression, type, config), format);
         } catch (IllegalArgumentException exception) {
             return "{" + placeholder + "}";
         }
     }
 
-    private static double evaluate(String expression, TowerType type) {
+    private static double evaluate(String expression, TowerType type, TowerBalanceConfig config) {
         if (expression.isBlank()) {
             throw new IllegalArgumentException("Blank tower description expression.");
         }
@@ -83,7 +88,7 @@ public final class TowerDescriptionTemplate {
                 continue;
             }
             String token = expression.substring(tokenStart, index).trim();
-            double value = value(token, type);
+            double value = value(token, type, config);
             if (operator == '*') {
                 result *= value;
             } else if (operator == '/') {
@@ -99,12 +104,12 @@ public final class TowerDescriptionTemplate {
         return result;
     }
 
-    private static double value(String token, TowerType type) {
+    private static double value(String token, TowerType type, TowerBalanceConfig config) {
         if (token.startsWith("ability.")) {
             String abilityKey = token.substring("ability.".length());
             int idSeparator = abilityKey.lastIndexOf('.');
             if (idSeparator > 0 && idSeparator < abilityKey.length() - 1) {
-                double configured = TowerBalanceRuntime.ability(
+                double configured = config.ability(
                         abilityKey.substring(0, idSeparator),
                         abilityKey.substring(idSeparator + 1),
                         Double.NaN
@@ -113,7 +118,7 @@ public final class TowerDescriptionTemplate {
                     return configured;
                 }
             }
-            return TowerBalanceRuntime.ability(type.id(), abilityKey);
+            return TowerBalanceRuntime.ability(config, type.id(), abilityKey);
         }
         if (token.startsWith("stat.")) {
             return stat(type, token.substring("stat.".length()));

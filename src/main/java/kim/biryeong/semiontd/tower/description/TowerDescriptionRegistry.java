@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.config.TowerBalanceConfig;
+import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 
 public final class TowerDescriptionRegistry {
     private static final Map<String, TowerDescriptionFactory> FACTORIES = new LinkedHashMap<>();
@@ -24,10 +26,14 @@ public final class TowerDescriptionRegistry {
     }
 
     public static Optional<List<String>> describe(TowerType type) {
+        return describe(type, TowerBalanceRuntime.current());
+    }
+
+    public static Optional<List<String>> describe(TowerType type, TowerBalanceConfig config) {
         if (type == null) {
             return Optional.empty();
         }
         TowerDescriptionFactory factory = FACTORIES.get(type.id());
-        return factory == null ? Optional.empty() : Optional.of(factory.build(type));
+        return factory == null ? Optional.empty() : Optional.of(factory.build(type, config));
     }
 }
