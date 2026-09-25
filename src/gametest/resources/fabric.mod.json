@@ -61,7 +61,8 @@
       "kim.biryeong.semiontd.tower.augment.OffensiveAugmentTowerGameTest",
       "kim.biryeong.semiontd.command.SemionCommandsPetVfxGameTest",
       "kim.biryeong.semiontd.entity.tower.vfx.TowerVfxGameTest",
-      "kim.biryeong.semiontd.game.RatingProfileCacheGameTest"
+      "kim.biryeong.semiontd.game.RatingProfileCacheGameTest",
+      "kim.biryeong.semiontd.cosmetic.NekopenHatGameTest"
     ]
   }
 }

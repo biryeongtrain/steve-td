@@ -1904,6 +1904,21 @@
       }
     },
     {
+      "id": "nekopen_hat",
+      "price": 100,
+      "slot": "head",
+      "item": {
+        "id": "semion-td:nekopen_hat",
+        "components": {
+          "minecraft:item_name": {
+            "text": "네코펭 모자",
+            "color": "gold",
+            "italic": false
+          }
+        }
+      }
+    },
+    {
       "id": "leiheng_blade",
       "price": 150,
       "slot": "offhand",
