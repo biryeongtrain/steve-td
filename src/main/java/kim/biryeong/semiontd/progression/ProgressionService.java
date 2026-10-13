@@ -10,7 +10,7 @@ import kim.biryeong.semiontd.config.ProgressionConfig;
 import kim.biryeong.semiontd.game.MatchResult;
 import kim.biryeong.semiontd.persistence.AppliedMatchRepository;
 import kim.biryeong.semiontd.persistence.FileAppliedMatchRepository;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 
 public final class ProgressionService {
@@ -56,7 +56,7 @@ public final class ProgressionService {
         return store.getOrCreateProfile(playerId, playerName);
     }
 
-    public SemionPlayerProfile saveSelectedJob(MinecraftServer server, UUID playerId, String playerName, ResourceLocation jobId) {
+    public SemionPlayerProfile saveSelectedJob(MinecraftServer server, UUID playerId, String playerName, Identifier jobId) {
         SemionPlayerProfile updated = store.getOrCreateProfile(playerId, playerName)
                 .updateSelectedJob(playerName, jobId);
         return store.putProfile(playerId, updated);
@@ -95,6 +95,14 @@ public final class ProgressionService {
             return Optional.empty();
         }
         return store.putProfilePersisted(playerId, updated) ? Optional.of(updated) : Optional.empty();
+    }
+
+    public synchronized ProgressionCurrencyChange changeCosmeticCurrency(
+            Map<UUID, String> targets,
+            long amount,
+            ProgressionCurrencyChange.Operation operation
+    ) {
+        return store.changeCosmeticCurrency(targets, amount, operation);
     }
 
     public synchronized CosmeticUpdateResult purchaseCosmetic(UUID playerId, String playerName, String cosmeticId, long price) {
@@ -157,6 +165,14 @@ public final class ProgressionService {
         }
         SemionPlayerProfile current = store.getOrCreateProfile(playerId, playerName);
         SemionPlayerProfile updated = current.updateBlueprints(playerName, designs);
+        return updated.equals(current) || store.putProfilePersisted(playerId, updated);
+    }
+
+    public synchronized boolean saveMagicSchoolSkin(UUID playerId, String playerName, String kind,
+            HeroCompanionSkinPreference skin) {
+        if (playerId == null || kind == null || kind.isBlank() || skin != null && !skin.valid()) return false;
+        SemionPlayerProfile current = store.getOrCreateProfile(playerId, playerName);
+        SemionPlayerProfile updated = current.updateMagicSchoolSkin(playerName, kind, skin);
         return updated.equals(current) || store.putProfilePersisted(playerId, updated);
     }
 

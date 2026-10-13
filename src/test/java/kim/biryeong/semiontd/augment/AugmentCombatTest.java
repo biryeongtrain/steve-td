@@ -21,7 +21,7 @@ import kim.biryeong.semiontd.tower.TowerType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeAll;
@@ -43,13 +43,13 @@ class AugmentCombatTest {
     }
 
     @Test
-    void quickEngagementUsesTwentyPercentAndEndsWithTheWave() {
+    void quickEngagementUsesThirtyFivePercentAndEndsWithTheWave() {
         PlayerLane lane = lane();
         Tower tower = add(lane, "quick_engagement", 0);
         lane.assignAugmentSnapshot(snapshot("engagement_plan_quick", AugmentChoice.none()));
         assertEquals(0, AugmentCombat.damageBonus(tower, null));
         startCombat(lane, 5);
-        assertEquals(.20, AugmentCombat.damageBonus(tower, null), 1e-9);
+        assertEquals(.35, AugmentCombat.damageBonus(tower, null), 1e-9);
         AugmentCombat.settleWave(lane, 5);
         assertEquals(0, AugmentCombat.damageBonus(tower, null));
     }
@@ -117,8 +117,8 @@ class AugmentCombatTest {
             AugmentCombat.settleWave(lane, 5);
             assertEquals(1, AugmentCombat.heatStacks(tower), type.id());
             assertEquals(1, AugmentCombat.masteryStacks(tower), type.id());
-            assertEquals(.028, AugmentCombat.damageBonus(tower, null), 1e-9,
-                    "One mastery stack +4% and one heat penalty -1.2% must settle once");
+            assertEquals(.018, AugmentCombat.damageBonus(tower, null), 1e-9,
+                    "One mastery stack +3% and one heat penalty -1.2% must settle once");
             Tower upgraded = ProductionTowerCatalog.entry(type).orElseThrow().create(OWNER, TeamId.RED, 1, tower.originalPosition());
             upgraded.copyFrom(tower, 0);
             lane.replaceTower(tower, upgraded);
@@ -360,7 +360,7 @@ class AugmentCombatTest {
         assertEquals(upgraded.type().id(), nextStart.towerTypeId());
         assertEquals(1, nextStart.state().masteryStacks());
         assertEquals(1, nextStart.state().heatStacks());
-        assertEquals(120.0, nextStart.state().startingMaxHealth(), 1e-9);
+        assertEquals(115.0, nextStart.state().startingMaxHealth(), 1e-9);
 
         assertTrue(lane.removeTower(upgraded));
         assertFalse(lane.removeTower(upgraded));
@@ -435,7 +435,7 @@ class AugmentCombatTest {
 
     private static void setRecordedEnemyDamage(Tower tower, double amount) {
         // Actual damage attribution is covered by GameTest; these tests exercise ledger transitions.
-        tower.setData(TowerDataKey.of(ResourceLocation.fromNamespaceAndPath("semiontd", "augment_enemy_damage"),
+        tower.setData(TowerDataKey.of(Identifier.fromNamespaceAndPath("semiontd", "augment_enemy_damage"),
                 Double.class), amount);
     }
 

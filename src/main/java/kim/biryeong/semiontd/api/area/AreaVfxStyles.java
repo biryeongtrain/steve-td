@@ -1,22 +1,22 @@
 package kim.biryeong.semiontd.api.area;
 
 import kim.biryeong.semiontd.SemionTd;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class AreaVfxStyles {
-    public static final ResourceLocation NONE = id("none");
-    public static final ResourceLocation SPLASH = id("splash");
-    public static final ResourceLocation PULSE = id("pulse");
-    public static final ResourceLocation CORPSE_EXPLOSION = id("corpse_explosion");
-    public static final ResourceLocation INSECT_EXPLOSION = id("insect_explosion");
-    public static final ResourceLocation BUFF = id("buff");
-    public static final ResourceLocation DEBUFF = id("debuff");
-    public static final ResourceLocation DRAGON_BREATH = id("dragon_breath");
+    public static final Identifier NONE = id("none");
+    public static final Identifier SPLASH = id("splash");
+    public static final Identifier PULSE = id("pulse");
+    public static final Identifier CORPSE_EXPLOSION = id("corpse_explosion");
+    public static final Identifier INSECT_EXPLOSION = id("insect_explosion");
+    public static final Identifier BUFF = id("buff");
+    public static final Identifier DEBUFF = id("debuff");
+    public static final Identifier DRAGON_BREATH = id("dragon_breath");
 
     private AreaVfxStyles() {
     }
 
-    private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, path);
+    private static Identifier id(String path) {
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, path);
     }
 }

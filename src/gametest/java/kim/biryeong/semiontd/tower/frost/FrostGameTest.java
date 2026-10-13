@@ -40,7 +40,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.axolotl.Axolotl;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
@@ -373,7 +373,7 @@ public final class FrostGameTest {
         setup.lane().addTower(tower);
         SemionTowerEntity entity = towerEntity(context, tower);
         long activationTick = context.getLevel().getGameTime();
-        FrostFullOperationService.PlayerState state = FrostFullOperationService.stateForTest(setup.owner());
+        FrostFullOperationState state = FrostFullOperationService.stateForTest(setup.owner());
         state.beginWave();
         state.activate(activationTick);
         FrostFullOperationService.tick(setup.lane());
@@ -429,16 +429,16 @@ public final class FrostGameTest {
             setup.lane().addTower(tierTwo);
             setup.lane().addTower(tierThree);
 
-            if (towerEntity(context, tierOne).getPolymerEntityType(null) != EntityType.SNOW_GOLEM
+            if (towerEntity(context, tierOne).getPolymerEntityType(null) != net.minecraft.world.entity.EntityTypes.SNOW_GOLEM
                     || snowGolemPumpkinData(context, FrostTowers.ICE_VANGUARD) != 0) {
                 throw new AssertionError("The T1 vanguard must be a pumpkinless snow golem.");
             }
-            if (towerEntity(context, tierTwo).getPolymerEntityType(null) != EntityType.SNOW_GOLEM
+            if (towerEntity(context, tierTwo).getPolymerEntityType(null) != net.minecraft.world.entity.EntityTypes.SNOW_GOLEM
                     || snowGolemPumpkinData(context, FrostTowers.STURDY_ICE_VANGUARD) != 0) {
                 throw new AssertionError("The T2 vanguard must be a pumpkinless 1.0x snow golem.");
             }
             SemionTowerEntity tierThreeEntity = towerEntity(context, tierThree);
-            if (tierThreeEntity.getPolymerEntityType(null) != EntityType.AXOLOTL
+            if (tierThreeEntity.getPolymerEntityType(null) != net.minecraft.world.entity.EntityTypes.AXOLOTL
                     || Math.abs(tierThreeEntity.getScale() - 1.2F) > 0.0001F
                     || axolotlVariantData(context, FrostTowers.DONGTAE) != Axolotl.Variant.BLUE.getId()) {
                 throw new AssertionError("Dongtae must reveal a 1.2x blue axolotl visual at T3.");
@@ -491,11 +491,11 @@ public final class FrostGameTest {
     public void activationItemCannotBeDroppedOrMovedThroughInventoryClicks(GameTestHelper context) {
         ServerPlayer player = context.makeMockServerPlayerInLevel();
         try {
-            if (player.drop(FrostFullOperationService.activationItemForTest().copy(), false) != null) {
+            if (player.drop(FrostFullOperationService.activationItemForTest().copy(), false, net.minecraft.util.Prediction.SERVER_ONLY) != null) {
                 throw new AssertionError("The full-operation item must not create a dropped item entity.");
             }
             player.inventoryMenu.setCarried(FrostFullOperationService.activationItemForTest().copy());
-            player.inventoryMenu.clicked(9, 0, ClickType.PICKUP, player);
+            player.inventoryMenu.clicked(9, 0, ContainerInput.PICKUP, player);
             if (!FrostFullOperationService.isActivationItem(player.inventoryMenu.getCarried())) {
                 throw new AssertionError("Container clicks must not move the full-operation item.");
             }
@@ -713,9 +713,9 @@ public final class FrostGameTest {
                     != largerIncome) {
                 throw new AssertionError("Nine frozen-food towers must prioritize the highest-max-health income monster.");
             }
-            requireClose(15.0, source.attackDamageAmount(wave),
+            requireClose(13.0, source.attackDamageAmount(wave),
                     "Three frozen-food towers must add 3 attack damage.");
-            requireClose(16.5, source.attackDamageAmount(largerIncome),
+            requireClose(14.3, source.attackDamageAmount(largerIncome),
                     "T1 frozen food must deal 10% additional damage to income monsters at nine towers.");
             requireClose(1.8, food.effectiveSplashRadiusForTest(),
                     "Six frozen-food towers must add one block of splash radius.");
@@ -750,8 +750,8 @@ public final class FrostGameTest {
             requireClose(0.9, food.chill(), "Six hits store 90% chill.");
             double beforeSeventhHit = target.runtimeMonster().health();
             food.onEmissionWaveHit(setup.lane());
-            requireClose(beforeSeventhHit - 36.0, target.runtimeMonster().health(),
-                    "The seventh wave hit must immediately fire exactly three 12-damage attacks.");
+            requireClose(beforeSeventhHit - 30.0, target.runtimeMonster().health(),
+                    "The seventh wave hit must immediately fire exactly three 10-damage attacks.");
             requireClose(0.0, food.chill(), "The seventh wave hit must consume all stored chill.");
 
             double afterBonusAttacks = target.runtimeMonster().health();
@@ -922,7 +922,7 @@ public final class FrostGameTest {
         List<SynchedEntityData.DataValue<?>> data = new ArrayList<>();
         EntityVisualApplierRegistry.apply(
                 type.visual(),
-                EntityType.SNOW_GOLEM,
+                net.minecraft.world.entity.EntityTypes.SNOW_GOLEM,
                 context.getLevel().registryAccess(),
                 data
         );
@@ -939,7 +939,7 @@ public final class FrostGameTest {
         List<SynchedEntityData.DataValue<?>> data = new ArrayList<>();
         EntityVisualApplierRegistry.apply(
                 type.visual(),
-                EntityType.AXOLOTL,
+                net.minecraft.world.entity.EntityTypes.AXOLOTL,
                 context.getLevel().registryAccess(),
                 data
         );

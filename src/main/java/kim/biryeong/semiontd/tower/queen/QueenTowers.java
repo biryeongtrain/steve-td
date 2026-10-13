@@ -10,7 +10,7 @@ import net.minecraft.world.entity.EntityType;
 public final class QueenTowers {
     public static final TowerType QUEEN = TowerType.builder("queen", "붉은 여왕")
             .mineralCost(70).maxHealth(60).range(9).damage(0).attackIntervalTicks(120).aggroPriority(1)
-            .visual(EntityVisual.builder(EntityTypeUtil.byId(EntityType.EVOKER)).build())
+            .visual(EntityVisual.builder(EntityTypeUtil.byId(net.minecraft.world.entity.EntityTypes.EVOKER)).build())
             .description(List.of(
                     "공격마다 축소 {ability.queen_global.queenShrinkPoints:number}(1점당 ×{ability.queen_global.shrinkFactorPerPoint:number})을 가합니다. 공격력은 원본의 {ability.queen_global.minimumStatScale:percent}까지, 외형은 {ability.queen_global.minimumVisualScale:percent}까지 감소합니다. 공격속도는 최대 70% 감소하며 이동속도는 유지됩니다. 체력은 다른 감소 한도와 별개로 처형선까지 줄어듭니다.",
                     "피해 증가 1%를 공격속도 0.7%로 전환합니다. 고정 공격력 +1도 공격속도 +0.7%로 전환합니다.",
@@ -21,7 +21,7 @@ public final class QueenTowers {
 
     public static final TowerType RANDOM_CARD_SOLDIER = TowerType.builder("queen_random_card_soldier", "무작위 카드병정")
             .mineralCost(25).maxHealth(45).range(8).damage(0).attackIntervalTicks(10).aggroPriority(0)
-            .visual(EntityVisual.builder(EntityTypeUtil.byId(EntityType.VINDICATOR)).build())
+            .visual(EntityVisual.builder(EntityTypeUtil.byId(net.minecraft.world.entity.EntityTypes.VINDICATOR)).build())
             .description(List.of(
                     "설치할 때 표준 52장 중 한 장을 복원 추첨합니다.",
                     "공격마다 축소 {ability.queen_global.cardShrinkPoints:number}(1점당 ×{ability.queen_global.shrinkFactorPerPoint:number})을 가합니다. 공격력은 원본의 {ability.queen_global.minimumStatScale:percent}까지, 외형은 {ability.queen_global.minimumVisualScale:percent}까지 감소합니다. 공격속도는 최대 70% 감소하며 이동속도는 유지됩니다. 체력은 별도로 처형선까지 줄어듭니다. 반경 {ability.queen_global.cardSplashRadius:blocks}의 추가 적 {ability.queen_global.cardSplashExtraTargets:int}기도 약화하며 사망 시 반경 {ability.queen_global.cardDeathRadius:blocks}에 축소 {ability.queen_global.cardDeathShrinkPoints:number}을 남깁니다.",

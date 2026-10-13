@@ -2,8 +2,8 @@ package kim.biryeong.semiontd.mixin.accessor;
 
 import net.minecraft.core.Holder;
 import net.minecraft.network.syncher.EntityDataAccessor;
-import net.minecraft.world.entity.animal.Chicken;
-import net.minecraft.world.entity.animal.ChickenVariant;
+import net.minecraft.world.entity.animal.chicken.Chicken;
+import net.minecraft.world.entity.animal.chicken.ChickenVariant;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 

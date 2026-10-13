@@ -1,0 +1,29 @@
+SemionTD original generated augment icon artwork
+Created 2026-10-08 with built-in image generation.
+These are original raster artwork assets, not game screenshots.
+13 PNG files; original generated pixels preserved without image editing.
+RGBA, 1254 x 1254. Transparent background.
+
+attack.png = 공격 / sword
+protection.png = 보호 / shield
+health.png = 체력 / heart
+revival.png = 재기 / phoenix
+speed.png = 속도 / stopwatch
+aim.png = 조준 / crosshair
+control.png = 제어 / chain
+growth.png = 성장 / sprout
+resources.png = 자원 / gem and coins
+summon.png = 소환 / elemental spirit in cupped hand
+synergy.png = 연계 / connected nodes
+enhancement.png = 강화 / upward chevrons and anvil
+chance.png = 확률 / dice
+
+Rendering guidance:
+Neutral ivory/silver highlights and graphite shadows permit rarity tinting.
+Preserve source luminance and alpha; do not replace all RGB with a flat color.
+Game target: 256 x 256 RGBA texture, shown at 49 x 49 GUI pixels.
+Normalize visible silhouette to about 76 percent of square canvas, centered.
+For normalization bounds, use alpha >= 128 to ignore extremely faint stray pixels.
+Keep soft alpha at actual silhouette edges when resampling.
+Verify on actual dark UI at native 49-pixel scale before shipping.
+Job-exclusive status remains a separate text label; these are effect categories.

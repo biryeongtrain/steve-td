@@ -41,7 +41,7 @@ import kim.biryeong.semiontd.statistics.JobStatisticsTotals;
 import kim.biryeong.semiontd.statistics.TraitCombinationStatisticsEntry;
 import kim.biryeong.semiontd.statistics.TraitTowerStatisticsEntry;
 import kim.biryeong.semiontd.trait.TraitLoadoutSnapshot;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class SQLiteJobStatisticsStore {
     private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().create();
@@ -297,220 +297,10 @@ public final class SQLiteJobStatisticsStore {
         }
     }
 
+
     private void initialize() {
-        try (Connection connection = SQLiteSupport.connect(path);
-             Statement statement = connection.createStatement()) {
-            boolean existingRoundStatistics = tableExists(connection, "job_round_statistics");
-            boolean legacyRoundStatistics = existingRoundStatistics
-                    && !columnExists(connection, "job_round_statistics", "attempt_count");
-            statement.executeUpdate("""
-                    CREATE TABLE IF NOT EXISTS job_stat_participant_facts (
-                        match_id INTEGER NOT NULL,
-                        player_id TEXT NOT NULL,
-                        job_id TEXT NOT NULL,
-                        team_id TEXT NOT NULL,
-                        won INTEGER NOT NULL,
-                        placement INTEGER,
-                        final_round INTEGER NOT NULL,
-                        cleared_round INTEGER NOT NULL DEFAULT 0,
-                        started_at_epoch_millis INTEGER NOT NULL,
-                        ended_at_epoch_millis INTEGER NOT NULL,
-                        monster_kills INTEGER NOT NULL,
-                        kill_minerals INTEGER NOT NULL,
-                        summoned_monsters INTEGER NOT NULL,
-                        final_income INTEGER NOT NULL,
-                        own_lane_incoming_threat REAL NOT NULL,
-                        own_lane_leaked_threat REAL NOT NULL,
-                        sent_income_threat REAL NOT NULL,
-                        income_attack_success_threat REAL NOT NULL,
-                        own_lane_diamond_gain INTEGER NOT NULL,
-                        assist_clear_diamond_gain INTEGER NOT NULL,
-                        income_generated INTEGER NOT NULL,
-                        assist_clear_threat REAL NOT NULL,
-                        incoming_income_threat REAL NOT NULL,
-                        primary_trait_id TEXT NOT NULL DEFAULT 'semion-td:none',
-                        primary_trait_version INTEGER NOT NULL DEFAULT 0,
-                        secondary_trait_id TEXT NOT NULL DEFAULT 'semion-td:none',
-                        secondary_trait_version INTEGER NOT NULL DEFAULT 0,
-                        catalog_version TEXT,
-                        augment_version TEXT,
-                        builder_origin TEXT,
-                        builder_enabled INTEGER,
-                        augment_selections TEXT,
-                        augment_offer_events TEXT,
-                        augment_telemetry TEXT,
-                        PRIMARY KEY (match_id, player_id)
-                    )
-                    """);
-            ensureColumn(
-                    connection,
-                    "job_stat_participant_facts",
-                    "cleared_round",
-                    "INTEGER NOT NULL DEFAULT 0"
-            );
-            ensureColumn(connection, "job_stat_participant_facts", "primary_trait_id",
-                    "TEXT NOT NULL DEFAULT 'semion-td:none'");
-            ensureColumn(connection, "job_stat_participant_facts", "primary_trait_version",
-                    "INTEGER NOT NULL DEFAULT 0");
-            ensureColumn(connection, "job_stat_participant_facts", "secondary_trait_id",
-                    "TEXT NOT NULL DEFAULT 'semion-td:none'");
-            ensureColumn(connection, "job_stat_participant_facts", "secondary_trait_version",
-                    "INTEGER NOT NULL DEFAULT 0");
-            ensureColumn(connection, "job_stat_participant_facts", "catalog_version", "TEXT");
-            ensureColumn(connection, "job_stat_participant_facts", "augment_version", "TEXT");
-            ensureColumn(connection, "job_stat_participant_facts", "builder_origin", "TEXT");
-            ensureColumn(connection, "job_stat_participant_facts", "builder_enabled", "INTEGER");
-            ensureColumn(connection, "job_stat_participant_facts", "augment_selections", "TEXT");
-            ensureColumn(connection, "job_stat_participant_facts", "augment_offer_events", "TEXT");
-            ensureColumn(connection, "job_stat_participant_facts", "augment_telemetry", "TEXT");
-            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_facts_job_id "
-                    + "ON job_stat_participant_facts (job_id)");
-            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_facts_ended_at "
-                    + "ON job_stat_participant_facts (ended_at_epoch_millis)");
-            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_facts_job_ended_at "
-                    + "ON job_stat_participant_facts (job_id, ended_at_epoch_millis)");
-            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_facts_traits "
-                    + "ON job_stat_participant_facts (job_id, primary_trait_id, primary_trait_version, "
-                    + "secondary_trait_id, secondary_trait_version)");
-            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_facts_catalog_version "
-                    + "ON job_stat_participant_facts (catalog_version)");
-            statement.executeUpdate("""
-                    CREATE TABLE IF NOT EXISTS job_statistics (
-                        job_id TEXT PRIMARY KEY,
-                        appearances INTEGER NOT NULL,
-                        wins INTEGER NOT NULL,
-                        placement_samples INTEGER NOT NULL,
-                        placement_sum INTEGER NOT NULL,
-                        final_round_sum INTEGER NOT NULL,
-                        monster_kills INTEGER NOT NULL,
-                        kill_minerals INTEGER NOT NULL,
-                        summoned_monsters INTEGER NOT NULL,
-                        final_income INTEGER NOT NULL,
-                        own_lane_incoming_threat REAL NOT NULL,
-                        own_lane_leaked_threat REAL NOT NULL,
-                        sent_income_threat REAL NOT NULL,
-                        income_attack_success_threat REAL NOT NULL,
-                        own_lane_diamond_gain INTEGER NOT NULL,
-                        assist_clear_diamond_gain INTEGER NOT NULL,
-                        income_generated INTEGER NOT NULL,
-                        assist_clear_threat REAL NOT NULL,
-                        incoming_income_threat REAL NOT NULL,
-                        first_match_at_epoch_millis INTEGER NOT NULL,
-                        last_match_at_epoch_millis INTEGER NOT NULL,
-                        updated_at_epoch_millis INTEGER NOT NULL
-                    )
-                    """);
-            statement.executeUpdate("""
-                    CREATE TABLE IF NOT EXISTS job_stat_participant_rounds (
-                        match_id INTEGER NOT NULL,
-                        player_id TEXT NOT NULL,
-                        round_number INTEGER NOT NULL,
-                        cleared INTEGER NOT NULL,
-                        PRIMARY KEY (match_id, player_id, round_number),
-                        CHECK (round_number BETWEEN 1 AND 40),
-                        CHECK (cleared IN (0, 1))
-                    )
-                    """);
-            statement.executeUpdate("""
-                    CREATE TABLE IF NOT EXISTS job_round_statistics (
-                        job_id TEXT NOT NULL,
-                        round_number INTEGER NOT NULL,
-                        attempt_count INTEGER NOT NULL DEFAULT 0,
-                        cleared_count INTEGER NOT NULL,
-                        PRIMARY KEY (job_id, round_number),
-                        CHECK (round_number BETWEEN 1 AND 40)
-                    )
-                    """);
-            statement.executeUpdate("""
-                    CREATE TABLE IF NOT EXISTS job_stat_participant_towers (
-                        match_id INTEGER NOT NULL,
-                        player_id TEXT NOT NULL,
-                        tower_type_id TEXT NOT NULL,
-                        tier INTEGER NOT NULL,
-                        count INTEGER NOT NULL,
-                        PRIMARY KEY (match_id, player_id, tower_type_id, tier),
-                        CHECK (tier >= 0),
-                        CHECK (count > 0)
-                    )
-                    """);
-            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_towers_type "
-                    + "ON job_stat_participant_towers (tower_type_id, tier)");
-            statement.executeUpdate("""
-                    CREATE TABLE IF NOT EXISTS job_stat_participant_round_metrics (
-                        match_id INTEGER NOT NULL,
-                        player_id TEXT NOT NULL,
-                        round_number INTEGER NOT NULL,
-                        wave_duration_ticks INTEGER NOT NULL,
-                        combat_ticks INTEGER NOT NULL,
-                        tower_count_start INTEGER NOT NULL,
-                        tower_count_end INTEGER NOT NULL,
-                        tower_death_count INTEGER NOT NULL,
-                        emerald_production_upgrade_count INTEGER NOT NULL,
-                        emerald_per_second INTEGER NOT NULL,
-                        income INTEGER NOT NULL,
-                        emerald_balance INTEGER NOT NULL,
-                        diamond_balance INTEGER NOT NULL,
-                        tower_limit_purchase_count INTEGER NOT NULL,
-                        monster_kills INTEGER NOT NULL,
-                        utility_support_metrics TEXT,
-                        wave_support_metrics TEXT,
-                        natural_wave_metrics TEXT,
-                        wave_template_id TEXT,
-                        natural_wave_count INTEGER,
-                        natural_wave_starting_health REAL,
-                        augment_economy_metrics TEXT,
-                        PRIMARY KEY (match_id, player_id, round_number)
-                    )
-                    """);
-            ensureColumn(connection, "job_stat_participant_round_metrics", "utility_support_metrics", "TEXT");
-            ensureColumn(connection, "job_stat_participant_round_metrics", "wave_support_metrics", "TEXT");
-            ensureColumn(connection, "job_stat_participant_round_metrics", "natural_wave_metrics", "TEXT");
-            ensureColumn(connection, "job_stat_participant_round_metrics", "wave_template_id", "TEXT");
-            ensureColumn(connection, "job_stat_participant_round_metrics", "natural_wave_count", "INTEGER");
-            ensureColumn(connection, "job_stat_participant_round_metrics", "natural_wave_starting_health", "REAL");
-            ensureColumn(connection, "job_stat_participant_round_metrics", "augment_economy_metrics", "TEXT");
-            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_round_metrics_round "
-                    + "ON job_stat_participant_round_metrics (round_number)");
-            statement.executeUpdate("""
-                    CREATE TABLE IF NOT EXISTS job_stat_participant_round_tower_metrics (
-                        match_id INTEGER NOT NULL,
-                        player_id TEXT NOT NULL,
-                        round_number INTEGER NOT NULL,
-                        tower_type_id TEXT NOT NULL,
-                        sample_count INTEGER NOT NULL,
-                        start_count INTEGER NOT NULL,
-                        end_alive_count INTEGER NOT NULL,
-                        death_count INTEGER NOT NULL,
-                        physical_damage_dealt REAL NOT NULL,
-                        magic_damage_dealt REAL NOT NULL,
-                        damage_taken REAL NOT NULL,
-                        healing_done REAL NOT NULL,
-                        kill_count INTEGER NOT NULL,
-                        first_combat_tick INTEGER NOT NULL,
-                        last_combat_tick INTEGER NOT NULL,
-                        survival_ticks INTEGER NOT NULL,
-                        wave_start_max_health REAL,
-                        enemy_hp_damage REAL,
-                        augment_special_damage_dealt REAL,
-                        PRIMARY KEY (match_id, player_id, round_number, tower_type_id)
-                    )
-                    """);
-            ensureColumn(connection, "job_stat_participant_round_tower_metrics", "wave_start_max_health", "REAL");
-            ensureColumn(connection, "job_stat_participant_round_tower_metrics", "enemy_hp_damage", "REAL");
-            ensureColumn(connection, "job_stat_participant_round_tower_metrics", "augment_special_damage_dealt", "REAL");
-            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_round_tower_metrics_type_round "
-                    + "ON job_stat_participant_round_tower_metrics (tower_type_id, round_number)");
-            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_job_stat_round_tower_metrics_round "
-                    + "ON job_stat_participant_round_tower_metrics (round_number)");
-            ensureColumn(
-                    connection,
-                    "job_round_statistics",
-                    "attempt_count",
-                    "INTEGER NOT NULL DEFAULT 0"
-            );
-            if (legacyRoundStatistics) {
-                statement.executeUpdate("DELETE FROM job_round_statistics");
-            }
+        try (Connection connection = SQLiteSupport.connect(path)) {
+            PersistenceJobStatisticsSchema.initialize(connection);
         } catch (SQLException exception) {
             throw new PersistenceException("Failed to initialize job statistics SQLite " + path, exception);
         }
@@ -587,7 +377,7 @@ public final class SQLiteJobStatisticsStore {
              Statement statement = connection.createStatement()) {
             statement.execute("PRAGMA query_only = ON");
             statement.execute("PRAGMA busy_timeout = 5000");
-            if (!tableExists(connection, "match_results")) {
+            if (!PersistenceJobStatisticsSchema.tableExists(connection, "match_results")) {
                 return;
             }
             try (ResultSet results = statement.executeQuery("SELECT payload FROM match_results ORDER BY match_id")) {
@@ -631,29 +421,6 @@ public final class SQLiteJobStatisticsStore {
         }
     }
 
-    private static boolean tableExists(Connection connection, String tableName) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement(
-                "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1"
-        )) {
-            statement.setString(1, tableName);
-            try (ResultSet results = statement.executeQuery()) {
-                return results.next();
-            }
-        }
-    }
-
-    private static boolean columnExists(Connection connection, String tableName, String columnName) throws SQLException {
-        try (Statement statement = connection.createStatement();
-             ResultSet columns = statement.executeQuery("PRAGMA table_info(" + tableName + ")")) {
-            while (columns.next()) {
-                if (columnName.equalsIgnoreCase(columns.getString("name"))) {
-                    return true;
-                }
-            }
-            return false;
-        }
-    }
-
     private static List<ParticipantFact> participantFacts(MatchResult matchResult) {
         if (matchResult == null || matchResult.matchMode() != MatchMode.NORMAL) {
             return List.of();
@@ -666,7 +433,7 @@ public final class SQLiteJobStatisticsStore {
         ArrayList<ParticipantFact> facts = new ArrayList<>();
         for (MatchParticipantResult participant : matchResult.participants()) {
             String rawJobId = participant.jobId();
-            ResourceLocation jobId = rawJobId == null ? null : ResourceLocation.tryParse(rawJobId);
+            Identifier jobId = rawJobId == null ? null : Identifier.tryParse(rawJobId);
             if (jobId == null) {
                 continue;
             }
@@ -1121,25 +888,6 @@ public final class SQLiteJobStatisticsStore {
                 roundCounts == null ? null : roundCounts.passCounts(),
                 roundCounts == null ? null : roundCounts.attemptCounts()
         );
-    }
-
-    private static void ensureColumn(
-            Connection connection,
-            String tableName,
-            String columnName,
-            String columnDefinition
-    ) throws SQLException {
-        try (Statement statement = connection.createStatement();
-             ResultSet columns = statement.executeQuery("PRAGMA table_info(" + tableName + ")")) {
-            while (columns.next()) {
-                if (columnName.equalsIgnoreCase(columns.getString("name"))) {
-                    return;
-                }
-            }
-        }
-        try (Statement statement = connection.createStatement()) {
-            statement.executeUpdate("ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + columnDefinition);
-        }
     }
 
     private record ParticipantFact(

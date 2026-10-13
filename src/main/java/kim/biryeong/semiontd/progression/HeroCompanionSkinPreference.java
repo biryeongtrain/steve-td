@@ -28,13 +28,13 @@ public record HeroCompanionSkinPreference(
     }
 
     public static Optional<HeroCompanionSkinPreference> fromProfile(GameProfile profile) {
-        if (profile == null || profile.getId() == null || profile.getName() == null || profile.getName().isBlank()) {
+        if (profile == null || profile.id() == null || profile.name() == null || profile.name().isBlank()) {
             return Optional.empty();
         }
-        Property texture = profile.getProperties().get("textures").stream().findFirst().orElse(null);
+        Property texture = profile.properties().get("textures").stream().findFirst().orElse(null);
         return Optional.of(new HeroCompanionSkinPreference(
-                profile.getName(),
-                profile.getId().toString(),
+                profile.name(),
+                profile.id().toString(),
                 texture == null ? "" : texture.value(),
                 texture == null || texture.signature() == null ? "" : texture.signature()
         ));

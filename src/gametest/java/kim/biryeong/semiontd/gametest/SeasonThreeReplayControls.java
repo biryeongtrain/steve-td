@@ -98,7 +98,7 @@ final class SeasonThreeReplayControls implements AutoCloseable {
                         RegistryFriendlyByteBuf.decorator(controls.server.registryAccess()), player.connection),
                         player.connection);
                 player.setGameMode(GameType.ADVENTURE);
-                player.setInvulnerable(true);
+                player.setPermanentlyInvulnerable(true);
                 // Match the mock player's lookup, without JOIN callbacks, lobby moves, or profile persistence.
                 controls.server.getPlayerList().getPlayers().add(player);
                 controls.onlinePlayers().put(player.getUUID(), player);

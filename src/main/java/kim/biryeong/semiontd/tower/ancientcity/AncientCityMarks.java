@@ -7,11 +7,11 @@ import java.util.UUID;
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.MonsterDataKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class AncientCityMarks {
     private static final MonsterDataKey<MarkSet> MARKS = MonsterDataKey.of(
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "ancient_city_marks"),
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "ancient_city_marks"),
             MarkSet.class
     );
 

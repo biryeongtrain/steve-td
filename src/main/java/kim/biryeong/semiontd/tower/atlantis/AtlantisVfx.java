@@ -10,7 +10,7 @@ import kim.biryeong.semiontd.api.area.AreaVfxStyleRegistry;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import net.minecraft.core.particles.DustParticleOptions;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 
@@ -29,8 +29,8 @@ import net.minecraft.world.phys.Vec3;
  * </ul>
  */
 public final class AtlantisVfx {
-    public static final ResourceLocation PRESSURE_ZONE = id("atlantis_pressure_zone");
-    public static final ResourceLocation WATER_PRESSURE = id("atlantis_water_pressure");
+    public static final Identifier PRESSURE_ZONE = id("atlantis_pressure_zone");
+    public static final Identifier WATER_PRESSURE = id("atlantis_water_pressure");
 
     private static final AreaVfxParticle DEEP_WATER = particle(0x1B6FA8, 1.15F, "bubble");
     private static final AreaVfxParticle SHALLOW_FOAM = particle(0x7FE3FF, 0.9F, "bubble_column_up");
@@ -61,7 +61,7 @@ public final class AtlantisVfx {
         }
         Vec3 ahead = player.position().add(horizontal.scale(5.0));
         Vec3 center = new Vec3(ahead.x, tower.getY(), ahead.z);
-        ResourceLocation style = kind == DebugKind.ZONE ? PRESSURE_ZONE : WATER_PRESSURE;
+        Identifier style = kind == DebugKind.ZONE ? PRESSURE_ZONE : WATER_PRESSURE;
         double radius = kind == DebugKind.ZONE ? 4.0 : 3.5;
         List<Vec3> samples = kind == DebugKind.ZONE
                 ? List.of(center)
@@ -136,12 +136,12 @@ public final class AtlantisVfx {
     private static AreaVfxParticle particle(int color, float scale, String vanillaId) {
         return new AreaVfxParticle(
                 new DustParticleOptions(color, scale),
-                ResourceLocation.fromNamespaceAndPath("minecraft", vanillaId)
+                Identifier.fromNamespaceAndPath("minecraft", vanillaId)
         );
     }
 
-    private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, path);
+    private static Identifier id(String path) {
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, path);
     }
 
     public enum DebugKind {

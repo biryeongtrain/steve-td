@@ -34,9 +34,7 @@ public final class OceanTower extends EntityBackedTower {
     private int dehydrationTicks;
     private int transferCooldownTicks;
     private PlayerLane currentLane;
-    private int waveTicks;
-    private double currentWaterSpent;
-    private int currentCharges;
+    private final OceanCurrentController current = new OceanCurrentController();
 
     public OceanTower(TowerType type, UUID ownerPlayer, TeamId teamId, int laneId, GridPosition position) {
         super(type, ownerPlayer, teamId, laneId, position);
@@ -97,9 +95,7 @@ public final class OceanTower extends EntityBackedTower {
     @Override
     public void onWaveStarted(PlayerLane lane, int currentRound) {
         waveActive = true;
-        waveTicks = 0;
-        currentWaterSpent = 0.0;
-        currentCharges = 0;
+        current.resetRound();
         if (augmentSnapshot().has("job_ocean_g1")) {
             water = Math.max(water, augmentSnapshot().parameter("job_ocean_g1", "openingWater", 150));
         }
@@ -110,9 +106,7 @@ public final class OceanTower extends EntityBackedTower {
         waveActive = false;
         dehydrationTicks = 0;
         transferCooldownTicks = 0;
-        waveTicks = 0;
-        currentWaterSpent = 0.0;
-        currentCharges = 0;
+        current.resetRound();
         currentLane = lane;
         super.resetForRound(lane);
     }
@@ -316,7 +310,7 @@ public final class OceanTower extends EntityBackedTower {
             lines.add("탈수: 능력 정지, 공격력·공격 속도 감소");
         }
         if (augmentSnapshot().has("job_ocean_g2") && type().damage() > 0.0) {
-            lines.add("거센 해류 " + currentCharges + "회 · 물 소모 " + oneDecimal(currentWaterSpent)
+            lines.add("거센 해류 " + current.charges() + "회 · 물 소모 " + oneDecimal(current.waterSpent())
                     + "/" + oneDecimal(augmentSnapshot().parameter("job_ocean_g2", "waterPerCharge", 30)));
         }
         if (tideActive()) {
@@ -334,9 +328,7 @@ public final class OceanTower extends EntityBackedTower {
         waveActive = oceanTower.waveActive;
         dehydrationTicks = oceanTower.dehydrationTicks;
         transferCooldownTicks = oceanTower.transferCooldownTicks;
-        waveTicks = oceanTower.waveTicks;
-        currentWaterSpent = oceanTower.currentWaterSpent;
-        currentCharges = oceanTower.currentCharges;
+        current.restore(oceanTower.current.snapshot());
     }
 
     private void splash(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
@@ -437,10 +429,7 @@ public final class OceanTower extends EntityBackedTower {
             if (waveActive && type().damage() > 0.0 && AugmentCombat.allowsTriggers()
                     && augmentSnapshot().has("job_ocean_g2")) {
                 double threshold = augmentSnapshot().parameter("job_ocean_g2", "waterPerCharge", 30);
-                currentWaterSpent += spent;
-                int charges = (int) Math.floor((currentWaterSpent + EPSILON) / threshold);
-                currentCharges += charges;
-                currentWaterSpent = Math.max(0.0, currentWaterSpent - charges * threshold);
+                current.recordSpent(spent, threshold);
             }
             maintainTideFloor();
         }
@@ -448,7 +437,7 @@ public final class OceanTower extends EntityBackedTower {
 
     void tickTide() {
         if (waveActive) {
-            waveTicks++;
+            current.tick();
             maintainTideFloor();
         }
     }
@@ -457,7 +446,7 @@ public final class OceanTower extends EntityBackedTower {
         int period = (int) augmentSnapshot().parameter("job_ocean_p", "periodTicks", 240);
         int duration = (int) augmentSnapshot().parameter("job_ocean_p", "durationTicks", 80);
         return waveActive && augmentSnapshot().has("job_ocean_p")
-                && waveTicks >= period && waveTicks % period < duration;
+                && current.tideActive(period, duration);
     }
 
     private void maintainTideFloor() {
@@ -467,16 +456,15 @@ public final class OceanTower extends EntityBackedTower {
     }
 
     boolean consumeCurrentCharge() {
-        if (!waveActive || !AugmentCombat.allowsTriggers() || currentCharges <= 0
+        if (!waveActive || !AugmentCombat.allowsTriggers() || current.charges() <= 0
                 || !augmentSnapshot().has("job_ocean_g2")) {
             return false;
         }
-        currentCharges--;
-        return true;
+        return current.consume();
     }
 
     int currentCharges() {
-        return currentCharges;
+        return current.charges();
     }
 
     private boolean canPayAttackAndExtra(String extraCostKey) {

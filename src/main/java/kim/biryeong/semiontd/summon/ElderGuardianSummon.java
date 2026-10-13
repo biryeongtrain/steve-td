@@ -17,7 +17,7 @@ public final class ElderGuardianSummon extends BasicIncomeSummon {
         return List.of(
                 new ApplyTowerTimedEffectGoal(
                         entity,
-                        TimedEffectType.TOWER_ATTACK_SPEED_REDUCTION,
+                        TimedEffectType.TOWER_ATTACK_SPEED_MULTIPLICATIVE_REDUCTION,
                         abilityValue("attackSpeedMagnitude", 0.30),
                         abilityValue("radius", 8.0),
                         abilityInt("durationTicks", 100),
@@ -27,7 +27,7 @@ public final class ElderGuardianSummon extends BasicIncomeSummon {
                 ),
                 new ApplyTowerTimedEffectGoal(
                         entity,
-                        TimedEffectType.TOWER_RANGE_REDUCTION,
+                        TimedEffectType.TOWER_RANGE_MULTIPLICATIVE_REDUCTION,
                         abilityValue("rangeMagnitude", 0.20),
                         abilityValue("radius", 8.0),
                         abilityInt("durationTicks", 100),

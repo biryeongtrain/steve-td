@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import kim.biryeong.semiontd.tower.blueprint.BlueprintDesign;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public record SemionPlayerProfile(
         String lastKnownName,
@@ -25,7 +25,8 @@ public record SemionPlayerProfile(
         Boolean tipsEnabled,
         List<String> recentBuildCodes,
         Map<String, HeroCompanionSkinPreference> heroCompanionSkins,
-        List<BlueprintDesign> blueprints
+        List<BlueprintDesign> blueprints,
+        Map<String, HeroCompanionSkinPreference> magicSchoolSkins
 ) {
     public static final Codec<SemionPlayerProfile> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.STRING.optionalFieldOf("lastKnownName", "").forGetter(SemionPlayerProfile::lastKnownName),
@@ -44,7 +45,10 @@ public record SemionPlayerProfile(
                     .optionalFieldOf("heroCompanionSkins", Map.of())
                     .forGetter(SemionPlayerProfile::heroCompanionSkins),
             BlueprintDesign.CODEC.listOf().optionalFieldOf("blueprints", List.of())
-                    .forGetter(SemionPlayerProfile::blueprints)
+                    .forGetter(SemionPlayerProfile::blueprints),
+            Codec.unboundedMap(Codec.STRING, HeroCompanionSkinPreference.CODEC)
+                    .optionalFieldOf("magicSchoolSkins", Map.of())
+                    .forGetter(SemionPlayerProfile::magicSchoolSkins)
     ).apply(instance, SemionPlayerProfile::new));
 
     public SemionPlayerProfile {
@@ -71,6 +75,13 @@ public record SemionPlayerProfile(
             });
         }
         heroCompanionSkins = Map.copyOf(normalizedSkins);
+        normalizedSkins.clear();
+        if (magicSchoolSkins != null) {
+            magicSchoolSkins.forEach((kind, skin) -> {
+                if (kind != null && !kind.isBlank() && skin != null && skin.valid()) normalizedSkins.put(kind, skin);
+            });
+        }
+        magicSchoolSkins = Map.copyOf(normalizedSkins);
         LinkedHashSet<String> normalizedCosmetics = new LinkedHashSet<>();
         if (ownedCosmeticIds != null) {
             for (String id : ownedCosmeticIds) {
@@ -98,6 +109,23 @@ public record SemionPlayerProfile(
         }
     }
 
+    public SemionPlayerProfile(String lastKnownName, int gamesPlayed, int wins, int losses, long cosmeticCurrency,
+            List<String> ownedCosmeticIds, String selectedCosmeticId, List<String> selectedCosmeticIds,
+            String selectedJobId, String selectedSkyboxId, Boolean tipsEnabled, List<String> recentBuildCodes,
+            Map<String, HeroCompanionSkinPreference> heroCompanionSkins) {
+        this(lastKnownName, gamesPlayed, wins, losses, cosmeticCurrency, ownedCosmeticIds, selectedCosmeticId,
+                selectedCosmeticIds, selectedJobId, selectedSkyboxId, tipsEnabled, recentBuildCodes, heroCompanionSkins, List.of(), Map.of());
+    }
+
+    public SemionPlayerProfile(String lastKnownName, int gamesPlayed, int wins, int losses, long cosmeticCurrency,
+            List<String> ownedCosmeticIds, String selectedCosmeticId, List<String> selectedCosmeticIds,
+            String selectedJobId, String selectedSkyboxId, Boolean tipsEnabled, List<String> recentBuildCodes,
+            Map<String, HeroCompanionSkinPreference> heroCompanionSkins, List<BlueprintDesign> blueprints) {
+        this(lastKnownName, gamesPlayed, wins, losses, cosmeticCurrency, ownedCosmeticIds, selectedCosmeticId,
+                selectedCosmeticIds, selectedJobId, selectedSkyboxId, tipsEnabled, recentBuildCodes,
+                heroCompanionSkins, blueprints, Map.of());
+    }
+
     public static SemionPlayerProfile fresh(String playerName) {
         return new SemionPlayerProfile(playerName == null ? "" : playerName, 0, 0, 0, 0,
                 List.of(), "", List.of(), "", "", true, List.of(), Map.of(), List.of());
@@ -111,7 +139,7 @@ public record SemionPlayerProfile(
         return copy(normalized, cosmeticCurrency, ownedCosmeticIds, selectedCosmeticIds, selectedJobId, selectedSkyboxId, tipsEnabled, recentBuildCodes);
     }
 
-    public SemionPlayerProfile updateSelectedJob(String playerName, ResourceLocation jobId) {
+    public SemionPlayerProfile updateSelectedJob(String playerName, Identifier jobId) {
         String normalized = playerName == null ? "" : playerName;
         String jobIdText = jobId == null ? "" : jobId.toString();
         if (normalized.equals(lastKnownName) && jobIdText.equals(selectedJobId)) {
@@ -137,11 +165,11 @@ public record SemionPlayerProfile(
         return copy(normalized, cosmeticCurrency, ownedCosmeticIds, selectedCosmeticIds, selectedJobId, selectedSkyboxId, enabled, recentBuildCodes);
     }
 
-    public Optional<ResourceLocation> selectedJobResource() {
+    public Optional<Identifier> selectedJobResource() {
         if (selectedJobId.isBlank()) {
             return Optional.empty();
         }
-        return Optional.ofNullable(ResourceLocation.tryParse(selectedJobId));
+        return Optional.ofNullable(Identifier.tryParse(selectedJobId));
     }
 
     public SemionPlayerProfile recordMatch(String playerName, boolean winner, long reward) {
@@ -160,7 +188,8 @@ public record SemionPlayerProfile(
                 tipsEnabled,
                 recentBuildCodes,
                 heroCompanionSkins,
-                blueprints
+                blueprints,
+                magicSchoolSkins
         );
     }
 
@@ -178,6 +207,14 @@ public record SemionPlayerProfile(
                 tipsEnabled,
                 recentBuildCodes
         );
+    }
+
+    public SemionPlayerProfile takeCosmeticCurrency(String playerName, long amount) {
+        if (amount <= 0 || amount > cosmeticCurrency) {
+            throw new IllegalArgumentException("Cosmetic currency removal must be positive and covered by the balance.");
+        }
+        return copy(playerName == null ? "" : playerName, cosmeticCurrency - amount,
+                ownedCosmeticIds, selectedCosmeticIds, selectedJobId, selectedSkyboxId, tipsEnabled, recentBuildCodes);
     }
 
     public SemionPlayerProfile rememberRecentBuildCode(String playerName, String code) {
@@ -252,7 +289,7 @@ public record SemionPlayerProfile(
         String legacySelection = selectedCosmeticIds.isEmpty() ? "" : selectedCosmeticIds.getFirst();
         return new SemionPlayerProfile(normalizedName, gamesPlayed, wins, losses, cosmeticCurrency,
                 ownedCosmeticIds, legacySelection, selectedCosmeticIds, selectedJobId, selectedSkyboxId,
-                tipsEnabled, recentBuildCodes, updated, blueprints);
+                tipsEnabled, recentBuildCodes, updated, blueprints, magicSchoolSkins);
     }
 
     /** 빌더 빌더 설계도 목록을 통째로 바꿉니다. */
@@ -265,7 +302,19 @@ public record SemionPlayerProfile(
         String legacySelection = selectedCosmeticIds.isEmpty() ? "" : selectedCosmeticIds.getFirst();
         return new SemionPlayerProfile(normalizedName, gamesPlayed, wins, losses, cosmeticCurrency,
                 ownedCosmeticIds, legacySelection, selectedCosmeticIds, selectedJobId, selectedSkyboxId,
-                tipsEnabled, recentBuildCodes, heroCompanionSkins, updated);
+                tipsEnabled, recentBuildCodes, heroCompanionSkins, updated, magicSchoolSkins);
+    }
+
+    public SemionPlayerProfile updateMagicSchoolSkin(String playerName, String kind, HeroCompanionSkinPreference skin) {
+        if (kind == null || kind.isBlank() || skin != null && !skin.valid()) return this;
+        var updated = new LinkedHashMap<>(magicSchoolSkins);
+        if (skin == null) updated.remove(kind);
+        else updated.put(kind, skin);
+        String normalizedName = playerName == null ? "" : playerName;
+        if (normalizedName.equals(lastKnownName) && updated.equals(magicSchoolSkins)) return this;
+        return new SemionPlayerProfile(normalizedName, gamesPlayed, wins, losses, cosmeticCurrency,
+                ownedCosmeticIds, selectedCosmeticId, selectedCosmeticIds, selectedJobId, selectedSkyboxId,
+                tipsEnabled, recentBuildCodes, heroCompanionSkins, blueprints, updated);
     }
 
     private SemionPlayerProfile copy(
@@ -280,6 +329,6 @@ public record SemionPlayerProfile(
     ) {
         String legacySelection = selectedCosmetics.isEmpty() ? "" : selectedCosmetics.getFirst();
         return new SemionPlayerProfile(playerName, gamesPlayed, wins, losses, currency, cosmetics,
-                legacySelection, selectedCosmetics, job, skybox, tips, builds, heroCompanionSkins, blueprints);
+                legacySelection, selectedCosmetics, job, skybox, tips, builds, heroCompanionSkins, blueprints, magicSchoolSkins);
     }
 }

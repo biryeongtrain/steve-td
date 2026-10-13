@@ -113,7 +113,7 @@ public final class IllagerRaidBossBarService {
         UUID playerId = player.getUUID();
         Component title = title(state, gaugeMax);
         float progress = progress(state, gaugeMax);
-        ServerBossEvent bossBar = bossBars.computeIfAbsent(playerId, ignored -> new ServerBossEvent(
+        ServerBossEvent bossBar = bossBars.computeIfAbsent(playerId, ignored -> new ServerBossEvent(java.util.UUID.randomUUID(),
                 title,
                 BossEvent.BossBarColor.RED,
                 BossEvent.BossBarOverlay.PROGRESS

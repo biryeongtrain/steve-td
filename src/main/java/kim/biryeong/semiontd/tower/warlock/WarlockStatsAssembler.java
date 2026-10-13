@@ -47,6 +47,7 @@ final class WarlockStatsAssembler {
                         tower.additionalHealth(),
                         combat.lifeStealRatio(tower),
                         combat.maximumLifeSteal(path),
+                        tower.lifeStealDisplayDamage(),
                         tower.damageReduction(),
                         tower.maximumDamageReduction(),
                         tower.incomeDebuffResistance()

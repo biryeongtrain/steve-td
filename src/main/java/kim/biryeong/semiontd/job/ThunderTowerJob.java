@@ -7,10 +7,10 @@ import kim.biryeong.semiontd.tower.thunder.ThunderStates;
 import kim.biryeong.semiontd.tower.thunder.ThunderTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class ThunderTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "thunder");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "thunder");
 
     public ThunderTowerJob() {
         super(
@@ -48,6 +48,11 @@ public final class ThunderTowerJob extends SemionJob {
 
     @Override
     public void onEliminated(JobContext context) {
+        ThunderStates.clear(context.player().uuid());
+    }
+
+    @Override
+    public void onMatchClosed(JobContext context) {
         ThunderStates.clear(context.player().uuid());
     }
 }

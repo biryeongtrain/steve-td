@@ -13,11 +13,11 @@ import kim.biryeong.semiontd.entity.visual.ParrotVisual;
 import kim.biryeong.semiontd.entity.visual.WolfVisual;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
-import net.minecraft.world.entity.animal.CatVariants;
-import net.minecraft.world.entity.animal.Parrot;
+import net.minecraft.world.entity.animal.feline.CatVariants;
+import net.minecraft.world.entity.animal.parrot.Parrot;
 import net.minecraft.world.entity.animal.wolf.WolfVariants;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 
@@ -63,11 +63,11 @@ public final class PetTowers {
             "<light_purple>같은 마당에 다른 고양이가 없으면 공격력이 {ability.soloDamageBonus:percent} 증가합니다.</light_purple>",
             "<aqua>성체가 되면 대상 주변 {ability.adultSplashRadius:blocks} 내 추가로 최대 {ability.adultSplashMaxTargets:integer}마리에게 피해의 {ability.adultSplashDamageRatio:percent} 스플래시 피해를 줍니다.</aqua>"
     );
-    public static final TowerType CAT_T1 = companion("t1_pet_cat", "아기 고양이 타워", 50, 95, 3.5, 12, 13, 5,
+    public static final TowerType CAT_T1 = companion("t1_pet_cat", "아기 고양이 타워", 50, 95, 5.5, 12, 13, 5,
             CatVisual.builder().variant(CatVariants.TABBY).tame(true).build(), CAT_DESC);
-    public static final TowerType CAT_T2 = companion("t2_pet_cat", "반려묘 타워", 120, 150, 3.8, 24, 12, 5,
+    public static final TowerType CAT_T2 = companion("t2_pet_cat", "반려묘 타워", 120, 150, 5.8, 24, 12, 5,
             CatVisual.builder().variant(CatVariants.CALICO).tame(true).build(), CAT_DESC);
-    public static final TowerType CAT_T3 = companion("t3_pet_cat", "개냥이 타워", 260, 230, 4.2, 38, 13, 0,
+    public static final TowerType CAT_T3 = companion("t3_pet_cat", "개냥이 타워", 260, 230, 6.2, 38, 13, 0,
             CatVisual.builder().variant(CatVariants.RAGDOLL).tame(true).build(), CAT_DESC);
 
     private static final List<String> BIRD_DESC = List.of(
@@ -163,7 +163,7 @@ public final class PetTowers {
             return ItemStack.EMPTY;
         }
         return BuiltInRegistries.ITEM
-                .getOptional(ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, path))
+                .getOptional(Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, path))
                 .map(ItemStack::new)
                 .orElse(ItemStack.EMPTY);
     }

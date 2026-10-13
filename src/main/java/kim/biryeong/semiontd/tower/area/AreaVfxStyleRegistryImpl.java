@@ -7,14 +7,14 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import kim.biryeong.semiontd.api.area.AreaVfxStylePlanner;
 import kim.biryeong.semiontd.api.area.AreaVfxStyleRegistry;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class AreaVfxStyleRegistryImpl implements AreaVfxStyleRegistry {
-    private final ConcurrentMap<ResourceLocation, AreaVfxStylePlanner> planners = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Identifier, AreaVfxStylePlanner> planners = new ConcurrentHashMap<>();
     private final AtomicBoolean frozen = new AtomicBoolean();
 
     @Override
-    public void register(ResourceLocation id, AreaVfxStylePlanner planner) {
+    public void register(Identifier id, AreaVfxStylePlanner planner) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(planner, "planner");
         if (frozen.get()) {
@@ -26,7 +26,7 @@ public final class AreaVfxStyleRegistryImpl implements AreaVfxStyleRegistry {
     }
 
     @Override
-    public Optional<AreaVfxStylePlanner> find(ResourceLocation id) {
+    public Optional<AreaVfxStylePlanner> find(Identifier id) {
         return Optional.ofNullable(id == null ? null : planners.get(id));
     }
 

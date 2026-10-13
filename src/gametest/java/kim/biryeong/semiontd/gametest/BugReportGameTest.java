@@ -17,7 +17,7 @@ import kim.biryeong.semiontd.tower.animal.PigTower;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class BugReportGameTest {
     @GameTest
@@ -39,8 +39,8 @@ public final class BugReportGameTest {
             var entity = tower.runtimeEntity(lane).orElseThrow();
             entity.setNoAi(true);
             tower.addPermanentFlatDamageBonus(7, lane);
-            tower.setData(TowerDataKey.of(ResourceLocation.fromNamespaceAndPath("test", "stacks"), Integer.class), 5);
-            tower.setData(TowerDataKey.of(ResourceLocation.fromNamespaceAndPath("test", "complex"), Map.class), Map.of("private", entity));
+            tower.setData(TowerDataKey.of(Identifier.fromNamespaceAndPath("test", "stacks"), Integer.class), 5);
+            tower.setData(TowerDataKey.of(Identifier.fromNamespaceAndPath("test", "complex"), Map.class), Map.of("private", entity));
             entity.applyTimedEffect(TimedEffectType.TOWER_DAMAGE_BONUS, 0.5, 80);
             tower.syncHealth(23); tower.onStateChanged(lane);
             var beforeEffects = entity.effectSnapshot();
@@ -71,11 +71,11 @@ public final class BugReportGameTest {
         var dispatcher = new com.mojang.brigadier.CommandDispatcher<net.minecraft.commands.CommandSourceStack>();
         service.register(dispatcher);
         var player = context.makeMockServerPlayerInLevel();
-        var source = player.createCommandSourceStack().withPermission(0);
+        var source = player.createCommandSourceStack().withPermission(net.minecraft.server.permissions.LevelBasedPermissionSet.forLevel(net.minecraft.server.permissions.PermissionLevel.byId(0)));
         require(dispatcher.getRoot().getChild("버그신고").canUse(source), "players can report");
         require(!dispatcher.getRoot().getChild("버그신고목록").canUse(source), "players cannot read private reports");
         require(!dispatcher.getRoot().getChild("버그신고조회").canUse(source), "players cannot read report details");
-        require(dispatcher.getRoot().getChild("버그신고목록").canUse(source.withPermission(2)), "operators can list");
+        require(dispatcher.getRoot().getChild("버그신고목록").canUse(source.withPermission(net.minecraft.server.permissions.LevelBasedPermissionSet.forLevel(net.minecraft.server.permissions.PermissionLevel.byId(2)))), "operators can list");
         require(dispatcher.execute("버그신고 공격 버프가 이상합니다", source) == 1, "report queued");
         require(dispatcher.execute("버그신고 중복 신고", source) == 0, "cooldown prevents duplicate capture");
         // Closing drains pending writes. The acknowledgement callback is processed by the server afterwards.
@@ -84,7 +84,7 @@ public final class BugReportGameTest {
         var reports = repository.list(1);
         require(reports.size() == 1, "one persisted report");
         var report = repository.find(reports.getFirst().id()).orElseThrow();
-        require(report.playerId().equals(player.getUUID()) && report.playerName().equals(player.getGameProfile().getName()), "identity is server-derived");
+        require(report.playerId().equals(player.getUUID()) && report.playerName().equals(player.getGameProfile().name()), "identity is server-derived");
         require(report.content().equals("공격 버프가 이상합니다"), "report text preserved");
         require(report.snapshot().has("reporterDimension"), "reporter context captured outside a game");
         require(dispatcher.execute("버그신고목록", context.getLevel().getServer().createCommandSourceStack()) == 0, "closed storage rejects new work");

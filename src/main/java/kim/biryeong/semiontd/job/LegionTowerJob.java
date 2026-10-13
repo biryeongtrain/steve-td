@@ -7,10 +7,10 @@ import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.legion.LegionTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class LegionTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "legion_towers");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "legion_towers");
 
     public LegionTowerJob() {
         super(

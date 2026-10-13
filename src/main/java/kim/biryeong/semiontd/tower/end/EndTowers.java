@@ -24,16 +24,16 @@ public final class EndTowers {
     public static final String CONFIG_ID = "end_global";
 
     public static final EntityVisual DRAGON_EGG_VISUAL = BlockDisplayVisual.builder(Blocks.DRAGON_EGG.defaultBlockState()).build();
-    public static final EntityVisual PHANTOM_VISUAL = EntityVisual.builder(byId(EntityType.PHANTOM)).build();
-    public static final EntityVisual DRAGON_VISUAL = EntityVisual.builder(byId(EntityType.ENDER_DRAGON)).build();
+    public static final EntityVisual PHANTOM_VISUAL = EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.PHANTOM)).build();
+    public static final EntityVisual DRAGON_VISUAL = EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.ENDER_DRAGON)).build();
 
     public static final TowerType BASE_END_TOWER = tower("base_ender_dragon", "엔더 드래곤", 0, 200, 5, 10, 15, 100, DRAGON_EGG_VISUAL, dragonDescription());
-    public static final TowerType T1_SHULKER_TOWER = tower("t1_shulker_tower", "셜커", 50, 100, 0, 5, 20, 10, byId(EntityType.SHULKER), shulkerLineDescription("낮은", "셜커"));
+    public static final TowerType T1_SHULKER_TOWER = tower("t1_shulker_tower", "셜커", 50, 100, 0, 5, 20, 10, byId(net.minecraft.world.entity.EntityTypes.SHULKER), shulkerLineDescription("낮은", "셜커"));
     public static final TowerType T2_SHULKER_TOWER = tower("t2_shulker_tower", "견고한 셜커", 100, 150, 0, 5, 20, 10, ShulkerVisual.builder().color(DyeColor.PURPLE).build(), shulkerLineDescription("보통인", "견고한 셜커"));
     public static final TowerType T3_SHULKER_TOWER = tower("t3_shulker_tower", "완강한 셜커", 150, 200, 0, 5, 20, 10, ShulkerVisual.builder().color(DyeColor.BLACK).build(), shulkerLineDescription("높은", "완강한 셜커"));
-    public static final TowerType T1_ENDERMITE_TOWER = tower("t1_endermite_tower", "엔더마이트", 50, 50, 0, 10, 20, 10, byId(EntityType.ENDERMITE), endCrystalLineDescription("낮은", "엔더마이트"));
-    public static final TowerType T2_ENDERMAN_TOWER = tower("t2_enderman_tower", "엔더맨", 100, 50, 0, 15, 20, 10, byId(EntityType.ENDERMAN), endCrystalLineDescription("보통인", "엔더맨"));
-    public static final TowerType T3_END_CRYSTAL_TOWER = tower("t3_end_crystal_tower", "엔드 수정", 150, 50, 0, 20, 20, 10, byId(EntityType.END_CRYSTAL), endCrystalLineDescription("높은", "엔드 수정"));
+    public static final TowerType T1_ENDERMITE_TOWER = tower("t1_endermite_tower", "엔더마이트", 50, 50, 0, 10, 20, 10, byId(net.minecraft.world.entity.EntityTypes.ENDERMITE), endCrystalLineDescription("낮은", "엔더마이트"));
+    public static final TowerType T2_ENDERMAN_TOWER = tower("t2_enderman_tower", "엔더맨", 100, 50, 0, 15, 20, 10, byId(net.minecraft.world.entity.EntityTypes.ENDERMAN), endCrystalLineDescription("보통인", "엔더맨"));
+    public static final TowerType T3_END_CRYSTAL_TOWER = tower("t3_end_crystal_tower", "엔드 수정", 150, 50, 0, 20, 20, 10, byId(net.minecraft.world.entity.EntityTypes.END_CRYSTAL), endCrystalLineDescription("높은", "엔드 수정"));
 
     private static final List<TowerType> ALL = List.of(
             BASE_END_TOWER,

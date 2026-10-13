@@ -21,15 +21,15 @@ import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
 
 public final class HeroTower extends HeroPartyTower {
-    private static final ResourceLocation SWORD_BURST = ResourceLocation.fromNamespaceAndPath("semion-td", "hero_party_sword_burst");
-    private static final ResourceLocation GREATSWORD_SWEEP = ResourceLocation.fromNamespaceAndPath("semion-td", "hero_party_greatsword_sweep");
-    private static final ResourceLocation STAFF_METEOR = ResourceLocation.fromNamespaceAndPath("semion-td", "hero_party_staff_meteor");
-    private static final ResourceLocation TOME_HOLY = ResourceLocation.fromNamespaceAndPath("semion-td", "hero_party_tome_holy");
+    private static final Identifier SWORD_BURST = Identifier.fromNamespaceAndPath("semion-td", "hero_party_sword_burst");
+    private static final Identifier GREATSWORD_SWEEP = Identifier.fromNamespaceAndPath("semion-td", "hero_party_greatsword_sweep");
+    private static final Identifier STAFF_METEOR = Identifier.fromNamespaceAndPath("semion-td", "hero_party_staff_meteor");
+    private static final Identifier TOME_HOLY = Identifier.fromNamespaceAndPath("semion-td", "hero_party_tome_holy");
     private int attackCount;
     private int augmentAttackCount;
     private UUID lastAttackingCompanion;
@@ -305,7 +305,9 @@ public final class HeroTower extends HeroPartyTower {
         }
         List<SemionMonsterEntity> candidates = source.level().getEntities(
                         source,
-                        source.targetSearchBox(),
+                        source.deployedAtFinalDefense()
+                                ? source.getBoundingBox().inflate(source.attackRange())
+                                : source.targetSearchBox(),
                         entity -> entity instanceof SemionMonsterEntity monster
                                 && monster.isAlive()
                                 && monster != primary
@@ -335,7 +337,7 @@ public final class HeroTower extends HeroPartyTower {
     private void areaAttack(
             SemionTowerEntity source,
             SemionMonsterEntity primary,
-            ResourceLocation effectId,
+            Identifier effectId,
             double radius,
             double damage,
             HeroWeapon weapon,
@@ -421,7 +423,7 @@ public final class HeroTower extends HeroPartyTower {
                 if (entity != null && entity.attackRange() > 0.0) {
                     List<SemionMonsterEntity> candidates = new ArrayList<>();
                     SemionTdApi.areaEffects().applyToMonsters(MonsterAreaEffectRequest.aroundTower(
-                            ResourceLocation.fromNamespaceAndPath("semiontd", JOINT_ATTACK), entity,
+                            Identifier.fromNamespaceAndPath("semiontd", JOINT_ATTACK), entity,
                             entity.attackRange(), AreaVfxSpec.none()).withFilter(entity::isValidAttackTarget), monster -> {
                                 candidates.add(monster);
                                 return AreaEffectOutcome.UNCHANGED;
@@ -439,7 +441,7 @@ public final class HeroTower extends HeroPartyTower {
             double total = heroDamage + living.stream().mapToDouble(entity -> entity.runtimeTower()
                     .resolveBasicAttackOutgoingDamage(entity, null, entity.attackDamageAmount(null))).sum();
             MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
-                    ResourceLocation.fromNamespaceAndPath("semiontd", PARTY_ATTACK), source, target.position(),
+                    Identifier.fromNamespaceAndPath("semiontd", PARTY_ATTACK), source, target.position(),
                     parameter(PARTY_ATTACK, "radius", 4), Set.of(), null, AreaVfxSpec.onTrigger(AreaVfxStyles.SPLASH))
                     .nearestTargets((int) parameter(PARTY_ATTACK, "maxTargets", 12));
             AugmentCombat.runWithoutTriggers(() -> TowerAreaDamage.applyResolved(this, source, request,
@@ -455,7 +457,7 @@ public final class HeroTower extends HeroPartyTower {
             }
             Vec3 forward = direction;
             MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
-                    ResourceLocation.fromNamespaceAndPath("semiontd", LEGEND), source, source.position(),
+                    Identifier.fromNamespaceAndPath("semiontd", LEGEND), source, source.position(),
                     Math.hypot(length, width / 2), Set.of(),
                     monster -> insideSlash(source.position(), forward, monster.position(), length, width),
                     AreaVfxSpec.onTrigger(AreaVfxStyles.SPLASH)).nearestTargets((int) parameter(LEGEND, "maxTargets", 12));

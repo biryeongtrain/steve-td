@@ -3,19 +3,26 @@ package kim.biryeong.semiontd.api.area;
 import java.util.Objects;
 import java.util.function.Predicate;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 
 public record TowerAreaEffectRequest(
-        ResourceLocation effectId,
+        Identifier effectId,
         SemionTowerEntity source,
         Vec3 center,
         double radius,
         TowerAreaTargetMode targetMode,
         boolean includeSource,
         Predicate<AreaTowerTarget> targetFilter,
-        AreaVfxSpec vfx
+        AreaVfxSpec vfx,
+        boolean alliedTeam
 ) {
+    public TowerAreaEffectRequest(Identifier effectId, SemionTowerEntity source, Vec3 center,
+            double radius, TowerAreaTargetMode targetMode, boolean includeSource,
+            Predicate<AreaTowerTarget> targetFilter, AreaVfxSpec vfx) {
+        this(effectId, source, center, radius, targetMode, includeSource, targetFilter, vfx, false);
+    }
+
     public TowerAreaEffectRequest {
         Objects.requireNonNull(effectId, "effectId");
         Objects.requireNonNull(source, "source");
@@ -32,7 +39,7 @@ public record TowerAreaEffectRequest(
     }
 
     public static TowerAreaEffectRequest aroundTower(
-            ResourceLocation effectId,
+            Identifier effectId,
             SemionTowerEntity source,
             double radius,
             TowerAreaTargetMode mode,
@@ -42,6 +49,11 @@ public record TowerAreaEffectRequest(
     }
 
     public TowerAreaEffectRequest withFilter(Predicate<AreaTowerTarget> filter) {
-        return new TowerAreaEffectRequest(effectId, source, center, radius, targetMode, includeSource, filter, vfx);
+        return new TowerAreaEffectRequest(effectId, source, center, radius, targetMode, includeSource, filter, vfx, alliedTeam);
+    }
+
+    public TowerAreaEffectRequest forAlliedTeam() {
+        return new TowerAreaEffectRequest(effectId, source, center, radius, TowerAreaTargetMode.ENTITIES,
+                includeSource, targetFilter, vfx, true);
     }
 }

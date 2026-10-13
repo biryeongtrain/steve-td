@@ -8,9 +8,9 @@ import kim.biryeong.semiontd.entity.visual.RabbitVisual;
 import kim.biryeong.semiontd.entity.visual.WolfVisual;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
-import net.minecraft.world.entity.animal.Fox;
-import net.minecraft.world.entity.animal.PigVariants;
-import net.minecraft.world.entity.animal.Rabbit;
+import net.minecraft.world.entity.animal.fox.Fox;
+import net.minecraft.world.entity.animal.pig.PigVariants;
+import net.minecraft.world.entity.animal.rabbit.Rabbit;
 import net.minecraft.world.entity.animal.wolf.WolfVariants;
 
 import java.util.List;

@@ -22,7 +22,7 @@ import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerPlacementPositions;
 import kim.biryeong.semiontd.tower.TowerType;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -136,7 +136,7 @@ public final class DemonLordSkills {
 
             Vec3 pull = horizontal(origin.subtract(victimPosition)).scale(ability(altar, "pullStrength", 0.5));
             target.setDeltaMovement(pull.x, 0.2, pull.z);
-            target.hurtMarked = true;
+            target.syncVelocity = true;
             DemonLordVfx.play(lane, DemonLordDisplayVfx.gripOfDoom(false, 0.0, DemonLordVfx.seed(lane))
                     .scaled(state.skillRangeMultiplier()), victimPosition);
             sound(player, SoundEvents.WITHER_HURT, 1.0f, 0.6f);
@@ -271,7 +271,7 @@ public final class DemonLordSkills {
                 Vec3 pull = toCentre.normalize().scale(vortex.pullStrength() * (0.45 + 0.55 * edge));
                 monster.setDeltaMovement(pull.x, monster.getDeltaMovement().y, pull.z);
             }
-            monster.hurtMarked = true;
+            monster.syncVelocity = true;
         }
         if (gameTime < vortex.nextDamageTick()) {
             return;
@@ -377,7 +377,7 @@ public final class DemonLordSkills {
         applyArea(altar, lane, slam, slamRadius, ignored -> true, monster -> {
             Tower.DamageResult result = DemonLordService.dealDamage(player, lane, altar, monster, damage, DamageType.MAGIC);
             monster.setDeltaMovement(monster.getDeltaMovement().x, 0.3, monster.getDeltaMovement().z);
-            monster.hurtMarked = true;
+            monster.syncVelocity = true;
             return damageOutcome(result);
         });
 
@@ -418,7 +418,7 @@ public final class DemonLordSkills {
                 Tower.DamageResult result = DemonLordService.dealDamage(
                         player, lane, sourceAltar, monster, damage, DamageType.MAGIC);
                 monster.setDeltaMovement(monster.getDeltaMovement().x, 0.25, monster.getDeltaMovement().z);
-                monster.hurtMarked = true;
+                monster.syncVelocity = true;
                 return damageOutcome(result);
             });
         } finally {
@@ -563,7 +563,7 @@ public final class DemonLordSkills {
         });
         Vec3 look = horizontal(player.getLookAngle());
         player.setDeltaMovement(look.x * leapPower, 0.62, look.z * leapPower);
-        player.hurtMarked = true;
+        player.syncVelocity = true;
         player.resetFallDistance();
 
         DemonLordVfx.follow(DemonLordDisplayVfx.demonWings(yawOf(look), DemonLordVfx.seed(lane)), player);
@@ -596,7 +596,7 @@ public final class DemonLordSkills {
             Tower.DamageResult result = DemonLordService.dealDamage(
                     player, lane, altar, monster, damage, DamageType.PHYSICAL);
             monster.setDeltaMovement(monster.getDeltaMovement().x, lift, monster.getDeltaMovement().z);
-            monster.hurtMarked = true;
+            monster.syncVelocity = true;
             monster.applyTimedEffect(TimedEffectType.MONSTER_STUN, 1.0, stunTicks);
             return damageOutcome(result);
         });
@@ -650,7 +650,7 @@ public final class DemonLordSkills {
     private static void castArcaneBombardment(ServerPlayer player, PlayerLane lane, DemonLordState state,
             DemonLordSkillTower altar, long gameTime) {
         player.setDeltaMovement(player.getDeltaMovement().x, ability(altar, "jumpPower", 0.9), player.getDeltaMovement().z);
-        player.hurtMarked = true;
+        player.syncVelocity = true;
         player.resetFallDistance();
 
         int delay = (int) Math.max(1.0, ability(altar, "castDelayTicks", 10.0));
@@ -795,7 +795,7 @@ public final class DemonLordSkills {
             return AreaEffectResult.empty();
         }
         MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
-                ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "demon_lord/" + altar.skill().key()),
+                Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "demon_lord/" + altar.skill().key()),
                 source,
                 center,
                 radius,
@@ -852,7 +852,7 @@ public final class DemonLordSkills {
     private static void push(SemionMonsterEntity monster, Vec3 direction, double strength, double lift) {
         Vec3 away = horizontal(direction).scale(strength);
         monster.setDeltaMovement(away.x, lift, away.z);
-        monster.hurtMarked = true;
+        monster.syncVelocity = true;
     }
 
     private static void sound(ServerPlayer player, net.minecraft.sounds.SoundEvent event, float volume, float pitch) {

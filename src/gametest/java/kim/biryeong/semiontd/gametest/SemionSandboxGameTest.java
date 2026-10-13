@@ -57,7 +57,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -238,8 +238,8 @@ public final class SemionSandboxGameTest {
             SemionMusicTrack track = new SemionMusicTrack(
                     "sandbox",
                     Path.of("sandbox.ogg"),
-                    ResourceLocation.fromNamespaceAndPath("semion-td", "music.sandbox"),
-                    ResourceLocation.fromNamespaceAndPath("semion-td", "music/sandbox"),
+                    Identifier.fromNamespaceAndPath("semion-td", "music.sandbox"),
+                    Identifier.fromNamespaceAndPath("semion-td", "music/sandbox"),
                     200L
             );
             SemionMusicService musicService = new SemionMusicService(new SemionMusicLibrary(List.of(track)), () -> 100L);
@@ -248,7 +248,7 @@ public final class SemionSandboxGameTest {
             SemionGameManager.SandboxStartResult startResult = manager.startSandbox(
                     server,
                     ownerId,
-                    owner.getGameProfile().getName(),
+                    owner.getGameProfile().name(),
                     SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(BlockPos.ZERO))
             );
             if (!assertEquals(context, SemionGameManager.SandboxStartResult.STARTED, startResult, "Sandbox should start before music playback.")) {
@@ -368,12 +368,12 @@ public final class SemionSandboxGameTest {
             configureManager(manager);
             MinecraftServer server = context.getLevel().getServer();
             var player = context.makeMockServerPlayerInLevel();
-            manager.saveSelectedJob(server, player.getUUID(), player.getGameProfile().getName(), IllagerTowerJob.ID);
+            manager.saveSelectedJob(server, player.getUUID(), player.getGameProfile().name(), IllagerTowerJob.ID);
 
             SemionGameManager.SandboxStartResult startResult = manager.startSandbox(
                     server,
                     player.getUUID(),
-                    player.getGameProfile().getName(),
+                    player.getGameProfile().name(),
                     SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(BlockPos.ZERO))
             );
             if (!assertEquals(context, SemionGameManager.SandboxStartResult.STARTED, startResult, "Illager sandbox should start without an active match.")) {
@@ -481,7 +481,7 @@ public final class SemionSandboxGameTest {
             if (!assertEquals(
                     context,
                     AnimalTowerJob.ID,
-                    manager.profile(server, player.getUUID(), player.getGameProfile().getName()).selectedJobResource().orElse(null),
+                    manager.profile(server, player.getUUID(), player.getGameProfile().name()).selectedJobResource().orElse(null),
                     "Running-match non-participant job selection should persist to the player's profile."
             )) {
                 return;
@@ -509,7 +509,7 @@ public final class SemionSandboxGameTest {
             if (!assertTrue(context, activeGame.start(server, new ParticipantSelectionPlan(
                     MatchMode.TEST,
                     List.of(
-                            new AssignedParticipant(player.getUUID(), player.getGameProfile().getName(), TeamId.RED, 1),
+                            new AssignedParticipant(player.getUUID(), player.getGameProfile().name(), TeamId.RED, 1),
                             new AssignedParticipant(activeBlueId, "running-job-block-blue", TeamId.BLUE, 1)
                     ),
                     Set.of(),
@@ -524,7 +524,7 @@ public final class SemionSandboxGameTest {
             }
             if (!assertTrue(
                     context,
-                    manager.profile(server, player.getUUID(), player.getGameProfile().getName()).selectedJobResource().isEmpty(),
+                    manager.profile(server, player.getUUID(), player.getGameProfile().name()).selectedJobResource().isEmpty(),
                     "Blocked mid-match participant job selection should not update the stored profile."
             )) {
                 return;
@@ -548,7 +548,7 @@ public final class SemionSandboxGameTest {
             SemionGameManager.SandboxStartResult startResult = manager.startSandbox(
                     server,
                     player.getUUID(),
-                    player.getGameProfile().getName(),
+                    player.getGameProfile().name(),
                     sandboxArena
             );
             if (!assertEquals(context, SemionGameManager.SandboxStartResult.STARTED, startResult, "Mock player should be able to start sandbox.")) {
@@ -619,7 +619,7 @@ public final class SemionSandboxGameTest {
                     manager.startSandbox(
                             server,
                             ownerId,
-                            player.getGameProfile().getName(),
+                            player.getGameProfile().name(),
                             SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(BlockPos.ZERO))
                     ),
                     "Sandbox should start before free summon and round movement checks."
@@ -731,7 +731,7 @@ public final class SemionSandboxGameTest {
                     manager.startSandbox(
                             server,
                             spectatorId,
-                            spectator.getGameProfile().getName(),
+                            spectator.getGameProfile().name(),
                             SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(BlockPos.ZERO))
                     ),
                     "Spectator should start with an owned sandbox."
@@ -828,7 +828,7 @@ public final class SemionSandboxGameTest {
             SemionGameManager.SandboxStartResult leavingStart = manager.startSandbox(
                     server,
                     leavingPlayer.getUUID(),
-                    leavingPlayer.getGameProfile().getName(),
+                    leavingPlayer.getGameProfile().name(),
                     SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(BlockPos.ZERO))
             );
             if (!assertEquals(context, SemionGameManager.SandboxStartResult.STARTED, leavingStart, "Leaving player sandbox should start.")) {
@@ -935,7 +935,7 @@ public final class SemionSandboxGameTest {
             SemionGameManager.SandboxStartResult startResult = manager.startSandbox(
                     server,
                     player.getUUID(),
-                    player.getGameProfile().getName(),
+                    player.getGameProfile().name(),
                     sandboxArena
             );
             if (!assertEquals(context, SemionGameManager.SandboxStartResult.STARTED, startResult, "Sandbox should start for elimination test.")) {
@@ -1012,7 +1012,7 @@ public final class SemionSandboxGameTest {
 
     @GameTest
     public void laneMonsterTargetsOnlyItsRuntimeTargetTeamBoss(GameTestHelper context) {
-        Vec3 bossPosition = context.absolutePos(BlockPos.ZERO).getCenter().add(4.0, 2.0, 4.0);
+        Vec3 bossPosition = Vec3.atCenterOf(context.absolutePos(BlockPos.ZERO)).add(4.0, 2.0, 4.0);
         LaneRegionLayout laneLayout = new LaneRegionLayout(
                 1,
                 bossPosition.add(0.0, 0.0, -4.0),

@@ -1,7 +1,7 @@
 package kim.biryeong.semiontd.entity.visual;
 
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.entity.animal.CowVariant;
+import net.minecraft.world.entity.animal.cow.CowVariant;
 
 public final class CowVisual {
     private CowVisual() {

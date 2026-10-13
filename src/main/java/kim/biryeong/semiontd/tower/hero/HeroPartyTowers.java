@@ -16,7 +16,7 @@ import net.minecraft.world.level.block.Blocks;
 public final class HeroPartyTowers {
     public static final String HERO_ID = "hero_party_hero";
 
-    private static final EntityVisual HIDDEN_ANCHOR = BlockDisplayVisual.builder(Blocks.LIGHT.defaultBlockState()).build();
+    private static final EntityVisual HIDDEN_ANCHOR = BlockDisplayVisual.builder(Blocks.AIR.defaultBlockState()).build();
     private static final EnumMap<HeroCompanionRole, List<TowerType>> COMPANIONS = new EnumMap<>(HeroCompanionRole.class);
     private static final Map<String, CompanionSpec> SPECS_BY_ID = new LinkedHashMap<>();
     private static final List<TowerType> ALL;

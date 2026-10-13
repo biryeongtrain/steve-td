@@ -6,38 +6,30 @@ import static kim.biryeong.semiontd.tower.description.TowerDescriptionTemplate.a
 import static kim.biryeong.semiontd.tower.description.TowerDescriptionTemplate.damageReductionText;
 import static kim.biryeong.semiontd.tower.description.TowerDescriptionTemplate.magicDamageText;
 
-import eu.pb4.placeholders.api.PlaceholderContext;
+import eu.pb4.placeholders.api.ServerPlaceholderContext;
 import eu.pb4.placeholders.api.PlaceholderResult;
 import eu.pb4.placeholders.api.Placeholders;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.config.WaveMonsterEntry;
 import kim.biryeong.semiontd.game.MatchMode;
-import kim.biryeong.semiontd.game.ParticipantSelectionPlan;
-import kim.biryeong.semiontd.game.ParticipantSelectionService;
 import kim.biryeong.semiontd.game.PlayerEconomy;
 import kim.biryeong.semiontd.game.RoundPhase;
 import kim.biryeong.semiontd.game.SemionGame;
 import kim.biryeong.semiontd.game.SemionPlayer;
 import kim.biryeong.semiontd.game.SemionTeam;
-import kim.biryeong.semiontd.game.StartCandidate;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.placeholder.SemionPlaceholders;
-import kim.biryeong.semiontd.tower.Tower;
-import kim.biryeong.semiontd.tower.TowerType;
-import kim.biryeong.semiontd.tower.demonlord.DemonLordState;
 import kim.biryeong.semiontd.tower.demonlord.DemonLordStates;
 import kim.biryeong.semiontd.tutorial.TutorialService.HighlightTarget;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -75,8 +67,22 @@ public final class SemionHudTextService {
             HighlightTarget highlightTarget,
             boolean highlightOn
     ) {
+        return sidebarLinesFor(viewer, game, matchMode, server, damageView, highlightTarget, highlightOn, null);
+    }
+
+    static List<Component> sidebarLinesFor(
+            ServerPlayer viewer,
+            SemionGame game,
+            MatchMode matchMode,
+            MinecraftServer server,
+            boolean damageView,
+            HighlightTarget highlightTarget,
+            boolean highlightOn,
+            UiLobbyRosterSummary lobby
+    ) {
         if (game.canConfigureRoster()) {
-            return components(lobbyMarkupFor(viewer, game, matchMode, server));
+            return components(lobbyMarkupFor(viewer, game, matchMode,
+                    lobby != null ? lobby : UiLobbyRosterSummary.capture(server, game, matchMode)));
         }
         if (damageView && game.playerLane(viewer.getUUID()).isPresent()) {
             return components(damageSidebarMarkupFor(viewer.getUUID(), game));
@@ -93,40 +99,10 @@ public final class SemionHudTextService {
             return "";
         }
 
-        Map<String, TowerDamageSummary> byType = new HashMap<>();
-        for (Tower tower : lane.towers()) {
-            TowerType type = tower.roundCombatType();
-            if (type == null) {
-                continue;
-            }
-            byType.merge(
-                    type.id(),
-                    new TowerDamageSummary(
-                            type.id(),
-                            type.displayName(),
-                            tower.roundPhysicalDamageDealt(),
-                            tower.roundMagicDamageDealt(),
-                            tower.roundDamageTaken()
-                    ),
-                    TowerDamageSummary::merge
-            );
-        }
-        DemonLordState demonLord = DemonLordStates.get(viewerId);
-        if (demonLord != null && (demonLord.roundPhysicalDamageDealt() > 0.0
-                || demonLord.roundMagicDamageDealt() > 0.0)) {
-            byType.put("semion-td:demon_lord", new TowerDamageSummary(
-                    "semion-td:demon_lord",
-                    "마왕",
-                    demonLord.roundPhysicalDamageDealt(),
-                    demonLord.roundMagicDamageDealt(),
-                    0.0
-            ));
-        }
-
-        List<TowerDamageSummary> summaries = List.copyOf(byType.values());
-        double totalPhysical = summaries.stream().mapToDouble(TowerDamageSummary::physical).sum();
-        double totalMagic = summaries.stream().mapToDouble(TowerDamageSummary::magic).sum();
-        double totalTaken = summaries.stream().mapToDouble(TowerDamageSummary::taken).sum();
+        List<UiHudDamageRanking.Summary> summaries = UiHudDamageRanking.summarize(lane.towers(), DemonLordStates.get(viewerId));
+        double totalPhysical = summaries.stream().mapToDouble(UiHudDamageRanking.Summary::physical).sum();
+        double totalMagic = summaries.stream().mapToDouble(UiHudDamageRanking.Summary::magic).sum();
+        double totalTaken = summaries.stream().mapToDouble(UiHudDamageRanking.Summary::taken).sum();
         StringBuilder text = new StringBuilder();
         text.append("<gold>").append(damageRoundLabel(game)).append("</gold>");
         int remainingPrepareSeconds = game.remainingPrepareSeconds();
@@ -268,16 +244,16 @@ public final class SemionHudTextService {
         return "<dark_green>↗</dark_green> <green>에메랄드/초 " + emeraldPerSec + "</green>";
     }
 
-    private static String lobbyMarkupFor(ServerPlayer viewer, SemionGame game, MatchMode matchMode, MinecraftServer server) {
+    private static String lobbyMarkupFor(ServerPlayer viewer, SemionGame game, MatchMode matchMode, UiLobbyRosterSummary lobby) {
         boolean ready = game.isReady(viewer.getUUID());
         String readyLabel = ready ? "<green><bold>준비 완료</bold></green>" : "<red><bold>미준비</bold></red>";
-        int onlinePlayers = server.getPlayerList().getPlayerCount();
-        String startableLabel = startableText(server, game, matchMode);
+        int onlinePlayers = lobby.onlinePlayerCount();
+        String startableLabel = lobby.startableLabel();
         String selectedJob = selectedJobText(viewer, null);
         return "<gray>상태</gray> <yellow>대기 중</yellow>\n"
                 + "<gray>게임 모드</gray> <aqua>" + matchModeLabel(matchMode) + "</aqua>\n"
                 + "<gray>선택 직업</gray> <yellow>" + selectedJob + "</yellow>\n"
-                + "<gray>준비 인원</gray> <green>" + game.readyPlayerCount() + "</green><dark_gray>/</dark_gray><white>" + onlinePlayers + "</white>\n"
+                + "<gray>준비 인원</gray> <green>" + lobby.readyPlayerCount() + "</green><dark_gray>/</dark_gray><white>" + onlinePlayers + "</white>\n"
                 + "<gray>준비 상태</gray> " + readyLabel + "\n"
                 + "<gray>시작 가능</gray> " + startableLabel;
     }
@@ -349,25 +325,16 @@ public final class SemionHudTextService {
         return String.format(Locale.ROOT, "%.1f%s", value, suffix);
     }
 
-    private static void appendDamageTop(StringBuilder text, List<TowerDamageSummary> summaries, boolean dealt) {
+    private static void appendDamageTop(StringBuilder text, List<UiHudDamageRanking.Summary> summaries, boolean dealt) {
         text.append(dealt ? "<red><bold>⚔ 가한 피해 TOP 5</bold></red>\n"
                 : "<aqua><bold>🛡 받은 피해 TOP 5</bold></aqua>\n");
-        Comparator<TowerDamageSummary> comparator = Comparator
-                .comparingDouble((TowerDamageSummary summary) -> dealt ? summary.dealt() : summary.taken())
-                .reversed()
-                .thenComparing(TowerDamageSummary::displayName)
-                .thenComparing(TowerDamageSummary::id);
-        List<TowerDamageSummary> top = summaries.stream()
-                .filter(summary -> (dealt ? summary.dealt() : summary.taken()) > 0.0)
-                .sorted(comparator)
-                .limit(5)
-                .toList();
+        List<UiHudDamageRanking.Summary> top = UiHudDamageRanking.top(summaries, dealt);
         if (top.isEmpty()) {
             text.append("<gray>기록 없음</gray>\n");
             return;
         }
         for (int index = 0; index < top.size(); index++) {
-            TowerDamageSummary summary = top.get(index);
+            UiHudDamageRanking.Summary summary = top.get(index);
             text.append("<gray>").append(index + 1).append(".</gray> <white>")
                     .append(summary.displayName()).append("</white> ");
             if (dealt) {
@@ -388,22 +355,6 @@ public final class SemionHudTextService {
                     : "R" + (game.currentRound() - 1) + " 최종";
             case WAITING -> "R1 시작 전";
         };
-    }
-
-    private record TowerDamageSummary(String id, String displayName, double physical, double magic, double taken) {
-        private double dealt() {
-            return physical + magic;
-        }
-
-        private TowerDamageSummary merge(TowerDamageSummary other) {
-            return new TowerDamageSummary(
-                    id,
-                    displayName,
-                    physical + other.physical,
-                    magic + other.magic,
-                    taken + other.taken
-            );
-        }
     }
 
     private static void appendMatchHeader(StringBuilder text, SemionGame game, MatchMode matchMode) {
@@ -488,13 +439,13 @@ public final class SemionHudTextService {
 
     private static String selectedJobText(ServerPlayer viewer, SemionPlayer player) {
         if (viewer != null) {
-            PlaceholderResult result = Placeholders.parsePlaceholder(
+            PlaceholderResult result = Placeholders.parseServerPlaceholder(
                     SemionPlaceholders.SELECTED_JOB,
                     null,
-                    PlaceholderContext.of(viewer)
+                    ServerPlaceholderContext.of(viewer)
             );
             if (result.isValid()) {
-                return result.text().getString();
+                return result.component().getString();
             }
         }
         if (player != null) {
@@ -508,7 +459,7 @@ public final class SemionHudTextService {
                 .filter(SemionTeam::active)
                 .sorted(Comparator.comparing(SemionTeam::id))
                 .toList();
-        text.append("<dark_gray>────</dark_gray>\n");
+        text.append(UiTextDivider.hudMarkup()).append("\n");
         text.append("<gray>전체 팀 보스</gray>\n");
         for (SemionTeam team : activeTeams) {
             text.append(teamNameText(team.id()))
@@ -520,7 +471,7 @@ public final class SemionHudTextService {
 
     private static void appendNextWavePreview(StringBuilder text, UUID viewerId, SemionGame game) {
         List<WaveMonsterEntry> entries = game.upcomingWaveEntries(viewerId);
-        text.append("<dark_gray>────</dark_gray>\n");
+        text.append(UiTextDivider.hudMarkup()).append("\n");
         text.append("<aqua><bold>다음 웨이브</bold></aqua>").append(healerCountMarkup(entries)).append('\n');
         if (entries.isEmpty()) {
             text.append("<gray>정보 없음</gray>\n");
@@ -581,7 +532,7 @@ public final class SemionHudTextService {
         if (entry.entityType() == null || entry.entityType().isBlank()) {
             return "특수 적";
         }
-        ResourceLocation entityType = ResourceLocation.tryParse(entry.entityType());
+        Identifier entityType = Identifier.tryParse(entry.entityType());
         if (entityType == null) {
             return "특수 적";
         }
@@ -617,25 +568,6 @@ public final class SemionHudTextService {
             return Optional.empty();
         }
         return game.teamForWorld(world);
-    }
-
-    private static String startableText(MinecraftServer server, SemionGame game, MatchMode matchMode) {
-        return readyPlan(server, game, matchMode)
-                .map(plan -> "<green><bold>가능</bold></green> <dark_gray>(</dark_gray><white>"
-                        + plan.activePlayerCount()
-                        + "명</white><dark_gray>)</dark_gray>")
-                .orElse("<red><bold>대기</bold></red>");
-    }
-
-    private static Optional<ParticipantSelectionPlan> readyPlan(
-            MinecraftServer server,
-            SemionGame game,
-            MatchMode matchMode
-    ) {
-        List<StartCandidate> candidates = server.getPlayerList().getPlayers().stream()
-                .map(player -> new StartCandidate(player.getUUID(), player.getGameProfile().getName()))
-                .toList();
-        return ParticipantSelectionService.selectReady(candidates, game.readyPlayerIds(), matchMode);
     }
 
     private static String phaseLabel(RoundPhase phase) {

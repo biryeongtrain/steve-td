@@ -11,10 +11,10 @@ import kim.biryeong.semiontd.tower.adversary.AdversaryTeamEffects;
 import kim.biryeong.semiontd.tower.adversary.AdversaryTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class AdversaryTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "adversary_towers");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "adversary_towers");
 
     public AdversaryTowerJob() {
         super(

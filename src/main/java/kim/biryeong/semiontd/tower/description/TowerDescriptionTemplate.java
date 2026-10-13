@@ -268,6 +268,10 @@ public final class TowerDescriptionTemplate {
         return styledProgressStat(LIFE_STEAL_COLOR, "\uD83E\uDE78", "생명력 흡수", "+" + format(value, "percent"), progress);
     }
 
+    public static String formatLifeStealEfficiency(double value, String progress) {
+        return styledProgressStat(LIFE_STEAL_COLOR, "\uD83E\uDE78", "생명력 흡수", formatNumber(Math.round(value * 1000.0) / 10.0) + "%", progress);
+    }
+
     public static String formatDamageReduction(double value, String progress) {
         return styledProgressStat(DAMAGE_REDUCTION_COLOR, "\uD83D\uDEE1", "피해 감소", "+" + format(value, "percent"), progress);
     }

@@ -34,6 +34,7 @@ public final class SiegeTrueDamageGoal extends CooldownAbilityGoal {
 
     @Override
     protected boolean castAbility() {
+        if (caster.isDisarmed() || caster.schoolSpells().controlled()) return false;
         LivingEntity target = caster.getTarget();
         if (target == null || !target.isAlive() || !(target instanceof LaneDefenseEntity || target instanceof SemionBossEntity)) {
             return false;

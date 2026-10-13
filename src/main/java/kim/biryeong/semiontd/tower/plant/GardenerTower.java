@@ -18,7 +18,7 @@ import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -90,7 +90,7 @@ public class GardenerTower extends PlantCombatTower {
     }
 
     /** 꽃밭 치유 회복을 다른 회복과 따로 세는 출처 id. 같은 정원사의 장판은 겹치지 않습니다. */
-    private static final ResourceLocation HEAL_SOURCE = ResourceLocation.fromNamespaceAndPath("semion-td", "gardener_heal_field");
+    private static final Identifier HEAL_SOURCE = Identifier.fromNamespaceAndPath("semion-td", "gardener_heal_field");
 
     private final int[] levels = {1, 1, 1};
     private long nextHealTick = Long.MIN_VALUE;

@@ -7,7 +7,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import kim.biryeong.semiontd.SemionTd;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 
 public final class SemionMusicLibrary {
@@ -61,8 +61,8 @@ public final class SemionMusicLibrary {
             return java.util.Optional.of(new SemionMusicTrack(
                     id,
                     path,
-                    ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "music." + id.replace('/', '.')),
-                    ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "music/" + id),
+                    Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "music." + id.replace('/', '.')),
+                    Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "music/" + id),
                     durationTicks
             ));
         } catch (IOException | IllegalArgumentException exception) {

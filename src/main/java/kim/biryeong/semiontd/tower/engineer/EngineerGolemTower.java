@@ -13,7 +13,7 @@ import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
@@ -23,7 +23,7 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.phys.Vec3;
 
 public final class EngineerGolemTower extends Tower {
-    private static final ResourceLocation COPPER_GOLEM_ID = ResourceLocation.parse("friendsandfoes:copper_golem");
+    private static final Identifier COPPER_GOLEM_ID = Identifier.parse("friendsandfoes:copper_golem");
     private final Map<GridPosition, Integer> plateCooldowns = new HashMap<>();
     private UUID entityUuid;
     private GridPosition targetPlate;
@@ -129,7 +129,7 @@ public final class EngineerGolemTower extends Tower {
         if (golem == null) {
             return;
         }
-        golem.setInvulnerable(true);
+        golem.setPermanentlyInvulnerable(true);
         golem.setNoAi(true);
         golem.setCustomName(Component.literal(type().displayName()));
         golem.setCustomNameVisible(true);
@@ -201,13 +201,12 @@ public final class EngineerGolemTower extends Tower {
                 .filter(tower -> tower.plateKind() != null)
                 .filter(tower -> !plateCooldowns.containsKey(tower.originalPosition()))
                 .filter(tower -> !tower.originalPosition().equals(lastPressedPlate))
-                .sorted(Comparator
+                .min(Comparator
                         .comparingInt((EngineerCircuitTower tower) -> tower.plateKind().priority()).reversed()
                         .thenComparingDouble(tower -> plateCenter(tower).distanceToSqr(origin))
                         .thenComparingInt(tower -> tower.originalPosition().x())
                         .thenComparingInt(tower -> tower.originalPosition().z()))
                 .map(Tower::originalPosition)
-                .findFirst()
                 .orElse(null);
     }
 
@@ -250,7 +249,11 @@ public final class EngineerGolemTower extends Tower {
         if (lane == null || lane.arenaWorld() == null || golem(lane) != null) {
             return;
         }
-        var type = BuiltInRegistries.ENTITY_TYPE.getOptional(COPPER_GOLEM_ID).orElse(null);
+        // Friends & Foes >= 1.21.9 migrates its old entity ID to the vanilla copper golem.
+        // Keep legacy registrations usable while preserving our existing no-AI tower controller.
+        var type = BuiltInRegistries.ENTITY_TYPE.getOptional(COPPER_GOLEM_ID)
+                .or(() -> BuiltInRegistries.ENTITY_TYPE.getOptional(Identifier.parse("minecraft:copper_golem")))
+                .orElse(null);
         if (type == null) {
             return;
         }
@@ -261,7 +264,7 @@ public final class EngineerGolemTower extends Tower {
         Vec3 home = home();
         mob.setPos(home.x, home.y, home.z);
         mob.setNoAi(true);
-        mob.setInvulnerable(true);
+        mob.setPermanentlyInvulnerable(true);
         mob.setCustomName(Component.literal(type().displayName()));
         mob.setCustomNameVisible(true);
         mob.setPersistenceRequired();

@@ -67,29 +67,30 @@ class WarlockSacrificeControllerTest {
     }
 
     @Test
-    void specializedPathsOnlyAcceptTheirOwnSacrificeLine() {
+    void allPathsAcceptBothSacrificeLinesAtEveryTier() {
         UUID owner = UUID.randomUUID();
-        WarlockTower ranged = warlock(WarlockTowers.RANGED_WARLOCK_TOWER, owner);
-        WarlockTower melee = warlock(WarlockTowers.MELEE_WARLOCK_TOWER, owner);
-        WarlockTower base = warlock(WarlockTowers.BASE_WARLOCK_TOWER, owner);
-        WarlockSacrificeTower rangedPet = sacrifice(
-                WarlockTowers.T1_RANGED_SLAVE,
-                owner,
-                new GridPosition(1, 0, 0)
-        );
-        WarlockSacrificeTower meleePet = sacrifice(
-                WarlockTowers.T1_SLAVE,
-                owner,
-                new GridPosition(1, 0, 0)
-        );
+        for (var coreType : List.of(WarlockTowers.BASE_WARLOCK_TOWER,
+                WarlockTowers.RANGED_WARLOCK_TOWER, WarlockTowers.MELEE_WARLOCK_TOWER)) {
+            WarlockTower core = warlock(coreType, owner);
+            for (var petType : List.of(WarlockTowers.T1_SLAVE, WarlockTowers.T2_SLAVE,
+                    WarlockTowers.T3_SLAVE, WarlockTowers.T1_RANGED_SLAVE,
+                    WarlockTowers.T2_RANGED_SLAVE, WarlockTowers.T3_RANGED_SLAVE)) {
+                var pet = sacrifice(petType, owner, new GridPosition(1, 0, 0));
+                assertTrue(WarlockSacrificeController.isEligibleTarget(core, pet, rule(5.0)),
+                        coreType.id() + " should absorb " + petType.id());
+            }
+        }
+    }
 
-        WarlockRules.SacrificeRule rule = rule(5.0);
-        assertTrue(WarlockSacrificeController.isEligibleTarget(ranged, rangedPet, rule));
-        assertFalse(WarlockSacrificeController.isEligibleTarget(ranged, meleePet, rule));
-        assertTrue(WarlockSacrificeController.isEligibleTarget(melee, meleePet, rule));
-        assertFalse(WarlockSacrificeController.isEligibleTarget(melee, rangedPet, rule));
-        assertTrue(WarlockSacrificeController.isEligibleTarget(base, rangedPet, rule));
-        assertTrue(WarlockSacrificeController.isEligibleTarget(base, meleePet, rule));
+    @Test
+    void passiveBonusesStillOnlyCountTheMatchingSacrificeLine() {
+        for (var petType : List.of(WarlockTowers.T1_SLAVE, WarlockTowers.T2_SLAVE,
+                WarlockTowers.T3_SLAVE, WarlockTowers.T1_RANGED_SLAVE,
+                WarlockTowers.T2_RANGED_SLAVE, WarlockTowers.T3_RANGED_SLAVE)) {
+            assertEquals(WarlockTowers.isRangedSlave(petType), WarlockPath.RANGED.acceptsPassiveTower(petType));
+            assertEquals(WarlockTowers.isMeleeSlave(petType), WarlockPath.MELEE.acceptsPassiveTower(petType));
+            assertFalse(WarlockPath.BASE.acceptsPassiveTower(petType));
+        }
     }
 
     @Test

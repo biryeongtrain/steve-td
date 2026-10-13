@@ -21,12 +21,12 @@ import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 
 final class AmbushMines {
     private static final TowerDataKey<Mines> STATE = TowerDataKey.of(
-            ResourceLocation.fromNamespaceAndPath("semiontd", "augment_mines"), Mines.class);
+            Identifier.fromNamespaceAndPath("semiontd", "augment_mines"), Mines.class);
     private static final Mines EMPTY = new Mines(-1, List.of(), List.of(), Set.of(), Set.of());
     private AmbushMines() {}
 

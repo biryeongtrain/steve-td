@@ -13,65 +13,65 @@ import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.SemionJob;
 import kim.biryeong.semiontd.rating.PlayerRatingProfile;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class SemionPlaceholders {
-    public static final ResourceLocation SELECTED_JOB = id("selected_job");
-    public static final ResourceLocation SELECTED_JOB_ID = id("selected_job_id");
-    public static final ResourceLocation JOB = id("job");
-    public static final ResourceLocation JOB_ID = id("job_id");
-    public static final ResourceLocation RATING_ELO = id("rating_elo");
-    public static final ResourceLocation RATING_GAMES = id("rating_games");
-    public static final ResourceLocation RATING_WINS = id("rating_wins");
-    public static final ResourceLocation RATING_LOSSES = id("rating_losses");
+    public static final Identifier SELECTED_JOB = id("selected_job");
+    public static final Identifier SELECTED_JOB_ID = id("selected_job_id");
+    public static final Identifier JOB = id("job");
+    public static final Identifier JOB_ID = id("job_id");
+    public static final Identifier RATING_ELO = id("rating_elo");
+    public static final Identifier RATING_GAMES = id("rating_games");
+    public static final Identifier RATING_WINS = id("rating_wins");
+    public static final Identifier RATING_LOSSES = id("rating_losses");
 
     private SemionPlaceholders() {
     }
 
     public static void register(SemionGameManager gameManager) {
-        Placeholders.register(SELECTED_JOB, (context, argument) -> {
+        Placeholders.registerServer(SELECTED_JOB, (context, argument) -> {
             if (!context.hasPlayer()) {
                 return PlaceholderResult.invalid("No player");
             }
             return PlaceholderResult.value(selectedJob(gameManager, context.player().getUUID()).displayName());
         });
-        Placeholders.register(SELECTED_JOB_ID, (context, argument) -> {
+        Placeholders.registerServer(SELECTED_JOB_ID, (context, argument) -> {
             if (!context.hasPlayer()) {
                 return PlaceholderResult.invalid("No player");
             }
             return PlaceholderResult.value(selectedJob(gameManager, context.player().getUUID()).id().toString());
         });
-        Placeholders.register(JOB, (context, argument) -> {
+        Placeholders.registerServer(JOB, (context, argument) -> {
             if (!context.hasPlayer()) {
                 return PlaceholderResult.invalid("No player");
             }
             return PlaceholderResult.value(selectedJob(gameManager, context.player().getUUID()).displayName());
         });
-        Placeholders.register(JOB_ID, (context, argument) -> {
+        Placeholders.registerServer(JOB_ID, (context, argument) -> {
             if (!context.hasPlayer()) {
                 return PlaceholderResult.invalid("No player");
             }
             return PlaceholderResult.value(Component.literal(selectedJob(gameManager, context.player().getUUID()).id().toString()));
         });
-        Placeholders.register(RATING_ELO, (context, argument) -> {
+        Placeholders.registerServer(RATING_ELO, (context, argument) -> {
             if (!context.hasPlayer()) {
                 return PlaceholderResult.invalid("No player");
             }
             return ratingPlaceholder(gameManager, context.player().getUUID(), SemionPlaceholders::ratingEloText);
         });
-        Placeholders.register(RATING_GAMES, (context, argument) -> {
+        Placeholders.registerServer(RATING_GAMES, (context, argument) -> {
             if (!context.hasPlayer()) {
                 return PlaceholderResult.invalid("No player");
             }
             return ratingPlaceholder(gameManager, context.player().getUUID(), SemionPlaceholders::ratingGamesText);
         });
-        Placeholders.register(RATING_WINS, (context, argument) -> {
+        Placeholders.registerServer(RATING_WINS, (context, argument) -> {
             if (!context.hasPlayer()) {
                 return PlaceholderResult.invalid("No player");
             }
             return ratingPlaceholder(gameManager, context.player().getUUID(), SemionPlaceholders::ratingWinsText);
         });
-        Placeholders.register(RATING_LOSSES, (context, argument) -> {
+        Placeholders.registerServer(RATING_LOSSES, (context, argument) -> {
             if (!context.hasPlayer()) {
                 return PlaceholderResult.invalid("No player");
             }
@@ -115,7 +115,7 @@ public final class SemionPlaceholders {
         return game.selectedJobOrDefault(playerId);
     }
 
-    private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, path);
+    private static Identifier id(String path) {
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, path);
     }
 }

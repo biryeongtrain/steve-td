@@ -6,17 +6,17 @@ import eu.pb4.polymer.core.api.other.PolymerMapCodec;
 import kim.biryeong.semiontd.ui.rp.ImageHandler;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.dialog.body.DialogBody;
 import net.minecraft.server.dialog.body.PlainMessage;
-import xyz.nucleoid.packettweaker.PacketContext;
+import net.fabricmc.fabric.api.networking.v1.context.PacketContext;
 
 import java.util.Optional;
 
-public record ImageBody(ResourceLocation id, Optional<Component> description) implements DialogBody {
+public record ImageBody(Identifier id, Optional<Component> description) implements DialogBody {
     public static final MapCodec<ImageBody> MAP_CODEC = PolymerMapCodec.ofDialogBody(
             RecordCodecBuilder.mapCodec(instance -> instance.group(
-                    ResourceLocation.CODEC.fieldOf("image").forGetter(ImageBody::id),
+                    Identifier.CODEC.fieldOf("image").forGetter(ImageBody::id),
                     ComponentSerialization.CODEC.optionalFieldOf("description").forGetter(ImageBody::description)
             ).apply(instance, ImageBody::new)),  ImageBody::asVanillaBody
     );

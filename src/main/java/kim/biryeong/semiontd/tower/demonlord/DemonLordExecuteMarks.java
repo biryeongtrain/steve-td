@@ -53,7 +53,7 @@ public final class DemonLordExecuteMarks {
         }
         double ratio = TowerBalanceRuntime.ability(altar.type().id(), "executeHealthRatio", 0.50);
         Map<Integer, SemionMonsterEntity> now = new HashMap<>();
-        List<PlayerLane> lanes = state.boundless() ? lane.teamLanes() : List.of(lane);
+        List<PlayerLane> lanes = List.of(lane);
         for (PlayerLane each : lanes) {
             if (each.arenaWorld() == null) {
                 continue;
@@ -147,7 +147,7 @@ public final class DemonLordExecuteMarks {
 
     private static PlayerTeam team() {
         PlayerTeam team = new PlayerTeam(new Scoreboard(), TEAM_NAME);
-        team.setColor(ChatFormatting.RED);
+        team.setColor(java.util.Optional.of(net.minecraft.world.scores.TeamColor.RED));
         return team;
     }
 }

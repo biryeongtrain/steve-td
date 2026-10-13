@@ -3,11 +3,9 @@ package kim.biryeong.semiontd.tower.engineer;
 import eu.pb4.polymer.virtualentity.api.ElementHolder;
 import eu.pb4.polymer.virtualentity.api.attachment.EntityAttachment;
 import eu.pb4.polymer.virtualentity.api.elements.BlockDisplayElement;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -42,7 +40,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.level.block.Blocks;
@@ -55,7 +53,7 @@ import org.joml.Vector3f;
 
 public final class EngineerTrapTower extends EntityBackedTower {
     private static final MonsterDataKey<Long> PISTON_IMMUNITY_UNTIL = MonsterDataKey.of(
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "engineer_piston_immunity_until"), Long.class
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "engineer_piston_immunity_until"), Long.class
     );
 
     private final EngineerTowers.TrapKind kind;
@@ -225,7 +223,7 @@ public final class EngineerTrapTower extends EntityBackedTower {
                     this, source, repeat, ignored -> pending.damage(), true, (target, amount, killed) -> {}));
         }
         boolean physicalPower = lane.arenaWorld().hasNeighborSignal(signalPosition());
-        Optional<PlateActivation> plateActivation = physicalPower
+        Optional<EngineerTrapSignalController.Activation> plateActivation = physicalPower
                 ? recentPlateActivation(lane)
                 : Optional.empty();
         boolean powered = plateActivation.isPresent();
@@ -359,7 +357,7 @@ public final class EngineerTrapTower extends EntityBackedTower {
         return armed;
     }
 
-    private void receiveSignal(PlayerLane lane, SemionTowerEntity source, PlateActivation activation) {
+    private void receiveSignal(PlayerLane lane, SemionTowerEntity source, EngineerTrapSignalController.Activation activation) {
         activationPlateDistance = activation.distance();
         activationPlateKind = activation.kind();
         if (activeTicks > 0) {
@@ -671,78 +669,26 @@ public final class EngineerTrapTower extends EntityBackedTower {
     }
 
     OptionalInt recentPlateDistance(PlayerLane lane) {
-        Optional<PlateActivation> activation = recentPlateActivation(lane);
+        Optional<EngineerTrapSignalController.Activation> activation = recentPlateActivation(lane);
         return activation.isPresent() ? OptionalInt.of(activation.orElseThrow().distance()) : OptionalInt.empty();
     }
 
-    private Optional<PlateActivation> recentPlateActivation(PlayerLane lane) {
+    private Optional<EngineerTrapSignalController.Activation> recentPlateActivation(PlayerLane lane) {
         return plateActivation(lane, true);
     }
 
-    private Optional<PlateActivation> plateActivation(PlayerLane lane, boolean requireRecentPress) {
+    private Optional<EngineerTrapSignalController.Activation> plateActivation(PlayerLane lane, boolean requireRecentPress) {
         long now = lane.arenaWorld().getGameTime();
-        long oldestAccepted = now - EngineerBalance.activeTicks();
-        Map<BlockPos, EngineerCircuitTower> circuits = new HashMap<>();
+        Map<BlockPos, EngineerTrapSignalSnapshot> circuits = new HashMap<>();
         for (var tower : lane.towers()) {
             if (tower instanceof EngineerCircuitTower circuit && ownerPlayer().equals(circuit.ownerPlayer())) {
-                circuits.put(circuit.circuitPosition(), circuit);
+                circuits.put(circuit.circuitPosition(), new EngineerTrapSignalSnapshot(
+                        EngineerTowers.repeaterDirection(circuit.type()).orElse(null),
+                        circuit.plateKind(), circuit.lastPressedGameTime()));
             }
         }
-        return circuits.values().stream()
-                .filter(circuit -> circuit.plateKind() != null)
-                .filter(circuit -> !requireRecentPress || circuit.lastPressedGameTime() >= oldestAccepted
-                        && circuit.lastPressedGameTime() <= now)
-                .map(circuit -> new PlatePath(
-                        circuit.lastPressedGameTime(),
-                        shortestDirectedDistance(circuits, circuit.circuitPosition()),
-                        circuit.circuitPosition(),
-                        circuit.plateKind()
-                ))
-                .filter(path -> path.distance() > 0)
-                .sorted(Comparator.comparingLong(PlatePath::pressedAt).reversed()
-                        .thenComparingInt(PlatePath::distance)
-                        .thenComparingInt(path -> path.position().getX())
-                        .thenComparingInt(path -> path.position().getY())
-                        .thenComparingInt(path -> path.position().getZ()))
-                .map(path -> new PlateActivation(path.distance(), path.kind()))
-                .findFirst();
-    }
-
-    private int shortestDirectedDistance(Map<BlockPos, EngineerCircuitTower> circuits, BlockPos start) {
-        ArrayDeque<CircuitStep> pending = new ArrayDeque<>();
-        Set<BlockPos> visited = new HashSet<>();
-        pending.addLast(new CircuitStep(start, 1));
-        visited.add(start);
-        while (!pending.isEmpty()) {
-            CircuitStep step = pending.removeFirst();
-            EngineerCircuitTower current = circuits.get(step.position());
-            for (Direction direction : Direction.Plane.HORIZONTAL) {
-                if (!canLeave(current, direction)) {
-                    continue;
-                }
-                BlockPos adjacent = step.position().relative(direction);
-                if (adjacent.equals(signalPosition())) {
-                    return step.distance();
-                }
-                EngineerCircuitTower next = circuits.get(adjacent);
-                if (next != null && canEnter(next, direction) && visited.add(adjacent)) {
-                    pending.addLast(new CircuitStep(adjacent, step.distance() + 1));
-                }
-            }
-        }
-        return -1;
-    }
-
-    private static boolean canLeave(EngineerCircuitTower circuit, Direction direction) {
-        return circuit != null && EngineerTowers.repeaterDirection(circuit.type())
-                .map(direction::equals)
-                .orElse(true);
-    }
-
-    private static boolean canEnter(EngineerCircuitTower circuit, Direction travelDirection) {
-        return EngineerTowers.repeaterDirection(circuit.type())
-                .map(travelDirection::equals)
-                .orElse(true);
+        return EngineerTrapSignalController.select(circuits, signalPosition(), now,
+                now - EngineerBalance.activeTicks(), requireRecentPress);
     }
 
     int activationPlateDistance() {
@@ -761,20 +707,6 @@ public final class EngineerTrapTower extends EntityBackedTower {
         return kind == EngineerTowers.TrapKind.TNT && tntPlateKind != null
                 ? tntPlateKind
                 : activationPlateKind;
-    }
-
-    private record CircuitStep(BlockPos position, int distance) {
-    }
-
-    private record PlatePath(
-            long pressedAt,
-            int distance,
-            BlockPos position,
-            EngineerTowers.PlateKind kind
-    ) {
-    }
-
-    private record PlateActivation(int distance, EngineerTowers.PlateKind kind) {
     }
 
     private double ability(String key, double fallback) {

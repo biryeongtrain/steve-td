@@ -3,7 +3,7 @@ package kim.biryeong.semiontd.entity.tower.vfx;
 import kim.biryeong.semiontd.api.area.AreaVfxPalette;
 import kim.biryeong.semiontd.api.area.AreaVfxParticle;
 import net.minecraft.core.particles.DustParticleOptions;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public enum BuilderPalette {
     VILLAGER(0xD9A441, 0xFFF1A8, "minecraft:wax_on", "minecraft:end_rod"),
@@ -39,6 +39,7 @@ public enum BuilderPalette {
     PIRATE(0xFFD700, 0xC0C0C0, "minecraft:wax_on", "minecraft:end_rod"),
     /** 빌더 빌더: 청사진 파랑과 흰 선. */
     BLUEPRINT(0x2F6FDE, 0xE8F1FF, "minecraft:enchant", "minecraft:end_rod"),
+    MAGIC_SCHOOL(0x8B5CF6, 0xFBBF24, "minecraft:enchant", "minecraft:end_rod"),
     DEFAULT(0xE0E0E0, 0xFFFFFF, "minecraft:end_rod", "minecraft:crit");
 
     private final DustParticleOptions rayParticle;
@@ -76,8 +77,8 @@ public enum BuilderPalette {
         );
     }
 
-    private static ResourceLocation particleId(String id) {
-        ResourceLocation parsed = ResourceLocation.tryParse(id);
+    private static Identifier particleId(String id) {
+        Identifier parsed = Identifier.tryParse(id);
         if (parsed == null) {
             throw new IllegalArgumentException("Invalid particle id: " + id);
         }

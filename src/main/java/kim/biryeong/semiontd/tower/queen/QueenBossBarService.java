@@ -85,7 +85,7 @@ public final class QueenBossBarService {
     private void update(ServerPlayer player, double charge, int required, double executionHealth) {
         Component title = title(executionHealth);
         UUID playerId = player.getUUID();
-        ServerBossEvent event = bossBars.computeIfAbsent(playerId, ignored -> new ServerBossEvent(
+        ServerBossEvent event = bossBars.computeIfAbsent(playerId, ignored -> new ServerBossEvent(java.util.UUID.randomUUID(),
                 title, BossEvent.BossBarColor.RED, BossEvent.BossBarOverlay.PROGRESS));
         event.setName(title);
         event.setProgress(progress(charge, required));

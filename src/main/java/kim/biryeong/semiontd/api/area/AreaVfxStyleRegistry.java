@@ -1,12 +1,12 @@
 package kim.biryeong.semiontd.api.area;
 
 import java.util.Optional;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public interface AreaVfxStyleRegistry {
-    void register(ResourceLocation id, AreaVfxStylePlanner planner);
+    void register(Identifier id, AreaVfxStylePlanner planner);
 
-    Optional<AreaVfxStylePlanner> find(ResourceLocation id);
+    Optional<AreaVfxStylePlanner> find(Identifier id);
 
     boolean frozen();
 }

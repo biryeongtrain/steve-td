@@ -5,9 +5,8 @@ import kim.biryeong.semiontd.config.TraitBalanceRuntime;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.tower.Tower;
-import kim.biryeong.semiontd.tower.end.EndTowers;
-import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
-import net.minecraft.resources.ResourceLocation;
+import kim.biryeong.semiontd.job.HyperCarryBuilders;
+import net.minecraft.resources.Identifier;
 
 public final class TraitEffects {
     private static final double BASE_WAVE_STARTED_SELL_REFUND_RATE = 0.50;
@@ -15,7 +14,7 @@ public final class TraitEffects {
     private TraitEffects() {
     }
 
-    public static double effectScale(TraitLoadout loadout, ResourceLocation traitId) {
+    public static double effectScale(TraitLoadout loadout, Identifier traitId) {
         if (loadout == null || traitId == null) {
             return 0.0;
         }
@@ -86,9 +85,15 @@ public final class TraitEffects {
     }
 
     public static double towerMaxHealthBonus(TraitLoadout loadout, Tower tower) {
-        boolean isCoreTower = tower != null && (WarlockTowers.isWarlockCore(tower.type()) || EndTowers.isBaseEndTower(tower.type()));
+        return maxHealthBonus(loadout, tower != null && HyperCarryBuilders.isCore(tower.type()));
+    }
 
-        double fullPower = isCoreTower
+    public static double hyperCarryMaxHealthBonus(TraitLoadout loadout) {
+        return maxHealthBonus(loadout, true);
+    }
+
+    private static double maxHealthBonus(TraitLoadout loadout, boolean hyperCarry) {
+        double fullPower = hyperCarry
                 ? value(BuiltInTraits.FORTITUDE_ID, "CoreMaxHealthBonus")
                 : value(BuiltInTraits.FORTITUDE_ID, "maxHealthBonus");
 
@@ -216,9 +221,7 @@ public final class TraitEffects {
                 .filter(candidate -> Objects.equals(candidate.ownerPlayer(), tower.ownerPlayer()))
                 .filter(candidate -> Objects.equals(candidate.type().id(), tower.type().id()))
                 .count();
-        return sameTypeTowers
-                * value(BuiltInTraits.STRENGTH_IN_NUMBERS_ID, "damageBonusPerTower")
-                * effectScale(loadout, BuiltInTraits.STRENGTH_IN_NUMBERS_ID);
+        return sameTypeDamageBonus(loadout, sameTypeTowers);
     }
 
     public static double diversityDamageBonus(TraitLoadout loadout, PlayerLane lane, Tower tower) {
@@ -231,6 +234,16 @@ public final class TraitEffects {
                 .map(candidate -> candidate.type().id())
                 .distinct()
                 .count();
+        return diversityDamageBonus(loadout, distinctTypes);
+    }
+
+    static double sameTypeDamageBonus(TraitLoadout loadout, long sameTypeTowers) {
+        return sameTypeTowers
+                * value(BuiltInTraits.STRENGTH_IN_NUMBERS_ID, "damageBonusPerTower")
+                * effectScale(loadout, BuiltInTraits.STRENGTH_IN_NUMBERS_ID);
+    }
+
+    static double diversityDamageBonus(TraitLoadout loadout, long distinctTypes) {
         return distinctTypes
                 * value(BuiltInTraits.DIVERSITY_ID, "damageBonusPerType")
                 * effectScale(loadout, BuiltInTraits.DIVERSITY_ID);
@@ -254,7 +267,7 @@ public final class TraitEffects {
         );
     }
 
-    private static double value(ResourceLocation traitId, String key) {
+    private static double value(Identifier traitId, String key) {
         return TraitBalanceRuntime.value(traitId, key);
     }
 }

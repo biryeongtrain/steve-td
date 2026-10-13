@@ -47,9 +47,9 @@ class AugmentServiceTest {
     }
 
     @Test
-    void offerHeaderOnlyShowsCompactAcquisitionAndTargetToolGuidance() {
+    void offerHeaderShowsSharedBudgetCarryoverAndTargetToolGuidance() {
         var state = new PlayerAugmentState(java.util.UUID.randomUUID());
-        assertEquals("선택한 증강 0/3 · 전체 리롤 5/5회\n증강은 즉시 획득합니다."
+        assertEquals("선택한 증강 0/3 · 공용 리롤 5/5\n한 번에 카드 3장을 교체합니다. 남은 횟수는 다음 증강 라운드로 이월됩니다."
                         + "\n지정형 증강은 도구로 타워를 선택할 수 있습니다.",
                 SemionText.mini(AugmentService.offerHeader(state)).getString());
     }

@@ -48,7 +48,7 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Items;
@@ -308,10 +308,10 @@ public final class GambleGameTest {
         group.addLane(lane);
         prepareFloor(context);
         GamblerTower target = gambler(owner, floor(context, 4, 2, 4));
-        ResourceLocation rangeSource = supportTestSource("range");
-        ResourceLocation regenerationSource = supportTestSource("regeneration");
-        ResourceLocation damageSource = supportTestSource("damage");
-        ResourceLocation healthSource = supportTestSource("health");
+        Identifier rangeSource = supportTestSource("range");
+        Identifier regenerationSource = supportTestSource("regeneration");
+        Identifier damageSource = supportTestSource("damage");
+        Identifier healthSource = supportTestSource("health");
         try {
             lane.addTower(target);
             SemionTowerEntity entity = entity(lane, target);
@@ -579,7 +579,7 @@ public final class GambleGameTest {
                     "The basic splash radius must remain fixed despite legacy rolled state.");
 
             SemionTowerEntity source = entity(lane, replacement);
-            ResourceLocation supportDamage = supportTestSource("grown-damage-composition");
+            Identifier supportDamage = supportTestSource("grown-damage-composition");
             source.setPersistentEffect(TimedEffectType.TOWER_FLAT_DAMAGE_BONUS, supportDamage, 2.5);
             require(close(source.attackDamageAmount(null), 47.5),
                     "Fixed support damage must be added after the gambler's +35 growth without being multiplied.");
@@ -839,7 +839,7 @@ public final class GambleGameTest {
                         require(support.activeEffects().equals(normal),
                                 "Faces three through six must receive no insurance effects.");
                     }
-                    ResourceLocation sourceId = GambleRoundEffects.sourceId(support);
+                    Identifier sourceId = GambleRoundEffects.sourceId(support);
                     require(support.affectedTargets() == 1
                                     && sourceCount(entity(lane, target), sourceId) == support.activeEffects().size(),
                             "Every insured combat effect must reach only the eligible owned gambler.");
@@ -1052,12 +1052,12 @@ public final class GambleGameTest {
         return entity;
     }
 
-    private static int sourceCount(SemionTowerEntity entity, net.minecraft.resources.ResourceLocation source) {
+    private static int sourceCount(SemionTowerEntity entity, net.minecraft.resources.Identifier source) {
         return (int) SUPPORT_EFFECTS.stream().filter(type -> entity.hasTimedEffectSource(type, source)).count();
     }
 
-    private static ResourceLocation supportTestSource(String path) {
-        return ResourceLocation.fromNamespaceAndPath("semion-td", "gamble/test/" + path);
+    private static Identifier supportTestSource(String path) {
+        return Identifier.fromNamespaceAndPath("semion-td", "gamble/test/" + path);
     }
 
     private static int sum(int[] values) {

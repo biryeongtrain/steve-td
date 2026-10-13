@@ -17,6 +17,15 @@ public final class SummonDescriptionFactory {
 
     private static void addAbilityLines(ArrayList<String> lines, SummonConfig.SummonDefinition definition) {
         switch (definition.id()) {
+            case "dark_priest", "ogre_champion" -> {
+                addLine(lines, "주 대상부터 가까운 방어 대상 최대 " + integer(definition, "maxTargets", 5)
+                        + "기를 광역 공격합니다.");
+                if (definition.id().equals("dark_priest")) {
+                    addLine(lines, "공격과 별개로 주변 아군을 " + number(value(definition, "healAmount", 16.0))
+                            + " × 성장 배율 + 대상 최대 체력의 " + percent(value(definition, "healMaxHealthRatio", 0.02))
+                            + "만큼 회복합니다. 성장 배율은 신관 최대 체력 / 기본 최대 체력이며 최소 1입니다.");
+                }
+            }
             case "wolf", "cave_spider", "stray", "goat", "bogged", "breeze", "vindicator" ->
                     addTowerDebuffLine(lines, definition, "공격속도", "magnitude");
             case "horse", "shulker" ->
@@ -26,8 +35,8 @@ public final class SummonDescriptionFactory {
                             + " 내 가까운 타워 최대 " + integer(definition, "maxTargets", 3)
                             + "기의 공격속도를 " + seconds(definition, "durationTicks", 100)
                             + "간 " + percent(value(definition, "attackSpeedMagnitude", 0.30))
-                            + ", 사거리를 " + percent(value(definition, "rangeMagnitude", 0.20))
-                            + " 감소시킵니다. (" + seconds(definition, "cooldownTicks", 80) + " 쿨타임)");
+                            + " 곱연산 감소시키고, 사거리를 " + percent(value(definition, "rangeMagnitude", 0.20))
+                            + " 곱연산 감소시킵니다. (" + seconds(definition, "cooldownTicks", 80) + " 쿨타임)");
             case "turtle" ->
                     addAllyBuffLine(lines, definition, "받는 피해", "magnitude", "감소");
             case "allay" ->
@@ -56,8 +65,7 @@ public final class SummonDescriptionFactory {
                             + " 감소시킵니다. (" + seconds(definition, "cooldownTicks", 60) + " 쿨타임)");
             case "guardian", "blaze", "ghast", "wither_skeleton", "warden" ->
                     addSupportLines(lines, definition);
-            default -> {
-            }
+            default -> definition.description().forEach(line -> addLine(lines, line));
         }
     }
 

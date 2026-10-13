@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.Gson;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.junit.jupiter.api.Test;
 
 final class SemionPlayerProfileTest {
@@ -13,7 +13,7 @@ final class SemionPlayerProfileTest {
     void selectedSkyboxSurvivesOtherProfileUpdates() {
         SemionPlayerProfile profile = SemionPlayerProfile.fresh("Player")
                 .updateSelectedSkybox("Player", "space")
-                .updateSelectedJob("Player", ResourceLocation.fromNamespaceAndPath("semion-td", "animal"))
+                .updateSelectedJob("Player", Identifier.fromNamespaceAndPath("semion-td", "animal"))
                 .recordMatch("Player", true, 10)
                 .rememberRecentBuildCode("Player", "ABC123");
 
@@ -38,7 +38,7 @@ final class SemionPlayerProfileTest {
 
         SemionPlayerProfile disabled = existing
                 .updateTipsEnabled("Player", false)
-                .updateSelectedJob("Player", ResourceLocation.fromNamespaceAndPath("semion-td", "animal"))
+                .updateSelectedJob("Player", Identifier.fromNamespaceAndPath("semion-td", "animal"))
                 .recordMatch("Player", true, 10)
                 .rememberRecentBuildCode("Player", "ABC123");
 
@@ -53,7 +53,7 @@ final class SemionPlayerProfileTest {
         SemionPlayerProfile duplicate = purchased.purchaseCosmetic("Player", "crown", 35);
         SemionPlayerProfile selected = duplicate
                 .updateSelectedCosmetic("Player", "crown")
-                .updateSelectedJob("Player", ResourceLocation.fromNamespaceAndPath("semion-td", "animal"))
+                .updateSelectedJob("Player", Identifier.fromNamespaceAndPath("semion-td", "animal"))
                 .recordMatch("Player", false, 5);
 
         assertEquals(65, purchased.cosmeticCurrency());

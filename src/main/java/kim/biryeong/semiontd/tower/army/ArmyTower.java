@@ -1,6 +1,5 @@
 package kim.biryeong.semiontd.tower.army;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -29,7 +28,7 @@ import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.decoration.ArmorStand;
@@ -46,8 +45,8 @@ import net.minecraft.world.item.Items;
  */
 public class ArmyTower extends ProductionTower {
     /** Single source key so the summed command bonus stays capped in one place. */
-    private static final ResourceLocation COMMAND_SOURCE =
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "army_command");
+    private static final Identifier COMMAND_SOURCE =
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "army_command");
 
     private int service;
     private int pendingServiceGain;
@@ -565,7 +564,7 @@ public class ArmyTower extends ProductionTower {
      * is only that promotion, command and discharge are visible at all, and the palette already
      * differs per style, so 승진(BUFF, green) and 전역(PULSE) read differently without new art.
      */
-    private boolean playRankVfx(PlayerLane lane, net.minecraft.resources.ResourceLocation style, String tag) {
+    private boolean playRankVfx(PlayerLane lane, net.minecraft.resources.Identifier style, String tag) {
         SemionTowerEntity source = entity(lane).orElse(null);
         if (source == null || !source.isAlive()) {
             return false;
@@ -595,60 +594,20 @@ public class ArmyTower extends ProductionTower {
         BARRAGE(AreaVfxStyles.SPLASH),
         DISCHARGE(AreaVfxStyles.PULSE);
 
-        private final ResourceLocation style;
+        private final Identifier style;
 
-        DebugVfx(ResourceLocation style) {
+        DebugVfx(Identifier style) {
             this.style = style;
         }
 
-        private ResourceLocation style() {
+        private Identifier style() {
             return style;
         }
     }
 
-
-    // ------------------------------------------------------------------ dialog
-
     @Override
     public List<String> runtimeDetailLines() {
-        ArrayList<String> lines = new ArrayList<>();
-        if (isTemporaryCopy()) {
-            lines.add("예비군 · 라운드 종료까지 참전 · 계급 오라와 전역 보상 없음");
-            return lines;
-        }
-        if (!ranks()) {
-            lines.add("계급 없음 · 짬의 영향을 받지 않습니다");
-            addSupportLines(lines);
-            return lines;
-        }
-
-        ArmyRank current = rank();
-        lines.add("계급 " + rankTitle(current) + " (짬 " + service + ")");
-        lines.add("공격력 " + percentInteger(current.attackMultiplier()) + " · 후임 버프 +"
-                + percentInteger(current.damageBuff()));
-
-        int untilPromotion = ArmyRank.wavesUntilPromotion(service);
-        int untilDischarge = ArmyRank.wavesUntilDischarge(service);
-        if (untilDischarge <= ArmyBalance.dischargeNoticeWaves()) {
-            lines.add("<red>전역까지 " + untilDischarge + "웨이브</red>");
-        } else if (untilPromotion > 0) {
-            lines.add("다음 진급까지 " + untilPromotion + "웨이브 · 전역까지 " + untilDischarge + "웨이브");
-        } else {
-            lines.add("전역까지 " + untilDischarge + "웨이브");
-        }
-
-        double medal = ArmyStates.medalBonus(ownerPlayer());
-        if (medal > 0.0) {
-            lines.add("훈장 " + ArmyStates.medalCount(ownerPlayer()) + "개 · 공격력 +" + percentInteger(medal));
-        }
-        return lines;
+        return ArmyTowerStatsView.create(this);
     }
 
-    private void addSupportLines(ArrayList<String> lines) {
-        double bonus = ArmyBalance.serviceRateBonus(type().id());
-        if (bonus != 0.0) {
-            String sign = bonus > 0 ? "+" : "";
-            lines.add("주변 아군 짬 " + sign + Math.round(bonus) + "/웨이브");
-        }
-    }
 }

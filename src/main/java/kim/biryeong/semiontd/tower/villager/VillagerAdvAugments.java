@@ -17,7 +17,7 @@ import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 
 public final class VillagerAdvAugments {
@@ -154,7 +154,7 @@ public final class VillagerAdvAugments {
                 ? entity : null;
     }
 
-    private static ResourceLocation id(String name) {
-        return ResourceLocation.fromNamespaceAndPath("semiontd", "villager_adv_augment/" + name);
+    private static Identifier id(String name) {
+        return Identifier.fromNamespaceAndPath("semiontd", "villager_adv_augment/" + name);
     }
 }

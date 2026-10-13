@@ -20,13 +20,13 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class IllagerRaidStates {
     public static final String RAID_CONFIG_ID = "illager_raid";
     public static final String AMBUSH = "job_illager_towers_g1";
     public static final String GRAND_RAID = "job_illager_towers_p";
-    private static final ResourceLocation AMBUSH_SPEED = ResourceLocation.fromNamespaceAndPath("semiontd", "illager_ambush");
+    private static final Identifier AMBUSH_SPEED = Identifier.fromNamespaceAndPath("semiontd", "illager_ambush");
 
     private static final Map<UUID, IllagerRaidState> STATES = new HashMap<>();
 
@@ -163,7 +163,7 @@ public final class IllagerRaidStates {
 
         ServerPlayer player = server.getPlayerList().getPlayer(lane.ownerPlayer());
         if (player != null) {
-            player.playNotifySound(SoundEvents.APPLY_EFFECT_RAID_OMEN, SoundSource.HOSTILE, 1.0F, 1.0F);
+            kim.biryeong.semiontd.util.SemionPlayerPackets.playSound(player, SoundEvents.APPLY_EFFECT_RAID_OMEN, SoundSource.HOSTILE, 1.0F, 1.0F);
         }
 
         int affectedTowers = 0;

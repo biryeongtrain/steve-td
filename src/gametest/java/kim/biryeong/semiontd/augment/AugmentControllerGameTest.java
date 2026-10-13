@@ -1,32 +1,109 @@
 package kim.biryeong.semiontd.augment;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-import kim.biryeong.semiontd.config.EconomyConfig;
-import kim.biryeong.semiontd.config.WaveConfig;
-import kim.biryeong.semiontd.game.AssignedParticipant;
-import kim.biryeong.semiontd.game.MatchMode;
-import kim.biryeong.semiontd.game.ParticipantSelectionPlan;
 import kim.biryeong.semiontd.game.RoundPhase;
 import kim.biryeong.semiontd.game.SemionGame;
 import kim.biryeong.semiontd.game.SemionPlayer;
 import kim.biryeong.semiontd.game.TeamId;
-import kim.biryeong.semiontd.gametest.SyntheticArenaFactory;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
-import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
-/** Exercises the real server controller and native dialog construction, not client rendering. */
-public final class AugmentControllerGameTest {
+public final class AugmentControllerGameTest extends AugmentControllerFixture {
+    @GameTest
+    public void closeReopenAndReconnectPreserveRerolledOfferWithoutSkippingOrResetting(GameTestHelper context) {
+        var online = context.makeMockServerPlayerInLevel();
+        var game = prepare(context, online, "GGG");
+        var originalConnection = online.connection;
+        try {
+            force(game, online, "beneficial_effect_2 reserve_income_gold reserve_production_gold");
+            advance(game, online, 20);
+            var player = game.players().get(online.getUUID());
+            var state = player.augments();
+            var before = state.currentOffer().orElseThrow();
+            String reroll = "reroll " + before.revision() + " " + UUID.randomUUID();
+            require(handle(game, online, reroll) == 1, "Fixture must spend one reroll before close.");
+            var kept = state.currentOffer().orElseThrow();
+            var events = List.copyOf(state.offerEvents());
+            var packets = new java.util.ArrayList<net.minecraft.network.protocol.Packet<?>>();
+            online.connection = new net.minecraft.server.network.ServerGamePacketListenerImpl(online.level().getServer(),
+                    new net.minecraft.network.Connection(net.minecraft.network.protocol.PacketFlow.SERVERBOUND), online,
+                    net.minecraft.server.network.CommonListenerCookie.createInitial(online.getGameProfile(), false)) {
+                @Override public void send(net.minecraft.network.protocol.Packet<?> packet) { packets.add(packet); }
+            };
+            var screen = game.augmentService().offerScreen(game, player, kept, true);
+            require(screen.buttons().getLast().label().equals("닫기"), "The action must describe closing, not skipping.");
+            require(game.augmentService().handle(game, online,
+                    screen.buttons().getLast().command().substring("/semiontd augment ".length()), false) == 1,
+                    "The actual navigation command must close successfully.");
+            require(packets.stream().anyMatch(net.minecraft.network.protocol.common.ClientboundClearDialogPacket.class::isInstance),
+                    "Closing must send the native clear-dialog packet.");
+            for (String route : List.of("ui current", "ui close", "ui skip", "ui current")) {
+                require(handle(game, online, route) == 1, "Current and legacy close views remain navigable.");
+            }
+            require(game.restorePlayerPlacement(online.level().getServer(), online), "Reconnect must restore the existing participant.");
+            game.augmentService().reopen(game, online);
+            require(state.currentOffer().orElseThrow().equals(kept) && state.offerEvents().equals(events)
+                            && state.rerollsRemainingBySlot().equals(List.of(4, 4, 4)) && state.selections().isEmpty(),
+                    "Close, command reopen and reconnect preserve cards, deadline, revision, draft and shared rerolls.");
+            require(handle(game, online, reroll) == 0, "Closing cannot revive a previously consumed reroll nonce.");
+            require(handle(game, online, "draft " + before.revision() + " 0 " + before.cardIds().getFirst() + " " + UUID.randomUUID()) == 0,
+                    "Closing cannot revive a replaced card.");
+            require(handle(game, online, "skip " + kept.revision() + " " + UUID.randomUUID()) == 0,
+                    "An old consuming skip command must no longer discard an offer.");
+            require(state.currentOffer().orElseThrow().equals(kept) && state.selections().isEmpty(), "Rejected old commands preserve the offer.");
+            String select = "draft " + kept.revision() + " 2 " + kept.cardIds().get(2) + " " + UUID.randomUUID();
+            require(handle(game, online, select) == 1, "A still-current card remains selectable after reopening.");
+            handle(game, online, "ui close");
+            handle(game, online, "ui current");
+            require(handle(game, online, select) == 0 && state.selections().size() == 1 && state.currentOffer().isEmpty(),
+                    "Closing and reopening after selection cannot recreate or duplicate an augment.");
+            var config = game.augmentConfig();
+            setField(game, "augmentConfig", new AugmentConfig(config.enabled(), true, config.rarityWeights(), config.parameters(), config.disabledIds()));
+            setField(game, "currentRound", 14);
+            setField(game, "phase", RoundPhase.ROUND_PAYOUT);
+            game.tick(online.level().getServer());
+            var next = state.currentOffer().orElseThrow();
+            require(next.milestoneRound() == 15 && state.rerollsRemainingBySlot().equals(List.of(4, 4, 4)),
+                    "A later milestone preserves the budgets rather than reopening the old offer.");
+            require(handle(game, online, select) == 0 && state.currentOffer().orElseThrow().equals(next),
+                    "An old selection callback cannot alter the new round offer.");
+        } finally { online.connection = originalConnection; game.close(); }
+        context.succeed();
+    }
+
+    @GameTest
+    public void closeDoesNotPauseExpirationAndReopenCannotGrantTwice(GameTestHelper context) {
+        var online = context.makeMockServerPlayerInLevel();
+        var game = prepare(context, online);
+        try {
+            force(game, online, "beneficial_effect_1 reserve_income_silver reserve_production_silver");
+            advance(game, online, 20);
+            var state = game.players().get(online.getUUID()).augments();
+            var offer = state.currentOffer().orElseThrow();
+            handle(game, online, "ui close");
+            setField(game, "tickCounter", offer.deadlineTickExclusive());
+            require(handle(game, online, "ui current") == 1, "The reopen command remains available at the deadline.");
+            require(state.currentOffer().isEmpty() && state.selections().size() == 1
+                            && state.selections().getFirst().outcome() == PlayerAugmentState.Outcome.SELECTED,
+                    "Reopen at expiration must use the existing random-selection rule, not skip or extend time.");
+            var selections = List.copyOf(state.selections());
+            game.augmentService().reopen(game, online);
+            handle(game, online, "ui close");
+            handle(game, online, "ui current");
+            require(state.selections().equals(selections) && state.rerollsRemainingBySlot().equals(List.of(5, 5, 5)),
+                    "Repeated reopen after expiry neither grants again nor spends or replenishes rerolls.");
+        } finally { game.close(); }
+        context.succeed();
+    }
+
     @GameTest
     public void beneficialCardsAreAcquiredInOneClickWithoutATargetAndSurviveReopen(GameTestHelper context) {
         for (int tier = 1; tier <= 3; tier++) {
@@ -93,7 +170,7 @@ public final class AugmentControllerGameTest {
                 entity.hurt(entity.damageSources().generic(), 10);
                 double baseline = health - tower.health();
                 require(baseline > 0, "The unaugmented body must receive damage.");
-                entity.invulnerableTime = 0;
+                entity.damageCooldownTime = 0;
                 force(game, online, "tactical_designation_1_cover reserve_income_silver reserve_production_silver");
                 advance(game, online, 20);
                 handle(game, online, "draft " + player.augments().currentOffer().orElseThrow().revision() + " 0 " + UUID.randomUUID());
@@ -119,177 +196,60 @@ public final class AugmentControllerGameTest {
     }
 
     @GameTest
-    public void demonLordDesignationsAreAutomaticAndSoulBondIsExcluded(GameTestHelper context) {
-        warmPlayerSpawn(context);
-        context.runAfterDelay(10, () -> checkDemonLordDesignations(context));
-    }
-
-    private static void checkDemonLordDesignations(GameTestHelper context) {
-        for (String id : List.of("tactical_designation_1_assault", "tactical_designation_1_cover",
-                "overheat_core", "battlefield_mastery", "one_man_show")) {
-            var card = AugmentCatalog.find(id).orElseThrow();
-            String schedule = switch (card.rarity()) {case SILVER -> "SSS"; case GOLD -> "GGG"; case PRISMATIC -> "PPP";};
-            String rarity = switch (card.rarity()) {case SILVER -> "silver"; case GOLD -> "gold"; case PRISMATIC -> "prismatic";};
-            ServerPlayer online = context.makeMockServerPlayerInLevel();
-            SemionGame game = prepare(context, online, schedule);
-            try {
-                var player = game.players().get(online.getUUID());
-                player.assignJob(new kim.biryeong.semiontd.job.DemonLordTowerJob());
-                var demon = kim.biryeong.semiontd.tower.demonlord.DemonLordStates.getOrCreate(player.uuid());
-                var lane = game.playerLane(player.uuid()).orElseThrow();
-                require(!game.augmentService().isEligible(game, player, "frontline_specialization"),
-                        "Demon Lords cannot receive soul bond in any candidate path.");
-                require(AugmentService.selfTargeted(player, id), "Common single designations must target the Demon Lord.");
-                force(game, online, id + " reserve_income_" + rarity + " reserve_production_" + rarity);
-                advance(game, online, 20);
-                var offer = player.augments().currentOffer().orElseThrow();
-                String command = "draft " + offer.revision() + " 0 " + UUID.randomUUID();
-                require(handle(game, online, command) == 1, "A self designation must be acquired in one click.");
-                handle(game, online, command);
-                require(player.augments().selections().size() == 1 && toolCount(online) == 0,
-                        "No duplicate grant or unusable target tool is allowed.");
-                advance(game, online, 5);
-                game.augmentService().reopen(game, online);
-                require(AugmentService.hudHint(game, player).contains("마왕 자신"), "HUD must not ask for a missing target.");
-                require(game.augmentService().eligibleTargets(game, player, id).isEmpty(), "Altars cannot steal the self effect.");
-                double before = demon.maxHealth();
-                lane.markWaveStarted(5);
-                require(demon.inCombat() && demon.maxHealth() == before, "Starting combat cannot lose or double the self bonus.");
-                if (id.equals("one_man_show")) {
-                    var unaugmented = new kim.biryeong.semiontd.tower.demonlord.DemonLordState(UUID.randomUUID());
-                    require(Math.abs(before - unaugmented.maxHealth() * 1.2) < .0001,
-                            "Self health must include 20% of the chosen bonus.");
-                }
-            } finally {
-                game.close();
-                kim.biryeong.semiontd.tower.demonlord.DemonLordStates.clearAllForTesting();
-            }
-        }
-        context.succeed();
-    }
-
-    private static void warmPlayerSpawn(GameTestHelper context) {
-        // Login waits for entity storage too; let it tick before creating a mock player in isolation.
-        net.minecraft.world.level.ChunkPos.rangeClosed(new net.minecraft.world.level.ChunkPos(context.getLevel().getSharedSpawnPos()), 2)
-                .forEach(pos -> context.getLevel().getChunk(pos.x, pos.z));
-    }
-
-    @GameTest
-    public void rerollControllerReplacesTheWholeOfferAndPreservesBudgetOnReopen(GameTestHelper context) {
+    public void sharedRerollRejectsLegacyCommandsAndPreservesBudgetOnReconnectAndNextRound(GameTestHelper context) {
         ServerPlayer online = context.makeMockServerPlayerInLevel();
         SemionGame game = prepare(context, online, "GGG");
         try {
             force(game, online, "tactical_designation_2_assault frontline_specialization battlefield_mastery");
             advance(game, online, 20);
-            var state = game.players().get(online.getUUID()).augments();
+            var player = game.players().get(online.getUUID());
+            var state = player.augments();
             var before = state.currentOffer().orElseThrow();
-            String command = "reroll " + before.revision() + " " + UUID.randomUUID();
-            require(handle(game, online, command) == 1, "One reroll button must replace the whole offer.");
+            UUID request = UUID.randomUUID();
+            String command = "reroll " + before.revision() + " " + request;
+            require(game.augmentService().handle(game, online, command, false) == 0, "Reroll requires the match session token.");
+            require(handle(game, online, "reroll " + before.revision() + " 0 " + before.cardIds().getFirst() + " " + UUID.randomUUID()) == 0,
+                    "The legacy per-slot reroll command must be rejected.");
+            require(handle(game, online, "reroll " + before.revision() + " 0 " + before.cardIds().get(1) + " " + UUID.randomUUID()) == 0,
+                    "A callback naming another card in the slot must be rejected.");
+            require(handle(game, online, command) == 1, "One reroll replaces all three cards.");
             var after = state.currentOffer().orElseThrow();
-            require(after.cardIds().size() == 3 && after.cardIds().stream().noneMatch(before.cardIds()::contains),
-                    "All three original cards must leave the offer.");
-            require(state.rerollsRemaining() == 4 && AugmentService.offerHeader(state).contains("4/5"),
-                    "The server and visible header must show the same remaining match budget.");
-            require(handle(game, online, command) == 1, "Replayed successful input keeps its receipt.");
+            require(java.util.Collections.disjoint(before.cardIds(), after.cardIds()),
+                    "All three previous cards must be replaced.");
+            require(state.rerollsRemainingBySlot().equals(List.of(4, 4, 4)) && AugmentService.offerHeader(state).contains("4/5"),
+                    "The server and visible header must show the shared remaining budget.");
+            require(handle(game, online, command) == 0, "A repeated callback must be rejected without another charge.");
             require(handle(game, online, "reroll " + before.revision() + " " + UUID.randomUUID()) == 0,
-                    "A stale reroll button cannot alter a new offer.");
-            require(handle(game, online, "ui reroll") == 1, "The full-offer reroll dialog must render.");
+                    "An old revision cannot reroll the new three-card offer.");
+            require(handle(game, online, "reroll " + after.revision() + " " + request) == 0,
+                    "A request ID cannot be reused for another revision.");
+            require(handle(game, online, "ui reroll") == 1, "The shared reroll dialog must render.");
+            require(game.restorePlayerPlacement(online.level().getServer(), online), "The real reconnect placement path must find the participant.");
             game.augmentService().reopen(game, online);
-            require(state.currentOffer().orElseThrow().equals(after) && state.rerollsRemaining() == 4,
-                    "Duplicate input, dialog reopening and reconnect restoration cannot spend more rerolls.");
+            require(game.players().get(online.getUUID()) == player && player.augments() == state
+                            && state.currentOffer().orElseThrow().equals(after) && state.rerollsRemainingBySlot().equals(List.of(4, 4, 4)),
+                    "Reconnect must preserve the same match state, offer and the shared balance.");
             require(state.offerEvents().stream().filter(event -> event.eventType().equals("REROLLED")).count() == 1,
                     "Only one successful replacement is recorded.");
-            var event = game.players().get(online.getUUID()).augmentTelemetry().snapshot().guiEvents().stream()
+            var event = player.augmentTelemetry().snapshot().guiEvents().stream()
                     .filter(row -> row.eventType().equals("REROLL")).findFirst().orElseThrow();
             require(event.slot() == null && event.augmentId() == null,
-                    "A full-offer reroll must not be attributed to one card slot.");
+                    "A shared reroll observation has no single slot or card identity.");
+            require(handle(game, online, "draft " + after.revision() + " 2 " + after.cardIds().get(2) + " " + UUID.randomUUID()) == 1,
+                    "A replacement card remains immediately selectable before assigning its target.");
+            require(state.currentOffer().isEmpty(), "One selection resolves the current offer.");
+            var config = game.augmentConfig();
+            setField(game, "augmentConfig", new AugmentConfig(config.enabled(), true,
+                    config.rarityWeights(), config.parameters(), config.disabledIds()));
+            setField(game, "currentRound", 14);
+            setField(game, "phase", RoundPhase.ROUND_PAYOUT);
+            game.tick(online.level().getServer());
+            require(game.currentRound() == 15 && game.phase() == RoundPhase.PREPARE_AND_SUMMON,
+                    "The real payout hook must advance into the next augment preparation.");
+            require(state.currentOffer().orElseThrow().milestoneRound() == 15
+                            && state.rerollsRemainingBySlot().equals(List.of(4, 4, 4)),
+                    "The next milestone must carry the shared balance without refilling it.");
         } finally {game.close();}
-        context.succeed();
-    }
-
-    @GameTest
-    public void insectCoverDesignatesRealBodiesAndReducesActualDamage(GameTestHelper context) {
-        for (var type : kim.biryeong.semiontd.tower.insect.InsectTowers.all()) {
-            if (type == kim.biryeong.semiontd.tower.insect.InsectTowers.SPAWNER) {continue;}
-            ServerPlayer online = context.makeMockServerPlayerInLevel();
-            SemionGame game = prepare(context, online);
-            try {
-                var lane = game.playerLane(online.getUUID()).orElseThrow();
-                Tower tower = ProductionTowerCatalog.entry(type).orElseThrow().create(online.getUUID(), TeamId.RED, 1,
-                        lane.laneLayout().finalDefenseTowerSlots().getFirst());
-                lane.addTower(tower);
-                var entity = ((EntityBackedTower) tower).runtimeEntity(lane).orElseThrow();
-                double health = tower.health();
-                entity.hurt(entity.damageSources().generic(), 10);
-                double baseline = health - tower.health();
-                require(baseline > 0, "The fixture must receive damage before designation.");
-                entity.invulnerableTime = 0;
-                force(game, online, "tactical_designation_1_cover reserve_income_silver reserve_production_silver");
-                advance(game, online, 20);
-                var player = game.players().get(online.getUUID());
-                var state = player.augments();
-                handle(game, online, "draft " + state.currentOffer().orElseThrow().revision() + " 0 " + UUID.randomUUID());
-                holdTargetTool(online);
-                var manager = new kim.biryeong.semiontd.game.SemionGameManager();
-                setField(manager, "activeGame", game);
-                kim.biryeong.semiontd.ui.SemionTowerInteractionService.handleUse(manager, online, online.level(),
-                        net.minecraft.world.InteractionHand.MAIN_HAND, entity, new net.minecraft.world.phys.EntityHitResult(entity));
-                require(tower.logicalId().equals(state.snapshot().choice("tactical_designation_1").primaryTargetId()),
-                        type.id() + " must accept cover designation through a physical right click.");
-                health = tower.health();
-                entity.hurt(entity.damageSources().generic(), 10);
-                double reduction = game.augmentConfig().parameter("tactical_designation_1", "damageReduction", .2);
-                require(Math.abs((health - tower.health()) - baseline * (1 - reduction)) < .0001,
-                        type.id() + " must reduce actual HP damage, not only record the target.");
-                Tower copy = ProductionTowerCatalog.entry(type).orElseThrow().create(online.getUUID(), TeamId.RED, 1,
-                        tower.originalPosition()).markTemporaryCopy(tower.logicalId());
-                lane.addTower(copy);
-                require(!game.augmentService().eligibleTargets(game, player, "tactical_designation_1_cover").contains(copy),
-                        "Temporary larvae/copies must remain excluded.");
-            } catch (AssertionError error) {
-                context.fail(Component.literal(error.getMessage()));
-            } finally {game.close();}
-        }
-        context.succeed();
-    }
-
-    @GameTest
-    public void illagerSoulBondAcceptsBothPhysicalClickRoles(GameTestHelper context) {
-        for (var entry : ProductionTowerCatalog.all().stream()
-                .filter(entry -> entry.type().id().startsWith("illager_")).toList()) {
-            ServerPlayer online = context.makeMockServerPlayerInLevel();
-            SemionGame game = prepare(context, online, "GGG");
-            try {
-                game.players().get(online.getUUID()).assignJob(new kim.biryeong.semiontd.job.IllagerTowerJob());
-                var lane = game.playerLane(online.getUUID()).orElseThrow();
-                Tower first = addTarget(game, online, entry.type());
-                Tower second = entry.create(online.getUUID(), TeamId.RED, 1,
-                        lane.laneLayout().finalDefenseTowerSlots().get(1));
-                lane.addTower(second);
-                force(game, online, "frontline_specialization reserve_income_gold reserve_production_gold");
-                advance(game, online, 20);
-                var state = game.players().get(online.getUUID()).augments();
-                handle(game, online, "draft " + state.currentOffer().orElseThrow().revision() + " 0 " + UUID.randomUUID());
-                holdTargetTool(online);
-                var manager = new kim.biryeong.semiontd.game.SemionGameManager();
-                setField(manager, "activeGame", game);
-                var firstEntity = ((EntityBackedTower) first).runtimeEntity(lane).orElseThrow();
-                var secondEntity = ((EntityBackedTower) second).runtimeEntity(lane).orElseThrow();
-                kim.biryeong.semiontd.ui.SemionTowerInteractionService.handleTargetToolAttack(game, online, firstEntity);
-                online.getCooldowns().tick();
-                online.getCooldowns().tick();
-                kim.biryeong.semiontd.ui.SemionTowerInteractionService.handleUse(manager, online, online.level(),
-                        net.minecraft.world.InteractionHand.MAIN_HAND, secondEntity, new net.minecraft.world.phys.EntityHitResult(secondEntity));
-                var choice = state.snapshot().choice("frontline_specialization");
-                require(first.logicalId().equals(choice.primaryTargetId()) && second.logicalId().equals(choice.secondaryTargetId()),
-                        entry.type().id() + " must accept separate vanguard and artillery clicks.");
-                lane.markWaveStarted(5);
-                require(AugmentCombat.damageBonus(first, firstEntity) < 0 && AugmentCombat.damageBonus(second, secondEntity) > 0,
-                        "Both assigned illager roles must affect combat.");
-            } catch (AssertionError error) {
-                context.fail(Component.literal(error.getMessage()));
-            } finally {game.close();}
-        }
         context.succeed();
     }
 
@@ -312,7 +272,7 @@ public final class AugmentControllerGameTest {
                 force(game, online, card.id() + " reserve_income_" + rarity + " reserve_production_" + rarity);
                 advance(game, online, 20);
                 var dialogs = new java.util.concurrent.atomic.AtomicInteger();
-                online.connection = new net.minecraft.server.network.ServerGamePacketListenerImpl(online.getServer(),
+                online.connection = new net.minecraft.server.network.ServerGamePacketListenerImpl(online.level().getServer(),
                         new net.minecraft.network.Connection(net.minecraft.network.protocol.PacketFlow.SERVERBOUND), online,
                         net.minecraft.server.network.CommonListenerCookie.createInitial(online.getGameProfile(), false)) {
                     @Override public void send(net.minecraft.network.protocol.Packet<?> packet) {
@@ -362,11 +322,11 @@ public final class AugmentControllerGameTest {
                 require(blockedOffer.cardIds().stream().allMatch(candidate -> AugmentCatalog.find(candidate).orElseThrow().reserve()),
                         "Initial offer must use three reserves when all jobs mismatch.");
                 require(blocked.reroll(5, blockedOffer.revision(), UUID.randomUUID(), 20, predicate).status()
-                                == PlayerAugmentState.Status.NO_REPLACEMENT && blocked.rerollsRemaining() == 5,
+                                == PlayerAugmentState.Status.NO_REPLACEMENT && blocked.rerollsRemaining(0) == 5,
                         "A reroll cannot introduce another job or spend a charge without a replacement.");
                 require(!game.augmentService().isEligible(game, player, id), "Other jobs cannot acquire " + id);
                 player.assignJob(kim.biryeong.semiontd.job.JobRegistry.find(
-                        net.minecraft.resources.ResourceLocation.parse(card.requiredJobId())).orElseThrow());
+                        net.minecraft.resources.Identifier.parse(card.requiredJobId())).orElseThrow());
                 require(game.augmentService().isEligible(game, player, id), "Matching job must allow " + id);
                 String rarity = card.rarity().name().toLowerCase(java.util.Locale.ROOT);
                 var allowed = new PlayerAugmentState(online.getUUID());
@@ -378,9 +338,24 @@ public final class AugmentControllerGameTest {
                 var reserveOffer = rerolled.forceOffer(5, 5, 1200, List.of("reserve_diamonds_" + rarity,
                         "reserve_income_" + rarity, "reserve_production_" + rarity));
                 require(rerolled.reroll(5, reserveOffer.revision(), UUID.randomUUID(), 20, predicate).status()
-                                == PlayerAugmentState.Status.SUCCESS
-                                && rerolled.currentOffer().orElseThrow().cardIds().contains(card.id()),
-                        "Reroll admits only the matching job card.");
+                                == PlayerAugmentState.Status.NO_REPLACEMENT
+                                && rerolled.currentOffer().orElseThrow().equals(reserveOffer)
+                                && rerolled.rerollsRemaining() == 5,
+                        "One eligible job card cannot partially replace three reserves or spend a charge.");
+                addTarget(game, online);
+                int tier = card.rarity().ordinal() + 1;
+                var replacementIds = java.util.Set.of(card.id(), AugmentCatalog.normalizeId("finishing_fire_" + tier),
+                        AugmentCatalog.normalizeId("beneficial_effect_" + tier));
+                var viableConfig = new AugmentConfig(true, true, onlyJobs.rarityWeights(), Map.of(),
+                        AugmentCatalog.normalDefinitions().stream().filter(candidate -> !replacementIds.contains(candidate.id()))
+                                .map(AugmentDefinition::id).collect(java.util.stream.Collectors.toSet()));
+                var viable = new PlayerAugmentState(online.getUUID());
+                viable.initialize(1, viableConfig, schedule);
+                var viableOffer = viable.forceOffer(5, 5, 1200, reserveOffer.cardIds());
+                require(viable.reroll(5, viableOffer.revision(), UUID.randomUUID(), 20, predicate).successful()
+                                && new java.util.HashSet<>(viable.currentOffer().orElseThrow().cardIds()).equals(replacementIds)
+                                && viable.rerollsRemaining() == 4,
+                        "A complete replacement admits the matching job and two eligible common cards.");
                 force(game, online, id + " reserve_income_" + rarity + " reserve_production_" + rarity);
                 advance(game, online, 20);
                 var offer = player.augments().currentOffer().orElseThrow();
@@ -390,7 +365,7 @@ public final class AugmentControllerGameTest {
                 require(handle(game, online, "draft " + offer.revision() + " 0 " + UUID.randomUUID()) == 0,
                         "A stale job offer must be rejected at click.");
                 require(!player.augments().hasSelected(id), "Rejected card has no effect.");
-                game.augmentService().tick(game, online.getServer(), offer.deadlineTickExclusive());
+                game.augmentService().tick(game, online.level().getServer(), offer.deadlineTickExclusive());
                 require(!player.augments().hasSelected(id), "Timeout cannot award another job's card.");
                 require(player.augments().selections().size() == 1, "Timeout still awards one safe replacement.");
             } finally {game.close();}
@@ -417,19 +392,21 @@ public final class AugmentControllerGameTest {
         } finally {game.close();}
         context.succeed();
     }
+
     @GameTest
     public void allOfferSummariesStayCompactAndKeepTradeoffs(GameTestHelper context) {
         try {
             for (AugmentDefinition card : AugmentCatalog.definitions()) {
                 String summary = AugmentService.offerSummary(card, AugmentConfig.defaults());
-                require(!summary.isBlank() && summary.length() <= 105 && !summary.contains("\n"),
-                        "Offer summaries must fit one compact item description, with full details in the tooltip: " + card.id());
+                require(!summary.isBlank() && !summary.contains("…")
+                                && summary.equals(AugmentDescriptions.describe(card, AugmentConfig.defaults())),
+                        "Card and detail must share the complete compact description: " + card.id());
             }
-            require(AugmentService.offerSummary(AugmentCatalog.find("overheat_core").orElseThrow(), AugmentConfig.defaults()).contains("영구 피해"),
+            require(AugmentService.offerSummary(AugmentCatalog.find("overheat_core").orElseThrow(), AugmentConfig.defaults()).contains("피해 -6% 영구 누적"),
                     "Compact overheat text must retain the permanent damage penalty.");
             require(AugmentService.offerSummary(AugmentCatalog.find("one_man_show").orElseThrow(), AugmentConfig.defaults()).contains("나머지 피해 -"),
                     "Compact one-man-show text must retain the penalty to the remaining towers.");
-            require(AugmentService.offerSummary(AugmentCatalog.find("wartime_economy").orElseThrow(), AugmentConfig.defaults()).contains("정기 지급은 영구"),
+            require(AugmentService.offerSummary(AugmentCatalog.find("wartime_economy").orElseThrow(), AugmentConfig.defaults()).contains("정기 다이아 지급 영구"),
                     "Compact wartime text must retain its permanent economic cost.");
         } catch (AssertionError error) {
             context.fail(Component.literal(error.getMessage()));
@@ -441,6 +418,7 @@ public final class AugmentControllerGameTest {
     public void singleClickSelectionChecksSessionRevealAndDuplicateRequests(GameTestHelper context) {
         ServerPlayer online = context.makeMockServerPlayerInLevel();
         SemionGame game = prepare(context, online);
+        var originalConnection = online.connection;
         try {
             force(game, online, "reserve_diamonds_silver reserve_income_silver reserve_production_silver");
             SemionPlayer player = game.players().get(online.getUUID());
@@ -455,9 +433,18 @@ public final class AugmentControllerGameTest {
             require(game.augmentService().handle(game, online, "session " + UUID.randomUUID() + " " + draft, false) == 0,
                     "An old match token must not mutate an otherwise current offer.");
             var pending = state.currentOffer().orElseThrow();
-            require(handle(game, online, "ui offer back") == 1, "Returning to candidates must remain a read-only dialog action.");
             game.augmentService().reopen(game, online);
-            require(pending.equals(state.currentOffer().orElseThrow()), "Reopening a native dialog must not change its stored offer or draft.");
+            require(player.augmentTelemetry().snapshot().guiEvents().stream()
+                            .noneMatch(event -> event.eventType().equals("SHOWN")),
+                    "An unavailable renderer must not record an offer as displayed.");
+            var packets = collectPackets(online);
+            game.augmentService().reopen(game, online);
+            require(showPackets(packets) == 1, "A client with the card pack must receive the actual offer dialog.");
+            require(handle(game, online, "ui offer back") == 1, "Returning to candidates must remain a read-only dialog action.");
+            packets.clear();
+            game.augmentService().reopen(game, online);
+            require(showPackets(packets) == 1, "Restoring a client with the card pack must show the actual offer again.");
+            require(pending.equals(state.currentOffer().orElseThrow()), "Reopening the offer dialog must not change its stored offer or draft.");
             long income = player.economy().income();
             require(handle(game, online, draft) == 1 && state.currentOffer().isEmpty(),
                     "A card with no settings must be granted by the first click, without a confirmation step.");
@@ -479,6 +466,7 @@ public final class AugmentControllerGameTest {
         } catch (AssertionError error) {
             context.fail(Component.literal(error.getMessage()));
         } finally {
+            online.connection = originalConnection;
             game.close();
         }
         context.succeed();
@@ -513,14 +501,14 @@ public final class AugmentControllerGameTest {
                     "Clearing the overlay preserves gameplay glow.");
             entity.setGlowingTag(false);
             setField(game, "phase", RoundPhase.LANE_WAVE);
-            game.augmentService().tick(game, online.getServer(), game.currentTick() + 100);
+            game.augmentService().tick(game, online.level().getServer(), game.currentTick() + 100);
             require(targetPreviewCount(game) == 1, "Held glow must continue during combat and beyond three seconds.");
             Tower other = addTarget(game, online);
             game.augmentService().useTargetTool(game, online, other, false, false);
             require(target.logicalId().equals(state.snapshot().choice("tactical_designation_1").primaryTargetId()),
                     "Combat clicks cannot change targets.");
             online.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
-            game.augmentService().tick(game, online.getServer(), game.currentTick() + 101);
+            game.augmentService().tick(game, online.level().getServer(), game.currentTick() + 101);
             require(targetPreviewCount(game) == 0, "Lowering the item removes the private overlay.");
             game.augmentService().reopen(game, online);
             holdTargetTool(online);
@@ -528,7 +516,7 @@ public final class AugmentControllerGameTest {
             game.augmentService().useTargetTool(game, online, target, true, false);
             require(targetPreviewCount(game) == 1, "The restored tool can highlight the same target again.");
             lane.removeTower(target);
-            game.augmentService().tick(game, online.getServer(), game.currentTick() + 102);
+            game.augmentService().tick(game, online.level().getServer(), game.currentTick() + 102);
             require(state.snapshot().choice("tactical_designation_1").primaryTargetId() == null && targetPreviewCount(game) == 0,
                     "Permanent removal clears the binding and overlay without assigning a replacement.");
             game.close();
@@ -765,7 +753,7 @@ public final class AugmentControllerGameTest {
             Tower first = addTarget(game, online, kim.biryeong.semiontd.tower.legion.LegionTowers.T1_PENGUIN);
             Tower second = addTarget(game, online);
             var stacks = kim.biryeong.semiontd.tower.TowerDataKey.of(
-                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("semiontd", "augment_mastery"), Integer.class);
+                    net.minecraft.resources.Identifier.fromNamespaceAndPath("semiontd", "augment_mastery"), Integer.class);
             force(game, online, "battlefield_mastery reserve_income_gold reserve_production_gold");
             advance(game, online, 20);
             handle(game, online, "draft " + state.currentOffer().orElseThrow().revision() + " 0 " + UUID.randomUUID());
@@ -782,7 +770,7 @@ public final class AugmentControllerGameTest {
                     .create(online.getUUID(), TeamId.RED, 1, first.originalPosition());
             upgraded.copyFrom(first, 50);
             require(lane.replaceTower(first, upgraded), "A replacement must use the existing upgrade path.");
-            game.augmentService().tick(game, online.getServer(), game.currentTick() + 1);
+            game.augmentService().tick(game, online.level().getServer(), game.currentTick() + 1);
             require(AugmentCombat.masteryStacks(upgraded) == 2 && upgraded.logicalId().equals(state.snapshot().choice("battlefield_mastery").primaryTargetId()),
                     "Normal upgrade keeps logical binding and mastery.");
             upgraded.syncHealth(upgraded.currentMaxHealth() * .4);
@@ -803,94 +791,6 @@ public final class AugmentControllerGameTest {
             game.close();
         }
         context.succeed();
-    }
-
-    private static SemionGame prepare(GameTestHelper context, ServerPlayer online) {
-        return prepare(context, online, "SSS");
-    }
-
-    private static SemionGame prepare(GameTestHelper context, ServerPlayer online, String raritySchedule) {
-        SemionGame game = new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(),
-                SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(BlockPos.ZERO)));
-        Map<String, Integer> weights = new LinkedHashMap<>();
-        AugmentConfig.defaults().rarityWeights().keySet().forEach(key -> weights.put(key, key.equals(raritySchedule) ? 100 : 0));
-        game.configureAugments(new AugmentConfig(true, false, weights, Map.of(), Set.of()));
-        require(game.start(context.getLevel().getServer(), new ParticipantSelectionPlan(MatchMode.NORMAL, List.of(
-                        new AssignedParticipant(online.getUUID(), "controller-red", TeamId.RED, 1),
-                        new AssignedParticipant(UUID.randomUUID(), "controller-blue", TeamId.BLUE, 1)), Set.of(), 2)),
-                "The synthetic NORMAL game must start.");
-        for (var team : game.teams().values()) {team.laneGroup().disableMonsters();}
-        setField(game, "currentRound", 4);
-        setField(game, "phase", RoundPhase.ROUND_PAYOUT);
-        game.tick(context.getLevel().getServer());
-        require(game.currentRound() == 5 && game.phase() == RoundPhase.PREPARE_AND_SUMMON, "The real payout hook must enter R5 preparation.");
-        return game;
-    }
-
-    private static void holdTargetTool(ServerPlayer online) {
-        for (int index = 0; index < online.getInventory().getContainerSize(); index++) {
-            var stack = online.getInventory().getItem(index);
-            if (AugmentTargetTool.isTool(stack)) {
-                online.getInventory().setItem(index, net.minecraft.world.item.ItemStack.EMPTY);
-                online.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, stack);
-                return;
-            }
-        }
-        throw new AssertionError("The targeted augment must grant a tool.");
-    }
-
-    private static int toolCount(ServerPlayer online) {
-        int count = 0;
-        for (int index = 0; index < online.getInventory().getContainerSize(); index++) {
-            if (AugmentTargetTool.isTool(online.getInventory().getItem(index))) {count++;}
-        }
-        return count;
-    }
-
-    private static Tower addTarget(SemionGame game, ServerPlayer online) {
-        return addTarget(game, online, UndeadTowers.T1_ZOMBIE_TOWER);
-    }
-
-    private static Tower addTarget(SemionGame game, ServerPlayer online, kim.biryeong.semiontd.tower.TowerType type) {
-        var lane = game.playerLane(online.getUUID()).orElseThrow();
-        var position = lane.laneLayout().finalDefenseTowerSlots().getFirst();
-        Tower tower = ProductionTowerCatalog.entry(type).orElseThrow()
-                .create(online.getUUID(), TeamId.RED, 1, position);
-        lane.addTower(tower);
-        require(AugmentCombat.isNormalPermanent(tower), "Target fixture must be a registered ordinary owned tower.");
-        return tower;
-    }
-
-    private static void force(SemionGame game, ServerPlayer online, String cards) {
-        require(game.augmentService().handle(game, online, "force 5 " + cards, true) == 1, "An authorized internal force-offer must succeed.");
-    }
-
-    private static int handle(SemionGame game, ServerPlayer online, String input) {
-        try {
-            var token = AugmentService.class.getDeclaredField("sessionToken");
-            token.setAccessible(true);
-            return game.augmentService().handle(game, online, "session " + token.get(game.augmentService()) + " " + input, false);
-        } catch (ReflectiveOperationException exception) {
-            throw new AssertionError("Cannot obtain the actual native-button match token.", exception);
-        }
-    }
-
-    private static void advance(SemionGame game, ServerPlayer online, int ticks) {
-        for (int i = 0; i < ticks; i++) {game.tick(online.getServer());}
-    }
-
-    private static void setField(Object target, String name, Object value) {
-        try {
-            var field = target.getClass().getDeclaredField(name);
-            field.setAccessible(true);
-            field.set(target, value);
-        } catch (ReflectiveOperationException exception) {
-            throw new AssertionError("Cannot prepare controller fixture: " + name, exception);
-        }
-    }
-
-    private static void require(boolean condition, String message) {
-        if (!condition) {throw new AssertionError(message);}
     }
 
     private static int targetPreviewCount(SemionGame game) {

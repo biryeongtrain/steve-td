@@ -50,6 +50,54 @@ final class SemionGameTeamLeaderTest {
         assertEquals(laneOne, game.teams().get(TeamId.RED).leaderPlayerId().orElseThrow());
     }
 
+    @org.junit.jupiter.api.RepeatedTest(25)
+    void tiedHighestEloUsesLowestAvailableLaneRegardlessOfCandidateOrder() {
+        SemionGame game = newGame();
+        game.teams().get(TeamId.RED).activate();
+        var first = new AssignedParticipant(UUID.randomUUID(), "first", TeamId.RED, 2, 1800);
+        var second = new AssignedParticipant(UUID.randomUUID(), "second", TeamId.RED, 3, 1800);
+        var third = new AssignedParticipant(UUID.randomUUID(), "third", TeamId.RED, 5, 1800);
+        var lowerElo = new AssignedParticipant(UUID.randomUUID(), "lower", TeamId.RED, 1, 1700);
+        var absent = new AssignedParticipant(UUID.randomUUID(), "absent", TeamId.RED, 4, 2000);
+        for (var candidate : List.of(first, second, third, lowerElo)) {
+            game.players().put(candidate.uuid(), player(candidate.uuid(), TeamId.RED, candidate.laneId()));
+        }
+        for (var order : List.of(
+                List.of(first, second, third, lowerElo, absent),
+                List.of(first, third, second, lowerElo, absent),
+                List.of(second, first, third, absent, lowerElo),
+                List.of(second, third, first, absent, lowerElo),
+                List.of(third, first, second, lowerElo, absent),
+                List.of(third, second, first, absent, lowerElo))) {
+            game.assignTeamLeadersFromParticipants(order);
+            assertEquals(first.uuid(), game.teams().get(TeamId.RED).leaderPlayerId().orElseThrow());
+        }
+        game.players().remove(first.uuid());
+        game.assignTeamLeadersFromParticipants(List.of(first, third, second, lowerElo, absent));
+        assertEquals(second.uuid(), game.teams().get(TeamId.RED).leaderPlayerId().orElseThrow());
+    }
+
+    @Test
+    void teamWithoutEligibleParticipantsRemainsWithoutLeader() {
+        SemionGame game = newGame();
+        game.teams().get(TeamId.RED).activate();
+        game.assignTeamLeadersFromParticipants(List.of());
+        assertTrue(game.teams().get(TeamId.RED).leaderPlayerId().isEmpty());
+        game.assignTeamLeadersFromParticipants(List.of(
+                new AssignedParticipant(UUID.randomUUID(), "absent", TeamId.RED, 1, 2000)));
+        assertTrue(game.teams().get(TeamId.RED).leaderPlayerId().isEmpty());
+    }
+
+    @Test
+    void inactiveTeamIsNotAssignedALeader() {
+        SemionGame game = newGame();
+        UUID candidate = UUID.randomUUID();
+        game.players().put(candidate, player(candidate, TeamId.RED, 1));
+        game.assignTeamLeadersFromParticipants(List.of(
+                new AssignedParticipant(candidate, "inactive", TeamId.RED, 1, 2000)));
+        assertTrue(game.teams().get(TeamId.RED).leaderPlayerId().isEmpty());
+    }
+
     @Test
     void assignsOneLeaderForEachActiveTeam() {
         SemionGame game = newGame();

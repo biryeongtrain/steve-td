@@ -13,9 +13,10 @@ import static kim.biryeong.semiontd.augment.AugmentRarity.*;
 
 /** Forty-two common cards, 126 job cards and nine fallback rewards; old stance IDs remain readable. */
 public final class AugmentCatalog {
-    public static final int OFFER_RULES_VERSION = 5;
+    public static final int OFFER_RULES_VERSION = 6;
     public static final List<Integer> MILESTONES = List.of(5, 15, 25);
     private static final Set<Integer> ALL_ROUNDS = Set.of(5, 15, 25);
+    private static final String NAMESPACE = "semiontd:";
     private static final Map<String, List<String>> STANCES = Map.of(
             "semiontd:tactical_designation_1", List.of("ASSAULT", "COVER"),
             "semiontd:tactical_designation_2", List.of("ASSAULT", "COVER"),
@@ -24,44 +25,47 @@ public final class AugmentCatalog {
             "semiontd:biased_armor", List.of("PHYSICAL", "MAGIC"));
     private static final List<AugmentDefinition> BASE_DEFINITIONS = createDefinitions();
     private static final List<AugmentDefinition> DEFINITIONS = splitStances();
+    private static final AugmentCatalogLookup LOOKUP = new AugmentCatalogLookup(DEFINITIONS, BASE_DEFINITIONS, STANCES);
 
     private AugmentCatalog() {}
 
     public static String normalizeId(String id) {
+        requireId(id);
+        return id.contains(":") ? id : NAMESPACE + id;
+    }
+
+    static void requireId(String id) {
         if (id == null || id.isBlank()) {throw new IllegalArgumentException("Augment ID is required.");}
-        return id.contains(":") ? id : "semiontd:" + id;
+    }
+
+    private static boolean sameId(String id, String normalized) {
+        return id.contains(":") ? id.equals(normalized)
+                : normalized.length() == NAMESPACE.length() + id.length() && normalized.startsWith(NAMESPACE)
+                        && normalized.endsWith(id);
     }
 
     public static List<AugmentDefinition> definitions() {return DEFINITIONS;}
     /** Split cards share the existing effect and balance keys, not player-selectable modes. */
     public static String effectId(String id) {
-        String normalized = normalizeId(id);
-        int suffix = normalized.lastIndexOf('_');
-        String parent = normalized.substring(0, suffix < 0 ? normalized.length() : suffix);
-        return STANCES.getOrDefault(parent, List.of()).stream()
-                .anyMatch(mode -> normalized.equals(parent + "_" + mode.toLowerCase(java.util.Locale.ROOT))) ? parent : normalized;
+        return LOOKUP.effectId(normalizeId(id));
     }
     public static String fixedMode(String id) {
-        String normalized = normalizeId(id), effect = effectId(id);
-        return effect.equals(normalized) ? "" : normalized.substring(effect.length() + 1).toUpperCase(java.util.Locale.ROOT);
+        return LOOKUP.fixedMode(normalizeId(id));
     }
     public static boolean matchesSelection(String requestedId, String selectedId) {
         if (selectedId == null) {return false;}
-        String requested = normalizeId(requestedId);
-        return requested.equals(selectedId) || requested.equals(effectId(selectedId));
+        requireId(requestedId);
+        return sameId(requestedId, selectedId) || sameId(requestedId, effectId(selectedId));
     }
     public static List<AugmentDefinition> normalDefinitions() {
-        return DEFINITIONS.stream().filter(card -> !card.reserve()).toList();
+        return LOOKUP.normalDefinitions();
     }
     public static List<AugmentDefinition> reserveDefinitions() {
-        return DEFINITIONS.stream().filter(AugmentDefinition::reserve).toList();
+        return LOOKUP.reserveDefinitions();
     }
     public static Optional<AugmentDefinition> find(String id) {
         if (id == null || id.isBlank()) {return Optional.empty();}
-        String normalized = normalizeId(id);
-        // Legacy combined IDs remain readable, but only split cards enter offers and exports.
-        return DEFINITIONS.stream().filter(card -> card.id().equals(normalized)).findFirst()
-                .or(() -> BASE_DEFINITIONS.stream().filter(card -> card.id().equals(normalized)).findFirst());
+        return LOOKUP.find(normalizeId(id));
     }
 
     private static List<AugmentDefinition> splitStances() {

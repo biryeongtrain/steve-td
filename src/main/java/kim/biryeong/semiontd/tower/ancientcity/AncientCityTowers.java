@@ -64,22 +64,22 @@ public final class AncientCityTowers {
 
     public static final TowerType WARDEN_T1 = magicTower(
             "ancient_city_warden_t1", "워든 타워", 110, 120.0, 6.5, 4.0, 20, 0,
-            EntityVisual.builder(byId(EntityType.WARDEN)).scale(0.22).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.WARDEN)).scale(0.22).build(),
             wardenDescription("기본")
     );
     public static final TowerType WARDEN_T2 = magicTower(
             "ancient_city_warden_t2", "강화 워든 타워", 160, 220.0, 7.5, 8.0, 18, 0,
-            EntityVisual.builder(byId(EntityType.WARDEN)).scale(0.28).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.WARDEN)).scale(0.28).build(),
             wardenDescription("중급")
     );
     public static final TowerType WARDEN_T3 = magicTower(
             "ancient_city_warden_t3", "고대 워든 타워", 300, 360.0, 9.0, 12.0, 16, 0,
-            EntityVisual.builder(byId(EntityType.WARDEN)).scale(0.33).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.WARDEN)).scale(0.33).build(),
             wardenDescription("최종")
     );
     public static final TowerType WARDEN_T4 = magicTower(
             "ancient_city_warden_t4", "심층 워든 타워", 650, 240.0, 9.5, 18.0, 14, 0,
-            EntityVisual.builder(byId(EntityType.WARDEN)).scale(0.38).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.WARDEN)).scale(0.38).build(),
             wardenDescription("초월")
     );
 

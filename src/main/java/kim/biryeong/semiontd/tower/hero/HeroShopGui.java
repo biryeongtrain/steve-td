@@ -61,7 +61,7 @@ public final class HeroShopGui extends SimpleGui {
                             .withStyle(ChatFormatting.GRAY))
                     .addLoreLine(Component.literal(equipped ? "착용 중" : owned ? "클릭: 착용" : "구매 " + HeroPartyBalance.weaponPurchaseCost(weapon) + " 다이아")
                             .withStyle(equipped ? ChatFormatting.GREEN : owned ? ChatFormatting.YELLOW : ChatFormatting.AQUA))
-                    .setCallback((slot, type, action) -> {
+                    .setCallback((slot, type, action, clickedGui) -> {
                         HeroPartyStates.ActionResult result = owned
                                 ? HeroPartyStates.equipWeapon(game, player.getUUID(), weapon)
                                 : HeroPartyStates.purchaseWeapon(game, player.getUUID(), weapon);
@@ -87,7 +87,7 @@ public final class HeroShopGui extends SimpleGui {
                     .setName(Component.literal(nextLevel > HeroPartyBalance.MAX_WEAPON_LEVEL
                             ? "최대 강화"
                             : weapon.displayName() + " +" + nextLevel + " 강화"))
-                    .setCallback((slot, type, action) -> {
+                    .setCallback((slot, type, action, clickedGui) -> {
                         HeroPartyStates.ActionResult result = HeroPartyStates.upgradeWeapon(game, player.getUUID(), weapon);
                         notifyResult(result);
                         refresh();
@@ -118,7 +118,7 @@ public final class HeroShopGui extends SimpleGui {
                 .setName(Component.literal("갑옷 +" + state.armorLevel()).withStyle(ChatFormatting.AQUA))
                 .addLoreLine(Component.literal("추가 체력 " + number(HeroPartyBalance.armorHealth(state.armorLevel()))))
                 .addLoreLine(Component.literal("피해 감소 " + percent(HeroPartyBalance.armorReduction(state.armorLevel()))))
-                .setCallback((slot, type, action) -> {
+                .setCallback((slot, type, action, clickedGui) -> {
                     notifyResult(HeroPartyStates.upgradeArmor(game, player.getUUID()));
                     refresh();
                 });
@@ -132,13 +132,13 @@ public final class HeroShopGui extends SimpleGui {
         }
         setSlot(31, armorButton);
         boolean armorVisible = state.armorVisible();
-        setSlot(32, new GuiElementBuilder(armorVisible ? Items.ARMOR_STAND : Items.GRAY_DYE)
+        setSlot(32, new GuiElementBuilder(armorVisible ? Items.ARMOR_STAND : Items.DYE.gray())
                 .setName(Component.literal(armorVisible ? "방어구 표시 중" : "방어구 숨김")
                         .withStyle(armorVisible ? ChatFormatting.GREEN : ChatFormatting.GRAY))
                 .addLoreLine(Component.literal(armorVisible ? "클릭: 방어구 숨기기" : "클릭: 방어구 표시하기"))
                 .addLoreLine(Component.literal("체력·피해 감소 효과는 유지됩니다.").withStyle(ChatFormatting.AQUA))
                 .glow(armorVisible)
-                .setCallback((slot, type, action) -> {
+                .setCallback((slot, type, action, clickedGui) -> {
                     notifyResult(HeroPartyStates.toggleArmorVisibility(game, player.getUUID()));
                     refresh();
                 }));
@@ -161,7 +161,7 @@ public final class HeroShopGui extends SimpleGui {
                 .addLoreLine(Component.literal(editable ? "구매·교체 가능" : "조회 전용").withStyle(editable ? ChatFormatting.GREEN : ChatFormatting.RED)));
         setSlot(49, new GuiElementBuilder(Items.BARRIER)
                 .setName(Component.literal("닫기").withStyle(ChatFormatting.RED))
-                .setCallback((slot, type, action) -> close()));
+                .setCallback((slot, type, action, clickedGui) -> close()));
     }
 
     private void notifyResult(HeroPartyStates.ActionResult result) {
@@ -204,19 +204,19 @@ public final class HeroShopGui extends SimpleGui {
     private static GuiElementBuilder statusButton(HeroWeapon weapon, WeaponStatus status, long diamond) {
         long cost = HeroPartyBalance.weaponPurchaseCost(weapon);
         return switch (status) {
-            case EQUIPPED -> new GuiElementBuilder(Items.LIME_STAINED_GLASS_PANE)
+            case EQUIPPED -> new GuiElementBuilder(Items.STAINED_GLASS_PANE.lime())
                     .setName(Component.literal("착용 중 · " + weapon.displayName()).withStyle(status.color))
                     .addLoreLine(Component.literal("현재 전투에 사용됩니다.").withStyle(ChatFormatting.GRAY));
-            case OWNED -> new GuiElementBuilder(Items.YELLOW_STAINED_GLASS_PANE)
+            case OWNED -> new GuiElementBuilder(Items.STAINED_GLASS_PANE.yellow())
                     .setName(Component.literal("보유 · " + weapon.displayName()).withStyle(status.color))
                     .addLoreLine(Component.literal("아래 무기를 클릭해 착용").withStyle(ChatFormatting.GRAY));
-            case PURCHASABLE -> new GuiElementBuilder(Items.LIGHT_BLUE_STAINED_GLASS_PANE)
+            case PURCHASABLE -> new GuiElementBuilder(Items.STAINED_GLASS_PANE.lightBlue())
                     .setName(Component.literal("구매 가능 · " + weapon.displayName()).withStyle(status.color))
                     .addLoreLine(Component.literal(cost + " 다이아").withStyle(ChatFormatting.AQUA));
-            case UNAFFORDABLE -> new GuiElementBuilder(Items.RED_STAINED_GLASS_PANE)
+            case UNAFFORDABLE -> new GuiElementBuilder(Items.STAINED_GLASS_PANE.red())
                     .setName(Component.literal("다이아 부족 · " + weapon.displayName()).withStyle(status.color))
                     .addLoreLine(Component.literal("필요 " + cost + " · 보유 " + diamond).withStyle(ChatFormatting.RED));
-            case READ_ONLY -> new GuiElementBuilder(Items.GRAY_STAINED_GLASS_PANE)
+            case READ_ONLY -> new GuiElementBuilder(Items.STAINED_GLASS_PANE.gray())
                     .setName(Component.literal("조회 전용 · " + weapon.displayName()).withStyle(status.color))
                     .addLoreLine(Component.literal("준비 단계에서 구매할 수 있습니다.").withStyle(ChatFormatting.GRAY));
         };

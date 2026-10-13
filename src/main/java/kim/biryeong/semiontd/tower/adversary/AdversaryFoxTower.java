@@ -4,12 +4,13 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import kim.biryeong.semiontd.SemionTd;
+import kim.biryeong.semiontd.api.SemionTdApi;
+import kim.biryeong.semiontd.api.area.AreaEffectOutcome;
 import kim.biryeong.semiontd.api.area.AreaVfxSpec;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
@@ -31,7 +32,7 @@ import kim.biryeong.semiontd.tower.TowerUpgradeOption;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -41,9 +42,9 @@ import net.minecraft.world.phys.Vec3;
 /** Runtime combat implementation for one Adversary fox. */
 public final class AdversaryFoxTower extends EntityBackedTower {
     private static final double LINE_HALF_WIDTH = 0.75;
-    private static final ResourceLocation RIVAL_MATCH = ResourceLocation.fromNamespaceAndPath("semiontd", "job_adversary_towers_g1");
+    private static final Identifier RIVAL_MATCH = Identifier.fromNamespaceAndPath("semiontd", "job_adversary_towers_g1");
     private static final TowerDataKey<UUID> FOX_ID = TowerDataKey.of(
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "adversary/fox_id"),
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "adversary/fox_id"),
             UUID.class
     );
 
@@ -506,7 +507,7 @@ public final class AdversaryFoxTower extends EntityBackedTower {
         if (!normalEntityHealthSyncPending) {
             // SemionTowerEntity normally clears vanilla's hurt cooldown after applying
             // damage. A hit fully consumed by logical overflow never reaches that path.
-            towerEntity.invulnerableTime = 0;
+            towerEntity.damageCooldownTime = 0;
         }
         return remainingDamage;
     }
@@ -704,182 +705,8 @@ public final class AdversaryFoxTower extends EntityBackedTower {
             lines.add("<light_purple>" + candidate.displayName() + "</light_purple>: "
                     + evolutionRequirementText(candidate, progress));
         }
-        switch (form) {
-            case BASE -> lines.add("기본 공격이 반경 "
-                    + number(global("baseSplashRadius", AdversaryBalance.BASE_SPLASH_RADIUS))
-                    + "블록 안의 다른 적 최대 "
-                    + globalInt("baseSplashExtraTargets", AdversaryBalance.BASE_SPLASH_EXTRA_TARGETS)
-                    + "기에게 공격력의 "
-                    + percent(global("baseSplashDamageRatio", AdversaryBalance.BASE_SPLASH_DAMAGE_RATIO))
-                    + "만큼 피해를 줍니다.");
-            case BREEZE -> lines.add("기본 공격이 다른 적 "
-                    + globalInt("breezeExtraTargets", AdversaryBalance.BREEZE_EXTRA_TARGETS)
-                    + "기에게 공격력의 "
-                    + percent(global(
-                    "breezeExtraTargetDamageRatio",
-                    AdversaryBalance.BREEZE_EXTRA_TARGET_DAMAGE_RATIO
-            )) + "만큼 연쇄 마법 피해를 줍니다.");
-            case GOLDEN_FANG -> {
-                int every = globalInt(
-                        "goldenExtraAttackEvery",
-                        AdversaryBalance.GOLDEN_FANG_EXTRA_ATTACK_EVERY
-                );
-                lines.add("같은 적을 " + every + "번 공격할 때마다 공격력의 "
-                        + percent(global(
-                        "goldenExtraDamageRatio",
-                        AdversaryBalance.GOLDEN_FANG_EXTRA_DAMAGE_RATIO
-                )) + "만큼 추가 피해를 줍니다.");
-                lines.add("연속 공격: " + goldenTargetHits + "/" + every);
-            }
-            case SHIELD_BEARER -> {
-                lines.add("받는 피해 " + percent(form.damageReduction()) + " 감소");
-                lines.add("반격 피해 "
-                        + number(global("shieldCounterDamage", AdversaryBalance.SHIELD_COUNTER_DAMAGE))
-                        + " / 재사용 대기시간 "
-                        + globalInt(
-                        "shieldCounterCooldownTicks",
-                        AdversaryBalance.SHIELD_COUNTER_COOLDOWN_TICKS
-                ) + "틱");
-            }
-            case BELL_KEEPER -> lines.add(number(globalInt(
-                    "bellHealIntervalTicks",
-                    AdversaryBalance.BELL_HEAL_INTERVAL_TICKS
-            ) / 20.0) + "초마다 반경 "
-                    + number(global("bellHealRadius", AdversaryBalance.BELL_HEAL_RADIUS))
-                    + "블록 내 체력 비율이 가장 낮은 다른 여우 "
-                    + globalInt("bellHealTargetCount", AdversaryBalance.BELL_HEAL_TARGET_COUNT)
-                    + "기의 최대 체력을 "
-                    + percent(global("bellHealMaxHealthRatio", AdversaryBalance.BELL_HEAL_MAX_HEALTH_RATIO))
-                    + " 회복합니다.");
-            case BEACON_KEEPER -> {
-                lines.add("받는 피해 " + percent(form.damageReduction()) + " 감소");
-                lines.add(number(globalInt(
-                        "beaconHealIntervalTicks",
-                        AdversaryBalance.BEACON_HEAL_INTERVAL_TICKS
-                ) / 20.0) + "초마다 반경 "
-                        + number(global("beaconHealRadius", AdversaryBalance.BEACON_HEAL_RADIUS))
-                        + "블록 내 체력 비율이 가장 낮은 다른 여우 최대 "
-                        + globalInt("beaconHealTargetCount", AdversaryBalance.BEACON_HEAL_TARGET_COUNT)
-                        + "기의 최대 체력을 각각 "
-                        + percent(global(
-                        "beaconHealMaxHealthRatio",
-                        AdversaryBalance.BEACON_HEAL_MAX_HEALTH_RATIO
-                )) + " 회복합니다.");
-            }
-            case OMINOUS_HEXER -> {
-                lines.add("받는 피해 " + percent(form.damageReduction()) + " 감소");
-                lines.add(number(globalInt(
-                        "bellHealIntervalTicks",
-                        AdversaryBalance.BELL_HEAL_INTERVAL_TICKS
-                ) / 20.0) + "초마다 반경 "
-                        + number(global("bellHealRadius", AdversaryBalance.BELL_HEAL_RADIUS))
-                        + "블록 내 체력 비율이 가장 낮은 다른 여우 "
-                        + globalInt("bellHealTargetCount", AdversaryBalance.BELL_HEAL_TARGET_COUNT)
-                        + "기의 최대 체력을 "
-                        + percent(global(
-                        "bellHealMaxHealthRatio",
-                        AdversaryBalance.BELL_HEAL_MAX_HEALTH_RATIO
-                )) + " 회복합니다.");
-                lines.add("아군을 노리는 적: 공격력 -"
-                        + percent(global(
-                        "ominousMonsterDamageReduction",
-                        AdversaryBalance.OMINOUS_MONSTER_DAMAGE_REDUCTION
-                )) + " / 공격 속도 -"
-                        + percent(global(
-                        "ominousMonsterAttackSpeedReduction",
-                        AdversaryBalance.OMINOUS_MONSTER_ATTACK_SPEED_REDUCTION
-                )) + " / 타워에게 받는 피해 +"
-                        + percent(global(
-                        "ominousMonsterTowerDamageTakenBonus",
-                        AdversaryBalance.OMINOUS_MONSTER_TOWER_DAMAGE_TAKEN_BONUS
-                )));
-                lines.add("숙적에게는 적용되지 않습니다.");
-            }
-            case TRACKER -> lines.add("라인에서 가장 앞선 적을 우선 공격합니다.");
-            case FIREWORK_PIERCER -> {
-                lines.add("웨이브 적에게 "
-                        + number(global(
-                    "fireworkWaveDamageMultiplier",
-                    AdversaryBalance.FIREWORK_WAVE_DAMAGE_MULTIPLIER
-                )) + "배, 인컴 적에게 "
-                        + number(global(
-                    "fireworkIncomeDamageMultiplier",
-                    AdversaryBalance.FIREWORK_INCOME_DAMAGE_MULTIPLIER
-                )) + "배의 피해를 줍니다.");
-                lines.add("직선상의 적 최대 "
-                        + globalInt("fireworkMaxTargets", AdversaryBalance.FIREWORK_MAX_TARGETS)
-                        + "기를 관통하며 " + percentList(AdversaryBalance.fireworkTargetDamageRatios())
-                        + "의 물리 피해를 줍니다.");
-            }
-            case BIG_GAME_TRACKER -> {
-                int stages = AdversaryBalance.bigGameStreakMultipliers().length;
-                lines.add("인컴 적에게 "
-                        + number(global(
-                        "bigGameIncomeDamageMultiplier",
-                        AdversaryBalance.BIG_GAME_INCOME_DAMAGE_MULTIPLIER
-                )) + "배, 웨이브 적에게 "
-                        + number(global(
-                        "bigGameWaveDamageMultiplier",
-                        AdversaryBalance.BIG_GAME_WAVE_DAMAGE_MULTIPLIER
-                )) + "배의 피해를 줍니다.");
-                lines.add("같은 인컴 적을 계속 공격하면 피해가 "
-                        + multiplierList(AdversaryBalance.bigGameStreakMultipliers())
-                        + "로 증가합니다.");
-                lines.add("조준 단계: " + Math.min(stages, spyglassTargetHits + 1) + "/" + stages);
-            }
-            case ECHO_FOX -> {
-                lines.add("같은 적을 공격할 때마다 피해가 "
-                        + percent(global(
-                        "echoBonusPerHit",
-                        AdversaryBalance.ECHO_STREAK_DAMAGE_BONUS_PER_HIT
-                )) + " 증가합니다. 최대 "
-                        + globalInt("echoMaxBonusStacks", AdversaryBalance.ECHO_MAX_STREAK_BONUS_STACKS)
-                        + "중첩.");
-                lines.add("피격되거나 대상을 바꾸면 중첩이 초기화됩니다.");
-                lines.add("메아리 중첩: " + echoTargetHits + "/"
-                        + globalInt("echoMaxBonusStacks", AdversaryBalance.ECHO_MAX_STREAK_BONUS_STACKS));
-            }
-            case MACE_EXECUTIONER -> {
-                lines.add(globalInt("maceFocusTicks", AdversaryBalance.MACE_FOCUS_TICKS)
-                        + "틱 동안 집중한 뒤 " + number(form.damage()) + "의 물리 피해를 줍니다.");
-                lines.add("연속 적중 시 피해가 "
-                        + multiplierList(AdversaryBalance.maceStreakMultipliers())
-                        + "로 증가합니다.");
-                lines.add("집중 중 최대 체력의 "
-                        + percent(global(
-                        "maceBreakHealthRatio",
-                        AdversaryBalance.MACE_FOCUS_BREAK_MAX_HEALTH_RATIO
-                )) + "만큼 피해를 받으면 공격이 취소됩니다.");
-                lines.add("적중 시 주변 적 최대 "
-                        + globalInt("maceSweepExtraTargets", AdversaryBalance.MACE_SWEEP_EXTRA_TARGETS)
-                        + "기에게 공격력의 "
-                        + percent(global("maceSweepDamageRatio", AdversaryBalance.MACE_SWEEP_DAMAGE_RATIO))
-                        + "만큼 피해를 줍니다.");
-                lines.add("집중: " + Math.max(0, maceTicksUntilStrike)
-                        + "틱 / 연속 적중: " + maceSuccessfulStrikes + "/"
-                        + (AdversaryBalance.maceStreakMultipliers().length - 1));
-            }
-            case SCULK_CORE -> {
-                lines.add("조준한 위치에 "
-                        + globalInt("sculkDelayTicks", AdversaryBalance.SCULK_DETONATION_DELAY_TICKS)
-                        + "틱 뒤 폭발을 일으킵니다.");
-                lines.add("반경 "
-                        + number(global("sculkRadius", AdversaryBalance.SCULK_DETONATION_RADIUS))
-                        + "블록 안의 적 최대 "
-                        + globalInt("sculkMaxTargets", AdversaryBalance.SCULK_MAX_TARGETS)
-                        + "기에게 " + number(form.damage()) + "의 마법 피해를 줍니다.");
-                lines.add("폭발할 때 방어를 무시하고 최대 체력의 "
-                        + percent(global(
-                        "sculkSelfDamageRatio",
-                        AdversaryBalance.SCULK_SELF_DAMAGE_MAX_HEALTH_RATIO
-                )) + "를 잃지만 체력은 "
-                        + percent(global(
-                        "sculkSelfDamageFloorRatio",
-                        AdversaryBalance.SCULK_SELF_DAMAGE_HEALTH_FLOOR_RATIO
-                )) + " 아래로 내려가지 않습니다.");
-                lines.add("대기 중인 폭발: " + pendingSculkBlasts.size() + "개");
-            }
-        }
+        AdversaryTowerFormStatsView.append(lines, form,
+                new AdversaryTowerFormStatsView.State(goldenTargetHits, spyglassTargetHits, echoTargetHits, maceTicksUntilStrike, maceSuccessfulStrikes, pendingSculkBlasts.size()));
         return List.copyOf(lines);
     }
 
@@ -1271,17 +1098,14 @@ public final class AdversaryFoxTower extends EntityBackedTower {
         if (lane == null || lane.arenaWorld() != source.level()) {
             return List.of();
         }
-        double radiusSqr = radius * radius;
-        return List.copyOf(lane.activeMonsters()).stream()
-                .filter(Monster::hasMinecraftEntity)
-                .map(monster -> lane.arenaWorld().getEntity(monster.minecraftEntityId()))
-                .filter(SemionMonsterEntity.class::isInstance)
-                .map(SemionMonsterEntity.class::cast)
-                .filter(monster -> source.isValidAttackTarget(monster)
-                        && monster.runtimeMonster() != null
-                        && !excluded.contains(monster.getUUID())
-                        && monster.position().distanceToSqr(center) <= radiusSqr)
-                .toList();
+        List<SemionMonsterEntity> targets = new ArrayList<>();
+        SemionTdApi.areaEffects().applyToMonsters(new MonsterAreaEffectRequest(
+                AreaEffectIds.tower(this, "attack_candidates"), source, center, radius,
+                excluded, source::isValidAttackTarget, AreaVfxSpec.none()), target -> {
+                    targets.add(target);
+                    return AreaEffectOutcome.UNCHANGED;
+                });
+        return targets;
     }
 
     private void beginOrMaintainMaceChannel(SemionTowerEntity source, SemionMonsterEntity target) {
@@ -1786,23 +1610,11 @@ public final class AdversaryFoxTower extends EntityBackedTower {
     }
 
     private static String number(double value) {
-        return String.format(Locale.ROOT, "%.2f", value).replaceFirst("\\.?0+$", "");
+        return AdversaryTowerFormStatsView.number(value);
     }
 
     protected static String percent(double ratio) {
-        return number(ratio * 100.0) + "%";
-    }
-
-    private static String multiplierList(double[] values) {
-        return java.util.Arrays.stream(values)
-                .mapToObj(value -> number(value) + "배")
-                .collect(java.util.stream.Collectors.joining(" / "));
-    }
-
-    private static String percentList(double[] values) {
-        return java.util.Arrays.stream(values)
-                .mapToObj(AdversaryFoxTower::percent)
-                .collect(java.util.stream.Collectors.joining(" / "));
+        return AdversaryTowerFormStatsView.percent(ratio);
     }
 
     private record LineCandidate(SemionMonsterEntity monster, double projection) {

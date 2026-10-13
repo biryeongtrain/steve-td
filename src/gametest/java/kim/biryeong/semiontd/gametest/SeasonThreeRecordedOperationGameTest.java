@@ -45,7 +45,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.GameTestServer;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -293,7 +293,7 @@ public final class SeasonThreeRecordedOperationGameTest {
                 for (int lane = 1; lane <= 2; lane++) {
                     UUID id = UUID.nameUUIDFromBytes(("s3-operation-" + scenarioIndex + "-" + team + "-" + lane).getBytes(StandardCharsets.UTF_8));
                     participants.add(new AssignedParticipant(id, "operation-" + team + "-" + lane, team, lane));
-                    if (!game.selectJob(id, ResourceLocation.parse(sample.builderId()))) {
+                    if (!game.selectJob(id, Identifier.parse(sample.builderId()))) {
                         finish("UNREPRODUCIBLE", "SOURCE_BUILDER_UNAVAILABLE");
                         return;
                     }
@@ -517,7 +517,7 @@ public final class SeasonThreeRecordedOperationGameTest {
                         || entity.getZ() < bounds.min().getZ() || entity.getZ() >= bounds.max().getZ() + 1) {
                     subject.outsideMap.add(id);
                 }
-                if (!level.getForceLoadedChunks().contains(ChunkPos.asLong(entity.blockPosition().getX() >> 4,
+                if (!level.getForceLoadedChunks().contains(ChunkPos.pack(entity.blockPosition().getX() >> 4,
                         entity.blockPosition().getZ() >> 4))) { subject.unforcedChunk.add(id); }
             });
         }

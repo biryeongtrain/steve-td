@@ -21,7 +21,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
 
@@ -44,7 +44,7 @@ public final class NekopenHatGameTest {
             Files.writeString(catalogPath, catalog.toString());
 
             ServerPlayer player = context.makeMockServerPlayerInLevel();
-            String playerName = player.getGameProfile().getName();
+            String playerName = player.getGameProfile().name();
             Path profilesPath = directory.resolve("profiles.json");
             SemionGameManager manager = new SemionGameManager();
             manager.configure(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(),
@@ -53,7 +53,7 @@ public final class NekopenHatGameTest {
             CosmeticService service = new CosmeticService(manager, catalogPath);
             service.load(context.getLevel().getServer());
             CosmeticCatalog.Entry entry = service.entries().getFirst();
-            ResourceLocation modelId = ResourceLocation.fromNamespaceAndPath("semion-td", "nekopen_hat");
+            Identifier modelId = Identifier.fromNamespaceAndPath("semion-td", "nekopen_hat");
             assertEquals(100L, entry.price());
             assertEquals(EquipmentSlot.HEAD, entry.slot());
             assertEquals(modelId, BuiltInRegistries.ITEM.getKey(entry.item().getItem()));
@@ -61,18 +61,18 @@ public final class NekopenHatGameTest {
             assertEquals(modelId, entry.item().get(DataComponents.ITEM_MODEL));
 
             CosmeticShopGui gui = new CosmeticShopGui(player, service);
-            assertEquals("네코펭 모자", gui.getSlot(0).getItemStack().getHoverName().getString());
-            assertTrue(gui.getSlot(0).getItemStack().get(DataComponents.LORE).lines().stream()
+            assertEquals("네코펭 모자", gui.getGuiElement(0).getItemStack().getHoverName().getString());
+            assertTrue(gui.getGuiElement(0).getItemStack().get(DataComponents.LORE).lines().stream()
                     .anyMatch(line -> line.getString().equals("가격: 100 치장 포인트")));
-            gui.click(0, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ClickType.PICKUP);
+            gui.click(0, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ContainerInput.PICKUP);
             assertFalse(service.profile(player).ownsCosmetic("nekopen_hat"));
             assertEquals(99L, service.profile(player).cosmeticCurrency());
             manager.grantCosmeticCurrency(player.getUUID(), playerName, 1);
-            gui.click(0, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ClickType.PICKUP);
+            gui.click(0, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ContainerInput.PICKUP);
             assertTrue(service.profile(player).ownsCosmetic("nekopen_hat"));
             assertEquals(0L, service.profile(player).cosmeticCurrency());
             assertTrue(player.getItemBySlot(EquipmentSlot.HEAD).isEmpty());
-            gui.click(0, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ClickType.PICKUP);
+            gui.click(0, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ContainerInput.PICKUP);
             assertEquals("nekopen_hat", CosmeticItemSupport.cosmeticId(player.getItemBySlot(EquipmentSlot.HEAD)));
             assertEquals(modelId, player.getItemBySlot(EquipmentSlot.HEAD).get(DataComponents.ITEM_MODEL));
             assertEquals(0L, service.profile(player).cosmeticCurrency());

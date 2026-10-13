@@ -9,7 +9,7 @@ import kim.biryeong.semiontd.api.area.AreaVfxStyleRegistry;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import net.minecraft.core.particles.DustParticleOptions;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -34,8 +34,8 @@ public final class ThunderVfx {
         DISCHARGE
     }
 
-    public static final ResourceLocation ARC = id("thunder_arc");
-    public static final ResourceLocation DISCHARGE = id("thunder_discharge");
+    public static final Identifier ARC = id("thunder_arc");
+    public static final Identifier DISCHARGE = id("thunder_discharge");
 
     /** Near-white, used only for the flash at each end of a bolt. */
     private static final AreaVfxParticle CORE = particle(0xFFFBE0, 1.0F, "electric_spark");
@@ -59,7 +59,7 @@ public final class ThunderVfx {
 
     public static void showDebug(SemionTowerEntity source, DebugKind kind) {
         Vec3 center = source.position().add(0.0, 0.08, 0.0);
-        ResourceLocation style = kind == DebugKind.ARC ? ARC : DISCHARGE;
+        Identifier style = kind == DebugKind.ARC ? ARC : DISCHARGE;
         double radius = kind == DebugKind.ARC ? 3.5 : 4.0;
         List<Vec3> hits = kind == DebugKind.ARC
                 ? List.of(center.add(2.4, 0.0, 0.7), center.add(-1.6, 0.0, 2.2), center.add(0.4, 0.0, -2.5))
@@ -190,11 +190,11 @@ public final class ThunderVfx {
     private static AreaVfxParticle particle(int color, float scale, String vanillaId) {
         return new AreaVfxParticle(
                 new DustParticleOptions(color, scale),
-                ResourceLocation.fromNamespaceAndPath("minecraft", vanillaId)
+                Identifier.fromNamespaceAndPath("minecraft", vanillaId)
         );
     }
 
-    private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, path);
+    private static Identifier id(String path) {
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, path);
     }
 }

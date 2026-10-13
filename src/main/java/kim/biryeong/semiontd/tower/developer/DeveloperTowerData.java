@@ -10,7 +10,7 @@ import java.util.Set;
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerDataKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /**
  * Per-tower developer state, stored in the typed tower data map.
@@ -76,7 +76,7 @@ public final class DeveloperTowerData {
 
     private static <T> TowerDataKey<T> key(String path, Class<T> type) {
         return TowerDataKey.of(
-                ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "developer/" + path),
+                Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "developer/" + path),
                 type
         );
     }
@@ -240,7 +240,19 @@ public final class DeveloperTowerData {
     }
 
     public static boolean hasBug(Tower tower, DeveloperBug bug) {
-        return bug != null && bugs(tower).contains(bug);
+        if (bug == null) {
+            return false;
+        }
+        String encoded = tower == null ? "" : tower.getDataOrDefault(BUGS, "");
+        if (encoded == null || encoded.isBlank()) {
+            return false;
+        }
+        for (String token : encoded.split(",")) {
+            if (DeveloperBug.fromKey(token).orElse(null) == bug) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static boolean addBug(Tower tower, DeveloperBug bug) {

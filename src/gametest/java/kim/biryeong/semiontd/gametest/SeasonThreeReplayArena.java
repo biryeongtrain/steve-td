@@ -22,7 +22,7 @@ import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.map.TeamArena;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -49,7 +49,7 @@ public final class SeasonThreeReplayArena {
         try {
             MapConfig config = MapConfig.defaultConfig();
             var server = context.getLevel().getServer();
-            var resourcePath = MapTemplateSerializer.getResourcePathFor(ResourceLocation.parse(config.templateId()));
+            var resourcePath = MapTemplateSerializer.getResourcePathFor(Identifier.parse(config.templateId()));
             byte[] bytes;
             try (var input = server.getResourceManager().getResourceOrThrow(resourcePath).open()) {
                 bytes = input.readAllBytes();
@@ -99,7 +99,7 @@ public final class SeasonThreeReplayArena {
                         for (int z = target.min().getZ() >> 4; z <= target.max().getZ() >> 4; z++) {
                             world.getChunk(x, z);
                             if (world.setChunkForced(x, z, true)) {
-                                forcedChunks.add(ChunkPos.asLong(x, z));
+                                forcedChunks.add(ChunkPos.pack(x, z));
                             }
                         }
                     }
@@ -130,7 +130,7 @@ public final class SeasonThreeReplayArena {
             for (BlockBounds target : bounds.values()) {
                 var chunks = target.asChunks().iterator();
                 while (chunks.hasNext()) {
-                    if (!world.areEntitiesActuallyLoadedAndTicking(new ChunkPos(chunks.nextLong()))) {
+                    if (!world.areEntitiesActuallyLoadedAndTicking(ChunkPos.unpack(chunks.nextLong()))) {
                         return false;
                     }
                 }
@@ -163,8 +163,8 @@ public final class SeasonThreeReplayArena {
                 }
             }
             for (long packed : forcedChunks) {
-                ChunkPos chunk = new ChunkPos(packed);
-                world.setChunkForced(chunk.x, chunk.z, false);
+                ChunkPos chunk = ChunkPos.unpack(packed);
+                world.setChunkForced(chunk.x(), chunk.z(), false);
             }
             forcedChunks.clear();
         }

@@ -22,12 +22,12 @@ import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public class AllayTower extends SupportTower {
     private static final int MINIMUM_REDUCED_INTERVAL_TICKS = 20;
-    private static final ResourceLocation WEAPON_SMITH_SOURCE = supportId("weapon_smith");
-    private static final ResourceLocation ARMORER_SOURCE = supportId("armorer");
+    private static final Identifier WEAPON_SMITH_SOURCE = supportId("weapon_smith");
+    private static final Identifier ARMORER_SOURCE = supportId("armorer");
     private static final TowerDataKey<Long> HEAL_BLOCKED_UNTIL = TowerDataKey.of(supportId("allay_heal_blocked_until"), Long.class);
     private static final TowerDataKey<Long> WEAPON_SMITH_BLOCKED_UNTIL = TowerDataKey.of(supportId("weapon_smith_blocked_until"), Long.class);
     private static final TowerDataKey<Long> ARMORER_BLOCKED_UNTIL = TowerDataKey.of(supportId("armorer_blocked_until"), Long.class);
@@ -177,8 +177,8 @@ public class AllayTower extends SupportTower {
         target.setData(key, gameTime + supportBlockTicks(lane));
     }
 
-    private static ResourceLocation supportId(String path) {
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "tower_support/" + path);
+    private static Identifier supportId(String path) {
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "tower_support/" + path);
     }
 
     private double radius() {

@@ -146,11 +146,55 @@ public final class SemionRatingGameTest {
         context.succeed();
     }
 
-    @GameTest
+    @GameTest(maxTicks = 500)
     public void laneAttributionStatsAreRecordedThroughPlayerLaneRuntime(GameTestHelper context) {
-        kim.biryeong.semiontd.map.GameArena arena = null;
         try {
-            arena = GameArenaLoader.load(context.getLevel().getServer(), MapConfig.defaultConfig());
+            var arena = GameArenaLoader.load(context.getLevel().getServer(), MapConfig.defaultConfig());
+            var owner = UUID.nameUUIDFromBytes("gametest-rating-lane-owner".getBytes());
+            var plan = new kim.biryeong.semiontd.game.ParticipantSelectionPlan(
+                    kim.biryeong.semiontd.game.MatchMode.NORMAL,
+                    List.of(new kim.biryeong.semiontd.game.AssignedParticipant(owner, "laneOwner", TeamId.RED, 1)), Set.of(), 1);
+            var setup = new kim.biryeong.semiontd.game.SemionGame(EconomyConfig.defaultConfig(),
+                    kim.biryeong.semiontd.config.WaveConfig.defaultConfig(), arena);
+            if (!setup.preloadWorldsForStart(plan)) {
+                arena.unload();
+                throw new AssertionError("The normal start preload must prepare the rating lane.");
+            }
+            var red = arena.teamArena(TeamId.RED).orElseThrow();
+            var observer = RuntimePlayerFixture.connect(context, red.world(),
+                    kim.biryeong.semiontd.game.StartPlacement.activePlayerSpawn(red.layout(), 1),
+                    net.minecraft.world.level.GameType.ADVENTURE, owner, "rating-viewer");
+            context.runAfterDelay(2, () -> {
+                try {
+                    observer.enterWorld(red.world(), kim.biryeong.semiontd.game.StartPlacement.activePlayerSpawn(red.layout(), 1));
+                } catch (Throwable failure) {
+                    observer.close();
+                    arena.unload();
+                    context.fail(net.minecraft.network.chat.Component.literal("Rating arena entry failed: " + failure));
+                    return;
+                }
+                RuntimePlayerFixture.whenChunksTrackEntities(context, red.world(),
+                        List.of(red.layout().lane(1).orElseThrow().spawn(),
+                                red.layout().lane(1).orElseThrow().positionAt(0.95),
+                                red.layout().lane(1).orElseThrow().positionAt(1.0)), () -> {
+                    try {
+                        verifyLaneAttributionRuntime(context, arena);
+                    } finally {
+                        observer.close();
+                        arena.unload();
+                    }
+                }, () -> {
+                    observer.close();
+                    arena.unload();
+                });
+            });
+        } catch (Exception exception) {
+            throw new AssertionError("Lane attribution arena preparation failed", exception);
+        }
+    }
+
+    private void verifyLaneAttributionRuntime(GameTestHelper context, kim.biryeong.semiontd.map.GameArena arena) {
+        try {
             UUID laneOwnerId = UUID.nameUUIDFromBytes("gametest-rating-lane-owner".getBytes());
             UUID senderId = UUID.nameUUIDFromBytes("gametest-rating-income-sender".getBytes());
             PlayerLane lane = new PlayerLane(
@@ -202,10 +246,21 @@ public final class SemionRatingGameTest {
             }
 
             if (!(lane.arenaWorld().getEntity(incomeMonster.minecraftEntityId()) instanceof SemionMonsterEntity monsterEntity)) {
-                throw new AssertionError("Spawned income unit should have a runtime monster entity");
+                throw new AssertionError("Spawned income unit should have a runtime monster entity; id="
+                        + incomeMonster.minecraftEntityId() + ", players=" + lane.arenaWorld().players().size()
+                        + ", chunk=" + lane.arenaWorld().getChunkAt(net.minecraft.core.BlockPos.containing(lane.laneLayout().spawn())).getFullStatus()
+                        + ", playerPositions=" + lane.arenaWorld().players().stream().map(player -> player.position().toString()).toList());
             }
             var leakPosition = lane.laneLayout().positionAt(0.95);
             monsterEntity.teleportTo(leakPosition.x, leakPosition.y, leakPosition.z);
+            lane.tick(context.getLevel().getServer(), null, players);
+            if (!incomeMonster.inFinalDefenseCombat()
+                    || laneOwner.matchStats().snapshot(laneOwner.economy().income()).ownLaneLeakedThreat() != 0.0
+                    || sender.matchStats().snapshot(sender.economy().income()).incomeAttackSuccessThreat() != 0.0) {
+                throw new AssertionError("Ninety-five percent progress must enter final defense without recording a completed leak.");
+            }
+            var bossPosition = lane.laneLayout().positionAt(1.0);
+            monsterEntity.teleportTo(bossPosition.x, bossPosition.y, bossPosition.z);
             lane.tick(context.getLevel().getServer(), null, players);
 
             PlayerMatchStatsSnapshot afterLeak = laneOwner.matchStats().snapshot(laneOwner.economy().income());
@@ -217,12 +272,8 @@ public final class SemionRatingGameTest {
                 throw new AssertionError("Income unit sender should record successful pressure through PlayerLane runtime");
             }
             context.succeed();
-        } catch (Exception exception) {
-            throw new AssertionError("Lane attribution GameTest failed", exception);
-        } finally {
-            if (arena != null) {
-                arena.unload();
-            }
+        } catch (Throwable failure) {
+            context.fail(net.minecraft.network.chat.Component.literal("Lane attribution GameTest failed: " + failure));
         }
     }
 

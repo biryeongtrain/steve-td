@@ -12,8 +12,8 @@ import kim.biryeong.semiontd.entity.visual.TropicalFishVisual;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.animal.Salmon;
-import net.minecraft.world.entity.animal.TropicalFish;
+import net.minecraft.world.entity.animal.fish.Salmon;
+import net.minecraft.world.entity.animal.fish.TropicalFish;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.Blocks;
 
@@ -54,7 +54,7 @@ public final class OceanTowers {
 
     public static final TowerType T1_PUFFERFISH = tower(
             "ocean_pufferfish_t1", "복어 타워", 40, 130.0, 2.4, 5.0, 16, 50,
-            byId(EntityType.PUFFERFISH),
+            byId(net.minecraft.world.entity.EntityTypes.PUFFERFISH),
             List.of(
                     "<gray>짧은 사거리와 높은 어그로로 앞라인을 지키는 기본 탱커입니다.</gray>",
                     "<green>물을 보유한 동안 받는 피해가 {ability.damageReduction:percent} 감소합니다.</green>",
@@ -64,7 +64,7 @@ public final class OceanTowers {
     );
     public static final TowerType T2_GUARDIAN = tower(
             "ocean_guardian_t2", "가디언 타워", 130, 230.0, 2.6, 9.0, 16, 70,
-            EntityVisual.builder(byId(EntityType.GUARDIAN)).scale(0.9).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.GUARDIAN)).scale(0.9).build(),
             List.of(
                     "<gray>더 높은 체력과 어그로로 앞라인을 지키는 중급 탱커입니다.</gray>",
                     "<green>물을 보유한 동안 받는 피해가 {ability.damageReduction:percent} 감소합니다.</green>",
@@ -74,7 +74,7 @@ public final class OceanTowers {
     );
     public static final TowerType T3_ELDER_GUARDIAN = tower(
             "ocean_elder_guardian_t3", "엘더 가디언 타워", 210, 450.0, 3.0, 16.0, 20, 110,
-            EntityVisual.builder(byId(EntityType.ELDER_GUARDIAN)).scale(0.5).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.ELDER_GUARDIAN)).scale(0.5).build(),
             List.of(
                     "<gray>압도적인 체력과 어그로로 앞라인을 버티는 최종 탱커입니다.</gray>",
                     "<green>물을 보유한 동안 받는 피해가 {ability.damageReduction:percent} 감소합니다.</green>",
@@ -128,7 +128,7 @@ public final class OceanTowers {
 
     public static final TowerType T1_SQUID = tower(
             "ocean_squid_t1", "오징어 타워", 50, 60.0, 0.0, 0.0, 100, -5,
-            EntityVisual.builder(byId(EntityType.SQUID)).scale(0.75).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.SQUID)).scale(0.75).build(),
             List.of(
                     "<gray>주변의 피해 입은 바다 전투 타워를 회복시키는 기본 지원 타워입니다.</gray>",
                     "<green>웨이브 중 {ability.healIntervalTicks:seconds}마다 물 {ability.abilityWaterCost:number}을 소모해 {ability.healRadius:blocks} 안의 다른 바다 전투 타워를 각각 {ability.healAmount:number} 회복시킵니다.</green>",
@@ -138,7 +138,7 @@ public final class OceanTowers {
     );
     public static final TowerType T2_GLOW_SQUID = tower(
             "ocean_glow_squid_t2", "발광 오징어 타워", 120, 90.0, 0.0, 0.0, 90, -5,
-            EntityVisual.builder(byId(EntityType.GLOW_SQUID)).scale(0.9).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.GLOW_SQUID)).scale(0.9).build(),
             List.of(
                     "<gray>더 넓은 범위를 더 자주 회복시키는 중급 지원 타워입니다.</gray>",
                     "<green>웨이브 중 {ability.healIntervalTicks:seconds}마다 물 {ability.abilityWaterCost:number}을 소모해 {ability.healRadius:blocks} 안의 다른 바다 전투 타워를 각각 {ability.healAmount:number} 회복시킵니다.</green>",
@@ -148,7 +148,7 @@ public final class OceanTowers {
     );
     public static final TowerType T3_DOLPHIN = tower(
             "ocean_dolphin_t3", "돌고래 타워", 210, 140.0, 0.0, 0.0, 80, -5,
-            EntityVisual.builder(byId(EntityType.DOLPHIN)).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.DOLPHIN)).build(),
             List.of(
                     "<gray>넓은 범위에 강한 회복을 빠르게 제공하는 최종 지원 타워입니다.</gray>",
                     "<green>웨이브 중 {ability.healIntervalTicks:seconds}마다 물 {ability.abilityWaterCost:number}을 소모해 {ability.healRadius:blocks} 안의 다른 바다 전투 타워를 각각 {ability.healAmount:number} 회복시킵니다.</green>",
@@ -187,7 +187,7 @@ public final class OceanTowers {
 
     public static final TowerType T1_COD = tower(
             "ocean_cod_t1", "대구 타워", 45, 55.0, 8.0, 6.0, 20, 0,
-            EntityVisual.builder(byId(EntityType.COD)).scale(0.7).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.COD)).scale(0.7).build(),
             List.of(
                     "<gray>최대 체력이 가장 높은 적을 우선 공격하는 단일 공격 타워입니다.</gray>",
                     "<green>공격할 때 물 {ability.attackWaterCost:number}을 소모하며, 저장한 물이 많을수록 공격력이 증가합니다.</green>",
@@ -196,7 +196,7 @@ public final class OceanTowers {
     );
     public static final TowerType T2_LARGE_COD = tower(
             "ocean_cod_t2", "큰 대구 타워", 100, 80.0, 11.0, 16.0, 15, 0,
-            EntityVisual.builder(byId(EntityType.COD)).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.COD)).build(),
             List.of(
                     "<gray>최대 체력이 가장 높은 적을 더 빠르게 처리하는 중급 단일 공격 타워입니다.</gray>",
                     "<green>공격할 때 물 {ability.attackWaterCost:number}을 소모하며, 저장한 물이 많을수록 공격력이 증가합니다.</green>",
@@ -205,7 +205,7 @@ public final class OceanTowers {
     );
     public static final TowerType T3_GIANT_COD = tower(
             "ocean_cod_t3", "거대 대구 타워", 210, 115.0, 12.0, 40.0, 12, 0,
-            EntityVisual.builder(byId(EntityType.COD)).scale(1.2).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.COD)).scale(1.2).build(),
             List.of(
                     "<gray>높은 체력의 적과 인컴/소환 적을 강하게 압박하는 최종 단일 공격 타워입니다.</gray>",
                     "<green>공격할 때 물 {ability.attackWaterCost:number}을 소모하며, 저장한 물이 많을수록 공격력이 증가합니다.</green>",

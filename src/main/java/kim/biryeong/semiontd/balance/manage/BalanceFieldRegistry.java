@@ -254,7 +254,7 @@ public final class BalanceFieldRegistry {
             case "generationBonus" -> "power";
             case "growthRounds", "hatchWaves", "roundReduction" -> "rounds";
             case "radius", "radiusBonus", "damageRadius", "triggerRadius", "shellRadius", "jackpotRadius", "hatchedRange",
-                    "minimumRange", "distance", "length", "width", "linkRange", "yardRadius" -> "blocks";
+                    "minimumRange", "distance", "length", "width", "linkRange", "yardRadius", "flightHeight", "knockbackDistance" -> "blocks";
             case "chargeDamage", "hatchedDamage", "mineDamage", "shellDamage", "damagePerHitCap" -> "damage";
             case "hatchedHealth", "healCap" -> "health";
             case "advanceMultiplier", "artilleryIncomingMultiplier", "attackMultiplier", "auraMultiplier", "bodyMultiplier",
@@ -271,7 +271,7 @@ public final class BalanceFieldRegistry {
                     "otherDamagePenalty", "overflowRatio", "overkillRatio", "penaltyPerStack", "powerPerTier", "quickDamageBonus",
                     "redirectRatio", "refundRatio", "repeatDamageRatio", "reviveHealthRatio", "rewardBonus", "scalePerClone",
                     "secondaryRatio", "slow", "statBonus", "statRatio", "statReversalChance", "transferRatio", "upgradeCostBonus", "vanguardDamagePenalty",
-                    "vanguardDamageReduction", "waitReduction", "weaponDamageBonus" -> "ratio";
+                    "vanguardDamageReduction", "waitReduction", "weaponDamageBonus", "rushDamageRatio", "burnDamageRatio", "proficiencyGainBonus" -> "ratio";
             case "castInterval", "neighborCount" -> "count";
             default -> AugmentConfig.parameterLimits(key).integer() ? "count" : null;
         };
@@ -284,8 +284,16 @@ public final class BalanceFieldRegistry {
             case "incomingDamageBonus" -> "받는 피해 증가율";
             case "activeCap" -> "동시 생존·생성 대기 상한";
             case "maxHealthBonus", "healthBonus" -> "최대 체력 증가율";
+            case "proficiencyGainBonus" -> "주문 숙련도 획득 증가율";
+            case "proficiencyCapBonus" -> "T3 최대 주문 숙련도 증가량";
             case "damageRatio" -> "공격력 비례 피해";
             case "healRatio" -> "회복 비율";
+            case "rushDamageRatio" -> "돌진 피해 비율";
+            case "burnDamageRatio" -> "화상 피해 비율";
+            case "flightHeight" -> "비행 높이";
+            case "knockbackDistance" -> "넉백 거리";
+            case "burnDurationTicks" -> "화상 지속 시간";
+            case "burnIntervalTicks" -> "화상 간격";
             case "statReversalChance" -> "실패 능력치 반전 확률";
             case "amount" -> "보상 수량";
             case "radius" -> "효과 반경";

@@ -6,7 +6,7 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -15,7 +15,7 @@ import net.minecraft.world.phys.Vec3;
  * @param maxTargets 중심에서 가까운 순서로 적용할 최대 대상 수
  */
 public record MonsterAreaEffectRequest(
-        ResourceLocation effectId,
+        Identifier effectId,
         SemionTowerEntity source,
         Vec3 center,
         double radius,
@@ -27,7 +27,7 @@ public record MonsterAreaEffectRequest(
 ) {
     /** 레인 경계를 지키는 기본 요청. 타워는 전부 이쪽입니다. */
     public MonsterAreaEffectRequest(
-            ResourceLocation effectId,
+            Identifier effectId,
             SemionTowerEntity source,
             Vec3 center,
             double radius,
@@ -39,7 +39,7 @@ public record MonsterAreaEffectRequest(
     }
 
     public MonsterAreaEffectRequest(
-            ResourceLocation effectId,
+            Identifier effectId,
             SemionTowerEntity source,
             Vec3 center,
             double radius,
@@ -67,7 +67,7 @@ public record MonsterAreaEffectRequest(
     }
 
     public static MonsterAreaEffectRequest aroundTarget(
-            ResourceLocation effectId,
+            Identifier effectId,
             SemionTowerEntity source,
             SemionMonsterEntity target,
             double radius,
@@ -78,7 +78,7 @@ public record MonsterAreaEffectRequest(
     }
 
     public static MonsterAreaEffectRequest aroundTower(
-            ResourceLocation effectId,
+            Identifier effectId,
             SemionTowerEntity source,
             double radius,
             AreaVfxSpec vfx

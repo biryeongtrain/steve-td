@@ -5,15 +5,15 @@ import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.config.TowerBalanceRuntime;
 import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.tower.TowerType;
-import kim.biryeong.semiontd.tower.demonlord.DemonLordState;
 import kim.biryeong.semiontd.summon.SummonMonsterType;
 import kim.biryeong.semiontd.tower.demonlord.DemonLordIncome;
 import kim.biryeong.semiontd.tower.demonlord.DemonLordService;
+import kim.biryeong.semiontd.tower.demonlord.DemonLordState;
 import kim.biryeong.semiontd.tower.demonlord.DemonLordStates;
 import kim.biryeong.semiontd.tower.demonlord.DemonLordTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /**
  * The demon lord builder: the player is the defense. Skills are bought straight into key slots from
@@ -23,7 +23,7 @@ import net.minecraft.resources.ResourceLocation;
  * level curve, which is this builder's only source of scaling.
  */
 public final class DemonLordTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "demon_lord_towers");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "demon_lord_towers");
 
     public DemonLordTowerJob() {
         super(
@@ -31,6 +31,11 @@ public final class DemonLordTowerJob extends SemionJob {
                 Component.literal("마왕 빌더"),
                 List.of(SemionText.mini("<gray>타워 대신 마왕 본인이 레인에서 직접 싸우는 빌더입니다.</gray>"))
         );
+    }
+
+    @Override
+    public boolean isHyperCarry() {
+        return true;
     }
 
     @Override

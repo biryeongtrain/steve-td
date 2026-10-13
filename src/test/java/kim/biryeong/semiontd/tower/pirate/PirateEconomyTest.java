@@ -144,7 +144,7 @@ class PirateEconomyTest {
         assertEquals(75, upgraded.sellRefundAmount());
         sell(upgraded);
         assertEquals(6, player.economy().diamond() - before);
-        assertEquals(10, lane.towers().stream().mapToDouble(Tower::permanentMaxHealthBonus).sum(), 1e-9);
+        assertEquals(8, lane.towers().stream().mapToDouble(Tower::permanentMaxHealthBonus).sum(), 1e-9);
     }
 
     @Test
@@ -276,7 +276,7 @@ class PirateEconomyTest {
         assertEquals(baseHealth, navigator.effectBaseMaxHealth(), 1e-9);
         assertEquals(baseDamage, navigator.modifyAttackDamage(null, null, navigator.type().damage()), 1e-9);
         PirateStates.recordDiamondSpend(player, 1);
-        assertEquals(baseHealth + 5, navigator.effectBaseMaxHealth(), 1e-9);
+        assertEquals(baseHealth + 3, navigator.effectBaseMaxHealth(), 1e-9);
         assertEquals(baseDamage + .5, navigator.modifyAttackDamage(null, null, navigator.type().damage()), 1e-9);
     }
 

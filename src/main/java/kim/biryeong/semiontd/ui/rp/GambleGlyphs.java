@@ -15,12 +15,12 @@ import javax.imageio.ImageIO;
 import kim.biryeong.semiontd.SemionTd;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /** Original pixel artwork generated into Polymer's pack, independent of licensed asset directories. */
 public final class GambleGlyphs {
-    public static final ResourceLocation FONT = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "gamble");
-    private static final Style STYLE = Style.EMPTY.withFont(FONT).withColor(0xFFFFFF).withShadowColor(0);
+    public static final Identifier FONT = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "gamble");
+    private static final Style STYLE = Style.EMPTY.withFont(new net.minecraft.network.chat.FontDescription.Resource(FONT)).withColor(0xFFFFFF).withShadowColor(0);
     private static final int CARD = 0xE200;
     private static final int BACK = 0xE234;
     private static final int DIE = 0xE240;

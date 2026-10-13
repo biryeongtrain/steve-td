@@ -1,15 +1,15 @@
 package kim.biryeong.semiontd.tower;
 
 import java.util.Objects;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
-public record TowerDataKey<T>(ResourceLocation id, Class<T> type) {
+public record TowerDataKey<T>(Identifier id, Class<T> type) {
     public TowerDataKey {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(type, "type");
     }
 
-    public static <T> TowerDataKey<T> of(ResourceLocation id, Class<T> type) {
+    public static <T> TowerDataKey<T> of(Identifier id, Class<T> type) {
         return new TowerDataKey<>(id, type);
     }
 

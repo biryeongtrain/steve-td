@@ -5,7 +5,7 @@ import kim.biryeong.semiontd.api.area.AreaVfxOutput;
 import kim.biryeong.semiontd.api.area.AreaVfxParticle;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import net.minecraft.core.particles.DustParticleOptions;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class BuiltinAreaVfxStyles {
     private static final AreaVfxParticle BUFF_PARTICLE = particle(0x66D975, 1.35F, "happy_villager");
@@ -129,7 +129,7 @@ public final class BuiltinAreaVfxStyles {
     private static AreaVfxParticle particle(int color, float scale, String id) {
         return new AreaVfxParticle(
                 new DustParticleOptions(color, scale),
-                ResourceLocation.fromNamespaceAndPath("minecraft", id)
+                Identifier.fromNamespaceAndPath("minecraft", id)
         );
     }
 }

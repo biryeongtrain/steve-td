@@ -39,13 +39,14 @@ class WarlockDescriptionTest {
         assertTrue(description.contains("흡수 시 최대 체력 증가분에 체력 30을 더해 회복"));
         assertTrue(description.contains("주위 25블록 내 아군 타워를 흡수합니다."));
         assertTrue(description.contains("흡수한 타워 체력과 피해의 50%"));
-        assertTrue(description.contains("체력 +2.5%"));
-        assertTrue(description.contains("피해 +5%"));
+        assertTrue(description.contains("체력 +4%"));
+        assertTrue(description.contains("피해 +7%"));
         assertTrue(description.contains("생존 중인 개구리 계열마다 체력 +4%, 피해 +10%"));
         assertTrue(description.contains("최대 체력 +20%, 피해 +50%까지 증가"));
         assertTrue(description.contains("체력 40% 이하"));
         assertTrue(description.contains("각성 시 체력을 회복하고, 재생이 증가합니다."));
         assertEquals(9, rangedDescriptionLines.size());
+        assertFalse(description.contains("생명력 흡수 효율:"));
         assertEquals("능력치는 높아질수록 증가 효율이 감소합니다.",
                 rangedDescriptionLines.getLast().replaceAll("<[^>]+>", ""));
         assertFalse(rangedMarkup.contains("{ability."));
@@ -57,13 +58,15 @@ class WarlockDescriptionTest {
         assertTrue(meleeDescription.contains("흡수 시 최대 체력 증가분에 체력 30을 더해 회복"));
         assertTrue(meleeDescription.contains("주위 25블록 내 아군 타워를 흡수합니다."));
         assertTrue(meleeDescription.contains("흡수한 타워 체력과 피해의 60%"));
-        assertTrue(meleeDescription.contains("체력 +5%"));
-        assertTrue(meleeDescription.contains("피해 +2.5%"));
+        assertTrue(meleeDescription.contains("체력 +7%"));
+        assertTrue(meleeDescription.contains("피해 +4%"));
         assertTrue(meleeDescription.contains("생존 중인 양 계열마다 체력 +10%, 피해 +4%"));
         assertTrue(meleeDescription.contains("최대 체력 +50%, 피해 +20%까지 증가"));
         assertTrue(meleeDescription.contains("체력 40% 이하"));
         assertTrue(meleeDescription.contains("각성 시 체력을 회복하고, 추가 피해와 이동 속도가 증가합니다."));
         assertEquals(9, meleeDescriptionLines.size());
+        assertFalse(meleeDescription.contains("생명력 흡수 효율:"));
+        assertFalse(meleeDescription.contains("아군 타워가 남아 있어도 현재 라운드 흡수 스택"));
         assertEquals("능력치는 높아질수록 증가 효율이 감소합니다.",
                 meleeDescriptionLines.getLast().replaceAll("<[^>]+>", ""));
         assertFalse(meleeMarkup.contains("{ability."));
@@ -117,5 +120,34 @@ class WarlockDescriptionTest {
 
     private static String plainDescription(TowerType type) {
         return String.join("\n", TowerBalanceRuntime.resolve(type).description()).replaceAll("<[^>]+>", "");
+    }
+
+    @Test
+    void lifeStealDisplayShowsTheEffectiveRateAndOriginalProgress() {
+        for (boolean ranged : new boolean[] {true, false}) {
+            double maximum = ranged ? .07 : .12;
+            int stages = ranged ? 14 : 12;
+            int every = ranged ? 10 : 1;
+            double step = ranged ? .005 : .01;
+            for (int stage = 0; stage <= stages; stage++) {
+                for (double damage : new double[] {40, 400, 4000}) {
+                    double expectedPercent = stage * (ranged ? 5 : 10) * (damage == 40 ? 1 : damage == 400 ? .1 : .01);
+                    String expectedText = kim.biryeong.semiontd.tower.description.TowerDescriptionTemplate
+                            .formatNumber(Math.round(expectedPercent * 10) / 10.0) + "%";
+                    String details = String.join("\n", WarlockStatsView.core(new WarlockStatsView.CoreStats(
+                            stage * every, stage * every, false, false, null,
+                            new WarlockStatsView.CombatStats(0, 0, 15, 0, 8, false),
+                            new WarlockStatsView.DefenseStats(0, stage * step, maximum, damage, 0, .3, 0),
+                            new WarlockStatsView.ProgressionStats(true, stage * every, every, 0, 10,
+                                    false, false, 0, 1, 0, 2, false))))
+                            .replaceAll("<[^>]+>", "");
+                    String progress = stage == stages ? "(MAX)" : "(" + ((stage + 1) * every) + ")";
+                    assertTrue(details.contains("생명력 흡수: " + expectedText + " " + progress), details);
+                    assertFalse(details.contains("표시값은 현재 피해"), details);
+                    assertFalse(details.contains("생명력 흡수 효율:"), details);
+                    assertFalse(details.contains("실제 회복률은"), details);
+                }
+            }
+        }
     }
 }

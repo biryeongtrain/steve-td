@@ -4,15 +4,15 @@ import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.effect.TimedEffectType;
 import kim.biryeong.semiontd.entity.monster.MonsterDataKey;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class QueenShrink {
     private static final MonsterDataKey<Double> POINTS = new MonsterDataKey<>(
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "queen_shrink_points"), Double.class);
-    public static final ResourceLocation SHRINK_DEBUFF_SOURCE =
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "queen_shrink_debuff");
-    public static final ResourceLocation GIANT_DEBUFF_SOURCE =
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "queen_giant_debuff");
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "queen_shrink_points"), Double.class);
+    public static final Identifier SHRINK_DEBUFF_SOURCE =
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "queen_shrink_debuff");
+    public static final Identifier GIANT_DEBUFF_SOURCE =
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "queen_giant_debuff");
 
     private QueenShrink() {}
 

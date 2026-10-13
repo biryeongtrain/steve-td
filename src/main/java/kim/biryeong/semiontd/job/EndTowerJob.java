@@ -7,10 +7,10 @@ import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.end.EndTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class EndTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(
             SemionTd.MOD_ID,
             "end_towers"
     );
@@ -25,6 +25,11 @@ public final class EndTowerJob extends SemionJob {
                         SemionText.mini("<yellow><bold>주의</bold></yellow> <gray>성장 준비가 길어 숙련자에게 권장합니다.</gray>")
                 )
         );
+    }
+
+    @Override
+    public boolean isHyperCarry() {
+        return true;
     }
 
     @Override

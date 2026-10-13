@@ -10,7 +10,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Item;
@@ -146,6 +146,7 @@ public final class SemionCosmeticItems {
 
     private static final List<Item> ITEMS = new ArrayList<>(DEFINITIONS.size());
     private static Item succubusHead;
+    private static final java.util.Map<Item, Component> DEFAULT_NAMES = new java.util.LinkedHashMap<>();
 
     private SemionCosmeticItems() {
     }
@@ -156,6 +157,10 @@ public final class SemionCosmeticItems {
         }
         DEFINITIONS.forEach(definition -> ITEMS.add(register(definition)));
         succubusHead = register(define("tower/succubus_head", "서큐버스 머리 장식", ChatFormatting.LIGHT_PURPLE));
+        // Registry components are rebuilt on reload in 26.3; apply our literal names after initialization.
+        net.fabricmc.fabric.api.item.v1.DefaultItemComponentEvents.MODIFY.register(context ->
+                DEFAULT_NAMES.forEach((item, name) ->
+                        context.modify(item, builder -> builder.set(DataComponents.ITEM_NAME, name))));
     }
 
     public static List<Item> items() {
@@ -167,18 +172,20 @@ public final class SemionCosmeticItems {
     }
 
     private static Item register(Definition definition) {
-        ResourceLocation id = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, definition.path());
+        Identifier id = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, definition.path());
         ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, id);
         Item.Properties properties = new Item.Properties()
                 .setId(key)
                 .stacksTo(1)
                 .equippable(definition.slot())
                 .component(DataComponents.ITEM_NAME, Component.literal(definition.name()).withStyle(definition.color()));
-        return Registry.register(
+        Item item = Registry.register(
                 BuiltInRegistries.ITEM,
                 key,
                 new SimplePolymerItem(properties, Items.PAPER, true)
         );
+        DEFAULT_NAMES.put(item, Component.literal(definition.name()).withStyle(definition.color()));
+        return item;
     }
 
     private static Definition define(String path, String name, ChatFormatting color) {

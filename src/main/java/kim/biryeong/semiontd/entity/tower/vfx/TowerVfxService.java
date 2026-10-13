@@ -1,5 +1,6 @@
 package kim.biryeong.semiontd.entity.tower.vfx;
 
+import kim.biryeong.semiontd.tower.magicschool.MagicSchoolTowers;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -34,41 +35,12 @@ import kim.biryeong.semiontd.game.SemionGame;
 import kim.biryeong.semiontd.game.SemionGameManager;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.TowerType;
-import kim.biryeong.semiontd.tower.adversary.AdversaryTowers;
-import kim.biryeong.semiontd.tower.ancientcity.AncientCityTowers;
-import kim.biryeong.semiontd.tower.animal.AnimalTowers;
-import kim.biryeong.semiontd.tower.army.ArmyTowers;
-import kim.biryeong.semiontd.tower.body.BodyTowers;
-import kim.biryeong.semiontd.tower.developer.DeveloperTowers;
-import kim.biryeong.semiontd.tower.end.EndTowers;
-import kim.biryeong.semiontd.tower.engineer.EngineerTowers;
-import kim.biryeong.semiontd.tower.futureagency.FutureAgencyTowers;
-import kim.biryeong.semiontd.tower.frost.FrostTowers;
-import kim.biryeong.semiontd.tower.gamble.GambleTowers;
-import kim.biryeong.semiontd.tower.hero.HeroPartyTowers;
-import kim.biryeong.semiontd.tower.illager.IllagerTowers;
-import kim.biryeong.semiontd.tower.insect.InsectTowers;
-import kim.biryeong.semiontd.tower.legion.LegionTowers;
-import kim.biryeong.semiontd.tower.mage.MageTowers;
-import kim.biryeong.semiontd.tower.succubus.SuccubusTowers;
-import kim.biryeong.semiontd.tower.nether.NetherTowers;
-import kim.biryeong.semiontd.tower.ocean.OceanTowers;
-import kim.biryeong.semiontd.tower.pet.PetTowers;
-import kim.biryeong.semiontd.tower.pirate.PirateTowers;
-import kim.biryeong.semiontd.tower.plant.PlantTowers;
-import kim.biryeong.semiontd.tower.queen.QueenTowers;
-import kim.biryeong.semiontd.tower.resonance.ResonanceTowers;
-import kim.biryeong.semiontd.tower.thunder.ThunderTowers;
-import kim.biryeong.semiontd.tower.demonlord.DemonLordTowers;
 import kim.biryeong.semiontd.tower.area.AreaVfxStyleRegistryImpl;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
-import kim.biryeong.semiontd.tower.undead.UndeadTowers;
-import kim.biryeong.semiontd.tower.villager.VillagerTowers;
-import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.mcbrincie.apel.lib.renderers.BaseApelRenderer;
-import net.mcbrincie.apel.lib.util.math.bezier.QuadraticBezierCurve;
 import net.minecraft.core.particles.DustParticleOptions;
+import kim.biryeong.semiontd.tower.magicschool.MagicSchoolSpell;
+import kim.biryeong.semiontd.tower.magicschool.MagicSchoolWizardTower;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.Packet;
@@ -81,7 +53,6 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LightningBolt;
 
 public final class TowerVfxService {
@@ -106,27 +77,13 @@ public final class TowerVfxService {
     private static final DustParticleOptions WARLOCK_SACRIFICE_SOUL_PARTICLE = new DustParticleOptions(0xD500F9, 0.95F);
     private static final DustParticleOptions TRANSCENDENCE_GOLD_PARTICLE = new DustParticleOptions(0xF4D35E, 1.15F);
     private static final DustParticleOptions TRANSCENDENCE_LIGHT_PARTICLE = new DustParticleOptions(0xFFF4CC, 0.9F);
-    private static final DustParticleOptions WARLOCK_AWAKENING_DARK_PARTICLE = new DustParticleOptions(0x4A0072, 1.35F);
-    private static final DustParticleOptions WARLOCK_AWAKENING_MANA_PARTICLE = new DustParticleOptions(0x189BE5, 1.1F);
-    private static final DustParticleOptions WARLOCK_AWAKENING_BRIGHT_PARTICLE = new DustParticleOptions(0xE040FB, 0.9F);
+    private static final DustParticleOptions WARLOCK_AWAKENING_DARK_PARTICLE = WARLOCK_SACRIFICE_DARK_PARTICLE;
+    private static final DustParticleOptions WARLOCK_AWAKENING_MANA_PARTICLE = WARLOCK_SACRIFICE_SOUL_PARTICLE;
+    private static final DustParticleOptions WARLOCK_AWAKENING_BRIGHT_PARTICLE = new DustParticleOptions(0xE5B6FF, 0.65F);
     private static final DustParticleOptions MAGIC_HIT_PARTICLE = new DustParticleOptions(0xA66CFF, 0.8F);
     private static final DustParticleOptions BODY_HEART_PARTICLE = new DustParticleOptions(0xE53935, 1.15F);
     private static final DustParticleOptions BODY_EYE_LASER_PARTICLE = new DustParticleOptions(0xFF1744, 1.1F);
     private static final DustParticleOptions BODY_EYE_LASER_CORE_PARTICLE = new DustParticleOptions(0xFFCDD2, 0.7F);
-
-    private static final Set<String> UNDEAD_TOWER_IDS = Set.of(
-            UndeadTowers.T1_ZOMBIE_TOWER.id(), UndeadTowers.T2_ZOMBIE_TOWER.id(), UndeadTowers.T3_ZOMBIE_TOWER.id(),
-            UndeadTowers.T1_SKELETON_TOWER.id(), UndeadTowers.T2_RANGED_SKELETON_TOWER.id(),
-            UndeadTowers.T2_MELEE_TOWER.id(), UndeadTowers.T3_RANGED_SKELETON_TOWER.id(),
-            UndeadTowers.T3_MELEE_TOWER.id(), UndeadTowers.T1_UNDEAD_ANIMAL_TOWER.id(),
-            UndeadTowers.T2_UNDEAD_ANIMAL_TOWER.id()
-    );
-    private static final Set<String> ANIMAL_TOWER_IDS = Set.of(
-            AnimalTowers.T1_PIG_TOWER.id(), AnimalTowers.T2_PIG_TOWER.id(), AnimalTowers.T3_PIG_TOWER.id(), AnimalTowers.T4_PIG_LEADER_TOWER.id(),
-            AnimalTowers.T1_WOLF_TOWER.id(), AnimalTowers.T2_WOLF_DPS_TOWER.id(), AnimalTowers.T3_WOLF_DPS_TOWER.id(), AnimalTowers.T4_WOLF_LEADER_TOWER.id(),
-            AnimalTowers.T1_RABBIT_TOWER.id(), AnimalTowers.T2_RABBIT_TOWER.id(), AnimalTowers.T3_RABBIT_TOWER.id(), AnimalTowers.T4_RABBIT_LEADER_TOWER.id(),
-            AnimalTowers.T1_FOX_TOWER.id(), AnimalTowers.T2_FOX_TOWER.id(), AnimalTowers.T3_FOX_TOWER.id(), AnimalTowers.T4_FOX_LEADER_TOWER.id()
-    );
 
     private static final ConcurrentLinkedQueue<PendingEvent> EVENTS = new ConcurrentLinkedQueue<>();
     private static final Map<VfxLaneKey, Integer> QUEUED_BY_LANE = new HashMap<>();
@@ -143,13 +100,15 @@ public final class TowerVfxService {
     private static volatile Consumer<Vec3> netherTransitionTestObserver;
     private static volatile Consumer<Vec3> illagerRaidActivationTestObserver;
     private static volatile BiConsumer<Vec3, Vec3> warlockSacrificeTestObserver;
+    private static volatile BiConsumer<UUID, String> warlockAwakeningTestObserver;
     private static volatile Consumer<List<Vec3>> transcendenceTestObserver;
     private static volatile Consumer<Vec3> magicHitTestObserver;
+    private static volatile Consumer<MagicSchoolSpellVfx.Visual> magicSchoolTestObserver;
     private static volatile Consumer<Vec3> prophecyLightningTestObserver;
     private static volatile Consumer<Vec3> bodyHeartbeatTestObserver;
     private static volatile BiConsumer<Vec3, Vec3> bodyEyeLaserTestObserver;
-    private static final Set<net.minecraft.resources.ResourceLocation> MISSING_STYLE_WARNINGS = ConcurrentHashMap.newKeySet();
-    private static final Map<net.minecraft.resources.ResourceLocation, Long> STYLE_ERROR_LOG_TICKS = new ConcurrentHashMap<>();
+    private static final Set<net.minecraft.resources.Identifier> MISSING_STYLE_WARNINGS = ConcurrentHashMap.newKeySet();
+    private static final Map<net.minecraft.resources.Identifier, Long> STYLE_ERROR_LOG_TICKS = new ConcurrentHashMap<>();
 
     private TowerVfxService() {
     }
@@ -185,6 +144,11 @@ public final class TowerVfxService {
         }
         Vec3 source = towerCenter(tower);
         Vec3 impact = targetCenter(target);
+        if (tower.runtimeTower() instanceof MagicSchoolWizardTower wizard) {
+            enqueueMagicSchool(context, new MagicSchoolSpellVfx.Visual(wizard.selectedSpell(),
+                    MagicSchoolSpellVfx.Kind.ATTACK, source, impact, 0));
+            return;
+        }
         AttackVisualKind kind = visualKind(tower.attackRange());
         enqueue(new AttackEvent(context, source, impact, kind, false));
         if (!killedPrimaryTarget
@@ -242,7 +206,12 @@ public final class TowerVfxService {
         }
         EventContext context = context(tower, impact);
         if (context != null) {
-            enqueue(new AttackEvent(context, towerCenter(tower), impact, visualKind(tower.attackRange()), true));
+            if (tower.runtimeTower() instanceof MagicSchoolWizardTower wizard) {
+                enqueueMagicSchool(context, new MagicSchoolSpellVfx.Visual(wizard.selectedSpell(),
+                        MagicSchoolSpellVfx.Kind.ATTACK, towerCenter(tower), impact, 0));
+            } else {
+                enqueue(new AttackEvent(context, towerCenter(tower), impact, visualKind(tower.attackRange()), true));
+            }
         }
     }
 
@@ -272,8 +241,51 @@ public final class TowerVfxService {
         Vec3 impact = targetCenter(target);
         EventContext context = context(tower, impact);
         if (context != null) {
-            enqueueMagicHit(context, impact);
+            if (tower.runtimeTower() instanceof MagicSchoolWizardTower wizard) {
+                enqueueMagicSchool(context, new MagicSchoolSpellVfx.Visual(wizard.selectedSpell(),
+                        MagicSchoolSpellVfx.Kind.HIT, towerCenter(tower), impact, 0));
+            } else {
+                enqueueMagicHit(context, impact);
+            }
         }
+    }
+
+    public static void showMagicSchoolVisual(SemionTowerEntity tower, MagicSchoolSpell spell,
+            MagicSchoolSpellVfx.Kind kind, Vec3 center, double radius) {
+        if (!config.enabled() || tower == null || spell == null || center == null) return;
+        EventContext context = context(tower, center);
+        if (context != null) enqueueMagicSchool(context,
+                new MagicSchoolSpellVfx.Visual(spell, kind, towerCenter(tower), center, radius));
+    }
+
+    private static void enqueueMagicSchool(EventContext context, MagicSchoolSpellVfx.Visual visual) {
+        var observer = magicSchoolTestObserver;
+        if (observer != null) observer.accept(visual);
+        enqueue(new MagicSchoolEvent(context, visual));
+    }
+
+    static void setMagicSchoolTestObserver(Consumer<MagicSchoolSpellVfx.Visual> observer) {
+        magicSchoolTestObserver = observer;
+    }
+
+    public static void showMagicSchoolDebug(ServerPlayer player, MagicSchoolSpell spell) {
+        if (!config.enabled() || player == null || !(player.level() instanceof ServerLevel level)) return;
+        Vec3 source = player.getEyePosition();
+        Vec3 impact = source.add(player.getLookAngle().scale(5));
+        EventContext context = new EventContext(new VfxLaneKey(level.dimension(), TeamId.RED, 0),
+                player.getUUID(), BuilderPalette.MAGIC_SCHOOL, level.getGameTime(), List.of(Recipient.snapshot(player)));
+        enqueueMagicSchool(context, new MagicSchoolSpellVfx.Visual(spell, MagicSchoolSpellVfx.Kind.ATTACK, source, impact, 0));
+        MagicSchoolSpellVfx.Kind kind = switch (spell) {
+            case PROTEGO -> MagicSchoolSpellVfx.Kind.SHIELD;
+            case EPISKEY -> MagicSchoolSpellVfx.Kind.HEAL;
+            case SECTUMSEMPRA -> MagicSchoolSpellVfx.Kind.WOUND;
+            case CRUCIO -> MagicSchoolSpellVfx.Kind.DOT;
+            case IMPERIO -> MagicSchoolSpellVfx.Kind.CONTROL;
+            default -> spell.defaultAbilities().containsKey("radius") ? MagicSchoolSpellVfx.Kind.AREA : MagicSchoolSpellVfx.Kind.HIT;
+        };
+        double radius = kind == MagicSchoolSpellVfx.Kind.SHIELD ? .7
+                : spell.defaultAbilities().containsKey("radius") ? spell.value("radius") : 0;
+        enqueueMagicSchool(context, new MagicSchoolSpellVfx.Visual(spell, kind, source, impact, radius));
     }
 
     public static void showBodyHeartbeat(SemionTowerEntity tower) {
@@ -358,7 +370,7 @@ public final class TowerVfxService {
         if (observer != null) {
             observer.accept(impact);
         }
-        LightningBolt lightning = EntityType.LIGHTNING_BOLT.create(level, EntitySpawnReason.TRIGGERED);
+        LightningBolt lightning = net.minecraft.world.entity.EntityTypes.LIGHTNING_BOLT.create(level, EntitySpawnReason.TRIGGERED);
         if (lightning != null) {
             lightning.setVisualOnly(true);
             lightning.setPos(impact.x, impact.y, impact.z);
@@ -610,103 +622,7 @@ public final class TowerVfxService {
     }
 
     public static BuilderPalette paletteFor(TowerType type) {
-        if (kim.biryeong.semiontd.tower.augment.AugmentTowers.isAugment(type)) {
-            return BuilderPalette.AUGMENT;
-        }
-        if (kim.biryeong.semiontd.tower.blueprint.BlueprintTowers.isBlueprintTower(type)) {
-            return BuilderPalette.BLUEPRINT;
-        }
-        if (VillagerTowers.isAdvVillagerTower(type)) {
-            return BuilderPalette.VILLAGER_ADV;
-        }
-        if (VillagerTowers.isBaseVillagerTower(type)) {
-            return BuilderPalette.VILLAGER;
-        }
-        if (type != null && UNDEAD_TOWER_IDS.contains(type.id())) {
-            return BuilderPalette.UNDEAD;
-        }
-        if (type != null && ANIMAL_TOWER_IDS.contains(type.id())) {
-            return BuilderPalette.ANIMAL;
-        }
-        if (WarlockTowers.isWarlockTower(type)) {
-            return BuilderPalette.WARLOCK;
-        }
-        if (LegionTowers.isLegionTower(type)) {
-            return BuilderPalette.LEGION;
-        }
-        if (ResonanceTowers.isResonanceTower(type)) {
-            return BuilderPalette.RESONANCE;
-        }
-        if (IllagerTowers.isIllagerTower(type)) {
-            return BuilderPalette.ILLAGER;
-        }
-        if (NetherTowers.isNetherTower(type)) {
-            return BuilderPalette.NETHER;
-        }
-        if (EndTowers.isEndTower(type)) {
-            return BuilderPalette.END;
-        }
-        if (OceanTowers.isOceanTower(type)) {
-            return BuilderPalette.OCEAN;
-        }
-        if (AncientCityTowers.isAncientCityTower(type)) {
-            return BuilderPalette.ANCIENT_CITY;
-        }
-        if (AdversaryTowers.isAdversaryTower(type)) {
-            return BuilderPalette.ADVERSARY;
-        }
-        if (FutureAgencyTowers.isFutureAgencyTower(type)) {
-            return BuilderPalette.FUTURE_AGENCY;
-        }
-        if (QueenTowers.isQueenTower(type)) {
-            return BuilderPalette.QUEEN;
-        }
-        if (EngineerTowers.isEngineerTower(type)) {
-            return BuilderPalette.ENGINEER;
-        }
-        if (MageTowers.isMageTower(type)) {
-            return BuilderPalette.MAGE;
-        }
-        if (HeroPartyTowers.isHeroPartyTower(type)) {
-            return BuilderPalette.HERO_PARTY;
-        }
-        if (InsectTowers.isInsectTower(type)) {
-            return BuilderPalette.INSECT;
-        }
-        if (PlantTowers.isPlantTower(type)) {
-            return BuilderPalette.PLANT;
-        }
-        if (ArmyTowers.isArmyTower(type)) {
-            return BuilderPalette.ARMY;
-        }
-        if (ThunderTowers.isThunderTower(type)) {
-            return BuilderPalette.THUNDER;
-        }
-        if (DemonLordTowers.isDemonLordTower(type)) {
-            return BuilderPalette.DEMON_LORD;
-        }
-        if (GambleTowers.isGambleTower(type)) {
-            return BuilderPalette.GAMBLE;
-        }
-        if (DeveloperTowers.isDeveloperTower(type)) {
-            return BuilderPalette.DEVELOPER;
-        }
-        if (SuccubusTowers.isSuccubusTower(type)) {
-            return BuilderPalette.SUCCUBUS;
-        }
-        if (BodyTowers.isBodyTower(type)) {
-            return BuilderPalette.BODY;
-        }
-        if (FrostTowers.isFrostTower(type)) {
-            return BuilderPalette.FROST;
-        }
-        if (PetTowers.isPetTower(type)) {
-            return BuilderPalette.PET;
-        }
-        if (PirateTowers.isPirateTower(type)) {
-            return BuilderPalette.PIRATE;
-        }
-        return BuilderPalette.DEFAULT;
+        return VfxBuilderPaletteSelection.paletteFor(type);
     }
 
     static int preferredRayPointCount(double distance) {
@@ -722,7 +638,7 @@ public final class TowerVfxService {
     }
 
     static List<Vec3> collectLinePoints(Vec3 start, Vec3 end, int points) {
-        CollectingApelRenderer collector = new CollectingApelRenderer();
+        CollectingParticleRenderer collector = new CollectingParticleRenderer();
         collector.drawLine(
                 ParticleTypes.END_ROD,
                 0,
@@ -747,8 +663,8 @@ public final class TowerVfxService {
 
     public static void showAreaEffect(
             SemionTowerEntity tower,
-            net.minecraft.resources.ResourceLocation effectId,
-            net.minecraft.resources.ResourceLocation styleId,
+            net.minecraft.resources.Identifier effectId,
+            net.minecraft.resources.Identifier styleId,
             Vec3 center,
             double radius,
             List<Vec3> appliedPositions,
@@ -769,9 +685,9 @@ public final class TowerVfxService {
                 ? List.of()
                 : appliedPositions.stream().limit(config.maxSampledHitRays()).toList();
         String rawTowerTypeId = tower.runtimeTower().type().id().replace('#', '/');
-        net.minecraft.resources.ResourceLocation towerTypeId = net.minecraft.resources.ResourceLocation.tryParse(rawTowerTypeId);
+        net.minecraft.resources.Identifier towerTypeId = net.minecraft.resources.Identifier.tryParse(rawTowerTypeId);
         if (towerTypeId == null || rawTowerTypeId.indexOf(':') < 0) {
-            towerTypeId = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, rawTowerTypeId);
+            towerTypeId = net.minecraft.resources.Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, rawTowerTypeId);
         }
         AreaVfxContext visual = new AreaVfxContext(
                 effectId,
@@ -792,6 +708,15 @@ public final class TowerVfxService {
         Consumer<AreaEffectVfxEvent> observer = areaEffectTestObserver;
         if (observer != null) {
             observer.accept(event);
+        }
+        if (tower.runtimeTower() instanceof MagicSchoolWizardTower
+                && effectId.getNamespace().equals(SemionTd.MOD_ID) && effectId.getPath().startsWith("magic_school_")) {
+            var spell = MagicSchoolSpell.find(effectId.getPath().substring("magic_school_".length()));
+            if (spell.isPresent()) {
+                enqueueMagicSchool(context, new MagicSchoolSpellVfx.Visual(spell.get(), MagicSchoolSpellVfx.Kind.AREA,
+                        towerCenter(tower), visualCenter, radius));
+                return;
+            }
         }
         enqueue(new AreaEvent(context, event));
     }
@@ -815,6 +740,10 @@ public final class TowerVfxService {
 
     static void setWarlockSacrificeTestObserver(BiConsumer<Vec3, Vec3> observer) {
         warlockSacrificeTestObserver = observer;
+    }
+
+    static void setWarlockAwakeningTestObserver(BiConsumer<UUID, String> observer) {
+        warlockAwakeningTestObserver = observer;
     }
 
     static void setTranscendenceTestObserver(Consumer<List<Vec3>> observer) {
@@ -957,7 +886,10 @@ public final class TowerVfxService {
                 continue;
             }
             stats.planned.increment();
-            if (event instanceof AttackEvent attack) {
+            if (event instanceof MagicSchoolEvent school) {
+                MagicSchoolSpellVfx.plan(school.visual, new PlannerOutput(school.context(), school.context().lane(),
+                        gameTime, batchConfig, vanillaPacketsByRecipient, gcbShapesByLane));
+            } else if (event instanceof AttackEvent attack) {
                 renderAttack(attack, gameTime, batchConfig, vanillaPacketsByRecipient, gcbShapesByLane);
             } else if (event instanceof AreaEvent area) {
                 renderArea(area, gameTime, batchConfig, vanillaPacketsByRecipient, gcbShapesByLane);
@@ -975,6 +907,7 @@ public final class TowerVfxService {
                 renderWarlockSacrifice(sacrifice, gameTime, batchConfig, vanillaPacketsByRecipient, gcbShapesByLane);
             } else if (event instanceof WarlockAwakeningEvent awakening) {
                 switch (awakening.visual) {
+                    case CHARGE -> renderWarlockAwakeningCharge(awakening, gameTime, batchConfig, vanillaPacketsByRecipient, gcbShapesByLane);
                     case BURST -> renderWarlockAwakeningBurst(awakening, gameTime, batchConfig, vanillaPacketsByRecipient, gcbShapesByLane);
                     case AURA -> renderWarlockAwakeningAura(awakening, gameTime, batchConfig, vanillaPacketsByRecipient, gcbShapesByLane);
                     case SPARK -> renderWarlockAwakeningSpark(awakening, gameTime, batchConfig, vanillaPacketsByRecipient, gcbShapesByLane);
@@ -1561,7 +1494,7 @@ public final class TowerVfxService {
 
     private static void sendVanilla(
             EventContext context,
-            Consumer<CollectingApelRenderer> draw,
+            Consumer<CollectingParticleRenderer> draw,
             VfxConfig config,
             Map<UUID, Integer> packetCounts
     ) {
@@ -1569,7 +1502,7 @@ public final class TowerVfxService {
         if (recipients.isEmpty()) {
             return;
         }
-        CollectingApelRenderer collector = new CollectingApelRenderer();
+        CollectingParticleRenderer collector = new CollectingParticleRenderer();
         draw.accept(collector);
         LaneStats stats = stats(context.lane());
         stats.vanillaRequestedPoints.add(collector.points.size());
@@ -1618,7 +1551,7 @@ public final class TowerVfxService {
             return;
         }
         GCBParticleS2CPacket payload = gcbPayload(particleOptions, particle, shape);
-        Packet<ClientCommonPacketListener> packet = ServerPlayNetworking.createS2CPacket(payload);
+        Packet<ClientCommonPacketListener> packet = ServerPlayNetworking.createClientboundPacket(payload);
         for (Recipient recipient : recipients) {
             recipient.send(packet);
         }
@@ -1790,6 +1723,15 @@ public final class TowerVfxService {
 
         void assignSequence(long sequence) {
             this.sequence = sequence;
+        }
+    }
+
+    private static final class MagicSchoolEvent extends PendingEvent {
+        private final MagicSchoolSpellVfx.Visual visual;
+
+        private MagicSchoolEvent(EventContext context, MagicSchoolSpellVfx.Visual visual) {
+            super(context, visual.kind() == MagicSchoolSpellVfx.Kind.ATTACK ? Phase.PRIMARY_ATTACK : Phase.AREA_DAMAGE);
+            this.visual = visual;
         }
     }
 
@@ -1999,8 +1941,8 @@ public final class TowerVfxService {
             ));
         }
 
-        private void send(Consumer<CollectingApelRenderer> draw) {
-            CollectingApelRenderer collector = new CollectingApelRenderer();
+        private void send(Consumer<CollectingParticleRenderer> draw) {
+            CollectingParticleRenderer collector = new CollectingParticleRenderer();
             draw.accept(collector);
             for (ParticlePoint point : collector.points) {
                 player.connection.send(new ClientboundLevelParticlesPacket(
@@ -2110,16 +2052,70 @@ public final class TowerVfxService {
         }
     }
 
-    private static final class CollectingApelRenderer extends BaseApelRenderer {
+    private record QuadraticBezierCurve(Vector3f start, Vector3f end, Vector3f control) {
+        Vector3f point(float t) {
+            float inverse = 1.0F - t;
+            return new Vector3f(start).mul(inverse * inverse)
+                    .add(new Vector3f(control).mul(2.0F * inverse * t))
+                    .add(new Vector3f(end).mul(t * t));
+        }
+    }
+
+    // Sampling is local: APEL has no 26.3 build, and these shapes only need JOML.
+    private static final class CollectingParticleRenderer {
         private final List<ParticlePoint> points = new ArrayList<>();
 
-        @Override
         public void drawParticle(ParticleOptions particle, int step, Vector3f position) {
             points.add(new ParticlePoint(particle, new Vec3(position.x, position.y, position.z)));
+        }
+
+        void drawLine(ParticleOptions particle, int step, Vector3f origin, Vector3f start,
+                      Vector3f end, Vector3f rotation, int amount) {
+            sample(particle, step, origin, rotation, amount,
+                    index -> new Vector3f(start).lerp(end, fraction(index, amount)));
+        }
+
+        void drawBezier(ParticleOptions particle, int step, Vector3f origin,
+                        QuadraticBezierCurve curve, Vector3f rotation, int amount) {
+            sample(particle, step, origin, rotation, amount,
+                    index -> curve.point(fraction(index, amount)));
+        }
+
+        void drawEllipse(ParticleOptions particle, int step, Vector3f origin,
+                         float radius, float stretch, Vector3f rotation, int amount) {
+            sample(particle, step, origin, rotation, amount, index -> {
+                double angle = 2.0 * Math.PI * index / amount;
+                return new Vector3f((float) Math.cos(angle) * radius, (float) Math.sin(angle) * stretch, 0);
+            });
+        }
+
+        void drawEllipsoid(ParticleOptions particle, int step, Vector3f origin,
+                           float xRadius, float yRadius, float zRadius, Vector3f rotation, int amount) {
+            sample(particle, step, origin, rotation, amount, index -> {
+                double y = 1.0 - 2.0 * (index + 0.5) / amount;
+                double radius = Math.sqrt(Math.max(0.0, 1.0 - y * y));
+                double angle = Math.PI * (3.0 - Math.sqrt(5.0)) * index;
+                return new Vector3f((float) (Math.cos(angle) * radius) * xRadius,
+                        (float) y * yRadius, (float) (Math.sin(angle) * radius) * zRadius);
+            });
+        }
+
+        private void sample(ParticleOptions particle, int step, Vector3f origin,
+                            Vector3f rotation, int amount, java.util.function.IntFunction<Vector3f> point) {
+            org.joml.Quaternionf quaternion = new org.joml.Quaternionf()
+                    .rotateZ(rotation.z).rotateY(rotation.y).rotateX(rotation.x);
+            for (int index = 0; index < amount; index++) {
+                drawParticle(particle, step, point.apply(index).rotate(quaternion).add(origin));
+            }
+        }
+
+        private static float fraction(int index, int amount) {
+            return amount <= 1 ? 0.0F : index / (float) (amount - 1);
         }
     }
 
     private enum WarlockAwakeningVisual {
+        CHARGE,
         BURST,
         AURA,
         SPARK
@@ -2127,86 +2123,110 @@ public final class TowerVfxService {
 
     private static final class WarlockAwakeningEvent extends PendingEvent {
         private final Vec3 center;
+        private final Vec3 right;
         private final WarlockAwakeningVisual visual;
+        private final double progress;
 
-        private WarlockAwakeningEvent(EventContext context, Vec3 center, WarlockAwakeningVisual visual) {
+        private WarlockAwakeningEvent(EventContext context, Vec3 center, Vec3 right, WarlockAwakeningVisual visual, double progress) {
             super(context, Phase.KILL_EFFECT);
             this.center = center;
+            this.right = right;
             this.visual = visual;
+            this.progress = progress;
         }
+    }
+
+    public static void showWarlockAwakeningCharge(SemionTowerEntity warlock, double progress) {
+        showWarlockAwakening(warlock, WarlockAwakeningVisual.CHARGE, Math.clamp(progress, 0.0, 1.0));
     }
 
     public static void showWarlockAwakening(SemionTowerEntity warlock) {
-        if (!config.enabled() || warlock == null) {
-            return;
-        }
-        Vec3 center = towerCenter(warlock);
-        EventContext context = context(warlock, center);
-        if (context != null) {
-            enqueue(new WarlockAwakeningEvent(context, center, WarlockAwakeningVisual.BURST));
-        }
+        showWarlockAwakening(warlock, WarlockAwakeningVisual.BURST, 1.0);
     }
 
     public static void showWarlockAwakeningAura(SemionTowerEntity warlock) {
-        if (!config.enabled() || warlock == null) {
-            return;
-        }
-        Vec3 center = towerCenter(warlock);
-        EventContext context = context(warlock, center);
-        if (context != null) {
-            enqueue(new WarlockAwakeningEvent(context, center, WarlockAwakeningVisual.AURA));
-        }
+        showWarlockAwakening(warlock, WarlockAwakeningVisual.AURA, 1.0);
     }
 
     public static void showWarlockAwakeningSparkBurst(SemionTowerEntity warlock) {
-        if (!config.enabled() || warlock == null) {
-            return;
-        }
+        showWarlockAwakening(warlock, WarlockAwakeningVisual.SPARK, 1.0);
+    }
+
+    private static void showWarlockAwakening(SemionTowerEntity warlock, WarlockAwakeningVisual visual, double progress) {
+        if (!config.enabled() || warlock == null || !warlock.isAlive()) return;
+        BiConsumer<UUID, String> observer = warlockAwakeningTestObserver;
+        if (observer != null) observer.accept(warlock.getUUID(), visual.name());
         Vec3 center = towerCenter(warlock);
         EventContext context = context(warlock, center);
         if (context != null) {
-            enqueue(new WarlockAwakeningEvent(context, center, WarlockAwakeningVisual.SPARK));
+            double yaw = Math.toRadians(warlock.getYRot());
+            enqueue(new WarlockAwakeningEvent(context, center, new Vec3(Math.cos(yaw), 0.0, Math.sin(yaw)), visual, progress));
         }
     }
 
-    private static void renderWarlockAwakeningBurst(WarlockAwakeningEvent event, long gameTime, VfxConfig config, Map<UUID, Integer> packetCounts, Map<VfxLaneKey, Integer> shapeCounts) {
-        int points = claimVanillaPoints(event.context().lane(), gameTime, config, 220, 96, true);
+    private static void renderWarlockAwakeningCharge(WarlockAwakeningEvent event, long gameTime, VfxConfig config, Map<UUID, Integer> packetCounts, Map<VfxLaneKey, Integer> shapeCounts) {
+        int points = claimVanillaPoints(event.context().lane(), gameTime, config, 60, 0, false);
+        if (points < 12) return;
+        double radius = 2.1 - event.progress * 1.45;
         Vec3 center = event.center;
-        Vec3 base = center.add(0.0, -0.65, 0.0);
-        sendParticle(event.context(), ParticleTypes.EXPLOSION_EMITTER, "minecraft:explosion_emitter", center, true, config, packetCounts, shapeCounts);
-        sendSphere(event.context(), WARLOCK_AWAKENING_DARK_PARTICLE, "minecraft:witch", center, 1.55, points * 40 / 100, true, config, packetCounts, shapeCounts);
-        sendSphere(event.context(), WARLOCK_AWAKENING_MANA_PARTICLE, "minecraft:reverse_portal", center, 0.9, points * 25 / 100, true, config, packetCounts, shapeCounts);
-        sendCircle(event.context(), WARLOCK_AWAKENING_BRIGHT_PARTICLE, "minecraft:electric_spark", base, 2.0, points * 20 / 100, true, config, packetCounts, shapeCounts);
-        sendCircle(event.context(), WARLOCK_AWAKENING_DARK_PARTICLE, "minecraft:witch", base.add(0.0, 0.08, 0.0), 1.25, points * 15 / 100, true, config, packetCounts, shapeCounts);
+        for (int index = 0; index < 4; index++) {
+            double angle = event.progress * Math.PI + index * Math.PI / 2.0;
+            Vec3 direction = new Vec3(Math.cos(angle), 0.0, Math.sin(angle));
+            Vec3 side = new Vec3(-direction.z, 0.0, direction.x);
+            sendTrail(event.context(), index % 2 == 0 ? WARLOCK_AWAKENING_DARK_PARTICLE : WARLOCK_AWAKENING_MANA_PARTICLE,
+                    "minecraft:witch", center.add(direction.scale(radius)).add(0.0, -0.6, 0.0),
+                    center.add(side.scale(radius * 0.65)).add(0.0, 0.8, 0.0), center,
+                    points / 6, false, config, packetCounts, shapeCounts);
+        }
+        sendSphere(event.context(), WARLOCK_AWAKENING_MANA_PARTICLE, "minecraft:reverse_portal", center,
+                0.55 - event.progress * 0.3, points / 3, false, config, packetCounts, shapeCounts);
+    }
+
+    private static final double[][] WARLOCK_SKULL_SEGMENTS = {
+            {-0.45, 0.65, 0.45, 0.65}, {-0.45, 0.65, -0.65, 0.4}, {0.45, 0.65, 0.65, 0.4},
+            {-0.65, 0.4, -0.65, -0.15}, {0.65, 0.4, 0.65, -0.15},
+            {-0.65, -0.15, -0.35, -0.3}, {0.65, -0.15, 0.35, -0.3},
+            {-0.35, -0.3, -0.35, -0.65}, {0.35, -0.3, 0.35, -0.65}, {-0.35, -0.65, 0.35, -0.65},
+            {-0.42, 0.15, -0.2, 0.05}, {0.42, 0.15, 0.2, 0.05},
+            {-0.09, -0.18, 0.0, -0.03}, {0.09, -0.18, 0.0, -0.03},
+            {-0.12, -0.65, -0.12, -0.4}, {0.12, -0.65, 0.12, -0.4}
+    };
+
+    private static void renderWarlockAwakeningBurst(WarlockAwakeningEvent event, long gameTime, VfxConfig config, Map<UUID, Integer> packetCounts, Map<VfxLaneKey, Integer> shapeCounts) {
+        int points = claimVanillaPoints(event.context().lane(), gameTime, config, 144, 0, false);
+        if (points < 48) return;
+        Vec3 skull = event.center.add(0.0, 1.25, 0.0);
+        for (int index = 0; index < WARLOCK_SKULL_SEGMENTS.length; index++) {
+            double[] segment = WARLOCK_SKULL_SEGMENTS[index];
+            Vec3 start = skull.add(event.right.scale(segment[0])).add(0.0, segment[1], 0.0);
+            Vec3 end = skull.add(event.right.scale(segment[2])).add(0.0, segment[3], 0.0);
+            sendLine(event.context(), index == 10 || index == 11 ? WARLOCK_AWAKENING_MANA_PARTICLE : WARLOCK_AWAKENING_BRIGHT_PARTICLE,
+                    "minecraft:witch", start, end, 3, false, config, packetCounts, shapeCounts);
+        }
+        int remaining = points - 48;
+        if (remaining > 0) {
+            sendSphere(event.context(), WARLOCK_AWAKENING_DARK_PARTICLE, "minecraft:witch", event.center, 1.15, remaining / 2, false, config, packetCounts, shapeCounts);
+            sendCircle(event.context(), WARLOCK_AWAKENING_MANA_PARTICLE, "minecraft:reverse_portal", event.center.add(0.0, -0.5, 0.0), 1.8, remaining - remaining / 2, false, config, packetCounts, shapeCounts);
+        }
     }
 
     private static void renderWarlockAwakeningAura(WarlockAwakeningEvent event, long gameTime, VfxConfig config, Map<UUID, Integer> packetCounts, Map<VfxLaneKey, Integer> shapeCounts) {
-        int points = claimVanillaPoints(event.context().lane(), gameTime, config, 48, 24, true);
-        int trailPoints = Math.max(4, points / 6);
-        double phase = gameTime * 0.18;
-        Vec3 center = event.center.add(0.0, -1.5, 0.0);
-        for (int index = 0; index < 6; index++) {
-            double angle = phase + Math.PI * 2.0 * index / 6.0;
+        int points = claimVanillaPoints(event.context().lane(), gameTime, config, 24, 0, false);
+        if (points < 6) return;
+        Vec3 center = event.center.add(0.0, -0.4, 0.0);
+        for (int index = 0; index < 3; index++) {
+            double angle = gameTime * 0.08 + index * Math.PI * 2.0 / 3.0;
             Vec3 direction = new Vec3(Math.cos(angle), 0.0, Math.sin(angle));
-            Vec3 side = new Vec3(-direction.z, 0.0, direction.x);
-            double height = 0.15 + (index % 3) * 0.35;
-            Vec3 start = center.add(direction.scale(2.4)).add(0.0, height, 0.0);
-            Vec3 control = center.add(direction.scale(1.15)).add(side.scale(0.65)).add(0.0, height + 0.35, 0.0);
-            Vec3 end = center.add(0.0, 0.15, 0.0);
-            ParticleOptions particle = index % 2 == 0 ? WARLOCK_AWAKENING_MANA_PARTICLE : WARLOCK_AWAKENING_BRIGHT_PARTICLE;
-            String gcbParticle = index % 2 == 0 ? "minecraft:reverse_portal" : "minecraft:witch";
-            sendTrail(event.context(), particle, gcbParticle, start, control, end, trailPoints, true, config, packetCounts, shapeCounts);
+            sendTrail(event.context(), WARLOCK_AWAKENING_DARK_PARTICLE, "minecraft:witch",
+                    center.add(direction.scale(0.95)), center.add(direction.scale(0.65)).add(0.0, 0.75, 0.0),
+                    center.add(0.0, 1.1, 0.0), points / 3, false, config, packetCounts, shapeCounts);
         }
     }
 
     private static void renderWarlockAwakeningSpark(WarlockAwakeningEvent event, long gameTime, VfxConfig config, Map<UUID, Integer> packetCounts, Map<VfxLaneKey, Integer> shapeCounts) {
-        int points = claimVanillaPoints(event.context().lane(), gameTime, config, 36, 0, false);
-        if (points <= 0) {
-            return;
-        }
-        Vec3 center = event.center.add(0.0, -1.4, 0.0);
-        sendSphere(event.context(), ParticleTypes.GLOW, "minecraft:glow", center, 0.72, points * 2 / 3, false, config, packetCounts, shapeCounts);
-        sendSphere(event.context(), ParticleTypes.END_ROD, "minecraft:end_rod", center.add(0.0, 0.18, 0.0), 0.34, Math.max(4, points / 3), false, config, packetCounts, shapeCounts);
+        int points = claimVanillaPoints(event.context().lane(), gameTime, config, 12, 0, false);
+        if (points <= 0) return;
+        sendSphere(event.context(), WARLOCK_AWAKENING_MANA_PARTICLE, "minecraft:reverse_portal", event.center, 0.65, points, false, config, packetCounts, shapeCounts);
     }
 
     private static final class LaneStats {

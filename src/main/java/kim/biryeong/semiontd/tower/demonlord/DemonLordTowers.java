@@ -32,7 +32,7 @@ public final class DemonLordTowers {
 
     /** 표기된 피해는 레벨 1 기준입니다. 실제 피해는 레벨 배율이 곱해집니다. */
     private static final String LEVEL_SCALING_LINE =
-            "<gray>표기 피해는 <yellow>레벨 1</yellow> 기준이며, 레벨이 오르면 함께 증가합니다.</gray>";
+            "<gray>표기 피해는 <yellow>레벨 1·점감 전</yellow> 기준입니다. 본체는 배율 합성 후 대상별 1회 피해를 로그 점감하며, 처형은 제외합니다.</gray>";
 
     private static final Map<DemonLordSkill, List<TowerType>> TOWERS = new EnumMap<>(DemonLordSkill.class);
 

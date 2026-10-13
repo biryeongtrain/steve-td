@@ -9,7 +9,7 @@ import kim.biryeong.semiontd.tower.developer.DeveloperStates;
 import kim.biryeong.semiontd.tower.developer.DeveloperTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /**
  * The 개발자 builder.
@@ -19,7 +19,7 @@ import net.minecraft.resources.ResourceLocation;
  * defects themselves, which are as often useful as harmful.
  */
 public final class DeveloperTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "developer");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "developer");
 
     public DeveloperTowerJob() {
         super(

@@ -54,7 +54,7 @@ public final class CosmeticShopGui extends SimpleGui {
                                     ? "클릭: 착용 해제"
                                     : owned ? "클릭: 착용" : "클릭: 구매")
                             .withStyle(selected ? ChatFormatting.YELLOW : ChatFormatting.WHITE))
-                    .setCallback((slot, type, action) -> {
+                    .setCallback((slot, type, action, clickedGui) -> {
                         service.handleCatalogClick(player, entry.id());
                         refresh();
                     });
@@ -64,7 +64,7 @@ public final class CosmeticShopGui extends SimpleGui {
         if (page > 0) {
             setSlot(45, new GuiElementBuilder(Items.ARROW)
                     .setName(Component.literal("이전 페이지"))
-                    .setCallback((slot, type, action) -> {
+                    .setCallback((slot, type, action, clickedGui) -> {
                         page--;
                         refresh();
                     }));
@@ -74,11 +74,11 @@ public final class CosmeticShopGui extends SimpleGui {
                         .withStyle(ChatFormatting.AQUA)));
         setSlot(49, new GuiElementBuilder(Items.BARRIER)
                 .setName(Component.literal("닫기").withStyle(ChatFormatting.RED))
-                .setCallback((slot, type, action) -> close()));
+                .setCallback((slot, type, action, clickedGui) -> close()));
         if (page < lastPage) {
             setSlot(53, new GuiElementBuilder(Items.ARROW)
                     .setName(Component.literal("다음 페이지"))
-                    .setCallback((slot, type, action) -> {
+                    .setCallback((slot, type, action, clickedGui) -> {
                         page++;
                         refresh();
                     }));

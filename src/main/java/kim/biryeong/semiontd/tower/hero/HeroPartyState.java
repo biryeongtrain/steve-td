@@ -403,7 +403,7 @@ public final class HeroPartyState {
             return;
         }
         if (questBossBar == null) {
-            questBossBar = new ServerBossEvent(
+            questBossBar = new ServerBossEvent(java.util.UUID.randomUUID(),
                     questTitle(),
                     BossEvent.BossBarColor.YELLOW,
                     BossEvent.BossBarOverlay.PROGRESS
@@ -427,7 +427,7 @@ public final class HeroPartyState {
 
     private void showBossBarIfMissing(ServerPlayer player) {
         if (questBossBar == null && player != null) {
-            questBossBar = new ServerBossEvent(
+            questBossBar = new ServerBossEvent(java.util.UUID.randomUUID(),
                     questTitle(),
                     BossEvent.BossBarColor.YELLOW,
                     BossEvent.BossBarOverlay.PROGRESS

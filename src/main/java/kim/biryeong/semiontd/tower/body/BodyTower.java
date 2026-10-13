@@ -1,5 +1,8 @@
 package kim.biryeong.semiontd.tower.body;
 
+import static kim.biryeong.semiontd.tower.body.BodyTowerTargetGeometry.eyeDirection;
+import static kim.biryeong.semiontd.tower.body.BodyTowerTargetGeometry.insideEyeRay;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -24,14 +27,13 @@ import kim.biryeong.semiontd.entity.visual.SemionAnimationState;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
-import kim.biryeong.semiontd.map.LaneRegionLayout;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
 import kim.biryeong.semiontd.tower.succubus.SuccubusDreams;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
 
@@ -42,7 +44,7 @@ import net.minecraft.world.phys.Vec3;
  * 각 기관의 행동을 한 번 실행합니다.</p>
  */
 public final class BodyTower extends EntityBackedTower {
-    private static final List<ResourceLocation> SKIN_STACK_SOURCES = stackSources("skin");
+    private static final List<Identifier> SKIN_STACK_SOURCES = stackSources("skin");
 
     private final Map<UUID, Integer> genitalHitCounts = new HashMap<>();
     private int heartDeathStacks;
@@ -166,8 +168,8 @@ public final class BodyTower extends EntityBackedTower {
     private void applySkinStack(SemionTowerEntity source) {
         double reduction = BodyBalance.skinReductionPerStack(type());
         int ticks = BodyBalance.skinReductionTicks(type());
-        ResourceLocation openSource = null;
-        for (ResourceLocation stackSource : SKIN_STACK_SOURCES) {
+        Identifier openSource = null;
+        for (Identifier stackSource : SKIN_STACK_SOURCES) {
             if (source.hasTimedEffectSource(TimedEffectType.TOWER_DAMAGE_REDUCTION, stackSource)) {
                 source.refreshTimedEffect(TimedEffectType.TOWER_DAMAGE_REDUCTION, stackSource, reduction, ticks);
             } else if (openSource == null) {
@@ -295,43 +297,6 @@ public final class BodyTower extends EntityBackedTower {
                 .map(SemionTowerEntity.class::cast);
     }
 
-    static Vec3 eyeDirection(LaneRegionLayout layout) {
-        return eyeDirection(layout, false);
-    }
-
-    static Vec3 eyeDirection(LaneRegionLayout layout, boolean finalDefense) {
-        List<Vec3> pathPoints = layout.pathPoints();
-        int start = finalDefense ? pathPoints.size() - 2 : 0;
-        int end = finalDefense ? -1 : pathPoints.size() - 1;
-        int step = finalDefense ? -1 : 1;
-        for (int index = start; index != end; index += step) {
-            Vec3 from = pathPoints.get(index);
-            Vec3 to = pathPoints.get(index + 1);
-            Vec3 againstTravel = new Vec3(from.x - to.x, 0.0, from.z - to.z);
-            if (againstTravel.lengthSqr() > 0.0) {
-                return againstTravel.normalize();
-            }
-        }
-        return Vec3.ZERO;
-    }
-
-    static boolean insideEyeRay(
-            Vec3 origin,
-            Vec3 target,
-            Vec3 direction,
-            double range,
-            double width
-    ) {
-        Vec3 delta = target.subtract(origin);
-        double projection = delta.x * direction.x + delta.z * direction.z;
-        if (projection < 0.0 || projection > range) {
-            return false;
-        }
-        double horizontalDistanceSqr = delta.x * delta.x + delta.z * delta.z;
-        double perpendicularSqr = Math.max(0.0, horizontalDistanceSqr - projection * projection);
-        return perpendicularSqr <= width * width;
-    }
-
     private static void lockEyeDirection(SemionTowerEntity source, Vec3 direction) {
         if (direction.lengthSqr() <= 0.0) {
             return;
@@ -342,11 +307,11 @@ public final class BodyTower extends EntityBackedTower {
         source.setYBodyRot(yaw);
     }
 
-    private static List<ResourceLocation> stackSources(String name) {
+    private static List<Identifier> stackSources(String name) {
         return List.of(
-                ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "body/" + name + "/stack_1"),
-                ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "body/" + name + "/stack_2"),
-                ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "body/" + name + "/stack_3")
+                Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "body/" + name + "/stack_1"),
+                Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "body/" + name + "/stack_2"),
+                Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "body/" + name + "/stack_3")
         );
     }
 

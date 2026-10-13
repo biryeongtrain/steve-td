@@ -270,11 +270,11 @@ final class TraitEffectsTest {
         assertEquals(12, monster.attackIntervalTicks());
     }
 
-    private static TraitLoadout primary(net.minecraft.resources.ResourceLocation traitId) {
+    private static TraitLoadout primary(net.minecraft.resources.Identifier traitId) {
         return new TraitLoadout(traitId, BuiltInTraits.NONE_ID);
     }
 
-    private static TraitLoadout secondary(net.minecraft.resources.ResourceLocation traitId) {
+    private static TraitLoadout secondary(net.minecraft.resources.Identifier traitId) {
         return new TraitLoadout(BuiltInTraits.NONE_ID, traitId);
     }
 

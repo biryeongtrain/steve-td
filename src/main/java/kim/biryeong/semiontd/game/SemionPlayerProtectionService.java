@@ -6,6 +6,9 @@ import kim.biryeong.semiontd.ui.SemionTowerInteractionService;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 
@@ -15,6 +18,9 @@ public final class SemionPlayerProtectionService {
 
     public static void register(SemionGameManager gameManager) {
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> {
+            if (isPlayerVersusPlayer(entity, source)) {
+                return false;
+            }
             if (entity instanceof ServerPlayer player
                     && shouldProtectPlayer(gameManager.protectionGame(player.getUUID()), player.getUUID())) {
                 return false;
@@ -37,6 +43,17 @@ public final class SemionPlayerProtectionService {
             }
             return InteractionResult.PASS;
         });
+    }
+
+    public static boolean isPlayerVersusPlayer(LivingEntity victim, DamageSource source) {
+        if (!(victim instanceof ServerPlayer)) {
+            return false;
+        }
+        var attacker = source.getEntity();
+        if (!(attacker instanceof ServerPlayer) && source.getDirectEntity() instanceof Projectile projectile) {
+            attacker = projectile.getOwner();
+        }
+        return attacker instanceof ServerPlayer && attacker != victim;
     }
 
     /**

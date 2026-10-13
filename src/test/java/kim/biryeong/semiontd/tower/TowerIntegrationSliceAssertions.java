@@ -19,7 +19,7 @@ import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.job.JobRegistry;
 import kim.biryeong.semiontd.job.SemionJob;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class TowerIntegrationSliceAssertions {
     private TowerIntegrationSliceAssertions() {
@@ -49,7 +49,7 @@ public final class TowerIntegrationSliceAssertions {
             );
             assertEquals(family.tiers().get(declaredType.id()), entry.tier(),
                     "Wrong production tier for " + declaredType.id());
-            List<ResourceLocation> owners = JobRegistry.all().stream()
+            List<Identifier> owners = JobRegistry.all().stream()
                     .filter(candidate -> candidate.includesTowerInCatalog(entry.type()))
                     .map(SemionJob::id)
                     .toList();
@@ -102,7 +102,7 @@ public final class TowerIntegrationSliceAssertions {
     }
 
     public record FamilyContract(
-            ResourceLocation jobId,
+            Identifier jobId,
             String globalConfigId,
             List<TowerType> towers,
             Map<String, Integer> tiers,

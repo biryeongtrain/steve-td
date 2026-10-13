@@ -1,11 +1,7 @@
 package kim.biryeong.semiontd.tower.income;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import kim.biryeong.semiontd.config.RoundWaveConfig;
-import kim.biryeong.semiontd.config.WaveConfig;
-import kim.biryeong.semiontd.config.WaveMonsterEntry;
+import kim.biryeong.semiontd.summon.SummonBalancePolicy;
 
 /**
  * 인컴 타워 수치.
@@ -32,12 +28,12 @@ public final class IncomeTowerBalance {
 
     public static final String TOWER_ID_PREFIX = "income_";
     public static final int MAX_LEVEL = 5;
+    /** 보내는 유닛의 체력·공격력 전체 배율. 인컴 타워 유닛이 웨이브 몹보다 너무 세서 낮췄습니다. */
+    public static final double BASE_STAT_MULTIPLIER = 0.85;
     /** 레벨마다 보내는 유닛의 체력·공격력이 기본치의 이만큼씩 더해집니다. */
-    public static final double STAT_BONUS_PER_LEVEL = 0.40;
+    public static final double STAT_BONUS_PER_LEVEL = 0.35;
     /** 판매 시 낸 에메랄드 중 돌려받는 비율. */
     public static final double SELL_REFUND_RATE = 0.50;
-    /** 라운드별 웨이브 세기를 볼 때, 보스 라운드 한 번이 튀지 않도록 이만큼의 라운드 중앙값을 씁니다. */
-    private static final int WAVE_SMOOTHING_ROUNDS = 3;
 
     private IncomeTowerBalance() {
     }
@@ -66,7 +62,7 @@ public final class IncomeTowerBalance {
             java.util.Map.entry("creaking", 2),
             java.util.Map.entry("siege_golem", 2),
             java.util.Map.entry("legion_commander", 3),
-            java.util.Map.entry("ogre_champion", 3)
+            java.util.Map.entry("ogre_champion", 4)
     );
 
     /** 현재 레벨에서 다음 레벨로 올리는 비용. 1→2는 설치비, 이후 레벨마다 설치비의 절반씩 비싸집니다. */
@@ -79,74 +75,20 @@ public final class IncomeTowerBalance {
         return Math.max(0, incomePerLevel) * Math.max(1, level);
     }
 
+    /** 레벨에 따른 유닛 체력·공격력 배율(전체 배율 포함). 1레벨 0.85배, 5레벨 2.04배입니다. */
     public static double statMultiplier(int level) {
-        return 1.0 + STAT_BONUS_PER_LEVEL * (Math.max(1, level) - 1);
+        return BASE_STAT_MULTIPLIER * (1.0 + STAT_BONUS_PER_LEVEL * (Math.max(1, level) - 1));
     }
 
     public static long sellRefund(long paidEmerald) {
         return Math.round(Math.max(0, paidEmerald) * SELL_REFUND_RATE);
     }
 
-    /**
-     * 기본 레인 몹이 라운드마다 세지는 만큼 인컴 유닛도 세지게 하는 배율.
-     *
-     * <p>그 라운드 웨이브 몹의 평균 체력·공격력을 1라운드 평균으로 나눕니다. 15라운드 같은 보스 라운드가
-     * 한 번 튀지 않도록 최근 몇 라운드의 중앙값을 쓰고, 앞 라운드보다 약해지지 않도록 누적 최댓값을 씁니다.
-     */
-    public static WaveScale waveScale(WaveConfig config, int round) {
-        if (config == null || round <= 1) {
-            return WaveScale.NONE;
-        }
-        WaveStrength base = strength(config, 1);
-        if (base == null || base.health() <= 0.0 || base.attackDamage() <= 0.0) {
-            return WaveScale.NONE;
-        }
-        List<WaveStrength> history = new ArrayList<>();
-        double health = 1.0;
-        double attackDamage = 1.0;
-        for (int current = 1; current <= round; current++) {
-            WaveStrength strength = strength(config, current);
-            if (strength == null) {
-                continue;
-            }
-            history.add(strength);
-            List<WaveStrength> window = history.subList(Math.max(0, history.size() - WAVE_SMOOTHING_ROUNDS), history.size());
-            health = Math.max(health, median(window.stream().mapToDouble(WaveStrength::health).toArray()) / base.health());
-            attackDamage = Math.max(attackDamage,
-                    median(window.stream().mapToDouble(WaveStrength::attackDamage).toArray()) / base.attackDamage());
-        }
-        return new WaveScale(health, attackDamage);
+    public static double healthMultiplier(int level, int round) {
+        return statMultiplier(level) * SummonBalancePolicy.summonHealthMultiplier(Math.max(1, round));
     }
 
-    private static WaveStrength strength(WaveConfig config, int round) {
-        RoundWaveConfig wave = config.configForRound(round).orElse(null);
-        if (wave == null) {
-            return null;
-        }
-        double count = 0.0;
-        double health = 0.0;
-        double attackDamage = 0.0;
-        for (List<WaveMonsterEntry> entries : wave.lanes().values()) {
-            for (WaveMonsterEntry entry : entries) {
-                count += entry.count();
-                health += entry.health() * entry.count();
-                attackDamage += entry.attackDamage() * entry.count();
-            }
-        }
-        return count <= 0.0 ? null : new WaveStrength(health / count, attackDamage / count);
-    }
-
-    private static double median(double[] values) {
-        double[] sorted = values.clone();
-        Arrays.sort(sorted);
-        int middle = sorted.length / 2;
-        return sorted.length % 2 == 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2.0;
-    }
-
-    private record WaveStrength(double health, double attackDamage) {
-    }
-
-    public record WaveScale(double health, double attackDamage) {
-        public static final WaveScale NONE = new WaveScale(1.0, 1.0);
+    public static double attackDamageMultiplier(int level, int round) {
+        return statMultiplier(level) * SummonBalancePolicy.summonAttackDamageMultiplier(Math.max(1, round));
     }
 }

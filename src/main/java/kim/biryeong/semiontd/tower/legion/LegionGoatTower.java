@@ -1,7 +1,6 @@
 package kim.biryeong.semiontd.tower.legion;
 
 import java.util.Comparator;
-import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
@@ -23,14 +22,14 @@ import kim.biryeong.semiontd.tower.SupportTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public class LegionGoatTower extends SupportTower {
     private static final int MAX_STACKS = 3;
-    private static final ResourceLocation[] DAMAGE_SOURCES = stackSources("goat_damage");
-    private static final ResourceLocation[] DAMAGE_REDUCTION_SOURCES = stackSources("goat_damage_reduction");
-    private static final ResourceLocation[] CLONE_DAMAGE_SOURCES = stackSources("goat_clone_damage");
-    private static final ResourceLocation[] CLONE_DAMAGE_REDUCTION_SOURCES = stackSources("goat_clone_damage_reduction");
+    private static final Identifier[] DAMAGE_SOURCES = stackSources("goat_damage");
+    private static final Identifier[] DAMAGE_REDUCTION_SOURCES = stackSources("goat_damage_reduction");
+    private static final Identifier[] CLONE_DAMAGE_SOURCES = stackSources("goat_clone_damage");
+    private static final Identifier[] CLONE_DAMAGE_REDUCTION_SOURCES = stackSources("goat_clone_damage_reduction");
     private static final Comparator<LegionGoatTower> STACK_ORDER = Comparator
             .comparingInt((LegionGoatTower tower) -> tower.originalPosition().x())
             .thenComparingInt(tower -> tower.originalPosition().y())
@@ -115,19 +114,23 @@ public class LegionGoatTower extends SupportTower {
     }
 
     private OptionalInt stackIndexFor(Tower target, PlayerLane lane) {
-        List<LegionGoatTower> stackProviders = lane.towers().stream()
-                .filter(LegionGoatTower.class::isInstance)
-                .map(LegionGoatTower.class::cast)
-                .filter(goat -> goat.canBuff(target))
-                .sorted(STACK_ORDER)
-                .limit(maxStacks())
-                .toList();
-        for (int index = 0; index < stackProviders.size(); index++) {
-            if (stackProviders.get(index) == this) {
-                return OptionalInt.of(index);
+        int maximum = maxStacks();
+        int index = 0;
+        boolean found = false;
+        for (Tower tower : lane.towers()) {
+            if (!(tower instanceof LegionGoatTower goat) || !goat.canBuff(target)) {
+                continue;
+            }
+            if (goat == this) {
+                found = true;
+            } else {
+                int order = STACK_ORDER.compare(goat, this);
+                if (order < 0 || order == 0 && !found) {
+                    index++;
+                }
             }
         }
-        return OptionalInt.empty();
+        return found && index < maximum ? OptionalInt.of(index) : OptionalInt.empty();
     }
 
     private boolean canBuff(Tower target) {
@@ -148,7 +151,7 @@ public class LegionGoatTower extends SupportTower {
         return dx * dx + dy * dy + dz * dz <= radius * radius;
     }
 
-    private boolean applyEffect(SemionTowerEntity entity, TimedEffectType type, ResourceLocation source, double magnitude) {
+    private boolean applyEffect(SemionTowerEntity entity, TimedEffectType type, Identifier source, double magnitude) {
         if (magnitude <= 0.0) {
             return false;
         }
@@ -180,12 +183,12 @@ public class LegionGoatTower extends SupportTower {
         return Math.max(1, Math.min(MAX_STACKS, TowerBalanceRuntime.abilityInt(type().id(), "maxStacks")));
     }
 
-    private static ResourceLocation supportId(String path) {
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "tower_support/" + path);
+    private static Identifier supportId(String path) {
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "tower_support/" + path);
     }
 
-    private static ResourceLocation[] stackSources(String path) {
-        ResourceLocation[] sources = new ResourceLocation[MAX_STACKS];
+    private static Identifier[] stackSources(String path) {
+        Identifier[] sources = new Identifier[MAX_STACKS];
         for (int index = 0; index < MAX_STACKS; index++) {
             sources[index] = supportId(path + "_" + (index + 1));
         }

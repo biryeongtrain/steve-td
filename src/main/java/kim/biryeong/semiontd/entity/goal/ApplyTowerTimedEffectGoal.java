@@ -44,7 +44,7 @@ public final class ApplyTowerTimedEffectGoal extends CooldownAbilityGoal {
         AABB searchBox = caster.getBoundingBox().inflate(radius);
         double radiusSqr = radius * radius;
         int applied = 0;
-        for (SemionTowerEntity tower : caster.level().getEntities(
+        for (SemionTowerEntity tower : EntityGoalTargetSelection.first(caster.level().getEntities(
                         caster,
                         searchBox,
                         entity -> entity instanceof SemionTowerEntity towerEntity
@@ -55,8 +55,7 @@ public final class ApplyTowerTimedEffectGoal extends CooldownAbilityGoal {
                 .filter(SemionTowerEntity.class::isInstance)
                 .map(SemionTowerEntity.class::cast)
                 .filter(tower -> caster.distanceToSqr(tower) <= radiusSqr)
-                .sorted(Comparator.comparingDouble(caster::distanceToSqr))
-                .toList()) {
+                .toList(), Comparator.comparingDouble(caster::distanceToSqr), maxTargets)) {
             double resistance = tower.runtimeTower() == null
                     ? 0.0
                     : Math.clamp(tower.runtimeTower().incomeDebuffResistance(), 0.0, 1.0);

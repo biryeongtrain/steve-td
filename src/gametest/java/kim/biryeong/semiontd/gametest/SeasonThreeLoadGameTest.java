@@ -44,7 +44,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.GameTestServer;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
@@ -97,7 +97,7 @@ public final class SeasonThreeLoadGameTest {
     private enum Group { NONE, ATTACK, DEFENSE, INCOME }
     private enum Stage { BASE, HEALER_ONLY, COUNT_ONLY, COUNT_AND_HEALER }
     private record Board(String id, String job, List<String> towers) {}
-    private record TickTimes(int samples, Double p50, Double p95, Double p99, Double maximum) {}
+    private record TickTimes(int samples, Double mean, Double p50, Double p95, Double p99, Double maximum) {}
     private record LaneResult(String board, Group group, int replica, List<PlayerAugmentState.Selection> selections,
             String templateId, int expectedSpawns, int observedSpawns, Integer spawnCompleteTick,
             double initialNaturalHealth, long observedHealers, long aliveMonsters, int leaks, double leakedThreat, long rewardedKills,
@@ -107,7 +107,7 @@ public final class SeasonThreeLoadGameTest {
             String healingRatioStatus, Double healingRatio) {}
     private record StageReport(String status, int round, Stage stage, int logicalParticipants, int initialRealTowers, int forcedArenaChunks,
             int endpointTick, double wallSeconds, String towerBalanceSha256, String augmentConfigSha256,
-            String waveDefinitionSha256, String definitions, List<String> limits, TickTimes serverTickMilliseconds,
+            String waveDefinitionSha256, String definitions, List<String> limits, TickTimes serverTickMilliseconds, TickTimes activeCombatTickMilliseconds,
             List<LaneResult> lanes) {}
 
     private static final class LaneRun {
@@ -167,6 +167,8 @@ public final class SeasonThreeLoadGameTest {
         private final List<LaneRun> lanes = new ArrayList<>();
         private final Map<UUID, SemionPlayer> players = new LinkedHashMap<>();
         private final List<Double> tickMillis = new ArrayList<>();
+        private final List<Double> activeCombatTickMillis = new ArrayList<>();
+        private boolean previousCombatActive;
         private final EconomyService economy = new EconomyService(EconomyConfig.defaultConfig());
         private final AugmentConfig augments;
         private final String towerHash = hash(TowerBalanceRuntime.current());
@@ -200,7 +202,7 @@ public final class SeasonThreeLoadGameTest {
                 BlockPos base = base(index);
                 for (int x = base.getX() >> 4; x <= (base.getX() + 17) >> 4; x++) {
                     for (int z = base.getZ() >> 4; z <= (base.getZ() + 31) >> 4; z++) {
-                        long key = ChunkPos.asLong(x, z);
+                        long key = ChunkPos.pack(x, z);
                         if (!level.getForceLoadedChunks().contains(key)) {
                             level.setChunkForced(x, z, true);
                             forcedChunks.add(key);
@@ -230,6 +232,8 @@ public final class SeasonThreeLoadGameTest {
                     .findFirst().orElseThrow();
             tick = 0;
             tickMillis.clear();
+            activeCombatTickMillis.clear();
+            previousCombatActive = false;
             for (int index = 0; index < LANES; index++) {
                 Board board = BOARDS.get(index % 2);
                 Group group = Group.values()[index / 2];
@@ -238,7 +242,7 @@ public final class SeasonThreeLoadGameTest {
                 UUID owner = UUID.nameUUIDFromBytes(("s3-wave-" + round + "-" + stage + "-" + index).getBytes(StandardCharsets.UTF_8));
                 SemionPlayer player = new SemionPlayer(owner, "load-" + index, team, laneId,
                         new PlayerEconomy(EconomyConfig.defaultConfig()));
-                player.assignJob(JobRegistry.find(ResourceLocation.parse(board.job())).orElseThrow());
+                player.assignJob(JobRegistry.find(Identifier.parse(board.job())).orElseThrow());
                 players.put(owner, player);
                 BlockPos base = base(index);
                 PlayerLane lane = new PlayerLane(team, laneId, owner, level, layout(base, laneId));
@@ -268,8 +272,14 @@ public final class SeasonThreeLoadGameTest {
             if (tick > 1) {
                 long[] times = level.getServer().getTickTimesNanos();
                 long nanos = times[Math.floorMod(level.getServer().getTickCount() - 1, times.length)];
-                if (nanos > 0) {tickMillis.add(nanos / 1_000_000.0);}
+                if (nanos > 0) {
+                    tickMillis.add(nanos / 1_000_000.0);
+                    if (previousCombatActive) {activeCombatTickMillis.add(nanos / 1_000_000.0);}
+                }
             }
+            previousCombatActive = lanes.stream().anyMatch(run -> run.result == null
+                    && run.lane.towers().stream().anyMatch(tower -> !tower.isDestroyed(run.lane))
+                    && run.lane.activeMonsters().stream().anyMatch(Monster::isAlive));
             for (LaneRun run : lanes) {
                 if (run.result == null) {
                     run.lane.tick(level.getServer(), economy, players, MonsterScalingConfig.defaultConfig(), tick);
@@ -310,7 +320,7 @@ public final class SeasonThreeLoadGameTest {
                     ROUNDS.get(roundIndex), Stage.values()[stageIndex], LANES, LANES * 6, forcedChunks.size(), tick,
                     startNanos == 0 ? 0 : (System.nanoTime() - startNanos) / 1_000_000_000.0,
                     towerHash, hash(augments), hash(wave), "BUNDLED_WAVE_AND_AUGMENT_H0; CURRENT_TOWER_RUNTIME",
-                    LIMITS, tickTimes(tickMillis), lanes.stream().map(run -> run.result).toList())));
+                    LIMITS, tickTimes(tickMillis), tickTimes(activeCombatTickMillis), lanes.stream().map(run -> run.result).toList())));
         }
 
         private void safely(Runnable action) {
@@ -381,7 +391,8 @@ public final class SeasonThreeLoadGameTest {
 
     private static TickTimes tickTimes(List<Double> samples) {
         List<Double> sorted = samples.stream().sorted().toList();
-        return new TickTimes(sorted.size(), percentile(sorted, .5), percentile(sorted, .95),
+        return new TickTimes(sorted.size(), samples.isEmpty() ? null : samples.stream().mapToDouble(Double::doubleValue).average().orElseThrow(),
+                percentile(sorted, .5), percentile(sorted, .95),
                 percentile(sorted, .99), percentile(sorted, 1));
     }
 

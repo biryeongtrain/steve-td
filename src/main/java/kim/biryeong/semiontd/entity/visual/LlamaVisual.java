@@ -1,6 +1,6 @@
 package kim.biryeong.semiontd.entity.visual;
 
-import net.minecraft.world.entity.animal.horse.Llama;
+import net.minecraft.world.entity.animal.equine.Llama;
 
 public final class LlamaVisual {
     private LlamaVisual() {

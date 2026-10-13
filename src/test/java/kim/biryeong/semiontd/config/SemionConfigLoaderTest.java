@@ -23,7 +23,7 @@ import kim.biryeong.semiontd.tower.legion.LegionTowers;
 import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -54,6 +54,429 @@ final class SemionConfigLoaderTest {
     static void bootstrapMinecraftRegistries() {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
+    }
+
+    @Test
+    void imperioDurationMigratesOnceAndCustomDurationsSurviveReload() throws Exception {
+        var path = tempDir.resolve("tower_balance.json");
+        Files.writeString(path, """
+                {"abilities":{"magic_school_spell_imperio":{"controlTicks":60,"cooldownTicks":60}}}
+                """);
+        var loaded = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        assertEquals(40, loaded.ability("magic_school_spell_imperio", "controlTicks", -1));
+        var migrated = Files.readString(path);
+        assertFalse(JsonParser.parseString(migrated).getAsJsonObject().getAsJsonObject("abilities")
+                .getAsJsonObject("magic_school_spell_imperio").has("cooldownTicks"));
+        SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+        assertEquals(migrated, Files.readString(path));
+        var object = JsonParser.parseString(migrated).getAsJsonObject();
+        object.getAsJsonObject("abilities").getAsJsonObject("magic_school_spell_imperio").addProperty("controlTicks", 60);
+        Files.writeString(path, object.toString());
+        assertEquals(60, SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance()
+                .ability("magic_school_spell_imperio", "controlTicks", -1));
+        Files.writeString(path, """
+                {"abilities":{"magic_school_spell_imperio":{"controlTicks":80,"cooldownTicks":20}}}
+                """);
+        assertEquals(80, SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance()
+                .ability("magic_school_spell_imperio", "controlTicks", -1));
+    }
+
+    @Test
+    void magicSchoolCombatPatchMigratesFormerDefaultsExactlyOnce() throws Exception {
+        var path = tempDir.resolve("tower_balance.json");
+        var object = JsonParser.parseString(new com.google.gson.Gson().toJson(TowerBalanceConfig.defaultConfig())).getAsJsonObject();
+        var abilities = object.getAsJsonObject("abilities");
+        var global = abilities.getAsJsonObject("magic_school_global");
+        global.remove("combatBalanceVersion");
+        Map.of("spellPowerCost", 100, "spellPowerCostIncrease", 75, "darkArtsDefenseCost", 90,
+                "spellTier2Cost", 200, "spellTier3Cost", 400, "spellTier4Cost", 700,
+                "spellTier5Cost", 1000).forEach(global::addProperty);
+        var towers = object.getAsJsonObject("towers");
+        towers.getAsJsonObject("magic_school_freshman_t1").addProperty("attackIntervalTicks", 24);
+        for (String house : List.of("gryffindor", "hufflepuff", "ravenclaw", "slytherin")) {
+            for (int tier : List.of(2, 3)) {
+                var stats = towers.getAsJsonObject("magic_school_" + house + "_t" + tier);
+                stats.addProperty("maxHealth", tier == 2 ? (house.equals("hufflepuff") ? 385 : 350)
+                        : (house.equals("hufflepuff") ? 770 : 700));
+                stats.addProperty("damage", tier == 2 ? (house.equals("slytherin") ? 55 : 50)
+                        : (house.equals("slytherin") ? 132 : 120));
+            }
+        }
+        var spell = abilities.getAsJsonObject("magic_school_spell_bombarda");
+        spell.addProperty("damageMultiplier", .8);
+        spell.addProperty("secondaryMultiplier", .5);
+        spell.addProperty("radius", 1.5);
+        Files.writeString(path, object.toString());
+        var balance = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        Map.of("spellPowerCost", 40, "spellPowerCostIncrease", 60, "darkArtsDefenseCost", 40,
+                "darkArtsDefenseCostIncrease", 60, "spellTier2Cost", 175, "spellTier3Cost", 320,
+                "spellTier4Cost", 500, "spellTier5Cost", 700, "spellTier6Cost", 10000,
+                "combatBalanceVersion", 1).forEach((key, expected) ->
+                assertEquals(expected.doubleValue(), balance.ability("magic_school_global", key, -1), key));
+        assertEquals(22, balance.towers().get("magic_school_freshman_t1").attackIntervalTicks());
+        for (String house : List.of("gryffindor", "hufflepuff", "ravenclaw", "slytherin")) {
+            var t2 = balance.towers().get("magic_school_" + house + "_t2");
+            var t3 = balance.towers().get("magic_school_" + house + "_t3");
+            assertEquals(house.equals("hufflepuff") ? 374 : 340, t2.maxHealth());
+            assertEquals(house.equals("slytherin") ? 55 : 50, t2.damage());
+            assertEquals(house.equals("hufflepuff") ? 550 : 500, t3.maxHealth());
+            assertEquals(house.equals("slytherin") ? 88 : 80, t3.damage());
+            assertEquals(house.equals("gryffindor") ? 17 : 18, t2.attackIntervalTicks());
+            assertEquals(house.equals("gryffindor") ? 11 : 12, t3.attackIntervalTicks());
+        }
+        assertEquals(.9, balance.ability("magic_school_spell_bombarda", "damageMultiplier", -1));
+        assertEquals(.70, balance.ability("magic_school_spell_bombarda", "secondaryMultiplier", -1));
+        assertEquals(2.4, balance.ability("magic_school_spell_bombarda", "radius", -1));
+        var migrated = Files.readString(path);
+        SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+        assertEquals(migrated, Files.readString(path));
+
+        object = JsonParser.parseString(migrated).getAsJsonObject();
+        object.getAsJsonObject("towers").getAsJsonObject("magic_school_gryffindor_t2").addProperty("damage", 50);
+        object.getAsJsonObject("towers").getAsJsonObject("magic_school_freshman_t1").addProperty("attackIntervalTicks", 24);
+        object.getAsJsonObject("abilities").getAsJsonObject("magic_school_global").addProperty("spellPowerCost", 100);
+        object.getAsJsonObject("abilities").getAsJsonObject("magic_school_spell_bombarda").addProperty("radius", 1.5);
+        Files.writeString(path, object.toString());
+        var overridden = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        assertEquals(50, overridden.towers().get("magic_school_gryffindor_t2").damage());
+        assertEquals(24, overridden.towers().get("magic_school_freshman_t1").attackIntervalTicks());
+        assertEquals(100, overridden.ability("magic_school_global", "spellPowerCost", -1));
+        assertEquals(1.5, overridden.ability("magic_school_spell_bombarda", "radius", -1));
+    }
+
+    @Test
+    void magicSchoolCombatPatchKeepsCustomValuesAndBackfillsMissingFields() throws Exception {
+        Files.writeString(tempDir.resolve("tower_balance.json"), """
+                {"abilities":{"magic_school_global":{"baseStatsVersion":1,"spellPowerCost":77,
+                  "spellPowerCostIncrease":35,"darkArtsDefenseCost":88,"darkArtsDefenseCostIncrease":44,
+                  "spellTier2Cost":250,"spellTier3Cost":350,"spellTier4Cost":550,"spellTier5Cost":750},
+                  "magic_school_spell_bombarda":{"damageMultiplier":1.2,"secondaryMultiplier":0.6,"radius":4}},
+                 "towers":{"magic_school_freshman_t1":{"attackIntervalTicks":27},
+                  "magic_school_hufflepuff_t2":{"maxHealth":500,"damage":70},
+                  "magic_school_slytherin_t3":{"maxHealth":850,"damage":160}}}
+                """);
+        var balance = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        Map.of("spellPowerCost", 77, "spellPowerCostIncrease", 35, "darkArtsDefenseCost", 88,
+                "darkArtsDefenseCostIncrease", 44, "spellTier2Cost", 250, "spellTier3Cost", 350,
+                "spellTier4Cost", 550, "spellTier5Cost", 750).forEach((key, expected) ->
+                assertEquals(expected.doubleValue(), balance.ability("magic_school_global", key, -1), key));
+        assertEquals(27, balance.towers().get("magic_school_freshman_t1").attackIntervalTicks());
+        assertEquals(500, balance.towers().get("magic_school_hufflepuff_t2").maxHealth());
+        assertEquals(70, balance.towers().get("magic_school_hufflepuff_t2").damage());
+        assertEquals(850, balance.towers().get("magic_school_slytherin_t3").maxHealth());
+        assertEquals(160, balance.towers().get("magic_school_slytherin_t3").damage());
+        assertEquals(340, balance.towers().get("magic_school_gryffindor_t2").maxHealth());
+        assertEquals(80, balance.towers().get("magic_school_ravenclaw_t3").damage());
+        assertEquals(1.2, balance.ability("magic_school_spell_bombarda", "damageMultiplier", -1));
+        assertEquals(.6, balance.ability("magic_school_spell_bombarda", "secondaryMultiplier", -1));
+        assertEquals(4, balance.ability("magic_school_spell_bombarda", "radius", -1));
+    }
+
+    @Test
+    void curriculumSecondPatchMigratesEightPercentDefaultsButKeepsCustomValues() throws Exception {
+        var path = tempDir.resolve("tower_balance.json");
+        Files.writeString(path, """
+                {"abilities":{"magic_school_global":{"curriculumBalanceVersion":1,
+                "spellPowerPerLevel":0.08,"darkArtsDefensePerLevel":0.08,
+                "spellPowerMaxLevel":5,"darkArtsDefenseMaxLevel":5}}}
+                """);
+        var balance = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        for (String prefix : List.of("spellPower", "darkArtsDefense")) {
+            assertEquals(prefix.equals("spellPower") ? .04 : .03, balance.ability("magic_school_global", prefix + "PerLevel", -1));
+            assertEquals(6, balance.ability("magic_school_global", prefix + "MaxLevel", -1));
+        }
+        assertEquals(.25, balance.ability("magic_school_spell_wingardium_leviosa", "liftDamageMultiplier", -1));
+        Files.writeString(path, """
+                {"abilities":{"magic_school_global":{"curriculumBalanceVersion":1,
+                "spellPowerPerLevel":0.1,"darkArtsDefensePerLevel":0.12,
+                "spellPowerMaxLevel":8,"darkArtsDefenseMaxLevel":7},
+                "magic_school_spell_wingardium_leviosa":{"liftDamageMultiplier":0.5}}}
+                """);
+        var custom = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        assertEquals(.1, custom.ability("magic_school_global", "spellPowerPerLevel", -1));
+        assertEquals(.12, custom.ability("magic_school_global", "darkArtsDefensePerLevel", -1));
+        assertEquals(8, custom.ability("magic_school_global", "spellPowerMaxLevel", -1));
+        assertEquals(7, custom.ability("magic_school_global", "darkArtsDefenseMaxLevel", -1));
+        assertEquals(.5, custom.ability("magic_school_spell_wingardium_leviosa", "liftDamageMultiplier", -1));
+    }
+
+    @Test
+    void curriculumBalanceMigratesFormerDefaultsOnceAndPreservesOverrides() throws Exception {
+        Path path = tempDir.resolve("tower_balance.json");
+        Files.writeString(path, """
+                {"abilities":{"magic_school_global":{"spellPowerPerLevel":0.1,"darkArtsDefensePerLevel":0.1,
+                "magicHistoryPerLevel":0.25,"magicHistoryMaxLevel":4,"sortingHatCost":150,
+                "deathEaterCost":100,"duelingPracticeCost":250}}}
+                """);
+        var expected = Map.of("spellPowerPerLevel", .04, "darkArtsDefensePerLevel", .03,
+                "magicHistoryPerLevel", .25, "magicHistoryMaxLevel", 5.0, "sortingHatCost", 80.0,
+                "deathEaterCost", 250.0, "duelingPracticeCost", 150.0);
+        var balance = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        expected.forEach((key, value) -> assertEquals(value, balance.ability("magic_school_global", key, -1), key));
+        assertEquals(2, balance.ability("magic_school_global", "curriculumBalanceVersion", -1));
+        String migrated = Files.readString(path);
+        assertEquals(balance, SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance());
+        assertEquals(migrated, Files.readString(path));
+        var object = JsonParser.parseString(migrated).getAsJsonObject();
+        object.getAsJsonObject("abilities").getAsJsonObject("magic_school_global").addProperty("spellPowerPerLevel", .10);
+        Files.writeString(path, object.toString());
+        assertEquals(.10, SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance()
+                .ability("magic_school_global", "spellPowerPerLevel", -1), "An explicit later override must survive reload.");
+
+        Files.writeString(path, """
+                {"abilities":{"magic_school_global":{"spellPowerPerLevel":0.12,"sortingHatCost":95,
+                "magicHistoryMaxLevel":7,"deathEaterCost":350,"duelingPracticeCost":175}}}
+                """);
+        var custom = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        assertEquals(.12, custom.ability("magic_school_global", "spellPowerPerLevel", -1));
+        assertEquals(95, custom.ability("magic_school_global", "sortingHatCost", -1));
+        assertEquals(7, custom.ability("magic_school_global", "magicHistoryMaxLevel", -1));
+        assertEquals(350, custom.ability("magic_school_global", "deathEaterCost", -1));
+        assertEquals(175, custom.ability("magic_school_global", "duelingPracticeCost", -1));
+        assertEquals(.03, custom.ability("magic_school_global", "darkArtsDefensePerLevel", -1));
+        assertEquals(.25, custom.ability("magic_school_global", "magicHistoryPerLevel", -1));
+    }
+
+    @Test
+    void magicSchoolT2CapMigratesOnceAndBackfillsArchwizardsWithoutOverwritingOverrides() throws Exception {
+        Path path = tempDir.resolve("tower_balance.json");
+        Files.writeString(path, """
+                {"abilities":{"magic_school_global":{"baseStatsVersion":1},
+                  "magic_school_gryffindor_t2":{"maxProficiency":200},
+                  "magic_school_hufflepuff_t2":{"maxProficiency":240},
+                  "magic_school_ravenclaw_t2":{"maxProficiency":200}},
+                 "upgradeCosts":{"magic_school_gryffindor_t2->magic_school_gryffindor_t3":777}}
+                """);
+        var balance = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        assertEquals(300, balance.ability("magic_school_gryffindor_t2", "maxProficiency", -1));
+        assertEquals(240, balance.ability("magic_school_hufflepuff_t2", "maxProficiency", -1));
+        assertEquals(300, balance.ability("magic_school_ravenclaw_t2", "maxProficiency", -1));
+        assertEquals(300, balance.ability("magic_school_slytherin_t2", "maxProficiency", -1));
+        assertEquals(2, balance.ability("magic_school_global", "proficiencyVersion", -1));
+        assertEquals(777, balance.upgradeCost("magic_school_gryffindor_t2", "magic_school_gryffindor_t3", -1));
+        for (String house : List.of("gryffindor", "hufflepuff", "ravenclaw", "slytherin")) {
+            assertEquals(1000, balance.ability("magic_school_" + house + "_t3", "maxProficiency", -1));
+            assertEquals(2, balance.ability("magic_school_" + house + "_t3", "towerSlotCost", -1));
+        }
+        assertEquals(450, balance.upgradeCost("magic_school_hufflepuff_t2", "magic_school_hufflepuff_t3", -1));
+        String migrated = Files.readString(path);
+        assertEquals(balance, SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance());
+        assertEquals(migrated, Files.readString(path));
+        var object = JsonParser.parseString(migrated).getAsJsonObject();
+        object.getAsJsonObject("abilities").getAsJsonObject("magic_school_gryffindor_t2").addProperty("maxProficiency", 200);
+        Files.writeString(path, object.toString());
+        assertEquals(200, SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance()
+                .ability("magic_school_gryffindor_t2", "maxProficiency", -1), "Later explicit cap changes must survive reload.");
+    }
+
+    @Test
+    void magicSchoolGrowthPatchMigratesPreviousDefaultsAndPreservesCustomAndLaterValues() throws Exception {
+        Path path = tempDir.resolve("tower_balance.json");
+        Files.writeString(path, """
+                {"abilities":{"magic_school_global":{"baseStatsVersion":1,"proficiencyVersion":1,
+                  "proficiencyDamagePerPoint":0.005,"proficiencyHealthPerPoint":0.005},
+                  "magic_school_gryffindor_t2":{"maxProficiency":300},
+                  "magic_school_gryffindor_t3":{"maxProficiency":300},
+                  "magic_school_hufflepuff_t2":{"maxProficiency":200},
+                  "magic_school_hufflepuff_t3":{"maxProficiency":500},
+                  "magic_school_spell_episkey":{"healingMultiplier":2}}}
+                """);
+        var balance = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        assertEquals(300, balance.ability("magic_school_gryffindor_t2", "maxProficiency", -1));
+        assertEquals(1000, balance.ability("magic_school_gryffindor_t3", "maxProficiency", -1));
+        assertEquals(200, balance.ability("magic_school_hufflepuff_t2", "maxProficiency", -1));
+        assertEquals(500, balance.ability("magic_school_hufflepuff_t3", "maxProficiency", -1));
+        assertEquals(.0015, balance.ability("magic_school_global", "proficiencyDamagePerPoint", -1));
+        assertEquals(.0015, balance.ability("magic_school_global", "proficiencyHealthPerPoint", -1));
+        assertEquals(.75, balance.ability("magic_school_spell_episkey", "healingMultiplier", -1));
+        String migrated = Files.readString(path);
+        assertEquals(balance, SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance());
+        assertEquals(migrated, Files.readString(path));
+        var object = JsonParser.parseString(migrated).getAsJsonObject();
+        object.getAsJsonObject("abilities").getAsJsonObject("magic_school_global").addProperty("proficiencyDamagePerPoint", .005);
+        object.getAsJsonObject("abilities").getAsJsonObject("magic_school_spell_episkey").addProperty("healingMultiplier", 2);
+        Files.writeString(path, object.toString());
+        var overridden = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        assertEquals(.005, overridden.ability("magic_school_global", "proficiencyDamagePerPoint", -1));
+        assertEquals(2, overridden.ability("magic_school_spell_episkey", "healingMultiplier", -1));
+        Files.writeString(path, """
+                {"abilities":{"magic_school_global":{"proficiencyVersion":1,
+                  "proficiencyDamagePerPoint":0.002,"proficiencyHealthPerPoint":0.003},
+                  "magic_school_spell_episkey":{"healingMultiplier":1.8}}}
+                """);
+        var custom = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        assertEquals(.002, custom.ability("magic_school_global", "proficiencyDamagePerPoint", -1));
+        assertEquals(.003, custom.ability("magic_school_global", "proficiencyHealthPerPoint", -1));
+        assertEquals(1.8, custom.ability("magic_school_spell_episkey", "healingMultiplier", -1));
+    }
+
+    @Test
+    void freeHogwartsMigrationRemovesRetiredTiersAndPreservesLaterPriceOverrides() throws Exception {
+        Path path = tempDir.resolve("tower_balance.json");
+        Files.writeString(path, """
+                {"towers":{"magic_school_hogwarts_t1":{"mineralCost":300,"maxHealth":1},
+                  "magic_school_hogwarts_t2":{"mineralCost":750,"maxHealth":2},
+                  "magic_school_hogwarts_t3":{"mineralCost":1000,"maxHealth":3}},
+                 "upgradeCosts":{"magic_school_hogwarts_t1->magic_school_hogwarts_t2":750,
+                  "magic_school_hogwarts_t2->magic_school_hogwarts_t3":1000}}
+                """);
+        var balance = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        assertEquals(0, balance.towers().get("magic_school_hogwarts_t1").mineralCost());
+        assertFalse(balance.towers().containsKey("magic_school_hogwarts_t2"));
+        assertFalse(balance.towers().containsKey("magic_school_hogwarts_t3"));
+        assertFalse(balance.upgradeCosts().containsKey("magic_school_hogwarts_t1->magic_school_hogwarts_t2"));
+        assertFalse(balance.upgradeCosts().containsKey("magic_school_hogwarts_t2->magic_school_hogwarts_t3"));
+        assertEquals(60, balance.ability("magic_school_spell_protego", "waveAggroBonus", -1));
+        assertEquals(60, balance.ability("magic_school_spell_protego_maxima", "waveAggroBonus", -1));
+        String migrated = Files.readString(path);
+        assertEquals(balance, SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance());
+        assertEquals(migrated, Files.readString(path));
+        var object = JsonParser.parseString(migrated).getAsJsonObject();
+        object.getAsJsonObject("towers").getAsJsonObject("magic_school_hogwarts_t1").addProperty("mineralCost", 125);
+        Files.writeString(path, object.toString());
+        assertEquals(125, SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance()
+                .towers().get("magic_school_hogwarts_t1").mineralCost());
+    }
+
+    @Test
+    void legacyHogwartsDefaultHealthMigratesOnceAndRetiresSequentialUpgrades() throws Exception {
+        Path path = tempDir.resolve("tower_balance.json");
+        Files.writeString(path, """
+                {"towers":{"magic_school_hogwarts_t1":{"mineralCost":350,"maxHealth":300},
+                  "magic_school_freshman_t1":{"damage":19}},"upgradeCosts":{},"abilities":{}}
+                """);
+        var balance = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        assertEquals(1.0, balance.towers().get("magic_school_hogwarts_t1").maxHealth());
+        assertEquals(350, balance.towers().get("magic_school_hogwarts_t1").mineralCost());
+        assertEquals(19.0, balance.towers().get("magic_school_freshman_t1").damage());
+        assertFalse(balance.towers().containsKey("magic_school_hogwarts_t2"));
+        assertFalse(balance.towers().containsKey("magic_school_hogwarts_t3"));
+        assertFalse(balance.upgradeCosts().containsKey("magic_school_hogwarts_t1->magic_school_hogwarts_t2"));
+        assertFalse(balance.upgradeCosts().containsKey("magic_school_hogwarts_t2->magic_school_hogwarts_t3"));
+        String migrated = Files.readString(path);
+        SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+        assertEquals(migrated, Files.readString(path));
+    }
+
+    @Test
+    void hogwartsMigrationPreservesCustomHealthAndAlreadyUpdatedConfigurations() throws Exception {
+        Path path = tempDir.resolve("tower_balance.json");
+        Files.writeString(path, """
+                {"towers":{"magic_school_hogwarts_t1":{"maxHealth":42}}}
+                """);
+        assertEquals(42.0, SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"))
+                .towerBalance().towers().get("magic_school_hogwarts_t1").maxHealth());
+        Files.writeString(path, """
+                {"towers":{"magic_school_hogwarts_t1":{"maxHealth":300},"magic_school_hogwarts_t2":{"maxHealth":2}}}
+                """);
+        assertEquals(300.0, SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"))
+                .towerBalance().towers().get("magic_school_hogwarts_t1").maxHealth());
+    }
+
+    @Test
+    void legacyStudentDefaultsMigrateOnceAndPreserveCustomFields() throws Exception {
+        Path path = tempDir.resolve("tower_balance.json");
+        Files.writeString(path, """
+                {"towers":{"magic_school_freshman_t1":{"maxHealth":80,"damage":12,"attackIntervalTicks":20,"mineralCost":125}}}
+                """);
+        var balance = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        var stats = balance.towers().get("magic_school_freshman_t1");
+        assertEquals(200, stats.maxHealth());
+        assertEquals(30, stats.damage());
+        assertEquals(22, stats.attackIntervalTicks());
+        assertEquals(125, stats.mineralCost());
+        assertEquals(2, balance.abilityInt("magic_school_freshman_t1", "towerSlotCost", -1));
+        String migrated = Files.readString(path);
+        SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+        assertEquals(migrated, Files.readString(path));
+        Files.writeString(path, """
+                {"towers":{"magic_school_freshman_t1":{"maxHealth":99,"damage":19,"attackIntervalTicks":24}}}
+                """);
+        stats = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance().towers().get("magic_school_freshman_t1");
+        assertEquals(99, stats.maxHealth());
+        assertEquals(19, stats.damage());
+        assertEquals(22, stats.attackIntervalTicks());
+    }
+
+    @Test
+    void legacyHouseBonusesBecomeBaseStatsAndMigrateOnlyOnce() throws Exception {
+        Path path = tempDir.resolve("tower_balance.json");
+        Files.writeString(path, """
+                {"towers": {
+                    "magic_school_freshman_t1": {"attackIntervalTicks":30},
+                    "magic_school_gryffindor_t2": {"attackIntervalTicks":18},
+                    "magic_school_hufflepuff_t2": {"maxHealth":350},
+                    "magic_school_slytherin_t2": {"damage":50}},
+                 "abilities": {
+                    "magic_school_global": {"waveProficiencyBase":20},
+                    "magic_school_gryffindor_t2": {"houseAttackIntervalReduction":1},
+                    "magic_school_hufflepuff_t2": {"houseHealthBonus":0.1},
+                    "magic_school_slytherin_t2": {"houseDamageBonus":0.1}}}
+                """);
+        var balance = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        assertEquals(22, balance.towers().get("magic_school_freshman_t1").attackIntervalTicks());
+        assertEquals(17, balance.towers().get("magic_school_gryffindor_t2").attackIntervalTicks());
+        assertEquals(374, balance.towers().get("magic_school_hufflepuff_t2").maxHealth());
+        assertEquals(55, balance.towers().get("magic_school_slytherin_t2").damage());
+        assertEquals(20, balance.abilityInt("magic_school_global", "waveProficiencyBase", -1));
+        assertEquals(1, balance.abilityInt("magic_school_global", "baseStatsVersion", -1));
+        String migrated = Files.readString(path);
+        assertFalse(migrated.contains("houseHealthBonus"));
+        assertFalse(migrated.contains("houseDamageBonus"));
+        assertFalse(migrated.contains("houseAttackIntervalReduction"));
+        SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
+        assertEquals(migrated, Files.readString(path));
+        var object = JsonParser.parseString(migrated).getAsJsonObject();
+        object.getAsJsonObject("towers").getAsJsonObject("magic_school_freshman_t1").addProperty("attackIntervalTicks", 30);
+        object.getAsJsonObject("towers").getAsJsonObject("magic_school_hufflepuff_t2").addProperty("maxHealth", 500);
+        Files.writeString(path, object.toString());
+        var reloaded = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        assertEquals(30, reloaded.towers().get("magic_school_freshman_t1").attackIntervalTicks(), "A later explicit override must survive.");
+        assertEquals(500, reloaded.towers().get("magic_school_hufflepuff_t2").maxHealth(), "House bonuses must not be baked twice.");
+    }
+
+    @Test
+    void customHouseStatsKeepTheirEffectiveValuesWhenMovingIntoTheCatalog() throws Exception {
+        Files.writeString(tempDir.resolve("tower_balance.json"), """
+                {"towers": {
+                    "magic_school_freshman_t1": {"maxHealth":220,"attackIntervalTicks":27},
+                    "magic_school_gryffindor_t2": {"attackIntervalTicks":25},
+                    "magic_school_hufflepuff_t2": {"maxHealth":500,"damage":75,"mineralCost":250},
+                    "magic_school_slytherin_t2": {"damage":80}},
+                 "abilities": {
+                    "magic_school_freshman_t1": {"houseHealthBonus":0.1},
+                    "magic_school_gryffindor_t2": {"houseAttackIntervalReduction":2},
+                    "magic_school_hufflepuff_t2": {"houseHealthBonus":0.2,"wandHealthBonus":0.15},
+                    "magic_school_slytherin_t2": {"houseDamageBonus":0.25}}}
+                """);
+        var balance = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        assertEquals(242, balance.towers().get("magic_school_freshman_t1").maxHealth());
+        assertEquals(27, balance.towers().get("magic_school_freshman_t1").attackIntervalTicks());
+        assertEquals(23, balance.towers().get("magic_school_gryffindor_t2").attackIntervalTicks());
+        assertEquals(600, balance.towers().get("magic_school_hufflepuff_t2").maxHealth());
+        assertEquals(75, balance.towers().get("magic_school_hufflepuff_t2").damage());
+        assertEquals(250, balance.towers().get("magic_school_hufflepuff_t2").mineralCost());
+        assertEquals(.15, balance.ability("magic_school_hufflepuff_t2", "wandHealthBonus", -1));
+        assertEquals(100, balance.towers().get("magic_school_slytherin_t2").damage());
+    }
+
+    @Test
+    void partialAndInvalidLegacyHouseSettingsUseDefaultsOrLastKnownGood() throws Exception {
+        Path path = tempDir.resolve("tower_balance.json");
+        Files.writeString(path, """
+                {"abilities":{"magic_school_hufflepuff_t2":{"houseHealthBonus":0.2}}}
+                """);
+        var good = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test")).towerBalance();
+        assertEquals(420, good.towers().get("magic_school_hufflepuff_t2").maxHealth());
+        assertEquals(17, good.towers().get("magic_school_gryffindor_t2").attackIntervalTicks());
+        Files.writeString(path, """
+                {"abilities":{"magic_school_hufflepuff_t2":{"houseHealthBonus":-0.1}}}
+                """);
+        assertEquals(good, SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"), good).towerBalance());
+        Files.writeString(path, """
+                {"towers":{"magic_school_hufflepuff_t2":[]}}
+                """);
+        assertEquals(good, SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"), good).towerBalance());
     }
 
     @Test
@@ -88,7 +511,7 @@ final class SemionConfigLoaderTest {
     @Test
     void jobAvailabilityIsCreatedSavedAndReloaded() {
         LoadedConfigs defaults = SemionConfigLoader.load(tempDir, LoggerFactory.getLogger("test"));
-        ResourceLocation disabledJob = ResourceLocation.fromNamespaceAndPath("semion-td", "nether");
+        Identifier disabledJob = Identifier.fromNamespaceAndPath("semion-td", "nether");
         JobAvailabilityConfig updated = defaults.jobAvailability().withEnabled(disabledJob, false);
 
         assertTrue(Files.exists(tempDir.resolve("jobs.json")));
@@ -101,7 +524,7 @@ final class SemionConfigLoaderTest {
 
     @Test
     void invalidJobAvailabilityRetainsLastKnownGood() throws Exception {
-        ResourceLocation disabledJob = ResourceLocation.fromNamespaceAndPath("semion-td", "nether");
+        Identifier disabledJob = Identifier.fromNamespaceAndPath("semion-td", "nether");
         JobAvailabilityConfig lastKnownGood = JobAvailabilityConfig.defaultConfig()
                 .withEnabled(disabledJob, false);
         Files.createDirectories(tempDir);
@@ -148,7 +571,7 @@ final class SemionConfigLoaderTest {
                 """);
         AugmentConfig loaded = SemionConfigLoader.loadOrCreateAugments(path, AugmentConfig.defaults(), LoggerFactory.getLogger("test"));
         assertTrue(loaded.enabled());
-        assertFalse(loaded.publicPoolEnabled());
+        assertTrue(loaded.publicPoolEnabled());
         assertEquals(0.31, loaded.parameter("tactical_designation_1", "damageBonus", -1));
         assertEquals(AugmentConfig.defaults().parameter("tactical_designation_1", "damageReduction", -1),
                 loaded.parameter("tactical_designation_1", "damageReduction", -1));
@@ -539,9 +962,9 @@ final class SemionConfigLoaderTest {
         assertFalse(global.containsKey("healthScale"));
         assertEquals(1400.0, global.get("awakeningKills"));
         assertEquals(30.0, global.get("absorptionHeal"));
-        assertEquals(140.0, configs.towerBalance().ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "damageThreshold", -1.0));
+        assertEquals(160.0, configs.towerBalance().ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "damageThreshold", -1.0));
         assertEquals(0.65, configs.towerBalance().ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "threshold", -1.0));
-        assertEquals(20.0, configs.towerBalance().ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "damageScale", -1.0));
+        assertEquals(40.0, configs.towerBalance().ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "damageScale", -1.0));
         assertEquals(2000.0, configs.towerBalance().ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "healthThreshold", -1.0));
         assertEquals(500.0, configs.towerBalance().ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "healthScale", -1.0));
         assertEquals(2.0, configs.towerBalance().ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "splashEvery", -1.0));
@@ -566,7 +989,7 @@ final class SemionConfigLoaderTest {
         assertFalse(writtenGlobal.has("damageScale"));
         assertFalse(writtenGlobal.has("healthThreshold"));
         assertFalse(writtenGlobal.has("healthScale"));
-        assertTrue(written.contains("\"damageThreshold\": 140.0"));
+        assertTrue(written.contains("\"damageThreshold\": 160.0"));
         assertTrue(written.contains("\"healthThreshold\": 3000.0"));
         assertTrue(written.contains("\"awakeningKills\": 1400.0"));
         assertTrue(written.contains("\"absorptionHeal\": 30.0"));

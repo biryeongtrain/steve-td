@@ -1,7 +1,6 @@
 package kim.biryeong.semiontd.tower.nether;
 
 import java.util.ArrayList;
-import java.util.ArrayDeque;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -28,7 +27,7 @@ import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.AABB;
 
@@ -39,29 +38,28 @@ public class NetherTower extends EntityBackedTower {
     public static final String TOTEM = "job_nether_p";
     public static final String CONFIG_ID = "nether_global";
     private static final TowerDataKey<NetherTowerState> STATE = TowerDataKey.of(
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "nether_tower_state"),
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "nether_tower_state"),
             NetherTowerState.class
     );
-    private static final ResourceLocation LOW_HEALTH_DAMAGE_SOURCE =
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "nether/low_health_damage");
-    private static final ResourceLocation LOW_HEALTH_DAMAGE_REDUCTION_SOURCE =
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "nether/low_health_damage_reduction");
-    private static final ResourceLocation LOW_HEALTH_ATTACK_SPEED_SOURCE =
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "nether/low_health_attack_speed");
-    private static final ResourceLocation ZOMBIE_ATTACK_SPEED_SOURCE =
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "nether/zombie_attack_speed");
-    private static final ResourceLocation PIGLIN_KILL_DAMAGE_SOURCE =
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "nether/piglin_kill_damage");
-    private static final ResourceLocation ZOMBIE_TRANSITION_DAMAGE_SOURCE =
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "nether/zombie_transition_damage");
+    private static final Identifier LOW_HEALTH_DAMAGE_SOURCE =
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "nether/low_health_damage");
+    private static final Identifier LOW_HEALTH_DAMAGE_REDUCTION_SOURCE =
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "nether/low_health_damage_reduction");
+    private static final Identifier LOW_HEALTH_ATTACK_SPEED_SOURCE =
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "nether/low_health_attack_speed");
+    private static final Identifier ZOMBIE_ATTACK_SPEED_SOURCE =
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "nether/zombie_attack_speed");
+    private static final Identifier PIGLIN_KILL_DAMAGE_SOURCE =
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "nether/piglin_kill_damage");
+    private static final Identifier ZOMBIE_TRANSITION_DAMAGE_SOURCE =
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "nether/zombie_transition_damage");
 
     private int attackCounter;
     private int decayReductionTicks;
     private int pulseCooldownTicks;
     private int markCounter;
     private boolean lastAttackWasCritical;
-    private double naturalHealthLoss;
-    private final ArrayDeque<Double> bloodCharges = new ArrayDeque<>();
+    private final NetherBloodChargeController bloodCharges = new NetherBloodChargeController();
     private int secondPhaseTicks;
     private int totemReviveTicks = -1;
     private boolean totemUsed;
@@ -185,8 +183,7 @@ public class NetherTower extends EntityBackedTower {
         pulseCooldownTicks = 0;
         markCounter = 0;
         lastAttackWasCritical = false;
-        naturalHealthLoss = 0;
-        bloodCharges.clear();
+        bloodCharges.resetRound();
         secondPhaseTicks = 0;
         totemReviveTicks = -1;
         totemUsed = false;
@@ -321,7 +318,7 @@ public class NetherTower extends EntityBackedTower {
             lines.add("저체력 피해 +" + percent(damageBonus));
         }
         lines.add("흡혈 " + percent(lifeStealRatio(null)));
-        if (augmentSnapshot().has(BLOODLETTING)) {lines.add("방혈 충전 " + bloodCharges.size());}
+        if (augmentSnapshot().has(BLOODLETTING)) {lines.add("방혈 충전 " + bloodCharges.chargeCount());}
         if (secondPhaseTicks > 0) {lines.add("2 페이즈 " + oneDecimal(secondPhaseTicks / 20.0) + "초");}
         if (totemReviveTicks > 0) {lines.add("불사의 토템 부활 " + oneDecimal(totemReviveTicks / 20.0) + "초");}
         if (totemRevived) {lines.add("불사의 토템 피해 +" + percent(augmentValue(TOTEM, "damageBonus", 1)));}
@@ -341,9 +338,7 @@ public class NetherTower extends EntityBackedTower {
         pulseCooldownTicks = netherTower.pulseCooldownTicks;
         markCounter = netherTower.markCounter;
         lastAttackWasCritical = netherTower.lastAttackWasCritical;
-        naturalHealthLoss = netherTower.naturalHealthLoss;
-        bloodCharges.clear();
-        bloodCharges.addAll(netherTower.bloodCharges);
+        bloodCharges.restore(netherTower.bloodCharges.snapshot());
         secondPhaseTicks = netherTower.secondPhaseTicks;
         totemReviveTicks = netherTower.totemReviveTicks;
         totemUsed = netherTower.totemUsed;
@@ -469,18 +464,12 @@ public class NetherTower extends EntityBackedTower {
 
     void recordNaturalHealthLoss(double loss) {
         if (!augmentSnapshot().has(BLOODLETTING) || loss <= 0 || !AugmentCombat.allowsTriggers()) {return;}
-        naturalHealthLoss += loss;
         double threshold = currentMaxHealth() * augmentValue(BLOODLETTING, "healthRatio", .2);
-        if (threshold <= 0) {return;}
-        while (naturalHealthLoss + 1.0e-9 >= threshold) {
-            naturalHealthLoss = Math.max(0, naturalHealthLoss - threshold);
-            bloodCharges.addLast(threshold);
-        }
+        bloodCharges.recordNaturalLoss(loss, threshold);
     }
 
     double consumeBloodCharge() {
-        if (!AugmentCombat.allowsTriggers() || bloodCharges.isEmpty()) {return 0;}
-        return bloodCharges.removeFirst();
+        return AugmentCombat.allowsTriggers() ? bloodCharges.consume() : 0;
     }
 
     private double augmentValue(String card, String key, double fallback) {
@@ -634,7 +623,7 @@ public class NetherTower extends EntityBackedTower {
 
     private void applyMonsterDamageTakenMark(
             SemionMonsterEntity target,
-            ResourceLocation sourceId,
+            Identifier sourceId,
             double magnitude,
             int durationTicks
     ) {
@@ -695,9 +684,9 @@ public class NetherTower extends EntityBackedTower {
         return towerType != null && type().id().equals(towerType.id());
     }
 
-    private ResourceLocation sourceId(String suffix) {
+    private Identifier sourceId(String suffix) {
         String path = "nether/" + type().id() + "/" + ownerPlayer() + "/" + laneId()
                 + "/" + position().x() + "_" + position().y() + "_" + position().z() + "/" + suffix;
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, path);
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, path);
     }
 }

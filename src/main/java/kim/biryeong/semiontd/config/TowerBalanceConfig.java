@@ -9,6 +9,9 @@ import java.util.List;
 import java.util.Map;
 import kim.biryeong.semiontd.tower.TowerCapacity;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.magicschool.MagicSchoolTowers;
+import kim.biryeong.semiontd.tower.magicschool.MagicSchoolCurriculum;
+import kim.biryeong.semiontd.tower.magicschool.MagicSchoolSpell;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityStates;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityTowers;
 import kim.biryeong.semiontd.tower.adversary.AdversaryBalance;
@@ -263,8 +266,11 @@ public record TowerBalanceConfig(
         addPetTowers(towers);
         kim.biryeong.semiontd.tower.augment.AugmentTowers.all().forEach(type -> addTower(towers, type));
         addPirateTowers(towers);
+        MagicSchoolTowers.all().forEach(type -> addTower(towers, type));
 
         LinkedHashMap<String, Long> upgradeCosts = new LinkedHashMap<>();
+        MagicSchoolTowers.houseWizards().forEach(type -> putUpgrade(upgradeCosts, MagicSchoolTowers.FRESHMAN, type.id(), 200));
+        MagicSchoolTowers.houseWizards().forEach(type -> putUpgrade(upgradeCosts, type, MagicSchoolTowers.archWizardFor(type).id(), 450));
         putUpgrade(upgradeCosts, VillagerTowers.T1_SPLASH_TOWER, "villager_splash_t2", 110);
         putUpgrade(upgradeCosts, VillagerTowers.T2_LIBRARIAN_TOWER, "villager_splash_t3", 180);
         putUpgrade(upgradeCosts, VillagerTowers.T1_GOLEM_TOWER, "t2_golem_tower", 180);
@@ -932,6 +938,32 @@ public record TowerBalanceConfig(
         putFrostAbilities(abilities);
         putPetAbilities(abilities);
         putPirateAbilities(abilities);
+        putAbilities(abilities, MagicSchoolTowers.CONFIG_ID, Map.of(
+                "waveProficiencyBase", 10.0, "proficiencyDamagePerPoint", 0.0015,
+                "proficiencyHealthPerPoint", 0.0015, "sortingHatCost", 80.0, "baseStatsVersion", 1.0,
+                "proficiencyVersion", 2.0, "hogwartsVersion", 1.0, "curriculumBalanceVersion", 2.0,
+                "combatBalanceVersion", 1.0, "nerfBalanceVersion", 1.0));
+        var curriculumAbilities = new LinkedHashMap<>(abilities.get(MagicSchoolTowers.CONFIG_ID));
+        curriculumAbilities.put("protectionBalanceVersion", 1.0);
+        curriculumAbilities.putAll(MagicSchoolCurriculum.defaultAbilities());
+        for (MagicSchoolSpell spell : MagicSchoolSpell.values()) {
+            putAbilities(abilities, spell.configId(), spell.defaultAbilities());
+        }
+        putAbilities(abilities, MagicSchoolTowers.CONFIG_ID, curriculumAbilities);
+        for (TowerType wizard : MagicSchoolTowers.all().stream().filter(MagicSchoolTowers::isWizard).toList()) {
+            putAbilities(abilities, wizard.id(), Map.of(
+                    "proficiencyDamagePerPoint", MagicSchoolTowers.proficiencyPerPoint(wizard),
+                    "proficiencyHealthPerPoint", MagicSchoolTowers.proficiencyPerPoint(wizard),
+                    "maxProficiency", MagicSchoolTowers.isFreshman(wizard) ? 100.0 : MagicSchoolTowers.isHouseWizard(wizard) ? 300.0 : 1000.0,
+                    "proficiencyGainBonus", MagicSchoolTowers.belongsToHouse(wizard, MagicSchoolTowers.RAVENCLAW) ? 0.15 : 0.0,
+                    "wandAttackIntervalReduction", MagicSchoolTowers.belongsToHouse(wizard, MagicSchoolTowers.GRYFFINDOR) ? 1.0 : 0.0,
+                    "wandHealthBonus", MagicSchoolTowers.belongsToHouse(wizard, MagicSchoolTowers.HUFFLEPUFF) ? 0.10
+                            : MagicSchoolTowers.belongsToHouse(wizard, MagicSchoolTowers.RAVENCLAW) ? 0.05 : 0.0,
+                    "wandDamageBonus", MagicSchoolTowers.belongsToHouse(wizard, MagicSchoolTowers.SLYTHERIN) ? 0.10
+                            : MagicSchoolTowers.belongsToHouse(wizard, MagicSchoolTowers.RAVENCLAW) ? 0.05 : 0.0,
+                    "mentorProficiency", MagicSchoolTowers.isFreshman(wizard) ? 8.0 : MagicSchoolTowers.isHouseWizard(wizard) ? 15.0 : 0.0,
+                    TowerCapacity.CONFIG_KEY, 2.0));
+        }
 
         TowerBalanceConfig fallback = new TowerBalanceConfig(
                 towers,
@@ -1521,12 +1553,12 @@ public record TowerBalanceConfig(
 
     /**
      * 빌더 빌더 설계도의 가격 계수와 한도. 가격 = priceScale × P^priceExponent, P = 초당 피해/dpsUnit × (사거리/rangePivot)^rangeExponent
-     * + 체력/healthUnit. 기본값은 기존 타워의 가격대별 중앙값에 맞췄습니다.
+     * + 체력/healthUnit. 기본값으로는 기존 타워의 가격대별 중앙값 위력을 그 가격의 약 3분의 2에 삽니다.
      */
     private static void putBlueprintAbilities(LinkedHashMap<String, Map<String, Double>> abilities) {
         putAbilities(abilities, kim.biryeong.semiontd.tower.blueprint.BlueprintTowers.CONFIG_ID, Map.ofEntries(
-                Map.entry("priceScale", 16.5),
-                Map.entry("priceExponent", 1.6),
+                Map.entry("priceScale", 12.0),
+                Map.entry("priceExponent", 1.5),
                 Map.entry("dpsUnit", 8.0),
                 Map.entry("healthUnit", 88.0),
                 Map.entry("rangePivot", 6.0),
@@ -2024,6 +2056,49 @@ public record TowerBalanceConfig(
                 "summon.durationTicks", "summon.minimumPricePerLevel");
         validateIntegral(blueprint, true, "summon.countPerLevel",
                 "summon.intervalTicksPerLevel", "summon.durationTicksPerLevel");
+        validateIntegral(MagicSchoolTowers.CONFIG_ID, true, "waveProficiencyBase", "sortingHatCost");
+        validateRange(MagicSchoolTowers.CONFIG_ID, "baseStatsVersion", 1, 1);
+        validateRange(MagicSchoolTowers.CONFIG_ID, "proficiencyVersion", 2, 2);
+        validateRange(MagicSchoolTowers.CONFIG_ID, "hogwartsVersion", 1, 1);
+        validateRange(MagicSchoolTowers.CONFIG_ID, "curriculumBalanceVersion", 2, 2);
+        validateRange(MagicSchoolTowers.CONFIG_ID, "combatBalanceVersion", 1, 1);
+        validateRange(MagicSchoolTowers.CONFIG_ID, "nerfBalanceVersion", 1, 1);
+        validateRange(MagicSchoolTowers.CONFIG_ID, "protectionBalanceVersion", 1, 1);
+        validateIntegral(MagicSchoolTowers.CONFIG_ID, true, "curseProficiencyThreshold");
+        validatePositive(MagicSchoolTowers.CONFIG_ID, "curseLowProficiencyAttackSpeedMultiplier");
+        validateRatios(MagicSchoolTowers.CONFIG_ID, "curseLowProficiencyAttackSpeedMultiplier");
+        for (MagicSchoolSpell spell : MagicSchoolSpell.values()) {
+            for (String key : spell.defaultAbilities().keySet()) {
+                validatePositive(spell.configId(), key);
+                if (key.endsWith("Ticks") || key.endsWith("Stacks") || key.equals("hitsToStun") || key.equals("attacksPerExtraTarget")
+                        || key.equals("waveAggroBonus")) {
+                    validateIntegral(spell.configId(), false, key);
+                }
+                if (key.endsWith("Reduction") || key.equals("attackSpeedPenalty")) {
+                    validateRange(spell.configId(), key, 0, .99);
+                }
+            }
+        }
+        for (String key : MagicSchoolCurriculum.defaultAbilities().keySet()) {
+            if (key.endsWith("Cost") || key.endsWith("CostIncrease")) validateIntegral(MagicSchoolTowers.CONFIG_ID, true, key);
+            if (key.endsWith("MaxLevel")) validateIntegral(MagicSchoolTowers.CONFIG_ID, false, key);
+        }
+        validateRatios(MagicSchoolTowers.CONFIG_ID, "spellPowerPerLevel", "darkArtsDefensePerLevel", "magicHistoryPerLevel");
+        validateRatios(MagicSchoolTowers.CONFIG_ID, "duelingPracticeHealthRatio", "duelingPracticeProficiencyRatio");
+        validatePositive(MagicSchoolTowers.CONFIG_ID, "mentorRadius");
+        validateIntegral(MagicSchoolTowers.CONFIG_ID, true, "deathEaterProficiencyPerRound");
+        validateIntegral(MagicSchoolTowers.CONFIG_ID, true, "spellPracticePerTier", "spellPracticeRepeatBonus");
+        validateRatios(MagicSchoolTowers.CONFIG_ID, "spellTransferDamageRatio", "potionsHealRatio", "explosiveBarrelDamageRatio");
+        validatePositive(MagicSchoolTowers.CONFIG_ID, "potionsHealRatio", "explosiveBarrelRadius");
+        validateIntegral(MagicSchoolTowers.CONFIG_ID, false, "spellTransferMaxTargets", "spellTransferCooldownTicks",
+                "transfigurationCooldownTicks", "barrelHealth", "barrelHealthRound1", "barrelHealthRound2", "barrelHealthRound3");
+        validateIntegral(MagicSchoolTowers.CONFIG_ID, true, "quidditchBaseReward", "quidditchRewardIncrease", "quidditchMaxIncreases", "barrelAggro");
+        validateRatios(MagicSchoolTowers.CONFIG_ID, "proficiencyDamagePerPoint", "proficiencyHealthPerPoint");
+        for (TowerType wizard : MagicSchoolTowers.all().stream().filter(MagicSchoolTowers::isWizard).toList()) {
+            validatePositive(wizard.id(), "maxProficiency");
+            validateRatios(wizard.id(), "proficiencyDamagePerPoint", "proficiencyHealthPerPoint", "proficiencyGainBonus", "wandHealthBonus", "wandDamageBonus");
+            validateIntegral(wizard.id(), true, "wandAttackIntervalReduction", "mentorProficiency", TowerCapacity.CONFIG_KEY);
+        }
     }
 
     private void validatePetAbilities() {
@@ -2319,7 +2394,8 @@ public record TowerBalanceConfig(
         String global = DemonLordTowers.GLOBAL_CONFIG_ID;
         validatePositive(global,
                 "baseMaxHealth", "experienceBase", "experienceGrowth", "bladeAttackIntervalTicks",
-                "healthBonusThreshold", "healthBonusScale", "damageBonusThreshold", "damageBonusScale");
+                "healthBonusThreshold", "healthBonusScale", "damageBonusThreshold", "damageBonusScale",
+                "physicalDamageThreshold", "physicalDamageScale", "magicDamageThreshold", "magicDamageScale");
         validateAtLeast(global, 0.0,
                 "maxHealthPerLevel", "experiencePerMaxHealth", "damagePerLevel", "bladeDamage");
         validateIntegral(global, false, "maxLevel", "bladeAttackIntervalTicks");
@@ -2839,7 +2915,7 @@ public record TowerBalanceConfig(
         putUpgrade(upgrades, DeveloperTowers.TEST_BUILD, DeveloperTowers.RELEASE.id(), 170);
         putUpgrade(upgrades, DeveloperTowers.TEST_BUILD, DeveloperTowers.LTS.id(), 160);
         putUpgrade(upgrades, DeveloperTowers.WORKBENCH, DeveloperTowers.DEPLOY_SERVER.id(), 80);
-        putUpgrade(upgrades, DeveloperTowers.DEPLOY_SERVER, DeveloperTowers.OPS_CENTER.id(), 160);
+        putUpgrade(upgrades, DeveloperTowers.DEPLOY_SERVER, DeveloperTowers.OPS_CENTER.id(), 155);
         putUpgrade(upgrades, DeveloperTowers.TESTER, DeveloperTowers.DEBUGGER.id(), 70);
         putUpgrade(upgrades, DeveloperTowers.DEBUGGER, DeveloperTowers.DEVELOPER.id(), 140);
     }
@@ -3452,8 +3528,8 @@ public record TowerBalanceConfig(
     private static void putInsectUpgrades(Map<String, Long> upgrades) {
         putUpgrade(upgrades, InsectTowers.SILVERFISH, InsectTowers.ENDERMITE.id(), 75);
         putUpgrade(upgrades, InsectTowers.ENDERMITE, InsectTowers.ENHANCED_ENDERMITE.id(), 140);
-        putUpgrade(upgrades, InsectTowers.CAVE_SPIDER, InsectTowers.SPIDER.id(), 90);
-        putUpgrade(upgrades, InsectTowers.SPIDER, InsectTowers.ENHANCED_SPIDER.id(), 160);
+        putUpgrade(upgrades, InsectTowers.CAVE_SPIDER, InsectTowers.SPIDER.id(), 115);
+        putUpgrade(upgrades, InsectTowers.SPIDER, InsectTowers.ENHANCED_SPIDER.id(), 185);
         putUpgrade(upgrades, InsectTowers.BEE, InsectTowers.ENHANCED_BEE.id(), 90);
         putUpgrade(upgrades, InsectTowers.ENHANCED_BEE, InsectTowers.QUEEN_BEE.id(), 170);
     }
@@ -4794,13 +4870,13 @@ public record TowerBalanceConfig(
         values.put(TRANSFER_HEAL.key(), 30.0);
         values.put(TRANSFER_HEAL_RATIO.key(), 0.05);
         values.put(ROUND_HEALTH_RATIO.key(), 0.50);
-        values.put(PERMANENT_HEALTH_RATIO.key(), 0.04);
+        values.put(PERMANENT_HEALTH_RATIO.key(), 0.06);
         values.put(HEALTH_THRESHOLD.key(), 3000.0);
         values.put(HEALTH_SCALE.key(), 500.0);
         values.put(ROUND_DAMAGE_RATIO.key(), 0.66);
-        values.put(PERMANENT_DAMAGE_RATIO.key(), 0.04);
-        values.put(DAMAGE_THRESHOLD.key(), 150.0);
-        values.put(DAMAGE_SCALE.key(), 25.0);
+        values.put(PERMANENT_DAMAGE_RATIO.key(), 0.06);
+        values.put(DAMAGE_THRESHOLD.key(), 175.0);
+        values.put(DAMAGE_SCALE.key(), 50.0);
         values.put(LIFE_STEAL_STACKS.key(), 30.0);
         values.put(LIFE_STEAL_STEP.key(), 0.01);
         values.put(LIFE_STEAL_CAP.key(), 0.10);
@@ -4969,8 +5045,8 @@ public record TowerBalanceConfig(
     private static Map<String, Double> baseWarlockAbilities() {
         LinkedHashMap<String, Double> values = new LinkedHashMap<>();
         values.put("sacrificeRadius", 6.0);
-        values.put("permanentHealth", 0.025);
-        values.put("permanentDamage", 0.05);
+        values.put("permanentHealth", 0.02);
+        values.put("permanentDamage", 0.02);
         return values;
     }
 
@@ -4978,12 +5054,12 @@ public record TowerBalanceConfig(
         LinkedHashMap<String, Double> values = new LinkedHashMap<>();
         values.put("threshold", 0.65);
         values.put("roundStat", 0.50);
-        values.put("permanentHealth", 0.025);
+        values.put("permanentHealth", 0.04);
         values.put("healthThreshold", 2000.0);
         values.put("healthScale", 500.0);
-        values.put("permanentDamage", 0.05);
-        values.put("damageThreshold", 140.0);
-        values.put("damageScale", 20.0);
+        values.put("permanentDamage", 0.07);
+        values.put("damageThreshold", 160.0);
+        values.put("damageScale", 40.0);
         values.put("lifeEvery", 10.0);
         values.put("lifeStep", 0.005);
         values.put("lifeCap", 0.07);
@@ -5008,14 +5084,14 @@ public record TowerBalanceConfig(
         LinkedHashMap<String, Double> values = new LinkedHashMap<>();
         values.put("threshold", 0.65);
         values.put("roundStat", 0.60);
-        values.put("permanentHealth", 0.05);
+        values.put("permanentHealth", 0.07);
         values.put("healthThreshold", 3500.0);
         values.put("healthScale", 500.0);
-        values.put("permanentDamage", 0.025);
+        values.put("permanentDamage", 0.04);
         values.put("damageThreshold", 200.0);
         values.put("damageScale", 20.0);
         values.put("lifeStep", 0.01);
-        values.put("lifeCap", 0.13);
+        values.put("lifeCap", 0.12);
         values.put("incomeDebuffResistance", 0.40);
         values.put("speedStep", 1.0);
         values.put("splashStep", 0.25);
@@ -5180,6 +5256,10 @@ public record TowerBalanceConfig(
         global.put("healthBonusScale", 500.0);
         global.put("damageBonusThreshold", 0.5);
         global.put("damageBonusScale", 0.5);
+        global.put("physicalDamageThreshold", 100.0);
+        global.put("physicalDamageScale", 100.0);
+        global.put("magicDamageThreshold", 100.0);
+        global.put("magicDamageScale", 50.0);
         global.put("bladeDamage", 19.0);
         global.put("bladeAttackIntervalTicks", 12.0);
         // 몹을 하나도 못 잡은 라운드에도 주는 기본 경험치입니다. 한 번 밀린 마왕이 영영
@@ -5218,9 +5298,11 @@ public record TowerBalanceConfig(
         legionEcho.put("cost", 260.0);
         legionEcho.put("copies", 5.0);
         putAbilities(abilities, "demon_lord_passive_legion_echo", legionEcho);
-        LinkedHashMap<String, Double> boundless = new LinkedHashMap<>();
-        boundless.put("cost", 120.0);
-        putAbilities(abilities, "demon_lord_passive_boundless", boundless);
+        LinkedHashMap<String, Double> dread = new LinkedHashMap<>();
+        dread.put("cost", 120.0);
+        dread.put("damageBonus", 0.1);
+        dread.put("defenseBonus", 0.1);
+        putAbilities(abilities, "demon_lord_passive_dread", dread);
         LinkedHashMap<String, Double> bladeWave = new LinkedHashMap<>();
         bladeWave.put("cost", 200.0);
         bladeWave.put("damageRatio", 0.6);

@@ -5,10 +5,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class TraitRegistry {
-    private static final Map<ResourceLocation, SemionTrait> TRAITS = new LinkedHashMap<>();
+    private static final Map<Identifier, SemionTrait> TRAITS = new LinkedHashMap<>();
 
     private TraitRegistry() {
     }
@@ -30,7 +30,7 @@ public final class TraitRegistry {
         return trait;
     }
 
-    public static synchronized Optional<SemionTrait> find(ResourceLocation id) {
+    public static synchronized Optional<SemionTrait> find(Identifier id) {
         BuiltInTraits.register();
         return Optional.ofNullable(TRAITS.get(id));
     }

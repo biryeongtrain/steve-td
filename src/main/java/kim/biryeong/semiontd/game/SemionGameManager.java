@@ -1,13 +1,10 @@
 package kim.biryeong.semiontd.game;
 
+import static kim.biryeong.semiontd.persistence.PersistenceRepositoryFactory.*;
+import kim.biryeong.semiontd.persistence.PersistenceRatingBackup;
+
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -51,28 +48,14 @@ import kim.biryeong.semiontd.map.GameArenaLoader;
 import kim.biryeong.semiontd.map.LobbyWorld;
 import kim.biryeong.semiontd.map.LobbyWorldLoader;
 import kim.biryeong.semiontd.music.SemionMusicService;
-import kim.biryeong.semiontd.persistence.AppliedMatchRepository;
-import kim.biryeong.semiontd.persistence.CascadingAppliedMatchRepository;
-import kim.biryeong.semiontd.persistence.CascadingMatchResultRepository;
-import kim.biryeong.semiontd.persistence.FileAppliedMatchRepository;
 import kim.biryeong.semiontd.persistence.FileMatchResultRepository;
-import kim.biryeong.semiontd.persistence.FileRatingEventRepository;
-import kim.biryeong.semiontd.persistence.FileRatingRepository;
-import kim.biryeong.semiontd.persistence.LoggingAppliedMatchRepository;
-import kim.biryeong.semiontd.persistence.LoggingMatchResultRepository;
 import kim.biryeong.semiontd.persistence.MatchResultRepository;
 import kim.biryeong.semiontd.persistence.PersistenceException;
-import kim.biryeong.semiontd.persistence.RatingEventRepository;
-import kim.biryeong.semiontd.persistence.RatingRepository;
-import kim.biryeong.semiontd.persistence.SemionPersistenceBackendType;
 import kim.biryeong.semiontd.persistence.SemionPersistenceConfig;
-import kim.biryeong.semiontd.persistence.SQLiteAppliedMatchRepository;
-import kim.biryeong.semiontd.persistence.SQLiteMatchResultRepository;
-import kim.biryeong.semiontd.persistence.SQLiteRatingEventRepository;
-import kim.biryeong.semiontd.persistence.SQLiteRatingRepository;
 import kim.biryeong.semiontd.progression.MatchProgressionReward;
 import kim.biryeong.semiontd.progression.HeroCompanionSkinPreference;
 import kim.biryeong.semiontd.progression.ProgressionService;
+import kim.biryeong.semiontd.progression.ProgressionCurrencyChange;
 import kim.biryeong.semiontd.progression.SemionPlayerProfile;
 import kim.biryeong.semiontd.rating.PlayerRatingProfile;
 import kim.biryeong.semiontd.rating.RatingAdjustment;
@@ -87,6 +70,7 @@ import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.tower.engineer.EngineerRedstoneBossBarService;
 import kim.biryeong.semiontd.tower.hero.HeroCompanionRole;
 import kim.biryeong.semiontd.tower.hero.HeroCompanionSkins;
+import kim.biryeong.semiontd.tower.magicschool.MagicSchoolSkins;
 import kim.biryeong.semiontd.tower.hero.FakePlayerTowerVisuals;
 import kim.biryeong.semiontd.tower.illager.IllagerRaidBossBarService;
 import kim.biryeong.semiontd.tower.legion.IllusionCloneSpawnQueue;
@@ -108,12 +92,11 @@ import kim.biryeong.semiontd.ui.SemionText;
 import kim.biryeong.semiontd.util.Scheduler;
 import kim.biryeong.semiontd.web.WebCatalogExporter;
 import kim.biryeong.semiontd.augment.AugmentConfig;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.Relative;
 import net.minecraft.world.level.GameType;
 
 public final class SemionGameManager {
@@ -128,8 +111,6 @@ public final class SemionGameManager {
     static final int COMBAT_SPEED_ENTRY_DELAY_TICKS = 2 * 20;
     private static final double COMBAT_SPEED_ENTRY_LOAD_RATIO = 0.8;
     private static final int COMBAT_SPEED_COOLDOWN_WAVES = 1;
-    private static final DateTimeFormatter RATING_BACKUP_TIMESTAMP_FORMATTER =
-            DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS").withZone(ZoneOffset.UTC);
 
     private EconomyConfig economyConfig = EconomyConfig.defaultConfig();
     private WaveConfig waveConfig = WaveConfig.defaultConfig();
@@ -223,6 +204,7 @@ public final class SemionGameManager {
         TOO_LATE,
         ALREADY_PARTICIPANT,
         ALREADY_PENDING,
+        JOB_REQUIRED,
         NO_SLOT,
         FAILED
     }
@@ -286,7 +268,7 @@ public final class SemionGameManager {
         JobRegistry.configureAvailability(this.jobAvailabilityConfig);
     }
 
-    public boolean setJobEnabled(ResourceLocation jobId, boolean enabled) {
+    public boolean setJobEnabled(Identifier jobId, boolean enabled) {
         if (configDir == null
                 || jobId == null
                 || JobRegistry.find(jobId).isEmpty()
@@ -509,159 +491,6 @@ public final class SemionGameManager {
         }
     }
 
-    private static Path resolveSqlitePath(Path configDir, SemionPersistenceConfig persistenceConfig) {
-        if (configDir == null || persistenceConfig.backend() != SemionPersistenceBackendType.SQLITE) {
-            return null;
-        }
-        return resolveConfiguredSqlitePath(configDir, persistenceConfig);
-    }
-
-    private static Path resolveConfiguredSqlitePath(Path configDir, SemionPersistenceConfig persistenceConfig) {
-        if (configDir == null) {
-            return null;
-        }
-        Path configured = Path.of(persistenceConfig.sqlitePath());
-        return configured.isAbsolute() ? configured : configDir.resolve(configured).normalize();
-    }
-
-    static MatchResultRepository createMatchResultRepository(
-            SemionPersistenceConfig persistenceConfig,
-            Path sqlitePath,
-            Path filePath,
-            Path configDir
-    ) {
-        MatchResultRepository file = new FileMatchResultRepository(filePath);
-        MatchResultRepository log = new LoggingMatchResultRepository(fallbackLogPath(configDir, "match-results-fallback.log"));
-        if (sqlitePath == null) {
-            if (requiresSQLite(persistenceConfig)) {
-                throw new PersistenceException("SQLite match-result repository is required but no SQLite path is available.");
-            }
-            return new CascadingMatchResultRepository(file, log, log);
-        }
-        try {
-            return new CascadingMatchResultRepository(new SQLiteMatchResultRepository(sqlitePath), file, log);
-        } catch (RuntimeException exception) {
-            if (persistenceConfig.externalDbRequired()) {
-                throw new PersistenceException("SQLite match-result repository is required but initialization failed.", exception);
-            }
-            SemionTd.LOGGER.warn("SQLite match-result repository initialization failed; using file/log fallback.", exception);
-            return new CascadingMatchResultRepository(file, log, log);
-        }
-    }
-
-    static AppliedMatchRepository createAppliedMatchRepository(
-            SemionPersistenceConfig persistenceConfig,
-            Path sqlitePath,
-            Path filePath,
-            Path configDir
-    ) {
-        AppliedMatchRepository file = new FileAppliedMatchRepository(filePath);
-        AppliedMatchRepository log = new LoggingAppliedMatchRepository(fallbackLogPath(configDir, "applied-matches-fallback.log"));
-        if (sqlitePath == null) {
-            if (requiresSQLite(persistenceConfig)) {
-                throw new PersistenceException("SQLite applied-match repository is required but no SQLite path is available.");
-            }
-            return new CascadingAppliedMatchRepository(file, log, log);
-        }
-        try {
-            return new CascadingAppliedMatchRepository(new SQLiteAppliedMatchRepository(sqlitePath), file, log);
-        } catch (RuntimeException exception) {
-            if (persistenceConfig.externalDbRequired()) {
-                throw new PersistenceException("SQLite applied-match repository is required but initialization failed.", exception);
-            }
-            SemionTd.LOGGER.warn("SQLite applied-match repository initialization failed; using file/log fallback.", exception);
-            return new CascadingAppliedMatchRepository(file, log, log);
-        }
-    }
-
-    static RatingRepository createRatingRepository(
-            SemionPersistenceConfig persistenceConfig,
-            Path sqlitePath,
-            Path filePath
-    ) {
-        RatingRepository file = new FileRatingRepository(filePath);
-        if (sqlitePath == null) {
-            if (requiresSQLite(persistenceConfig)) {
-                throw new PersistenceException("SQLite rating repository is required but no SQLite path is available.");
-            }
-            return file;
-        }
-        try {
-            RatingRepository sqlite = new SQLiteRatingRepository(sqlitePath);
-            migrateFallbackRatingProfiles(file, sqlite);
-            return sqlite;
-        } catch (RuntimeException exception) {
-            if (persistenceConfig.externalDbRequired()) {
-                throw new PersistenceException("SQLite rating repository is required but initialization failed.", exception);
-            }
-            SemionTd.LOGGER.warn("SQLite rating repository initialization failed; using file fallback.", exception);
-            return file;
-        }
-    }
-
-    static void migrateFallbackRatingProfiles(RatingRepository fallback, RatingRepository primary) {
-        int migrated = 0;
-        for (PlayerRatingProfile fallbackProfile : fallback.findAllProfiles().values()) {
-            Optional<PlayerRatingProfile> existing = primary.findProfile(fallbackProfile.playerId());
-            if (existing.isPresent()
-                    && existing.get().updatedAtEpochMillis() >= fallbackProfile.updatedAtEpochMillis()) {
-                continue;
-            }
-            primary.saveProfile(fallbackProfile.playerId(), fallbackProfile);
-            migrated++;
-        }
-        if (migrated > 0) {
-            SemionTd.LOGGER.info("Migrated {} fallback rating profiles into primary rating repository.", migrated);
-        }
-    }
-
-    static void migrateFallbackRatingEvents(RatingEventRepository fallback, RatingEventRepository primary) {
-        int migrated = 0;
-        for (RatingMatchResult fallbackResult : fallback.findAllMatchResults().values()) {
-            if (primary.findMatchResult(fallbackResult.matchId()).isPresent()) {
-                continue;
-            }
-            primary.saveMatchResult(fallbackResult);
-            migrated++;
-        }
-        if (migrated > 0) {
-            SemionTd.LOGGER.info("Migrated {} fallback rating events into primary rating-event repository.", migrated);
-        }
-    }
-
-    static RatingEventRepository createRatingEventRepository(
-            SemionPersistenceConfig persistenceConfig,
-            Path sqlitePath,
-            Path filePath
-    ) {
-        RatingEventRepository file = new FileRatingEventRepository(filePath);
-        if (sqlitePath == null) {
-            if (requiresSQLite(persistenceConfig)) {
-                throw new PersistenceException("SQLite rating-event repository is required but no SQLite path is available.");
-            }
-            return file;
-        }
-        try {
-            RatingEventRepository sqlite = new SQLiteRatingEventRepository(sqlitePath);
-            migrateFallbackRatingEvents(file, sqlite);
-            return sqlite;
-        } catch (RuntimeException exception) {
-            if (persistenceConfig.externalDbRequired()) {
-                throw new PersistenceException("SQLite rating-event repository is required but initialization failed.", exception);
-            }
-            SemionTd.LOGGER.warn("SQLite rating-event repository initialization failed; using file fallback.", exception);
-            return file;
-        }
-    }
-
-    private static boolean requiresSQLite(SemionPersistenceConfig persistenceConfig) {
-        return persistenceConfig.backend() == SemionPersistenceBackendType.SQLITE && persistenceConfig.externalDbRequired();
-    }
-
-    private static Path fallbackLogPath(Path configDir, String fileName) {
-        return configDir == null ? null : configDir.resolve(fileName);
-    }
-
     public ReloadConfigResult reloadConfigs(MinecraftServer server) {
         if (configDir == null) {
             return new ReloadConfigResult(false, false, null);
@@ -728,7 +557,8 @@ public final class SemionGameManager {
             throw new PersistenceException("Semion TD config directory is not configured.");
         }
 
-        RatingSoftResetResult result = softResetRatingStore(configDir, persistenceConfig);
+        RatingSoftResetResult result = new RatingSoftResetResult(
+                PersistenceRatingBackup.reset(configDir, persistenceConfig));
         Path ratingProfilePath = configDir.resolve("ratings.json");
         Path ratingEventPath = configDir.resolve("rating-events.json");
         Path sqlitePath = resolveSqlitePath(configDir, persistenceConfig);
@@ -746,73 +576,6 @@ public final class SemionGameManager {
         pendingRatingRetryMatchResults.clear();
         pendingRatingRetryDelayTicks = 0;
         return result;
-    }
-
-    static RatingSoftResetResult softResetRatingStore(Path configDir, SemionPersistenceConfig persistenceConfig) {
-        if (configDir == null) {
-            throw new PersistenceException("Semion TD config directory is not configured.");
-        }
-
-        Path ratingProfilePath = configDir.resolve("ratings.json");
-        Path ratingEventPath = configDir.resolve("rating-events.json");
-        SemionPersistenceConfig safePersistenceConfig = persistenceConfig == null
-                ? SemionPersistenceConfig.defaultConfig()
-                : persistenceConfig;
-        Path sqlitePath = resolveSqlitePath(configDir, safePersistenceConfig);
-        Path backupPath = configDir.resolve("rating-backups")
-                .resolve("elo-softreset-" + RATING_BACKUP_TIMESTAMP_FORMATTER.format(Instant.now()));
-
-        try {
-            Files.createDirectories(backupPath);
-            backupFileIfExists(ratingProfilePath, backupPath.resolve("ratings.json"));
-            backupFileIfExists(ratingEventPath, backupPath.resolve("rating-events.json"));
-            if (sqlitePath != null) {
-                backupSqliteRatings(sqlitePath, backupPath.resolve(sqlitePath.getFileName()));
-            }
-            Files.deleteIfExists(ratingProfilePath);
-            Files.deleteIfExists(ratingEventPath);
-            if (sqlitePath != null) {
-                clearSqliteRatings(sqlitePath);
-            }
-        } catch (IOException | SQLException exception) {
-            throw new PersistenceException("Failed to soft reset ratings with backup " + backupPath, exception);
-        }
-        return new RatingSoftResetResult(backupPath);
-    }
-
-    private static void backupFileIfExists(Path source, Path target) throws IOException {
-        if (Files.exists(source)) {
-            Files.copy(source, target);
-        }
-    }
-
-    private static void backupSqliteRatings(Path sqlitePath, Path backupPath) throws IOException, SQLException {
-        checkpointSqlite(sqlitePath);
-        Files.copy(sqlitePath, backupPath);
-    }
-
-    private static void checkpointSqlite(Path sqlitePath) throws SQLException {
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + sqlitePath.toAbsolutePath());
-             var statement = connection.createStatement()) {
-            statement.execute("PRAGMA busy_timeout = 5000");
-            statement.execute("PRAGMA wal_checkpoint(FULL)");
-        }
-    }
-
-    private static void clearSqliteRatings(Path sqlitePath) throws SQLException {
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + sqlitePath.toAbsolutePath());
-             var statement = connection.createStatement()) {
-            statement.execute("PRAGMA busy_timeout = 5000");
-            connection.setAutoCommit(false);
-            try {
-                statement.executeUpdate("DELETE FROM rating_profiles");
-                statement.executeUpdate("DELETE FROM rating_events");
-                connection.commit();
-            } catch (SQLException exception) {
-                connection.rollback();
-                throw exception;
-            }
-        }
     }
 
     public void configureMusic(SemionMusicService musicService) {
@@ -860,6 +623,7 @@ public final class SemionGameManager {
         SemionPlayerProfile profile = progressionService.profile(server, playerId, playerName);
         HeroCompanionSkins.load(playerId, profile.heroCompanionSkins());
         kim.biryeong.semiontd.tower.blueprint.BlueprintLibrary.load(playerId, profile.blueprints());
+        MagicSchoolSkins.load(playerId, profile.magicSchoolSkins());
         return profile;
     }
 
@@ -867,6 +631,13 @@ public final class SemionGameManager {
     public boolean saveBlueprints(UUID playerId, String playerName,
             java.util.List<kim.biryeong.semiontd.tower.blueprint.BlueprintDesign> designs) {
         return progressionService.saveBlueprints(playerId, playerName, designs);
+    }
+
+    public ProgressionCurrencyChange changeCosmeticCurrency(
+            Map<UUID, String> targets, long amount,
+            ProgressionCurrencyChange.Operation operation
+    ) {
+        return progressionService.changeCosmeticCurrency(targets, amount, operation);
     }
 
     public Optional<SemionPlayerProfile> grantCosmeticCurrency(UUID playerId, String playerName, long amount) {
@@ -903,7 +674,7 @@ public final class SemionGameManager {
         return ratingService.topProfiles();
     }
 
-    public SemionPlayerProfile saveSelectedJob(MinecraftServer server, UUID playerId, String playerName, ResourceLocation jobId) {
+    public SemionPlayerProfile saveSelectedJob(MinecraftServer server, UUID playerId, String playerName, Identifier jobId) {
         return progressionService.saveSelectedJob(server, playerId, playerName, jobId);
     }
 
@@ -939,6 +710,14 @@ public final class SemionGameManager {
         }
         HeroCompanionSkins.set(playerId, role, skin);
         FakePlayerTowerVisuals.refreshSkin(playerId, role);
+        return true;
+    }
+
+    public boolean saveMagicSchoolSkin(UUID playerId, String playerName, MagicSchoolSkins.Kind kind,
+            HeroCompanionSkinPreference skin) {
+        if (kind == null || !progressionService.saveMagicSchoolSkin(playerId, playerName, kind.id(), skin)) return false;
+        MagicSchoolSkins.set(playerId, kind, skin);
+        FakePlayerTowerVisuals.refreshMagicSchoolSkin(playerId, kind);
         return true;
     }
 
@@ -1007,9 +786,9 @@ public final class SemionGameManager {
 
     private void showBuildList(ServerPlayer player, boolean includeDebugGuides, int publicPage, int myPage) {
         SemionPlayerProfile profile = progressionService.profile(
-                player.getServer(),
+                player.level().getServer(),
                 player.getUUID(),
-                player.getGameProfile().getName()
+                player.getGameProfile().name()
         );
         if (includeDebugGuides) {
             dialogService.showDebugBuildGuides(player, buildGuideService, profile);
@@ -1038,7 +817,7 @@ public final class SemionGameManager {
         if (guide.isEmpty()) {
             return Optional.empty();
         }
-        progressionService.rememberRecentBuildCode(server, player.getUUID(), player.getGameProfile().getName(), guide.get().code());
+        progressionService.rememberRecentBuildCode(server, player.getUUID(), player.getGameProfile().name(), guide.get().code());
         return guide;
     }
 
@@ -1067,7 +846,7 @@ public final class SemionGameManager {
             } catch (RuntimeException exception) {
                 SemionTd.LOGGER.warn(
                         "Failed to send player {} to the Semion TD lobby; disconnecting for a clean reconnect.",
-                        player.getGameProfile().getName(),
+                        player.getGameProfile().name(),
                         exception
                 );
                 disconnectForLobbyReset(player);
@@ -1288,9 +1067,9 @@ public final class SemionGameManager {
             return SandboxStartResult.PLAYER_IN_MATCH;
         }
         try {
-            return startSandbox(server, player.getUUID(), player.getGameProfile().getName(), GameArenaLoader.load(server, mapConfig));
+            return startSandbox(server, player.getUUID(), player.getGameProfile().name(), GameArenaLoader.load(server, mapConfig));
         } catch (ArenaLoadException | RuntimeException exception) {
-            SemionTd.LOGGER.warn("Failed to start Semion TD sandbox for {}.", player.getGameProfile().getName(), exception);
+            SemionTd.LOGGER.warn("Failed to start Semion TD sandbox for {}.", player.getGameProfile().name(), exception);
             return SandboxStartResult.FAILED;
         }
     }
@@ -1307,9 +1086,9 @@ public final class SemionGameManager {
             return TutorialStartResult.PLAYER_IN_MATCH;
         }
         try {
-            return startTutorial(server, player.getUUID(), player.getGameProfile().getName(), GameArenaLoader.load(server, mapConfig));
+            return startTutorial(server, player.getUUID(), player.getGameProfile().name(), GameArenaLoader.load(server, mapConfig));
         } catch (ArenaLoadException | RuntimeException exception) {
-            SemionTd.LOGGER.warn("Failed to start Semion TD tutorial for {}.", player.getGameProfile().getName(), exception);
+            SemionTd.LOGGER.warn("Failed to start Semion TD tutorial for {}.", player.getGameProfile().name(), exception);
             return TutorialStartResult.FAILED;
         }
     }
@@ -1583,7 +1362,7 @@ public final class SemionGameManager {
         try {
             sendPlayerToLobby(server, player);
         } catch (ArenaLoadException exception) {
-            SemionTd.LOGGER.warn("Failed to return practice player {} to lobby.", player.getGameProfile().getName(), exception);
+            SemionTd.LOGGER.warn("Failed to return practice player {} to lobby.", player.getGameProfile().name(), exception);
         }
     }
 
@@ -1761,9 +1540,12 @@ public final class SemionGameManager {
         if (pendingLateJoins.containsKey(playerId)) {
             return LateJoinResult.ALREADY_PENDING;
         }
+        if (selectedLateJoinJob(server, player) == null) {
+            return LateJoinResult.JOB_REQUIRED;
+        }
         Optional<AssignedParticipant> assignment = findLateJoinAssignment(
                 playerId,
-                player.getGameProfile().getName()
+                player.getGameProfile().name()
         );
         if (assignment.isEmpty()) {
             return LateJoinResult.NO_SLOT;
@@ -1831,6 +1613,12 @@ public final class SemionGameManager {
         return Optional.empty();
     }
 
+    private SemionJob selectedLateJoinJob(MinecraftServer server, ServerPlayer player) {
+        return profile(server, player.getUUID(), player.getGameProfile().name())
+                .selectedJobResource().flatMap(JobRegistry::find)
+                .filter(SemionGame::canLateJoinWithJob).orElse(null);
+    }
+
     private boolean finishLateJoin(MinecraftServer server, UUID playerId, boolean timeout) {
         PendingLateJoin pending = pendingLateJoins.remove(playerId);
         SemionGame game = activeGame;
@@ -1839,24 +1627,24 @@ public final class SemionGameManager {
             return false;
         }
 
+        SemionJob job = selectedLateJoinJob(server, player);
+        if (job == null) {
+            player.sendSystemMessage(SemionText.prefixedError("사용 가능한 직업을 먼저 선택해야 중도 참여할 수 있습니다. 무직으로는 참가할 수 없습니다."));
+            return false;
+        }
         AssignedParticipant assignment = pending.assignment();
         SemionTeam team = game.teams().get(assignment.teamId());
         boolean slotAvailable = team != null && team.active() && !team.eliminated()
                 && team.memberIds().size() < SemionTeam.MAX_PLAYERS
                 && team.laneGroup().lane(assignment.laneId()).isEmpty();
         if (!slotAvailable) {
-            assignment = findLateJoinAssignment(playerId, player.getGameProfile().getName()).orElse(null);
+            assignment = findLateJoinAssignment(playerId, player.getGameProfile().name()).orElse(null);
         }
         if (assignment == null) {
             player.sendSystemMessage(SemionText.prefixedError("참가할 수 있는 팀에 빈자리가 없어 중도 참여가 취소되었습니다."));
             return false;
         }
 
-        SemionJob job = profile(server, playerId, player.getGameProfile().getName())
-                .selectedJobResource()
-                .flatMap(JobRegistry::find)
-                .filter(JobRegistry::isEnabled)
-                .orElse(JobRegistry.defaultJob());
         boolean joined = game.addLateParticipant(
                 server,
                 player,
@@ -1962,7 +1750,7 @@ public final class SemionGameManager {
             MinecraftServer server,
             UUID playerId,
             TraitSlot slot,
-            ResourceLocation traitId
+            Identifier traitId
     ) {
         if (!traitsEnabled()) {
             return TraitSelectionSession.SelectionResult.DISABLED;
@@ -2090,14 +1878,18 @@ public final class SemionGameManager {
 
     public void handlePlayerJoin(ServerPlayer player) {
         musicService.handlePlayerJoin(player);
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.level().getServer();
         if (server == null) {
             return;
         }
-        profile(server, player.getUUID(), player.getGameProfile().getName());
+        profile(server, player.getUUID(), player.getGameProfile().name());
         VanillaTeamBridge.ensureTeams(server);
 
         Scheduler.INSTANCE.submit((s) -> {
+            if (s.getPlayerList().getPlayer(player.getUUID()) != player
+                    || !player.connection.isAcceptingMessages()) {
+                return;
+            }
             if (activeGame != null && activeGame.rosterLocked()) {
                 if (activeGame.restorePlayerPlacement(s, player)) {
                     if (activeGame.augmentsEnabled()) {
@@ -2110,7 +1902,7 @@ public final class SemionGameManager {
                 try {
                     sendPlayerToLobby(s, player);
                 } catch (ArenaLoadException exception) {
-                    SemionTd.LOGGER.warn("Failed to send late-joining player {} to lobby.", player.getGameProfile().getName(), exception);
+                    SemionTd.LOGGER.warn("Failed to send late-joining player {} to lobby.", player.getGameProfile().name(), exception);
                 }
                 String lateJoinHint = activeGame.matchMode() == MatchMode.NORMAL && activeGame.currentRound() <= LATE_JOIN_MAX_ROUND
                         ? " 5라운드까지는 /중도참여로 경기에 참가할 수 있습니다."
@@ -2138,7 +1930,7 @@ public final class SemionGameManager {
                     sidebarHudService.refreshNow(server, activeGame, matchMode, practiceViewerIds());
                 }
             } catch (ArenaLoadException exception) {
-                SemionTd.LOGGER.warn("Failed to send player {} to lobby.", player.getGameProfile().getName(), exception);
+                SemionTd.LOGGER.warn("Failed to send player {} to lobby.", player.getGameProfile().name(), exception);
             }
         },1);
     }
@@ -2148,7 +1940,7 @@ public final class SemionGameManager {
             return;
         }
         UUID playerId = player.getUUID();
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.level().getServer();
         pendingLateJoins.remove(playerId);
         if (activeGame != null && activeGame.canConfigureRoster()) {
             activeGame.markNotReady(playerId);
@@ -2193,6 +1985,7 @@ public final class SemionGameManager {
             activeGame = null;
         }
         HeroCompanionSkins.clearAll();
+        MagicSchoolSkins.clearAll();
         clearRatingProfileCache();
         clearStartCountdown();
         clearTraitSelection();
@@ -2361,7 +2154,7 @@ public final class SemionGameManager {
                 server,
                 game,
                 player.getUUID(),
-                player.getGameProfile().getName()
+                player.getGameProfile().name()
         );
     }
 
@@ -2371,11 +2164,11 @@ public final class SemionGameManager {
                 playerId,
                 playerName
         );
-        Optional<ResourceLocation> selectedJobId = profile.selectedJobResource();
+        Optional<Identifier> selectedJobId = profile.selectedJobResource();
         if (selectedJobId.isEmpty()) {
             return false;
         }
-        ResourceLocation jobId = selectedJobId.get();
+        Identifier jobId = selectedJobId.get();
         if (!game.selectJob(playerId, jobId)) {
             SemionTd.LOGGER.warn(
                     "Ignoring persisted Semion TD job {} for player {}; the job is not available.",
@@ -2508,7 +2301,7 @@ public final class SemionGameManager {
 
     private static void playTraitSelectionChime(MinecraftServer server) {
         server.getPlayerList().getPlayers().forEach(player ->
-                player.playNotifySound(SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.MASTER, 1.0F, 1.0F)
+                kim.biryeong.semiontd.util.SemionPlayerPackets.playSound(player, SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.MASTER, 1.0F, 1.0F)
         );
     }
 
@@ -2581,7 +2374,7 @@ public final class SemionGameManager {
             );
         }
         server.getPlayerList().getPlayers().forEach(player -> {
-            player.playNotifySound(SoundEvents.STONE_BUTTON_CLICK_ON, SoundSource.MUSIC, 1557f, 1f);
+            kim.biryeong.semiontd.util.SemionPlayerPackets.playSound(player, SoundEvents.STONE_BUTTON_CLICK_ON, SoundSource.MUSIC, 1557f, 1f);
         });
     }
 
@@ -2622,7 +2415,7 @@ public final class SemionGameManager {
         } catch (RuntimeException disconnectException) {
             SemionTd.LOGGER.warn(
                     "Failed to disconnect player {} after lobby reset failure.",
-                    player.getGameProfile().getName(),
+                    player.getGameProfile().name(),
                     disconnectException
             );
         }

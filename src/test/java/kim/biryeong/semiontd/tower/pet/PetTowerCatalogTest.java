@@ -19,8 +19,8 @@ import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import kim.biryeong.semiontd.tower.TowerType;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
-import net.minecraft.world.entity.animal.CatVariants;
-import net.minecraft.world.entity.animal.Parrot;
+import net.minecraft.world.entity.animal.feline.CatVariants;
+import net.minecraft.world.entity.animal.parrot.Parrot;
 import net.minecraft.world.entity.animal.wolf.WolfVariants;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +38,46 @@ class PetTowerCatalogTest {
     @BeforeEach
     void reload() {
         ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+    }
+
+    @Test
+    void catPrimaryRangesResolveThroughDefaultsAndCatalogWithoutChangingSplash() {
+        List<TowerType> cats = List.of(PetTowers.CAT_T1, PetTowers.CAT_T2, PetTowers.CAT_T3);
+        double[] ranges = {5.5, 5.8, 6.2};
+        double[] splashRadii = {1.5, 2.0, 2.5};
+        int[] splashTargets = {2, 4, 6};
+        TowerBalanceConfig bundled = TowerBalanceConfig.defaultConfig();
+        TowerBalanceConfig code = TowerBalanceConfig.codeDefaults();
+        for (int index = 0; index < cats.size(); index++) {
+            TowerType cat = cats.get(index);
+            assertEquals(ranges[index], cat.range(), cat.id());
+            assertEquals(ranges[index], code.towers().get(cat.id()).range(), cat.id());
+            assertEquals(ranges[index], bundled.towers().get(cat.id()).range(), cat.id());
+            assertEquals(ranges[index], ProductionTowerCatalog.find(cat.id()).orElseThrow().type().range(), cat.id());
+            assertEquals(splashRadii[index], PetBalance.adultSplashRadius(cat), cat.id());
+            assertEquals(splashTargets[index], PetBalance.adultSplashMaxTargets(cat), cat.id());
+            assertEquals(0.3, PetBalance.adultSplashDamageRatio(cat), cat.id());
+        }
+    }
+
+    @Test
+    void missingCatRangeUsesNewDefaultWhileExistingOperatorRangesSurviveReload() {
+        TowerBalanceConfig defaults = TowerBalanceConfig.defaultConfig();
+        var configured = new TowerBalanceConfig(java.util.Map.of(
+                PetTowers.CAT_T1.id(), new TowerBalanceConfig.TowerStats(null, null, 3.5, null, null, null),
+                PetTowers.CAT_T2.id(), new TowerBalanceConfig.TowerStats(null, null, 8.0, null, null, null),
+                PetTowers.CAT_T3.id(), new TowerBalanceConfig.TowerStats(null, null, null, null, null, null)),
+                java.util.Map.of(), java.util.Map.of());
+        TowerBalanceConfig merged = configured.withMissingDefaults(defaults);
+        assertEquals(merged, merged.withMissingDefaults(defaults));
+        try {
+            ProductionTowerCatalogs.reloadBuiltIns(merged);
+            assertEquals(3.5, ProductionTowerCatalog.find(PetTowers.CAT_T1.id()).orElseThrow().type().range());
+            assertEquals(8.0, ProductionTowerCatalog.find(PetTowers.CAT_T2.id()).orElseThrow().type().range());
+            assertEquals(6.2, ProductionTowerCatalog.find(PetTowers.CAT_T3.id()).orElseThrow().type().range());
+        } finally {
+            ProductionTowerCatalogs.reloadBuiltIns(defaults);
+        }
     }
 
     @Test

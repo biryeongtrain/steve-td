@@ -17,13 +17,13 @@ import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class IllagerMarks {
     private static final MonsterDataKey<Boolean> MARK_TRANSFERRED = MonsterDataKey.of(
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "illager_raid/mark_transferred"), Boolean.class);
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "illager_raid/mark_transferred"), Boolean.class);
     private static final MonsterDataKey<IllagerMark> MARK = MonsterDataKey.of(
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "illager_mark"),
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "illager_mark"),
             IllagerMark.class
     );
 
@@ -31,7 +31,7 @@ public final class IllagerMarks {
     }
 
     private static MonsterDataKey<IllagerMark> omenKey(UUID owner) {
-        return MonsterDataKey.of(ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID,
+        return MonsterDataKey.of(Identifier.fromNamespaceAndPath(SemionTd.MOD_ID,
                 "illager_omen/" + owner), IllagerMark.class);
     }
 

@@ -12,6 +12,12 @@
 
 `/semiontd reload`는 타워 밸런스 설정과 카탈로그를 다시 읽습니다. 진행 중인 게임에서 새로 설치하거나 업그레이드하는 타워부터 확인하는 편이 안전합니다.
 
+## 마법학교 설정
+
+마법학교의 현재 수치와 주문·커리큘럼 규칙은 [마법학교 빌더](magic-school-builder.md)를 참고합니다. 학생별 `abilities.magic_school_*`의 `maxProficiency`, `proficiencyDamagePerPoint`, `proficiencyHealthPerPoint`가 숙련도 한도와 증가율을 결정합니다. 기본 한도는 T1 100·T2 300·T3 1000, 포인트당 증가율은 각각 0.0015·0.0008·0.0005입니다.
+
+`magic_school_global.nerfBalanceVersion=1`은 기존 이관 뒤 이전 기본값만 한 번 새 수치로 바꿉니다. 전역 커스텀 숙련도 증가율은 학생별 키로 보존하며, 이관 이후에는 학생별 키를 수정합니다. 고등 주문 수업은 `advancedSpellsCost=350`이며 주문 단계 해금과 별도로 시전자 자격만 한 단계 높입니다. 저주 제한은 `curseProficiencyThreshold=500`, `curseLowProficiencyAttackSpeedMultiplier=0.1`로 설정합니다. 마법 대학원은 `augment_balance.json`의 `proficiencyCapBonus=250`과 `balanceVersion=1`, 저주 증강의 즉시 보상은 `diamondReward=100`을 사용합니다. 운영 서버 설정은 모드가 읽을 때 이관되며 소스 수정 작업에서 직접 덮어쓰지 않습니다.
+
 ## `towers`: 타워 공통값
 
 형태:
@@ -457,3 +463,43 @@
 5. 주민 ADV 경험치와 평판은 `villagerAdv`에서 조정합니다.
 6. `/semiontd reload`를 실행합니다.
 7. `/semiontd tower list`, 타워 UI, 실제 설치/업그레이드로 값이 반영됐는지 확인합니다.
+
+
+## 공개 패치와 기본 설정의 동기화
+
+기본 설정은 `src/main/resources/semiontd/balance-defaults/tower_balance.json`과 `augment_balance.json`에서 배포된다. [적용된 패치 기록](https://semiontd.biryeong.kim/patches)의 동일 설정 경로는 마지막 적용값으로 대조한다. 표시 이름이 같은 타워도 있으므로 이름 대신 원래 타워 ID와 설정 경로를 사용한다. 틱과 초, 비율과 퍼센트를 구분한다.
+
+현재 회귀 기준은 적용 기록 18건의 최종 경로 187개다. 사용 중인 185개 경로를 공개 도감 `5e3a47fbdf1be38258b3a86ed48dcbd36792e2219f771886f3eda1fb623feab3`과 교차 확인했고, 이전 기본 파일과 달랐던 타워 81개 값과 증강 6개 값을 동기화했다. 제거된 `semiontd:decisive_delivery`의 과거 2개 값은 복원하지 않는다.
+
+`ConfigPublishedPatchContractTest`와 `src/test/resources/balance/applied-patch-values.json`은 각 값의 패치 출처를 보존하고, 새 설정 파일 생성 및 실제 런타임 로딩 후 값을 확인한다. 기존 운영 설정의 명시적 오버라이드는 유지한다. 사용자가 삭제한 운영 `tower_balance.json`은 이번 작업에서 복원하지 않았으며, 다음 승인된 서버 시작 시 새 번들의 기본 파일이 생성된다. 패치 동기화는 리팩토링의 동작 보존 검증과 별도로 수행한다.
+
+## 고양이 사거리와 영구 흡수 성장
+
+고양이의 주 공격 사거리는 `towers.t1_pet_cat.range` 5.5, `towers.t2_pet_cat.range` 5.8, `towers.t3_pet_cat.range` 6.2칸이다. 성체 스플래시 반경 1.5/2/2.5칸, 추가 대상 2/4/6기, 피해율 30%는 그대로다.
+
+아래 키는 `abilities` 아래에 있다. 영구 성장과 피해 성장의 선형 구간을 설정하며, 라운드 성장이나 생명력 흡수율을 뜻하지 않는다.
+
+| 설정 항목 | 영구 피해 | 영구 체력 | 피해 선형 구간 끝 / 이후 scale |
+| --- | ---: | ---: | ---: |
+| `base_warlock_tower` | `permanentDamage` 0.02 | `permanentHealth` 0.02 | 기존 기본 흡수 방식 유지 |
+| `ranged_warlock_tower` | `permanentDamage` 0.07 | `permanentHealth` 0.04 | `damageThreshold` 160 / `damageScale` 40 |
+| `melee_warlock_tower` | `permanentDamage` 0.04 | `permanentHealth` 0.07 | `damageThreshold` 200 / `damageScale` 20 |
+| `end_global` | `permanentDamageRatio` 0.06 | `permanentHealthRatio` 0.06 | `damageThreshold` 175 / `damageScale` 50 |
+
+원거리/근거리 흑마의 라운드 성장 50%/60%, 엔드의 라운드 피해 66%·체력 50%는 유지한다. 이 수치는 번들 및 코드 기본값이다. 이미 저장된 운영 값과 사용자 지정 값은 재로드 때 덮어쓰지 않으므로, 기존 서버에 적용하려면 위 키를 별도로 변경해야 한다.
+
+## 인컴 표시와 엘더 가디언 감속
+
+기본 인컴 이름은 한국어로 표시한다. 알려진 기본 영어 이름만 변환하고 사용자 지정 별칭은 유지한다. 저장 ID와 선택/소환 식별자는 바꾸지 않는다.
+
+엘더 가디언은 전용 곱연산 디버프를 사용한다. `summons.elder_guardian.abilityValues.attackSpeedMagnitude=0.25`는 기존 공격속도 보정 결과에 0.75를, `rangeMagnitude=0.20`은 비율·고정값·타워별 사거리 보정 결과에 0.8을 곱한다. 다른 일반 감속·사거리 감소의 가산 규칙은 유지한다. 같은 엘더 효과는 강한 값만 유지하고, 같은 세기는 남은 시간을 갱신하며 약한 재적용은 갱신하지 않는다. 인컴 디버프 저항은 감소율에 먼저 반영된다. 반경 8블록, 같은 대상 팀·라인의 가까운 타워 최대 3개, 지속 100게임틱과 해제 규칙은 유지한다.
+
+지속 100게임틱은 20TPS에서 5초, 40TPS에서 2.5초에 해당한다. 별도 확인된 기존 쿨타임 문제는 이번 곱연산 변경에 포함하지 않는다. 설정 `cooldownTicks=100`과 설명의 5초와 달리, 이 능력 Goal은 기본 AI 스케줄러에서 2게임틱마다 실행되고 100회 차감 후 다음 호출에 재시전하므로 정상 연속 실행 기준 약 202게임틱이다. 운영 시간 실측과는 구분한다. 운영 설정의 감소율만 저장해서는 새 계산식이 적용되지 않으며 수정 JAR의 별도 배포·로드가 필요하다.
+
+마왕 인컴 타워가 파견한 암흑 신관·오우거 투사·드워프 총병은 주 대상에게 한 번 피해를 준다. 같은 종류의 일반 소환은 기존 광역/관통 피해를 유지하며, 마왕 파견 인컴의 치유·오라·소환·연출 등 비피해 효과도 유지한다.
+
+## 폭발형 제물의 영구 성장 보너스 폐기
+
+흑마법사의 골드 증강 `job_warlock_towers_g1`(폭발형 제물)은 영구 성장량을 추가 증폭하지 않는다. 동일한 제물을 흡수할 때 증강 유무와 관계없이 기본·원거리·근거리의 영구 체력/피해 비율은 각각 2%/2%, 4%/7%, 7%/4%이며 라운드 성장분도 같다. 제물 최대 체력 100%의 마법 폭발, 반경 3블록, 최대 12대상 기본값과 해당 폭발의 사용자 설정은 유지한다.
+
+기존 증강 설정에 남아 있는 이 증강의 `growthBonus`만 로드 시 무시한다. 증강 ID와 다른 폭발 파라미터는 유지하며, 운영 파일을 직접 변경할 필요 없이 구버전 설정을 읽을 수 있다.

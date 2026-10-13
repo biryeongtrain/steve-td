@@ -25,7 +25,7 @@ final class EndAugments {
     static final String MINE = "job_end_towers_s";
     static final String GROWTH = "job_end_towers_g1";
     static final String BREATH = "job_end_towers_g2";
-    static final String TWIN = "job_end_towers_p";
+    static final String ASSAULT = "job_end_towers_p";
     private final List<Mine> mines = new ArrayList<>();
     private int completedTransfers;
     private boolean charged;

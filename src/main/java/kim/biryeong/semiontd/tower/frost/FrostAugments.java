@@ -23,7 +23,7 @@ import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 
 public final class FrostAugments {
@@ -32,9 +32,9 @@ public final class FrostAugments {
     public static final String THAW = "job_frost_g2";
     public static final String AGE = "job_frost_p";
     private static final MonsterDataKey<Long> LAST_STUN = MonsterDataKey.of(
-            ResourceLocation.fromNamespaceAndPath("semiontd", "frost_augment_stun"), Long.class);
+            Identifier.fromNamespaceAndPath("semiontd", "frost_augment_stun"), Long.class);
     private static final MonsterDataKey<Long> LAST_THAW = MonsterDataKey.of(
-            ResourceLocation.fromNamespaceAndPath("semiontd", "frost_augment_thaw"), Long.class);
+            Identifier.fromNamespaceAndPath("semiontd", "frost_augment_thaw"), Long.class);
     private static final Map<UUID, Wave> WAVES = new java.util.concurrent.ConcurrentHashMap<>();
 
     private FrostAugments() { }

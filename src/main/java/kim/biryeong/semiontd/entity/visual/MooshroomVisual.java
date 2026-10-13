@@ -1,6 +1,6 @@
 package kim.biryeong.semiontd.entity.visual;
 
-import net.minecraft.world.entity.animal.MushroomCow;
+import net.minecraft.world.entity.animal.cow.MushroomCow;
 
 public final class MooshroomVisual {
     private MooshroomVisual() {

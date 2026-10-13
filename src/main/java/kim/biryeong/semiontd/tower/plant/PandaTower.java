@@ -188,7 +188,7 @@ public class PandaTower extends ProductionTower {
         if (!(source.level() instanceof net.minecraft.server.level.ServerLevel level)) {
             return;
         }
-        level.getChunkSource().broadcast(source, new net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket(
+        level.getChunkSource().sendToTrackingPlayers(source, new net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket(
                 source.getId(), java.util.List.of(net.minecraft.network.syncher.SynchedEntityData.DataValue.create(
                         kim.biryeong.semiontd.mixin.accessor.PandaAccessor.semiontd$dataIdFlags(),
                         rolling ? ROLL_FLAG : (byte) 0))));
@@ -196,7 +196,7 @@ public class PandaTower extends ProductionTower {
 
     /** 구르기 한 바퀴를 서버 틱으로. 배속이 아니면 32틱, 서버가 초당 40틱이면 64틱입니다. */
     static int dashTicks(SemionTowerEntity source) {
-        return Math.max(1, kim.biryeong.semiontd.game.ClientTickScale.toServerTicks(source.getServer(), ROLL_CLIENT_TICKS));
+        return Math.max(1, kim.biryeong.semiontd.game.ClientTickScale.toServerTicks(source.level().getServer(), ROLL_CLIENT_TICKS));
     }
 
     private void endDash() {
@@ -213,7 +213,7 @@ public class PandaTower extends ProductionTower {
     private void advanceDash(SemionTowerEntity source) {
         double step = ability("chargeDistance") / Math.max(1, dashTotalTicks);
         source.move(net.minecraft.world.entity.MoverType.SELF, dashDirection.scale(step));
-        source.hurtMarked = true;
+        source.syncVelocity = true;
         sweep(source);
         dashTicksLeft--;
         if (dashTicksLeft <= 0) {
@@ -297,7 +297,7 @@ public class PandaTower extends ProductionTower {
         }
         Vec3 away = horizontal(monster.position().subtract(from)).scale(strength);
         monster.setDeltaMovement(away.x, 0.35, away.z);
-        monster.hurtMarked = true;
+        monster.syncVelocity = true;
     }
 
     /** 반경 안에서 가장 가까운 살아 있는 몹. 돌진 방향을 정하는 데만 씁니다. */

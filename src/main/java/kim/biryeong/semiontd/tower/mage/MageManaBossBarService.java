@@ -100,7 +100,7 @@ public final class MageManaBossBarService {
     private void update(ServerPlayer player, int mana, int capacity) {
         Component title = title(mana, capacity);
         UUID playerId = player.getUUID();
-        ServerBossEvent event = bossBars.computeIfAbsent(playerId, ignored -> new ServerBossEvent(
+        ServerBossEvent event = bossBars.computeIfAbsent(playerId, ignored -> new ServerBossEvent(java.util.UUID.randomUUID(),
                 title, BossEvent.BossBarColor.BLUE, BossEvent.BossBarOverlay.PROGRESS
         ));
         event.setName(title);

@@ -21,7 +21,7 @@ import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.game.PlayerLane;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
@@ -29,8 +29,8 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.phys.Vec3;
 
 final class QueenGiantRunner {
-    private static final ResourceLocation EFFECT_ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "queen_giant_run");
-    private static final ResourceLocation SPAWN_EFFECT_ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "queen_giant_spawn");
+    private static final Identifier EFFECT_ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "queen_giant_run");
+    private static final Identifier SPAWN_EFFECT_ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "queen_giant_spawn");
     private final Entity entity;
     private final SemionTowerEntity source;
     private final List<Vec3> path;
@@ -51,9 +51,9 @@ final class QueenGiantRunner {
         if (source == null) return false;
         List<Vec3> path = queen.deployedAtFinalDefense() ? finalDefensePath(lane) : reverseLanePath(lane);
         if (path.size() < 2) return false;
-        Entity giant = EntityType.GIANT.create(lane.arenaWorld(), EntitySpawnReason.TRIGGERED);
+        Entity giant = net.minecraft.world.entity.EntityTypes.GIANT.create(lane.arenaWorld(), EntitySpawnReason.TRIGGERED);
         if (giant == null) return false;
-        giant.setInvulnerable(true);
+        giant.setPermanentlyInvulnerable(true);
         giant.setSilent(true);
         giant.setCustomName(Component.literal("자이언트"));
         giant.setCustomNameVisible(true);

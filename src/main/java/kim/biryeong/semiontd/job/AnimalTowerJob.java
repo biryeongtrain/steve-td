@@ -7,10 +7,10 @@ import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.animal.AnimalTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class AnimalTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "animal_towers");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "animal_towers");
     private static final Set<String> ALLOWED_TOWER_IDS = Set.of(
             AnimalTowers.T1_PIG_TOWER.id(),
             AnimalTowers.T2_PIG_TOWER.id(),

@@ -24,7 +24,7 @@ import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /** State belongs to the original logical tower and survives an ordinary upgrade. */
 public final class UndeadAugments {
@@ -240,6 +240,6 @@ public final class UndeadAugments {
     }
 
     private static <T> TowerDataKey<T> key(String name, Class<T> type) {
-        return TowerDataKey.of(ResourceLocation.fromNamespaceAndPath("semiontd", "undead_augment/" + name), type);
+        return TowerDataKey.of(Identifier.fromNamespaceAndPath("semiontd", "undead_augment/" + name), type);
     }
 }

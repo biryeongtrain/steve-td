@@ -76,6 +76,9 @@
 | `/semiontd playerlimit list` | 정원 초과 입장 허용 목록을 봅니다. |
 | `/semiontd cosmetic add <id> <price> [slot]` | 주 손 아이템을 1개로 복사해 판매 목록에 추가합니다. `slot`은 `head` 또는 `offhand`이며 생략하면 `head`입니다. |
 | `/semiontd cosmetic points give <player> <amount>` | 지정한 플레이어에게 치장 포인트를 지급하고 즉시 저장합니다. 권한 레벨 2 이상만 사용할 수 있습니다. |
+| `/semiontd cosmetic points take <player> <amount>` | 지정한 한 플레이어의 치장 포인트를 회수하고 저장합니다. 잔액 부족 시 회수하지 않습니다. 권한 레벨 2. |
+| `/semiontd cosmetic points giveall <amount>` | 실행 시점의 접속자 전원에게 치장 포인트를 각각 지급합니다. 권한 레벨 2. |
+| `/semiontd cosmetic points takeall <amount>` | 실행 시점의 접속자 전원에게 치장 포인트를 각각 회수합니다. 권한 레벨 2. |
 | `/semiontd cosmetic update <id> <price> [slot]` | 기존 상품을 주 손 아이템과 새 가격으로 교체합니다. 슬롯을 생략하면 기존 슬롯을 유지합니다. |
 | `/semiontd cosmetic remove <id>` | 상품을 판매 목록에서 제거하고 해당 상품의 착용을 해제합니다. 구매 기록은 유지합니다. |
 | `/semiontd cosmetic list` | 등록된 상품 ID, 가격, 착용 슬롯을 봅니다. |
@@ -169,3 +172,15 @@
 | `/semiontd-debug buildguide [list/detail/towerui]` | 빌드 가이드 화면을 디버그합니다. |
 
 디버그 명령어는 운영자가 서버 상태를 확인하거나 UI를 점검할 때만 사용합니다.
+
+직업 관리 버튼과 `job enable`/`job disable` 자동완성은 `villager_towers`처럼 `semion-td:`를 생략한 ID를 사용합니다. 예: `/semiontd job disable villager_towers`, `/semiontd job enable villager_towers`. OP 권한 레벨 2가 필요하며, 저장된 `jobs.json`의 ID는 기존 전체 ID를 유지합니다.
+
+### 접속자 전체 치장 포인트 조정
+
+게임 종료 보상과 같은 `profiles.json`의 `cosmeticCurrency`를 조정합니다. `/semiontd cosmetic points giveall 100`은 현재 접속자 한 명당 100포인트를 지급하고, `takeall 100`은 한 명당 100포인트를 회수합니다. 로비·경기 중·관전자 등 실제 서버 접속자 모두가 대상이며, 오프라인 저장 계정은 제외합니다. UUID가 중복돼도 한 번만 반영합니다.
+
+수량은 1 이상 `long` 범위의 정수입니다. 한 명이라도 잔액이 부족하거나 개인 잔액·합산 총량이 범위를 초과하면 전체 작업을 취소합니다. 저장은 임시 파일 작성 후 원자적 교체로 한 번에 반영하며, 읽기·저장·원자적 교체 실패 시 변경하지 않습니다. 파일시스템이 원자적 교체를 지원하지 않으면 실패로 처리합니다. 결과에는 대상 인원과 실제 지급·회수 총량이 표시되고 실패 시 실제 반영량은 0입니다. 재실행은 새로운 지급·회수이므로 성공 메시지 확인 후 사용합니다.
+
+기존 단일 지급 `/semiontd cosmetic points give <player> <amount>`는 그대로 유지합니다. 단일 회수는 `/semiontd cosmetic points take <player> <amount>`이며, 기존 지급과 같은 플레이어 조회 방식을 사용합니다. 정확히 한 대상만 허용하고, 잔액 부족·저장 실패 시 반영량은 0입니다. 치장 소유권·선택·승패 기록과 경기 중 다이아·에메랄드는 바꾸지 않습니다.
+
+중도 참여는 사용 가능한 직업을 선택한 플레이어만 요청할 수 있습니다. 직업 미선택·무직·사용 불가 직업은 요청 및 특성 선택 완료 시 다시 검사하여 거절합니다. 기존 참가자의 경기 직업과 재접속 복구, 관전, 5라운드까지의 유효한 중도 참여 규칙은 유지됩니다.

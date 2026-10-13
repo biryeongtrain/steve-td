@@ -3,14 +3,14 @@ package kim.biryeong.semiontd.api.area;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 
 public record AreaVfxContext(
-        ResourceLocation effectId,
-        ResourceLocation styleId,
+        Identifier effectId,
+        Identifier styleId,
         UUID sourceTowerId,
-        ResourceLocation sourceTowerTypeId,
+        Identifier sourceTowerTypeId,
         AreaVfxPalette palette,
         Vec3 source,
         Vec3 center,

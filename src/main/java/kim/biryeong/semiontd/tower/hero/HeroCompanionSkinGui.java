@@ -36,7 +36,7 @@ public final class HeroCompanionSkinGui extends SimpleGui {
             HeroCompanionSkinPreference skin = HeroCompanionSkins.preference(player.getUUID(), role).orElse(null);
             GameProfile profile = HeroCompanionSkins.profile(player.getUUID(), role, skin);
             GuiElementBuilder roleButton = new GuiElementBuilder(Items.PLAYER_HEAD)
-                    .setSkullOwner(profile, player.getServer())
+                    .setProfile(profile)
                     .setName(Component.literal(role.displayName() + " 스킨")
                             .withStyle(skin == null ? ChatFormatting.YELLOW : ChatFormatting.GREEN))
                     .addLoreLine(Component.literal(skin == null
@@ -44,20 +44,20 @@ public final class HeroCompanionSkinGui extends SimpleGui {
                             : "적용 중: " + skin.sourceName()).withStyle(ChatFormatting.GRAY))
                     .addLoreLine(Component.literal("클릭: 플레이어 이름 검색").withStyle(ChatFormatting.AQUA))
                     .glow(skin != null)
-                    .setCallback((slot, type, action) ->
+                    .setCallback((slot, type, action, clickedGui) ->
                             new HeroCompanionSkinInputGui(player, gameManager, role).open());
             setSlot(ROLE_SLOTS[index], roleButton);
 
-            GuiElementBuilder resetButton = new GuiElementBuilder(skin == null ? Items.GRAY_DYE : Items.BARRIER)
+            GuiElementBuilder resetButton = new GuiElementBuilder(skin == null ? Items.DYE.gray() : Items.BARRIER)
                     .setName(Component.literal(role.displayName() + " 기본 스킨 복원")
                             .withStyle(skin == null ? ChatFormatting.DARK_GRAY : ChatFormatting.RED))
                     .addLoreLine(Component.literal(skin == null ? "이미 기본 스킨입니다." : "저장된 스킨을 삭제합니다."));
             if (skin != null) {
-                resetButton.setCallback((slot, type, action) -> {
+                resetButton.setCallback((slot, type, action, clickedGui) -> {
                     if (gameManager.saveHeroCompanionSkin(
-                            player.getServer(),
+                            player.level().getServer(),
                             player.getUUID(),
-                            player.getGameProfile().getName(),
+                            player.getGameProfile().name(),
                             role,
                             null
                     )) {
@@ -75,6 +75,6 @@ public final class HeroCompanionSkinGui extends SimpleGui {
         }
         setSlot(31, new GuiElementBuilder(Items.BARRIER)
                 .setName(Component.literal("닫기").withStyle(ChatFormatting.RED))
-                .setCallback((slot, type, action) -> close()));
+                .setCallback((slot, type, action, clickedGui) -> close()));
     }
 }

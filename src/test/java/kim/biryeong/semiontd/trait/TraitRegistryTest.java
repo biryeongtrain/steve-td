@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import kim.biryeong.semiontd.SemionTd;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.junit.jupiter.api.Test;
 
 final class TraitRegistryTest {
@@ -21,7 +21,7 @@ final class TraitRegistryTest {
 
     @Test
     void duplicateTraitIdsAreRejected() {
-        ResourceLocation id = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "duplicate_test_trait");
+        Identifier id = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "duplicate_test_trait");
         TraitRegistry.register(new SemionTrait(id, Component.literal("중복 테스트"), List.of()) {});
 
         assertThrows(IllegalArgumentException.class, () ->
@@ -30,7 +30,7 @@ final class TraitRegistryTest {
 
     @Test
     void loadoutSnapshotFreezesRegisteredTraitVersion() {
-        ResourceLocation id = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "versioned_test_trait");
+        Identifier id = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "versioned_test_trait");
         TraitRegistry.register(new SemionTrait(id, 3, Component.literal("버전 테스트"), List.of()) {});
 
         TraitLoadoutSnapshot snapshot = TraitLoadoutSnapshot.from(

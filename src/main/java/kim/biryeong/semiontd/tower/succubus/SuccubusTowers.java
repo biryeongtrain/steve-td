@@ -15,16 +15,16 @@ import kim.biryeong.semiontd.entity.visual.SheepVisual;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.animal.Rabbit;
+import net.minecraft.world.entity.animal.rabbit.Rabbit;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.Blocks;
 
 public final class SuccubusTowers {
-    public static final TowerType DREAM_DUST_T1 = tower("succubus_dream_dust_t1", "꿈가루 타워", 45, 65, 7, 7, 14, 0, EntityType.ALLAY,
+    public static final TowerType DREAM_DUST_T1 = tower("succubus_dream_dust_t1", "꿈가루 타워", 45, 65, 7, 7, 14, 0, net.minecraft.world.entity.EntityTypes.ALLAY,
             List.of("<gray>공격을 반복해 적에게 꿈을 쌓습니다.</gray>", "<light_purple>{ability.stackEvery:integer}번째 적중마다 꿈 1스택을 부여합니다.</light_purple>"));
-    public static final TowerType DREAM_DUST_T2 = tower("succubus_dream_dust_t2", "짙은 꿈가루 타워", 100, 105, 8, 13, 12, 0, EntityType.ALLAY,
+    public static final TowerType DREAM_DUST_T2 = tower("succubus_dream_dust_t2", "짙은 꿈가루 타워", 100, 105, 8, 13, 12, 0, net.minecraft.world.entity.EntityTypes.ALLAY,
             DREAM_DUST_T1.description());
-    public static final TowerType DREAM_DUST_T3 = tower("succubus_dream_dust_t3", "심층 꿈가루 타워", 210, 155, 9, 23, 10, 0, EntityType.ALLAY,
+    public static final TowerType DREAM_DUST_T3 = tower("succubus_dream_dust_t3", "심층 꿈가루 타워", 210, 155, 9, 23, 10, 0, net.minecraft.world.entity.EntityTypes.ALLAY,
             DREAM_DUST_T1.description());
 
     private static final EntityVisual PURPLE_SHEEP = SheepVisual.builder().color(DyeColor.PURPLE).build();
@@ -46,13 +46,13 @@ public final class SuccubusTowers {
     public static final TowerType LULLABY_T3 = support("succubus_lullaby_t3", "심층 자장가 타워", 240, 170, 80, WHITE_RABBIT,
             5.5, 4, 7);
 
-    public static final TowerType NIGHTMARE_T1 = tower("succubus_nightmare_t1", "악몽 타워", 65, 70, 8, 14, 16, 0, EntityType.PHANTOM,
+    public static final TowerType NIGHTMARE_T1 = tower("succubus_nightmare_t1", "악몽 타워", 65, 70, 8, 14, 16, 0, net.minecraft.world.entity.EntityTypes.PHANTOM,
             List.of("<gray>꿈이 깊은 적을 우선 공격하는 마법 타워입니다.</gray>",
                     "<light_purple>꿈 {ability.minimumStacks:integer}스택 이상인 적에게 꿈 1스택을 추가합니다.</light_purple>",
                     "<red>잠든 적에게 주는 피해가 {ability.sleepingDamageBonus:percent} 증가합니다.</red>"));
-    public static final TowerType NIGHTMARE_T2 = tower("succubus_nightmare_t2", "가위눌림 타워", 135, 110, 9, 26, 14, 0, EntityType.PHANTOM,
+    public static final TowerType NIGHTMARE_T2 = tower("succubus_nightmare_t2", "가위눌림 타워", 135, 110, 9, 26, 14, 0, net.minecraft.world.entity.EntityTypes.PHANTOM,
             NIGHTMARE_T1.description());
-    public static final TowerType NIGHTMARE_T3 = tower("succubus_nightmare_t3", "심연의 악몽 타워", 270, 160, 10, 46, 12, 0, EntityType.PHANTOM,
+    public static final TowerType NIGHTMARE_T3 = tower("succubus_nightmare_t3", "심연의 악몽 타워", 270, 160, 10, 46, 12, 0, net.minecraft.world.entity.EntityTypes.PHANTOM,
             NIGHTMARE_T1.description());
 
     public static final TowerType SUCCUBUS = TowerType.builder("succubus", "서큐버스 타워")

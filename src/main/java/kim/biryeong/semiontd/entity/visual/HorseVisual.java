@@ -1,7 +1,7 @@
 package kim.biryeong.semiontd.entity.visual;
 
-import net.minecraft.world.entity.animal.horse.Markings;
-import net.minecraft.world.entity.animal.horse.Variant;
+import net.minecraft.world.entity.animal.equine.Markings;
+import net.minecraft.world.entity.animal.equine.Variant;
 
 public final class HorseVisual {
     private HorseVisual() {

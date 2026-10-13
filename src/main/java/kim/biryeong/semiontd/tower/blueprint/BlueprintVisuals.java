@@ -54,10 +54,14 @@ public final class BlueprintVisuals {
         if (visual == null || visual.blockbenchModel().isPresent()) {
             return new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ARMOR_STAND);
         }
-        net.minecraft.resources.ResourceLocation id = net.minecraft.resources.ResourceLocation.tryParse(visual.entityTypeId());
+        net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(visual.entityTypeId());
         var type = id == null ? null : net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getOptional(id).orElse(null);
-        var egg = net.minecraft.world.item.SpawnEggItem.byId(type);
-        return new net.minecraft.world.item.ItemStack(egg != null ? egg : net.minecraft.world.item.Items.EGG);
+        if (type == null) {
+            return new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.EGG);
+        }
+        return net.minecraft.world.item.SpawnEggItem.byId(type)
+                .map(net.minecraft.world.item.ItemStack::new)
+                .orElseGet(() -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.EGG));
     }
 
     private static boolean borrowable(ProductionTowerCatalog.CatalogEntry entry) {

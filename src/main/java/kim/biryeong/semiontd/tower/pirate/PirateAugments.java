@@ -25,7 +25,7 @@ import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
 import kim.biryeong.semiontd.tower.succubus.SuccubusDreams;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class PirateAugments {
     public static final String LOOT = "job_pirate_s";
@@ -33,7 +33,7 @@ public final class PirateAugments {
     public static final String FLEET = "job_pirate_g2";
     public static final String CANNON = "job_pirate_p";
     private static final TowerDataKey<Integer> OPENING = TowerDataKey.of(
-            ResourceLocation.fromNamespaceAndPath("semiontd", "pirate_augment_opening"), Integer.class);
+            Identifier.fromNamespaceAndPath("semiontd", "pirate_augment_opening"), Integer.class);
     private static final Map<UUID, State> STATES = new java.util.concurrent.ConcurrentHashMap<>();
 
     private PirateAugments() { }

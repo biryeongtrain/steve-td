@@ -27,6 +27,13 @@ public enum WarlockPath {
     boolean acceptsSacrificeTower(TowerType type) {
         return switch (this) {
             case BASE -> !WarlockTowers.isWarlockCore(type);
+            case RANGED, MELEE -> WarlockTowers.isRangedSlave(type) || WarlockTowers.isMeleeSlave(type);
+        };
+    }
+
+    boolean acceptsPassiveTower(TowerType type) {
+        return switch (this) {
+            case BASE -> false;
             case RANGED -> WarlockTowers.isRangedSlave(type);
             case MELEE -> WarlockTowers.isMeleeSlave(type);
         };

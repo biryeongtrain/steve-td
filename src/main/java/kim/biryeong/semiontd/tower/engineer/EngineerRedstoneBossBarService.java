@@ -109,7 +109,7 @@ public final class EngineerRedstoneBossBarService {
     private void update(ServerPlayer player, int count, int maximum) {
         Component title = title(count, maximum);
         UUID playerId = player.getUUID();
-        ServerBossEvent event = bossBars.computeIfAbsent(playerId, ignored -> new ServerBossEvent(
+        ServerBossEvent event = bossBars.computeIfAbsent(playerId, ignored -> new ServerBossEvent(java.util.UUID.randomUUID(),
                 title, BossEvent.BossBarColor.RED, BossEvent.BossBarOverlay.PROGRESS
         ));
         event.setName(title);

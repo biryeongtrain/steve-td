@@ -67,6 +67,65 @@ final class OceanAugmentsTest {
     }
 
     @Test
+    void recyclePreservesLogicalIdTiesAndFirstAllocationOrder() {
+        OceanTower first = fish();
+        OceanTower second = fish();
+        OceanTower lowerId = first.logicalId().compareTo(second.logicalId()) < 0 ? first : second;
+        OceanTower higherId = lowerId == first ? second : first;
+        OceanTower medium = fish();
+        medium.addWater(200);
+        OceanTower full = fish();
+        full.addWater(full.waterSoftCap() - full.water());
+        Map<OceanTower, Double> allocations = OceanWaterTower.supplyAllocations(
+                List.of(medium, full, higherId, full, lowerId), 0.1, true);
+        assertEquals(List.of(medium, lowerId, higherId), List.copyOf(allocations.keySet()));
+        assertEquals(Double.doubleToRawLongBits((0.1 + 0.1) + 0.1),
+                Double.doubleToRawLongBits(allocations.get(lowerId)));
+        assertEquals(0.1, allocations.get(medium));
+        assertEquals(0.1, allocations.get(higherId));
+        assertEquals(100, lowerId.water());
+        assertEquals(100, higherId.water());
+        assertEquals(300, medium.water());
+        assertEquals(full.waterSoftCap(), full.water());
+    }
+
+    @Test
+    void recyclePreservesSoftCapToleranceAndNoRecipientCases() {
+        OceanTower capped = fish();
+        capped.addWater(capped.waterSoftCap() - capped.water() - 0.5e-9);
+        OceanTower below = fish();
+        below.addWater(below.waterSoftCap() - below.water() - 2.0e-9);
+        assertTrue(capped.water() + 1.0e-9 >= capped.waterSoftCap());
+        assertTrue(below.water() + 1.0e-9 < below.waterSoftCap());
+        assertEquals(Map.of(below, 14.0), OceanWaterTower.supplyAllocations(List.of(capped, below), 7, true));
+        assertTrue(OceanWaterTower.supplyAllocations(List.of(capped, capped), 7, true).isEmpty());
+        assertTrue(OceanWaterTower.supplyAllocations(List.of(), 7, true).isEmpty());
+        assertEquals(List.of(capped, below), List.copyOf(
+                OceanWaterTower.supplyAllocations(List.of(capped, below), 7, false).keySet()));
+    }
+
+    @Test
+    void recyclePreservesSequentialDoubleAccumulationForEveryAmount() {
+        OceanTower full = fish();
+        full.addWater(full.waterSoftCap() - full.water());
+        OceanTower low = fish();
+        OceanTower medium = fish();
+        medium.addWater(200);
+        List<OceanTower> targets = List.of(full, low, full, full, medium, medium);
+        for (double amount : new double[]{0.0, -0.0, -2.5, 0.1, Double.MIN_VALUE,
+                Double.MAX_VALUE, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NaN}) {
+            Map<OceanTower, Double> allocations = OceanWaterTower.supplyAllocations(targets, amount, true);
+            assertEquals(List.of(low, medium), List.copyOf(allocations.keySet()));
+            assertEquals(Double.doubleToRawLongBits(((amount + amount) + amount) + amount),
+                    Double.doubleToRawLongBits(allocations.get(low)));
+            assertEquals(Double.doubleToRawLongBits(amount + amount),
+                    Double.doubleToRawLongBits(allocations.get(medium)));
+            assertEquals(100, low.water());
+            assertEquals(300, medium.water());
+        }
+    }
+
+    @Test
     void currentCountsActualSpendAccumulatesAndConsumesOnePerBasicAttack() {
         OceanTower fish = fish("g2");
         fish.onWaveStarted(null, 1);

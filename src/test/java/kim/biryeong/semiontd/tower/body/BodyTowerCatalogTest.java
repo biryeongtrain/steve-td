@@ -72,8 +72,8 @@ class BodyTowerCatalogTest {
         assertVisual(BodyTowers.HEART_T2, Blocks.REDSTONE_BLOCK, 0.95);
         assertVisual(BodyTowers.HEART_T3, Blocks.FIRE_CORAL_BLOCK, 0.95);
 
-        assertVisual(BodyTowers.BRAIN_T1, Blocks.PINK_CONCRETE_POWDER, 0.95);
-        assertVisual(BodyTowers.BRAIN_T2, Blocks.PINK_WOOL, 0.95);
+        assertVisual(BodyTowers.BRAIN_T1, Blocks.CONCRETE_POWDER.pink(), 0.95);
+        assertVisual(BodyTowers.BRAIN_T2, Blocks.WOOL.pink(), 0.95);
         assertVisual(BodyTowers.BRAIN_T3, Blocks.BRAIN_CORAL_BLOCK, 0.95);
 
         assertVisual(BodyTowers.SKIN_T1, Blocks.OAK_WOOD, 0.95);
@@ -85,7 +85,7 @@ class BodyTowerCatalogTest {
         assertVisual(BodyTowers.EYE_T3, Blocks.PEARLESCENT_FROGLIGHT, 0.95);
 
         assertVisual(BodyTowers.GENITAL_T1, Blocks.LEVER, 1.1);
-        assertVisual(BodyTowers.GENITAL_T2, Blocks.LIGHTNING_ROD, 1.1);
+        assertVisual(BodyTowers.GENITAL_T2, Blocks.LIGHTNING_ROD.weathering().unaffected(), 1.1);
         assertVisual(BodyTowers.GENITAL_T3, Blocks.END_ROD, 1.1);
     }
 

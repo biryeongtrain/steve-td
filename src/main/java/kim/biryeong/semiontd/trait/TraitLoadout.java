@@ -1,9 +1,9 @@
 package kim.biryeong.semiontd.trait;
 
 import java.util.Objects;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
-public record TraitLoadout(ResourceLocation primaryTraitId, ResourceLocation secondaryTraitId) {
+public record TraitLoadout(Identifier primaryTraitId, Identifier secondaryTraitId) {
     public TraitLoadout {
         primaryTraitId = primaryTraitId == null ? BuiltInTraits.NONE_ID : primaryTraitId;
         secondaryTraitId = secondaryTraitId == null ? BuiltInTraits.NONE_ID : secondaryTraitId;
@@ -17,18 +17,18 @@ public record TraitLoadout(ResourceLocation primaryTraitId, ResourceLocation sec
         return !isNone(primaryTraitId) && Objects.equals(primaryTraitId, secondaryTraitId);
     }
 
-    public ResourceLocation traitId(TraitSlot slot) {
+    public Identifier traitId(TraitSlot slot) {
         return slot == TraitSlot.PRIMARY ? primaryTraitId : secondaryTraitId;
     }
 
-    public TraitLoadout with(TraitSlot slot, ResourceLocation traitId) {
-        ResourceLocation normalized = traitId == null ? BuiltInTraits.NONE_ID : traitId;
+    public TraitLoadout with(TraitSlot slot, Identifier traitId) {
+        Identifier normalized = traitId == null ? BuiltInTraits.NONE_ID : traitId;
         return slot == TraitSlot.PRIMARY
                 ? new TraitLoadout(normalized, secondaryTraitId)
                 : new TraitLoadout(primaryTraitId, normalized);
     }
 
-    public static boolean isNone(ResourceLocation traitId) {
+    public static boolean isNone(Identifier traitId) {
         return traitId == null || BuiltInTraits.NONE_ID.equals(traitId);
     }
 }

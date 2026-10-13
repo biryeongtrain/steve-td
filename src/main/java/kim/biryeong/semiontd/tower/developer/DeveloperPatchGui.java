@@ -95,7 +95,7 @@ public final class DeveloperPatchGui extends SimpleGui {
 
         setSlot(CLOSE_SLOT, new GuiElementBuilder(Items.BARRIER)
                 .setName(Component.literal("닫기").withStyle(ChatFormatting.RED))
-                .setCallback((slot, type, action) -> close()));
+                .setCallback((slot, type, action, clickedGui) -> close()));
     }
 
     private void drawStatus(DeveloperStates.PlayerState state) {
@@ -156,7 +156,7 @@ public final class DeveloperPatchGui extends SimpleGui {
                 button.addLoreLine(Component.literal("다음 라운드부터 적용")
                         .withStyle(ChatFormatting.YELLOW));
             }
-            button.setCallback((slot, type, action) -> {
+            button.setCallback((slot, type, action, clickedGui) -> {
                 if (!patchesEditable()) {
                     notify("준비 또는 웨이브 단계에만 패치할 수 있습니다.");
                     return;
@@ -194,7 +194,7 @@ public final class DeveloperPatchGui extends SimpleGui {
                 button.addLoreLine(Component.literal("읽기 전용 버그로 잠겨 있습니다")
                         .withStyle(ChatFormatting.RED));
             }
-            button.setCallback((slot, type, action) -> {
+            button.setCallback((slot, type, action, clickedGui) -> {
                 if (!preparationEditable()) {
                     notify("준비 단계에만 최적화할 수 있습니다.");
                     return;
@@ -212,7 +212,7 @@ public final class DeveloperPatchGui extends SimpleGui {
         boolean visible = state.bugsVisible();
         int index = 0;
         for (DeveloperBug bug : bugs) {
-            GuiElementBuilder button = new GuiElementBuilder(visible ? bug.item() : Items.GRAY_DYE)
+            GuiElementBuilder button = new GuiElementBuilder(visible ? bug.item() : Items.DYE.gray())
                     .setName(Component.literal(visible ? bug.displayName() : "정체불명의 버그")
                             .withStyle(ChatFormatting.LIGHT_PURPLE));
             if (visible) {
@@ -230,7 +230,7 @@ public final class DeveloperPatchGui extends SimpleGui {
             boolean canDebug = preparationEditable() && state.debugRemovalsRemaining() > 0;
             button.addLoreLine(Component.literal(canDebug ? "클릭: 버그 제거" : "디버거가 필요합니다")
                     .withStyle(canDebug ? ChatFormatting.AQUA : ChatFormatting.DARK_GRAY));
-            button.setCallback((slot, type, action) -> {
+            button.setCallback((slot, type, action, clickedGui) -> {
                 if (!preparationEditable()) {
                     notify("준비 단계에만 제거할 수 있습니다.");
                     return;
@@ -245,7 +245,7 @@ public final class DeveloperPatchGui extends SimpleGui {
                     .addLoreLine(Component.literal("클릭 후 같은 라인의 다른 자기 성장 타워를 선택")
                             .withStyle(ChatFormatting.GRAY))
                     .addLoreLine(Component.literal("웅크린 채 타워 클릭: 취소").withStyle(ChatFormatting.DARK_GRAY));
-            reproduce.setCallback((slot, type, action) -> {
+            reproduce.setCallback((slot, type, action, clickedGui) -> {
                 if (!preparationEditable()) {
                     notify("준비 단계에만 재현할 수 있습니다.");
                     return;
@@ -262,7 +262,7 @@ public final class DeveloperPatchGui extends SimpleGui {
             index++;
         }
         if (bugs.isEmpty()) {
-            setSlot(BUG_ROW, new GuiElementBuilder(Items.LIME_DYE)
+            setSlot(BUG_ROW, new GuiElementBuilder(Items.DYE.lime())
                     .setName(Component.literal("버그 없음").withStyle(ChatFormatting.GREEN))
                     .addLoreLine(Component.literal("이 타워는 깨끗합니다.").withStyle(ChatFormatting.GRAY)));
         }
@@ -278,7 +278,7 @@ public final class DeveloperPatchGui extends SimpleGui {
                         + Math.round(DeveloperBalance.maintenanceDamageBonus() * 100.0) + "%")
                         .withStyle(ChatFormatting.GREEN))
                 .addLoreLine(Component.literal("메모리 누수도 함께 초기화됩니다").withStyle(ChatFormatting.GRAY))
-                .setCallback((slot, type, action) -> {
+                .setCallback((slot, type, action, clickedGui) -> {
                     if (!preparationEditable()) {
                         notify("준비 단계에만 점검할 수 있습니다.");
                         return;
@@ -291,7 +291,7 @@ public final class DeveloperPatchGui extends SimpleGui {
     private void drawPin(PlayerLane lane, DeveloperStates.PlayerState state) {
         boolean pinned = DeveloperTowerData.isPinned(tower);
         int used = DeveloperPatchService.pinnedCount(lane, player.getUUID());
-        setSlot(PIN_SLOT, new GuiElementBuilder(pinned ? Items.LIME_DYE : Items.IRON_INGOT)
+        setSlot(PIN_SLOT, new GuiElementBuilder(pinned ? Items.DYE.lime() : Items.IRON_INGOT)
                 .setName(Component.literal(pinned ? "버전 고정 해제" : "버전 고정")
                         .withStyle(pinned ? ChatFormatting.GREEN : ChatFormatting.WHITE))
                 .addLoreLine(Component.literal("고정된 타워는 패치도 버그도 재현도 걸리지 않습니다")
@@ -299,7 +299,7 @@ public final class DeveloperPatchGui extends SimpleGui {
                 .addLoreLine(Component.literal("고정 슬롯 " + used + "/" + state.versionPinSlots())
                         .withStyle(ChatFormatting.DARK_GRAY))
                 .glow(pinned)
-                .setCallback((slot, type, action) -> {
+                .setCallback((slot, type, action, clickedGui) -> {
                     if (!preparationEditable()) {
                         notify("준비 단계에만 고정할 수 있습니다.");
                         return;

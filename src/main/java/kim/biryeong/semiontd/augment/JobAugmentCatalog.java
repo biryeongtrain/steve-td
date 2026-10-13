@@ -63,8 +63,8 @@ final class JobAugmentCatalog {
                     "제물을 흡수하면 제물이 있던 곳에서 가장 가까운 적 1기에게 제물 공격력의 {damageRatio:percent} 피해를 줍니다. 제물의 원래 공격 유형을 사용합니다.",
                     Map.of("damageRatio", 3.0)),
             card("J05-G1", "warlock_towers", "g1", "폭발형 제물", GOLD,
-                    "흡수한 제물이 반경 {radius}블록으로 폭발해 최대 {maxTargets}기의 적에게 제물 최대 체력의 {healthRatio:percent} 마법 피해를 줍니다. 흡수로 얻는 영구 성장량이 {growthBonus:percent} 증가합니다.",
-                    Map.of("radius", 3.0, "maxTargets", 12.0, "healthRatio", 1.0, "growthBonus", 0.25)),
+                    "흡수한 제물이 반경 {radius}블록으로 폭발해 최대 {maxTargets}기의 적에게 제물 최대 체력의 {healthRatio:percent} 마법 피해를 줍니다.",
+                    Map.of("radius", 3.0, "maxTargets", 12.0, "healthRatio", 1.0)),
             card("J05-G2", "warlock_towers", "g2", "(진)각성", GOLD,
                     "각성을 즉시 해금합니다. 다른 아군이 살아있어도 체력 {healthThreshold:percent} 이하에서 각성하며, 각성 중 주는 피해가 {damageBonus:percent} 증가합니다.",
                     Map.of("healthThreshold", 0.6, "damageBonus", 0.2)),
@@ -128,9 +128,10 @@ final class JobAugmentCatalog {
             card("J10-G2", "end_towers", "g2", "삼중 브레스", GOLD,
                     "엔더 드래곤이 {intervalTicks:seconds}초마다 {burstIntervalTicks}틱 간격으로 브레스를 {shots}번 발사합니다. 각 브레스는 길이 {length}블록, 폭 {width}블록이며 최대 {maxTargets}기에게 공격력의 {damageRatio:percent} 마법 피해를 줍니다. 표적이 유효하지 않으면 기존 사거리에서 다시 고릅니다.",
                     Map.of("intervalTicks", 120.0, "burstIntervalTicks", 4.0, "shots", 2.0, "length", 12.0, "width", 3.0, "maxTargets", 12.0, "damageRatio", 0.75)),
-            card("J10-P", "end_towers", "p", "쌍둥이 용", PRISMATIC,
-                    "매 웨이브 부화 직후 당시 형태의 복제본 1기를 만듭니다. 생성 당시 본체 최대 체력과 공격력의 {statRatio:percent}를 고정하고 원래 전투 능력을 계승합니다. 성장·추가 소환·증강은 계승하지 않습니다. 일반 슬롯을 쓰지 않고 판매·승급할 수 없으며, 본체가 전투 중 죽어도 라운드 종료까지 남습니다. 본체를 판매·영구 제거하면 함께 사라집니다.",
-                    Map.of("statRatio", 0.5)),
+            card("J10-P", "end_towers", "p", "차원의 수호자", PRISMATIC,
+                    "엔더 드래곤이 라운드당 1회 부화 위치에서 {chargeTicks:seconds}초 차지한 뒤 자기 라인 후방 끝 중앙으로 순간이동합니다. 3초 동안 전방까지 소환 영역을 포함한 라인 전체 폭을 쓸며 현재 물리 피해의 {rushDamageRatio:percent} 피해를 적마다 한 번 줍니다. 실제 피해를 입은 소환 몬스터는 {stunTicks:seconds}초 기절하고 경로를 거슬러 최대 {knockbackDistance}블록 밀려납니다. 넉백은 출현 지점·벽·라인 경계에서 멈추며 보스와 최종 방어 중인 적은 밀지 않습니다. 전방 끝 5블록 앞에서 사라지고 후방 끝 5블록 뒤 중앙의 바닥 Y+{flightHeight}에 재등장합니다. 그 자리에서 바닥을 향한 보라색 브레스로 라인 전체를 한 차례 쓸어, {burnDurationTicks:seconds}초 동안 {burnIntervalTicks:seconds}초마다 현재 공격력의 {burnDamageRatio:percent} 마법 화상 피해를 주고 정상 전투로 복귀합니다.",
+                    Map.of("chargeTicks", 60.0, "rushDamageRatio", 1.0, "stunTicks", 200.0, "knockbackDistance", 20.0, "flightHeight", 10.0,
+                            "width", 6.0, "burnDurationTicks", 200.0, "burnIntervalTicks", 20.0, "burnDamageRatio", 0.25)),
             card("J11-S", "ocean", "s", "물 돌려쓰기", SILVER,
                     "소프트캡에 도달한 바다 타워가 받을 물을 같은 공급원에 연결된 물이 가장 적은 타워에게 돌려줍니다. 물량 감쇠 전 배분량을 옮기며 공급원 중복 감쇠는 한 번 적용합니다.",
                     Map.of()),
@@ -388,7 +389,16 @@ final class JobAugmentCatalog {
                     Map.of("survivorCap", 2.0, "damageReduction", 0.25)),
             card("J31-P", "future_agency_towers", "p", "구조 타임루프", PRISMATIC,
                     "원본 요원이 처음 죽을 피해를 받으면 자신과 연결 생존자를 웨이브 시작 체력으로 복원합니다. 이번 웨이브에 죽은 연결 생존자도 복귀합니다. 원본마다 라운드당 1회이며 생존자를 추가 생성하거나 성장·시작 효과를 다시 발동하지 않습니다.",
-                    Map.of())
+                    Map.of()),
+            card("J32-S", "magic_school", "s", "머글의 지팡이", SILVER,
+                    "1단계 주문 '머글의 지팡이'를 해금합니다.", Map.of()),
+            card("J32-G1", "magic_school", "g1", "하늘을 나는 빗자루", GOLD,
+                    "다른 아군이 최종 방어선으로 이동할 때 내가 라인에서 전투 중이면 그 아군의 타워 1기가 내 라인을 지원합니다. 내가 이동할 때는 아직 라인에서 전투 중인 아군마다 내 마법사 1기를 보냅니다. 최대 체력, 현재 체력이 높은 순으로 선택하며 마법학교·마왕 빌더는 지원 상대에서 제외합니다. 지원한 라인의 수비가 끝나면 최종 방어선으로 이동합니다.", Map.of()),
+            card("J32-G2", "magic_school", "g2", "마법 대학원", GOLD,
+                    "주문 숙련도 획득량이 {proficiencyGainBonus:percent} 증가합니다. 다른 획득 보정과 곱연산하며 T3 마법사의 최대 주문 숙련도가 {proficiencyCapBonus} 증가합니다.",
+                    Map.of("proficiencyGainBonus", .3, "proficiencyCapBonus", 250.0, "balanceVersion", 1.0)),
+            card("J32-P", "magic_school", "p", "용서받지 못할 저주", PRISMATIC,
+                    "즉시 {diamondReward} 다이아를 얻고 아바다케다브라, 크루시오, 임페리오를 해금합니다. 5단계 주문을 사용할 수 있는 마법사에게 장착할 수 있으며 각 저주는 내 마법사 1기만 사용할 수 있습니다. 숙련도 500 이하에서는 공격 속도가 추가로 90% 감소합니다 (곱연산).", Map.of("diamondReward", 100.0))
     );
 
     private JobAugmentCatalog() {}

@@ -8,10 +8,10 @@ import kim.biryeong.semiontd.tower.futureagency.FutureAgencyStates;
 import kim.biryeong.semiontd.tower.futureagency.FutureAgencyTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class FutureAgencyTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "future_agency_towers");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "future_agency_towers");
 
     public FutureAgencyTowerJob() {
         super(ID, Component.literal("미래기관 빌더"), List.of(
@@ -36,11 +36,15 @@ public final class FutureAgencyTowerJob extends SemionJob {
     }
 
     @Override public boolean includesTowerInCatalog(TowerType type) {return FutureAgencyTowers.isFutureAgencyTower(type);}
+
     @Override public void onMatchStarted(JobContext context) {FutureAgencyStates.clear(context.player().uuid());}
+
     @Override public void onRoundStarted(JobContext context, int round) {FutureAgencyStates.state(context.player().uuid()).openRound(round);}
+
     @Override public void onRoundEnded(JobContext context, int round) {
         FutureAgencyStates.state(context.player().uuid())
                 .setNextSelectionLimit(context.game().hasClearedRound(context.player().uuid(), round) ? 2 : 1);
     }
+
     @Override public void onEliminated(JobContext context) {FutureAgencyStates.clear(context.player().uuid());}
 }

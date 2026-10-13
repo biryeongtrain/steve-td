@@ -51,7 +51,7 @@ import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class BuilderAugmentTransactionGameTest {
     @GameTest
@@ -213,7 +213,7 @@ public final class BuilderAugmentTransactionGameTest {
         }
     }
 
-    private static SemionGame game(GameTestHelper context, UUID owner, ResourceLocation job, String... cards) {
+    private static SemionGame game(GameTestHelper context, UUID owner, Identifier job, String... cards) {
         ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
         SemionGame game = new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(),
                 SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(BlockPos.ZERO)));

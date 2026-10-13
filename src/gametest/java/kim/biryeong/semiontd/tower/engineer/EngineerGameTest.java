@@ -56,7 +56,7 @@ public final class EngineerGameTest {
                 platePosition
         );
         lane.addTower(plate);
-        Mob intruder = context.spawn(EntityType.ZOMBIE, new BlockPos(6, 3, 6));
+        Mob intruder = context.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE, new BlockPos(6, 3, 6));
         intruder.setNoAi(true);
 
         context.runAfterDelay(5, () -> {
@@ -896,7 +896,7 @@ public final class EngineerGameTest {
         SemionMonsterEntity target = spawnMonster(context, lane, "repeat_kill_target", source.position().add(1, 0, 0));
         target.setNoAi(true);
         target.setNoGravity(true);
-        target.setInvulnerable(true);
+        target.setPermanentlyInvulnerable(true);
         target.runtimeMonster().syncHealth(1);
         target.setHealth(1);
         context.runAfterDelay(40, () -> {

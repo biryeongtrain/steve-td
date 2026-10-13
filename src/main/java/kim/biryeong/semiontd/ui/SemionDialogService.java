@@ -1,16 +1,17 @@
 package kim.biryeong.semiontd.ui;
 
+import static kim.biryeong.semiontd.ui.UiJobStatisticsView.*;
+import static kim.biryeong.semiontd.ui.UiDialogPresentation.*;
+import static kim.biryeong.semiontd.ui.UiDialogBodyRenderer.*;
+import static kim.biryeong.semiontd.ui.UiDialogTableLayout.*;
+
+import kim.biryeong.semiontd.tower.magicschool.HogwartsTower;
+import kim.biryeong.semiontd.tower.magicschool.MagicSchoolSpell;
+import kim.biryeong.semiontd.tower.magicschool.MagicSchoolWizardTower;
 import kim.biryeong.semiontd.tower.gamble.PokerTableTower;
 import kim.biryeong.semiontd.tower.gamble.GamblerTower;
 import kim.biryeong.semiontd.tower.gamble.GambleBalance;
 import kim.biryeong.semiontd.tower.gamble.GambleTowers;
-import de.tomalbrc.avatarrenderer.AvatarRendererMod;
-import de.tomalbrc.avatarrenderer.impl.AvatarRenderer;
-import de.tomalbrc.avatarrenderer.impl.SkinLoader;
-import java.awt.image.BufferedImage;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -18,14 +19,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalDouble;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import kim.biryeong.semiontd.buildguide.BuildGuide;
 import kim.biryeong.semiontd.buildguide.BuildGuideService;
@@ -87,7 +81,6 @@ import kim.biryeong.semiontd.trait.TraitRegistry;
 import kim.biryeong.semiontd.trait.TraitSlot;
 import kim.biryeong.semiontd.ui.dialog.body.HeaderMessage;
 import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.ClickEvent;
 import kim.biryeong.semiontd.game.MatchParticipantResult;
 import kim.biryeong.semiontd.game.MatchResult;
 import kim.biryeong.semiontd.game.PlayerEconomy;
@@ -103,8 +96,6 @@ import kim.biryeong.semiontd.progression.SemionPlayerProfile;
 import kim.biryeong.semiontd.statistics.JobStatisticsEntry;
 import kim.biryeong.semiontd.statistics.JobStatisticsSnapshot;
 import kim.biryeong.semiontd.statistics.JobStatisticsState;
-import kim.biryeong.semiontd.statistics.JobStatisticsTotals;
-import kim.biryeong.semiontd.statistics.TraitCombinationStatisticsEntry;
 import kim.biryeong.semiontd.ui.dialog.body.AlignedMessage;
 import kim.biryeong.semiontd.ui.dialog.body.SplitAlignedMessage;
 import kim.biryeong.semiontd.util.TextUncenterer;
@@ -118,8 +109,6 @@ import net.minecraft.server.dialog.CommonDialogData;
 import net.minecraft.server.dialog.Dialog;
 import net.minecraft.server.dialog.DialogAction;
 import net.minecraft.server.dialog.MultiActionDialog;
-import net.minecraft.server.dialog.NoticeDialog;
-import net.minecraft.server.dialog.action.StaticAction;
 import net.minecraft.server.dialog.body.DialogBody;
 import net.minecraft.server.dialog.body.PlainMessage;
 import net.minecraft.server.dialog.body.ItemBody;
@@ -130,19 +119,15 @@ import static kim.biryeong.semiontd.tower.description.TowerDescriptionTemplate.*
 import static kim.biryeong.semiontd.ui.dialog.body.HeaderMessage.dividerComponent;
 
 public final class SemionDialogService {
+    public static List<JobStatisticsRow> jobStatisticsRows(JobStatisticsSnapshot snapshot) {
+        return UiJobStatisticsView.jobStatisticsRows(snapshot);
+    }
+
     private static final int BODY_WIDTH = 256;
     private static final int AUGMENT_BODY_WIDTH = 360;
     private static final int TITLE_HEADER_WIDTH = 200;
     private static final int PLAYER_STATUS_WIDTH = 480;
-    private static final int JOB_STATISTICS_WIDTH = 460;
-    private static final int JOB_STATISTICS_DETAIL_WIDTH = 420;
-    private static final int JOB_STATISTICS_DETAIL_CONTENT_WIDTH = JOB_STATISTICS_DETAIL_WIDTH - 23;
-    private static final int JOB_STATISTICS_DETAIL_TABLE_WIDTH = 380;
-    private static final int JOB_STATISTICS_JOB_WIDTH = 80;
-    private static final int JOB_STATISTICS_SELECTION_WIDTH = 100;
-    private static final int JOB_STATISTICS_GAME_WIDTH = 120;
-    private static final int JOB_STATISTICS_PLACEMENT_WIDTH = 120;
-    private static final int JOB_STATISTICS_SEPARATOR_WIDTH = 10;
+
     private static final int PLAYER_STATUS_TEAM_WIDTH = 40;
     private static final int PLAYER_STATUS_AVATAR_WIDTH = 20;
     private static final int PLAYER_STATUS_AVATAR_NAME_GAP = 4;
@@ -165,10 +150,6 @@ public final class SemionDialogService {
     private static final int BUILD_GUIDE_PAGE_SIZE = 4;
     private static final String DIAMOND_GRADIENT = "<gradient:#ffffff:#d5fff6:#a1fbe8:#4aedd9:#20c5b5:#1aaaa7:#11727a:#145e53>";
     private static final String GRADIENT_CLOSE = "</gradient>";
-    private static final DateTimeFormatter STATISTICS_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault());
-    private static final ConcurrentMap<SmallAvatarKey, Component> SMALL_AVATAR_CACHE = new ConcurrentHashMap<>();
-    private static final Set<String> AVATAR_LOAD_REQUESTS = ConcurrentHashMap.newKeySet();
-    private static final ExecutorService AVATAR_LOADER = Executors.newFixedThreadPool(2, Thread.ofPlatform().daemon().name("semiontd-avatar-loader-", 0).factory());
 
     public void showGameStatus(ServerPlayer player, SemionGame game) {
         ArrayList<DialogBody> bodies = new ArrayList<>();
@@ -239,9 +220,8 @@ public final class SemionDialogService {
             bodies.add(new PlainMessage(Component.literal(" "), BODY_WIDTH));
         }
 
-        List<MatchParticipantResult> losers = matchResult.participants().stream()
+        List<MatchParticipantResult> losers = orderedParticipants.stream()
                 .filter(participant -> !participant.winner())
-                .sorted(participantComparator())
                 .toList();
         bodies.add(new HeaderMessage(miniMessage("<red><bold>탈락 플레이어</bold></red>"), BODY_WIDTH));
         if (losers.isEmpty()) {
@@ -504,42 +484,6 @@ public final class SemionDialogService {
         );
     }
 
-    public static List<JobStatisticsRow> jobStatisticsRows(JobStatisticsSnapshot snapshot) {
-        LinkedHashMap<String, JobStatisticsEntry> remaining = new LinkedHashMap<>();
-        for (JobStatisticsEntry entry : snapshot.jobs()) {
-            remaining.put(entry.jobId(), entry);
-        }
-
-        ArrayList<JobStatisticsRow> rows = new ArrayList<>();
-        for (SemionJob job : JobRegistry.all()) {
-            String jobId = job.id().toString();
-            JobStatisticsEntry entry = remaining.remove(jobId);
-            rows.add(new JobStatisticsRow(
-                    jobId,
-                    job.displayName().getString(),
-                    entry == null ? emptyJobStatisticsEntry(jobId) : entry,
-                    true
-            ));
-        }
-        remaining.values().stream()
-                .sorted(Comparator.comparing(JobStatisticsEntry::jobId))
-                .map(entry -> new JobStatisticsRow(entry.jobId(), entry.jobId(), entry, false))
-                .forEach(rows::add);
-        return List.copyOf(rows);
-    }
-
-    static List<JobStatisticsRow> jobStatisticsCategoryRows(JobStatisticsSnapshot snapshot, boolean official) {
-        java.util.Set<String> categoryIds = (official
-                ? JobRegistry.officialBuilders()
-                : JobRegistry.creativeBuilders()).stream()
-                .map(job -> job.id().toString())
-                .collect(java.util.stream.Collectors.toSet());
-        return jobStatisticsRows(snapshot).stream()
-                .filter(JobStatisticsRow::registered)
-                .filter(row -> categoryIds.contains(row.jobId()))
-                .toList();
-    }
-
     public void showTraitSelection(ServerPlayer player, TraitLoadout loadout, int secondsRemaining) {
         String body = traitSelectionSummaryBody(loadout, secondsRemaining);
         ArrayList<ActionButton> actions = new ArrayList<>();
@@ -634,7 +578,7 @@ public final class SemionDialogService {
 
     private static String traitSelectionSummaryAbilityLine(
             String label,
-            net.minecraft.resources.ResourceLocation traitId,
+            net.minecraft.resources.Identifier traitId,
             TraitSlot slot
     ) {
         boolean noEffect = TraitLoadout.isNone(traitId);
@@ -663,7 +607,7 @@ public final class SemionDialogService {
 
     private static String traitSelectionLoadoutLine(
             String label,
-            net.minecraft.resources.ResourceLocation traitId
+            net.minecraft.resources.Identifier traitId
     ) {
         String color = TraitLoadout.isNone(traitId) ? "dark_red" : "yellow";
         String name = TraitLoadout.isNone(traitId) ? "선택 안 함" : traitName(traitId);
@@ -937,7 +881,7 @@ public final class SemionDialogService {
                         true,
                         false,
                         DialogAction.CLOSE,
-                        actionDialogBodies(body.toString()),
+                        actionDialogBodies(body.toString(), BODY_WIDTH),
                         inputs
                 ),
                 actions,
@@ -1093,6 +1037,29 @@ public final class SemionDialogService {
                         BUTTON_WIDTH
                 ));
             }
+            if (tower instanceof HogwartsTower) {
+                actions.add(actionButton(
+                        "커리큘럼",
+                        "/semiontd magic_school curriculum "
+                                + managementPosition.x() + " "
+                                + managementPosition.y() + " "
+                                + managementPosition.z(),
+                        "마법학교의 커리큘럼을 확인합니다."
+                ));
+                actions.add(actionButton("마법사 스킨", "/semiontd magic_school skin "
+                        + managementPosition.x() + " " + managementPosition.y() + " " + managementPosition.z(),
+                        "신입생과 기숙사별 마법사의 스킨을 설정합니다. T3는 T2의 스킨을 공유합니다."));
+            }
+            if (tower instanceof MagicSchoolWizardTower) {
+                actions.add(actionButton(
+                        "주문",
+                        "/semiontd magic_school spells "
+                                + managementPosition.x() + " "
+                                + managementPosition.y() + " "
+                                + managementPosition.z(),
+                        "이 마법사가 사용할 주문을 확인하고 지정합니다."
+                ));
+            }
             if (!tower.isTemporaryCopy() && tower.canBeSold()) {
                 actions.add(actionButton(
                         tower.saleActionLabel(),
@@ -1107,7 +1074,7 @@ public final class SemionDialogService {
                 ));
             }
         }
-        showActions(player, "세미온 TD 타워 상세", actionDialogBodies(body.toString()), actions, actionColumns);
+        showActions(player, "세미온 TD 타워 상세", actionDialogBodies(body.toString(), BODY_WIDTH), actions, actionColumns);
     }
 
     public void showHeroCompanionConfirmation(ServerPlayer player, SemionGame game, HeroCompanionRole role) {
@@ -1512,11 +1479,12 @@ public final class SemionDialogService {
             Component label = Component.literal(unit.displayName())
                     .withStyle(affordable ? ChatFormatting.WHITE : ChatFormatting.DARK_GRAY)
                     .append(Component.literal(" " + cost + "◆").withStyle(affordable ? ChatFormatting.GREEN : ChatFormatting.RED));
-            Component tooltip = Component.literal(unit.displayName() + " · " + unit.tier().name()
+            Component tooltip = Component.literal(unit.displayName() + " · " + (unit.tier().ordinal() + 1) + "단계"
                     + "\n설치 " + cost + " 에메랄드 · 레벨당 인컴 +" + unit.incomeGain()
                     + " · 타워 수 " + kim.biryeong.semiontd.tower.TowerCapacity.slotCost(IncomeTowerService.towerType(unit))
-                    + "\n체력 " + Math.round(unit.maxHealth()) + " · 공격력 " + Math.round(unit.attackDamage())
-                    + (unit.description().isEmpty() ? "" : "\n" + unit.description().getFirst()));
+                    + "\n체력 " + Math.round(unit.maxHealth() * IncomeTowerBalance.statMultiplier(1))
+                    + " · 공격력 " + Math.round(unit.attackDamage() * IncomeTowerBalance.statMultiplier(1))
+                    + (IncomeTowerService.description(unit).isEmpty() ? "" : "\n" + IncomeTowerService.description(unit).getFirst()));
             actions.add(actionButton(label, "/semiontd income build " + unit.id(), tooltip, COMPACT_BUTTON_WIDTH));
         }
         showActions(player, "세미온 TD 인컴 타워", body.toString(), actions, 2);
@@ -1526,17 +1494,20 @@ public final class SemionDialogService {
         SemionPlayer semionPlayer = game.players().get(player.getUUID());
         boolean owned = semionPlayer != null && tower.ownerPlayer().equals(player.getUUID());
         SummonMonsterType unit = IncomeTowerService.unit(game, tower.summonId()).orElse(null);
-        IncomeTowerBalance.WaveScale scale = IncomeTowerBalance.waveScale(game.waveConfig(), game.currentRound());
-        double level = IncomeTowerBalance.statMultiplier(tower.level());
+        double healthScale = IncomeTowerBalance.healthMultiplier(tower.level(), game.currentRound());
+        double attackScale = IncomeTowerBalance.attackDamageMultiplier(tower.level(), game.currentRound());
         StringBuilder body = new StringBuilder();
         body.append("<gradient:#f472b6:#a78bfa><bold>인컴 타워</bold></gradient>\n");
-        body.append("<white><bold>").append(tower.type().displayName()).append("</bold></white> <yellow>Lv.")
+        body.append("<white><bold>").append(tower.type().displayName()).append("</bold></white> <yellow>레벨 ")
                 .append(tower.level()).append('/').append(IncomeTowerBalance.MAX_LEVEL).append("</yellow>\n");
         body.append("<divider>\n");
         if (unit != null) {
-            body.append("<white>보내는 유닛</white> 체력 <red>").append(Math.round(unit.maxHealth() * level * scale.health()))
-                    .append("</red> · 공격력 <gold>").append(Math.round(unit.attackDamage() * level * scale.attackDamage()))
+            body.append("<white>보내는 유닛</white> 체력 <red>").append(Math.round(unit.maxHealth() * healthScale))
+                    .append("</red> · 공격력 <gold>").append(Math.round(unit.attackDamage() * attackScale))
                     .append("</gold> <dark_gray>(이번 라운드 기준)</dark_gray>\n");
+            for (String line : IncomeTowerService.description(unit)) {
+                body.append("<gray>").append(line).append("</gray>\n");
+            }
         }
         body.append("<white>라운드 인컴</white> <aqua>+").append(IncomeTowerService.incomeOf(game, tower)).append("</aqua>\n");
         body.append("<white>판매 시 환불</white> <green>").append(IncomeTowerBalance.sellRefund(tower.paidEmerald()))
@@ -1556,7 +1527,7 @@ public final class SemionDialogService {
             long cost = IncomeTowerService.upgradeCost(game, tower);
             boolean affordable = semionPlayer.economy().emerald() >= cost;
             actions.add(actionButton(
-                    Component.literal("레벨업 → Lv." + (tower.level() + 1) + " (" + cost + "◆)")
+                    Component.literal("레벨업 → 레벨 " + (tower.level() + 1) + " (" + cost + "◆)")
                             .withStyle(affordable ? ChatFormatting.GREEN : ChatFormatting.RED),
                     "/semiontd income upgrade " + coordinates,
                     Component.literal("보내는 유닛이 세지고 라운드 인컴이 +" + (unit == null ? 0 : unit.incomeGain()) + " 오릅니다."),
@@ -1692,6 +1663,12 @@ public final class SemionDialogService {
         }
 
         StringBuilder effects = new StringBuilder();
+        appendTimedEffect(effects, entity, TimedEffectType.TOWER_RENNERVATE_DAMAGE_BONUS, "<green>레네르바테 공격력 +", "</green>");
+        double schoolProtection = kim.biryeong.semiontd.tower.magicschool.MagicSchoolSpellCombat.protection(entity);
+        if (schoolProtection > 0) effects.append("<blue>마법학교 보호: 받는 피해 -")
+                .append(java.math.BigDecimal.valueOf(schoolProtection * 100.0)
+                        .setScale(5, java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString())
+                .append("% (곱연산 · 라운드 종료까지)</blue>\n");
         appendTimedEffect(effects, entity, TimedEffectType.TOWER_DAMAGE_BONUS, "<green>⚔ 피해 증가 +", "</green>");
         appendTimedEffect(effects, entity, TimedEffectType.TOWER_ATTACK_SPEED_BONUS, "<green>⚡ 공속 증가 +", "</green>");
         appendTimedEffect(effects, entity, TimedEffectType.TOWER_RANGE_BONUS, "<green>🎯 사거리 증가 +", "</green>");
@@ -1710,7 +1687,9 @@ public final class SemionDialogService {
         appendTimedEffect(effects, entity, TimedEffectType.TOWER_HEAL_AMOUNT_BONUS, "<green>❤ 회복량 증가 +", "</green>");
         appendTimedEffect(effects, entity, TimedEffectType.TOWER_ABILITY_INTERVAL_REDUCTION, "<green>⏱ 주기 감소 +", "</green>");
         appendTimedEffect(effects, entity, TimedEffectType.TOWER_ATTACK_SPEED_REDUCTION, "<red>⚡ 공속 감소 -", "</red>");
+        appendTimedEffect(effects, entity, TimedEffectType.TOWER_ATTACK_SPEED_MULTIPLICATIVE_REDUCTION, "<red>⚡ 공격 속도 -", "</red>");
         appendTimedEffect(effects, entity, TimedEffectType.TOWER_RANGE_REDUCTION, "<red>🎯 사거리 감소 -", "</red>");
+        appendTimedEffect(effects, entity, TimedEffectType.TOWER_RANGE_MULTIPLICATIVE_REDUCTION, "<red>🎯 사거리 -", "</red>");
         appendTimedEffectValue(effects, entity, TimedEffectType.TOWER_FLAT_RANGE_BONUS,
                 "<green>🎯 사거리 증가 +", "칸</green>");
         appendTimedEffectValue(effects, entity, TimedEffectType.TOWER_FLAT_RANGE_REDUCTION,
@@ -1757,6 +1736,11 @@ public final class SemionDialogService {
     }
 
     static String formatTowerDamageStats(Tower tower, SemionTowerEntity entity, double currentDamage) {
+        if (tower instanceof MagicSchoolWizardTower wizard
+                && wizard.selectedSpell() == kim.biryeong.semiontd.tower.magicschool.MagicSchoolSpell.AVADA_KEDAVRA) {
+            return "<aqua>마법 피해: 대상 최대 체력의 "
+                    + percent(wizard.selectedSpell().value("maxHealthMultiplier")) + "</aqua>";
+        }
         if (tower instanceof GamblerTower gambler) {
             GamblerTower.AttackDamage damage = gambler.currentAttackDamage(entity);
             return formatAttackDamage(damage.physical(), "")
@@ -1804,7 +1788,14 @@ public final class SemionDialogService {
             return gambler.currentAttackDamage(towerEntity).physical();
         }
         double baseDamage = towerPrimaryDamage(tower);
-        if (tower.primaryDamageType() == DamageType.MAGIC && !SuccubusTowers.isSuccubusTower(tower.type())) {
+        if (tower instanceof MagicSchoolWizardTower wizard) {
+            var target = towerEntity == null ? null : towerEntity.currentAttackTarget();
+            double attack = towerEntity == null ? wizard.modifyAttackDamage(null, null, baseDamage)
+                    : wizard.resolveBasicAttackOutgoingDamage(towerEntity, target, towerEntity.attackDamageAmount(target));
+            return wizard.spellPrimaryDamage(target, attack);
+        }
+        if (tower.primaryDamageType() == DamageType.MAGIC && !SuccubusTowers.isSuccubusTower(tower.type())
+                && !(tower instanceof MagicSchoolWizardTower)) {
             return towerEntity == null
                     ? baseDamage
                     : tower.resolveOutgoingDamage(towerEntity, null, baseDamage);
@@ -1830,7 +1821,11 @@ public final class SemionDialogService {
             return;
         }
         body.append("<yellow>⭐ 고유 능력</yellow>\n");
-        for (String line : lines) {body.append("<dark_gray>-</dark_gray> <green>").append(PirateTowers.isPirateTower(tower.type()) ? PirateTowers.highlightAbilityNumbers(line) : line).append("</green>\n");
+        for (String line : lines) {
+            String formatted = PirateTowers.isPirateTower(tower.type()) ? PirateTowers.highlightAbilityNumbers(line)
+                    : tower instanceof MagicSchoolWizardTower
+                            ? MagicSchoolSpell.highlightAttackCoefficients(line) : line;
+            body.append("<dark_gray>-</dark_gray> <green>").append(formatted).append("</green>\n");
         }
     }
 
@@ -1886,182 +1881,27 @@ public final class SemionDialogService {
         }
     }
 
-    private void show(ServerPlayer player, String title, String body) {
-        show(player, title, miniMessage(body));
-    }
-
-    private void show(ServerPlayer player, String title, Component body) {
-        Dialog dialog = new NoticeDialog(
-                new CommonDialogData(
-                        Component.literal(title),
-                        Optional.empty(),
-                        true,
-                        false,
-                        DialogAction.CLOSE,
-                        List.<DialogBody>of(new PlainMessage(body, BODY_WIDTH)),
-                        List.of()
-                ),
-                NoticeDialog.DEFAULT_ACTION
-        );
-        player.connection.send(new ClientboundShowDialogPacket(Holder.direct(dialog)));
-    }
-
     public void showAugment(ServerPlayer player, AugmentService.Screen screen) {
         List<DialogBody> bodies = new ArrayList<>();
         if (!screen.body().isBlank()) {
             bodies.add(new PlainMessage(miniMessage(screen.body()), AUGMENT_BODY_WIDTH));
         }
-        for (AugmentService.CardLine card : screen.cards()) {
-            ItemStack icon = new ItemStack(switch (card.category()) {
-                case "TRADE_OFF" -> Items.CHAIN;
-                case "TOWER" -> Items.SCAFFOLDING;
-                case "GAME_CHANGER" -> Items.NETHER_STAR;
-                case "INCOME" -> Items.EMERALD;
-                default -> Items.COMPASS;
-            });
-            bodies.add(new ItemBody(icon, Optional.of(new PlainMessage(miniMessage(card.text()), AUGMENT_BODY_WIDTH - 24)),
-                    false, false, 16, 16));
+        if (screen.cards().size() == 3) {
+            bodies.addAll(UiAugmentOfferView.bodies(screen.cards()));
+        } else {
+            for (AugmentService.CardLine card : screen.cards()) {
+                bodies.add(new PlainMessage(miniMessage(card.text()), AUGMENT_BODY_WIDTH));
+            }
         }
         List<ActionButton> actions = screen.buttons().stream()
-                .map(button -> actionButton(Component.literal(button.label()), button.command(), Component.literal(button.description()), COMPACT_BUTTON_WIDTH))
+                .map(button -> new ActionButton(new net.minecraft.server.dialog.CommonButtonData(
+                        Component.literal(button.label()), Optional.empty(),
+                        screen.cards().size() == 3 ? UiAugmentOfferView.CARD_WIDTH : COMPACT_BUTTON_WIDTH),
+                        button.command() == null || button.command().isBlank() ? Optional.empty()
+                                : Optional.of(new net.minecraft.server.dialog.action.StaticAction(
+                                        new net.minecraft.network.chat.ClickEvent.RunCommand(button.command())))))
                 .toList();
         showActions(player, miniMessage(screen.title()), bodies, actions, screen.columns());
-    }
-
-    private void showActions(ServerPlayer player, String title, String body, List<ActionButton> actions) {
-        showActions(player, title, body, actions, 2);
-    }
-
-    private void showActions(ServerPlayer player, String title, String body, List<ActionButton> actions, int columns) {
-        showActions(player, title, body, actions, actionButton("닫기", "", "창을 닫습니다."), columns);
-    }
-
-    private void showActions(
-            ServerPlayer player,
-            String title,
-            String body,
-            List<ActionButton> actions,
-            ActionButton exitAction,
-            int columns
-    ) {
-        if (actions.isEmpty()) {
-            showActions(player, title, actionDialogBodies(body), actions, columns);
-            return;
-        }
-        Dialog dialog = new MultiActionDialog(
-                new CommonDialogData(
-                        Component.literal(title),
-                        Optional.empty(),
-                        true,
-                        false,
-                        DialogAction.CLOSE,
-                        actionDialogBodies(body),
-                        List.of()
-                ),
-                actions,
-                Optional.of(exitAction),
-                columns
-        );
-        player.connection.send(new ClientboundShowDialogPacket(Holder.direct(dialog)));
-    }
-
-    private void showActions(ServerPlayer player, String title, List<DialogBody> bodies, List<ActionButton> actions, int columns) {
-        showActions(player, Component.literal(title), bodies, actions, columns);
-    }
-
-    private void showActions(ServerPlayer player, Component title, List<DialogBody> bodies, List<ActionButton> actions, int columns) {
-        if (actions.isEmpty()) {
-            Dialog dialog = new NoticeDialog(
-                    new CommonDialogData(
-                            title,
-                            Optional.empty(),
-                            true,
-                            false,
-                            DialogAction.CLOSE,
-                            bodies,
-                            List.of()
-                    ),
-                    NoticeDialog.DEFAULT_ACTION
-            );
-            player.connection.send(new ClientboundShowDialogPacket(Holder.direct(dialog)));
-            return;
-        }
-        Dialog dialog = new MultiActionDialog(
-                new CommonDialogData(
-                        title,
-                        Optional.empty(),
-                        true,
-                        false,
-                        DialogAction.CLOSE,
-                        bodies,
-                        List.of()
-                ),
-                actions,
-                Optional.of(actionButton("닫기", "", "창을 닫습니다.")),
-                columns
-        );
-        player.connection.send(new ClientboundShowDialogPacket(Holder.direct(dialog)));
-    }
-
-    static List<DialogBody> actionDialogBodies(String body) {
-        return actionDialogBodies(body, () -> dividerComponent(BODY_WIDTH));
-    }
-
-    static List<DialogBody> actionDialogBodies(String body, Supplier<Component> dividerFactory) {
-        if (body == null || body.isBlank()) {
-            return List.of();
-        }
-        int split = body.indexOf('\n');
-        if (split < 0) {
-            return List.of(new HeaderMessage(miniMessage(body), BODY_WIDTH));
-        }
-        ArrayList<DialogBody> bodies = new ArrayList<>();
-        MutableComponent contentComponent = Component.empty();
-        String header = body.substring(0, split);
-        String content = body.substring(split + 1);
-        if (!header.isBlank()) {
-            contentComponent.append(new HeaderMessage(miniMessage(header), BODY_WIDTH).asVanillaComponent());
-        }
-        String[] sections = content.split("(?m)^<divider>\\n?", -1);
-        for (int i = 0; i < sections.length; i++) {
-            String section = sections[i].strip();
-            if (!section.isBlank()) {
-                if (!contentComponent.getSiblings().isEmpty()) {
-                    contentComponent.append("\n");
-                }
-                contentComponent.append(miniMessage(section));
-            }
-            if (i < sections.length - 1) {
-                contentComponent.append("\n");
-                contentComponent.append(dividerFactory.get());
-            }
-        }
-        if (!contentComponent.getSiblings().isEmpty()) {
-            bodies.add(new PlainMessage(contentComponent, BODY_WIDTH));
-        }
-        return bodies;
-    }
-
-    private static ActionButton actionButton(String label, String command, String tooltip) {
-        return actionButton(label, command, Component.literal(tooltip), BUTTON_WIDTH);
-    }
-
-    private static ActionButton actionButton(String label, String command, Component tooltip, int width) {
-        return actionButton(Component.literal(label), command, tooltip, width);
-    }
-
-    private static ActionButton actionButton(Component label, String command, Component tooltip, int width) {
-        Optional<net.minecraft.server.dialog.action.Action> action = command == null || command.isBlank()
-                ? Optional.empty()
-                : Optional.of(new StaticAction(new ClickEvent.RunCommand(command)));
-        return new ActionButton(
-                new CommonButtonData(label, Optional.of(tooltip), width),
-                action
-        );
-    }
-
-    private static ActionButton actionSpacer() {
-        return new ActionButton(new CommonButtonData(Component.empty(), Optional.empty(), 1), Optional.empty());
     }
 
     static List<Integer> futureAgencyUpgradeGrid(List<TowerUpgradeOption> upgrades) {
@@ -2138,11 +1978,15 @@ public final class SemionDialogService {
         );
     }
 
+    static String jobManagementCommand(SemionJob job) {
+        return "/semiontd job " + (JobRegistry.isEnabled(job) ? "disable " : "enable ") + job.id().getPath();
+    }
+
     private static ActionButton jobManagementButton(SemionJob job) {
         boolean enabled = JobRegistry.isEnabled(job);
         Component label = Component.literal((enabled ? "켜짐 · " : "꺼짐 · ") + job.displayName().getString())
                 .withStyle(enabled ? ChatFormatting.GREEN : ChatFormatting.RED);
-        String command = "/semiontd job " + (enabled ? "disable " : "enable ") + job.id();
+        String command = jobManagementCommand(job);
         String tooltip = enabled
                 ? "클릭하면 이 직업을 비활성화합니다. 진행 중인 경기는 유지됩니다."
                 : "클릭하면 이 직업을 다시 활성화합니다.";
@@ -2167,21 +2011,21 @@ public final class SemionDialogService {
         return "/semiontd trait select " + slotName + " " + trait.id().getPath();
     }
 
-    private static String traitName(net.minecraft.resources.ResourceLocation traitId) {
+    private static String traitName(net.minecraft.resources.Identifier traitId) {
         return TraitRegistry.find(traitId)
                 .map(trait -> trait.displayName().getString())
                 .orElse(traitId.toString());
     }
 
-    private static String traitEffectSummary(net.minecraft.resources.ResourceLocation traitId, TraitSlot slot) {
+    private static String traitEffectSummary(net.minecraft.resources.Identifier traitId, TraitSlot slot) {
         return TraitRegistry.find(traitId)
                 .map(trait -> trait.effectSummary(slot).getString())
                 .orElse("효과 정보 없음");
     }
 
     private static String traitName(String traitId) {
-        net.minecraft.resources.ResourceLocation parsed =
-                traitId == null ? null : net.minecraft.resources.ResourceLocation.tryParse(traitId);
+        net.minecraft.resources.Identifier parsed =
+                traitId == null ? null : net.minecraft.resources.Identifier.tryParse(traitId);
         return parsed == null ? String.valueOf(traitId) : traitName(parsed);
     }
 
@@ -2464,18 +2308,6 @@ public final class SemionDialogService {
         }
     }
 
-    private static void appendDescription(MutableComponent tooltip, List<String> description) {
-        if (description.isEmpty()) {
-            return;
-        }
-        tooltip.append(Component.literal("\n\n설명"));
-        for (String line : description) {
-            if (line != null && !line.isBlank()) {
-                tooltip.append(Component.literal("\n- " + line));
-            }
-        }
-    }
-
     private static void appendSummonDescription(MutableComponent tooltip, List<String> description) {
         if (description == null || description.stream().noneMatch(line -> line != null && !line.isBlank())) {
             return;
@@ -2550,92 +2382,12 @@ public final class SemionDialogService {
         return oneDecimal(20.0 / Math.max(1, attackIntervalTicks));
     }
 
-    private static String statDeltaSuffix(double baseValue, double currentValue, boolean higherBetter) {
-        if (Math.abs(baseValue - currentValue) < 0.005) {
-            return "";
-        }
-        String color = (currentValue > baseValue) == higherBetter ? "green" : "red";
-        String sign = currentValue > baseValue ? "+" : "";
-        String delta = Math.abs(baseValue) < 0.0001
-                ? sign + oneDecimal(currentValue - baseValue)
-                : sign + percent((currentValue - baseValue) / baseValue);
-        return " <dark_gray>(기본 " + oneDecimal(baseValue)
-                + ", </dark_gray><" + color + ">" + delta + "</" + color + "><dark_gray>)</dark_gray>";
-    }
-
     private static String percent(double value) {
         return oneDecimal(value * 100.0) + "%";
     }
 
     private static String oneDecimal(double value) {
         return String.format(java.util.Locale.ROOT, "%.1f", value);
-    }
-
-    private static Component miniMessage(String text) {
-        try {
-            return SemionText.mini(text);
-        } catch (RuntimeException exception) {
-            return Component.literal(text);
-        }
-    }
-
-    private static MutableComponent mutableMiniMessage(String text) {
-        try {
-            return SemionText.mutableMini(text);
-        } catch (RuntimeException exception) {
-            return Component.empty().append(Component.literal(text));
-        }
-    }
-
-    private static PlainMessage decoratedHeader(Component title, int width) {
-        return decoratedHeader(title, width, ChatFormatting.DARK_GRAY);
-    }
-
-    private static PlainMessage decoratedHeader(Component title, int width, ChatFormatting sideColor) {
-        Component side = Component.literal("──────").withStyle(sideColor);
-        return new PlainMessage(
-                Component.empty().append(side).append(" ").append(title).append(" ").append(side),
-                width
-        );
-    }
-
-    static HeaderMessage jobStatisticsHeader(Component title) {
-        return new HeaderMessage(title, JOB_STATISTICS_WIDTH);
-    }
-
-    static HeaderMessage jobStatisticsDetailHeader(Component title) {
-        return new HeaderMessage(title, JOB_STATISTICS_DETAIL_WIDTH);
-    }
-
-    static HeaderMessage jobStatisticsListHeader() {
-        return new HeaderMessage(
-                Component.literal("직업 목록").withStyle(ChatFormatting.YELLOW),
-                JOB_STATISTICS_WIDTH
-        );
-    }
-
-    static PlainMessage jobStatisticsDivider() {
-        return HeaderMessage.divider(JOB_STATISTICS_WIDTH);
-    }
-
-    static PlainMessage jobStatisticsDetailDivider() {
-        return HeaderMessage.divider(JOB_STATISTICS_DETAIL_TABLE_WIDTH);
-    }
-
-    private static void appendJobStatisticsState(List<DialogBody> bodies, JobStatisticsState state) {
-        if (state == JobStatisticsState.LOADING) {
-            bodies.add(new PlainMessage(
-                    Component.literal("재집계 중입니다. 마지막 정상 통계를 표시합니다.")
-                            .withStyle(ChatFormatting.YELLOW),
-                    JOB_STATISTICS_WIDTH
-            ));
-        } else if (state == JobStatisticsState.FAILED) {
-            bodies.add(new PlainMessage(
-                    Component.literal("최근 갱신에 실패했습니다. 마지막 정상 통계를 표시합니다.")
-                            .withStyle(ChatFormatting.RED),
-                    JOB_STATISTICS_WIDTH
-            ));
-        }
     }
 
     private static Component participantResultBody(
@@ -2645,7 +2397,7 @@ public final class SemionDialogService {
         var stats = participant.stats();
         MutableComponent body = Component.empty()
                 .append(TextUncenterer.filler(8))
-                .append(avatarComponent(participant.playerName(), AvatarVariant.RESULT))
+                .append(UiPlayerAvatarService.avatarComponent(participant.playerName(), UiPlayerAvatarService.AvatarVariant.RESULT))
                 .append(miniMessage(" <white>" + participant.playerName() + "</white>"
                         + " <dark_gray>[</dark_gray>"
                         + (participant.winner() ? "<gold>승리</gold>" : "<gray>패배</gray>")
@@ -2662,15 +2414,7 @@ public final class SemionDialogService {
     }
 
     static Component playerStatusTable(List<PlayerStatusRow> rows) {
-        StringBuilder body = new StringBuilder("\n");
-        body.append("<divider>\n");
-        Component divider = ((PlainMessage) actionDialogBodies(
-                body.toString(),
-                () -> dividerComponent(PLAYER_STATUS_WIDTH)
-        ).getFirst())
-                .contents()
-                .getSiblings()
-                .getLast();
+        Component divider = dividerComponent(HeaderMessage.contentWidth(PLAYER_STATUS_WIDTH));
 
         MutableComponent table = playerStatusHeaderWithBodySpacing(playerStatusHeader(divider));
 
@@ -2749,7 +2493,7 @@ public final class SemionDialogService {
                 playerStatusAvatar(row.playerName()),
                 name,
                 PLAYER_STATUS_AVATAR_WIDTH + PLAYER_STATUS_NAME_WIDTH - PLAYER_STATUS_BODY_JOB_SHIFT,
-                AvatarVariant.COMPACT.imageSize,
+                UiPlayerAvatarService.AvatarVariant.COMPACT.imageSize(),
                 TextUncenterer.width(name)
         );
         return playerStatusTableRow(
@@ -2825,429 +2569,8 @@ public final class SemionDialogService {
         );
     }
 
-    private static Component centeredTableCell(Component value, int width) {
-        return centeredTableCell(value, width, TextUncenterer.width(value));
-    }
-
-    static Component centeredTableCell(Component value, int width, int valueWidth) {
-        int remainingWidth = Math.max(0, width - valueWidth);
-        int leftPaddingWidth = remainingWidth / 2;
-        return Component.empty()
-                .append(TextUncenterer.filler(leftPaddingWidth))
-                .append(value)
-                .append(TextUncenterer.filler(remainingWidth - leftPaddingWidth));
-    }
-
-    private static Component avatarComponent(String playerName, AvatarVariant variant) {
-        SmallAvatarKey key = new SmallAvatarKey(playerName, variant);
-        Component cached = SMALL_AVATAR_CACHE.get(key);
-        if (cached != null) {
-            return cached;
-        }
-
-        loadAvatar(playerName);
-        SmallAvatarKey defaultKey = new SmallAvatarKey("Steve", variant);
-        return SMALL_AVATAR_CACHE.computeIfAbsent(defaultKey, SemionDialogService::defaultSmallAvatar);
-    }
-
     static Component playerStatusAvatar(String playerName) {
-        return avatarComponent(playerName, AvatarVariant.COMPACT);
-    }
-
-    private static void loadAvatar(String playerName) {
-        if (!AVATAR_LOAD_REQUESTS.add(playerName)) {
-            return;
-        }
-        AVATAR_LOADER.execute(() -> {
-            try {
-                SkinLoader.load(playerName).ifPresent(skin -> {
-                    for (AvatarVariant variant : AvatarVariant.values()) {
-                        SmallAvatarKey key = new SmallAvatarKey(playerName, variant);
-                        SMALL_AVATAR_CACHE.put(key, AvatarRenderer.asTextComponent(
-                                avatarImage(skin, variant),
-                                variant.yOffset()
-                        ));
-                    }
-                });
-            } catch (RuntimeException ignored) {
-                // Keep the bundled Steve fallback.
-            }
-        });
-    }
-
-    private static Component defaultSmallAvatar(SmallAvatarKey key) {
-        try (var stream = AvatarRendererMod.class.getResourceAsStream("/steve.png")) {
-            if (stream == null) {
-                return Component.empty();
-            }
-            BufferedImage skin = javax.imageio.ImageIO.read(stream);
-            if (skin == null) {
-                return Component.empty();
-            }
-            return AvatarRenderer.asTextComponent(avatarImage(skin, key.variant()), key.variant().yOffset());
-        } catch (java.io.IOException exception) {
-            return Component.empty();
-        }
-    }
-
-    private static BufferedImage avatarImage(BufferedImage skin, AvatarVariant variant) {
-        BufferedImage face = new BufferedImage(variant.imageSize(), variant.imageSize(), BufferedImage.TYPE_INT_ARGB);
-        boolean hasFaceOverlay = skin.getHeight() >= 64;
-        for (int y = 0; y < 8; y++) {
-            for (int x = 0; x < 8; x++) {
-                int color = skinPixel(skin, 8 + x, 8 + y);
-                if (hasFaceOverlay) {
-                    int overlay = skinPixel(skin, 40 + x, 8 + y);
-                    if ((overlay >>> 24) > 16) {
-                        color = overlay;
-                    }
-                }
-                if ((color >>> 24) != 0) {
-                    int targetX = 1 + x * variant.pixelScale();
-                    int targetY = 1 + y * variant.pixelScale();
-                    for (int dy = 0; dy < variant.pixelScale(); dy++) {
-                        for (int dx = 0; dx < variant.pixelScale(); dx++) {
-                            face.setRGB(targetX + dx, targetY + dy, color);
-                        }
-                    }
-                }
-            }
-        }
-
-        BufferedImage outlined = new BufferedImage(variant.imageSize(), variant.imageSize(), BufferedImage.TYPE_INT_ARGB);
-        for (int y = 0; y < face.getHeight(); y++) {
-            for (int x = 0; x < face.getWidth(); x++) {
-                if ((face.getRGB(x, y) >>> 24) == 0) {
-                    continue;
-                }
-                for (int dy = -1; dy <= 1; dy++) {
-                    for (int dx = -1; dx <= 1; dx++) {
-                        int ox = x + dx;
-                        int oy = y + dy;
-                        if (ox >= 0 && ox < outlined.getWidth() && oy >= 0 && oy < outlined.getHeight()
-                                && (outlined.getRGB(ox, oy) >>> 24) == 0) {
-                            outlined.setRGB(ox, oy, 0xFF000000);
-                        }
-                    }
-                }
-            }
-        }
-        for (int y = 0; y < face.getHeight(); y++) {
-            for (int x = 0; x < face.getWidth(); x++) {
-                int color = face.getRGB(x, y);
-                if ((color >>> 24) != 0) {
-                    outlined.setRGB(x, y, color);
-                }
-            }
-        }
-        return outlined;
-    }
-
-    private static Component statisticsOverview(JobStatisticsSnapshot snapshot) {
-        return Component.literal("일반 경기 ").withStyle(ChatFormatting.GRAY)
-                .append(Component.literal(formatCount(snapshot.eligibleMatchCount()) + "회").withStyle(ChatFormatting.WHITE))
-                .append(Component.literal("  참가 표본 ").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal(formatCount(snapshot.participantAppearances()) + "건").withStyle(ChatFormatting.WHITE))
-                .append(Component.literal("  최근 갱신 ").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal(formatTime(snapshot.generatedAtEpochMillis())).withStyle(ChatFormatting.WHITE));
-    }
-
-    static Component jobStatisticsCategoryOverview(JobStatisticsSnapshot snapshot) {
-        String period = snapshot.participantAppearances() > 0L
-                ? formatTime(snapshot.firstMatchAtEpochMillis()) + " ~ " + formatTime(snapshot.lastMatchAtEpochMillis())
-                : "-";
-        return Component.literal("기록 기간 ").withStyle(ChatFormatting.GRAY)
-                .append(Component.literal(period).withStyle(ChatFormatting.WHITE));
-    }
-
-    static Component jobStatisticsSummaryHeader() {
-        List<Component> cells = jobStatisticsSummaryHeaderCells();
-        return jobStatisticsSummaryTableRow(cells.get(0), cells.get(1), cells.get(2), cells.get(3));
-    }
-
-    static void addJobStatisticsSummary(
-            List<DialogBody> bodies,
-            JobStatisticsSnapshot snapshot,
-            List<JobStatisticsRow> rows
-    ) {
-        Component header = Component.empty()
-                .append(new HeaderMessage(
-                        Component.literal("직업별 요약").withStyle(ChatFormatting.YELLOW),
-                        JOB_STATISTICS_WIDTH
-                ).asVanillaComponent())
-                .append("\n")
-                .append(jobStatisticsSummaryHeader())
-                .append("\n")
-                .append(jobStatisticsDivider().contents().copy());
-
-        MutableComponent body = Component.empty();
-        for (JobStatisticsRow row : rows) {
-            if (!body.getString().isEmpty()) {
-                body.append("\n");
-            }
-            body.append(jobStatisticsSummaryLine(snapshot, row));
-        }
-
-        bodies.add(new PlainMessage(header, JOB_STATISTICS_WIDTH));
-        bodies.add(new PlainMessage(body, JOB_STATISTICS_WIDTH));
-        bodies.add(jobStatisticsDivider());
-    }
-
-    static List<Component> jobStatisticsSummaryHeaderCells() {
-        return List.of(
-                Component.literal("직업").withStyle(ChatFormatting.AQUA),
-                Component.literal("선택 ").withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal("(선택률)").withStyle(ChatFormatting.DARK_GRAY)),
-                Component.literal("경기 ").withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal("(승률)").withStyle(ChatFormatting.GREEN)),
-                Component.literal("순위 ").withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal("(R)").withStyle(ChatFormatting.DARK_GRAY))
-        );
-    }
-
-    static Component jobStatisticsSummaryLine(JobStatisticsSnapshot snapshot, JobStatisticsRow row) {
-        List<Component> cells = jobStatisticsSummaryCells(snapshot, row);
-        return jobStatisticsSummaryTableRow(cells.get(0), cells.get(1), cells.get(2), cells.get(3));
-    }
-
-    static List<Component> jobStatisticsSummaryCells(JobStatisticsSnapshot snapshot, JobStatisticsRow row) {
-        JobStatisticsEntry entry = row.entry();
-        MutableComponent job = Component.literal(row.displayName()).withStyle(ChatFormatting.AQUA);
-        if (!row.registered()) {
-            job.append(Component.literal(" [미등록]").withStyle(ChatFormatting.DARK_GRAY));
-        }
-        Component selection = Component.literal(formatCount(entry.appearances()) + "회")
-                .withStyle(ChatFormatting.WHITE)
-                .append(Component.literal(" (" + formatPercent(snapshot.selectionRate(entry)) + ")")
-                        .withStyle(ChatFormatting.DARK_GRAY));
-        Component game = Component.literal(formatCount(entry.wins()) + "승 "
-                        + formatCount(entry.appearances() - entry.wins()) + "패")
-                .withStyle(ChatFormatting.WHITE)
-                .append(Component.literal(" (" + formatPercent(entry.winRate()) + ")")
-                        .withStyle(ChatFormatting.GREEN));
-        Component placement = Component.literal(formatAverage(entry.averagePlacement(), "위"))
-                .withStyle(ChatFormatting.WHITE)
-                .append(Component.literal(" (" + formatRound(entry.averageFinalRound()) + ")")
-                        .withStyle(ChatFormatting.DARK_GRAY));
-        return List.of(job, selection, game, placement);
-    }
-
-    static List<Integer> jobStatisticsSummaryColumnWidths() {
-        return List.of(
-                JOB_STATISTICS_JOB_WIDTH,
-                JOB_STATISTICS_SELECTION_WIDTH,
-                JOB_STATISTICS_GAME_WIDTH,
-                JOB_STATISTICS_PLACEMENT_WIDTH
-        );
-    }
-
-    private static Component jobStatisticsSummaryTableRow(
-            Component job,
-            Component selection,
-            Component game,
-            Component placement
-    ) {
-        return Component.empty()
-                .append(centeredTableCell(job, JOB_STATISTICS_JOB_WIDTH))
-                .append(centeredTableCell(selection, JOB_STATISTICS_SELECTION_WIDTH))
-                .append(centeredTableCell(game, JOB_STATISTICS_GAME_WIDTH))
-                .append(centeredTableCell(placement, JOB_STATISTICS_PLACEMENT_WIDTH));
-    }
-
-    static List<Component> jobStatisticsSampleHeaderCells() {
-        return List.of(
-                statisticsHeaderCell("선택", "%", ChatFormatting.DARK_GRAY),
-                statisticsHeaderCell("승리", "%", ChatFormatting.GREEN),
-                statisticsHeaderCell("평균 순위", "R", ChatFormatting.DARK_GRAY)
-        );
-    }
-
-    static List<Component> jobStatisticsSampleCells(
-            JobStatisticsSnapshot snapshot,
-            JobStatisticsEntry entry
-    ) {
-        return List.of(
-                statisticsValueCell(formatCount(entry.appearances()) + "회",
-                        formatPercent(snapshot.selectionRate(entry)), ChatFormatting.DARK_GRAY),
-                statisticsValueCell(formatCount(entry.wins()) + "승",
-                        formatPercent(entry.winRate()), ChatFormatting.GREEN),
-                statisticsValueCell(formatAverage(entry.averagePlacement(), "위"),
-                        formatRound(entry.averageFinalRound()), ChatFormatting.DARK_GRAY)
-        );
-    }
-
-    static List<List<Component>> jobStatisticsRoundRows(JobStatisticsEntry entry) {
-        ArrayList<List<Component>> rows = new ArrayList<>(10);
-        for (int offset = 0; offset < 10; offset++) {
-            ArrayList<Component> row = new ArrayList<>(4);
-            for (int firstRound = 1; firstRound <= JobStatisticsEntry.MAX_TRACKED_ROUND; firstRound += 10) {
-                row.add(jobStatisticsRoundCell(entry, firstRound + offset));
-            }
-            rows.add(List.copyOf(row));
-        }
-        return List.copyOf(rows);
-    }
-
-    private static Component jobStatisticsRoundCell(JobStatisticsEntry entry, int round) {
-        return Component.literal("R" + round + " ").withStyle(ChatFormatting.GRAY)
-                .append(Component.literal(formatPercent(entry.roundPassRate(round)))
-                        .withStyle(ChatFormatting.AQUA));
-    }
-
-    static List<Integer> jobStatisticsRoundColumnWidths() {
-        return statisticsEqualColumnWidths(4, true);
-    }
-
-    static Component jobStatisticsRoundBody(JobStatisticsEntry entry) {
-        return centeredStatisticsRows(
-                jobStatisticsRoundColumnWidths(),
-                jobStatisticsRoundRows(entry),
-                true
-        );
-    }
-
-    static Component jobStatisticsCombatBody(JobStatisticsEntry entry) {
-        JobStatisticsTotals totals = entry.totals();
-        return centeredStatisticsRows(
-                statisticsEqualColumnWidths(2),
-                List.of(List.of(
-                        statisticsNumber(entry.averageValue(totals.monsterKills())),
-                        statisticsNumber(entry.averageValue(totals.killMinerals()))
-                )),
-                false
-        );
-    }
-
-    static List<Component> jobStatisticsCombatHeaderCells() {
-        return statisticsHeaderCells("평균 처치", "평균 획득 다이아");
-    }
-
-    static Component jobStatisticsIncomeBody(JobStatisticsEntry entry) {
-        JobStatisticsTotals totals = entry.totals();
-        return centeredStatisticsRows(
-                statisticsEqualColumnWidths(5),
-                List.of(List.of(
-                        statisticsNumber(entry.averageValue(totals.summonedMonsters())),
-                        statisticsValueCell(formatAverage(entry.averageValue(totals.finalIncome()), ""),
-                                formatAverage(entry.averageValue(totals.incomeGenerated()), ""),
-                                ChatFormatting.DARK_GRAY),
-                        statisticsNumber(entry.averageValue(totals.sentIncomeThreat())),
-                        statisticsNumber(entry.averageValue(totals.incomingIncomeThreat())),
-                        statisticsValueCell(formatAverage(
-                                entry.averageValue(totals.incomeAttackSuccessThreat()), ""),
-                                formatPercent(entry.incomeAttackSuccessRate()), ChatFormatting.GREEN)
-                )),
-                false
-        );
-    }
-
-    static List<Component> jobStatisticsIncomeHeaderCells() {
-        return statisticsHeaderCells(
-                "평균 소환", "최종(생산)", "보낸 위협", "받은 위협", "성공 위협(%)"
-        );
-    }
-
-    static Component jobStatisticsDefenseBody(JobStatisticsEntry entry) {
-        JobStatisticsTotals totals = entry.totals();
-        return centeredStatisticsRows(
-                statisticsEqualColumnWidths(6),
-                List.of(List.of(
-                        statisticsNumber(entry.averageValue(totals.ownLaneIncomingThreat())),
-                        statisticsNumber(entry.averageValue(totals.ownLaneLeakedThreat())),
-                        Component.literal(formatPercent(entry.defenseSuccessRate())).withStyle(ChatFormatting.GREEN),
-                        statisticsNumber(entry.averageValue(totals.ownLaneDiamondGain())),
-                        statisticsNumber(entry.averageValue(totals.assistClearDiamondGain())),
-                        statisticsNumber(entry.averageValue(totals.assistClearThreat()))
-                )),
-                false
-        );
-    }
-
-    static List<Component> jobStatisticsDefenseHeaderCells() {
-        return statisticsHeaderCells(
-                "라인 위협", "누수 위협", "방어율", "라인 다이아", "지원 다이아", "정리 위협"
-        );
-    }
-
-    private static List<Component> statisticsHeaderCells(String... labels) {
-        return java.util.Arrays.stream(labels)
-                .map(label -> (Component) Component.literal(label).withStyle(ChatFormatting.GRAY))
-                .toList();
-    }
-
-    private static Component statisticsHeaderCell(
-            String label,
-            String parenthetical,
-            ChatFormatting parentheticalColor
-    ) {
-        return Component.literal(label).withStyle(ChatFormatting.GRAY)
-                .append(Component.literal("(" + parenthetical + ")").withStyle(parentheticalColor));
-    }
-
-    private static Component statisticsValueCell(
-            String value,
-            String parenthetical,
-            ChatFormatting parentheticalColor
-    ) {
-        return Component.literal(value).withStyle(ChatFormatting.WHITE)
-                .append(Component.literal("(" + parenthetical + ")").withStyle(parentheticalColor));
-    }
-
-    private static Component statisticsNumber(OptionalDouble value) {
-        return Component.literal(formatAverage(value, "")).withStyle(ChatFormatting.WHITE);
-    }
-
-    static List<Integer> statisticsEqualColumnWidths(int columnCount) {
-        return statisticsEqualColumnWidths(columnCount, false);
-    }
-
-    private static List<Integer> statisticsEqualColumnWidths(int columnCount, boolean separated) {
-        int availableWidth = JOB_STATISTICS_DETAIL_TABLE_WIDTH
-                - (separated ? JOB_STATISTICS_SEPARATOR_WIDTH * Math.max(0, columnCount - 1) : 0);
-        int baseWidth = availableWidth / columnCount;
-        int remainder = availableWidth % columnCount;
-        ArrayList<Integer> widths = new ArrayList<>(columnCount);
-        for (int index = 0; index < columnCount; index++) {
-            widths.add(baseWidth + (index < remainder ? 1 : 0));
-        }
-        return List.copyOf(widths);
-    }
-
-    private static Component centeredStatisticsRows(
-            List<Integer> widths,
-            List<List<Component>> rows,
-            boolean separated
-    ) {
-        MutableComponent table = Component.empty();
-        for (List<Component> row : rows) {
-            if (!table.getString().isEmpty()) {
-                table.append("\n");
-            }
-            table.append(centeredStatisticsRow(widths, row, separated));
-        }
-        return table;
-    }
-
-    private static Component centeredStatisticsRow(
-            List<Integer> widths,
-            List<Component> cells,
-            boolean separated
-    ) {
-        if (widths.size() != cells.size()) {
-            throw new IllegalArgumentException("Statistics table width and cell counts must match.");
-        }
-        MutableComponent row = Component.empty();
-        for (int index = 0; index < cells.size(); index++) {
-            if (separated && index > 0) {
-                row.append(statisticsTableSeparator());
-            }
-            row.append(centeredTableCell(cells.get(index), widths.get(index)));
-        }
-        return row;
-    }
-
-    private static Component statisticsTableSeparator() {
-        return Component.literal(" | ").withStyle(ChatFormatting.DARK_GRAY);
+        return UiPlayerAvatarService.avatarComponent(playerName, UiPlayerAvatarService.AvatarVariant.COMPACT);
     }
 
     private static ActionButton jobStatisticsButton(JobStatisticsRow row) {
@@ -3259,176 +2582,6 @@ public final class SemionDialogService {
                 Component.literal(tooltip),
                 COMPACT_BUTTON_WIDTH
         );
-    }
-
-    private static JobStatisticsEntry emptyJobStatisticsEntry(String jobId) {
-        return new JobStatisticsEntry(
-                jobId,
-                0L,
-                0L,
-                0L,
-                0L,
-                0L,
-                JobStatisticsTotals.empty(),
-                0L,
-                0L,
-                0L
-        );
-    }
-
-    private static void addStatisticsTable(List<DialogBody> bodies, Component table) {
-        bodies.add(new PlainMessage(table, JOB_STATISTICS_DETAIL_WIDTH));
-    }
-
-    private static void addStatisticsSectionWithHeaderAndBody(
-            List<DialogBody> bodies,
-            String title,
-            Component header,
-            Component body
-    ) {
-        addStatisticsTable(bodies, Component.empty()
-                .append(statisticsSectionHeader(title))
-                .append("\n")
-                .append(header)
-                .append("\n")
-                .append(HeaderMessage.dividerComponent(JOB_STATISTICS_DETAIL_TABLE_WIDTH)));
-        addStatisticsTable(bodies, body);
-    }
-
-    private static void addStatisticsSectionWithBody(
-            List<DialogBody> bodies,
-            String title,
-            Component body
-    ) {
-        addStatisticsTable(bodies, statisticsSectionHeader(title));
-        addStatisticsTable(bodies, body);
-    }
-
-    private static Component statisticsSectionHeader(String title) {
-        return new HeaderMessage(
-                Component.literal(title).withStyle(ChatFormatting.YELLOW),
-                JOB_STATISTICS_DETAIL_TABLE_WIDTH + 23
-        ).asVanillaComponent();
-    }
-
-    private static void addCenteredStatisticsLine(List<DialogBody> bodies, Component line) {
-        bodies.add(new PlainMessage(
-                centeredTableCell(line, JOB_STATISTICS_DETAIL_CONTENT_WIDTH),
-                JOB_STATISTICS_DETAIL_WIDTH
-        ));
-    }
-
-    private static void addTraitCombinationStatistics(
-            List<DialogBody> bodies,
-            List<TraitCombinationStatisticsEntry> combinations,
-            long jobAppearances
-    ) {
-        addStatisticsSectionWithHeaderAndBody(
-                bodies,
-                "특성 조합",
-                centeredStatisticsRow(
-                        statisticsEqualColumnWidths(4),
-                        jobStatisticsTraitHeaderCells(),
-                        false
-                ),
-                jobStatisticsTraitBody(combinations, jobAppearances)
-        );
-    }
-
-    static Component jobStatisticsTraitBody(
-            List<TraitCombinationStatisticsEntry> combinations,
-            long jobAppearances
-    ) {
-        List<Integer> widths = statisticsEqualColumnWidths(4);
-        if (combinations.isEmpty()) {
-            return centeredStatisticsRows(widths, List.of(List.of(
-                    statisticsNumber(OptionalDouble.empty()),
-                    statisticsNumber(OptionalDouble.empty()),
-                    statisticsNumber(OptionalDouble.empty()),
-                    statisticsNumber(OptionalDouble.empty())
-            )), false);
-        }
-        int visibleCount = Math.min(8, combinations.size());
-        ArrayList<List<Component>> rows = new ArrayList<>(visibleCount);
-        for (int index = 0; index < visibleCount; index++) {
-            TraitCombinationStatisticsEntry combination = combinations.get(index);
-            rows.add(List.of(
-                    fitStatisticsLabel(jobStatisticsTraitLabel(combination), widths.getFirst()),
-                    statisticsValueCell(formatCount(combination.appearances()) + "회",
-                            formatPercent(combination.selectionRate(jobAppearances)), ChatFormatting.DARK_GRAY),
-                    statisticsValueCell(formatCount(combination.wins()) + "승",
-                            formatPercent(combination.winRate()), ChatFormatting.GREEN),
-                    statisticsValueCell(formatAverage(combination.averagePlacement(), "위"),
-                            formatRound(combination.averageFinalRound()), ChatFormatting.DARK_GRAY)
-            ));
-        }
-        return centeredStatisticsRows(widths, rows, false);
-    }
-
-    static String jobStatisticsTraitLabel(TraitCombinationStatisticsEntry combination) {
-        return traitName(combination.primaryTraitId()) + "·" + traitName(combination.secondaryTraitId());
-    }
-
-    private static Component fitStatisticsLabel(String label, int width) {
-        Component fullLabel = Component.literal(label).withStyle(ChatFormatting.WHITE);
-        if (TextUncenterer.width(fullLabel) <= width) {
-            return fullLabel;
-        }
-        String fitted = label;
-        while (!fitted.isEmpty()) {
-            int lastCodePoint = fitted.offsetByCodePoints(0, fitted.codePointCount(0, fitted.length()) - 1);
-            fitted = fitted.substring(0, lastCodePoint);
-            Component abbreviated = Component.literal(fitted + "…").withStyle(ChatFormatting.WHITE);
-            if (TextUncenterer.width(abbreviated) <= width) {
-                return abbreviated;
-            }
-        }
-        return Component.literal("…").withStyle(ChatFormatting.WHITE);
-    }
-
-    static List<Component> jobStatisticsTraitHeaderCells() {
-        return List.of(
-                Component.literal("특성").withStyle(ChatFormatting.GRAY),
-                statisticsHeaderCell("선택", "%", ChatFormatting.DARK_GRAY),
-                statisticsHeaderCell("승리", "%", ChatFormatting.GREEN),
-                statisticsHeaderCell("평균 순위", "R", ChatFormatting.DARK_GRAY)
-        );
-    }
-
-    private static String formatPercent(OptionalDouble value) {
-        if (value.isEmpty() || !Double.isFinite(value.getAsDouble())) {
-            return "-";
-        }
-        return String.format(Locale.ROOT, "%.1f%%", value.getAsDouble() * 100.0);
-    }
-
-    private static String formatAverage(OptionalDouble value, String suffix) {
-        if (value.isEmpty() || !Double.isFinite(value.getAsDouble())) {
-            return "-";
-        }
-        return String.format(Locale.ROOT, "%.1f%s", value.getAsDouble(), suffix);
-    }
-
-    private static String formatRound(OptionalDouble value) {
-        if (value.isEmpty() || !Double.isFinite(value.getAsDouble())) {
-            return "-";
-        }
-        return String.format(Locale.ROOT, "R%.1f", value.getAsDouble());
-    }
-
-    private static String formatCount(long value) {
-        return String.format(Locale.ROOT, "%,d", value);
-    }
-
-    private static String formatTime(long epochMillis) {
-        return epochMillis <= 0L ? "-" : STATISTICS_TIME_FORMAT.format(Instant.ofEpochMilli(epochMillis));
-    }
-
-    private static int skinPixel(BufferedImage skin, int x, int y) {
-        if (x < 0 || y < 0 || x >= skin.getWidth() || y >= skin.getHeight()) {
-            return 0;
-        }
-        return skin.getRGB(x, y);
     }
 
     private static String teamListMarkup(java.util.Set<TeamId> teams) {
@@ -3538,13 +2691,6 @@ public final class SemionDialogService {
                 + emeraldCost + "</green>";
     }
 
-    private static String teamList(java.util.Set<TeamId> teams) {
-        if (teams.isEmpty()) {
-            return "없음";
-        }
-        return teams.stream().map(Enum::name).sorted().collect(Collectors.joining(", "));
-    }
-
     private static Comparator<MatchParticipantResult> participantComparator() {
         return Comparator.comparing(MatchParticipantResult::teamId)
                 .thenComparing(MatchParticipantResult::playerName);
@@ -3569,36 +2715,6 @@ public final class SemionDialogService {
             JobStatisticsEntry entry,
             boolean registered
     ) {
-    }
-
-    private enum AvatarVariant {
-        COMPACT(1, 10, 25),
-        RESULT(2, 18, 20);
-
-        private final int pixelScale;
-        private final int imageSize;
-        private final int yOffset;
-
-        AvatarVariant(int pixelScale, int imageSize, int yOffset) {
-            this.pixelScale = pixelScale;
-            this.imageSize = imageSize;
-            this.yOffset = yOffset;
-        }
-
-        int pixelScale() {
-            return pixelScale;
-        }
-
-        int imageSize() {
-            return imageSize;
-        }
-
-        int yOffset() {
-            return yOffset;
-        }
-    }
-
-    private record SmallAvatarKey(String playerName, AvatarVariant variant) {
     }
 
 }

@@ -60,8 +60,8 @@ class EndTransferControllerTest extends EndTestFixture {
         lane.addTower(enderman);
         enderman.onWaveStarted(lane, 1);
         tick(dragon, lane, 3);
-        double partialPermanentDamage = expectedDamageBonus(0.3);
-        double partialTotalDamage = expectedDamageBonus(5.25);
+        double partialPermanentDamage = expectedDamageBonus(0.45);
+        double partialTotalDamage = expectedDamageBonus(5.4);
         assertEquals(0, dragon.transferStats().endCrystalCount());
         assertTrue(lane.towers().contains(enderman));
         assertEquals(partialTotalDamage - partialPermanentDamage, dragon.transferStats().roundDamageBonus(), 0.0001);
@@ -69,8 +69,8 @@ class EndTransferControllerTest extends EndTestFixture {
         assertEquals(0.75, EndTransferController.progress(enderman), 0.0001);
 
         tick(dragon, lane, 1);
-        double completedPermanentDamage = expectedDamageBonus(0.4);
-        double completedTotalDamage = expectedDamageBonus(7.0);
+        double completedPermanentDamage = expectedDamageBonus(0.6);
+        double completedTotalDamage = expectedDamageBonus(7.2);
         assertEquals(1, dragon.transferStats().endCrystalCount());
         assertEquals(completedTotalDamage - completedPermanentDamage, dragon.transferStats().roundDamageBonus(), 0.0001);
         assertEquals(completedPermanentDamage, dragon.transferStats().permanentDamageBonus(), 0.0001);

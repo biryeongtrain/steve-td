@@ -8,10 +8,10 @@ import kim.biryeong.semiontd.tower.gamble.GambleSpectatorRewards;
 import kim.biryeong.semiontd.tower.gamble.GambleTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class GambleTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(
             SemionTd.MOD_ID, "gamble_towers"
     );
 

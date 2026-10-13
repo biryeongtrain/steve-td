@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.game;
 
-import net.minecraft.ChatFormatting;
+import net.minecraft.world.scores.TeamColor;
+import java.util.Optional;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerScoreboard;
@@ -24,7 +25,7 @@ public final class VanillaTeamBridge {
     public static void assignPlayer(MinecraftServer server, ServerPlayer player, TeamId teamId) {
         ServerScoreboard scoreboard = server.getScoreboard();
         PlayerTeam team = getOrCreateTeam(scoreboard, teamId);
-        String playerName = player.getGameProfile().getName();
+        String playerName = player.getGameProfile().name();
         scoreboard.removePlayerFromTeam(playerName);
         scoreboard.addPlayerToTeam(playerName, team);
     }
@@ -32,7 +33,7 @@ public final class VanillaTeamBridge {
     public static void assignSpectator(MinecraftServer server, ServerPlayer player) {
         ServerScoreboard scoreboard = server.getScoreboard();
         PlayerTeam team = getOrCreateSpectatorTeam(scoreboard);
-        String playerName = player.getGameProfile().getName();
+        String playerName = player.getGameProfile().name();
         scoreboard.removePlayerFromTeam(playerName);
         scoreboard.addPlayerToTeam(playerName, team);
     }
@@ -45,7 +46,7 @@ public final class VanillaTeamBridge {
         }
 
         team.setDisplayName(Component.literal("Semion " + teamId.name()));
-        team.setColor(color(teamId));
+        team.setColor(Optional.of(color(teamId)));
         team.setAllowFriendlyFire(false);
         team.setSeeFriendlyInvisibles(true);
         return team;
@@ -58,7 +59,7 @@ public final class VanillaTeamBridge {
         }
 
         team.setDisplayName(Component.literal("Semion Spectator"));
-        team.setColor(ChatFormatting.GRAY);
+        team.setColor(Optional.of(TeamColor.GRAY));
         team.setAllowFriendlyFire(false);
         team.setSeeFriendlyInvisibles(true);
         return team;
@@ -68,14 +69,14 @@ public final class VanillaTeamBridge {
         return TEAM_PREFIX + teamId.name().toLowerCase();
     }
 
-    private static ChatFormatting color(TeamId teamId) {
+    private static TeamColor color(TeamId teamId) {
         return switch (teamId) {
-            case RED -> ChatFormatting.RED;
-            case BLUE -> ChatFormatting.BLUE;
-            case GREEN -> ChatFormatting.GREEN;
-            case YELLOW -> ChatFormatting.YELLOW;
-            case PURPLE -> ChatFormatting.LIGHT_PURPLE;
-            case AQUA -> ChatFormatting.AQUA;
+            case RED -> TeamColor.RED;
+            case BLUE -> TeamColor.BLUE;
+            case GREEN -> TeamColor.GREEN;
+            case YELLOW -> TeamColor.YELLOW;
+            case PURPLE -> TeamColor.LIGHT_PURPLE;
+            case AQUA -> TeamColor.AQUA;
         };
     }
 }

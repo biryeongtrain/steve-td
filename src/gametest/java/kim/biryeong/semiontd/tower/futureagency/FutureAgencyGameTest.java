@@ -2,6 +2,8 @@ package kim.biryeong.semiontd.tower.futureagency;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -35,8 +37,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
-public final class FutureAgencyGameTest {
-    @GameTest
+public final class FutureAgencyGameTest implements kim.biryeong.semiontd.gametest.RuntimeArenaFixture {
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void rescueAugmentsKeepTwoSurvivorsAndRestoreTheStartSnapshotOnlyOnce(GameTestHelper context) {
         UUID owner = UUID.randomUUID();
         FutureAgencyStates.clear(owner);
@@ -143,7 +145,7 @@ public final class FutureAgencyGameTest {
                         kim.biryeong.semiontd.augment.AugmentChoice.none())).toList());
     }
 
-    @GameTest
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void cleanLaneRecordGrantsTwoPolicyChoicesNextRound(GameTestHelper context) {
         UUID owner = UUID.nameUUIDFromBytes("future-agency-clean-lane".getBytes(StandardCharsets.UTF_8));
         UUID opponent = UUID.nameUUIDFromBytes("future-agency-clean-lane-opponent".getBytes(StandardCharsets.UTF_8));
@@ -183,7 +185,106 @@ public final class FutureAgencyGameTest {
         }
     }
 
-    @GameTest
+    @GameTest(structure = "semion-td-gametest:combat_arena")
+    public void denseControlCountMatchesSortedReferenceAcrossLiveLaneChanges(GameTestHelper context) {
+        UUID owner = UUID.randomUUID();
+        FutureAgencyStates.clear(owner);
+        PlayerLane lane = testLane(context, owner);
+        PlayerLane otherLane = testLane(context, owner, 2);
+        GridPosition origin = floor(context, 4, 2, 4);
+        prepareFloor(context, origin);
+        ArrayList<SemionMonsterEntity> entities = new ArrayList<>();
+        try {
+            FutureAgencyAgentTower suppression = agent(owner, FutureAgencyRole.SUPPRESSION, origin);
+            lane.addTower(suppression);
+            Vec3 center = towerEntity(lane, suppression).position().add(0, 0, 2);
+            double radius = FutureAgencyBalance.suppressionDenseRadius();
+            SemionMonsterEntity primary = spawnRootTarget(context, lane, center);
+            entities.add(primary);
+            require(FutureAgencyAgentTower.nearbyTargetCount(lane, center, radius, primary) == 0,
+                    "The primary must not count itself.");
+            SemionMonsterEntity inside = spawnRootTarget(context, lane, center.add(radius / 2, 0, 0));
+            entities.add(inside);
+            entities.add(spawnRootTarget(context, lane, center.add(radius, 0, 0)));
+            entities.add(spawnRootTarget(context, lane, center.add(radius + 0.0001, 0, 0)));
+            SemionMonsterEntity dead = spawnRootTarget(context, lane, center);
+            entities.add(dead);
+            dead.setHealth(0);
+            SemionMonsterEntity removed = spawnRootTarget(context, lane, center);
+            entities.add(removed);
+            removed.discard();
+            entities.add(spawnRootTarget(context, otherLane, center));
+            require(FutureAgencyAgentTower.nearbyTargetCount(lane, center, radius, primary) == 2,
+                    "Include the exact radius boundary; exclude outside, dead, removed, and other-lane targets.");
+            lane.activeMonsters().add(inside.runtimeMonster());
+            lane.activeMonsters().add(new Monster("unspawned-dense-target", TeamId.RED, 1,
+                    Optional.empty(), Optional.empty(), 500, 0, 10, AttackKind.MELEE, "minecraft:zombie", 0L));
+            inside.runtimeMonster().syncHealth(0);
+            require(FutureAgencyAgentTower.nearbyTargetCount(lane, center, radius, primary) == 3,
+                    "Count duplicate lane entries and preserve live-entity eligibility independently of runtime health.");
+            inside.runtimeMonster().syncHealth(500);
+            for (int order = 0; order < 6; order++) {
+                for (SemionMonsterEntity excluded : List.of(primary, inside)) {
+                    assertDenseCountMatchesReference(lane, excluded.position(), radius, excluded);
+                }
+                Collections.rotate(lane.activeMonsters(), 1);
+                if (order % 2 == 0) Collections.reverse(lane.activeMonsters());
+            }
+            FutureAgencyStates.PlayerState state = FutureAgencyStates.state(owner);
+            state.reconstruct();
+            int selectionBound = java.util.Arrays.stream(FutureAgencyPolicy.values())
+                    .mapToInt(FutureAgencyPolicy::maxStacks).sum() + 1;
+            for (int round = 1; round <= selectionBound; round++) {
+                state.openRound(round);
+                if (state.offers().contains(FutureAgencyPolicy.DENSE_CONTROL)) break;
+                require(!state.offers().isEmpty() && state.choose(state.offers().getFirst()),
+                        "Exhausting other policies must eventually offer dense control.");
+            }
+            double baseline = suppression.modifyAttackDamage(null, primary, 100);
+            require(state.choose(FutureAgencyPolicy.DENSE_CONTROL), "Dense control must be selectable.");
+            double bonus = Math.min(FutureAgencyBalance.suppressionDenseCap(),
+                    sortedDenseCountReference(lane, center, radius, primary)
+                            * FutureAgencyBalance.policy(FutureAgencyPolicy.DENSE_CONTROL));
+            require(close(suppression.modifyAttackDamage(null, primary, 100), baseline + 100 * bonus),
+                    "Actual suppression damage must use the equivalent neighbor count.");
+            inside.setPos(center.add(radius + 1, 0, 0));
+            assertDenseCountMatchesReference(lane, center, radius, primary);
+            primary.discard();
+            assertDenseCountMatchesReference(lane, inside.position(), radius, inside);
+            lane.activeMonsters().clear();
+            assertDenseCountMatchesReference(lane, center, radius, primary);
+            require(FutureAgencyAgentTower.nearbyTargetCount(null, center, radius, primary) == 0
+                            && FutureAgencyAgentTower.nearbyTargetCount(lane, null, radius, primary) == 0,
+                    "Missing lane or center must retain the empty result.");
+            context.succeed();
+        } finally {
+            entities.forEach(SemionMonsterEntity::discard);
+            lane.activeMonsters().clear();
+            otherLane.activeMonsters().clear();
+            lane.clearTowers();
+            FutureAgencyStates.clear(owner);
+        }
+    }
+
+    private static void assertDenseCountMatchesReference(PlayerLane lane, Vec3 center, double radius,
+                                                         SemionMonsterEntity excluded) {
+        require(FutureAgencyAgentTower.nearbyTargetCount(lane, center, radius, excluded)
+                        == sortedDenseCountReference(lane, center, radius, excluded),
+                "Dense control must match the previous sorted-count result after lane or target changes.");
+    }
+
+    private static long sortedDenseCountReference(PlayerLane lane, Vec3 center, double radius,
+                                                  SemionMonsterEntity excluded) {
+        return lane.activeMonsters().stream().filter(monster -> monster.hasMinecraftEntity())
+                .map(monster -> lane.arenaWorld().getEntity(monster.minecraftEntityId()))
+                .filter(SemionMonsterEntity.class::isInstance).map(SemionMonsterEntity.class::cast)
+                .filter(entity -> entity.isAlive() && entity.position().distanceToSqr(center) <= radius * radius)
+                .sorted(Comparator.comparingDouble((SemionMonsterEntity entity) -> -entity.runtimeMonster().laneProgress())
+                        .thenComparing(entity -> entity.getUUID().toString())).toList().stream()
+                .filter(target -> target != excluded).count();
+    }
+
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void suppressionReducesMoveAndAttackSpeedTogether(GameTestHelper context) {
         UUID owner = UUID.nameUUIDFromBytes("future-agency-suppression".getBytes(StandardCharsets.UTF_8));
         FutureAgencyStates.clear(owner);
@@ -207,7 +308,7 @@ public final class FutureAgencyGameTest {
         }
     }
 
-    @GameTest
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void survivorsStayCapped(GameTestHelper context) {
         UUID owner = UUID.nameUUIDFromBytes("future-agency-carry".getBytes(StandardCharsets.UTF_8));
         FutureAgencyStates.clear(owner);
@@ -269,7 +370,7 @@ public final class FutureAgencyGameTest {
         }
     }
 
-    @GameTest
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void finalDefenseDoesNotCreateSurvivorCopies(GameTestHelper context) {
         UUID owner = UUID.nameUUIDFromBytes("future-agency-final-defense".getBytes(StandardCharsets.UTF_8));
         FutureAgencyStates.clear(owner);
@@ -301,7 +402,7 @@ public final class FutureAgencyGameTest {
         }
     }
 
-    @GameTest
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void survivorDeathReplacementAndOriginalSaleRespectLink(GameTestHelper context) {
         UUID owner = UUID.nameUUIDFromBytes("future-agency-death".getBytes(StandardCharsets.UTF_8));
         FutureAgencyStates.clear(owner);
@@ -354,7 +455,7 @@ public final class FutureAgencyGameTest {
         }
     }
 
-    @GameTest
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void originalUpgradeSynchronizesSurvivorGradePositionAndHealthRatio(GameTestHelper context) {
         UUID owner = UUID.nameUUIDFromBytes("future-agency-upgrade".getBytes(StandardCharsets.UTF_8));
         FutureAgencyStates.clear(owner);
@@ -394,7 +495,7 @@ public final class FutureAgencyGameTest {
         }
     }
 
-    @GameTest
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void survivorLinksAreIsolatedByOwnerAndLane(GameTestHelper context) {
         UUID firstOwner = UUID.nameUUIDFromBytes("future-agency-owner-a".getBytes(StandardCharsets.UTF_8));
         UUID secondOwner = UUID.nameUUIDFromBytes("future-agency-owner-b".getBytes(StandardCharsets.UTF_8));
@@ -436,7 +537,7 @@ public final class FutureAgencyGameTest {
         }
     }
 
-    @GameTest
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void worldSaveKeepsCarryThroughFinalDefenseReset(GameTestHelper context) {
         UUID owner = UUID.nameUUIDFromBytes("future-agency-world-save".getBytes(StandardCharsets.UTF_8));
         FutureAgencyStates.clear(owner);
@@ -549,6 +650,8 @@ public final class FutureAgencyGameTest {
     }
 
     private static PlayerLane testLane(GameTestHelper context, UUID owner, int laneId) {
+        context.assertTrue(context.getBounds().contains(Vec3.atCenterOf(context.absolutePos(new BlockPos(14, 6, 14)))),
+                "The declared structure must contain the entire future-agency arena.");
         BlockPos min = context.absolutePos(new BlockPos(0, 1, 0));
         BlockPos max = context.absolutePos(new BlockPos(14, 6, 14));
         LaneRegionLayout layout = new LaneRegionLayout(

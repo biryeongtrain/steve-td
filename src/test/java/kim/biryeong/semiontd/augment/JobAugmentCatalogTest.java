@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import kim.biryeong.semiontd.job.JobRegistry;
 import net.minecraft.SharedConstants;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.Bootstrap;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -21,7 +21,7 @@ class JobAugmentCatalogTest {
             "legion_towers", "resonance_towers", "illager_towers", "nether", "end_towers", "ocean", "ancient_city",
             "hero_party", "succubus", "adversary_towers", "engineer_towers", "queen_towers", "atlantis_towers",
             "plant_towers", "army", "thunder", "demon_lord_towers", "gamble", "body", "pet_towers",
-            "developer_towers", "frost", "pirate", "mage_towers", "insect_towers", "future_agency_towers");
+            "developer_towers", "frost", "pirate", "mage_towers", "insect_towers", "future_agency_towers", "magic_school");
 
     @BeforeAll
     static void bootstrap() {
@@ -32,8 +32,8 @@ class JobAugmentCatalogTest {
     @Test
     void allReviewIdsKeepTheirRegisteredBuilderAndOriginalCards() {
         var entries = JobAugmentCatalog.entries();
-        assertEquals(126, entries.size());
-        assertEquals(126, entries.stream().map(JobAugmentCatalog.Entry::reviewId).distinct().count());
+        assertEquals(130, entries.size());
+        assertEquals(130, entries.stream().map(JobAugmentCatalog.Entry::reviewId).distinct().count());
         for (int index = 0; index < JOBS.size(); index++) {
             String job = JOBS.get(index);
             String owner = "semion-td:" + switch (job) {
@@ -43,7 +43,7 @@ class JobAugmentCatalogTest {
                 default -> job;
             };
             String reviewPrefix = String.format(java.util.Locale.ROOT, "J%02d-", index + 1);
-            assertTrue(JobRegistry.find(ResourceLocation.parse(owner)).isPresent(), owner);
+            assertTrue(JobRegistry.find(Identifier.parse(owner)).isPresent(), owner);
             for (String suffix : List.of("s", "g1", "g2", "p")) {
                 String reviewId = reviewPrefix + suffix.toUpperCase(java.util.Locale.ROOT);
                 var entry = entries.stream().filter(candidate -> candidate.reviewId().equals(reviewId)).findFirst().orElseThrow();
@@ -62,8 +62,8 @@ class JobAugmentCatalogTest {
     @Test
     void everyJobDefaultIsBundledAndPartialConfigurationPreservesExplicitValues() {
         AugmentConfig defaults = AugmentConfig.defaults();
-        assertFalse(defaults.enabled());
-        assertFalse(defaults.publicPoolEnabled());
+        assertTrue(defaults.enabled());
+        assertTrue(defaults.publicPoolEnabled());
         for (var entry : JobAugmentCatalog.entries()) {
             assertEquals(entry.parameters(), defaults.parametersFor(entry.definition().id()), entry.reviewId());
             assertFalse(AugmentDescriptions.describe(entry.definition(), defaults).contains("{"), entry.reviewId());
@@ -75,7 +75,7 @@ class JobAugmentCatalogTest {
         assertFalse(changed.isEnabled("job_mage_towers_p"));
         assertTrue(changed.isEnabled("job_mage_towers_s"));
         assertEquals(changed, AugmentConfig.fromJson(changed.toJson()));
-        assertEquals(126, changed.parameters().keySet().stream().filter(id -> id.startsWith("semiontd:job_")).count());
+        assertEquals(130, changed.parameters().keySet().stream().filter(id -> id.startsWith("semiontd:job_")).count());
     }
 
     @Test

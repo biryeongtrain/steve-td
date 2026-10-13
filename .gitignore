@@ -29,3 +29,6 @@ logs/
 
 # Privately licensed resource-pack assets
 /src/main/resources/assets/semion-td/
+
+# Local third-party mod JARs; see README.md
+/libs/

@@ -13,13 +13,13 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.advancements.AdvancementVisibilityEvaluator;
 
 public final class SemionAdvancementGameTest {
     @GameTest
     public void onlySemionAdvancementsAreLoaded(GameTestHelper context) {
-        List<ResourceLocation> foreignAdvancements = context.getLevel().getServer().getAdvancements()
+        List<Identifier> foreignAdvancements = context.getLevel().getServer().getAdvancements()
                 .getAllAdvancements()
                 .stream()
                 .map(AdvancementHolder::id)
@@ -29,7 +29,7 @@ public final class SemionAdvancementGameTest {
             context.fail(Component.literal("Only Semion TD advancements should remain: " + foreignAdvancements));
             return;
         }
-        Map<ResourceLocation, AdvancementHolder> loadedAdvancements = context.getLevel().getServer().getAdvancements()
+        Map<Identifier, AdvancementHolder> loadedAdvancements = context.getLevel().getServer().getAdvancements()
                 .getAllAdvancements()
                 .stream()
                 .collect(java.util.stream.Collectors.toMap(AdvancementHolder::id, advancement -> advancement));
@@ -37,7 +37,7 @@ public final class SemionAdvancementGameTest {
             context.fail(Component.literal("All Semion TD advancements and their root should load: " + loadedAdvancements.keySet()));
             return;
         }
-        List<ResourceLocation> missingParents = loadedAdvancements.values().stream()
+        List<Identifier> missingParents = loadedAdvancements.values().stream()
                 .filter(advancement -> advancement.value().parent()
                         .filter(parent -> !loadedAdvancements.containsKey(parent))
                         .isPresent())
@@ -63,7 +63,7 @@ public final class SemionAdvancementGameTest {
                     player.getAdvancements().getOrStartProgress(root).isDone(),
                     Component.literal("The Semion TD advancement root should unlock automatically.")
             );
-            Set<ResourceLocation> visible = new HashSet<>();
+            Set<Identifier> visible = new HashSet<>();
             AdvancementVisibilityEvaluator.evaluateVisibility(
                     manager.tree().get(root),
                     node -> player.getAdvancements().getOrStartProgress(node.holder()).isDone(),

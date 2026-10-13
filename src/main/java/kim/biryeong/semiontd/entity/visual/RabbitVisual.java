@@ -1,6 +1,6 @@
 package kim.biryeong.semiontd.entity.visual;
 
-import net.minecraft.world.entity.animal.Rabbit;
+import net.minecraft.world.entity.animal.rabbit.Rabbit;
 
 public final class RabbitVisual {
     private RabbitVisual() {

@@ -56,6 +56,6 @@ public final class AreaEffectLaneIndex {
         return lane.arenaWorld() == source.level()
                 && lane.ownerPlayer().equals(source.ownerPlayer())
                 && lane.teamId() == source.teamId()
-                && lane.laneId() == source.laneId();
+                && lane.laneId() == source.runtimeTower().laneId();
     }
 }

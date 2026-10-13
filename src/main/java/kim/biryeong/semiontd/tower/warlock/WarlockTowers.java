@@ -41,13 +41,13 @@ public final class WarlockTowers {
                     + attackSpeedText("{ability.attackSpeedReduction:percent}") + " 감소시킵니다.</gray>"
     );
 
-    public static final TowerType BASE_WARLOCK_TOWER = tower("base_warlock_tower", "흑마법사 타워", 0, 80, 4, 5, 20, 30, byId(EntityType.WITCH), baseWarlockDescription());
-    public static final TowerType RANGED_WARLOCK_TOWER = tower("ranged_warlock_tower", "원거리 흑마법사 타워", 0, 100, 7, 8, 20, 20, byId(EntityType.WITCH), rangedWarlockDescription());
-    public static final TowerType MELEE_WARLOCK_TOWER = tower("melee_warlock_tower", "근거리 흑마법사 타워", 0, 120, 3, 7, 20, 80, byId(EntityType.WITCH), meleeWarlockDescription());
+    public static final TowerType BASE_WARLOCK_TOWER = tower("base_warlock_tower", "흑마법사 타워", 0, 80, 4, 5, 20, 30, byId(net.minecraft.world.entity.EntityTypes.WITCH), baseWarlockDescription());
+    public static final TowerType RANGED_WARLOCK_TOWER = tower("ranged_warlock_tower", "원거리 흑마법사 타워", 0, 100, 7, 8, 20, 20, byId(net.minecraft.world.entity.EntityTypes.WITCH), rangedWarlockDescription());
+    public static final TowerType MELEE_WARLOCK_TOWER = tower("melee_warlock_tower", "근거리 흑마법사 타워", 0, 120, 3, 7, 20, 80, byId(net.minecraft.world.entity.EntityTypes.WITCH), meleeWarlockDescription());
     public static final TowerType T1_SLAVE = tower("t1_slave", "희생\"양\"", 50, 75, 2, 4, 20, 30, SheepVisual.builder().color(DyeColor.RED).build(), List.of("<gray>" + warlockText("흑마법사") + "가 데려온 양입니다.</gray>"));
     public static final TowerType T2_SLAVE = tower("t2_slave", "희생\"양\"", 85, 120, 2, 8, 20, 50, SheepVisual.builder().color(DyeColor.PINK).build(), T2_SLAVE_DESCRIPTION);
     public static final TowerType T3_SLAVE = tower("t3_slave", "희생\"양\"", 135, 185, 2, 12, 20, 70, SheepVisual.builder().color(DyeColor.WHITE).build(), T3_SLAVE_DESCRIPTION);
-    public static final TowerType T1_RANGED_SLAVE = tower("t1_ranged_slave", "애완 박쥐", 55, 70, 7, 5, 17, 20, byId(EntityType.BAT), List.of("<gray>" + warlockText("흑마법사") + "가 키우는 박쥐입니다.</gray>", "<gray>애완동물도 얄짤없네요.</gray>"));
+    public static final TowerType T1_RANGED_SLAVE = tower("t1_ranged_slave", "애완 박쥐", 55, 70, 7, 5, 17, 20, byId(net.minecraft.world.entity.EntityTypes.BAT), List.of("<gray>" + warlockText("흑마법사") + "가 키우는 박쥐입니다.</gray>", "<gray>애완동물도 얄짤없네요.</gray>"));
     public static final TowerType T2_RANGED_SLAVE = tower("t2_ranged_slave", "애완 개구리", 90, 120, 7, 8, 15, 15, FrogVisual.builder().variant(FrogVariants.COLD).build(), RANGED_SLAVE_DESCRIPTION);
     public static final TowerType T3_RANGED_SLAVE = tower("t3_ranged_slave", "애완 개구리", 140, 185, 7, 12, 13, 15, FrogVisual.builder().variant(FrogVariants.WARM).build(), RANGED_SLAVE_DESCRIPTION);
 

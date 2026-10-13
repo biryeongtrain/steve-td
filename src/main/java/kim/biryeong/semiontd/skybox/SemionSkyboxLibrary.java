@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.Optional;
 import javax.imageio.ImageIO;
 import kim.biryeong.semiontd.SemionTd;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 
 public final class SemionSkyboxLibrary {
@@ -76,7 +76,7 @@ public final class SemionSkyboxLibrary {
             return Optional.of(new SemionSkybox(
                     id,
                     displayName(relative),
-                    ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "skybox/" + id),
+                    Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "skybox/" + id),
                     data
             ));
         } catch (IOException | IllegalArgumentException exception) {

@@ -30,7 +30,7 @@ public record TipConfig(
                 120,
                 List.of(
                         "<gold><bold>TIP</bold></gold> <gray>업그레이드 가격은 대상 타워의 설치 가격과 별도로 설정됩니다.</gray>",
-                        "<gold><bold>TIP</bold></gold> <gray>팀원에게 다이아를 요청하려면 <yellow>/요청 &lt;수량&gt;</yellow>을 사용하세요.</gray>",
+                        "<gold><bold>TIP</bold></gold> <gray>팀원에게 다이아를 요청하려면 <yellow>/요청 \\<수량></yellow>을 사용하세요.</gray>",
                         "<gold><bold>TIP</bold></gold> <gray><yellow>/스카이박스</yellow>에서 개인 스카이박스를 선택할 수 있습니다.</gray>",
                         "<gold><bold>TIP</bold></gold> <gray>팁을 끄려면 <yellow>/semiontd tip off</yellow>를 사용하세요.</gray>"
                 )

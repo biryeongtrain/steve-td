@@ -53,7 +53,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.GameTestServer;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
@@ -196,7 +196,7 @@ public final class SeasonThreeBuilderBalanceGameTest {
             outsideFloor |= entity.getX() < supportedBounds.min().getX() || entity.getX() >= supportedBounds.max().getX() + 1
                     || entity.getZ() < supportedBounds.min().getZ() || entity.getZ() >= supportedBounds.max().getZ() + 1;
             belowFloor |= entity.getY() < supportedBounds.min().getY() - .5;
-            unforcedChunk |= !lane.arenaWorld().getForceLoadedChunks().contains(entity.chunkPosition().toLong());
+            unforcedChunk |= !lane.arenaWorld().getForceLoadedChunks().contains(entity.chunkPosition().pack());
         }
 
         EntityDiagnostic snapshot() {
@@ -252,7 +252,7 @@ public final class SeasonThreeBuilderBalanceGameTest {
                     boolean present = lane.arenaWorld().getBlockState(circuit.circuitPosition()).is(circuitBlock(circuit).getBlock());
                     blockTowers.put(tower.logicalId(), new BlockDiagnostic(tower.type().id(), circuit.circuitPosition(),
                             present && (previous == null || previous.presentThroughout()),
-                            lane.arenaWorld().getForceLoadedChunks().contains(new ChunkPos(circuit.circuitPosition()).toLong())));
+                            lane.arenaWorld().getForceLoadedChunks().contains(ChunkPos.containing(circuit.circuitPosition()).pack())));
                 } else if (tower instanceof AdversaryRivalTower rival && rival.convertedForWave()) {
                     for (Monster candidate : lane.activeMonsters()) {
                         if (AdversaryRivalTower.isOwnedRival(candidate, tower.ownerPlayer())
@@ -391,7 +391,7 @@ public final class SeasonThreeBuilderBalanceGameTest {
                 BlockPos base = base(side);
                 for (int x = (base.getX() - FLOOR_MARGIN) >> 4; x <= (base.getX() + 17 + FLOOR_MARGIN) >> 4; x++) {
                     for (int z = (base.getZ() - FLOOR_MARGIN) >> 4; z <= (base.getZ() + 31 + FLOOR_MARGIN) >> 4; z++) {
-                        long key = ChunkPos.asLong(x, z);
+                        long key = ChunkPos.pack(x, z);
                         if (!level.getForceLoadedChunks().contains(key)) {
                             level.setChunkForced(x, z, true);
                             forcedChunks.add(key);
@@ -429,7 +429,7 @@ public final class SeasonThreeBuilderBalanceGameTest {
             game = new SemionGame(economyConfig, waveConfig, new GameArena(arenas));
             economy = new EconomyService(economyConfig, game);
             for (int side = 0; side < 2; side++) {
-                require(game.selectJob(participants.get(side).uuid(), ResourceLocation.parse(boards.get(side).jobId())),
+                require(game.selectJob(participants.get(side).uuid(), Identifier.parse(boards.get(side).jobId())),
                         "Fixture job is unavailable: " + boards.get(side).jobId());
             }
             require(game.start(level.getServer(), new ParticipantSelectionPlan(MatchMode.NORMAL, participants, Set.of(), 2)),
@@ -439,7 +439,7 @@ public final class SeasonThreeBuilderBalanceGameTest {
             for (AssignedParticipant participant : participants) {
                 var boss = game.teams().get(participant.teamId()).laneGroup().bossEntity().orElseThrow();
                 boss.setNoAi(true);
-                boss.setInvulnerable(true);
+                boss.setPermanentlyInvulnerable(true);
             }
             // Skip previous rounds, not placement/upgrade eligibility or round-start hooks.
             setField(game, "currentRound", pair.round() - 1);

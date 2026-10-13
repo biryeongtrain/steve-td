@@ -16,7 +16,7 @@ import kim.biryeong.semiontd.api.area.AreaVfxStylePlanner;
 import kim.biryeong.semiontd.api.area.AreaVfxStyleRegistry;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.particles.DustParticleOptions;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.BeforeAll;
@@ -34,7 +34,7 @@ class SuccubusVfxTest {
         CapturingRegistry registry = new CapturingRegistry();
         SuccubusVfx.register(registry);
 
-        for (ResourceLocation id : List.of(SuccubusVfx.STACK, SuccubusVfx.SLEEP,
+        for (Identifier id : List.of(SuccubusVfx.STACK, SuccubusVfx.SLEEP,
                 SuccubusVfx.SLEEP_SMOKE, SuccubusVfx.ABSORB)) {
             CountingOutput output = new CountingOutput();
             registry.find(id).orElseThrow().plan(context(id), output);
@@ -47,19 +47,19 @@ class SuccubusVfxTest {
         }
     }
 
-    private static AreaVfxContext context(ResourceLocation style) {
+    private static AreaVfxContext context(Identifier style) {
         AreaVfxParticle particle = new AreaVfxParticle(new DustParticleOptions(0xFFFFFF, 1.0F),
-                ResourceLocation.fromNamespaceAndPath("minecraft", "witch"));
-        return new AreaVfxContext(ResourceLocation.fromNamespaceAndPath("semion-td", "test"), style,
-                UUID.randomUUID(), ResourceLocation.fromNamespaceAndPath("semion-td", "succubus"),
+                Identifier.fromNamespaceAndPath("minecraft", "witch"));
+        return new AreaVfxContext(Identifier.fromNamespaceAndPath("semion-td", "test"), style,
+                UUID.randomUUID(), Identifier.fromNamespaceAndPath("semion-td", "succubus"),
                 new AreaVfxPalette(particle, particle), new Vec3(0.0, 64.0, 0.0),
                 new Vec3(3.0, 64.0, 0.0), 3.0, List.of(), 1, 1, 0, 1L);
     }
 
     private static final class CapturingRegistry implements AreaVfxStyleRegistry {
-        private final Map<ResourceLocation, AreaVfxStylePlanner> planners = new HashMap<>();
-        @Override public void register(ResourceLocation id, AreaVfxStylePlanner planner) {planners.put(id, planner);}
-        @Override public Optional<AreaVfxStylePlanner> find(ResourceLocation id) {return Optional.ofNullable(planners.get(id));}
+        private final Map<Identifier, AreaVfxStylePlanner> planners = new HashMap<>();
+        @Override public void register(Identifier id, AreaVfxStylePlanner planner) {planners.put(id, planner);}
+        @Override public Optional<AreaVfxStylePlanner> find(Identifier id) {return Optional.ofNullable(planners.get(id));}
         @Override public boolean frozen() {return false;}
     }
 

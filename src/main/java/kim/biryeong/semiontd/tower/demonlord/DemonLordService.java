@@ -29,7 +29,7 @@ import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.ChatFormatting;
 import kim.biryeong.semiontd.SemionTd;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -103,17 +103,19 @@ public final class DemonLordService {
     }
 
     /** 전투 배속 보정: 클라이언트 쪽 공격 충전 표시를 서버 평타 간격에 맞춥니다. */
-    private static final ResourceLocation TICK_ATTACK_SPEED_MODIFIER_ID =
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "demon_lord_tick_attack_speed");
+    private static final Identifier TICK_ATTACK_SPEED_MODIFIER_ID =
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "demon_lord_tick_attack_speed");
 
     /** 바닐라 기본 비행 속도. */
     private static final float BASE_FLYING_SPEED = 0.05F;
 
     /** 플레이어별로 마지막으로 맞춘 배속. 바뀌면 쿨타임 표시를 다시 보냅니다. */
     private static final Map<UUID, Float> LAST_TICK_RATIO = new ConcurrentHashMap<>();
+    private static final DemonLordBinding[] BINDINGS = DemonLordBinding.values();
+    private static final DemonLordSkill[] SKILLS = DemonLordSkill.values();
 
-    private static final ResourceLocation MOVE_SPEED_MODIFIER_ID =
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "demon_lord_move_speed");
+    private static final Identifier MOVE_SPEED_MODIFIER_ID =
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "demon_lord_move_speed");
 
     private static final Component BLADE_NAME =
             Component.literal("마검").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD);
@@ -310,6 +312,7 @@ public final class DemonLordService {
             return;
         }
         DemonLordState state = DemonLordStates.getOrCreate(owner);
+        state.syncTraits(lane.traitLoadout());
         state.syncAugments(lane.augmentSnapshot());
         state.setLaneId(lane.laneId());
         state.setTeamId(lane.teamId());
@@ -327,17 +330,19 @@ public final class DemonLordService {
             state.clearLoadoutDirty();
         }
         syncBossBar(player, state);
-        syncMoveSpeed(player, state);
-        syncTickScale(player, state, gameTime);
+        float tickRatio = state.inCombat()
+                ? kim.biryeong.semiontd.game.ClientTickScale.ratio(player.level().getServer()) : 1.0F;
+        syncMoveSpeed(player, state, tickRatio);
+        syncTickScale(player, state, gameTime, tickRatio);
 
         if (!state.inCombat()) {
             DemonLordExecuteMarks.clear(player);
             restoreFlight(player);
             releaseAggro(player, gameTime);
             if (state.consumePactEndedNotice()) {
-                player.displayClientMessage(Component.literal("파멸의 계약이 끝났습니다. 레벨과 스탯이 처음으로 돌아갑니다.")
+                player.sendSystemMessage(Component.literal("파멸의 계약이 끝났습니다. 레벨과 스탯이 처음으로 돌아갑니다.")
                         .withStyle(ChatFormatting.DARK_RED), false);
-                player.playNotifySound(SoundEvents.WITHER_DEATH, SoundSource.PLAYERS, 0.6f, 1.2f);
+                kim.biryeong.semiontd.util.SemionPlayerPackets.playSound(player, SoundEvents.WITHER_DEATH, SoundSource.PLAYERS, 0.6f, 1.2f);
             }
             return;
         }
@@ -367,68 +372,9 @@ public final class DemonLordService {
         if (layout == null) {
             return;
         }
-        Vec3 centre = laneCentre(layout);
+        Vec3 centre = DemonLordLaneGeometry.laneCentre(layout);
         player.teleportTo(centre.x, centre.y, centre.z);
         setHeldSlot(player, DemonLordSkill.BLADE_SLOT);
-    }
-
-    /**
-     * Middle of the player's own lane.
-     *
-     * <p>Not {@code positionAt(0.5)}: {@link LaneRegionLayout#pathPoints()} runs lane spawn ->
-     * lane waypoints -> the shared final waypoints -> the central boss spawn, so half way along it
-     * lands outside the lane entirely. Only the stretch that is actually inside {@code lane_path}
-     * counts, which keeps the drop on walkable path rather than on the lane area's bounding box
-     * centre (an L-shaped lane would put that inside a wall).
-     */
-    private static Vec3 laneCentre(LaneRegionLayout layout) {
-        List<Vec3> inside = layout.pathPoints().stream()
-                .filter(point -> containsHorizontally(layout.laneArea(), point))
-                .toList();
-        if (inside.size() == 1) {
-            return inside.getFirst();
-        }
-        if (inside.size() >= 2) {
-            return midpointAlong(inside);
-        }
-        BlockBounds area = layout.laneArea();
-        return new Vec3(
-                (area.min().getX() + area.max().getX() + 1.0) / 2.0,
-                layout.spawn().y,
-                (area.min().getZ() + area.max().getZ() + 1.0) / 2.0
-        );
-    }
-
-    private static Vec3 midpointAlong(List<Vec3> points) {
-        double total = 0.0;
-        for (int i = 0; i < points.size() - 1; i++) {
-            total += points.get(i).distanceTo(points.get(i + 1));
-        }
-        if (total <= 0.0) {
-            return points.getFirst();
-        }
-        double target = total / 2.0;
-        double walked = 0.0;
-        for (int i = 0; i < points.size() - 1; i++) {
-            Vec3 from = points.get(i);
-            Vec3 to = points.get(i + 1);
-            double segment = from.distanceTo(to);
-            if (segment <= 0.0) {
-                continue;
-            }
-            if (walked + segment >= target) {
-                return from.lerp(to, (target - walked) / segment);
-            }
-            walked += segment;
-        }
-        return points.getLast();
-    }
-
-    private static boolean containsHorizontally(BlockBounds area, Vec3 point) {
-        return point.x >= area.min().getX()
-                && point.x < area.max().getX() + 1.0
-                && point.z >= area.min().getZ()
-                && point.z < area.max().getZ() + 1.0;
     }
 
     public static void clearBossBar(UUID playerId) {
@@ -442,13 +388,29 @@ public final class DemonLordService {
         if (player == null) {
             return;
         }
-        boolean hadState = DemonLordStates.get(player.getUUID()) != null;
+        disconnectPlayer(player);
+        clearPlayerState(player.getUUID());
+    }
+
+    public static void disconnectPlayer(ServerPlayer player) {
+        if (player == null) {
+            return;
+        }
+        UUID owner = player.getUUID();
+        DemonLordState state = DemonLordStates.get(owner);
         clearCombatKit(player);
-        if (hadState) {
+        if (state != null) {
+            restoreHotbar(player);
+            state.setCombatKitGranted(false);
+            state.markLoadoutDirty();
             restoreFlight(player);
             clearTickScale(player);
+            releaseAggro(player);
         }
-        clearPlayerState(player.getUUID());
+        clearBossBar(owner);
+        DemonLordExecuteMarks.forget(owner);
+        LAST_TICK_RATIO.remove(owner);
+        removeCarriers(owner);
     }
 
     /**
@@ -469,6 +431,7 @@ public final class DemonLordService {
     public static void beginWave(PlayerLane lane, int round) {
         DemonLordState state = DemonLordStates.get(lane.ownerPlayer());
         if (state != null) {
+            state.syncTraits(lane.traitLoadout());
             state.syncAugments(lane.augmentSnapshot());
             state.countPactRound();
             state.enterCombat();
@@ -524,7 +487,7 @@ public final class DemonLordService {
         releaseAggro(player);
         restoreFlight(player);
         setHeldSlot(player, DemonLordSkill.BLADE_SLOT);
-        player.displayClientMessage(
+        player.sendSystemMessage(
                 Component.literal("전투에서 제외되었습니다. 다음 라운드에 부활합니다.").withStyle(ChatFormatting.DARK_RED),
                 false
         );
@@ -538,7 +501,7 @@ public final class DemonLordService {
      * the player can hear whether the swing was fully wound up.
      */
     private static void playSwing(ServerPlayer attacker, double charge) {
-        attacker.swing(InteractionHand.MAIN_HAND, true);
+        attacker.swing(InteractionHand.MAIN_HAND, attacker.getMainHandItem().getAttackAnimation(), true);
         if (!(attacker.level() instanceof ServerLevel level)) {
             return;
         }
@@ -587,7 +550,7 @@ public final class DemonLordService {
 
     private static void syncBossBar(ServerPlayer player, DemonLordState state) {
         ServerBossEvent bar = BOSS_BARS.computeIfAbsent(player.getUUID(), id -> {
-            ServerBossEvent created = new ServerBossEvent(
+            ServerBossEvent created = new ServerBossEvent(java.util.UUID.randomUUID(),
                     Component.empty(), BossEvent.BossBarColor.RED, BossEvent.BossBarOverlay.PROGRESS);
             created.addPlayer(player);
             return created;
@@ -659,9 +622,8 @@ public final class DemonLordService {
             return;
         }
         if (!lane.clearedThisRound()) {
-            // 경계 없는 마왕은 라인 밖으로 나가 아군 라인을 도울 수 있습니다.
-            if (!state.boundless() && !containsHorizontally(layout.laneArea(), player.position())) {
-                teleport(player, laneCentre(layout));
+            if (!DemonLordLaneGeometry.containsHorizontally(layout.laneArea(), player.position())) {
+                teleport(player, DemonLordLaneGeometry.laneCentre(layout));
             }
             return;
         }
@@ -673,7 +635,7 @@ public final class DemonLordService {
                     (area.minX + area.maxX) / 2.0,
                     area.maxY,
                     (area.minZ + area.maxZ) / 2.0));
-        } else if (!state.boundless() && !layout.isInsideFinalDefenseTowerArea(player.position())) {
+        } else if (!layout.isInsideFinalDefenseTowerArea(player.position())) {
             teleport(player, layout.clampToFinalDefenseTowerArea(player.position()));
         }
     }
@@ -691,13 +653,12 @@ public final class DemonLordService {
      * 등급 단위(20%)로는 불가능하기 때문입니다. 일시(transient) 수정자라 저장되지 않고, 값이
      * 달라질 때만 갱신해 매 틱 속성을 흔들지 않습니다.
      */
-    private static void syncMoveSpeed(ServerPlayer player, DemonLordState state) {
+    private static void syncMoveSpeed(ServerPlayer player, DemonLordState state, float ratio) {
         AttributeInstance attribute = player.getAttribute(Attributes.MOVEMENT_SPEED);
         if (attribute == null) {
             return;
         }
         // 스탯 보너스에 전투 배속을 곱합니다. 곱연산 수정자라 (1 + 보너스) × 배속 - 1을 넣습니다.
-        double ratio = state.inCombat() ? kim.biryeong.semiontd.game.ClientTickScale.ratio(player.getServer()) : 1.0;
         double bonus = state.inCombat() ? (1.0 + state.moveSpeedBonus()) * ratio - 1.0 : 0.0;
         AttributeModifier existing = attribute.getModifier(MOVE_SPEED_MODIFIER_ID);
         if (bonus <= 0.0) {
@@ -763,7 +724,7 @@ public final class DemonLordService {
         if (player.getY() >= floor - FALL_RESCUE_DEPTH) {
             return;
         }
-        Vec3 centre = laneCentre(lane.laneLayout());
+        Vec3 centre = DemonLordLaneGeometry.laneCentre(lane.laneLayout());
         player.teleportTo(centre.x, centre.y, centre.z);
         player.setDeltaMovement(Vec3.ZERO);
         player.resetFallDistance();
@@ -806,7 +767,7 @@ public final class DemonLordService {
         if (layout != null) {
             to = state != null && state.centralDefense()
                     ? layout.clampToFinalDefenseTowerArea(to)
-                    : containsHorizontally(layout.laneArea(), to) ? to : from;
+                    : DemonLordLaneGeometry.containsHorizontally(layout.laneArea(), to) ? to : from;
         }
         return safeLanding(player, from, to);
     }
@@ -894,8 +855,9 @@ public final class DemonLordService {
     }
 
     static void syncSkillCooldowns(ServerPlayer player, DemonLordState state, long now) {
-        for (DemonLordSkill skill : DemonLordSkill.values()) {
-            showCooldown(player, skill, state.remainingCooldownTicks(skill, now));
+        float ratio = kim.biryeong.semiontd.game.ClientTickScale.ratio(player.level().getServer());
+        for (DemonLordSkill skill : SKILLS) {
+            showCooldown(player, skill, state.remainingCooldownTicks(skill, now), ratio);
         }
     }
 
@@ -905,10 +867,17 @@ public final class DemonLordService {
      * 직접 판단하고, 서버 쪽 값은 서버 틱으로 줄어 표시와 어긋나기 때문입니다.
      */
     private static void showCooldown(ServerPlayer player, DemonLordSkill skill, int remainingServerTicks) {
-        ResourceLocation group = player.getCooldowns().getCooldownGroup(new ItemStack(skill.item()));
+        showCooldown(player, skill, remainingServerTicks,
+                kim.biryeong.semiontd.game.ClientTickScale.ratio(player.level().getServer()));
+    }
+
+    private static void showCooldown(ServerPlayer player, DemonLordSkill skill, int remainingServerTicks, float ratio) {
+        Identifier group = player.getCooldowns().getCooldownGroup(new ItemStack(skill.item()));
         player.getCooldowns().removeCooldown(group);
-        player.connection.send(new net.minecraft.network.protocol.game.ClientboundCooldownPacket(group,
-                kim.biryeong.semiontd.game.ClientTickScale.toClientTicks(player.getServer(), remainingServerTicks)));
+        if (remainingServerTicks > 0) {
+            player.connection.send(new net.minecraft.network.protocol.game.ClientboundCooldownPacket(group,
+                    kim.biryeong.semiontd.game.ClientTickScale.toClientTicks(ratio, remainingServerTicks)));
+        }
     }
 
     /**
@@ -917,6 +886,10 @@ public final class DemonLordService {
      */
     /** 마왕이 아니게 되면 배속 보정(공격 속도 수정자, 비행 속도)을 되돌립니다. */
     private static void clearTickScale(ServerPlayer player) {
+        AttributeInstance movementSpeed = player.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (movementSpeed != null) {
+            movementSpeed.removeModifier(MOVE_SPEED_MODIFIER_ID);
+        }
         AttributeInstance attackSpeed = player.getAttribute(Attributes.ATTACK_SPEED);
         if (attackSpeed != null && attackSpeed.getModifier(TICK_ATTACK_SPEED_MODIFIER_ID) != null) {
             attackSpeed.removeModifier(TICK_ATTACK_SPEED_MODIFIER_ID);
@@ -927,10 +900,12 @@ public final class DemonLordService {
         }
     }
 
-    private static void syncTickScale(ServerPlayer player, DemonLordState state, long now) {
-        float ratio = state.inCombat() ? kim.biryeong.semiontd.game.ClientTickScale.ratio(player.getServer()) : 1.0F;
-        Float previous = LAST_TICK_RATIO.put(player.getUUID(), ratio);
-        if (previous != null && Math.abs(previous - ratio) > 1.0E-3F) {
+    private static void syncTickScale(ServerPlayer player, DemonLordState state, long now, float ratio) {
+        Float previous = LAST_TICK_RATIO.get(player.getUUID());
+        if (previous == null || Float.compare(previous, ratio) != 0) {
+            LAST_TICK_RATIO.put(player.getUUID(), ratio);
+        }
+        if (previous == null || Math.abs(previous - ratio) > 1.0E-3F) {
             syncSkillCooldowns(player, state, now);
         }
         AttributeInstance attackSpeed = player.getAttribute(Attributes.ATTACK_SPEED);
@@ -1023,7 +998,7 @@ public final class DemonLordService {
         }
         EnumMap<DemonLordBinding, DemonLordSkillTower> carriers = set.carriers();
         Map<DemonLordBinding, DemonLordLoadout.Slot> wanted = state.loadout().view();
-        for (DemonLordBinding binding : DemonLordBinding.values()) {
+        for (DemonLordBinding binding : BINDINGS) {
             DemonLordLoadout.Slot slot = wanted.get(binding);
             DemonLordSkillTower current = carriers.get(binding);
             TowerType type = slot == null ? null : DemonLordSkillShop.resolved(slot.skill(), slot.tier());
@@ -1189,6 +1164,10 @@ public final class DemonLordService {
         double originalAmount = amount;
         if (augmentState != null && lane != null) {
             amount *= augmentState.augments().damageMultiplier(lane.augmentSnapshot(), attacker.level().getGameTime());
+        }
+        amount = DemonLordDamageScaling.apply(amount, type);
+        if (amount <= 0.0) {
+            return Tower.DamageResult.NONE;
         }
         SemionTowerEntity source = altar == null ? null : altar.entity(lane);
         if (source != null) {

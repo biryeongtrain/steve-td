@@ -33,7 +33,7 @@ public final class GambleRevealService {
         player.connection.send(ClientboundClearDialogPacket.INSTANCE);
         ActiveReveal active = new ActiveReveal(reveal, player.level().dimension());
         ACTIVE.put(player.getUUID(), active);
-        player.displayClientMessage(render(reveal, reveal.frameAt(0)), true);
+        player.sendSystemMessage(render(reveal, reveal.frameAt(0)), true);
     }
 
     public static boolean isRolling(UUID player) {
@@ -84,12 +84,12 @@ public final class GambleRevealService {
             active.age++;
             if (active.age >= active.reveal.durationTicks()) {
                 iterator.remove();
-                player.displayClientMessage(Component.empty(), true);
+                player.sendSystemMessage(Component.empty(), true);
                 continue;
             }
             GambleReveal.Frame frame = active.reveal.frameAt(active.age);
             if (active.age % 3 == 0 || frame.cue() != GambleReveal.Cue.NONE) {
-                player.displayClientMessage(render(active.reveal, frame), true);
+                player.sendSystemMessage(render(active.reveal, frame), true);
             }
             switch (frame.cue()) {
                 case DRAW -> sound(player, SoundEvents.BOOK_PAGE_TURN, 0.8F, 0.95F + active.age / 120.0F);
@@ -106,7 +106,7 @@ public final class GambleRevealService {
     }
 
     private static void sound(ServerPlayer player, SoundEvent sound, float volume, float pitch) {
-        player.playNotifySound(sound, SoundSource.PLAYERS, volume, pitch);
+        kim.biryeong.semiontd.util.SemionPlayerPackets.playSound(player, sound, SoundSource.PLAYERS, volume, pitch);
     }
 
     public static void clear(UUID player) {

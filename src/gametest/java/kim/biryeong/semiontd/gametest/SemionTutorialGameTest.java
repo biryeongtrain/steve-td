@@ -74,7 +74,7 @@ public final class SemionTutorialGameTest {
             if (!assertEquals(
                     context,
                     SemionGameManager.TutorialStartResult.STARTED,
-                    manager.startTutorial(server, playerId, player.getGameProfile().getName(), arena),
+                    manager.startTutorial(server, playerId, player.getGameProfile().name(), arena),
                     "Tutorial should start."
             )) {
                 return;
@@ -405,7 +405,7 @@ public final class SemionTutorialGameTest {
                     manager.startSandbox(
                             server,
                             playerId,
-                            player.getGameProfile().getName(),
+                            player.getGameProfile().name(),
                             SyntheticArenaFactory.create(context.getLevel(), context.absolutePos(new BlockPos(60, 0, 0)))
                     ),
                     "Starting sandbox after completion should create a fresh practice session."

@@ -25,6 +25,20 @@ class WarlockPathTest {
     }
 
     @Test
+    void rangedHealthStaysLinearThroughTwoThousandThenGrowsContinuously() {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        var scaling = WarlockConfig.RUNTIME.path(WarlockPath.RANGED).healthScaling();
+        assertEquals(1999.0, scaling.value(1999.0), 0.000001);
+        assertEquals(2000.0, scaling.value(2000.0), 0.000001);
+        assertEquals(2000.0, scaling.value(2000.000001), 0.000002);
+        assertEquals(2000.0 + 500.0 * Math.log1p(1.0 / 500.0), scaling.value(2001.0), 0.000001);
+        assertEquals(2000.0 + 500.0 * Math.log(2.0), scaling.value(2500.0), 0.000001);
+        assertTrue(scaling.value(4000.0) > scaling.value(2500.0));
+        assertTrue(scaling.value(4000.0) < 4000.0);
+        assertEquals(3500.0, WarlockConfig.RUNTIME.path(WarlockPath.MELEE).healthScaling().threshold(), 0.000001);
+    }
+
+    @Test
     void everyCoreAndSacrificeTowerResolvesToOnePath() {
         assertEquals(WarlockPath.BASE, WarlockPath.fromCore(WarlockTowers.BASE_WARLOCK_TOWER));
         assertEquals(WarlockPath.RANGED, WarlockPath.fromCore(WarlockTowers.RANGED_WARLOCK_TOWER));
@@ -49,7 +63,7 @@ class WarlockPathTest {
         assertEquals(0.65, ranged.absorption().triggerHealthRatio(), 0.0001);
         assertEquals(0.65, melee.absorption().triggerHealthRatio(), 0.0001);
         assertEquals(0.07, ranged.lifeSteal().maximum(), 0.0001);
-        assertEquals(0.13, melee.lifeSteal().maximum(), 0.0001);
+        assertEquals(0.12, melee.lifeSteal().maximum(), 0.0001);
         assertEquals(4, ranged.defense().sacrificesPerStep());
         assertEquals(10, melee.defense().sacrificesPerStep());
         assertEquals(5, config.combat().minimumIntervalTicks());

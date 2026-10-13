@@ -6,29 +6,29 @@ import java.util.List;
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.config.TraitBalanceRuntime;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class BuiltInTraits {
-    public static final ResourceLocation NONE_ID = id("none");
-    public static final ResourceLocation MOBILIZATION_GRANT_ID = id("mobilization_grant");
-    public static final ResourceLocation CLEAN_LANE_BONUS_ID = id("clean_lane_bonus");
-    public static final ResourceLocation RAPID_DEPLOYMENT_ID = id("rapid_deployment");
-    public static final ResourceLocation BERSERK_SUMMONS_ID = id("berserk_summons");
-    public static final ResourceLocation INTERCEPTION_DOCTRINE_ID = id("interception_doctrine");
-    public static final ResourceLocation OPENING_SALVO_ID = id("opening_salvo");
-    public static final ResourceLocation WAVEBREAKER_DOCTRINE_ID = id("wavebreaker_doctrine");
-    public static final ResourceLocation FORTITUDE_ID = id("fortitude");
-    public static final ResourceLocation DOUBLE_EDGED_SWORD_ID = id("double_edged_sword");
-    public static final ResourceLocation STRENGTH_IN_NUMBERS_ID = id("strength_in_numbers");
-    public static final ResourceLocation DIVERSITY_ID = id("diversity");
-    public static final ResourceLocation SUPPLY_DEPOT_ID = id("supply_depot");
-    public static final ResourceLocation TRANSCENDENCE_ID = id("transcendence");
-    public static final ResourceLocation WEEKLY_HOLIDAY_PAY_ID = id("weekly_holiday_pay");
-    public static final ResourceLocation RUTHLESS_ID = id("ruthless");
-    public static final ResourceLocation IGNITE_ID = id("ignite");
-    public static final ResourceLocation GIANT_SLAYER_ID = id("giant_slayer");
-    public static final ResourceLocation FINISHING_BLOW_ID = id("finishing_blow");
-    public static final ResourceLocation PERFORMANCE_BONUS_ID = id("performance_bonus");
+    public static final Identifier NONE_ID = id("none");
+    public static final Identifier MOBILIZATION_GRANT_ID = id("mobilization_grant");
+    public static final Identifier CLEAN_LANE_BONUS_ID = id("clean_lane_bonus");
+    public static final Identifier RAPID_DEPLOYMENT_ID = id("rapid_deployment");
+    public static final Identifier BERSERK_SUMMONS_ID = id("berserk_summons");
+    public static final Identifier INTERCEPTION_DOCTRINE_ID = id("interception_doctrine");
+    public static final Identifier OPENING_SALVO_ID = id("opening_salvo");
+    public static final Identifier WAVEBREAKER_DOCTRINE_ID = id("wavebreaker_doctrine");
+    public static final Identifier FORTITUDE_ID = id("fortitude");
+    public static final Identifier DOUBLE_EDGED_SWORD_ID = id("double_edged_sword");
+    public static final Identifier STRENGTH_IN_NUMBERS_ID = id("strength_in_numbers");
+    public static final Identifier DIVERSITY_ID = id("diversity");
+    public static final Identifier SUPPLY_DEPOT_ID = id("supply_depot");
+    public static final Identifier TRANSCENDENCE_ID = id("transcendence");
+    public static final Identifier WEEKLY_HOLIDAY_PAY_ID = id("weekly_holiday_pay");
+    public static final Identifier RUTHLESS_ID = id("ruthless");
+    public static final Identifier IGNITE_ID = id("ignite");
+    public static final Identifier GIANT_SLAYER_ID = id("giant_slayer");
+    public static final Identifier FINISHING_BLOW_ID = id("finishing_blow");
+    public static final Identifier PERFORMANCE_BONUS_ID = id("performance_bonus");
 
     private static boolean registered;
 
@@ -58,7 +58,7 @@ public final class BuiltInTraits {
                 "내 타워가 기본 웨이브 몬스터에게 입히는 피해를 높입니다.");
         register(FORTITUDE_ID, 1, "완강함",
                 "내 모든 타워의 최대 체력을 높입니다.",
-                "흑마법사와 엔드 핵심 타워는 별도 수치를 사용합니다.");
+                "하이퍼 캐리형의 핵심 전투체는 별도 수치를 사용합니다.");
         register(DOUBLE_EDGED_SWORD_ID, 1, "양날의 검",
                 "내 타워의 최종 피해가 증가하지만 받는 최종 피해도 증가합니다.");
         register(STRENGTH_IN_NUMBERS_ID, 1, "무리의 힘",
@@ -90,7 +90,7 @@ public final class BuiltInTraits {
     }
 
     private static void register(
-            ResourceLocation id,
+            Identifier id,
             int version,
             String displayName,
             String... description
@@ -112,7 +112,7 @@ public final class BuiltInTraits {
         });
     }
 
-    private static Component effectSummary(ResourceLocation id, TraitSlot slot) {
+    private static Component effectSummary(Identifier id, TraitSlot slot) {
         double scale = slot.effectScale();
         String summary = switch (id.getPath()) {
             case "none" -> "효과 없음";
@@ -135,7 +135,7 @@ public final class BuiltInTraits {
                     + signedPercentage(value(id, "damageBonus") * scale);
             case "fortitude" -> "최대 체력 "
                     + signedPercentage(value(id, "maxHealthBonus") * scale)
-                    + " · 흑마법사, 엔드 "
+                    + " · 하이퍼 캐리형 "
                     + signedPercentage(value(id, "CoreMaxHealthBonus") * scale);
             case "double_edged_sword" -> "입히는 피해 "
                     + signedPercentage(value(id, "outgoingDamageBonus") * scale)
@@ -179,7 +179,7 @@ public final class BuiltInTraits {
         return Component.literal(summary);
     }
 
-    private static double value(ResourceLocation id, String key) {
+    private static double value(Identifier id, String key) {
         return TraitBalanceRuntime.value(id, key);
     }
 
@@ -199,7 +199,7 @@ public final class BuiltInTraits {
         return BigDecimal.valueOf(value).stripTrailingZeros().toPlainString();
     }
 
-    private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, path);
+    private static Identifier id(String path) {
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, path);
     }
 }

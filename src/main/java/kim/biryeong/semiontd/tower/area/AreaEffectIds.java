@@ -2,16 +2,16 @@ package kim.biryeong.semiontd.tower.area;
 
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.tower.Tower;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class AreaEffectIds {
     private AreaEffectIds() {
     }
 
-    public static ResourceLocation tower(Tower tower, String effect) {
+    public static Identifier tower(Tower tower, String effect) {
         String towerId = tower == null || tower.type() == null ? "unknown" : tower.type().id();
         // Native fallback clones use a runtime-only #illusion suffix, not a resource path.
         towerId = towerId.replace('#', '/');
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "tower/" + towerId + "/" + effect);
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "tower/" + towerId + "/" + effect);
     }
 }

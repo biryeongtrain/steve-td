@@ -71,12 +71,12 @@ public final class BlueprintEditorGui extends SimpleGui {
         setSlot(VISUAL_SLOT, GuiElementBuilder.from(BlueprintVisuals.icon(visual == null ? null : visual.visual()))
                 .setName(text("겉모습: " + (visual == null ? "없음" : visual.sourceName()), ChatFormatting.AQUA))
                 .addLoreLineRaw(text("클릭: 겉모습 고르기", ChatFormatting.GRAY))
-                .setCallback((index, type, action) -> new BlueprintVisualGui(player, gameManager, 0).open()));
+                .setCallback((index, type, action, clickedGui) -> new BlueprintVisualGui(player, gameManager, 0).open()));
         setSlot(SUMMARY_SLOT, summary(stats));
         setSlot(NAME_SLOT, new GuiElementBuilder(Items.NAME_TAG)
                 .setName(text("이름: " + (draft.name.isBlank() ? "(없음)" : draft.name), ChatFormatting.YELLOW))
                 .addLoreLineRaw(text("클릭: 이름 짓기", ChatFormatting.GRAY))
-                .setCallback((index, type, action) -> new BlueprintNameGui(player, gameManager).open()));
+                .setCallback((index, type, action, clickedGui) -> new BlueprintNameGui(player, gameManager).open()));
 
         for (StatRow row : ROWS) {
             setSlot(9 + row.column(), stepButton(row, true));
@@ -89,7 +89,7 @@ public final class BlueprintEditorGui extends SimpleGui {
                 .setName(text("피해 유형: " + damageTypeName(draft.damageType), ChatFormatting.GOLD))
                 .addLoreLineRaw(text("마법은 마법 저항을, 고정은 방어를 무시합니다.", ChatFormatting.GRAY))
                 .addLoreLineRaw(text("클릭: 바꾸기 (고정 피해는 값이 더 비쌈)", ChatFormatting.GRAY))
-                .setCallback((index, type, action) -> {
+                .setCallback((index, type, action, clickedGui) -> {
                     DamageType[] types = DamageType.values();
                     draft.damageType = types[(draft.damageType.ordinal() + 1) % types.length];
                     refresh();
@@ -104,17 +104,17 @@ public final class BlueprintEditorGui extends SimpleGui {
                     .addLoreLineRaw(text(BlueprintTexts.effect(module, level), ChatFormatting.WHITE))
                     .addLoreLineRaw(text("좌클릭: 단계 올리기 · 우클릭: 내리기(1단계면 떼기)", ChatFormatting.GRAY))
                     .setCount(level)
-                    .setCallback((index, type, action) -> changeModule(module, type)));
+                    .setCallback((index, type, action, clickedGui) -> changeModule(module, type)));
         }
         while (slot < FIRST_MODULE_SLOT + BlueprintPricing.maxModules() && slot < ADD_MODULE_SLOT) {
-            setSlot(slot++, new GuiElementBuilder(Items.LIGHT_GRAY_STAINED_GLASS_PANE)
+            setSlot(slot++, new GuiElementBuilder(Items.STAINED_GLASS_PANE.lightGray())
                     .setName(text("빈 모듈 칸", ChatFormatting.DARK_GRAY)));
         }
         boolean canAdd = draft.modules.size() < BlueprintPricing.maxModules();
         setSlot(ADD_MODULE_SLOT, new GuiElementBuilder(canAdd ? Items.ANVIL : Items.BARRIER)
                 .setName(text(canAdd ? "모듈 추가" : "모듈 칸이 가득 찼습니다", canAdd ? ChatFormatting.GREEN : ChatFormatting.RED))
                 .addLoreLineRaw(text("모듈은 " + BlueprintPricing.maxModules() + "개까지, 각 " + BlueprintModule.MAX_LEVEL + "단계까지", ChatFormatting.GRAY))
-                .setCallback((index, type, action) -> {
+                .setCallback((index, type, action, clickedGui) -> {
                     if (canAdd) {
                         new BlueprintModuleGui(player, gameManager).open();
                     }
@@ -123,7 +123,7 @@ public final class BlueprintEditorGui extends SimpleGui {
                 .setName(text("대상 우선도: " + draft.targetPriority.displayName(), ChatFormatting.YELLOW))
                 .addLoreLineRaw(text("누구를 먼저 노릴지 고릅니다. 가격에는 들지 않습니다.", ChatFormatting.GRAY))
                 .addLoreLineRaw(text("클릭: 바꾸기", ChatFormatting.GRAY))
-                .setCallback((index, type, action) -> {
+                .setCallback((index, type, action, clickedGui) -> {
                     BlueprintTargetPriority[] values = BlueprintTargetPriority.values();
                     int step = type.isRight ? values.length - 1 : 1;
                     draft.targetPriority = values[(draft.targetPriority.ordinal() + step) % values.length];
@@ -132,11 +132,11 @@ public final class BlueprintEditorGui extends SimpleGui {
 
         setSlot(45, new GuiElementBuilder(Items.ARROW)
                 .setName(text("설계도 목록으로", ChatFormatting.YELLOW))
-                .setCallback((index, type, action) -> new BlueprintLibraryGui(player, gameManager).open()));
+                .setCallback((index, type, action, clickedGui) -> new BlueprintLibraryGui(player, gameManager).open()));
         setSlot(47, new GuiElementBuilder(Items.WATER_BUCKET)
                 .setName(text("처음부터 다시", ChatFormatting.RED))
                 .addLoreLineRaw(text("쉬프트+클릭: 모든 값을 기본으로 되돌립니다.", ChatFormatting.GRAY))
-                .setCallback((index, type, action) -> {
+                .setCallback((index, type, action, clickedGui) -> {
                     if (type.shift) {
                         BlueprintDraft.reset(player.getUUID());
                         new BlueprintEditorGui(player, gameManager).open();
@@ -151,7 +151,7 @@ public final class BlueprintEditorGui extends SimpleGui {
             save.addLoreLineRaw(text(status, ChatFormatting.YELLOW));
         }
         if (problem.isEmpty()) {
-            save.glow().setCallback((index, type, action) -> save());
+            save.glow().setCallback((index, type, action, clickedGui) -> save());
         }
         setSlot(49, save);
     }
@@ -167,10 +167,10 @@ public final class BlueprintEditorGui extends SimpleGui {
     }
 
     private GuiElementBuilder stepButton(StatRow row, boolean increase) {
-        return new GuiElementBuilder(increase ? Items.LIME_STAINED_GLASS_PANE : Items.RED_STAINED_GLASS_PANE)
+        return new GuiElementBuilder(increase ? Items.STAINED_GLASS_PANE.lime() : Items.STAINED_GLASS_PANE.red())
                 .setName(text(row.label() + (increase ? " 올리기" : " 내리기"), increase ? ChatFormatting.GREEN : ChatFormatting.RED))
                 .addLoreLineRaw(text("클릭 " + BlueprintTexts.num(row.step()) + " · 쉬프트 " + BlueprintTexts.num(row.bigStep()), ChatFormatting.GRAY))
-                .setCallback((index, type, action) -> {
+                .setCallback((index, type, action, clickedGui) -> {
                     double amount = (type.shift ? row.bigStep() : row.step()) * (increase ? 1 : -1);
                     adjust(row, amount);
                     refresh();

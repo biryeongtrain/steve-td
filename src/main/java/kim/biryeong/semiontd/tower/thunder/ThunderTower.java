@@ -27,7 +27,7 @@ import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
 
@@ -215,7 +215,7 @@ public class ThunderTower extends ProductionTower {
         if (lastStunTick != Long.MIN_VALUE && now - lastStunTick < ThunderBalance.stunCooldownTicks()) {
             return;
         }
-        ResourceLocation immunitySource = ResourceLocation.fromNamespaceAndPath(
+        Identifier immunitySource = Identifier.fromNamespaceAndPath(
                 SemionTd.MOD_ID,
                 "thunder_stun/" + ownerPlayer()
         );
@@ -349,7 +349,7 @@ public class ThunderTower extends ProductionTower {
         if (!waveActive || source == null || !source.isAlive() || SuccubusDreams.isAsleep(source)
                 || !AugmentCombat.allowsTriggers() || !ThunderTowers.isSquirrel(type())
                 || !augmentSnapshot().has("job_thunder_s") || grid.shortage()
-                || !nearbyEnemies(source).isEmpty()) {
+                || hasNearbyEnemies(source)) {
             idleChargeTicks = 0;
             return;
         }
@@ -359,16 +359,11 @@ public class ThunderTower extends ProductionTower {
         }
     }
 
-    private static List<SemionMonsterEntity> nearbyEnemies(SemionTowerEntity source) {
-        List<SemionMonsterEntity> targets = new ArrayList<>();
-        SemionTdApi.areaEffects().applyToMonsters(MonsterAreaEffectRequest.aroundTower(
+    static boolean hasNearbyEnemies(SemionTowerEntity source) {
+        return SemionTdApi.areaEffects().applyToMonsters(MonsterAreaEffectRequest.aroundTower(
                 AreaEffectIds.tower(source.runtimeTower(), "augment_targets"), source,
-                source.attackRange(), AreaVfxSpec.none()), target -> {
-                    targets.add(target);
-                    return AreaEffectOutcome.UNCHANGED;
-                });
-        targets.sort(Comparator.comparingDouble(source::distanceToSqr));
-        return targets;
+                source.attackRange(), AreaVfxSpec.none()), target -> AreaEffectOutcome.UNCHANGED)
+                .candidateCount() > 0;
     }
 
     private void relayLightning(SemionTowerEntity source, double damage, Set<UUID> visited) {

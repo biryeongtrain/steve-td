@@ -65,7 +65,7 @@ public final class BugReportSnapshot {
                 value.addProperty("team", team.id().name());
                 value.addProperty("lane", lane.laneId());
                 value.addProperty("eliminated", team.eliminated());
-                value.addProperty("dimension", lane.arenaWorld() == null ? null : lane.arenaWorld().dimension().location().toString());
+                value.addProperty("dimension", lane.arenaWorld() == null ? null : lane.arenaWorld().dimension().identifier().toString());
                 value.addProperty("waveTemplateId", lane.waveTemplateId());
                 value.addProperty("activeMonsters", lane.activeMonsters().size());
                 value.addProperty("queuedSummons", lane.queuedSummonCount());

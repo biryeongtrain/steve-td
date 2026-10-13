@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import kim.biryeong.semiontd.entity.monster.Monster;
+import kim.biryeong.semiontd.entity.monster.MonsterDataKey;
 import kim.biryeong.semiontd.entity.visual.EntityVisual;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
@@ -20,6 +21,7 @@ import kim.biryeong.semiontd.tower.TowerPlacementPositions;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.demonlord.DemonLordIncome;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.Identifier;
 
 /**
  * 인컴 타워 설치·레벨업·판매·대상 지정, 그리고 준비 시간 종료 시 유닛 파견용 몬스터 생성.
@@ -28,6 +30,22 @@ import net.minecraft.core.BlockPos;
  * 설치와 관리는 준비 단계에서만 됩니다. 비용은 에메랄드이고, 타워 수는 일반 타워와 같이 셉니다.
  */
 public final class IncomeTowerService {
+    private static final MonsterDataKey<Boolean> DISPATCH = MonsterDataKey.of(
+            Identifier.fromNamespaceAndPath("semion-td", "income_tower_dispatch"), Boolean.class);
+
+    public static boolean isDispatch(Monster monster) {
+        return monster != null && monster.getData(DISPATCH).orElse(false);
+    }
+
+    public static List<String> description(SummonMonsterType unit) {
+        return switch (unit.id()) {
+            case "dark_priest", "ogre_champion" -> java.util.stream.Stream.concat(unit.description().stream(),
+                    java.util.stream.Stream.of("주 대상 피해는 100%, 추가 광역 대상 피해는 각각 50%입니다.")).toList();
+            case "dwarf_gunner" -> List.of("탄환으로 한 대상에게 물리 피해를 줍니다.");
+            default -> unit.description();
+        };
+    }
+
     private IncomeTowerService() {
     }
 
@@ -195,24 +213,24 @@ public final class IncomeTowerService {
     /**
      * 이 타워가 이번 라운드에 보낼 유닛 한 마리.
      *
-     * <p>라운드 보정은 소환 몹 공식 대신 기본 레인 몹이 라운드마다 세지는 비율({@link IncomeTowerBalance#waveScale})을
-     * 쓰고, 그 위에 레벨 보정을 곱합니다.
+     * <p>라운드 보정은 일반 소환 몹과 같은 라운드 곡선을 쓰고, 그 위에 레벨 보정을 곱합니다.
      */
     public static Optional<Monster> createDispatch(
             SemionGame game,
             SemionPlayer owner,
             IncomeTower tower,
             TeamId targetTeam,
-            int targetLaneId,
-            IncomeTowerBalance.WaveScale scale
+            int targetLaneId
     ) {
         SummonMonsterType unit = unit(game, tower.summonId()).orElse(null);
         if (unit == null) {
             return Optional.empty();
         }
         Monster monster = unit.createMonster(new SummonContext(game, owner), targetTeam, targetLaneId, 1);
-        double level = IncomeTowerBalance.statMultiplier(tower.level());
-        monster.applyAugmentBodyModifiers(level * scale.health(), level * scale.attackDamage());
+        monster.setData(DISPATCH, true);
+        int round = game.currentRound();
+        monster.applyAugmentBodyModifiers(IncomeTowerBalance.healthMultiplier(tower.level(), round),
+                IncomeTowerBalance.attackDamageMultiplier(tower.level(), round));
         return Optional.of(monster);
     }
 

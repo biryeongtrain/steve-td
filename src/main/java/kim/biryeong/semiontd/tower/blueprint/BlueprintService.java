@@ -23,7 +23,7 @@ public final class BlueprintService {
 
     /** 프로필을 읽어 계정 설계도 목록을 서버에 불러 둡니다. */
     public static void ensureLoaded(ServerPlayer player, SemionGameManager gameManager) {
-        gameManager.profile(player.getServer(), player.getUUID(), player.getGameProfile().getName());
+        gameManager.profile(player.level().getServer(), player.getUUID(), player.getGameProfile().name());
     }
 
     public static Outcome save(ServerPlayer player, SemionGameManager gameManager, BlueprintDesign design) {
@@ -34,7 +34,7 @@ public final class BlueprintService {
         }
         List<BlueprintDesign> updated = BlueprintLibrary.add(player.getUUID(), design);
         List<String> messages = new ArrayList<>();
-        if (!gameManager.saveBlueprints(player.getUUID(), player.getGameProfile().getName(), updated)) {
+        if (!gameManager.saveBlueprints(player.getUUID(), player.getGameProfile().name(), updated)) {
             messages.add("설계도를 계정에 저장하지 못했습니다. 이번 접속 동안만 남습니다.");
         }
         BlueprintStats stats = design.stats();
@@ -55,7 +55,7 @@ public final class BlueprintService {
         if (updated.isEmpty()) {
             return new Outcome(false, List.of((index + 1) + "번 설계도가 없습니다."));
         }
-        if (!gameManager.saveBlueprints(player.getUUID(), player.getGameProfile().getName(), updated.get())) {
+        if (!gameManager.saveBlueprints(player.getUUID(), player.getGameProfile().name(), updated.get())) {
             return new Outcome(false, List.of("계정에 저장하지 못했습니다."));
         }
         return new Outcome(true, List.of((index + 1) + "번 설계도를 지웠습니다. 진행 중인 경기의 설계도는 경기가 끝날 때까지 남습니다."));

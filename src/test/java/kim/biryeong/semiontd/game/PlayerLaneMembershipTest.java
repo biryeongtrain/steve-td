@@ -66,6 +66,70 @@ class PlayerLaneMembershipTest {
         assertEquals(List.of(remover, destroyed), lane.towers());
     }
 
+    @Test
+    void tickSnapshotSkipsRemovedTowerAndDefersAddedTower() {
+        PlayerLane lane = lane();
+        CallbackTower first = new CallbackTower(0);
+        CallbackTower removed = new CallbackTower(1);
+        CallbackTower added = new CallbackTower(2);
+        first.onTick = () -> {
+            lane.removeTower(removed);
+            lane.addTower(added);
+        };
+        lane.addTower(first);
+        lane.addTower(removed);
+        lane.tickTowers();
+        assertEquals(1, first.ticks);
+        assertEquals(0, removed.ticks);
+        assertEquals(0, added.ticks);
+        lane.tickTowers();
+        assertEquals(2, first.ticks);
+        assertEquals(1, added.ticks);
+    }
+
+    @Test
+    void replacementAndClearKeepTickMembershipConsistent() {
+        PlayerLane lane = lane();
+        CallbackTower first = new CallbackTower(0);
+        CallbackTower original = new CallbackTower(1);
+        CallbackTower replacement = new CallbackTower(2);
+        first.onTick = () -> lane.replaceTower(original, replacement);
+        lane.addTower(first);
+        lane.addTower(original);
+        lane.tickTowers();
+        assertEquals(0, original.ticks);
+        assertEquals(0, replacement.ticks);
+        lane.tickTowers();
+        assertEquals(1, replacement.ticks);
+        lane.clearTowers();
+        lane.addTower(original);
+        lane.tickTowers();
+        assertEquals(1, original.ticks);
+    }
+
+    @Test
+    void nestedTickSeesMembershipChangesWithoutChangingTheOuterSnapshot() {
+        PlayerLane lane = lane();
+        CallbackTower first = new CallbackTower(0);
+        CallbackTower removed = new CallbackTower(1);
+        CallbackTower added = new CallbackTower(2);
+        first.onTick = () -> {
+            first.onTick = () -> {};
+            lane.removeTower(removed);
+            lane.addTower(added);
+            lane.tickTowers();
+        };
+        lane.addTower(first);
+        lane.addTower(removed);
+        lane.tickTowers();
+        assertEquals(2, first.ticks);
+        assertEquals(0, removed.ticks);
+        assertEquals(1, added.ticks);
+        lane.tickTowers();
+        assertEquals(3, first.ticks);
+        assertEquals(2, added.ticks);
+    }
+
     private static PlayerLane lane() {
         LaneRegionLayout layout = new LaneRegionLayout(
                 1,
@@ -81,6 +145,8 @@ class PlayerLaneMembershipTest {
     private static final class CallbackTower extends Tower {
         private Tower removeOnNotification;
         private int notifications;
+        private int ticks;
+        private Runnable onTick = () -> {};
 
         private CallbackTower(int x) {
             super(TYPE, OWNER, TeamId.BLUE, 1, new GridPosition(x, 64, 0));
@@ -92,6 +158,12 @@ class PlayerLaneMembershipTest {
             if (removeOnNotification != null) {
                 lane.removeTower(removeOnNotification);
             }
+        }
+
+        @Override
+        public void tick(PlayerLane lane) {
+            ticks++;
+            onTick.run();
         }
 
         @Override

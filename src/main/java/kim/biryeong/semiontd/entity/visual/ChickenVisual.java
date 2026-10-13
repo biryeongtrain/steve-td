@@ -1,7 +1,7 @@
 package kim.biryeong.semiontd.entity.visual;
 
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.entity.animal.ChickenVariant;
+import net.minecraft.world.entity.animal.chicken.ChickenVariant;
 
 public final class ChickenVisual {
     private ChickenVisual() {

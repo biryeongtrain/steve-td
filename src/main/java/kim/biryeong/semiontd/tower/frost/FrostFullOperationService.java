@@ -2,7 +2,6 @@ package kim.biryeong.semiontd.tower.frost;
 
 import static kim.biryeong.semiontd.tower.description.TowerDescriptionTemplate.format;
 
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -29,7 +28,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundStopSoundPacket;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -50,13 +49,13 @@ public final class FrostFullOperationService {
     private static final float FULL_OPERATION_SOUND_PITCH = 0.75F;
     private static final Component ACTIVATION_NAME = Component.literal("냉동창고 완전 가동")
             .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
-    private static final ResourceLocation CHILL_PULSE_ID =
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "frost_full_operation_chill");
-    private static final ResourceLocation DAMAGE_REDUCTION_ID =
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "frost_full_operation_damage_reduction");
-    private static final ResourceLocation FULL_OPERATION_AMBIENT_SOUND_ID =
-            ResourceLocation.withDefaultNamespace("ambient.soul_sand_valley.loop");
-    private static final Map<UUID, PlayerState> STATES = new ConcurrentHashMap<>();
+    private static final Identifier CHILL_PULSE_ID =
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "frost_full_operation_chill");
+    private static final Identifier DAMAGE_REDUCTION_ID =
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "frost_full_operation_damage_reduction");
+    private static final Identifier FULL_OPERATION_AMBIENT_SOUND_ID =
+            Identifier.withDefaultNamespace("ambient.soul_sand_valley.loop");
+    private static final Map<UUID, FrostFullOperationState> STATES = new ConcurrentHashMap<>();
 
     private FrostFullOperationService() {
     }
@@ -90,7 +89,7 @@ public final class FrostFullOperationService {
         if (lane == null || lane.ownerPlayer() == null) {
             return;
         }
-        PlayerState state = STATES.computeIfAbsent(lane.ownerPlayer(), ignored -> new PlayerState());
+        FrostFullOperationState state = STATES.computeIfAbsent(lane.ownerPlayer(), ignored -> new FrostFullOperationState());
         state.beginWave();
         clearFullOperationEffects(lane);
         onlinePlayer(lane).ifPresent(player -> {
@@ -103,7 +102,7 @@ public final class FrostFullOperationService {
         if (lane == null || lane.ownerPlayer() == null) {
             return;
         }
-        PlayerState state = STATES.get(lane.ownerPlayer());
+        FrostFullOperationState state = STATES.get(lane.ownerPlayer());
         if (state != null) {
             state.endWave();
         }
@@ -136,7 +135,7 @@ public final class FrostFullOperationService {
         if (lane == null || family == null || lane.arenaWorld() == null) {
             return;
         }
-        PlayerState state = STATES.computeIfAbsent(lane.ownerPlayer(), ignored -> new PlayerState());
+        FrostFullOperationState state = STATES.computeIfAbsent(lane.ownerPlayer(), ignored -> new FrostFullOperationState());
         if (!state.record(family, lane.arenaWorld().getGameTime())) {
             return;
         }
@@ -147,7 +146,7 @@ public final class FrostFullOperationService {
         if (lane == null) {
             return;
         }
-        PlayerState state = STATES.computeIfAbsent(lane.ownerPlayer(), ignored -> new PlayerState());
+        FrostFullOperationState state = STATES.computeIfAbsent(lane.ownerPlayer(), ignored -> new FrostFullOperationState());
         updateReadiness(lane, state);
     }
 
@@ -155,22 +154,22 @@ public final class FrostFullOperationService {
         if (lane == null || lane.arenaWorld() == null) {
             return;
         }
-        PlayerState state = STATES.get(lane.ownerPlayer());
-        if (state == null || !state.active) {
+        FrostFullOperationState state = STATES.get(lane.ownerPlayer());
+        if (state == null || !state.active()) {
             return;
         }
         long gameTime = lane.arenaWorld().getGameTime();
-        if (gameTime >= state.activeUntilTick) {
-            state.active = false;
+        if (gameTime >= state.activeUntilTick()) {
+            state.expire();
             clearFullOperationEffects(lane);
             onlinePlayer(lane).ifPresent(FrostFullOperationService::stopFullOperationPresentation);
             return;
         }
         refreshFullOperationEffects(lane, state, gameTime);
         onlinePlayer(lane).ifPresent(player -> player.setTicksFrozen(player.getTicksRequiredToFreeze()));
-        if (gameTime >= state.nextChillPulseTick) {
+        if (gameTime >= state.nextChillPulseTick()) {
             applyChillPulse(lane);
-            state.nextChillPulseTick = gameTime + Math.max(1, FrostBalance.fullOperationChillIntervalTicks());
+            state.scheduleChillPulse(gameTime + Math.max(1, FrostBalance.fullOperationChillIntervalTicks()));
         }
     }
 
@@ -197,16 +196,16 @@ public final class FrostFullOperationService {
             return false;
         }
         CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-        return data != null && data.getUnsafe().getBooleanOr(ACTIVATION_ITEM_KEY, false);
+        return data != null && data.copyTag().getBooleanOr(ACTIVATION_ITEM_KEY, false);
     }
 
-    static PlayerState stateForTest(UUID ownerPlayer) {
-        return STATES.computeIfAbsent(ownerPlayer, ignored -> new PlayerState());
+    static FrostFullOperationState stateForTest(UUID ownerPlayer) {
+        return STATES.computeIfAbsent(ownerPlayer, ignored -> new FrostFullOperationState());
     }
 
     private static boolean activate(PlayerLane lane, ServerPlayer player) {
-        PlayerState state = STATES.get(lane.ownerPlayer());
-        if (state == null || !state.ready || state.usedThisWave || !hasBothDevices(lane)
+        FrostFullOperationState state = STATES.get(lane.ownerPlayer());
+        if (state == null || !state.ready() || state.usedThisWave() || !hasBothDevices(lane)
                 || eruptionChill(lane) + 1.0E-9 < FrostBalance.fullOperationEruptionChill()) {
             clearActivationItem(player);
             return false;
@@ -227,19 +226,19 @@ public final class FrostFullOperationService {
 
     private static void startFullOperationPresentation(ServerPlayer player) {
         player.setTicksFrozen(player.getTicksRequiredToFreeze());
-        player.playNotifySound(
+        kim.biryeong.semiontd.util.SemionPlayerPackets.playSound(player,
                 SoundEvents.ANVIL_USE,
                 SoundSource.PLAYERS,
                 1.25F,
                 1.05F
         );
-        player.playNotifySound(
+        kim.biryeong.semiontd.util.SemionPlayerPackets.playSound(player,
                 SoundEvents.BREEZE_WIND_CHARGE_BURST.value(),
                 SoundSource.AMBIENT,
                 1.0F,
                 FULL_OPERATION_SOUND_PITCH
         );
-        player.playNotifySound(
+        kim.biryeong.semiontd.util.SemionPlayerPackets.playSound(player,
                 SoundEvents.AMBIENT_SOUL_SAND_VALLEY_LOOP.value(),
                 SoundSource.AMBIENT,
                 1.0F,
@@ -260,14 +259,14 @@ public final class FrostFullOperationService {
         return FULL_OPERATION_SOUND_PITCH;
     }
 
-    private static void updateReadiness(PlayerLane lane, PlayerState state) {
-        if (!state.waveActive || state.ready || state.usedThisWave
-                || state.totalActivations < FrostBalance.fullOperationRequiredActivations()
+    private static void updateReadiness(PlayerLane lane, FrostFullOperationState state) {
+        if (!state.waveActive() || state.ready() || state.usedThisWave()
+                || state.totalActivations() < FrostBalance.fullOperationRequiredActivations()
                 || !hasBothDevices(lane)
                 || eruptionChill(lane) + 1.0E-9 < FrostBalance.fullOperationEruptionChill()) {
             return;
         }
-        state.ready = true;
+        state.markReady();
         onlinePlayer(lane).ifPresent(player -> {
             player.getInventory().setItem(ACTIVATION_SLOT, activationItem());
             player.containerMenu.sendAllDataToRemote();
@@ -378,8 +377,8 @@ public final class FrostFullOperationService {
         if (ownerPlayer == null) {
             return false;
         }
-        PlayerState state = STATES.get(ownerPlayer);
-        return state != null && state.active && gameTime < state.activeUntilTick;
+        FrostFullOperationState state = STATES.get(ownerPlayer);
+        return state != null && state.active() && gameTime < state.activeUntilTick();
     }
 
     public static double displayedDamageReduction(UUID ownerPlayer, long gameTime, double normalReduction) {
@@ -413,9 +412,9 @@ public final class FrostFullOperationService {
         return activationItem();
     }
 
-    private static void refreshFullOperationEffects(PlayerLane lane, PlayerState state, long gameTime) {
+    private static void refreshFullOperationEffects(PlayerLane lane, FrostFullOperationState state, long gameTime) {
         ServerLevel level = lane.arenaWorld();
-        int remainingTicks = (int) Math.max(1L, state.activeUntilTick - gameTime);
+        int remainingTicks = (int) Math.max(1L, state.activeUntilTick() - gameTime);
         double reduction = Math.max(0.0, FrostBalance.fullOperationDamageReduction());
         for (Tower tower : lane.towers()) {
             if (!lane.ownerPlayer().equals(tower.ownerPlayer()) || tower.isDestroyed(lane)) {
@@ -478,65 +477,4 @@ public final class FrostFullOperationService {
         ICEBOX
     }
 
-    static final class PlayerState {
-        private final EnumMap<TriggerFamily, Integer> familyActivations =
-                new EnumMap<>(TriggerFamily.class);
-        private final EnumMap<TriggerFamily, Long> lastActivationTick =
-                new EnumMap<>(TriggerFamily.class);
-        private int totalActivations;
-        private boolean waveActive;
-        private boolean ready;
-        private boolean usedThisWave;
-        private boolean active;
-        private long activeUntilTick;
-        private long nextChillPulseTick;
-
-        void beginWave() {
-            familyActivations.clear();
-            lastActivationTick.clear();
-            totalActivations = 0;
-            waveActive = true;
-            ready = false;
-            usedThisWave = false;
-            active = false;
-            activeUntilTick = 0L;
-            nextChillPulseTick = 0L;
-        }
-
-        void endWave() {
-            waveActive = false;
-            ready = false;
-            active = false;
-        }
-
-        boolean record(TriggerFamily family, long gameTime) {
-            if (!waveActive || lastActivationTick.getOrDefault(family, Long.MIN_VALUE) == gameTime) {
-                return false;
-            }
-            int count = familyActivations.getOrDefault(family, 0);
-            if (count >= FrostBalance.fullOperationMaxActivationsPerFamily()) {
-                return false;
-            }
-            lastActivationTick.put(family, gameTime);
-            familyActivations.put(family, count + 1);
-            totalActivations++;
-            return true;
-        }
-
-        void activate(long gameTime) {
-            ready = false;
-            usedThisWave = true;
-            active = true;
-            activeUntilTick = gameTime + Math.max(1, FrostBalance.fullOperationDurationTicks());
-            nextChillPulseTick = gameTime;
-        }
-
-        int totalActivations() {
-            return totalActivations;
-        }
-
-        int familyActivations(TriggerFamily family) {
-            return familyActivations.getOrDefault(family, 0);
-        }
-    }
 }

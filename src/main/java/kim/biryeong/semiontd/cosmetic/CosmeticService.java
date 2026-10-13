@@ -69,7 +69,7 @@ public final class CosmeticService {
     }
 
     public SemionPlayerProfile profile(ServerPlayer player) {
-        return gameManager.profile(player.getServer(), player.getUUID(), player.getGameProfile().getName());
+        return gameManager.profile(player.level().getServer(), player.getUUID(), player.getGameProfile().name());
     }
 
     public void handleCatalogClick(ServerPlayer player, String cosmeticId) {
@@ -89,7 +89,7 @@ public final class CosmeticService {
     private void handlePurchase(ServerPlayer player, CosmeticCatalog.Entry entry) {
         CosmeticUpdateResult result = gameManager.purchaseCosmetic(
                 player.getUUID(),
-                player.getGameProfile().getName(),
+                player.getGameProfile().name(),
                 entry.id(),
                 entry.price()
         );
@@ -125,7 +125,7 @@ public final class CosmeticService {
         }
         CosmeticUpdateResult result = gameManager.selectCosmetics(
                 player.getUUID(),
-                player.getGameProfile().getName(),
+                player.getGameProfile().name(),
                 selections
         );
         if (result != CosmeticUpdateResult.SUCCESS) {
@@ -157,7 +157,7 @@ public final class CosmeticService {
 
         List<String> validIds = selectedEntries.stream().map(CosmeticCatalog.Entry::id).toList();
         if (!validIds.equals(profile.selectedCosmeticIds())
-                && gameManager.selectCosmetics(player.getUUID(), player.getGameProfile().getName(), validIds)
+                && gameManager.selectCosmetics(player.getUUID(), player.getGameProfile().name(), validIds)
                 != CosmeticUpdateResult.SUCCESS) {
             return;
         }

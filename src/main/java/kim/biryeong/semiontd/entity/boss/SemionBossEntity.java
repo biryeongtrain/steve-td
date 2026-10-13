@@ -13,7 +13,7 @@ import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import xyz.nucleoid.packettweaker.PacketContext;
+import net.fabricmc.fabric.api.networking.v1.context.PacketContext;
 
 public class SemionBossEntity extends PathfinderMob implements PolymerEntity {
     public static final double FINAL_DEFENSE_ENGAGEMENT_RANGE = Monster.FINAL_DEFENSE_ATTACK_RANGE;
@@ -22,7 +22,7 @@ public class SemionBossEntity extends PathfinderMob implements PolymerEntity {
 
     private TeamId teamId = TeamId.RED;
     private BossMonster runtimeBoss;
-    private EntityType<?> polymerEntityType = EntityType.IRON_GOLEM;
+    private EntityType<?> polymerEntityType = net.minecraft.world.entity.EntityTypes.IRON_GOLEM;
     private Vec3 anchorPosition;
     private int currentRound = 1;
 
@@ -108,7 +108,8 @@ public class SemionBossEntity extends PathfinderMob implements PolymerEntity {
     }
 
     @Override
-    public void knockback(double strength, double x, double z) {
+    public void knockback(double strength, double x, double z,
+            net.minecraft.world.damagesource.DamageSource source, float damage, boolean comesFromEffect) {
     }
 
     private void holdAnchorPosition() {

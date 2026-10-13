@@ -40,7 +40,7 @@ import kim.biryeong.semiontd.gametest.SeasonThreeReplaySupport.Sample;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 
 /** Recorded purchases, not reconstructed historical matches; only this test's budget is injected. */
@@ -177,7 +177,7 @@ final class SeasonThreeRecordedCombatGameTest {
             controls = SeasonThreeReplayControls.attach(context, game, controlNames);
             economy = new EconomyService(economyConfig, game);
             for (AssignedParticipant participant : participants) {
-                require(game.selectJob(participant.uuid(), ResourceLocation.parse(trial.source().builderId())),
+                require(game.selectJob(participant.uuid(), Identifier.parse(trial.source().builderId())),
                         "Unknown current builder: " + trial.source().builderId());
             }
             require(game.start(level.getServer(), new ParticipantSelectionPlan(MatchMode.NORMAL, participants, Set.of(), 2)),
@@ -185,7 +185,7 @@ final class SeasonThreeRecordedCombatGameTest {
             for (AssignedParticipant participant : participants) {
                 var boss = game.teams().get(participant.teamId()).laneGroup().bossEntity().orElseThrow();
                 boss.setNoAi(true);
-                boss.setInvulnerable(true);
+                boss.setPermanentlyInvulnerable(true);
             }
             setField(game, "currentRound", trial.round() - 1);
             setField(game, "phase", RoundPhase.ROUND_PAYOUT);

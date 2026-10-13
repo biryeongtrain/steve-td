@@ -496,7 +496,7 @@ public final class AugmentLifecycleGameTest {
             tick(game, context.getLevel().getServer(), AugmentService.PREPARE_TICKS + SemionGame.DEFAULT_PREPARE_TICKS);
             ServerPlayer late = context.makeMockServerPlayerInLevel();
             require(game.addLateParticipant(context.getLevel().getServer(), late,
-                    new AssignedParticipant(late.getUUID(), late.getGameProfile().getName(), TeamId.RED, 2),
+                    new AssignedParticipant(late.getUUID(), late.getGameProfile().name(), TeamId.RED, 2),
                     TraitLoadout.none(), JobRegistry.find(UndeadTowerJob.ID).orElseThrow(), 5), "Late R5 request must activate.");
             SemionPlayer player = game.players().get(late.getUUID());
             PlayerLane lane = game.playerLane(player.uuid()).orElseThrow();
@@ -530,8 +530,8 @@ public final class AugmentLifecycleGameTest {
 
     private static void addLate(SemionGame game, GameTestHelper context, ServerPlayer player, int lane, int requestedRound) {
         require(game.addLateParticipant(context.getLevel().getServer(), player,
-                new AssignedParticipant(player.getUUID(), player.getGameProfile().getName(), TeamId.RED, lane),
-                TraitLoadout.none(), JobRegistry.defaultJob(), requestedRound), "Late participant activation must succeed.");
+                new AssignedParticipant(player.getUUID(), player.getGameProfile().name(), TeamId.RED, lane),
+                TraitLoadout.none(), JobRegistry.find(UndeadTowerJob.ID).orElseThrow(), requestedRound), "Late participant activation must succeed.");
     }
 
     private static int draft(SemionGame game, ServerPlayer online, long revision, int slot) {

@@ -31,7 +31,7 @@ import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.phys.Vec3;
@@ -39,15 +39,15 @@ import net.minecraft.world.phys.Vec3;
 /** Logical support state survives entity recreation; only a new wave reloads limited uses. */
 public class AugmentTower extends ProductionTower {
     private static final TowerDataKey<SupportState> STATE = TowerDataKey.of(
-            ResourceLocation.fromNamespaceAndPath("semiontd", "augment_tower_support"), SupportState.class);
+            Identifier.fromNamespaceAndPath("semiontd", "augment_tower_support"), SupportState.class);
     private static final SupportState EMPTY = new SupportState(-1, List.of(), Set.of(), 0, 0, false, false, 0);
     private static final TowerDataKey<Observations> OBSERVATIONS = TowerDataKey.of(
-            ResourceLocation.fromNamespaceAndPath("semiontd", "augment_tower_observations"), Observations.class);
+            Identifier.fromNamespaceAndPath("semiontd", "augment_tower_observations"), Observations.class);
     private static final TowerDataKey<RecordedStages> RECORDED_STAGES = TowerDataKey.of(
-            ResourceLocation.fromNamespaceAndPath("semiontd", "augment_tower_recorded_stages"), RecordedStages.class);
+            Identifier.fromNamespaceAndPath("semiontd", "augment_tower_recorded_stages"), RecordedStages.class);
     private boolean restoringEntity;
     private static final TowerDataKey<Integer> GROWTH_TIER = TowerDataKey.of(
-            ResourceLocation.fromNamespaceAndPath("semiontd", "augment_tower_growth_tier"), Integer.class);
+            Identifier.fromNamespaceAndPath("semiontd", "augment_tower_growth_tier"), Integer.class);
 
     public AugmentTower(TowerType type, UUID owner, TeamId team, int lane, GridPosition original, GridPosition current) {
         super(type, owner, team, lane, original, current);

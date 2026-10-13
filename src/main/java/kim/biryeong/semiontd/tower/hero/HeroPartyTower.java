@@ -157,9 +157,9 @@ public abstract class HeroPartyTower extends ProductionTower {
     }
 
     protected final ServerPlayer onlineOwner(SemionTowerEntity source) {
-        return source == null || source.getServer() == null
+        return source == null || source.level().getServer() == null
                 ? null
-                : source.getServer().getPlayerList().getPlayer(ownerPlayer());
+                : source.level().getServer().getPlayerList().getPlayer(ownerPlayer());
     }
 
     protected static boolean isIncomeTarget(SemionMonsterEntity target) {

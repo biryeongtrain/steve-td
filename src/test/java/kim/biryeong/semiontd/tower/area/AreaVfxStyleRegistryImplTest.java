@@ -4,11 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import kim.biryeong.semiontd.api.area.AreaVfxStylePlanner;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.junit.jupiter.api.Test;
 
 class AreaVfxStyleRegistryImplTest {
-    private static final ResourceLocation STYLE_ID = ResourceLocation.fromNamespaceAndPath("test", "style");
+    private static final Identifier STYLE_ID = Identifier.fromNamespaceAndPath("test", "style");
 
     @Test
     void registrationRejectsDuplicatesAndLateWrites() {
@@ -23,6 +23,6 @@ class AreaVfxStyleRegistryImplTest {
         registry.freeze();
         assertTrue(registry.frozen());
         assertThrows(IllegalStateException.class, () -> registry.register(
-                ResourceLocation.fromNamespaceAndPath("test", "late"), planner));
+                Identifier.fromNamespaceAndPath("test", "late"), planner));
     }
 }

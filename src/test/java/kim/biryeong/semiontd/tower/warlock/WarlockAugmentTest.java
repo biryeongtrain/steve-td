@@ -26,14 +26,26 @@ class WarlockAugmentTest {
     static void bootstrap() {SharedConstants.tryDetectVersion(); Bootstrap.bootStrap();}
 
     @Test
-    void explosiveSacrificeScalesOnlyPermanentGrowth() {
-        WarlockSacrifice.Gain gain = new WarlockSacrifice.Gain(100, 20, 40, 8, 3, 10)
-                .withPermanentMultiplier(1.25);
-        assertEquals(125, gain.permanentHealth());
-        assertEquals(25, gain.permanentDamage());
-        assertEquals(40, gain.roundHealth());
-        assertEquals(8, gain.roundDamage());
-        assertEquals(3, gain.intervalReduction());
+    void explosiveSacrificeRetiresGrowthBonusWithoutChangingExplosionOrRejectingOldConfig() {
+        var definition = kim.biryeong.semiontd.augment.AugmentCatalog.find(WarlockAugments.EXPLOSIVE).orElseThrow();
+        for (double legacyBonus : new double[]{.25, 9}) {
+            var json = com.google.gson.JsonParser.parseString("""
+                    {"parameters":{"semiontd:job_warlock_towers_g1":{
+                        "growthBonus":%s,"radius":4.5,"maxTargets":7,"healthRatio":0.7}}}
+                    """.formatted(legacyBonus)).getAsJsonObject();
+            AugmentConfig configured = AugmentConfig.fromJson(json);
+            assertFalse(configured.parametersFor(WarlockAugments.EXPLOSIVE).containsKey("growthBonus"));
+            assertEquals(4.5, configured.parameter(WarlockAugments.EXPLOSIVE, "radius", -1));
+            assertEquals(7, configured.parameter(WarlockAugments.EXPLOSIVE, "maxTargets", -1));
+            assertEquals(0.7, configured.parameter(WarlockAugments.EXPLOSIVE, "healthRatio", -1));
+            String description = kim.biryeong.semiontd.augment.AugmentDescriptions.describe(definition, configured);
+            assertFalse(description.contains("growthBonus"));
+            assertFalse(description.contains("영구"));
+            assertTrue(description.contains("4.5"));
+            assertTrue(description.contains("70%"));
+        }
+        assertEquals(java.util.Map.of("radius", 3.0, "maxTargets", 12.0, "healthRatio", 1.0),
+                AugmentConfig.defaults().parametersFor(WarlockAugments.EXPLOSIVE));
     }
 
     @Test

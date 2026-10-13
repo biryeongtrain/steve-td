@@ -4,7 +4,7 @@ import java.util.List;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class DeveloperVfx {
     public enum DebugKind {
@@ -19,7 +19,7 @@ public final class DeveloperVfx {
     private DeveloperVfx() {
     }
 
-    static void show(DeveloperTower tower, ResourceLocation style, String event) {
+    static void show(DeveloperTower tower, Identifier style, String event) {
         SemionTowerEntity entity = tower == null ? null : tower.spawnedEntity();
         if (entity == null) {
             return;

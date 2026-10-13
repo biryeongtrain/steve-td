@@ -14,7 +14,7 @@ import kim.biryeong.semiontd.entity.tower.vfx.BuilderPalette;
 import kim.biryeong.semiontd.entity.tower.vfx.TowerVfxService;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
@@ -22,19 +22,19 @@ import net.minecraft.world.phys.Vec3;
 public final class SuccubusVfx {
     public enum DebugKind {STACK, SLEEP, SMOKE, WAKE, ABSORB}
 
-    public static final ResourceLocation STACK = id("succubus_stack");
-    public static final ResourceLocation SLEEP = id("succubus_sleep");
-    public static final ResourceLocation SLEEP_SMOKE = id("succubus_sleep_smoke");
-    public static final ResourceLocation ABSORB = id("succubus_absorb");
+    public static final Identifier STACK = id("succubus_stack");
+    public static final Identifier SLEEP = id("succubus_sleep");
+    public static final Identifier SLEEP_SMOKE = id("succubus_sleep_smoke");
+    public static final Identifier ABSORB = id("succubus_absorb");
 
     private static final AreaVfxParticle PURPLE = particle(0x8B5CF6, 0.9F, "witch");
     private static final AreaVfxParticle PINK = particle(0xF472B6, 0.85F, "portal");
     private static final AreaVfxParticle DARK = particle(0x581C87, 1.1F, "reverse_portal");
     private static final AreaVfxParticle RED = particle(0xDC2626, 0.95F, "damage_indicator");
     private static final AreaVfxParticle LARGE_SMOKE = new AreaVfxParticle(ParticleTypes.LARGE_SMOKE,
-            ResourceLocation.fromNamespaceAndPath("minecraft", "large_smoke"));
+            Identifier.fromNamespaceAndPath("minecraft", "large_smoke"));
     private static final AreaVfxParticle SMOKE = new AreaVfxParticle(ParticleTypes.SMOKE,
-            ResourceLocation.fromNamespaceAndPath("minecraft", "smoke"));
+            Identifier.fromNamespaceAndPath("minecraft", "smoke"));
     private static Consumer<Vec3> sleepSmokeTestObserver;
 
     private SuccubusVfx() {
@@ -78,7 +78,7 @@ public final class SuccubusVfx {
         forward = forward.lengthSqr() < 1.0E-6 ? new Vec3(0.0, 0.0, 1.0) : forward.normalize();
         Vec3 source = player.position().add(forward.scale(3.0)).add(0.0, 1.0, 0.0);
         Vec3 target = player.position().add(forward.scale(6.0)).add(0.0, 1.0, 0.0);
-        ResourceLocation style = switch (kind) {
+        Identifier style = switch (kind) {
             case STACK -> STACK;
             case SLEEP -> SLEEP;
             case SMOKE -> SLEEP_SMOKE;
@@ -96,7 +96,7 @@ public final class SuccubusVfx {
         ));
     }
 
-    private static void show(SemionTowerEntity source, ResourceLocation style, Vec3 center,
+    private static void show(SemionTowerEntity source, Identifier style, Vec3 center,
                              double radius, List<Vec3> samples) {
         if (source == null || center == null) return;
         TowerVfxService.showAreaEffect(source,
@@ -147,10 +147,10 @@ public final class SuccubusVfx {
 
     private static AreaVfxParticle particle(int color, float scale, String vanillaId) {
         return new AreaVfxParticle(new DustParticleOptions(color, scale),
-                ResourceLocation.fromNamespaceAndPath("minecraft", vanillaId));
+                Identifier.fromNamespaceAndPath("minecraft", vanillaId));
     }
 
-    private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, path.toLowerCase(Locale.ROOT));
+    private static Identifier id(String path) {
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, path.toLowerCase(Locale.ROOT));
     }
 }

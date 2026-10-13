@@ -47,7 +47,7 @@ class WarlockStatsTest {
         assertTrue(details.contains("각성 해금: 0/1400킬"));
         assertTrue(details.contains("영구 체력: +0"));
         assertFalse(details.contains("재생:"));
-        assertTrue(details.contains("생명력 흡수: +0% (10)"));
+        assertTrue(details.contains("생명력 흡수: 0% (10)"));
         assertTrue(details.contains("피해 감소: +0% (4)"));
         assertTrue(details.contains("영구 피해: +0"));
         assertTrue(details.contains("공격 속도: -0틱"));
@@ -87,7 +87,7 @@ class WarlockStatsTest {
         assertTrue(meleeDetails.contains("각성 해금: 0/1400킬"));
         assertTrue(meleeDetails.contains("영구 체력: +0"));
         assertFalse(meleeDetails.contains("재생:"));
-        assertTrue(meleeDetails.contains("생명력 흡수: +0% (1)"));
+        assertTrue(meleeDetails.contains("생명력 흡수: 0% (1)"));
         assertTrue(meleeDetails.contains("피해 감소: +0% (10)"));
         assertTrue(meleeDetails.contains("영구 피해: +0"));
         assertTrue(meleeDetails.contains("공격 속도: -0틱 (1)"));
@@ -105,7 +105,7 @@ class WarlockStatsTest {
                         true,
                         new WarlockStatsView.AwakeningStats(1400, 1400, true, true, 0.35, 0.40, true, 40.0, 0.0, 0.0),
                         new WarlockStatsView.CombatStats(42.5, 4, 15, 1.5, 8.0, true),
-                        new WarlockStatsView.DefenseStats(75.0, 0.08, 0.08, 0.10, 0.10, 0.05),
+                        new WarlockStatsView.DefenseStats(75.0, 0.08, 0.08, 400, 0.10, 0.10, 0.05),
                         new WarlockStatsView.ProgressionStats(
                                 true, 12, 10, 7, 4,
                                 true, true, 7, 1,
@@ -122,7 +122,7 @@ class WarlockStatsTest {
         assertTrue(details.contains("각성 상태: 각성 완료"));
         assertTrue(details.contains("영구 체력: +75"));
         assertTrue(details.contains("재생: +40 HP/s"));
-        assertTrue(details.contains("생명력 흡수: +8% (MAX)"));
+        assertTrue(details.contains("생명력 흡수: 8% (MAX)"));
         assertTrue(details.contains("피해 감소: +10% (MAX)"));
         assertTrue(details.contains("영구 피해: +42.5"));
         assertTrue(details.contains("공격 속도: -4틱"));
@@ -138,7 +138,7 @@ class WarlockStatsTest {
                         true,
                         new WarlockStatsView.AwakeningStats(1400, 1400, true, true, 0.35, 0.40, true, 0.0, 75.0, 0.30),
                         new WarlockStatsView.CombatStats(42.5, 4, 15, 1.5, 8.0, true),
-                        new WarlockStatsView.DefenseStats(75.0, 0.08, 0.08, 0.10, 0.10, 0.05),
+                        new WarlockStatsView.DefenseStats(75.0, 0.08, 0.08, 400, 0.10, 0.10, 0.05),
                         new WarlockStatsView.ProgressionStats(
                                 true, 7, 1, 12, 10,
                                 true, false, 7, 1,
@@ -158,7 +158,7 @@ class WarlockStatsTest {
                         false,
                         new WarlockStatsView.AwakeningStats(0, 1400, false, true, 0.35, 0.40, true, 0.0, 0.0, 0.0),
                         new WarlockStatsView.CombatStats(247.2593, 15, 15, 8.0, 8.0, true),
-                        new WarlockStatsView.DefenseStats(4395.8797, 0.0, 0.08, 0.0, 0.10, 0.05),
+                        new WarlockStatsView.DefenseStats(4395.8797, 0.0, 0.08, 400, 0.0, 0.10, 0.05),
                         new WarlockStatsView.ProgressionStats(
                                 true, 100, 10, 20, 4,
                                 true, true, 20, 1,

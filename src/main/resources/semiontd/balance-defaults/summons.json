@@ -559,7 +559,7 @@
     },
     "goat": {
       "id": "goat",
-      "displayName": "Messi",
+      "displayName": "메시",
       "enabled": true,
       "emeraldCost": 180,
       "incomeGain": 9,
@@ -631,7 +631,7 @@
     },
     "pillager": {
       "id": "pillager",
-      "displayName": "Pillager",
+      "displayName": "약탈자",
       "enabled": true,
       "emeraldCost": 180,
       "incomeGain": 9,
@@ -659,7 +659,7 @@
     },
     "piglin_brute": {
       "id": "piglin_brute",
-      "displayName": "Piglin Brute",
+      "displayName": "피글린 야수",
       "enabled": true,
       "emeraldCost": 180,
       "incomeGain": 9,
@@ -687,7 +687,7 @@
     },
     "ravager": {
       "id": "ravager",
-      "displayName": "Ravager",
+      "displayName": "파괴수",
       "enabled": true,
       "emeraldCost": 200,
       "incomeGain": 10,
@@ -715,7 +715,7 @@
     },
     "hoglin": {
       "id": "hoglin",
-      "displayName": "Hoglin",
+      "displayName": "호글린",
       "enabled": true,
       "emeraldCost": 180,
       "incomeGain": 9,
@@ -744,7 +744,7 @@
     },
     "horse": {
       "id": "horse",
-      "displayName": "Horse",
+      "displayName": "말",
       "enabled": true,
       "emeraldCost": 250,
       "incomeGain": 12,
@@ -781,7 +781,7 @@
     },
     "llama": {
       "id": "llama",
-      "displayName": "Llama",
+      "displayName": "라마",
       "enabled": true,
       "emeraldCost": 250,
       "incomeGain": 12,
@@ -810,7 +810,7 @@
     },
     "phantom": {
       "id": "phantom",
-      "displayName": "Phantom",
+      "displayName": "팬텀",
       "enabled": true,
       "emeraldCost": 280,
       "incomeGain": 13,
@@ -838,7 +838,7 @@
     },
     "enderman": {
       "id": "enderman",
-      "displayName": "Enderman",
+      "displayName": "엔더맨",
       "enabled": true,
       "emeraldCost": 300,
       "incomeGain": 15,
@@ -866,7 +866,7 @@
     },
     "breeze": {
       "id": "breeze",
-      "displayName": "Breeze",
+      "displayName": "브리즈",
       "enabled": true,
       "emeraldCost": 300,
       "incomeGain": 14,
@@ -902,7 +902,7 @@
     },
     "guardian": {
       "id": "guardian",
-      "displayName": "Guardian",
+      "displayName": "가디언",
       "enabled": true,
       "emeraldCost": 320,
       "incomeGain": 15,
@@ -967,7 +967,7 @@
     },
     "magma_cube": {
       "id": "magma_cube",
-      "displayName": "Magma Cube",
+      "displayName": "마그마 큐브",
       "enabled": true,
       "emeraldCost": 380,
       "incomeGain": 18,
@@ -996,7 +996,7 @@
     },
     "ocelot": {
       "id": "ocelot",
-      "displayName": "Ocelot",
+      "displayName": "오실롯",
       "enabled": true,
       "emeraldCost": 400,
       "incomeGain": 18,
@@ -1033,7 +1033,7 @@
     },
     "vindicator": {
       "id": "vindicator",
-      "displayName": "Vindicator",
+      "displayName": "변명자",
       "enabled": true,
       "emeraldCost": 420,
       "incomeGain": 19,
@@ -1069,7 +1069,7 @@
     },
     "witch": {
       "id": "witch",
-      "displayName": "Witch",
+      "displayName": "마녀",
       "enabled": true,
       "emeraldCost": 450,
       "incomeGain": 19,
@@ -1108,7 +1108,7 @@
     },
     "iron_golem": {
       "id": "iron_golem",
-      "displayName": "Iron Golem",
+      "displayName": "철 골렘",
       "enabled": true,
       "emeraldCost": 460,
       "incomeGain": 20,
@@ -1136,7 +1136,7 @@
     },
     "blaze": {
       "id": "blaze",
-      "displayName": "Blaze",
+      "displayName": "블레이즈",
       "enabled": true,
       "emeraldCost": 500,
       "incomeGain": 22,
@@ -1173,7 +1173,7 @@
     },
     "shulker": {
       "id": "shulker",
-      "displayName": "Shulker",
+      "displayName": "셜커",
       "enabled": true,
       "emeraldCost": 520,
       "incomeGain": 23,
@@ -1210,7 +1210,7 @@
     },
     "ghast": {
       "id": "ghast",
-      "displayName": "Ghast",
+      "displayName": "가스트",
       "enabled": true,
       "emeraldCost": 560,
       "incomeGain": 25,
@@ -1246,7 +1246,7 @@
     },
     "zoglin": {
       "id": "zoglin",
-      "displayName": "Zoglin",
+      "displayName": "조글린",
       "enabled": true,
       "emeraldCost": 600,
       "incomeGain": 30,
@@ -1275,7 +1275,7 @@
     },
     "wither_skeleton": {
       "id": "wither_skeleton",
-      "displayName": "Wither Skeleton",
+      "displayName": "위더 스켈레톤",
       "enabled": true,
       "emeraldCost": 650,
       "incomeGain": 32,
@@ -1315,7 +1315,7 @@
     },
     "evoker": {
       "id": "evoker",
-      "displayName": "Evoker",
+      "displayName": "소환사",
       "enabled": true,
       "emeraldCost": 680,
       "incomeGain": 33,
@@ -1353,7 +1353,7 @@
     },
     "elder_guardian": {
       "id": "elder_guardian",
-      "displayName": "Elder Guardian",
+      "displayName": "엘더 가디언",
       "enabled": true,
       "emeraldCost": 600,
       "incomeGain": 27,
@@ -1378,7 +1378,7 @@
         "COOLDOWN"
       ],
       "description": [
-        "반경 8블록 내 가까운 타워 최대 3기의 공격속도를 5초간 25%, 사거리를 20% 감소시킵니다. (5초 쿨타임)"
+        "반경 8블록 내 가까운 타워 최대 3기의 공격속도를 5초간 25% 곱연산 감소시키고, 사거리를 20% 곱연산 감소시킵니다. (5초 쿨타임)"
       ],
       "abilityValues": {
         "radius": 8.0,
@@ -1391,7 +1391,7 @@
     },
     "warden": {
       "id": "warden",
-      "displayName": "Warden",
+      "displayName": "워든",
       "enabled": true,
       "emeraldCost": 800,
       "incomeGain": 40,
@@ -1435,10 +1435,10 @@
       "enabled": true,
       "emeraldCost": 35,
       "incomeGain": 2,
-      "maxHealth": 45.0,
+      "maxHealth": 27.0,
       "armor": 0.0,
       "resistance": 0.0,
-      "attackDamage": 2.5,
+      "attackDamage": 2.3,
       "attackKind": "MELEE",
       "damageType": "PHYSICAL",
       "entityTypeId": "minecraft:zombie",
@@ -1467,10 +1467,10 @@
       "enabled": true,
       "emeraldCost": 110,
       "incomeGain": 5,
-      "maxHealth": 90.0,
+      "maxHealth": 66.0,
       "armor": 1.0,
       "resistance": 4.0,
-      "attackDamage": 7.0,
+      "attackDamage": 5.5,
       "attackKind": "MELEE",
       "damageType": "PHYSICAL",
       "entityTypeId": "minecraft:zombie",
@@ -1498,10 +1498,10 @@
       "enabled": true,
       "emeraldCost": 140,
       "incomeGain": 6,
-      "maxHealth": 100.0,
+      "maxHealth": 84.0,
       "armor": 1.0,
       "resistance": 8.0,
-      "attackDamage": 8.0,
+      "attackDamage": 7.0,
       "attackKind": "RANGED",
       "damageType": "MAGIC",
       "entityTypeId": "minecraft:zombie",
@@ -1521,7 +1521,11 @@
       "description": [
         "멀리서 범위 마법 피해를 주고, 공격과 따로 주변 아군을 광역 치유합니다."
       ],
-      "abilityValues": {}
+      "abilityValues": {
+        "maxTargets": 5.0,
+        "healAmount": 16.0,
+        "healMaxHealthRatio": 0.02
+      }
     },
     "dwarf_gunner": {
       "id": "dwarf_gunner",
@@ -1529,10 +1533,10 @@
       "enabled": true,
       "emeraldCost": 170,
       "incomeGain": 8,
-      "maxHealth": 150.0,
+      "maxHealth": 102.0,
       "armor": 4.0,
       "resistance": 2.0,
-      "attackDamage": 15.0,
+      "attackDamage": 9.0,
       "attackKind": "RANGED",
       "damageType": "PHYSICAL",
       "entityTypeId": "minecraft:zombie",
@@ -1560,10 +1564,10 @@
       "enabled": true,
       "emeraldCost": 230,
       "incomeGain": 10,
-      "maxHealth": 190.0,
+      "maxHealth": 160.0,
       "armor": 2.0,
       "resistance": 2.0,
-      "attackDamage": 21.0,
+      "attackDamage": 13.0,
       "attackKind": "RANGED",
       "damageType": "PHYSICAL",
       "entityTypeId": "minecraft:zombie",
@@ -1591,10 +1595,10 @@
       "enabled": true,
       "emeraldCost": 290,
       "incomeGain": 13,
-      "maxHealth": 260.0,
+      "maxHealth": 205.0,
       "armor": 6.0,
       "resistance": 2.0,
-      "attackDamage": 22.0,
+      "attackDamage": 13.0,
       "attackKind": "MELEE",
       "damageType": "PHYSICAL",
       "entityTypeId": "minecraft:zombie",
@@ -1626,7 +1630,7 @@
       "maxHealth": 230.0,
       "armor": 3.0,
       "resistance": 14.0,
-      "attackDamage": 20.0,
+      "attackDamage": 15.0,
       "attackKind": "RANGED",
       "damageType": "MAGIC",
       "entityTypeId": "minecraft:zombie",
@@ -1655,10 +1659,10 @@
       "enabled": true,
       "emeraldCost": 420,
       "incomeGain": 18,
-      "maxHealth": 380.0,
+      "maxHealth": 350.0,
       "armor": 4.0,
       "resistance": 4.0,
-      "attackDamage": 30.0,
+      "attackDamage": 23.0,
       "attackKind": "MELEE",
       "damageType": "PHYSICAL",
       "entityTypeId": "minecraft:creaking",
@@ -1687,10 +1691,10 @@
       "enabled": true,
       "emeraldCost": 470,
       "incomeGain": 20,
-      "maxHealth": 460.0,
+      "maxHealth": 390.0,
       "armor": 16.0,
       "resistance": 6.0,
-      "attackDamage": 40.0,
+      "attackDamage": 25.0,
       "attackKind": "MELEE",
       "damageType": "PHYSICAL",
       "entityTypeId": "minecraft:zombie",
@@ -1709,7 +1713,7 @@
         "PASSIVE"
       ],
       "description": [
-        "타워와 마왕의 어그로를 모두 무시하고 곧장 보스(철골렘)를 두들깁니다."
+        "일반 인컴처럼 방어 타워의 어그로 우선순위를 따라 공격합니다."
       ],
       "abilityValues": {}
     },
@@ -1719,10 +1723,10 @@
       "enabled": true,
       "emeraldCost": 590,
       "incomeGain": 25,
-      "maxHealth": 580.0,
+      "maxHealth": 490.0,
       "armor": 14.0,
       "resistance": 10.0,
-      "attackDamage": 55.0,
+      "attackDamage": 33.0,
       "attackKind": "MELEE",
       "damageType": "PHYSICAL",
       "entityTypeId": "minecraft:zombie",
@@ -1750,10 +1754,10 @@
       "enabled": true,
       "emeraldCost": 710,
       "incomeGain": 30,
-      "maxHealth": 760.0,
+      "maxHealth": 590.0,
       "armor": 10.0,
       "resistance": 6.0,
-      "attackDamage": 70.0,
+      "attackDamage": 42.0,
       "attackKind": "MELEE",
       "damageType": "PHYSICAL",
       "entityTypeId": "minecraft:zombie",
@@ -1773,7 +1777,9 @@
       "description": [
         "몽둥이로 내려찍어 주변 타워를 한꺼번에 때리는 거대한 탱커입니다."
       ],
-      "abilityValues": {}
+      "abilityValues": {
+        "maxTargets": 5.0
+      }
     }
   }
 }

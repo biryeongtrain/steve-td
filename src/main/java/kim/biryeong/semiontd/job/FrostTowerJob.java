@@ -3,16 +3,16 @@ package kim.biryeong.semiontd.job;
 import java.util.List;
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.tower.TowerType;
-import kim.biryeong.semiontd.tower.frost.FrostTeamEffects;
 import kim.biryeong.semiontd.tower.frost.FrostFullOperationService;
+import kim.biryeong.semiontd.tower.frost.FrostTeamEffects;
 import kim.biryeong.semiontd.tower.frost.FrostTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /** 혹한 빌더의 공개 카탈로그와 고유 냉각장치 설치 제한. */
 public final class FrostTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "frost");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "frost");
 
     public FrostTowerJob() {
         super(

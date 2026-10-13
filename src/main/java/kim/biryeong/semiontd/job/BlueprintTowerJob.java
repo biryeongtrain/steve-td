@@ -9,7 +9,7 @@ import kim.biryeong.semiontd.tower.blueprint.BlueprintStates;
 import kim.biryeong.semiontd.tower.blueprint.BlueprintTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /**
  * 빌더 빌더: 정해진 타워가 없고, 플레이어가 능력치·겉모습을 골라 설계한 타워만 세웁니다.
@@ -17,7 +17,7 @@ import net.minecraft.resources.ResourceLocation;
  * <p>설계도는 계정에 저장되어 경기가 시작하면 그 사람의 타워가 되고, 만든 사람만 세울 수 있습니다. 세게 설계할수록 설치 가격이 가파르게 오릅니다.
  */
 public final class BlueprintTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "blueprint");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "blueprint");
 
     public BlueprintTowerJob() {
         super(

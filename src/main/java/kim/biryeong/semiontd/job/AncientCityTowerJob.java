@@ -8,10 +8,10 @@ import kim.biryeong.semiontd.tower.ancientcity.AncientCityStates;
 import kim.biryeong.semiontd.tower.ancientcity.AncientCityTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class AncientCityTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "ancient_city");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "ancient_city");
 
     public AncientCityTowerJob() {
         super(

@@ -294,7 +294,7 @@
       "range": 2.0,
       "damage": 7.0,
       "attackIntervalTicks": 20,
-      "aggroPriority": 55
+      "aggroPriority": 56
     },
     "t3_pig_tower": {
       "mineralCost": 300,
@@ -491,16 +491,16 @@
     "t1_penguin": {
       "mineralCost": 165,
       "maxHealth": 150.0,
-      "range": 4.0,
-      "damage": 22.0,
+      "range": 3.0,
+      "damage": 25.0,
       "attackIntervalTicks": 20,
       "aggroPriority": 30
     },
     "t2_penguin_tower": {
       "mineralCost": 225,
       "maxHealth": 220.0,
-      "range": 4.0,
-      "damage": 30.0,
+      "range": 3.0,
+      "damage": 40.0,
       "attackIntervalTicks": 15,
       "aggroPriority": 30
     },
@@ -508,7 +508,7 @@
       "mineralCost": 120,
       "maxHealth": 80.0,
       "range": 8.0,
-      "damage": 18.0,
+      "damage": 20.0,
       "attackIntervalTicks": 20,
       "aggroPriority": 15
     },
@@ -516,8 +516,8 @@
       "mineralCost": 225,
       "maxHealth": 100.0,
       "range": 8.0,
-      "damage": 24.0,
-      "attackIntervalTicks": 20,
+      "damage": 28.0,
+      "attackIntervalTicks": 18,
       "aggroPriority": 15
     },
     "illusion_tower": {
@@ -2161,7 +2161,7 @@
       "aggroPriority": 45
     },
     "insect_cave_spider_t1": {
-      "mineralCost": 40,
+      "mineralCost": 50,
       "maxHealth": 150.0,
       "range": 2.4,
       "damage": 4.0,
@@ -2365,20 +2365,20 @@
       "maxHealth": 60.0,
       "range": 9.0,
       "damage": 0.0,
-      "attackIntervalTicks": 120,
+      "attackIntervalTicks": 20,
       "aggroPriority": 1
     },
     "queen_joker": {
       "mineralCost": 0,
-      "maxHealth": 45.0,
+      "maxHealth": 80.0,
       "range": 8.0,
       "damage": 0.0,
       "attackIntervalTicks": 10,
       "aggroPriority": 0
     },
     "queen_random_card_soldier": {
-      "mineralCost": 25,
-      "maxHealth": 45.0,
+      "mineralCost": 30,
+      "maxHealth": 80.0,
       "range": 8.0,
       "damage": 0.0,
       "attackIntervalTicks": 10,
@@ -4020,23 +4020,23 @@
       "mineralCost": 55,
       "maxHealth": 70.0,
       "range": 6.0,
-      "damage": 12.0,
+      "damage": 10.0,
       "attackIntervalTicks": 20,
       "aggroPriority": 0
     },
     "frost_frozen_dumpling_t2": {
       "mineralCost": 0,
       "maxHealth": 70.0,
-      "range": 6.0,
-      "damage": 30.0,
+      "range": 7.0,
+      "damage": 20.0,
       "attackIntervalTicks": 17,
       "aggroPriority": 0
     },
     "frost_frozen_dumpling_t3": {
       "mineralCost": 0,
       "maxHealth": 70.0,
-      "range": 6.0,
-      "damage": 45.0,
+      "range": 8.0,
+      "damage": 40.0,
       "attackIntervalTicks": 14,
       "aggroPriority": 0
     },
@@ -4139,7 +4139,7 @@
     "t1_pet_cat": {
       "mineralCost": 50,
       "maxHealth": 95.0,
-      "range": 3.5,
+      "range": 5.5,
       "damage": 12.0,
       "attackIntervalTicks": 13,
       "aggroPriority": 5
@@ -4147,7 +4147,7 @@
     "t2_pet_cat": {
       "mineralCost": 120,
       "maxHealth": 150.0,
-      "range": 3.8,
+      "range": 5.8,
       "damage": 24.0,
       "attackIntervalTicks": 12,
       "aggroPriority": 5
@@ -4155,7 +4155,7 @@
     "t3_pet_cat": {
       "mineralCost": 260,
       "maxHealth": 230.0,
-      "range": 4.2,
+      "range": 6.2,
       "damage": 38.0,
       "attackIntervalTicks": 13,
       "aggroPriority": 0
@@ -4210,9 +4210,9 @@
     },
     "pirate_admiral": { "mineralCost": 1000, "maxHealth": 100.0, "range": 8.0, "damage": 15.0, "attackIntervalTicks": 13, "aggroPriority": 25 },
     "pirate_golden_admiral": { "mineralCost": 0, "maxHealth": 400.0, "range": 8.0, "damage": 15.0, "attackIntervalTicks": 13, "aggroPriority": 25 },
-    "pirate_deckhand": { "mineralCost": 75, "maxHealth": 90.0, "range": 2.0, "damage": 5.0, "attackIntervalTicks": 17, "aggroPriority": 15 },
-    "pirate_lookout_deckhand": { "mineralCost": 0, "maxHealth": 150.0, "range": 2.0, "damage": 7.5, "attackIntervalTicks": 18, "aggroPriority": 15 },
-    "pirate_soul_reaver_deckhand": { "mineralCost": 0, "maxHealth": 300.0, "range": 2.0, "damage": 16.0, "attackIntervalTicks": 17, "aggroPriority": 15 },
+    "pirate_deckhand": { "mineralCost": 75, "maxHealth": 100.0, "range": 3.0, "damage": 7.0, "attackIntervalTicks": 16, "aggroPriority": 15 },
+    "pirate_lookout_deckhand": { "mineralCost": 0, "maxHealth": 150.0, "range": 3.0, "damage": 12.0, "attackIntervalTicks": 16, "aggroPriority": 15 },
+    "pirate_soul_reaver_deckhand": { "mineralCost": 0, "maxHealth": 250.0, "range": 2.0, "damage": 16.0, "attackIntervalTicks": 17, "aggroPriority": 15 },
     "pirate_ferryman": { "mineralCost": 200, "maxHealth": 90.0, "range": 6.0, "damage": 8.0, "attackIntervalTicks": 20, "aggroPriority": 5 },
     "pirate_veteran_ferryman": { "mineralCost": 0, "maxHealth": 125.0, "range": 6.0, "damage": 11.0, "attackIntervalTicks": 18, "aggroPriority": 5 },
     "pirate_legendary_ferryman": { "mineralCost": 0, "maxHealth": 165.0, "range": 6.0, "damage": 15.0, "attackIntervalTicks": 17, "aggroPriority": 5 },
@@ -4220,14 +4220,14 @@
     "pirate_sweet_boat_singer": { "mineralCost": 0, "maxHealth": 120.0, "range": 10.0, "damage": 12.0, "attackIntervalTicks": 11, "aggroPriority": 10 },
     "pirate_swordsman": { "mineralCost": 550, "maxHealth": 180.0, "range": 3.0, "damage": 5.0, "attackIntervalTicks": 17, "aggroPriority": 15 },
     "pirate_iron_swordsman": { "mineralCost": 0, "maxHealth": 325.0, "range": 3.0, "damage": 8.0, "attackIntervalTicks": 17, "aggroPriority": 15 },
-    "pirate_parrot": { "mineralCost": 600, "maxHealth": 80.0, "range": 10.0, "damage": 20.0, "attackIntervalTicks": 18, "aggroPriority": 5 },
-    "pirate_one_eyed_parrot": { "mineralCost": 0, "maxHealth": 150.0, "range": 10.0, "damage": 35.0, "attackIntervalTicks": 17, "aggroPriority": 5 },
-    "pirate_capablanca": { "mineralCost": 0, "maxHealth": 330.0, "range": 10.0, "damage": 60.0, "attackIntervalTicks": 15, "aggroPriority": 5 },
-    "pirate_helmsman": { "mineralCost": 900, "maxHealth": 300.0, "range": 10.0, "damage": 20.0, "attackIntervalTicks": 17, "aggroPriority": 15 },
+    "pirate_parrot": { "mineralCost": 600, "maxHealth": 60.0, "range": 10.0, "damage": 20.0, "attackIntervalTicks": 18, "aggroPriority": 5 },
+    "pirate_one_eyed_parrot": { "mineralCost": 0, "maxHealth": 120.0, "range": 10.0, "damage": 35.0, "attackIntervalTicks": 17, "aggroPriority": 5 },
+    "pirate_capablanca": { "mineralCost": 0, "maxHealth": 200.0, "range": 10.0, "damage": 60.0, "attackIntervalTicks": 15, "aggroPriority": 5 },
+    "pirate_helmsman": { "mineralCost": 900, "maxHealth": 250.0, "range": 10.0, "damage": 20.0, "attackIntervalTicks": 17, "aggroPriority": 15 },
     "pirate_guide": { "mineralCost": 0, "maxHealth": 350.0, "range": 10.0, "damage": 25.0, "attackIntervalTicks": 17, "aggroPriority": 5 },
-    "pirate_navigator": { "mineralCost": 0, "maxHealth": 500.0, "range": 10.0, "damage": 30.0, "attackIntervalTicks": 17, "aggroPriority": 15 },
-    "pirate_first_navigator": { "mineralCost": 0, "maxHealth": 700.0, "range": 10.0, "damage": 40.0, "attackIntervalTicks": 15, "aggroPriority": 15 },
-    "pirate_shabby_chest": { "mineralCost": 50, "maxHealth": 200.0, "range": 0.0, "damage": 0.0, "attackIntervalTicks": 20, "aggroPriority": 50 },
+    "pirate_navigator": { "mineralCost": 0, "maxHealth": 350.0, "range": 10.0, "damage": 30.0, "attackIntervalTicks": 17, "aggroPriority": 15 },
+    "pirate_first_navigator": { "mineralCost": 0, "maxHealth": 550.0, "range": 10.0, "damage": 40.0, "attackIntervalTicks": 15, "aggroPriority": 15 },
+    "pirate_shabby_chest": { "mineralCost": 50, "maxHealth": 250.0, "range": 0.0, "damage": 0.0, "attackIntervalTicks": 20, "aggroPriority": 50 },
     "pirate_empire_chest": { "mineralCost": 0, "maxHealth": 250.0, "range": 0.0, "damage": 0.0, "attackIntervalTicks": 20, "aggroPriority": 50 },
     "pirate_deep_chest": { "mineralCost": 0, "maxHealth": 250.0, "range": 0.0, "damage": 0.0, "attackIntervalTicks": 20, "aggroPriority": 50 },
     "pirate_fantasy_chest": { "mineralCost": 0, "maxHealth": 300.0, "range": 0.0, "damage": 0.0, "attackIntervalTicks": 20, "aggroPriority": 50 },
@@ -4249,6 +4249,86 @@
       "damage": 58.0,
       "attackIntervalTicks": 18,
       "aggroPriority": 78
+    },
+    "magic_school_hogwarts_t1": {
+      "mineralCost": 0,
+      "maxHealth": 1.0,
+      "range": 0.0,
+      "damage": 0.0,
+      "attackIntervalTicks": 20,
+      "aggroPriority": 0
+    },
+    "magic_school_freshman_t1": {
+      "mineralCost": 100,
+      "maxHealth": 200.0,
+      "range": 8.0,
+      "damage": 30.0,
+      "attackIntervalTicks": 22,
+      "aggroPriority": 0
+    },
+    "magic_school_gryffindor_t2": {
+      "mineralCost": 200,
+      "maxHealth": 340.0,
+      "range": 10.0,
+      "damage": 50.0,
+      "attackIntervalTicks": 17,
+      "aggroPriority": 0
+    },
+    "magic_school_gryffindor_t3": {
+      "mineralCost": 450,
+      "maxHealth": 500.0,
+      "range": 10.0,
+      "damage": 80.0,
+      "attackIntervalTicks": 11,
+      "aggroPriority": 0
+    },
+    "magic_school_hufflepuff_t2": {
+      "mineralCost": 200,
+      "maxHealth": 374.0,
+      "range": 10.0,
+      "damage": 50.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": 0
+    },
+    "magic_school_hufflepuff_t3": {
+      "mineralCost": 450,
+      "maxHealth": 550.0,
+      "range": 10.0,
+      "damage": 80.0,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 0
+    },
+    "magic_school_ravenclaw_t2": {
+      "mineralCost": 200,
+      "maxHealth": 340.0,
+      "range": 10.0,
+      "damage": 50.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": 0
+    },
+    "magic_school_ravenclaw_t3": {
+      "mineralCost": 450,
+      "maxHealth": 500.0,
+      "range": 10.0,
+      "damage": 80.0,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 0
+    },
+    "magic_school_slytherin_t2": {
+      "mineralCost": 200,
+      "maxHealth": 340.0,
+      "range": 10.0,
+      "damage": 55.0,
+      "attackIntervalTicks": 18,
+      "aggroPriority": 0
+    },
+    "magic_school_slytherin_t3": {
+      "mineralCost": 450,
+      "maxHealth": 500.0,
+      "range": 10.0,
+      "damage": 88.0,
+      "attackIntervalTicks": 12,
+      "aggroPriority": 0
     }
   },
   "upgradeCosts": {
@@ -4452,8 +4532,8 @@
     "engineer_slime_t2->engineer_slime_t3": 140,
     "insect_silverfish_t1->insect_endermite_t2": 75,
     "insect_endermite_t2->insect_endermite_t3": 140,
-    "insect_cave_spider_t1->insect_spider_t2": 90,
-    "insect_spider_t2->insect_spider_t3": 160,
+    "insect_cave_spider_t1->insect_spider_t2": 115,
+    "insect_spider_t2->insect_spider_t3": 185,
     "insect_bee_t1->insect_bee_t2": 90,
     "insect_bee_t2->insect_bee_t3": 170,
     "future_escapee->reconstruct_future_agency": 0,
@@ -4661,7 +4741,7 @@
     "developer_test_build->developer_release": 170,
     "developer_test_build->developer_lts": 160,
     "developer_workbench->developer_deploy_server": 80,
-    "developer_deploy_server->developer_ops_center": 160,
+    "developer_deploy_server->developer_ops_center": 155,
     "developer_tester->developer_debugger": 70,
     "developer_debugger->developer_dev": 140,
     "succubus_dream_dust_t1->succubus_dream_dust_t2": 100,
@@ -4688,8 +4768,8 @@
     "frost_eruption_cooling_device->frost_eruption_cooling_device_expanded": 1000,
     "frost_ice_breaker_t1->frost_ice_breaker_t2": 100,
     "frost_ice_breaker_t2->frost_ice_breaker_t3": 200,
-    "frost_frozen_dumpling_t1->frost_frozen_dumpling_t2": 100,
-    "frost_frozen_dumpling_t2->frost_frozen_dumpling_t3": 200,
+    "frost_frozen_dumpling_t1->frost_frozen_dumpling_t2": 120,
+    "frost_frozen_dumpling_t2->frost_frozen_dumpling_t3": 220,
     "frost_icebox_t1->frost_icebox_t2": 145,
     "frost_icebox_t2->frost_icebox_t3": 225,
     "t1_pet_butler->t2_pet_butler": 220,
@@ -4721,32 +4801,40 @@
     "pirate_shabby_chest->pirate_empire_chest": 150,
     "pirate_deep_chest->pirate_fantasy_chest": 350,
     "pirate_dropped_anchor->pirate_deep_anchor": 600,
-    "pirate_deep_anchor->pirate_ancient_anchor": 1200
+    "pirate_deep_anchor->pirate_ancient_anchor": 1200,
+    "magic_school_slytherin_t2->magic_school_slytherin_t3": 450,
+    "magic_school_ravenclaw_t2->magic_school_ravenclaw_t3": 450,
+    "magic_school_hufflepuff_t2->magic_school_hufflepuff_t3": 450,
+    "magic_school_gryffindor_t2->magic_school_gryffindor_t3": 450,
+    "magic_school_freshman_t1->magic_school_gryffindor_t2": 200,
+    "magic_school_freshman_t1->magic_school_hufflepuff_t2": 200,
+    "magic_school_freshman_t1->magic_school_ravenclaw_t2": 200,
+    "magic_school_freshman_t1->magic_school_slytherin_t2": 200
   },
   "abilities": {
-    "pirate_admiral": { "spendThreshold": 200.0, "paybackLow": 50.0, "paybackHigh": 75.0, "maxHealthBonusLow": 2.0, "maxHealthBonusHigh": 4.0, "damageBonus": 0.5, "effectCount": 1.0 },
+    "pirate_admiral": { "spendThreshold": 200.0, "paybackLow": 50.0, "paybackHigh": 75.0, "maxHealthBonusLow": 1.0, "maxHealthBonusHigh": 2.0, "damageBonus": 0.5, "effectCount": 1.0 },
     "pirate_golden_admiral": { "effectCount": 2.0 },
-    "pirate_deckhand": { "incomeMin": 1.0, "incomeMax": 3.0, "openingDamageBonus": 0.5, "openingDamageTicks": 120.0 },
-    "pirate_lookout_deckhand": { "incomeMin": 2.0, "incomeMax": 3.0, "splashRadius": 1.5, "splashRatio": 0.5, "openingDamageBonus": 0.5, "openingDamageTicks": 120.0 },
-    "pirate_soul_reaver_deckhand": { "incomeMin": 3.0, "incomeMax": 5.0, "splashRadius": 2.0, "splashRatio": 0.6, "deathHaste": 0.4, "deathHasteRadius": 5.0, "deathHasteTicks": 60.0, "openingDamageBonus": 0.5, "openingDamageTicks": 120.0 },
+    "pirate_deckhand": { "incomeMin": 1.0, "incomeMax": 3.0, "openingDamageBonus": 0.8, "openingDamageTicks": 200.0 },
+    "pirate_lookout_deckhand": { "incomeMin": 2.0, "incomeMax": 3.0, "splashRadius": 1.5, "splashRatio": 0.5, "openingDamageBonus": 0.85, "openingDamageTicks": 120.0 },
+    "pirate_soul_reaver_deckhand": { "incomeMin": 3.0, "incomeMax": 5.0, "splashRadius": 2.0, "splashRatio": 0.4, "deathHaste": 0.4, "deathHasteRadius": 5.0, "deathHasteTicks": 60.0, "openingDamageBonus": 0.5, "openingDamageTicks": 120.0 },
     "pirate_ferryman": { "incomeBonus": 2.0 },
     "pirate_veteran_ferryman": { "incomeBonus": 3.0 },
     "pirate_legendary_ferryman": { "incomeBonus": 4.0 },
     "pirate_boat_singer": { "chestRoundReduction": 1.0 },
     "pirate_sweet_boat_singer": { "chestRoundReduction": 2.0 },
-    "pirate_swordsman": { "positiveBuffMultiplier": 1.5 },
-    "pirate_iron_swordsman": { "positiveBuffMultiplier": 2.0, "firstAttackMultiplier": 2.0, "firstAttackSlow": 0.8, "firstAttackSlowTicks": 40.0 },
+    "pirate_swordsman": { "positiveBuffMultiplier": 1.4 },
+    "pirate_iron_swordsman": { "positiveBuffMultiplier": 1.8, "firstAttackMultiplier": 1.75, "firstAttackSlow": 0.8, "firstAttackSlowTicks": 40.0 },
     "pirate_parrot": { "damagePerHundredDiamond": 0.02, "damageBonusCap": 5.0, "openingAttackCount": 3.0, "openingRangeBonus": 10.0, "openingDamageMultiplier": 2.5 },
     "pirate_one_eyed_parrot": { "damagePerHundredDiamond": 0.035, "damageBonusCap": 5.0, "openingAttackCount": 3.0, "openingRangeBonus": 10.0, "openingDamageMultiplier": 2.5 },
-    "pirate_capablanca": { "damagePerHundredDiamond": 0.05, "damageBonusCap": 5.0, "speedPerHundredEmerald": 0.05, "speedBonusCap": 1.0, "openingAttackCount": 3.0, "openingRangeBonus": 10.0, "openingDamageMultiplier": 2.5 },
-    "pirate_helmsman": { "spendStep": 100.0, "healthPerStep": 2.0, "damagePerStep": 0.5 },
-    "pirate_guide": { "spendStep": 100.0, "healthPerStep": 3.0, "lostHealthThreshold": 1200.0, "lostHealthRatio": 0.035 },
-    "pirate_navigator": { "spendStep": 75.0, "healthPerStep": 3.0, "damagePerStep": 0.5 },
-    "pirate_first_navigator": { "spendStep": 75.0, "healthPerStep": 5.0, "damagePerStep": 0.5, "splashRadius": 2.0, "splashRatio": 0.8 },
+    "pirate_capablanca": { "damagePerHundredDiamond": 0.01, "damageBonusCap": 4.0, "speedPerHundredEmerald": 0.05, "speedBonusCap": 1.0, "openingAttackCount": 3.0, "openingRangeBonus": 10.0, "openingDamageMultiplier": 2.5 },
+    "pirate_helmsman": { "spendStep": 100.0, "healthPerStep": 1.0, "damagePerStep": 0.5 },
+    "pirate_guide": { "spendStep": 100.0, "healthPerStep": 1.5, "lostHealthThreshold": 1200.0, "lostHealthRatio": 0.03 },
+    "pirate_navigator": { "spendStep": 75.0, "healthPerStep": 2.0, "damagePerStep": 0.5 },
+    "pirate_first_navigator": { "spendStep": 75.0, "healthPerStep": 3.0, "damagePerStep": 0.5, "splashRadius": 2.0, "splashRatio": 0.5 },
     "pirate_shabby_chest": { "rounds": 5.0, "cashout": 90.0, "saleHealthBonus": 5.0 },
     "pirate_empire_chest": { "rounds": 5.0, "cashout": 200.0, "saleDamageBonus": 1.0 },
-    "pirate_deep_chest": { "rounds": 5.0, "cashout": 250.0, "saleHealthBonus": 10.0 },
-    "pirate_fantasy_chest": { "rounds": 5.0, "cashout": 600.0, "saleHealthBonus": 10.0 },
+    "pirate_deep_chest": { "rounds": 5.0, "cashout": 250.0, "saleHealthBonus": 8.0 },
+    "pirate_fantasy_chest": { "rounds": 5.0, "cashout": 600.0, "saleHealthBonus": 8.0 },
     "pirate_dropped_anchor": { "radius": 2.0, "damageReduction": 0.01, "durationTicks": 80.0, "saleBonus": 0.001, "saleBonusCap": 0.1, "maxStacks": 2.0 },
     "pirate_deep_anchor": { "radius": 2.0, "damageReduction": 0.02, "durationTicks": 140.0, "saleBonus": 0.001, "saleBonusCap": 0.1, "maxStacks": 2.0 },
     "pirate_ancient_anchor": { "radius": 2.0, "damageReduction": 0.05, "durationTicks": 240.0, "saleBonus": 0.001, "saleBonusCap": 0.1, "maxStacks": 2.0 },
@@ -4995,18 +5083,18 @@
     },
     "base_warlock_tower": {
       "sacrificeRadius": 6.0,
-      "permanentHealth": 0.025,
-      "permanentDamage": 0.05
+      "permanentHealth": 0.02,
+      "permanentDamage": 0.02
     },
     "ranged_warlock_tower": {
       "threshold": 0.65,
       "roundStat": 0.5,
-      "permanentHealth": 0.025,
+      "permanentHealth": 0.04,
       "healthThreshold": 2000.0,
       "healthScale": 500.0,
-      "permanentDamage": 0.05,
-      "damageThreshold": 140.0,
-      "damageScale": 20.0,
+      "permanentDamage": 0.07,
+      "damageThreshold": 160.0,
+      "damageScale": 40.0,
       "lifeEvery": 10.0,
       "lifeStep": 0.005,
       "lifeCap": 0.07,
@@ -5028,14 +5116,14 @@
     "melee_warlock_tower": {
       "threshold": 0.65,
       "roundStat": 0.6,
-      "permanentHealth": 0.05,
+      "permanentHealth": 0.07,
       "healthThreshold": 3500.0,
       "healthScale": 500.0,
-      "permanentDamage": 0.025,
+      "permanentDamage": 0.04,
       "damageThreshold": 200.0,
       "damageScale": 20.0,
       "lifeStep": 0.01,
-      "lifeCap": 0.13,
+      "lifeCap": 0.12,
       "incomeDebuffResistance": 0.4,
       "speedStep": 1.0,
       "splashStep": 0.25,
@@ -5125,7 +5213,7 @@
     },
     "t1_penguin": {
       "cloneDamageRatio": 1.4,
-      "cloneRangeRatio": 1.0,
+      "cloneRangeRatio": 0.9,
       "cloneHealthRatio": 1.4,
       "cloneAttackIntervalMultiplier": 1.0,
       "cloneCount": 1.0,
@@ -5134,22 +5222,22 @@
     },
     "t2_penguin_tower": {
       "cloneAttackIntervalMultiplier": 1.0,
-      "cloneDamageRatio": 1.1,
-      "cloneRangeRatio": 1.0,
+      "cloneDamageRatio": 1.35,
+      "cloneRangeRatio": 0.9,
       "cloneSpawnRadius": 1.5,
       "cloneAggroPriorityBonus": 5.0,
       "cloneCount": 2.0,
       "splashRadius": 1.25,
-      "cloneHealthRatio": 1.1,
+      "cloneHealthRatio": 1.35,
       "splashDamageRatio": 0.6
     },
     "t1_parrot_tower": {
-      "attackStackBonus": 0.2,
-      "maxAttackStacks": 6.0
+      "attackStackBonus": 0.4,
+      "maxAttackStacks": 3.0
     },
     "t2_parrot_tower": {
-      "attackStackBonus": 0.3,
-      "maxAttackStacks": 9.0
+      "attackStackBonus": 0.45,
+      "maxAttackStacks": 5.0
     },
     "illusion_tower": {
       "cloneDamageRatio": 0.85,
@@ -5526,12 +5614,12 @@
       "raidIncomeDamageBonus": 1.25
     },
     "illager_evoker_single_t3": {
-      "markDurationTicks": 60.0,
-      "incomeDamageBonus": 1.7,
-      "raidMarkedDamageBonus": 1.25,
-      "raidMarkDurationBonusTicks": 20.0,
-      "raidIncomeDamageBonus": 1.25,
-      "markDamageTakenBonus": 0.08
+      "markDurationTicks": 100.0,
+      "incomeDamageBonus": 2.0,
+      "raidMarkedDamageBonus": 1.5,
+      "raidMarkDurationBonusTicks": 60.0,
+      "raidIncomeDamageBonus": 1.5,
+      "markDamageTakenBonus": 0.15
     },
     "illager_pillager_captain_splash_t2": {
       "raidSplashRadiusBonus": 0.5,
@@ -5540,10 +5628,10 @@
       "splashDamageRatio": 0.6
     },
     "illager_evoker_splash_t3": {
-      "raidSplashRadiusBonus": 0.75,
+      "raidSplashRadiusBonus": 1.0,
       "splashRadius": 1.5,
       "raidSplashDamageRatioBonus": 0.3,
-      "splashDamageRatio": 0.7
+      "splashDamageRatio": 0.65
     },
     "illager_vex_t1": {
       "markDamageTakenBonus": 0.2,
@@ -5570,17 +5658,17 @@
       "raidForceTargetRadiusBonus": 0.5
     },
     "illager_illusioner_low_t3": {
-      "raidLowHealthMarkDamageTakenBonus": 0.3,
-      "markDurationTicks": 120.0,
-      "markDamageTakenBonus": 0.5,
-      "raidMarkDurationBonusTicks": 30.0,
+      "raidLowHealthMarkDamageTakenBonus": 0.5,
+      "markDurationTicks": 200.0,
+      "markDamageTakenBonus": 0.75,
+      "raidMarkDurationBonusTicks": 40.0,
       "forceTargetRadius": 1.0,
-      "raidMarkDamageTakenBonus": 0.25,
-      "raidForceTargetRadiusBonus": 1.0
+      "raidMarkDamageTakenBonus": 0.3,
+      "raidForceTargetRadiusBonus": 0.25
     },
     "illager_illusioner_high_t3": {
-      "markDurationTicks": 120.0,
-      "markDamageTakenBonus": 0.6,
+      "markDurationTicks": 180.0,
+      "markDamageTakenBonus": 0.75,
       "raidMarkDurationBonusTicks": 30.0,
       "forceTargetRadius": 1.0,
       "raidMarkDamageTakenBonus": 0.25,
@@ -5818,13 +5906,13 @@
       "transferHeal": 30.0,
       "transferHealRatio": 0.05,
       "roundHealthRatio": 0.5,
-      "permanentHealthRatio": 0.04,
+      "permanentHealthRatio": 0.06,
       "healthThreshold": 3000.0,
       "healthScale": 500.0,
       "roundDamageRatio": 0.66,
-      "permanentDamageRatio": 0.04,
-      "damageThreshold": 150.0,
-      "damageScale": 25.0,
+      "permanentDamageRatio": 0.06,
+      "damageThreshold": 175.0,
+      "damageScale": 50.0,
       "lifeStealStacks": 30.0,
       "lifeStealStep": 0.01,
       "lifeStealCap": 0.1,
@@ -6614,7 +6702,7 @@
       "cardSplashExtraTargets": 5.0,
       "spadeRadius": 2.5,
       "spadeExtraTargets": 5.0,
-      "giantChargeTicks": 400.0,
+      "giantChargeTicks": 300.0,
       "giantAccelerationRadius": 6.0,
       "giantAccelerationMemoryTicks": 40.0,
       "giantExecutionVisualShrink": 0.2,
@@ -7363,6 +7451,10 @@
       "healthBonusScale": 500.0,
       "damageBonusThreshold": 0.5,
       "damageBonusScale": 0.5,
+      "physicalDamageThreshold": 100.0,
+      "physicalDamageScale": 100.0,
+      "magicDamageThreshold": 100.0,
+      "magicDamageScale": 50.0,
       "bladeDamage": 19.0,
       "bladeAttackIntervalTicks": 12.0,
       "passiveExperiencePerRound": 6.0,
@@ -7862,8 +7954,8 @@
       "damageIntervalTicks": 20.0
     },
     "builder_blueprint": {
-      "priceScale": 16.5,
-      "priceExponent": 1.6,
+      "priceScale": 12.0,
+      "priceExponent": 1.5,
       "dpsUnit": 8.0,
       "healthUnit": 88.0,
       "rangePivot": 6.0,
@@ -8038,7 +8130,7 @@
       "towerSlotCost": 3.0
     },
     "income_ogre_champion": {
-      "towerSlotCost": 3.0
+      "towerSlotCost": 4.0
     },
     "demon_lord_passive_blood_cleave": {
       "cost": 180.0,
@@ -8051,8 +8143,10 @@
       "cost": 260.0,
       "copies": 5.0
     },
-    "demon_lord_passive_boundless": {
-      "cost": 120.0
+    "demon_lord_passive_dread": {
+      "cost": 120.0,
+      "damageBonus": 0.1,
+      "defenseBonus": 0.1
     },
     "demon_lord_passive_blade_wave": {
       "cost": 200.0,
@@ -8532,12 +8626,12 @@
       "frozenFoodIncomeDamageBonusAt9": 0.1
     },
     "frost_frozen_dumpling_t2": {
-      "splashRadius": 1.5,
+      "splashRadius": 1.25,
       "frozenFoodDamageBonusAt3": 5.0,
       "frozenFoodIncomeDamageBonusAt9": 0.2
     },
     "frost_frozen_dumpling_t3": {
-      "splashRadius": 3.0,
+      "splashRadius": 1.7,
       "frozenFoodDamageBonusAt3": 10.0,
       "frozenFoodIncomeDamageBonusAt9": 0.3
     },
@@ -8757,6 +8851,273 @@
       "chargeDebuffTicks": 100.0,
       "chargeAttackSpeedReduction": 0.5,
       "chargeRangeReduction": 0.5
+    },
+    "magic_school_spell_expelliarmus": {
+      "disarmTicks": 40.0,
+      "damageMultiplier": 0.8
+    },
+    "magic_school_spell_muggle_wand": {
+      "fixedDamage": 80.0,
+      "fixedIntervalTicks": 20.0,
+      "damageMultiplier": 1.0
+    },
+    "magic_school_spell_stupefy": {
+      "hitsToStun": 3.0,
+      "stunTicks": 10.0,
+      "damageMultiplier": 1.0
+    },
+    "magic_school_spell_protego": {
+      "waveAggroBonus": 60.0,
+      "damageReduction": 0.3,
+      "damageMultiplier": 0.5
+    },
+    "magic_school_spell_wingardium_leviosa": {
+      "damageMultiplier": 0.85,
+      "intervalTicks": 100.0,
+      "radius": 6.0,
+      "stunTicks": 24.0,
+      "liftDamageMultiplier": 0.25,
+      "liftPower": 0.8
+    },
+    "magic_school_spell_expulso": {
+      "radius": 1.2,
+      "secondaryMultiplier": 0.5,
+      "damageMultiplier": 0.8
+    },
+    "magic_school_spell_lumos": {
+      "magicVulnerability": 0.12,
+      "damageMultiplier": 0.8,
+      "radius": 2.0
+    },
+    "magic_school_spell_episkey": {
+      "radius": 8.0,
+      "healingMultiplier": 0.75,
+      "recipientCooldownTicks": 60.0,
+      "damageMultiplier": 0.9
+    },
+    "magic_school_spell_sectumsempra": {
+      "radius": 3.0,
+      "secondaryMultiplier": 0.5,
+      "healingReduction": 0.65,
+      "healingReductionTicks": 100.0,
+      "damageMultiplier": 1.0
+    },
+    "magic_school_spell_bombarda": {
+      "radius": 2.4,
+      "secondaryMultiplier": 0.7,
+      "damageMultiplier": 0.9
+    },
+    "magic_school_spell_protego_maxima": {
+      "waveAggroBonus": 60.0,
+      "damageReduction": 0.3,
+      "radius": 6.0,
+      "auraReduction": 0.05,
+      "maxAuraStacks": 3.0,
+      "damageMultiplier": 0.8
+    },
+    "magic_school_spell_expecto_patronum": {
+      "radius": 3.0,
+      "secondaryMultiplier": 0.25,
+      "attacksPerExtraTarget": 2.0,
+      "damageMultiplier": 1.0
+    },
+    "magic_school_spell_lumos_maxima": {
+      "radius": 4.0,
+      "damageMultiplier": 1.0
+    },
+    "magic_school_spell_rennervate": {
+      "radius": 8.0,
+      "intervalTicks": 100.0,
+      "buffTicks": 60.0,
+      "damageBonus": 0.12,
+      "damageMultiplier": 1.1
+    },
+    "magic_school_spell_avada_kedavra": {
+      "attackSpeedPenalty": 0.6,
+      "maxHealthMultiplier": 2.0,
+      "damageMultiplier": 1.0
+    },
+    "magic_school_spell_crucio": {
+      "dotMultiplier": 0.15,
+      "dotTicks": 40.0,
+      "dotIntervalTicks": 2.0,
+      "vulnerabilityPerStack": 0.1,
+      "maxStacks": 20.0,
+      "damageMultiplier": 0.15
+    },
+    "magic_school_spell_imperio": {
+      "controlTicks": 40.0,
+      "controlVersion": 1.0,
+      "damageMultiplier": 1.0
+    },
+    "magic_school_global": {
+      "waveProficiencyBase": 10.0,
+      "proficiencyDamagePerPoint": 0.0015,
+      "proficiencyHealthPerPoint": 0.0015,
+      "sortingHatCost": 80.0,
+      "spellPowerCost": 40.0,
+      "spellPowerCostIncrease": 60.0,
+      "spellPowerMaxLevel": 6.0,
+      "darkArtsDefenseCost": 40.0,
+      "darkArtsDefenseCostIncrease": 60.0,
+      "darkArtsDefenseMaxLevel": 6.0,
+      "magicHistoryCost": 120.0,
+      "magicHistoryCostIncrease": 120.0,
+      "magicHistoryMaxLevel": 5.0,
+      "customWandsCost": 250.0,
+      "deathEaterCost": 250.0,
+      "mentorCost": 200.0,
+      "duelingPracticeCost": 150.0,
+      "duelingPracticeHealthRatio": 0.15,
+      "duelingPracticeProficiencyRatio": 0.3,
+      "spellPracticeCost": 125.0,
+      "spellPracticePerTier": 2.0,
+      "spellPracticeRepeatBonus": 2.0,
+      "spellChangeTier1Cost": 0.0,
+      "spellChangeTier2Cost": 20.0,
+      "spellChangeTier3Cost": 35.0,
+      "spellChangeTier4Cost": 50.0,
+      "spellChangeTier5Cost": 65.0,
+      "spellChangeTier6Cost": 80.0,
+      "spellPowerPerLevel": 0.04,
+      "darkArtsDefensePerLevel": 0.03,
+      "magicHistoryPerLevel": 0.25,
+      "mentorRadius": 1.0,
+      "deathEaterProficiencyPerRound": 2.0,
+      "spellTransferCost": 300.0,
+      "potionsCost": 300.0,
+      "quidditchCost": 200.0,
+      "transfigurationCost": 200.0,
+      "explosiveBarrelsCost": 500.0,
+      "spellTransferDamageRatio": 0.1,
+      "spellTransferMaxTargets": 5.0,
+      "spellTransferCooldownTicks": 70.0,
+      "potionsHealRatio": 0.08,
+      "quidditchBaseReward": 5.0,
+      "quidditchRewardIncrease": 5.0,
+      "quidditchMaxIncreases": 5.0,
+      "transfigurationCooldownTicks": 60.0,
+      "barrelAggro": 100.0,
+      "barrelHealth": 1.0,
+      "barrelHealthRound1": 5.0,
+      "barrelHealthRound2": 15.0,
+      "barrelHealthRound3": 25.0,
+      "explosiveBarrelRadius": 2.0,
+      "explosiveBarrelDamageRatio": 0.3,
+      "spellTier2Cost": 175.0,
+      "spellTier3Cost": 320.0,
+      "spellTier4Cost": 500.0,
+      "spellTier5Cost": 700.0,
+      "spellTier6Cost": 10000.0,
+      "proficiencyVersion": 2.0,
+      "hogwartsVersion": 1.0,
+      "curriculumBalanceVersion": 2.0,
+      "baseStatsVersion": 1.0,
+      "combatBalanceVersion": 1.0,
+      "nerfBalanceVersion": 1.0,
+      "protectionBalanceVersion": 1.0,
+      "advancedSpellsCost": 350.0,
+      "curseProficiencyThreshold": 500.0,
+      "curseLowProficiencyAttackSpeedMultiplier": 0.1
+    },
+    "magic_school_freshman_t1": {
+      "maxProficiency": 100.0,
+      "proficiencyGainBonus": 0.0,
+      "towerSlotCost": 2.0,
+      "wandAttackIntervalReduction": 0.0,
+      "wandHealthBonus": 0.0,
+      "wandDamageBonus": 0.0,
+      "mentorProficiency": 8.0,
+      "proficiencyDamagePerPoint": 0.0015,
+      "proficiencyHealthPerPoint": 0.0015
+    },
+    "magic_school_gryffindor_t2": {
+      "maxProficiency": 300.0,
+      "proficiencyGainBonus": 0.0,
+      "towerSlotCost": 2.0,
+      "wandAttackIntervalReduction": 1.0,
+      "wandHealthBonus": 0.0,
+      "wandDamageBonus": 0.0,
+      "mentorProficiency": 15.0,
+      "proficiencyDamagePerPoint": 0.0008,
+      "proficiencyHealthPerPoint": 0.0008
+    },
+    "magic_school_gryffindor_t3": {
+      "maxProficiency": 1000.0,
+      "proficiencyGainBonus": 0.0,
+      "towerSlotCost": 2.0,
+      "wandAttackIntervalReduction": 1.0,
+      "wandHealthBonus": 0.0,
+      "wandDamageBonus": 0.0,
+      "mentorProficiency": 0.0,
+      "proficiencyDamagePerPoint": 0.0005,
+      "proficiencyHealthPerPoint": 0.0005
+    },
+    "magic_school_hufflepuff_t2": {
+      "maxProficiency": 300.0,
+      "proficiencyGainBonus": 0.0,
+      "towerSlotCost": 2.0,
+      "wandAttackIntervalReduction": 0.0,
+      "wandHealthBonus": 0.1,
+      "wandDamageBonus": 0.0,
+      "mentorProficiency": 15.0,
+      "proficiencyDamagePerPoint": 0.0008,
+      "proficiencyHealthPerPoint": 0.0008
+    },
+    "magic_school_hufflepuff_t3": {
+      "maxProficiency": 1000.0,
+      "proficiencyGainBonus": 0.0,
+      "towerSlotCost": 2.0,
+      "wandAttackIntervalReduction": 0.0,
+      "wandHealthBonus": 0.1,
+      "wandDamageBonus": 0.0,
+      "mentorProficiency": 0.0,
+      "proficiencyDamagePerPoint": 0.0005,
+      "proficiencyHealthPerPoint": 0.0005
+    },
+    "magic_school_ravenclaw_t2": {
+      "maxProficiency": 300.0,
+      "proficiencyGainBonus": 0.15,
+      "towerSlotCost": 2.0,
+      "wandAttackIntervalReduction": 0.0,
+      "wandHealthBonus": 0.05,
+      "wandDamageBonus": 0.05,
+      "mentorProficiency": 15.0,
+      "proficiencyDamagePerPoint": 0.0008,
+      "proficiencyHealthPerPoint": 0.0008
+    },
+    "magic_school_ravenclaw_t3": {
+      "maxProficiency": 1000.0,
+      "proficiencyGainBonus": 0.15,
+      "towerSlotCost": 2.0,
+      "wandAttackIntervalReduction": 0.0,
+      "wandHealthBonus": 0.05,
+      "wandDamageBonus": 0.05,
+      "mentorProficiency": 0.0,
+      "proficiencyDamagePerPoint": 0.0005,
+      "proficiencyHealthPerPoint": 0.0005
+    },
+    "magic_school_slytherin_t2": {
+      "maxProficiency": 300.0,
+      "proficiencyGainBonus": 0.0,
+      "towerSlotCost": 2.0,
+      "wandAttackIntervalReduction": 0.0,
+      "wandHealthBonus": 0.0,
+      "wandDamageBonus": 0.1,
+      "mentorProficiency": 15.0,
+      "proficiencyDamagePerPoint": 0.0008,
+      "proficiencyHealthPerPoint": 0.0008
+    },
+    "magic_school_slytherin_t3": {
+      "maxProficiency": 1000.0,
+      "proficiencyGainBonus": 0.0,
+      "towerSlotCost": 2.0,
+      "wandAttackIntervalReduction": 0.0,
+      "wandHealthBonus": 0.0,
+      "wandDamageBonus": 0.1,
+      "mentorProficiency": 0.0,
+      "proficiencyDamagePerPoint": 0.0005,
+      "proficiencyHealthPerPoint": 0.0005
     }
   },
   "illusionCloneQueue": {

@@ -36,7 +36,7 @@ import kim.biryeong.semiontd.trait.TraitVfx;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
@@ -51,7 +51,7 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import xyz.nucleoid.packettweaker.PacketContext;
+import net.fabricmc.fabric.api.networking.v1.context.PacketContext;
 
 public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity, HealingTarget, LaneDefenseEntity {
     private static final double DEFAULT_MELEE_RANGE = 2.5;
@@ -68,8 +68,10 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
      */
     public static final double DEMON_LORD_AGGRO_KEEP_RANGE = 16.0;
     private static final double DEFENSE_SEARCH_VERTICAL_PADDING = 3.0;
+    private static final java.util.concurrent.atomic.AtomicInteger DOMINATED =
+            new java.util.concurrent.atomic.AtomicInteger();
 
-    private EntityType<?> polymerEntityType = EntityType.ZOMBIE;
+    private EntityType<?> polymerEntityType = net.minecraft.world.entity.EntityTypes.ZOMBIE;
     private Monster runtimeMonster;
     private LaneRegionLayout laneLayout;
     private String blockbenchModelId;
@@ -81,6 +83,8 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
     private final List<Goal> summonAbilityGoals = new ArrayList<>();
     private NaturalWaveHealGoal waveAbilityGoal;
     private final TimedEffectSet timedEffects = new TimedEffectSet();
+    private final kim.biryeong.semiontd.tower.magicschool.MagicSchoolMonsterSpells schoolSpells =
+            new kim.biryeong.semiontd.tower.magicschool.MagicSchoolMonsterSpells(this);
     private IgniteState ignite;
     private final Map<Tower, BeePoisonState> beePoisons = new IdentityHashMap<>();
     private LivingEntityHolder<SemionMonsterEntity> holder;
@@ -137,6 +141,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
 
     /** 지배당해 편을 바꾼 동안, 지키는 레인 id. -1이면 지배당하지 않았습니다. */
     private int dominatedLaneId = -1;
+    private boolean dominatedCounted;
 
     public boolean isDominated() {
         return dominatedLaneId >= 0;
@@ -148,9 +153,27 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
      */
     public void setDominatedFor(int laneId) {
         dominatedLaneId = laneId;
+        countDominated(laneId >= 0 && !isRemoved());
         if (laneId >= 0) {
             setTarget(null);
         }
+    }
+
+    public static boolean anyDominated() {
+        return DOMINATED.get() > 0;
+    }
+
+    private void countDominated(boolean dominated) {
+        if (dominated != dominatedCounted) {
+            dominatedCounted = dominated;
+            DOMINATED.addAndGet(dominated ? 1 : -1);
+        }
+    }
+
+    @Override
+    public void remove(RemovalReason reason) {
+        countDominated(false);
+        super.remove(reason);
     }
 
     @Override
@@ -191,7 +214,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         TeamId senderTeam = monster.senderTeam().orElse(null);
         setCustomName(senderName != null && senderTeam != null
                 ? Component.literal(senderName).withStyle(teamColor(senderTeam))
-                : Component.literal(monster.id()));
+                : Component.literal(monster.displayName()));
         setCustomNameVisible(true);
         refreshSupportProgressName();
         setPolymerEntityType(monster.entityTypeId());
@@ -251,6 +274,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         tickStealthVisual();
         tickIgnite();
         tickBeePoisons();
+        schoolSpells.tick();
         timedEffects.tick();
         if (runtimeMonster != null) {
             runtimeMonster.expireShields(level().getGameTime());
@@ -326,6 +350,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
      * 없으면 예전처럼 바로 때립니다. 은신 유닛은 공격하는 동안 드러납니다.
      */
     public void startAttack(LivingEntity target) {
+        if (isDisarmed() || schoolSpells.controlled()) return;
         playAnimation(SemionAnimationState.ATTACK);
         if (attackStyle == null) {
             MonsterAttackStyle.strike(this, target, attackDamageAmount());
@@ -358,7 +383,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         pendingHitTarget = null;
         pendingHitTick = -1;
         // 휘두르는 도중 기절하면 헛손질입니다. 대상이 죽었으면 방식에 따라 주변만 맞을 수 있습니다.
-        if (isAlive() && !isStunned() && attackStyle != null) {
+        if (isAlive() && !isStunned() && !isDisarmed() && !schoolSpells.controlled() && attackStyle != null) {
             attackStyle.hit(this, target);
         }
     }
@@ -381,13 +406,13 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         if (holder != null) {
             for (var element : holder.getElements()) {
                 if (element instanceof eu.pb4.polymer.virtualentity.api.elements.DisplayElement display) {
-                    byte flags = display.getDataTracker().get(eu.pb4.polymer.virtualentity.api.tracker.EntityTrackedData.FLAGS);
+                    byte flags = display.getSyncedData().get(eu.pb4.polymer.virtualentity.api.data.EntityData.FLAGS);
                     packets.add(new net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket(display.getEntityId(), List.of(
                             net.minecraft.network.syncher.SynchedEntityData.DataValue.create(
-                                    eu.pb4.polymer.virtualentity.api.tracker.EntityTrackedData.FLAGS,
+                                    eu.pb4.polymer.virtualentity.api.data.EntityData.FLAGS,
                                     on ? (byte) (flags | 0x40) : flags),
                             net.minecraft.network.syncher.SynchedEntityData.DataValue.create(
-                                    eu.pb4.polymer.virtualentity.api.tracker.DisplayTrackedData.GLOW_COLOR_OVERRIDE,
+                                    eu.pb4.polymer.virtualentity.api.data.DisplayEntityData.GLOW_COLOR_OVERRIDE,
                                     on ? color : display.getGlowColorOverride()))));
                 }
             }
@@ -460,6 +485,17 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         return Math.max(DEFENSE_TARGET_LEASH_RANGE, attackRange());
     }
 
+    public void rewindLanePath(Vec3 destination, double progress) {
+        getNavigation().stop();
+        for (var goal : goalSelector.getAvailableGoals()) {
+            if (goal.getGoal() instanceof LaneFollowGoal) {goal.stop();}
+        }
+        getMoveControl().setWantedPosition(destination.x, destination.y, destination.z, 0);
+        setDeltaMovement(Vec3.ZERO);
+        teleportTo(destination.x, destination.y, destination.z);
+        if (runtimeMonster != null) {runtimeMonster.syncLaneProgress(progress);}
+    }
+
     public int nextPathPointIndex() {
         if (laneLayout == null) {
             return 0;
@@ -495,7 +531,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         TeamId team = runtimeMonster.senderTeam().orElse(null);
         var name = sender != null && team != null
                 ? Component.literal(sender).withStyle(teamColor(team))
-                : Component.literal(runtimeMonster.id());
+                : Component.literal(runtimeMonster.displayName());
         setCustomName(name.append(Component.literal(" · " + progress.get())));
     }
 
@@ -504,6 +540,10 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
     }
 
     public AppliedDamageResult applySemionDamageResult(DamageSource damageSource, double amount, DamageType damageType) {
+        if (damageType == DamageType.MAGIC) {
+            amount *= 1.0 + activeTimedEffectMagnitude(TimedEffectType.MONSTER_LUMOS)
+                    + activeTimedEffectMagnitude(TimedEffectType.MONSTER_CRUCIO_VULNERABILITY);
+        }
         if (!Double.isFinite(amount) || amount <= 0.0) {
             return new AppliedDamageResult(false, 0.0, 0.0, 0.0);
         }
@@ -578,7 +618,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
             return false;
         }
         double before = runtimeMonster.health();
-        runtimeMonster.heal(amount);
+        runtimeMonster.heal(amount * Math.max(0, 1 - activeTimedEffectMagnitude(TimedEffectType.MONSTER_HEAL_REDUCTION)));
         if (runtimeMonster.health() <= before) {
             return false;
         }
@@ -627,7 +667,7 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
             return;
         }
         boolean oneShot = isOneShot(animationState);
-        if (holder == null && animationState == SemionAnimationState.ATTACK && polymerEntityType == EntityType.CREAKING) {
+        if (holder == null && animationState == SemionAnimationState.ATTACK && polymerEntityType == net.minecraft.world.entity.EntityTypes.CREAKING) {
             // 바닐라 모습의 크리킹은 엔티티 이벤트 4로 팔 휘두르기 동작을 봅니다.
             level().broadcastEntityEvent(this, (byte) 4);
         }
@@ -698,6 +738,14 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         return timedEffects.magnitude(TimedEffectType.MONSTER_STUN) > 0.0;
     }
 
+    public boolean isDisarmed() {
+        return timedEffects.magnitude(TimedEffectType.MONSTER_DISARM) > 0;
+    }
+
+    public kim.biryeong.semiontd.tower.magicschool.MagicSchoolMonsterSpells schoolSpells() {
+        return schoolSpells;
+    }
+
     public boolean isRooted() {
         return timedEffects.magnitude(TimedEffectType.MONSTER_ROOT) > 0.0;
     }
@@ -717,11 +765,11 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         super.setJumping(jumping && !isStunned() && !isRooted());
     }
 
-    public boolean applyTimedEffect(TimedEffectType type, ResourceLocation sourceId, double magnitude, int durationTicks) {
+    public boolean applyTimedEffect(TimedEffectType type, Identifier sourceId, double magnitude, int durationTicks) {
         return timedEffects.apply(type, sourceId, magnitude, durationTicks);
     }
 
-    public boolean refreshTimedEffect(TimedEffectType type, ResourceLocation sourceId, double magnitude, int durationTicks) {
+    public boolean refreshTimedEffect(TimedEffectType type, Identifier sourceId, double magnitude, int durationTicks) {
         return timedEffects.refresh(type, sourceId, magnitude, durationTicks);
     }
 
@@ -734,6 +782,10 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
             magnitude -= Math.max(0.0, queen - 0.70);
         }
         return magnitude;
+    }
+
+    public void removeTimedEffect(TimedEffectType type) {
+        timedEffects.remove(type);
     }
 
     public int activeTimedEffectTicks(TimedEffectType type) {
@@ -827,11 +879,11 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
         ));
     }
 
-    public boolean hasTimedEffectSource(TimedEffectType type, ResourceLocation sourceId) {
+    public boolean hasTimedEffectSource(TimedEffectType type, Identifier sourceId) {
         return timedEffects.hasSource(type, sourceId);
     }
 
-    public boolean setPersistentEffect(TimedEffectType type, ResourceLocation sourceId, double magnitude) {
+    public boolean setPersistentEffect(TimedEffectType type, Identifier sourceId, double magnitude) {
         return timedEffects.setPersistent(type, sourceId, magnitude);
     }
 
@@ -1009,7 +1061,8 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
     }
 
     @Override
-    public void knockback(double strength, double x, double z) {
+    public void knockback(double strength, double x, double z,
+            net.minecraft.world.damagesource.DamageSource source, float damage, boolean comesFromEffect) {
     }
 
     private void installSummonAbilityGoals() {
@@ -1056,16 +1109,16 @@ public class SemionMonsterEntity extends PathfinderMob implements AnimatedEntity
 
     private void setPolymerEntityType(String entityTypeId) {
         if (entityTypeId == null || entityTypeId.isBlank()) {
-            polymerEntityType = EntityType.ZOMBIE;
+            polymerEntityType = net.minecraft.world.entity.EntityTypes.ZOMBIE;
             return;
         }
 
-        ResourceLocation id = ResourceLocation.tryParse(entityTypeId);
+        Identifier id = Identifier.tryParse(entityTypeId);
         if (id == null) {
-            polymerEntityType = EntityType.ZOMBIE;
+            polymerEntityType = net.minecraft.world.entity.EntityTypes.ZOMBIE;
             return;
         }
 
-        polymerEntityType = BuiltInRegistries.ENTITY_TYPE.getOptional(id).orElse(EntityType.ZOMBIE);
+        polymerEntityType = BuiltInRegistries.ENTITY_TYPE.getOptional(id).orElse(net.minecraft.world.entity.EntityTypes.ZOMBIE);
     }
 }

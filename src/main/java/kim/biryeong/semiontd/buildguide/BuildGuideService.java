@@ -356,7 +356,7 @@ public final class BuildGuideService {
                 continue;
             }
             List<BuildAction> actions = actionsForRound(trackedGuide.get(), round);
-            player.playNotifySound(SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.MUSIC, 1.0f, 1.2f);
+            kim.biryeong.semiontd.util.SemionPlayerPackets.playSound(player, SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.MUSIC, 1.0f, 1.2f);
             player.sendSystemMessage(SemionText.prefixedMini(roundSummary(game, activePlayer.uuid(), round, actions)));
             showRoundIndicators(player, game, activePlayer.uuid(), actions);
         }

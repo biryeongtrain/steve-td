@@ -19,33 +19,33 @@ import net.minecraft.world.level.block.Blocks;
 public final class AtlantisTowers {
     public static final TowerType TURTLE_T1 = tower(
             "atlantis_turtle_t1", "바다거북 타워", 55, 190.0, 2.6, 5.0, 20, 55,
-            EntityVisual.builder(byId(EntityType.TURTLE)).scale(0.8).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.TURTLE)).scale(0.8).build(),
             turtleDescription("기본")
     );
     public static final TowerType TURTLE_T2 = tower(
             "atlantis_turtle_t2", "심해 거북 타워", 115, 320.0, 2.8, 9.0, 18, 85,
-            EntityVisual.builder(byId(EntityType.TURTLE)).scale(1.0).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.TURTLE)).scale(1.0).build(),
             turtleDescription("중급")
     );
     public static final TowerType TURTLE_T3 = tower(
             "atlantis_turtle_t3", "해저 바다거북 타워", 240, 620.0, 3.0, 14.0, 16, 115,
-            EntityVisual.builder(byId(EntityType.TURTLE)).scale(1.2).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.TURTLE)).scale(1.2).build(),
             turtleDescription("최종")
     );
 
     public static final TowerType DOLPHIN_T1 = tower(
             "atlantis_dolphin_t1", "돌고래 타워", 55, 80.0, 6.5, 13.0, 16, 0,
-            EntityVisual.builder(byId(EntityType.DOLPHIN)).scale(0.7).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.DOLPHIN)).scale(0.7).build(),
             dolphinDescription("기본")
     );
     public static final TowerType DOLPHIN_T2 = tower(
             "atlantis_dolphin_t2", "심해 돌고래 타워", 120, 130.0, 7.5, 24.0, 14, 0,
-            EntityVisual.builder(byId(EntityType.DOLPHIN)).scale(0.85).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.DOLPHIN)).scale(0.85).build(),
             dolphinDescription("중급")
     );
     public static final TowerType DOLPHIN_T3 = tower(
             "atlantis_dolphin_t3", "해저 돌고래 타워", 250, 190.0, 8.5, 40.0, 12, 0,
-            EntityVisual.builder(byId(EntityType.DOLPHIN)).scale(1.0).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.DOLPHIN)).scale(1.0).build(),
             dolphinDescription("최종")
     );
 

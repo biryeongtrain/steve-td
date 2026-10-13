@@ -22,7 +22,7 @@ import kim.biryeong.semiontd.tower.animal.AnimalTowers;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.material.Fluids;
@@ -259,7 +259,7 @@ final class OceanTowerCatalogTest {
     }
 
     private static void assertOneBlockVisualSize(TowerType type) {
-        ResourceLocation entityTypeId = ResourceLocation.parse(type.visual().entityTypeId());
+        Identifier entityTypeId = Identifier.parse(type.visual().entityTypeId());
         var dimensions = BuiltInRegistries.ENTITY_TYPE.getOptional(entityTypeId).orElseThrow().getDimensions();
         double scale = type.visual().scale();
         assertTrue(dimensions.width() * scale <= 1.0 + EPSILON, type.id() + " visual width exceeds one block.");

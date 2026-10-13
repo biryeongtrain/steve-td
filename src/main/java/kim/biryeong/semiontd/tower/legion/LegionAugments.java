@@ -23,7 +23,7 @@ import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 
 /** Per-wave material ownership is retained even after different bodies' clones merge. */
@@ -331,7 +331,7 @@ public final class LegionAugments {
     }
 
     private static <T> TowerDataKey<T> key(String path, Class<T> type) {
-        return TowerDataKey.of(ResourceLocation.fromNamespaceAndPath("semion-td", "legion_augment_" + path), type);
+        return TowerDataKey.of(Identifier.fromNamespaceAndPath("semion-td", "legion_augment_" + path), type);
     }
 
     static final class Wave {

@@ -41,11 +41,11 @@ public final class BugReportCommands implements AutoCloseable {
                 .executes(context -> { message(context.getSource(), "사용법: /버그신고 <내용> · 신고 시 같은 경기의 타워 상태가 운영자에게 전달됩니다."); return 1; })
                 .then(argument("내용", StringArgumentType.greedyString()).executes(context ->
                         submit(context.getSource(), context.getSource().getPlayerOrException(), StringArgumentType.getString(context, "내용")))));
-        dispatcher.register(literal("버그신고목록").requires(source -> source.hasPermission(2))
+        dispatcher.register(literal("버그신고목록").requires(source -> source.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER))
                 .executes(context -> list(context.getSource(), 1))
                 .then(argument("페이지", IntegerArgumentType.integer(1, 100_000)).executes(context ->
                         list(context.getSource(), IntegerArgumentType.getInteger(context, "페이지")))));
-        dispatcher.register(literal("버그신고조회").requires(source -> source.hasPermission(2))
+        dispatcher.register(literal("버그신고조회").requires(source -> source.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER))
                 .then(argument("ID", StringArgumentType.word())
                         .executes(context -> detail(context.getSource(), StringArgumentType.getString(context, "ID"), 1))
                         .then(argument("페이지", IntegerArgumentType.integer(1, 100_000)).executes(context ->
@@ -66,9 +66,9 @@ public final class BugReportCommands implements AutoCloseable {
         final BugReport report;
         try {
             var snapshot = BugReportSnapshot.capture(games.protectionGame(player.getUUID()));
-            snapshot.addProperty("reporterDimension", player.level().dimension().location().toString());
+            snapshot.addProperty("reporterDimension", player.level().dimension().identifier().toString());
             snapshot.addProperty("reporterX", player.getX()); snapshot.addProperty("reporterY", player.getY()); snapshot.addProperty("reporterZ", player.getZ());
-            report = new BugReport(UUID.randomUUID(), System.currentTimeMillis(), player.getUUID(), player.getGameProfile().getName(), content, snapshot);
+            report = new BugReport(UUID.randomUUID(), System.currentTimeMillis(), player.getUUID(), player.getGameProfile().name(), content, snapshot);
         } catch (RuntimeException exception) {
             nextReport.remove(player.getUUID());
             source.sendFailure(Component.literal("게임 상태를 기록하지 못했습니다. 다시 시도하거나 운영자에게 문의해 주세요."));
@@ -130,7 +130,7 @@ public final class BugReportCommands implements AutoCloseable {
                     SemionTd.LOGGER.warn("Bug report storage operation failed: {}", error.getClass().getSimpleName());
                 }
                 if (opOnly && !(source.getEntity() instanceof ServerPlayer player
-                        ? player.createCommandSourceStack().hasPermission(2) : source.hasPermission(2))) return;
+                        ? player.createCommandSourceStack().permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER) : source.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER))) return;
                 if (error != null) source.sendFailure(Component.literal("신고 저장소를 사용할 수 없습니다. 잠시 후 다시 시도해 주세요."));
                 else done.accept(result);
             }));

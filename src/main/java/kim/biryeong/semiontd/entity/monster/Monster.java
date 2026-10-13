@@ -26,6 +26,7 @@ public final class Monster {
     private final Optional<UUID> ownerPlayer;
     private final Optional<TeamId> senderTeam;
     private String senderName;
+    private String displayName;
     private double maxHealth;
     private final double armor;
     private final double resistance;
@@ -452,6 +453,14 @@ public final class Monster {
 
     public Optional<String> senderName() {
         return Optional.ofNullable(senderName);
+    }
+
+    public String displayName() {
+        return displayName == null ? id : displayName;
+    }
+
+    public void setDisplayName(String name) {
+        displayName = name == null || name.isBlank() ? null : name;
     }
 
     public void setSenderName(String senderName) {

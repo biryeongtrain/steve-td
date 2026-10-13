@@ -3,14 +3,14 @@ package kim.biryeong.semiontd.config;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public record JobAvailabilityConfig(Set<String> disabledJobs) {
     public JobAvailabilityConfig {
         LinkedHashSet<String> validated = new LinkedHashSet<>();
         if (disabledJobs != null) {
             for (String jobId : disabledJobs) {
-                if (jobId == null || ResourceLocation.tryParse(jobId) == null) {
+                if (jobId == null || Identifier.tryParse(jobId) == null) {
                     throw new IllegalArgumentException("Invalid disabled job id: " + jobId);
                 }
                 validated.add(jobId);
@@ -23,11 +23,11 @@ public record JobAvailabilityConfig(Set<String> disabledJobs) {
         return new JobAvailabilityConfig(Set.of());
     }
 
-    public boolean isEnabled(ResourceLocation jobId) {
+    public boolean isEnabled(Identifier jobId) {
         return jobId != null && !disabledJobs.contains(jobId.toString());
     }
 
-    public JobAvailabilityConfig withEnabled(ResourceLocation jobId, boolean enabled) {
+    public JobAvailabilityConfig withEnabled(Identifier jobId, boolean enabled) {
         LinkedHashSet<String> updated = new LinkedHashSet<>(disabledJobs);
         if (enabled) {
             updated.remove(jobId.toString());

@@ -1,8 +1,8 @@
 package kim.biryeong.semiontd.entity.visual;
 
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.entity.npc.VillagerProfession;
-import net.minecraft.world.entity.npc.VillagerType;
+import net.minecraft.world.entity.npc.villager.VillagerProfession;
+import net.minecraft.world.entity.npc.villager.VillagerType;
 
 public final class VillagerVisual {
     private VillagerVisual() {

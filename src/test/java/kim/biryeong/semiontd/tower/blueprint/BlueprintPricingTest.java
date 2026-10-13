@@ -45,11 +45,11 @@ class BlueprintPricingTest {
     }
 
     @Test
-    void priceMatchesTheMedianTowerOfEachCostBracket() {
+    void medianTowerPowerCostsAboutTwoThirdsOfItsBracketPrice() {
         // 기존 빌더 타워 가격대별 중앙값: 가격 50·130·260 → 체력 88·140·200, 초당 피해 8·16.7·26.7, 사거리 5.5·6.25·7.
-        assertBetween(40, 60, BlueprintPricing.price(stats(88, 8.0, 5.5)));
-        assertBetween(110, 150, BlueprintPricing.price(stats(140, 16.7, 6.25)));
-        assertBetween(230, 300, BlueprintPricing.price(stats(200, 26.7, 7.0)));
+        assertBetween(25, 45, BlueprintPricing.price(stats(88, 8.0, 5.5)));
+        assertBetween(70, 100, BlueprintPricing.price(stats(140, 16.7, 6.25)));
+        assertBetween(140, 190, BlueprintPricing.price(stats(200, 26.7, 7.0)));
     }
 
     @Test
@@ -267,8 +267,8 @@ class BlueprintPricingTest {
     @Test
     void summonsPayForBaseHealthAndDamageButNotInheritedModules() {
         BlueprintStats plain = stats(300, 0, 6);
-        assertEquals(115, BlueprintPricing.price(plain));
-        long[] expected = {190, 250, 270};
+        assertEquals(75, BlueprintPricing.price(plain));
+        long[] expected = {120, 155, 165};
         double[] powerRatios = {0.35, 0.60, 0.675};
         for (int level = 1; level <= 3; level++) {
             BlueprintStats summoned = plain.withModules(Map.of(BlueprintModule.SUMMON, level), BlueprintTargetPriority.FIRST);

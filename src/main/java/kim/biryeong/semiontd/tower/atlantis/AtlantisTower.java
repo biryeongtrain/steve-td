@@ -26,7 +26,7 @@ import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -177,7 +177,7 @@ public class AtlantisTower extends ProductionTower {
             // Each zone carries its own source id, so effects are tracked per zone instead of
             // collapsing to a single strongest value: a zone that disappears takes exactly its own
             // contribution with it, and a weaker zone can still refresh what it owns.
-            ResourceLocation zoneId = AreaEffectIds.tower(this, "pressure_zone/" + index);
+            Identifier zoneId = AreaEffectIds.tower(this, "pressure_zone/" + index);
             MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
                     zoneId,
                     towerEntity,
@@ -214,7 +214,7 @@ public class AtlantisTower extends ProductionTower {
      * not push a tower towards immunity. This is the ally half of the zone that the turtle tooltip
      * advertises.
      */
-    private void protectAlliesInside(PlayerLane lane, PressureZone zone, ResourceLocation zoneId, int duration) {
+    private void protectAlliesInside(PlayerLane lane, PressureZone zone, Identifier zoneId, int duration) {
         double reduction = zone.allyDamageReduction();
         if (reduction <= 0.0) {
             return;

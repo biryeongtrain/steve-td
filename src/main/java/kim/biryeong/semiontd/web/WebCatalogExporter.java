@@ -57,10 +57,11 @@ public final class WebCatalogExporter {
             Path versionsDir = catalogDir.resolve("versions");
             Files.createDirectories(versionsDir);
             Path versionPath = versionsDir.resolve(document.versionHash() + ".json");
+            String contents = GSON.toJson(document);
             if (Files.notExists(versionPath)) {
-                writeAtomically(versionPath, GSON.toJson(document));
+                writeAtomically(versionPath, contents);
             }
-            writeAtomically(catalogDir.resolve("current.json"), GSON.toJson(document));
+            writeAtomically(catalogDir.resolve("current.json"), contents);
         }
         currentVersion = document.versionHash();
         return document;
@@ -106,23 +107,7 @@ public final class WebCatalogExporter {
                 .sorted(Comparator.comparing(job -> job.id().toString()))
                 .toList();
 
-        Map<String, String> towerBuilders = new TreeMap<>();
-        for (ProductionTowerCatalog.CatalogEntry entry : catalogEntries) {
-            List<SemionJob> owners = jobs.stream()
-                    .filter(job -> job.includesTowerInCatalog(entry.type()))
-                    .toList();
-            if (entry.availability() == ProductionTowerCatalog.Availability.AUGMENT) {
-                if (!owners.isEmpty()) {
-                    throw new IllegalStateException("Augment tower cannot belong to a builder: " + entry.type().id());
-                }
-                continue;
-            }
-            if (owners.size() != 1) {
-                throw new IllegalStateException("Tower must belong to exactly one builder: "
-                        + entry.type().id() + " owners=" + owners.stream().map(job -> job.id().toString()).toList());
-            }
-            towerBuilders.put(entry.type().id(), owners.getFirst().id().toString());
-        }
+        WebCatalogBuilderIndex towerBuilders = WebCatalogBuilderIndex.create(catalogEntries, jobs);
 
         List<BuilderEntry> builders = jobs.stream()
                 .map(job -> {
@@ -134,10 +119,7 @@ public final class WebCatalogExporter {
                         job.id().toString(),
                         job.displayName().getString(),
                         description,
-                        towerBuilders.entrySet().stream()
-                                .filter(entry -> entry.getValue().equals(job.id().toString()))
-                                .map(Map.Entry::getKey)
-                                .toList(),
+                        towerBuilders.towerIds(job.id().toString()),
                         JobRegistry.officialBuilders().contains(job) ? "OFFICIAL" : "CREATIVE",
                         JobRegistry.isEnabled(job)
                     );
@@ -147,7 +129,7 @@ public final class WebCatalogExporter {
                 .toList();
 
         List<TowerEntry> towers = catalogEntries.stream()
-                .map(entry -> towerEntry(entry, towerBuilders.get(entry.type().id())))
+                .map(entry -> towerEntry(entry, towerBuilders.builderId(entry.type().id())))
                 .toList();
         List<UpgradeEntry> upgrades = catalogEntries.stream()
                 .flatMap(entry -> ProductionTowerCatalog.upgrades(entry.type()).stream()

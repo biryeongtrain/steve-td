@@ -121,7 +121,7 @@ public class UndeadRangedSkeletonTower extends EntityBackedTower {
                 .filter(SemionMonsterEntity.class::isInstance)
                 .map(SemionMonsterEntity.class::cast)
                 .toList());
-        java.util.Collections.shuffle(candidates, new java.util.Random(towerEntity.level().random.nextLong()));
+        java.util.Collections.shuffle(candidates, new java.util.Random(towerEntity.level().getRandom().nextLong()));
         return candidates.stream().limit(count).toList();
     }
 

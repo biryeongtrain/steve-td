@@ -1,6 +1,6 @@
 package kim.biryeong.semiontd.mixin;
 
-import com.mojang.authlib.GameProfile;
+import net.minecraft.server.players.NameAndId;
 import kim.biryeong.semiontd.game.SemionPlayerLimitBypassService;
 import net.minecraft.server.players.PlayerList;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,10 +13,10 @@ public abstract class PlayerListMixin {
             method = "canPlayerLogin",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/server/players/PlayerList;canBypassPlayerLimit(Lcom/mojang/authlib/GameProfile;)Z"
+                    target = "Lnet/minecraft/server/players/PlayerList;canBypassPlayerLimit(Lnet/minecraft/server/players/NameAndId;)Z"
             )
     )
-    private boolean semiontd$allowMatchParticipantsWhenServerIsFull(PlayerList playerList, GameProfile profile) {
-        return playerList.canBypassPlayerLimit(profile) || SemionPlayerLimitBypassService.canBypassPlayerLimit(profile);
+    private boolean semiontd$allowMatchParticipantsWhenServerIsFull(PlayerList playerList, NameAndId profile) {
+        return playerList.canBypassPlayerLimit(profile) || SemionPlayerLimitBypassService.canBypassPlayerLimitIdentity(profile);
     }
 }

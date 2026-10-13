@@ -6,22 +6,22 @@ import kim.biryeong.semiontd.entity.monster.Monster;
 import kim.biryeong.semiontd.entity.monster.MonsterDataKey;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /** 몬스터에 귀속되는 한기·냉매 상태와 미래 아이스브레이크용 해동 진입점. */
 public final class FrostMonsterStates {
     private static final MonsterDataKey<java.util.UUID> REFRIGERANT_OWNER = MonsterDataKey.of(
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "frost_refrigerant_owner"), java.util.UUID.class);
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "frost_refrigerant_owner"), java.util.UUID.class);
     private static final MonsterDataKey<Double> CHILL = MonsterDataKey.of(
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "frost_chill"),
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "frost_chill"),
             Double.class
     );
     private static final MonsterDataKey<Boolean> REFRIGERATED = MonsterDataKey.of(
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "frost_refrigerated"),
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "frost_refrigerated"),
             Boolean.class
     );
-    private static final ResourceLocation REFRIGERANT_EFFECT_SOURCE =
-            ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "frost_refrigerant");
+    private static final Identifier REFRIGERANT_EFFECT_SOURCE =
+            Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "frost_refrigerant");
 
     private FrostMonsterStates() {
     }

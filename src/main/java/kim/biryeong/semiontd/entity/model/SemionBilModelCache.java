@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class SemionBilModelCache {
     /** 이름이 이것으로 끝나는 큐브는 스스로 빛납니다(눈빛·룬처럼 어두운 데서도 밝게 보이는 부분). */
@@ -38,7 +38,7 @@ public final class SemionBilModelCache {
     }
 
     private static Optional<Model> loadUncached(String modelId) {
-        ResourceLocation id = ResourceLocation.tryParse(modelId);
+        Identifier id = Identifier.tryParse(modelId);
         if (id == null) {
             return Optional.empty();
         }
@@ -58,7 +58,7 @@ public final class SemionBilModelCache {
      * BIL의 BbModelLoader.load(id)와 같은 경로에서 .bbmodel을 읽되, {@link #GLOW_SUFFIX}로 끝나는 큐브에 light_emission을
      * 넣은 뒤 넘깁니다. 블록벤치 자유 모델 형식은 큐브 발광 값을 저장하지 않으므로 이름으로 표시합니다.
      */
-    private static Model loadBbModel(ResourceLocation id) {
+    private static Model loadBbModel(Identifier id) {
         String path = String.format("/model/%s/%s.bbmodel", id.getNamespace(), id.getPath());
         try (InputStream stream = BbModelLoader.class.getResourceAsStream(path)) {
             if (stream == null) {

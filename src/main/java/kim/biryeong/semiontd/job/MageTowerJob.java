@@ -3,20 +3,17 @@ package kim.biryeong.semiontd.job;
 import java.util.List;
 import java.util.UUID;
 import kim.biryeong.semiontd.SemionTd;
-import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
-import kim.biryeong.semiontd.tower.mage.MageProphetTower;
 import kim.biryeong.semiontd.tower.mage.MageStates;
 import kim.biryeong.semiontd.tower.mage.MageTowerLifecycle;
 import kim.biryeong.semiontd.tower.mage.MageTowers;
-import kim.biryeong.semiontd.tower.mage.MageWizardTower;
 import kim.biryeong.semiontd.ui.SemionText;
 import kim.biryeong.semiontd.summon.SummonRegistry;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class MageTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "mage_towers");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "mage_towers");
 
     public MageTowerJob() {
         super(

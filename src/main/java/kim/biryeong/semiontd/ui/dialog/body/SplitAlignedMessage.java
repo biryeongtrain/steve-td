@@ -12,7 +12,7 @@ import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.server.dialog.Dialog;
 import net.minecraft.server.dialog.body.DialogBody;
 import net.minecraft.server.dialog.body.PlainMessage;
-import xyz.nucleoid.packettweaker.PacketContext;
+import net.fabricmc.fabric.api.networking.v1.context.PacketContext;
 
 public record SplitAlignedMessage(Component left, Component right, int width) implements DialogBody {
     private static final int TEXT_SAFE_MARGIN = 56;
@@ -32,9 +32,7 @@ public record SplitAlignedMessage(Component left, Component right, int width) im
     }
 
     public PlainMessage asVanillaBody(PacketContext context) {
-        String language = context.getClientOptions() != null
-                ? context.getClientOptions().language()
-                : "en_us";
+        String language = xyz.nucleoid.server.translations.api.LocalizationTarget.of(context).getLanguageCode();
         int textWidth = Math.max(0, this.width - TEXT_SAFE_MARGIN);
         List<Component> lines = new ArrayList<>();
         lines.addAll(TextUncenterer.getLeftAlignedNoWrap(this.left, textWidth, language));

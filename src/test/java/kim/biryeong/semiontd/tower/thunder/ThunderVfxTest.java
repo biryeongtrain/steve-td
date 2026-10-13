@@ -18,7 +18,7 @@ import kim.biryeong.semiontd.api.area.AreaVfxStylePlanner;
 import kim.biryeong.semiontd.api.area.AreaVfxStyleRegistry;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.particles.DustParticleOptions;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.BeforeAll;
@@ -128,7 +128,7 @@ class ThunderVfxTest {
         return plan(ThunderVfx.ARC, hits);
     }
 
-    private static CapturingOutput plan(ResourceLocation styleId, List<Vec3> hits) {
+    private static CapturingOutput plan(Identifier styleId, List<Vec3> hits) {
         CapturingRegistry registry = new CapturingRegistry();
         ThunderVfx.register(registry);
         AreaVfxStylePlanner planner = registry.planners.get(styleId);
@@ -139,16 +139,16 @@ class ThunderVfxTest {
         return output;
     }
 
-    private static AreaVfxContext context(ResourceLocation styleId, List<Vec3> hits) {
+    private static AreaVfxContext context(Identifier styleId, List<Vec3> hits) {
         AreaVfxParticle particle = new AreaVfxParticle(
                 new DustParticleOptions(0xFFFFFF, 1.0F),
-                ResourceLocation.fromNamespaceAndPath("minecraft", "electric_spark")
+                Identifier.fromNamespaceAndPath("minecraft", "electric_spark")
         );
         return new AreaVfxContext(
-                ResourceLocation.fromNamespaceAndPath("semion-td", "test_effect"),
+                Identifier.fromNamespaceAndPath("semion-td", "test_effect"),
                 styleId,
                 UUID.nameUUIDFromBytes("thunder-tower".getBytes()),
-                ResourceLocation.fromNamespaceAndPath("semion-td", "thunder_squirrel_t3"),
+                Identifier.fromNamespaceAndPath("semion-td", "thunder_squirrel_t3"),
                 new AreaVfxPalette(particle, particle),
                 CENTER,
                 CENTER,
@@ -162,15 +162,15 @@ class ThunderVfxTest {
     }
 
     private static final class CapturingRegistry implements AreaVfxStyleRegistry {
-        private final Map<ResourceLocation, AreaVfxStylePlanner> planners = new HashMap<>();
+        private final Map<Identifier, AreaVfxStylePlanner> planners = new HashMap<>();
 
         @Override
-        public void register(ResourceLocation id, AreaVfxStylePlanner planner) {
+        public void register(Identifier id, AreaVfxStylePlanner planner) {
             planners.put(id, planner);
         }
 
         @Override
-        public Optional<AreaVfxStylePlanner> find(ResourceLocation id) {
+        public Optional<AreaVfxStylePlanner> find(Identifier id) {
             return Optional.ofNullable(planners.get(id));
         }
 

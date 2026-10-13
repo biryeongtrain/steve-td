@@ -96,11 +96,11 @@ public final class DemonLordSkillGui extends SimpleGui {
             Optional<DemonLordLoadout.Slot> owned = state.loadout().slot(binding);
             GuiElementBuilder builder;
             if (owned.isEmpty()) {
-                builder = new GuiElementBuilder(Items.GRAY_STAINED_GLASS_PANE)
+                builder = new GuiElementBuilder(Items.STAINED_GLASS_PANE.gray())
                         .setName(Component.literal("[" + binding.label() + "] 빈 슬롯").withStyle(ChatFormatting.GRAY))
                         .addLoreLineRaw(keyHint(binding))
                         .addLoreLineRaw(white("클릭: 이 슬롯에 넣을 스킬 고르기"))
-                        .setCallback((index, type, action) -> open(new View(target, true)));
+                        .setCallback((index, type, action, clickedGui) -> open(new View(target, true)));
             } else {
                 DemonLordLoadout.Slot current = owned.get();
                 builder = new GuiElementBuilder(current.skill().item())
@@ -111,7 +111,7 @@ public final class DemonLordSkillGui extends SimpleGui {
                                 + "초 · 낸 다이아 " + current.paid()))
                         .addLoreLineRaw(white("클릭: 업그레이드 / 빼기"))
                         .hideDefaultTooltip()
-                        .setCallback((index, type, action) -> open(new View(target, false)));
+                        .setCallback((index, type, action, clickedGui) -> open(new View(target, false)));
             }
             setSlot(slot++, builder);
         }
@@ -121,11 +121,11 @@ public final class DemonLordSkillGui extends SimpleGui {
             Optional<DemonLordLoadout.PassiveEntry> owned = state.loadout().passive(target);
             GuiElementBuilder builder;
             if (owned.isEmpty()) {
-                builder = new GuiElementBuilder(Items.PURPLE_STAINED_GLASS_PANE)
+                builder = new GuiElementBuilder(Items.STAINED_GLASS_PANE.purple())
                         .setName(Component.literal("[" + target.label() + "] 빈 패시브 자리").withStyle(ChatFormatting.GRAY))
                         .addLoreLineRaw(gray("넣어 두면 항상 켜져 있습니다."))
                         .addLoreLineRaw(white("클릭: 이 자리에 넣을 패시브 고르기"))
-                        .setCallback((i, type, action) -> open(new View(null, target, true)));
+                        .setCallback((i, type, action, clickedGui) -> open(new View(null, target, true)));
             } else {
                 DemonLordPassive passive = owned.get().passive();
                 builder = new GuiElementBuilder(passive.item())
@@ -135,7 +135,7 @@ public final class DemonLordSkillGui extends SimpleGui {
                 passive.description().forEach(line -> builder.addLoreLineRaw(gray(line)));
                 builder.addLoreLineRaw(gray("낸 다이아 " + owned.get().paid()))
                         .addLoreLineRaw(white("클릭: 빼기"))
-                        .setCallback((i, type, action) -> open(new View(null, target, false)));
+                        .setCallback((i, type, action, clickedGui) -> open(new View(null, target, false)));
             }
             setSlot(PASSIVE_SLOTS[index], builder);
         }
@@ -158,7 +158,7 @@ public final class DemonLordSkillGui extends SimpleGui {
                 builder.addLoreLineRaw(Component.literal("구매 " + cost + " 다이아")
                                 .withStyle(affordable ? ChatFormatting.AQUA : ChatFormatting.RED))
                         .addLoreLineRaw(white("클릭: [" + slot.label() + "] 자리에 구매"))
-                        .setCallback((index, type, action) -> {
+                        .setCallback((index, type, action, clickedGui) -> {
                             if (report(DemonLordSkillShop.buyPassive(state, economy, slot, passive))) {
                                 open(View.overview());
                             }
@@ -188,7 +188,7 @@ public final class DemonLordSkillGui extends SimpleGui {
         setSlot(15, new GuiElementBuilder(Items.LAVA_BUCKET)
                 .setName(Component.literal("빼기").withStyle(ChatFormatting.RED))
                 .addLoreLineRaw(Component.literal("환불 " + owned.get().paid() + " 다이아 (전액)").withStyle(ChatFormatting.AQUA))
-                .setCallback((index, type, action) -> {
+                .setCallback((index, type, action, clickedGui) -> {
                     if (report(DemonLordSkillShop.removePassive(state, economy, slot))) {
                         open(View.overview());
                     }
@@ -215,7 +215,7 @@ public final class DemonLordSkillGui extends SimpleGui {
                 builder.addLoreLineRaw(Component.literal("구매 " + cost + " 다이아")
                                 .withStyle(affordable ? ChatFormatting.AQUA : ChatFormatting.RED))
                         .addLoreLineRaw(white("클릭: [" + binding.label() + "] 슬롯에 구매"))
-                        .setCallback((index, type, action) -> {
+                        .setCallback((index, type, action, clickedGui) -> {
                             if (report(DemonLordSkillShop.buy(state, economy, binding, skill))) {
                                 open(View.overview());
                             }
@@ -251,7 +251,7 @@ public final class DemonLordSkillGui extends SimpleGui {
                     .addLoreLineRaw(Component.literal("비용 " + cost + " 다이아")
                             .withStyle(economy.diamond() >= cost ? ChatFormatting.AQUA : ChatFormatting.RED));
             describe(upgrade, DemonLordSkillShop.resolved(current.skill(), current.tier() + 1));
-            upgrade.setCallback((index, type, action) -> {
+            upgrade.setCallback((index, type, action, clickedGui) -> {
                 report(DemonLordSkillShop.upgrade(state, economy, binding));
                 refresh();
             });
@@ -261,7 +261,7 @@ public final class DemonLordSkillGui extends SimpleGui {
         setSlot(15, new GuiElementBuilder(Items.LAVA_BUCKET)
                 .setName(Component.literal("빼기").withStyle(ChatFormatting.RED))
                 .addLoreLineRaw(Component.literal("환불 " + current.paid() + " 다이아 (전액)").withStyle(ChatFormatting.AQUA))
-                .setCallback((index, type, action) -> {
+                .setCallback((index, type, action, clickedGui) -> {
                     if (report(DemonLordSkillShop.remove(state, economy, binding))) {
                         open(View.overview());
                     }
@@ -276,10 +276,10 @@ public final class DemonLordSkillGui extends SimpleGui {
 
     private boolean report(DemonLordSkillShop.Result result) {
         boolean success = result == DemonLordSkillShop.Result.SUCCESS;
-        owner.displayClientMessage(success
+        owner.sendSystemMessage(success
                 ? SemionText.prefixedMini("<green>스킬 배정을 바꿨습니다.</green>")
                 : SemionText.prefixedError(result.message()), false);
-        owner.playNotifySound(success ? SoundEvents.EXPERIENCE_ORB_PICKUP : SoundEvents.VILLAGER_NO,
+        kim.biryeong.semiontd.util.SemionPlayerPackets.playSound(owner, success ? SoundEvents.EXPERIENCE_ORB_PICKUP : SoundEvents.VILLAGER_NO,
                 SoundSource.PLAYERS, 0.7f, 1.0f);
         return success;
     }
@@ -311,13 +311,13 @@ public final class DemonLordSkillGui extends SimpleGui {
     private GuiElementBuilder backButton() {
         return new GuiElementBuilder(Items.ARROW)
                 .setName(Component.literal("← 슬롯 목록").withStyle(ChatFormatting.WHITE))
-                .setCallback((index, type, action) -> open(View.overview()));
+                .setCallback((index, type, action, clickedGui) -> open(View.overview()));
     }
 
     private GuiElementBuilder closeButton() {
         return new GuiElementBuilder(Items.BARRIER)
                 .setName(Component.literal("닫기").withStyle(ChatFormatting.RED))
-                .setCallback((index, type, action) -> close());
+                .setCallback((index, type, action, clickedGui) -> close());
     }
 
     private static Component gray(String text) {

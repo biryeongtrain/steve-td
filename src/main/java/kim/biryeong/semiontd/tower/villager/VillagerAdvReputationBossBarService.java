@@ -93,7 +93,7 @@ public final class VillagerAdvReputationBossBarService {
     private void update(ServerPlayer player, double reputation, double reputationMax) {
         UUID playerId = player.getUUID();
         Component title = title(reputation, reputationMax);
-        ServerBossEvent bossBar = bossBars.computeIfAbsent(playerId, ignored -> new ServerBossEvent(
+        ServerBossEvent bossBar = bossBars.computeIfAbsent(playerId, ignored -> new ServerBossEvent(java.util.UUID.randomUUID(),
                 title,
                 BossEvent.BossBarColor.GREEN,
                 BossEvent.BossBarOverlay.PROGRESS

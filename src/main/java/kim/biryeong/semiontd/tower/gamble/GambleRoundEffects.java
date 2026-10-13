@@ -16,11 +16,11 @@ import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.Tower;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class GambleRoundEffects {
-    private static final Map<PlayerLane, Map<UUID, Set<ResourceLocation>>> ACTIVE_SOURCES = new WeakHashMap<>();
-    private static final Map<PlayerLane, Map<UUID, Map<ResourceLocation, GridPosition>>> SPECTATOR_LINKS =
+    private static final Map<PlayerLane, Map<UUID, Set<Identifier>>> ACTIVE_SOURCES = new WeakHashMap<>();
+    private static final Map<PlayerLane, Map<UUID, Map<Identifier, GridPosition>>> SPECTATOR_LINKS =
             new WeakHashMap<>();
     private static final List<TimedEffectType> EFFECT_TYPES = List.of(
             TimedEffectType.TOWER_FLAT_RANGE_BONUS,
@@ -37,14 +37,14 @@ public final class GambleRoundEffects {
     private GambleRoundEffects() {
     }
 
-    public static ResourceLocation sourceId(Tower tower) {
+    public static Identifier sourceId(Tower tower) {
         String owner = tower.ownerPlayer().toString().replace("-", "");
         var position = tower.originalPosition();
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID,
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID,
                 "gamble/support/" + owner + "/" + position.x() + "_" + position.y() + "_" + position.z());
     }
 
-    public static void clearSource(PlayerLane lane, UUID owner, ResourceLocation sourceId) {
+    public static void clearSource(PlayerLane lane, UUID owner, Identifier sourceId) {
         if (lane == null || sourceId == null) {
             return;
         }
@@ -60,7 +60,7 @@ public final class GambleRoundEffects {
     public static synchronized Optional<GamblerTower> assignSpectator(
             PlayerLane lane,
             UUID owner,
-            ResourceLocation sourceId,
+            Identifier sourceId,
             SemionTowerEntity source,
             double range
     ) {
@@ -78,14 +78,13 @@ public final class GambleRoundEffects {
                         .orElse(false))
                 .filter(tower -> spectatorLinkCount(lane, owner, tower.originalPosition())
                         < GambleBalance.maxSpectatorsPerGambler())
-                .sorted(Comparator.comparingDouble(GamblerTower::gambleScore).reversed()
+                .min(Comparator.comparingDouble(GamblerTower::gambleScore).reversed()
                         .thenComparingDouble(tower -> towerEntity(tower, lane)
                                 .map(entity -> entity.position().distanceToSqr(source.position()))
                                 .orElse(Double.MAX_VALUE))
                         .thenComparingInt(tower -> tower.originalPosition().x())
                         .thenComparingInt(tower -> tower.originalPosition().y())
-                        .thenComparingInt(tower -> tower.originalPosition().z()))
-                .findFirst();
+                        .thenComparingInt(tower -> tower.originalPosition().z()));
         selected.ifPresent(tower -> SPECTATOR_LINKS
                 .computeIfAbsent(lane, ignored -> new LinkedHashMap<>())
                 .computeIfAbsent(owner, ignored -> new LinkedHashMap<>())
@@ -102,7 +101,7 @@ public final class GambleRoundEffects {
     }
 
     public static synchronized void rememberSource(
-            PlayerLane lane, UUID owner, ResourceLocation sourceId
+            PlayerLane lane, UUID owner, Identifier sourceId
     ) {
         if (lane == null || owner == null || sourceId == null) {
             return;
@@ -115,7 +114,7 @@ public final class GambleRoundEffects {
         if (lane == null || owner == null) {
             return;
         }
-        LinkedHashSet<ResourceLocation> sources = new LinkedHashSet<>(ACTIVE_SOURCES
+        LinkedHashSet<Identifier> sources = new LinkedHashSet<>(ACTIVE_SOURCES
                 .getOrDefault(lane, Map.of()).getOrDefault(owner, Set.of()));
         lane.towers().stream()
                 .filter(tower -> owner.equals(tower.ownerPlayer()))
@@ -128,12 +127,12 @@ public final class GambleRoundEffects {
             }
             towerEntity(target, lane).ifPresent(entity -> sources.forEach(source -> clearSource(entity, source)));
         }
-        Map<UUID, Set<ResourceLocation>> byOwner = ACTIVE_SOURCES.get(lane);
+        Map<UUID, Set<Identifier>> byOwner = ACTIVE_SOURCES.get(lane);
         if (byOwner != null) {
             byOwner.remove(owner);
             if (byOwner.isEmpty()) ACTIVE_SOURCES.remove(lane);
         }
-        Map<UUID, Map<ResourceLocation, GridPosition>> spectatorOwners = SPECTATOR_LINKS.get(lane);
+        Map<UUID, Map<Identifier, GridPosition>> spectatorOwners = SPECTATOR_LINKS.get(lane);
         if (spectatorOwners != null) {
             spectatorOwners.remove(owner);
             if (spectatorOwners.isEmpty()) SPECTATOR_LINKS.remove(lane);
@@ -148,18 +147,18 @@ public final class GambleRoundEffects {
         return backed.runtimeEntity(lane);
     }
 
-    private static void clearSource(SemionTowerEntity entity, ResourceLocation sourceId) {
+    private static void clearSource(SemionTowerEntity entity, Identifier sourceId) {
         EFFECT_TYPES.forEach(type -> entity.setPersistentEffect(type, sourceId, 0.0));
     }
 
     private static synchronized void releaseSpectatorSource(
-            PlayerLane lane, UUID owner, ResourceLocation sourceId
+            PlayerLane lane, UUID owner, Identifier sourceId
     ) {
-        Map<UUID, Map<ResourceLocation, GridPosition>> owners = SPECTATOR_LINKS.get(lane);
+        Map<UUID, Map<Identifier, GridPosition>> owners = SPECTATOR_LINKS.get(lane);
         if (owners == null) {
             return;
         }
-        Map<ResourceLocation, GridPosition> links = owners.get(owner);
+        Map<Identifier, GridPosition> links = owners.get(owner);
         if (links != null) {
             links.remove(sourceId);
             if (links.isEmpty()) owners.remove(owner);

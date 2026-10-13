@@ -14,7 +14,7 @@ import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.entity.monster.MonsterDataKey;
 import kim.biryeong.semiontd.augment.AugmentCombat;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 
 /**
@@ -73,7 +73,7 @@ public final class PlantSoilEnvironment {
                 continue;
             }
             if (roots) {
-                MonsterDataKey<Integer> stunnedRound = new MonsterDataKey<>(ResourceLocation.fromNamespaceAndPath(
+                MonsterDataKey<Integer> stunnedRound = new MonsterDataKey<>(Identifier.fromNamespaceAndPath(
                         "semiontd", "plant_root_entry/" + owner), Integer.class);
                 int round = lane.towers().stream().findFirst().map(Tower::currentRound).orElse(0);
                 if (monster.getData(stunnedRound).orElse(-1) != round) {
@@ -218,24 +218,6 @@ public final class PlantSoilEnvironment {
         double cap = soilValue(PlantSoil.MYCELIUM, "damageTakenBonusCap");
         double bonus = tiles * perTile;
         return cap > 0.0 ? Math.min(cap, bonus) : bonus;
-    }
-
-    private static PlantTerraformTower terrainSource(PlayerLane lane, UUID owner, SemionMonsterEntity monster) {
-        int x = Mth.floor(monster.getX());
-        int z = Mth.floor(monster.getZ());
-        GridPosition sourcePosition = PlantSoilStates.sourceAtColumn(owner, x, z);
-        if (sourcePosition == null) {
-            return null;
-        }
-        for (Tower tower : lane.towers()) {
-            if (tower instanceof PlantTerraformTower terraformer
-                    && tower.health() > 0.0
-                    && owner.equals(tower.ownerPlayer())
-                    && sourcePosition.equals(tower.originalPosition())) {
-                return terraformer;
-            }
-        }
-        return null;
     }
 
     private static SemionTowerEntity sourceEntity(PlayerLane lane, PlantTerraformTower source) {

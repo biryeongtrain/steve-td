@@ -16,7 +16,7 @@ import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalogs;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
-import net.minecraft.world.entity.animal.Rabbit;
+import net.minecraft.world.entity.animal.rabbit.Rabbit;
 import net.minecraft.world.item.DyeColor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;

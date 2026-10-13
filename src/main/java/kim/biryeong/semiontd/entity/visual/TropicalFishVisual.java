@@ -1,6 +1,6 @@
 package kim.biryeong.semiontd.entity.visual;
 
-import net.minecraft.world.entity.animal.TropicalFish;
+import net.minecraft.world.entity.animal.fish.TropicalFish;
 import net.minecraft.world.item.DyeColor;
 
 public final class TropicalFishVisual {

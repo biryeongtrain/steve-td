@@ -15,9 +15,14 @@ public record AugmentSnapshot(AugmentConfig config, List<PlayerAugmentState.Sele
     }
 
     public boolean has(String cardId) {
-        String id = AugmentCatalog.normalizeId(cardId);
-        return selections.stream().anyMatch(selection -> selection.outcome() == PlayerAugmentState.Outcome.SELECTED
-                && AugmentCatalog.matchesSelection(id, selection.augmentId()));
+        AugmentCatalog.requireId(cardId);
+        for (PlayerAugmentState.Selection selection : selections) {
+            if (selection.outcome() == PlayerAugmentState.Outcome.SELECTED
+                    && AugmentCatalog.matchesSelection(cardId, selection.augmentId())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public AugmentChoice choice(String cardId) {

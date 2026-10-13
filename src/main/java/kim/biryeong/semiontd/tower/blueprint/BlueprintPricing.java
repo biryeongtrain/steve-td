@@ -16,8 +16,8 @@ import kim.biryeong.semiontd.entity.monster.DamageType;
  *   P     = 공격 + 생존 + 유틸 + Σ 지원 모듈 위력 × 단계 + 소환
  *   가격  = priceScale × P^priceExponent   (priceStep 단위로 반올림, 최소 minimumPrice)
  * </pre>
- * 기본 계수는 기존 빌더 타워의 가격대별 중앙값(가격 50·130·260 → 초당 피해 8·16.7·26.7, 체력 88·140·200)에
- * 맞췄습니다. 같은 가격이면 기존 타워 중앙값쯤의 위력이 나오고, 지수가 1보다 커서 세게 만들수록 값이 가파르게 오릅니다.
+ * 기본 계수로는 기존 빌더 타워의 가격대별 중앙값(가격 50·130·260 → 초당 피해 8·16.7·26.7, 체력 88·140·200)의 위력을
+ * 약 35·85·160에 삽니다. 지수가 1보다 커서 세게 만들수록 값이 가파르게 오릅니다.
  * 계수는 모두 {@link BlueprintTowers#CONFIG_ID} 아래 능력 값이라 설정에서 바꿀 수 있습니다.
  */
 public final class BlueprintPricing {

@@ -78,7 +78,7 @@ import kim.biryeong.semiontd.ui.SemionText;
 import kim.biryeong.semiontd.ui.SemionTitleService;
 import kim.biryeong.semiontd.web.WebCatalogExporter;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -89,7 +89,6 @@ public final class SemionGame {
     public static final int DEFAULT_PREPARE_TICKS = 25 * 20;
     public static final int DEFAULT_WAVE_FINAL_DEFENSE_TICKS = 90 * 20;
     static final int LEADER_TARGET_COOLDOWN_ROUNDS = 3;
-    private static final String DEMON_LORD_METRICS_ID = "semion-td:demon_lord";
 
     private EconomyConfig economyConfig;
     private WaveConfig waveConfig;
@@ -815,7 +814,7 @@ public final class SemionGame {
         return java.util.Collections.unmodifiableMap(selectedJobs);
     }
 
-    public boolean selectJob(UUID playerId, ResourceLocation jobId) {
+    public boolean selectJob(UUID playerId, Identifier jobId) {
         if (!canConfigureRoster()) {
             return false;
         }
@@ -844,12 +843,12 @@ public final class SemionGame {
         return selectedTraitLoadouts.getOrDefault(playerId, TraitLoadout.none());
     }
 
-    public TraitSelectionSession.SelectionResult selectTrait(UUID playerId, TraitSlot slot, ResourceLocation traitId) {
+    public TraitSelectionSession.SelectionResult selectTrait(UUID playerId, TraitSlot slot, Identifier traitId) {
         boolean runningSandboxParticipant = sandboxMode && isActiveParticipant(playerId);
         if (!canConfigureRoster() && !runningSandboxParticipant) {
             return TraitSelectionSession.SelectionResult.STARTED;
         }
-        ResourceLocation normalizedTraitId = traitId == null ? BuiltInTraits.NONE_ID : traitId;
+        Identifier normalizedTraitId = traitId == null ? BuiltInTraits.NONE_ID : traitId;
         if (TraitRegistry.find(normalizedTraitId).isEmpty()) {
             return TraitSelectionSession.SelectionResult.UNKNOWN_TRAIT;
         }
@@ -1350,6 +1349,10 @@ public final class SemionGame {
         return true;
     }
 
+    public static boolean canLateJoinWithJob(SemionJob job) {
+        return job != null && !job.id().equals(JobRegistry.defaultJob().id()) && JobRegistry.isEnabled(job);
+    }
+
     public boolean addLateParticipant(
             MinecraftServer server,
             ServerPlayer player,
@@ -1358,7 +1361,7 @@ public final class SemionGame {
             SemionJob job,
             int requestedRound
     ) {
-        if (server == null || player == null || participant == null || job == null
+        if (server == null || player == null || participant == null || !canLateJoinWithJob(job)
                 || !rosterLocked || phase == RoundPhase.WAITING || phase == RoundPhase.ENDED
                 || requestedRound < 1 || requestedRound > 5
                 || !player.getUUID().equals(participant.uuid())) {
@@ -1511,7 +1514,6 @@ public final class SemionGame {
      * 보냅니다. 레인은 소환 몹의 인컴 레인 배분 규칙을 따릅니다.
      */
     private void dispatchIncomeTowers() {
-        IncomeTowerBalance.WaveScale scale = IncomeTowerBalance.waveScale(waveConfig, currentRound);
         java.util.Random guardRandom = new java.util.Random();
         for (SemionTeam team : livingTeams()) {
             for (PlayerLane lane : team.laneGroup().lanes()) {
@@ -1527,7 +1529,7 @@ public final class SemionGame {
                     if (demonLord != null && demonLord.loadout().hasPassive(
                             kim.biryeong.semiontd.tower.demonlord.DemonLordPassive.INVASION_GUARD)) {
                         // 침공군 호위: 적 레인으로 보내는 대신 무작위 아군 라인을 이 웨이브 동안 지킵니다.
-                        IncomeTowerService.createDispatch(this, owner, incomeTower, owner.teamId(), lane.laneId(), scale)
+                        IncomeTowerService.createDispatch(this, owner, incomeTower, owner.teamId(), lane.laneId())
                                 .ifPresent(unit -> kim.biryeong.semiontd.tower.demonlord.DemonLordPassives.deployInvasionGuard(
                                         lane, incomeTower.type(), unit, currentRound, guardRandom));
                         continue;
@@ -1539,7 +1541,7 @@ public final class SemionGame {
                         continue;
                     }
                     IncomeTowerService.createDispatch(this, owner, incomeTower, targetTeam.get().id(),
-                            targetLane.get().laneId(), scale).ifPresent(monster -> {
+                            targetLane.get().laneId()).ifPresent(monster -> {
                         monster.setSenderName(owner.name());
                         monster.setOrigin(MonsterOrigin.NORMAL_PAID);
                         monster.applyAttackModifiers(
@@ -1724,6 +1726,8 @@ public final class SemionGame {
     }
 
     private void recordRoundMetrics(int round, int waveDurationTicks) {
+        Map<UUID, MonsterSupportMetrics.Snapshot> utilitySupportByPlayer = GameRoundSupportMetrics.capture(
+                teams.values(), roundKillBaselines.keySet());
         for (UUID playerId : List.copyOf(roundKillBaselines.keySet())) {
             Long killBaseline = roundKillBaselines.remove(playerId);
             SemionPlayer player = players.get(playerId);
@@ -1741,53 +1745,11 @@ public final class SemionGame {
                         round, lane.leakedThisRound(), lane.leakedThreatThisRound(), lane.leakedCountThisRound()));
             }
 
-            List<TowerRoundMetricsSnapshot> towerMetrics = lane.roundTowerMetrics();
-            List<TowerRoundMetricsSnapshot> builderTowerMetrics = towerMetrics.stream()
-                    .filter(metrics -> !DEMON_LORD_METRICS_ID.equals(metrics.towerTypeId()))
-                    .filter(metrics -> ProductionTowerCatalog.find(metrics.towerTypeId())
-                            .map(entry -> entry.availability() == ProductionTowerCatalog.Availability.JOB).orElse(true))
-                    .toList();
-            int firstCombatTick = towerMetrics.stream()
-                    .mapToInt(TowerRoundMetricsSnapshot::firstCombatTick)
-                    .filter(tick -> tick >= 0)
-                    .min()
-                    .orElse(-1);
-            int lastCombatTick = towerMetrics.stream()
-                    .mapToInt(TowerRoundMetricsSnapshot::lastCombatTick)
-                    .max()
-                    .orElse(-1);
-            PlayerEconomy economy = player.economy();
-            MonsterSupportMetrics.Snapshot utilitySupport = teams.values().stream()
-                    .flatMap(otherTeam -> otherTeam.laneGroup().lanes().stream())
-                    .map(otherLane -> otherLane.utilitySupportMetrics(playerId))
-                    .reduce(MonsterSupportMetrics.Snapshot.empty(), MonsterSupportMetrics.Snapshot::plus);
+            MonsterSupportMetrics.Snapshot utilitySupport = utilitySupportByPlayer.getOrDefault(
+                    playerId, MonsterSupportMetrics.Snapshot.empty());
             roundMetricsByPlayer.computeIfAbsent(playerId, ignored -> new ArrayList<>()).add(
-                    new PlayerRoundMetricsSnapshot(
-                            round,
-                            waveDurationTicks,
-                            firstCombatTick < 0 ? 0 : lastCombatTick - firstCombatTick + 1,
-                            builderTowerMetrics.stream().mapToInt(TowerRoundMetricsSnapshot::startCount).sum(),
-                            builderTowerMetrics.stream().mapToInt(TowerRoundMetricsSnapshot::endAliveCount).sum(),
-                            builderTowerMetrics.stream().mapToInt(TowerRoundMetricsSnapshot::deathCount).sum(),
-                            economy.emeraldProductionUpgradeCount(),
-                            economy.emeraldPerSec(),
-                            economy.income(),
-                            economy.emerald(),
-                            economy.diamond(),
-                            economy.towerLimitPurchaseCount(),
-                            player.matchStats().monsterKills() - killBaseline,
-                            towerMetrics,
-                            utilitySupport,
-                            lane.naturalWaveSupportMetrics(),
-                            lane.waveSupportMetrics(),
-                            lane.waveTemplateId(),
-                            lane.naturalWaveCount(),
-                            lane.naturalWaveStartingHealth(),
-                            augmentsEnabled() ? new AugmentEconomyMetricsSnapshot(
-                                    player.economyAugments().diamondGranted(), player.economyAugments().incomeGranted(),
-                                    player.economyAugments().incomeForgone(), player.economyAugments().payoutWithheld()) : null
-                    )
-            );
+                    GameRoundMetricsSnapshot.capture(player, lane, round, waveDurationTicks, killBaseline,
+                            augmentsEnabled(), utilitySupport));
         }
         teams.values().forEach(team -> team.laneGroup().lanes().forEach(PlayerLane::clearRoundMonsterMetrics));
     }
@@ -1884,12 +1846,19 @@ public final class SemionGame {
             if (!team.active() || team.eliminated()) {
                 continue;
             }
-            activeParticipants.stream()
+            List<AssignedParticipant> candidates = activeParticipants.stream()
                     .filter(participant -> participant.teamId() == team.id())
                     .filter(participant -> players.containsKey(participant.uuid()))
-                    .min(Comparator.comparingInt(AssignedParticipant::displayElo).reversed()
-                            .thenComparingInt(AssignedParticipant::laneId))
-                    .ifPresent(participant -> team.setLeader(participant.uuid()));
+                    .toList();
+            if (candidates.isEmpty()) {
+                continue;
+            }
+            int highestElo = candidates.stream().mapToInt(AssignedParticipant::displayElo).max().orElseThrow();
+            AssignedParticipant leader = candidates.stream()
+                    .filter(participant -> participant.displayElo() == highestElo)
+                    .min(Comparator.comparingInt(AssignedParticipant::laneId))
+                    .orElseThrow();
+            team.setLeader(leader.uuid());
         }
     }
 
@@ -2194,9 +2163,7 @@ public final class SemionGame {
     }
 
     private int spectatorIndex(UUID spectatorId) {
-        List<UUID> ordered = matchSpectatorIds.stream().sorted().toList();
-        int index = ordered.indexOf(spectatorId);
-        return Math.max(0, index);
+        return GameSpectatorPlacementOrder.index(matchSpectatorIds, spectatorId);
     }
 
     private void spawnBossesForActiveTeams(Set<TeamId> activeTeams) {
@@ -2283,7 +2250,7 @@ public final class SemionGame {
         long gasPerSec = economy.gasPerSec();
         mineral += TraitEffects.startingMineralBonus(player.traitLoadout());
         for (TraitSlot slot : TraitSlot.values()) {
-            ResourceLocation traitId = player.traitLoadout().traitId(slot);
+            Identifier traitId = player.traitLoadout().traitId(slot);
             Optional<SemionTrait> trait = TraitRegistry.find(traitId);
             if (trait.isEmpty()) {
                 continue;

@@ -1,6 +1,6 @@
 package kim.biryeong.semiontd.entity.visual;
 
-import net.minecraft.world.entity.animal.Fox;
+import net.minecraft.world.entity.animal.fox.Fox;
 
 public final class FoxVisual {
     private FoxVisual() {

@@ -51,7 +51,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,6 +66,7 @@ public class SemionTd implements ModInitializer {
     public void onInitialize() {
         SemionCosmeticItems.register();
         PolymerResourcePackUtils.addModAssets(MOD_ID);
+        kim.biryeong.semiontd.ui.rp.PolyFactoryResourceCompatibility.register();
         SemionEntityTypes.register();
         BuiltInTraits.register();
 
@@ -125,8 +126,17 @@ public class SemionTd implements ModInitializer {
         SemionTdApi.initializeInternal(new AreaEffectService(gameManager), areaVfxStyles);
         TowerVfxService.initialize(configs.vfx(), gameManager, areaVfxStyles);
         ServerLifecycleEvents.SERVER_STARTING.register(server -> areaVfxStyles.freeze());
-        ServerLifecycleEvents.SERVER_STARTED.register(server ->
-                balanceManagement = BalanceManagementBootstrap.start(server, gameManager, configDir));
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            balanceManagement = BalanceManagementBootstrap.start(server, gameManager, configDir);
+            var active = gameManager.captureBalanceBundle();
+            LOGGER.info("Runtime tower balance: end damageScale={}, ranged warlock damageScale={}, healthThreshold={}, healthScale={}, melee lifeCap={}",
+                    active.tower().ability("end_global", "damageScale", -1.0),
+                    active.tower().ability("ranged_warlock_tower", "damageScale", -1.0),
+                    active.tower().ability("ranged_warlock_tower", "healthThreshold", -1.0),
+                    active.tower().ability("ranged_warlock_tower", "healthScale", -1.0),
+                    active.tower().ability("melee_warlock_tower", "lifeCap", -1.0));
+            LOGGER.info("Runtime End assault parameters: {}", active.augment().parametersFor("job_end_towers_p"));
+        });
         ServerLifecycleEvents.SERVER_STARTED.register(balancePatchNotifier::start);
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
             if (balanceManagement != null) { balanceManagement.close(); balanceManagement = null; }
@@ -142,14 +152,16 @@ public class SemionTd implements ModInitializer {
         cosmeticService.registerUseProtection();
         Events.initialize(gameManager, skyboxService, tipService, cosmeticService);
 
-        Registry.register(BuiltInRegistries.DIALOG_BODY_TYPE, ResourceLocation.fromNamespaceAndPath("ttt", "aligned_message"), AlignedMessage.MAP_CODEC);
-        Registry.register(BuiltInRegistries.DIALOG_BODY_TYPE, ResourceLocation.fromNamespaceAndPath("ttt", "aligned_item"), AlignedItemBody.MAP_CODEC);
-        Registry.register(BuiltInRegistries.DIALOG_BODY_TYPE, ResourceLocation.fromNamespaceAndPath("ttt", "header_message"), HeaderMessage.MAP_CODEC);
-        Registry.register(BuiltInRegistries.DIALOG_BODY_TYPE, ResourceLocation.fromNamespaceAndPath("ttt", "image"), ImageBody.MAP_CODEC);
-        Registry.register(BuiltInRegistries.DIALOG_BODY_TYPE, ResourceLocation.fromNamespaceAndPath("ttt", "split_aligned_message"), SplitAlignedMessage.MAP_CODEC);
+        Registry.register(BuiltInRegistries.DIALOG_BODY_TYPE, Identifier.fromNamespaceAndPath("ttt", "aligned_message"), AlignedMessage.MAP_CODEC);
+        Registry.register(BuiltInRegistries.DIALOG_BODY_TYPE, Identifier.fromNamespaceAndPath("ttt", "aligned_item"), AlignedItemBody.MAP_CODEC);
+        Registry.register(BuiltInRegistries.DIALOG_BODY_TYPE, Identifier.fromNamespaceAndPath("ttt", "header_message"), HeaderMessage.MAP_CODEC);
+        Registry.register(BuiltInRegistries.DIALOG_BODY_TYPE, Identifier.fromNamespaceAndPath("ttt", "image"), ImageBody.MAP_CODEC);
+        Registry.register(BuiltInRegistries.DIALOG_BODY_TYPE, Identifier.fromNamespaceAndPath("ttt", "split_aligned_message"), SplitAlignedMessage.MAP_CODEC);
         ImageHandler.init();
         SemionUiFont.init();
         kim.biryeong.semiontd.ui.rp.GambleGlyphs.init();
+        kim.biryeong.semiontd.ui.rp.AugmentCardIcons.init();
+        kim.biryeong.semiontd.ui.augment.AugmentCardFrames.init();
         LOGGER.info("Semion TD initialized.");
     }
 }

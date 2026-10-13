@@ -59,7 +59,7 @@ public final class QueenGameTest {
             for (Tower tower : List.of(queen, card, joker)) lane.addTower(tower);
             var target = spawnTarget(context, lane, Vec3.atCenterOf(context.absolutePos(new BlockPos(5, 2, 2))),
                     "queen-conversion").entity();
-            var source = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("semion-td", "queen_conversion_test");
+            var source = net.minecraft.resources.Identifier.fromNamespaceAndPath("semion-td", "queen_conversion_test");
             for (Tower tower : List.of(queen, card, joker)) {
                 SemionTowerEntity entity = towerEntity(context, tower);
                 int baseInterval = entity.attackIntervalTicks();
@@ -92,7 +92,7 @@ public final class QueenGameTest {
             double damageBonus = queen.augmentSnapshot().parameter("beneficial_effect_1", "damageBonus", 0.05);
             double speedBonus = queen.augmentSnapshot().parameter("beneficial_effect_1", "attackSpeedBonus", 0.05);
             require(towerEntity(context, queen).attackIntervalTicks()
-                            == (int) Math.ceil(QueenTowers.QUEEN.attackIntervalTicks() / (1.49 + damageBonus * .7 + speedBonus)),
+                            == (int) Math.ceil(20.0 / (1.49 + damageBonus * .7 + speedBonus)),
                     "A common augment must supply native speed plus converted damage, without double conversion.");
             context.succeed();
         } finally {
@@ -260,7 +260,7 @@ public final class QueenGameTest {
             player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
             require(queenEquipment.isMarker() && !queenEquipment.isPickable(),
                     "The Queen equipment overlay must not intercept player interaction.");
-            require(queenEquipment.interactAt(player, Vec3.ZERO, InteractionHand.MAIN_HAND) == InteractionResult.PASS
+            require(queenEquipment.interact(player, InteractionHand.MAIN_HAND, Vec3.ZERO) == InteractionResult.PASS
                             && player.getItemInHand(InteractionHand.MAIN_HAND).isEmpty()
                             && queenEquipment.getItemBySlot(EquipmentSlot.MAINHAND).is(Items.GOLDEN_SWORD),
                     "Players must not take equipment from the Queen overlay.");
@@ -464,7 +464,7 @@ public final class QueenGameTest {
             lane.addTower(queen);
             SemionTowerEntity source = towerEntity(context, queen);
             ArmorStand equipment = equipmentVisual(context, source);
-            require(SemionEntityTypes.TOWER.updateInterval() == EntityType.ARMOR_STAND.updateInterval(),
+            require(SemionEntityTypes.TOWER.updateInterval() == net.minecraft.world.entity.EntityTypes.ARMOR_STAND.updateInterval(),
                     "Tower and equipment-overlay packets must use the same interpolation interval.");
             Vec3 shiftedPosition = source.position().add(0.75, 0.25, -0.5);
             source.teleportTo(shiftedPosition.x, shiftedPosition.y, shiftedPosition.z);

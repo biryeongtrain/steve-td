@@ -30,6 +30,42 @@ final class EndVfx {
         level.sendParticles(ParticleTypes.ENCHANT, targetPosition.x, targetPosition.y, targetPosition.z, 0, sourceOffset.x, sourceOffset.y, sourceOffset.z, 1.0);
     }
 
+    static void assaultCharge(ServerLevel level, Vec3 center, double progress, int tick) {
+        if (tick % 3 != 0) {return;}
+        double radius = 2.5 * (1.0 - Math.min(1.0, progress));
+        level.sendParticles(ParticleTypes.REVERSE_PORTAL, center.x, center.y + 1, center.z,
+                8, radius, .6, radius, .08);
+    }
+
+    static void assaultWave(ServerLevel level, Vec3 center, Vec3 direction, double width) {
+        Vec3 side = new Vec3(-direction.z, 0, direction.x);
+        int steps = Math.max(1, (int) Math.ceil(width * 2));
+        for (int step = 0; step <= steps; step++) {
+            Vec3 point = center.add(side.scale(width * (step / (double) steps - .5)));
+            level.sendParticles(net.minecraft.core.particles.PowerParticleOption.create(ParticleTypes.DRAGON_BREATH, 1.0F),
+                    point.x, point.y, point.z, 2, .15, .4, .15, .02);
+        }
+    }
+
+    static void assaultBreath(ServerLevel level, Vec3 source, Vec3 ground, Vec3 direction, double width) {
+        Vec3 mouth = EndDragonBreathGeometry.mouth(source, direction);
+        Vec3 side = new Vec3(-direction.z, 0, direction.x);
+        for (int ray : new int[]{0, -2, -1, 1, 2}) {
+            Vec3 end = ground.add(side.scale(width * .25 * ray));
+            for (int step = 0; step <= 6; step++) {
+                double progress = step / 6.0;
+                Vec3 point = EndDragonBreathGeometry.point(mouth, end, direction, progress)
+                        .add(side.scale(.125 * ray * (1 - progress)));
+                double depth = .1 + .65 * progress;
+                level.sendParticles(net.minecraft.core.particles.PowerParticleOption.create(ParticleTypes.DRAGON_BREATH, 1.0F),
+                        point.x, point.y, point.z, 1,
+                        Math.abs(direction.x) * depth + Math.abs(side.x) * .1, .1,
+                        Math.abs(direction.z) * depth + Math.abs(side.z) * .1, .01);
+            }
+        }
+        assaultWave(level, ground.add(0, .2, 0), direction, width);
+    }
+
     private static Vec3 particlePosition(Tower tower, double height) {
         return new Vec3(tower.position().x() + 0.5, tower.position().y() + height, tower.position().z() + 0.5);
     }

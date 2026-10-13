@@ -37,7 +37,7 @@ public final class BalancePatchNotifier implements AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(BalancePatchNotifier.class);
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final URI DEFAULT_ENDPOINT =
-            URI.create("https://api.github.com/repos/biryeongtrain/semiontd-balance/commits/main");
+            URI.create("https://api.github.com/repos/Kyarurung/semiontd-balance/commits/main");
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(15);
     private static final long POLL_INTERVAL_MINUTES = 5;
     private static final int CHANGE_PREVIEW_LIMIT = 3;

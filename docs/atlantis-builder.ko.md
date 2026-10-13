@@ -363,10 +363,10 @@ config/TowerBalanceConfig.java                   기본값 + 머지 + 검증
 | 수압 피해 공식·상한·소유자 격리 | `AtlantisPressureTest` (JUnit) |
 | 빌더 소유권 단일성 | `WebCatalogExporterTest` 갱신 |
 | 내장 빌더 수·starter 수 | `SemionParticipantGameTest` 갱신 |
-| 구역 전개·스택 축적·운반 대상 포함 폭발·사망 연쇄 | `AtlantisIntegrationGameTest` (GameTest) |
+| 구역 전개·스택 축적·운반 대상 포함 폭발·사망 연쇄 | `AtlantisTowerIntegrationTest` (GameTest) |
 | 거북이 설치/업그레이드/판매/파괴·라운드 복원 시 구역 정원 증감 | `AtlantisZoneCapacityTest` (JUnit) + GameTest |
 | 티어별 변종이 카탈로그 재로드 후에도 유지 | `AtlantisTowerCatalogTest` |
-| 구역 안 아군만 피해감소를 받음 | `AtlantisIntegrationGameTest` (GameTest) |
+| 구역 안 아군만 피해감소를 받음 | `AtlantisTowerIntegrationTest` (GameTest) |
 | VFX 스타일 등록·지오메트리·운영 렌더러 디버그 명령 | `AtlantisVfxTest` (JUnit) + GameTest |
 
 ```text

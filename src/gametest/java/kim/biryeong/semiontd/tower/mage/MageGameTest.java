@@ -2,6 +2,8 @@ package kim.biryeong.semiontd.tower.mage;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,103 @@ import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
 public final class MageGameTest {
+    @GameTest(structure = "semion-td-gametest:combat_arena")
+    public void primarySelectionMatchesStableSortAndKeepsSpellDamage(GameTestHelper context) {
+        UUID owner = stableUuid("mage-primary-selection");
+        MageStates.clear(owner);
+        PlayerLane lane = testLane(context, owner);
+        prepareFloor(context, 8);
+        MageWizardTower wizard = new MageWizardTower(MageTowers.spellType(MageSpell.WIND_CUTTER),
+                owner, TeamId.RED, 1, grid(context, new BlockPos(4, 2, 4)));
+        ArrayList<SpawnedTarget> targets = new ArrayList<>();
+        AreaEffectLaneIndex.register(lane);
+        try {
+            lane.addTower(core(context, owner, new BlockPos(3, 2, 4)));
+            lane.addTower(wizard);
+            SemionTowerEntity source = towerEntity(context, wizard);
+            Vec3 center = source.position();
+            double range = 3.0;
+            for (int index = 0; index < 12; index++) {
+                Optional<UUID> sender = index % 3 == 0 && index != 9 ? Optional.of(owner) : Optional.empty();
+                SpawnedTarget target = spawnTarget(context, lane,
+                        center.add(index % 4, 0, 0), "mage-selection-" + index, sender,
+                        index == 9 ? Optional.of(TeamId.BLUE) : Optional.empty());
+                target.entity().setNoAi(true);
+                target.entity().setNoGravity(true);
+                target.runtime().syncLaneProgress((index % 4) / 4.0);
+                targets.add(target);
+            }
+            targets.get(1).entity().setStealthCapable(true);
+            targets.get(2).entity().setDominatedFor(1);
+            targets.get(3).entity().setHealth(0);
+            targets.get(4).entity().discard();
+            targets.get(5).runtime().syncHealth(0);
+            targets.get(7).entity().setPos(center.add(range + 0.0001, 0, 0));
+            for (int order = 0; order < 12; order++) {
+                assertPrimaryMatchesSort(lane, center, range);
+                assertPrimaryMatchesSort(lane, center, 0);
+                Collections.rotate(lane.activeMonsters(), 1);
+                if (order % 2 == 0) Collections.reverse(lane.activeMonsters());
+            }
+            lane.activeMonsters().clear();
+            SpawnedTarget boundary = targets.get(11);
+            boundary.entity().setPos(center.add(range, 0, 0));
+            lane.activeMonsters().add(boundary.runtime());
+            require(MageTowerRuntime.firstPrioritizedInRange(lane, center, range).orElse(null) == boundary.entity(),
+                    "The exact range boundary must remain eligible.");
+            boundary.entity().setPos(center.add(range + 0.0001, 0, 0));
+            assertPrimaryMatchesSort(lane, center, range);
+            require(MageTowerRuntime.firstPrioritizedInRange(lane, center, range).isEmpty(),
+                    "A target outside the exact range must be rejected immediately.");
+            lane.activeMonsters().clear();
+            SpawnedTarget first = targets.get(6), second = targets.get(8);
+            first.entity().setPos(center.add(2, 0, 0));
+            second.entity().setPos(center.add(0, 0, 2));
+            first.runtime().syncLaneProgress(.5);
+            second.runtime().syncLaneProgress(.5);
+            lane.activeMonsters().add(second.runtime());
+            lane.activeMonsters().add(first.runtime());
+            require(MageTowerRuntime.firstPrioritizedInRange(lane, center, range).orElse(null) == second.entity(),
+                    "A wave target must precede an income target even at equal progress.");
+            SpawnedTarget tied = targets.get(10);
+            tied.entity().setPos(center.add(1, 0, 1));
+            tied.runtime().syncLaneProgress(.5);
+            lane.activeMonsters().add(0, tied.runtime());
+            require(MageTowerRuntime.firstPrioritizedInRange(lane, center, range).orElse(null) == tied.entity(),
+                    "Equal wave priorities must retain the first lane encounter.");
+            lane.activeMonsters().remove(tied.runtime());
+            lane.markWaveStarted(1);
+            MageStates.state(owner).clearMana();
+            MageStates.state(owner).addMana(1000);
+            wizard.tick(lane);
+            double expectedDamage = MageBalance.WIND_CUTTER_DAMAGE * wizard.currentSpellDamageMultiplier();
+            requireClose(200 - expectedDamage, second.runtime().health(),
+                    "The actual ordinary spell must damage the same primary.");
+            requireClose(200, first.runtime().health(), "An off-line income target must remain unharmed.");
+            require(wizard.spellCasts() == 1, "Single-target selection must not consume an extra spell cast.");
+            lane.activeMonsters().clear();
+            require(MageTowerRuntime.firstPrioritizedInRange(lane, center, range).isEmpty()
+                            && MageTowerRuntime.firstPrioritizedInRange(null, center, range).isEmpty(),
+                    "Empty or unavailable lanes must retain an empty selection.");
+            context.succeed();
+        } finally {
+            targets.forEach(target -> target.entity().discard());
+            lane.clearTowers();
+            AreaEffectLaneIndex.unregister(lane);
+            MageStates.clear(owner);
+        }
+    }
+
+    private static void assertPrimaryMatchesSort(PlayerLane lane, Vec3 center, double range) {
+        Optional<SemionMonsterEntity> expected = MageTowerRuntime.liveMonsters(lane).stream()
+                .filter(entity -> !entity.isStealthed() && !entity.isDominated())
+                .sorted(Comparator.comparing((SemionMonsterEntity entity) -> MageTowerRuntime.isIncome(entity.runtimeMonster()))
+                        .thenComparingDouble(entity -> -entity.runtimeMonster().laneProgress()))
+                .filter(entity -> entity.position().distanceToSqr(center) <= range * range).findFirst();
+        require(MageTowerRuntime.firstPrioritizedInRange(lane, center, range).equals(expected),
+                "Primary selection must match the old stable sorted reference across order and live-state changes.");
+    }
+
     @GameTest
     public void augmentsReplayTheThirdSpellAndLimitWorldTargets(GameTestHelper context) {
         UUID owner = stableUuid("mage-augment-world");
@@ -311,7 +410,14 @@ public final class MageGameTest {
             String id,
             Optional<UUID> sender
     ) {
-        Monster runtime = new Monster(id, TeamId.RED, 1, sender, Optional.empty(),
+        return spawnTarget(context, lane, position, id, sender, Optional.empty());
+    }
+
+    private static SpawnedTarget spawnTarget(
+            GameTestHelper context, PlayerLane lane, Vec3 position, String id,
+            Optional<UUID> sender, Optional<TeamId> senderTeam
+    ) {
+        Monster runtime = new Monster(id, TeamId.RED, 1, sender, senderTeam,
                 200.0, 0.0, 20.0, AttackKind.MELEE, "minecraft:zombie", 5L);
         SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
         entity.configureFrom(runtime, lane.laneLayout());

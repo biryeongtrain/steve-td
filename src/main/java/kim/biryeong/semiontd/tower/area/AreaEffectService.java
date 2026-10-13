@@ -69,11 +69,9 @@ public final class AreaEffectService implements AreaEffectApi {
                 .map(SemionMonsterEntity.class::cast)
                 .toList();
         if (request.maxTargets() != Integer.MAX_VALUE && candidates.size() > request.maxTargets()) {
-            candidates = candidates.stream()
-                    .sorted(Comparator.comparingDouble((SemionMonsterEntity monster) -> monster.position().distanceToSqr(request.center()))
-                            .thenComparing(monster -> monster.runtimeMonster().logicalId()))
-                    .limit(request.maxTargets())
-                    .toList();
+            candidates = AreaTargetSelection.sortedFirst(candidates,
+                    Comparator.comparingDouble((SemionMonsterEntity monster) -> monster.position().distanceToSqr(request.center()))
+                            .thenComparing(monster -> monster.runtimeMonster().logicalId()), request.maxTargets());
         }
         return apply(request.source(), request.effectId(), request.center(), request.radius(), request.vfx(), candidates,
                 SemionMonsterEntity::position, action);
@@ -102,7 +100,10 @@ public final class AreaEffectService implements AreaEffectApi {
             for (SemionTowerEntity entity : level.getEntitiesOfClass(
                     SemionTowerEntity.class,
                     searchBox(request.center(), request.radius()),
-                    target -> validTowerEntity(request.source(), target)
+                    target -> request.alliedTeam()
+                            ? target.isAlive() && !target.isRemoved() && target.runtimeTower() != null
+                                    && request.source().teamId() == target.teamId()
+                            : validTowerEntity(request.source(), target)
             )) {
                 Tower tower = entity.runtimeTower();
                 boolean illusion = entity.isIllusionClone() || tower instanceof IllusionRuntimeTower;
@@ -116,7 +117,9 @@ public final class AreaEffectService implements AreaEffectApi {
         double radiusSqr = request.radius() * request.radius();
         List<AreaTowerTarget> filtered = candidates.values().stream()
                 .filter(target -> request.includeSource() || target.tower() != request.source().runtimeTower())
-                .filter(target -> validTowerTarget(request.source(), target))
+                .filter(target -> request.alliedTeam()
+                        ? target.tower().health() > 0 && request.source().teamId() == target.tower().teamId()
+                        : validTowerTarget(request.source(), target))
                 .filter(target -> towerPosition(target).distanceToSqr(request.center()) <= radiusSqr)
                 .filter(request.targetFilter())
                 .toList();
@@ -125,7 +128,7 @@ public final class AreaEffectService implements AreaEffectApi {
     }
 
     private PlayerLane activeLane(SemionTowerEntity source) {
-        MinecraftServer server = source.getServer();
+        MinecraftServer server = source.level().getServer();
         if (server == null) {
             return null;
         }
@@ -147,7 +150,7 @@ public final class AreaEffectService implements AreaEffectApi {
 
     private static <T> AreaEffectResult<T> apply(
             SemionTowerEntity source,
-            net.minecraft.resources.ResourceLocation effectId,
+            net.minecraft.resources.Identifier effectId,
             Vec3 center,
             double radius,
             kim.biryeong.semiontd.api.area.AreaVfxSpec vfx,
@@ -198,7 +201,7 @@ public final class AreaEffectService implements AreaEffectApi {
         return tower.health() > 0.0
                 && source.ownerPlayer().equals(tower.ownerPlayer())
                 && source.teamId() == tower.teamId()
-                && source.laneId() == tower.laneId();
+                && source.laneId() == tower.combatLaneId();
     }
 
     private static Optional<SemionTowerEntity> towerEntity(Tower tower, ServerLevel level) {

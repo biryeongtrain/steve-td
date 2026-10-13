@@ -27,7 +27,7 @@ import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.TowerType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.decoration.ArmorStand;
@@ -324,7 +324,7 @@ public final class QueenCardTower extends ProductionTower {
         entity.setCustomName(Component.literal((isJoker() ? "조커 → " : "") + value.label() + " 카드병정"));
         entity.setCustomNameVisible(true);
         ItemStack item = switch (value.suit()) {
-            case HEART -> new ItemStack(Items.RED_DYE);
+            case HEART -> new ItemStack(Items.DYE.red());
             case DIAMOND -> new ItemStack(Items.DIAMOND);
             case CLUB -> new ItemStack(Items.OAK_SAPLING);
             case SPADE -> new ItemStack(Items.IRON_SHOVEL);
@@ -345,7 +345,7 @@ public final class QueenCardTower extends ProductionTower {
         equipmentVisual = TowerEquipmentVisual.sync(equipmentVisual, entity(lane).orElse(null));
     }
 
-    private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, path);
+    private static Identifier id(String path) {
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, path);
     }
 }

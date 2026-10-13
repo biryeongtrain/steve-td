@@ -213,7 +213,7 @@ final class DemonLordAugments {
     private void showEcho(ServerPlayer player, PlayerLane lane, double side, long now) {
         ArmorStand visual = new ArmorStand(lane.arenaWorld(), player.getX() + side, player.getY(), player.getZ());
         visual.setInvisible(true);
-        visual.setInvulnerable(true);
+        visual.setPermanentlyInvulnerable(true);
         visual.setNoGravity(true);
         visual.setSilent(true);
         visual.setShowArms(true);
@@ -227,7 +227,7 @@ final class DemonLordAugments {
             visual.setItemSlot(slot, player.getItemBySlot(slot).copy());
         }
         ItemStack head = new ItemStack(Items.PLAYER_HEAD);
-        head.set(DataComponents.PROFILE, new ResolvableProfile(player.getGameProfile()));
+        head.set(DataComponents.PROFILE, ResolvableProfile.createResolved(player.getGameProfile()));
         visual.setItemSlot(EquipmentSlot.HEAD, head);
         if (lane.arenaWorld().addFreshEntity(visual)) {visuals.add(visual);}
         visualsUntil = now + 10;

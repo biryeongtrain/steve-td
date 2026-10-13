@@ -4,7 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import eu.pb4.polymer.core.api.other.PolymerMapCodec;
-import xyz.nucleoid.packettweaker.PacketContext;
+import net.fabricmc.fabric.api.networking.v1.context.PacketContext;
 
 import java.util.Optional;
 import net.minecraft.server.dialog.body.DialogBody;
@@ -22,7 +22,10 @@ public record AlignedItemBody(
 ) implements DialogBody {
     public static final MapCodec<AlignedItemBody> MAP_CODEC = PolymerMapCodec.ofDialogBody(
             RecordCodecBuilder.mapCodec(instance -> instance.group(
-                    ItemStack.STRICT_CODEC.fieldOf("item").forGetter(AlignedItemBody::item),
+                    net.minecraft.world.item.ItemStackTemplate.CODEC
+                            .xmap(net.minecraft.world.item.ItemStackTemplate::create,
+                                    net.minecraft.world.item.ItemStackTemplate::fromNonEmptyStack)
+                            .fieldOf("item").forGetter(AlignedItemBody::item),
                     AlignedMessage.DIALOG_BODY_CODEC.fieldOf("description").forGetter(AlignedItemBody::description),
                     Codec.BOOL.optionalFieldOf("show_decorations", true).forGetter(AlignedItemBody::showDecorations),
                     Codec.BOOL.optionalFieldOf("show_tooltip", true).forGetter(AlignedItemBody::showTooltip),
@@ -39,7 +42,7 @@ public record AlignedItemBody(
 
     public ItemBody asVanillaBody(PacketContext context) {
         return new ItemBody(
-                this.item,
+                net.minecraft.world.item.ItemStackTemplate.fromNonEmptyStack(this.item),
                 Optional.of(this.description.asVanillaBody(context)),
                 this.showDecorations,
                 this.showTooltip,

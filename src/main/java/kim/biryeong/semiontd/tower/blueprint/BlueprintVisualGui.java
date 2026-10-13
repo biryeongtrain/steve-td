@@ -38,7 +38,7 @@ public final class BlueprintVisualGui extends SimpleGui {
             GuiElementBuilder builder = GuiElementBuilder.from(BlueprintVisuals.icon(option.visual()))
                     .setName(text(option.sourceName(), option.sourceTowerId().equals(selected) ? ChatFormatting.GREEN : ChatFormatting.WHITE))
                     .addLoreLineRaw(text("클릭: 이 겉모습으로", ChatFormatting.GRAY))
-                    .setCallback((slot, type, action) -> {
+                    .setCallback((slot, type, action, clickedGui) -> {
                         BlueprintDraft.of(player.getUUID()).visualSourceId = option.sourceTowerId();
                         new BlueprintEditorGui(player, gameManager).open();
                     });
@@ -50,15 +50,15 @@ public final class BlueprintVisualGui extends SimpleGui {
         if (current > 0) {
             setSlot(45, new GuiElementBuilder(Items.ARROW)
                     .setName(text("이전 쪽", ChatFormatting.YELLOW))
-                    .setCallback((slot, type, action) -> new BlueprintVisualGui(player, gameManager, current - 1).open()));
+                    .setCallback((slot, type, action, clickedGui) -> new BlueprintVisualGui(player, gameManager, current - 1).open()));
         }
         setSlot(49, new GuiElementBuilder(Items.BARRIER)
                 .setName(text("편집 창으로", ChatFormatting.RED))
-                .setCallback((slot, type, action) -> new BlueprintEditorGui(player, gameManager).open()));
+                .setCallback((slot, type, action, clickedGui) -> new BlueprintEditorGui(player, gameManager).open()));
         if (current < pages - 1) {
             setSlot(53, new GuiElementBuilder(Items.ARROW)
                     .setName(text("다음 쪽", ChatFormatting.YELLOW))
-                    .setCallback((slot, type, action) -> new BlueprintVisualGui(player, gameManager, current + 1).open()));
+                    .setCallback((slot, type, action, clickedGui) -> new BlueprintVisualGui(player, gameManager, current + 1).open()));
         }
     }
 }

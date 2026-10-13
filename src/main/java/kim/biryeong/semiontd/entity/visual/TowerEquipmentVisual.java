@@ -18,7 +18,7 @@ public final class TowerEquipmentVisual {
         if (visual == null || visual.isRemoved()) {
             visual = new ArmorStand(level, source.getX(), source.getY(), source.getZ());
             visual.setInvisible(true);
-            visual.setInvulnerable(true);
+            visual.setPermanentlyInvulnerable(true);
             visual.setNoGravity(true);
             visual.setSilent(true);
             visual.setShowArms(true);

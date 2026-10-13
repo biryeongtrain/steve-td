@@ -14,6 +14,10 @@ public final class AugmentDescriptions {
     private AugmentDescriptions() {}
 
     public static String describe(AugmentDefinition card, AugmentConfig config) {
+        return AugmentBriefDescriptions.describe(card, config);
+    }
+
+    static String completeDescription(AugmentDefinition card, AugmentConfig config) {
         String effect = AugmentCatalog.effectId(card.id());
         String id = effect.substring(effect.indexOf(':') + 1);
         String mode = AugmentCatalog.fixedMode(card.id());

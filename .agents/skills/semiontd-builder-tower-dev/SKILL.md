@@ -5,7 +5,7 @@ description: "Implement, extend, review, debug, or balance SemionTD builders/job
 
 # SemionTD Builder and Tower Development
 
-Implement the smallest complete builder or tower change that fits the repository's current architecture. Treat source, active server configuration, player-visible UI, web export, and executable tests as one delivery surface.
+Implement the smallest complete builder or tower change that fits the repository's current architecture. Treat source, applicable balance configuration, player-visible UI, web export, and executable tests as one delivery surface. The current checkout targets Minecraft 26.3 / Java 25. Confirm the exact dependencies and tasks in the build before using an example.
 
 ## Operating contract
 
@@ -22,10 +22,10 @@ Use this precedence:
 
 1. Current checked-out source and tests define APIs, lifecycle order, persistence, and integration points.
 2. The active server's `config/semion-td/tower_balance.json` and `economy.json` define deployed balance when the task concerns live balance.
-3. `TowerBalanceConfig.defaultConfig()` supplies fallback and packaged defaults, not proof of current live values.
+3. `TowerBalanceConfig.defaultConfig()` loads `src/main/resources/semiontd/balance-defaults/tower_balance.json` through `BundledBalanceDefaults`, with code defaults as fallback. Neither is proof of current live values. An explicit request to synchronize published patches determines the requested new defaults; it does not authorize overwriting operator overrides.
 4. This skill explains the architecture but never overrides newer source.
 
-If the active server configuration is unavailable, say that conclusions use source defaults. Do not silently substitute an old snapshot or a personal deployment path.
+If the active server configuration is unavailable or intentionally deleted, say that conclusions use packaged defaults. Do not recreate a deleted operational file, silently substitute an old snapshot, or start an operational server. For an approved published-patch synchronization, retain the source URL, applied status, date/version and units in the existing balance contract fixture; verify both packaged defaults and runtime loading.
 
 ## Workflow
 
@@ -37,7 +37,7 @@ State the mechanic, affected builders/towers, required persistence, player-visib
 
 Follow the relevant path end to end:
 
-- builder lifecycle: `JobRegistry` -> `SemionJob` hooks -> `SemionGame` / `EconomyService`;
+- builder lifecycle: `SemionGame` / `EconomyService` -> `SemionJob` hooks overridden in each `*TowerJob`; lane boundaries live in `PlayerLane` (`resetForRound`, `markWaveStarted`, `clearTowers`);
 - tower availability: family constants -> family catalog -> `ProductionTowerCatalogs` -> `ProductionTowerService`;
 - combat: `SemionTowerEntity` / `TowerAttackMonsterGoal` -> `Tower` hooks -> shared damage and area-effect APIs;
 - balance: `TowerBalanceConfig` -> `SemionConfigLoader` -> `TowerBalanceRuntime` -> resolved catalog entries;
@@ -48,13 +48,21 @@ Inspect every caller before changing a shared hook or service.
 
 ### 3. Choose the closest complete sibling
 
-Compare at least one simple family and one family with similar state, targeting, support, or resource behavior. Copy structure, not stale values. Reuse current helpers for damage, timed effects, area effects, VFX, descriptions, state transfer, and config merging.
+Use the [registered-builder implementation comparison](../../../docs/production-tower-catalog.ko.md#빌더별-구현-방식-선택) to choose a family with matching state ownership, lifetime and trigger, then compare a simpler family. The comparison covers every registered builder and Default, with actual code, tests and limitations. No family is the default model for every responsibility. Reuse current helpers for damage, timed effects, area effects, VFX, descriptions, state transfer and config merging. Preserve the chosen family's ordering, reset/copy and failure contracts; do not copy its class count, stale values or unrelated game rules. Responsibility separation is a design choice, and performance claims require measurements under identical inputs.
 
-### 4. Implement the whole integration slice
+### 4. Keep responsibilities and tests together
+
+Name new classes by package/category/specific responsibility, for example `ocean/OceanTowerRuntimeTest` and `villager/VillagerTowerAugmentCombatTest`. Keep family behavior and its JUnit/GameTest tests in the matching `tower/<family>` package. Keep actual cross-family contracts in the responsible common package; do not duplicate them into each family.
+
+Reuse `GameTestParticipantFixture`, `AugmentCombatFixture` or `AugmentControllerFixture` only when the test needs that setup. Register concrete GameTest classes in `src/gametest/resources/fabric.mod.json`; preserve annotations, invocation interfaces, source sets and task discovery when moving a test. Keep helper bases unregistered. Check method identity and registration before and after moves.
+
+Keep catalog data, family state, combat hooks and UI presentation separate where they have distinct lifetimes or callers. Split a class for a concrete responsibility, not to meet a line limit. A responsibility-only move is not a performance improvement.
+
+### 5. Implement the whole integration slice
 
 For a new builder family, normally cover:
 
-- immutable `SemionJob` definition and `JobRegistry` registration;
+- immutable `SemionJob` definition and `JobRegistry` registration (override only the event hooks the builder needs);
 - stable tower IDs, tier/role grouping, visuals, descriptions, and upgrade graph;
 - runtime tower classes only where behavior differs from the base classes;
 - family catalog registration and top-level `ProductionTowerCatalogs` wiring;
@@ -65,11 +73,11 @@ For a new builder family, normally cover:
 
 Do not create a custom placement, targeting, damage, scan, or visual-effect pipeline if the shared pipeline can express the mechanic.
 
-### 5. Verify reload and compatibility
+### 6. Verify reload and compatibility
 
 Confirm missing config keys are backfilled without overwriting configured values, invalid config preserves last-known-good runtime data, and `/semiontd reload` resolves active catalog/tower types correctly. Preserve stable IDs and legacy upgrade-cost lookup when changing an existing family.
 
-### 6. Validate at the correct depth
+### 7. Validate at the correct depth
 
 Run the smallest focused test first, then the required suite:
 
@@ -80,12 +88,14 @@ Run the smallest focused test first, then the required suite:
 git diff --check
 ```
 
+Use the full `test runGameTest remapJar` gate for implemented gameplay changes. `remapJar` is this 26.3 build's compatibility task for the distributable output; do not transplant a legacy Loom remapping setup. The configured GameTest task creates a fresh isolated world. Keep unrelated operating-server mods out of the default suite while retaining required runtime dependencies.
+
 Prefix with `rtk` where required. Run `runGameTest` for entity, placement, upgrade, lifecycle, team-lane, dialog, or VFX behavior. Run `remapJar` or `build` when a distributable artifact or packaged resources are part of the request.
 
 ## Non-negotiable invariants
 
-- Treat registered jobs as shared singleton objects. Store mutable match/player state in keyed services, and clear it at match start, elimination, and runtime shutdown as required.
-- Do not assume the lane is attached inside `SemionJob.onSelected`; selection runs before `team.addPlayer` in the current lifecycle.
+- Treat jobs as shared objects. Keep job metadata, permissions, economy modifiers and event hook overrides together in the `*TowerJob`; do not add a separate lifecycle class per builder. Keep mutable match/player state in keyed services and preserve the all-participant pre/post-lane shutdown phases.
+- Do not assume the lane is attached inside `SemionJob.onSelected`; selection runs before `team.addPlayer`. There is no deselection hook, and reconnect does not replay selection or match-start hooks. Preserve the six `PlayerLane` boundaries around temporary-copy removal, tower wave callbacks and tower teardown; do not move actual wave-start behavior into the preparation-phase round hook.
 - Make every exported tower belong to exactly one builder through `includesTowerInCatalog`; context-sensitive jobs must not rely only on `canUseTower`.
 - Register only tier-one choices as starters. Register all entries before linking upgrade edges.
 - Resolve catalog types through `TowerBalanceRuntime` and price upgrades through `TowerBalanceRuntime.upgradeCost(from, upgradeId)`, not the target tower's placement cost.
@@ -96,6 +106,7 @@ Prefix with `rtk` where required. Run `runGameTest` for entity, placement, upgra
 - Give every new builder/job its own `BuilderPalette` entry and route all of its tower IDs through `TowerVfxService.paletteFor(...)`. Do not leave a new builder on `DEFAULT` or reuse another builder's palette. The palette must be exercised by production attack, secondary, area, or special VFX; an enum-only entry is incomplete.
 - Render config-driven numeric descriptions with `TowerDescriptionRegistry` templates. Expose changing state through `runtimeDetailLines()` or the timed-effect dialog path.
 - Keep `WebCatalogExporter.snapshot()` valid and verify that descriptions contain no unresolved placeholders.
+- Preserve ordered lane snapshots, callback-time membership checks, FIFO spawn order and directed upgrade prices when optimizing. Count collection construction, invalidation and memory costs; compare unchanged, responsibility-only and algorithm-improved stages under identical inputs before claiming MSPT or TPS gains.
 - Do not declare success from compilation alone. Report the exact checks run, their result, and any environment-only blocker.
 
 ## Completion report
@@ -106,3 +117,6 @@ Report only:
 2. changed files or installed artifact path;
 3. exact test, GameTest, reload, and packaging evidence;
 4. live-config assumptions or blockers that remain.
+
+
+하이퍼 캐리형(엔드·흑마법사·마왕) 작업은 `references/implementation.md`의 하이퍼 캐리형 빌더 공통 계약을 따른다. 특성·증강 제한, 생명력 흡수, 체력·피해의 선형 구간 및 스케일 연결과 검증은 필수다. 미확정 수치를 임의로 만들지 말고 기존 구현의 미이행 항목을 명시한다.

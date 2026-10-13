@@ -1,6 +1,6 @@
 {
-  "enabled": false,
-  "publicPoolEnabled": false,
+  "enabled": true,
+  "publicPoolEnabled": true,
   "rarityWeights": {
     "GGG": 18,
     "GGP": 11,
@@ -89,8 +89,7 @@
     "semiontd:job_warlock_towers_g1": {
       "radius": 3,
       "maxTargets": 12,
-      "healthRatio": 1,
-      "growthBonus": 0.25
+      "healthRatio": 1
     },
     "semiontd:job_warlock_towers_g2": {
       "healthThreshold": 0.6,
@@ -183,7 +182,15 @@
       "damageRatio": 0.75
     },
     "semiontd:job_end_towers_p": {
-      "statRatio": 0.5
+      "chargeTicks": 60,
+      "rushDamageRatio": 1.0,
+      "stunTicks": 200,
+      "knockbackDistance": 20,
+      "flightHeight": 10,
+      "width": 6,
+      "burnDurationTicks": 200,
+      "burnIntervalTicks": 20,
+      "burnDamageRatio": 0.25
     },
     "semiontd:job_ocean_s": {},
     "semiontd:job_ocean_g1": {
@@ -571,8 +578,8 @@
       "redirectRatio": 0.35
     },
     "semiontd:battlefield_mastery": {
-      "bonusPerStack": 0.2,
-      "damageThreshold": 0.3,
+      "bonusPerStack": 0.15,
+      "damageThreshold": 0.2,
       "maxStacks": 4.0
     },
     "semiontd:biased_armor": {
@@ -614,7 +621,7 @@
     "semiontd:engagement_plan": {
       "longDamageBonus": 0.25,
       "longDamageReduction": 0.15,
-      "quickDamageBonus": 0.2,
+      "quickDamageBonus": 0.35,
       "transitionTicks": 160.0
     },
     "semiontd:finishing_fire_1": {
@@ -648,7 +655,7 @@
       "areaPerTier": 0.15
     },
     "semiontd:forbidden_blueprint": {
-      "payoutMultiplier": 0.9,
+      "payoutMultiplier": 0.95,
       "ticketCount": 2.0,
       "ticketValue": 450.0
     },
@@ -741,8 +748,8 @@
       "hatchWaves": 1.0,
       "hatchedDamage": 200.0,
       "hatchedHealth": 1000.0,
-      "hatchedIntervalTicks": 30.0,
-      "hatchedRange": 5.0
+      "hatchedIntervalTicks": 10.0,
+      "hatchedRange": 15.0
     },
     "semiontd:support_performance": {
       "incomeBonus": 10.0,
@@ -778,6 +785,16 @@
     "semiontd:winning_barrage": {
       "charges": 3.0,
       "damageBonus": 0.6
+    },
+    "semiontd:job_magic_school_s": {},
+    "semiontd:job_magic_school_g1": {},
+    "semiontd:job_magic_school_g2": {
+      "proficiencyGainBonus": 0.3,
+      "proficiencyCapBonus": 250.0,
+      "balanceVersion": 1.0
+    },
+    "semiontd:job_magic_school_p": {
+      "diamondReward": 100.0
     }
   },
   "disabledIds": []

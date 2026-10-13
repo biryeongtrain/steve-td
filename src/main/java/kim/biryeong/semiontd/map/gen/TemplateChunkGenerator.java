@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.map.gen;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.biome.BiomeManager;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.SectionPos;
 import net.minecraft.resources.ResourceKey;
@@ -45,7 +46,7 @@ public class TemplateChunkGenerator extends GameChunkGenerator {
     }
 
     @Override
-    public CompletableFuture<ChunkAccess> fillFromNoise(Blender blender, RandomState noiseConfig, StructureManager structureAccessor, ChunkAccess chunk) {
+    public CompletableFuture<ChunkAccess> buildTerrain(ChunkAccess chunk, Blender blender, RandomState noiseConfig, StructureManager structureAccessor, BiomeManager biomeManager, WorldGenRegion carverBiomeRegion, java.util.Set<net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome>> possibleBiomes) {
         var chunkPos = chunk.getPos();
 
         var chunkBounds = BlockBounds.ofChunk(chunk);
@@ -64,7 +65,7 @@ public class TemplateChunkGenerator extends GameChunkGenerator {
             int maxSectionY = this.worldBounds.max().getY() >> 4;
 
             for (int sectionY = maxSectionY; sectionY >= minSectionY; sectionY--) {
-                long sectionPos = SectionPos.asLong(chunkPos.x, sectionY, chunkPos.z);
+                long sectionPos = SectionPos.asLong(chunkPos.x(), sectionY, chunkPos.z());
 
                 var templateChunk = this.template.getChunk(sectionPos);
                 if (templateChunk == null) {
@@ -123,13 +124,13 @@ public class TemplateChunkGenerator extends GameChunkGenerator {
             return;
         }
 
-        var protochunk = (ProtoChunk) region.getChunk(chunkPos.x, chunkPos.z);
+        var protochunk = (ProtoChunk) region.getChunk(chunkPos.x(), chunkPos.z());
 
         int minSectionY = this.worldBounds.min().getY() >> 4;
         int maxSectionY = this.worldBounds.max().getY() >> 4;
 
         for (int sectionY = maxSectionY; sectionY >= minSectionY; sectionY--) {
-            this.template.getEntitiesInChunk(chunkPos.x, sectionY, chunkPos.z).forEach(entity -> {
+            this.template.getEntitiesInChunk(chunkPos.x(), sectionY, chunkPos.z()).forEach(entity -> {
                 var entityTag = entity.createEntityNbt(BlockPos.ZERO);
                 protochunk.addEntity(entityTag);
             });

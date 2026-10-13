@@ -173,12 +173,17 @@ public final class MageWizardTower extends ProductionTower {
             collapseTicks = ticks("collapseDelayTicks", MageBalance.DIMENSIONAL_COLLAPSE_DELAY_TICKS);
             return;
         }
-        List<SemionMonsterEntity> targets = worldCastAvailable(selected)
-                ? laneTargets() : targetsInRange(source, spellRange(selected));
-        if (targets.isEmpty()) {
+        SemionMonsterEntity primary;
+        if (worldCastAvailable(selected)) {
+            List<SemionMonsterEntity> targets = laneTargets();
+            primary = targets.isEmpty() ? null : targets.getFirst();
+        } else {
+            primary = MageTowerRuntime.firstPrioritizedInRange(currentLane, source.position(), spellRange(selected))
+                    .orElse(null);
+        }
+        if (primary == null) {
             return;
         }
-        SemionMonsterEntity primary = targets.getFirst();
         if (!tryBeginCast(selected)) {
             return;
         }

@@ -46,13 +46,17 @@ public final class SemionSidebarHudService {
     }
 
     public void refreshNow(MinecraftServer server, SemionGame game, MatchMode matchMode, Set<UUID> protectedPlayerIds) {
+        UiLobbyRosterSummary lobby = null;
         Set<UUID> onlinePlayerIds = new HashSet<>();
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             onlinePlayerIds.add(player.getUUID());
             if (protectedPlayerIds.contains(player.getUUID())) {
                 continue;
             }
-            List<Component> lines = sidebarLinesFor(player, game, matchMode, server);
+            if (lobby == null && game.canConfigureRoster()) {
+                lobby = UiLobbyRosterSummary.capture(server, game, matchMode);
+            }
+            List<Component> lines = sidebarLinesFor(player, game, matchMode, server, lobby);
             if (lines.isEmpty()) {
                 remove(player);
             } else {
@@ -68,12 +72,16 @@ public final class SemionSidebarHudService {
         if (playerIds == null || playerIds.isEmpty()) {
             return;
         }
+        UiLobbyRosterSummary lobby = null;
         for (UUID playerId : playerIds) {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             if (player == null) {
                 continue;
             }
-            List<Component> lines = sidebarLinesFor(player, game, matchMode, server);
+            if (lobby == null && game.canConfigureRoster()) {
+                lobby = UiLobbyRosterSummary.capture(server, game, matchMode);
+            }
+            List<Component> lines = sidebarLinesFor(player, game, matchMode, server, lobby);
             if (lines.isEmpty()) {
                 remove(player);
             } else {
@@ -159,7 +167,7 @@ public final class SemionSidebarHudService {
 
     private void updateActionbar(ServerPlayer player, SemionGame game) {
         SemionHudTextService.actionbarTextFor(player.getUUID(), game)
-                .ifPresent(component -> player.displayClientMessage(component, true));
+                .ifPresent(component -> player.sendSystemMessage(component, true));
     }
 
     private void updateActionbar(
@@ -169,21 +177,25 @@ public final class SemionSidebarHudService {
             boolean highlightOn
     ) {
         SemionHudTextService.actionbarTextFor(player.getUUID(), game, highlightTarget, highlightOn)
-                .ifPresent(component -> player.displayClientMessage(component, true));
+                .ifPresent(component -> player.sendSystemMessage(component, true));
     }
 
     private List<Component> sidebarLinesFor(
             ServerPlayer player,
             SemionGame game,
             MatchMode matchMode,
-            MinecraftServer server
+            MinecraftServer server,
+            UiLobbyRosterSummary lobby
     ) {
         return SemionHudTextService.sidebarLinesFor(
                 player,
                 game,
                 matchMode,
                 server,
-                damageViewEnabled(player.getUUID())
+                damageViewEnabled(player.getUUID()),
+                HighlightTarget.NONE,
+                false,
+                lobby
         );
     }
 

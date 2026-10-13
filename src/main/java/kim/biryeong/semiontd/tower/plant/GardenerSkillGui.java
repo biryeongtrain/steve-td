@@ -64,7 +64,7 @@ public final class GardenerSkillGui extends SimpleGui {
                     ? Component.literal("최고 단계입니다.").withStyle(ChatFormatting.GREEN)
                     : Component.literal("강화 " + cost + " 다이아").withStyle(diamond >= cost ? ChatFormatting.AQUA : ChatFormatting.RED));
             if (!max && editable) {
-                builder.setCallback((slot, type, action) -> upgrade(skill));
+                builder.setCallback((slot, type, action, clickedGui) -> upgrade(skill));
             }
             setSlot(SKILL_SLOTS[index], builder);
         }
@@ -77,9 +77,9 @@ public final class GardenerSkillGui extends SimpleGui {
         }
         GardenerTower.UpgradeResult result = tower.upgrade(skill, semionPlayer.economy());
         boolean success = result == GardenerTower.UpgradeResult.SUCCESS;
-        player.displayClientMessage(Component.literal(result.message())
+        player.sendSystemMessage(Component.literal(result.message())
                 .withStyle(success ? ChatFormatting.GREEN : ChatFormatting.RED), true);
-        player.playNotifySound(success ? SoundEvents.PLAYER_LEVELUP : SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 0.7f, 1.4f);
+        kim.biryeong.semiontd.util.SemionPlayerPackets.playSound(player, success ? SoundEvents.PLAYER_LEVELUP : SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 0.7f, 1.4f);
         refresh();
     }
 }

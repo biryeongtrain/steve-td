@@ -1,7 +1,7 @@
 package kim.biryeong.semiontd.mixin.accessor;
 
 import net.minecraft.network.syncher.EntityDataAccessor;
-import net.minecraft.world.entity.animal.MushroomCow;
+import net.minecraft.world.entity.animal.cow.MushroomCow;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 

@@ -17,10 +17,10 @@ class FakePlayerTowerVisualsTest {
     void succubusAlwaysUsesTheFixedSlimTextureWithAnOwnerScopedProfile() throws Exception {
         GameProfile first = FakePlayerTowerVisuals.succubusProfile(UUID.randomUUID());
         GameProfile second = FakePlayerTowerVisuals.succubusProfile(UUID.randomUUID());
-        var firstTexture = first.getProperties().get("textures").iterator().next();
-        var secondTexture = second.getProperties().get("textures").iterator().next();
+        var firstTexture = first.properties().get("textures").iterator().next();
+        var secondTexture = second.properties().get("textures").iterator().next();
 
-        assertNotEquals(first.getId(), second.getId());
+        assertNotEquals(first.id(), second.id());
         assertEquals(firstTexture.value(), secondTexture.value());
         assertEquals(FakePlayerTowerVisuals.SUCCUBUS_TEXTURE_SIGNATURE, firstTexture.signature());
         String metadata = new String(Base64.getDecoder().decode(firstTexture.value()), StandardCharsets.UTF_8);

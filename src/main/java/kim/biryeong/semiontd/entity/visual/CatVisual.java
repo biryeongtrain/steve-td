@@ -1,7 +1,7 @@
 package kim.biryeong.semiontd.entity.visual;
 
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.entity.animal.CatVariant;
+import net.minecraft.world.entity.animal.feline.CatVariant;
 import net.minecraft.world.item.DyeColor;
 
 public final class CatVisual {

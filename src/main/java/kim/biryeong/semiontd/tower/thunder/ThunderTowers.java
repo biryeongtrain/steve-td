@@ -40,7 +40,7 @@ public final class ThunderTowers {
 
     public static final TowerType ROD_T1 = tower(
             "thunder_rod_t1", "피뢰침", 30, 70.0, 0.0, 0.0, 20, -5,
-            BlockDisplayVisual.builder(Blocks.LIGHTNING_ROD.defaultBlockState()).scale(0.8).build(),
+            BlockDisplayVisual.builder(Blocks.LIGHTNING_ROD.weathering().unaffected().defaultBlockState()).scale(0.8).build(),
             List.of(
                     "<gray> 공격하지 않고 전력만 생산하는 설비입니다. </gray>",
                     "<aqua> 전력 <yellow>{ability.powerOutput:integer}</yellow>을 꾸준히 공급합니다. </aqua>",
@@ -50,7 +50,7 @@ public final class ThunderTowers {
 
     public static final TowerType ROD_COPPER = tower(
             "thunder_rod_copper", "구리 피뢰탑", 75, 130.0, 0.0, 0.0, 20, -5,
-            BlockDisplayVisual.builder(Blocks.LIGHTNING_ROD.defaultBlockState()).scale(1.15).build(),
+            BlockDisplayVisual.builder(Blocks.LIGHTNING_ROD.weathering().unaffected().defaultBlockState()).scale(1.15).build(),
             List.of(
                     "<gray> 출력이 흔들리지 않는 안정형 발전 설비입니다. </gray>",
                     "<aqua> 전력 <yellow>{ability.powerOutput:integer}</yellow>를 고정으로 공급합니다. </aqua>",
@@ -60,7 +60,7 @@ public final class ThunderTowers {
 
     public static final TowerType ROD_STORM = tower(
             "thunder_rod_storm", "폭풍 유도침", 75, 100.0, 0.0, 0.0, 20, -5,
-            BlockDisplayVisual.builder(Blocks.LIGHTNING_ROD.defaultBlockState()).scale(1.15).build(),
+            BlockDisplayVisual.builder(Blocks.LIGHTNING_ROD.weathering().unaffected().defaultBlockState()).scale(1.15).build(),
             List.of(
                     "<gray> 낙뢰를 끌어오는 도박형 발전 설비입니다. </gray>",
                     "<aqua> 웨이브마다 전력 <yellow>{ability.stormMinOutput:integer}~{ability.stormMaxOutput:integer}</yellow> 사이를 뽑습니다. </aqua>",
@@ -73,7 +73,7 @@ public final class ThunderTowers {
 
     public static final TowerType ARMADILLO_T1 = tower(
             "thunder_armadillo_t1", "꼬마 아르마딜로", 50, 250.0, 2.4, 8.0, 20, 55,
-            EntityVisual.builder(byId(EntityType.ARMADILLO)).scale(0.8).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.ARMADILLO)).scale(0.8).build(),
             List.of(
                     "<gray> 몬스터를 자기 쪽으로 끌어당기는 앞라인 타워입니다. </gray>",
                     "<aqua> 공격할 때 대상을 <yellow>감전</yellow>시켜 잠시 멈춥니다. </aqua>",
@@ -84,7 +84,7 @@ public final class ThunderTowers {
 
     public static final TowerType ARMADILLO_INSULATED = tower(
             "thunder_armadillo_insulated", "절연 아르마딜로", 105, 440.0, 2.6, 15.0, 19, 85,
-            EntityVisual.builder(byId(EntityType.ARMADILLO)).scale(1.0).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.ARMADILLO)).scale(1.0).build(),
             List.of(
                     "<gray> 전기를 통과시키지 않는 껍질로 전력망에서 분리된 타워입니다. </gray>",
                     "<green> 전력을 <yellow>전혀 소비하지 않습니다</yellow>. 전력이 부족해도 항상 100% 성능입니다. </green>",
@@ -95,7 +95,7 @@ public final class ThunderTowers {
 
     public static final TowerType ARMADILLO_RUBBER = tower(
             "thunder_armadillo_rubber", "고무 아르마딜로", 220, 900.0, 2.8, 26.0, 17, 110,
-            EntityVisual.builder(byId(EntityType.ARMADILLO)).scale(1.2).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.ARMADILLO)).scale(1.2).build(),
             List.of(
                     "<gray> 절연 계열의 최종 형태입니다. 전기를 막아내는 두꺼운 껍질로 버팁니다. </gray>",
                     "<green> 전력을 <yellow>전혀 소비하지 않습니다</yellow>. </green>",
@@ -106,7 +106,7 @@ public final class ThunderTowers {
 
     public static final TowerType ARMADILLO_GROUNDED = tower(
             "thunder_armadillo_grounded", "접지 아르마딜로", 100, 300.0, 2.6, 15.0, 19, 85,
-            EntityVisual.builder(byId(EntityType.ARMADILLO)).scale(1.0).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.ARMADILLO)).scale(1.0).build(),
             List.of(
                     "<gray> 전기를 땅으로 흘려 적을 취약하게 만드는 앞라인 타워입니다. </gray>",
                     "<aqua> 공격한 대상에게 <yellow>접지 표식</yellow>을 남깁니다. </aqua>",
@@ -119,7 +119,7 @@ public final class ThunderTowers {
 
     public static final TowerType ARMADILLO_EARTH = tower(
             "thunder_armadillo_earth", "대지 아르마딜로", 215, 560.0, 2.8, 26.0, 17, 110,
-            EntityVisual.builder(byId(EntityType.ARMADILLO)).scale(1.2).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.ARMADILLO)).scale(1.2).build(),
             List.of(
                     "<gray> 접지 계열의 최종 형태입니다. </gray>",
                     "<aqua> 받는 피해를 <yellow>{ability.markDamageBonus:percent}</yellow> 올리고 적 공격력을 <yellow>{ability.markAttackReduction:percent}</yellow> 낮춥니다. </aqua>",
@@ -256,7 +256,7 @@ public final class ThunderTowers {
 
     private static EntityVisual squirrel(String model, double scale) {
         // The rabbit is gameplay fallback data only; players see the Blockbench model.
-        return EntityVisual.builder(byId(EntityType.RABBIT))
+        return EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.RABBIT))
                 .blockbenchModel(model)
                 .scale(scale)
                 .build();

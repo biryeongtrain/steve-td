@@ -1,6 +1,6 @@
 package kim.biryeong.semiontd.entity.visual;
 
-import net.minecraft.world.entity.animal.Salmon;
+import net.minecraft.world.entity.animal.fish.Salmon;
 
 public final class SalmonVisual {
     private SalmonVisual() {

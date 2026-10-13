@@ -45,11 +45,12 @@ public final class InvasionSummon extends BasicIncomeSummon {
             }
             case "dark_priest" -> {
                 double splash = abilityValue("splashRadius", 2.5);
-                entity.setAttackStyle(InvasionAttacks.area(hit, splash,
+                entity.setAttackStyle(InvasionAttacks.area(hit, splash, abilityInt("maxTargets", 5),
                         InvasionAttacks.at(seed -> InvasionVfx.priestBlast(splash, seed))));
                 return List.of(new InvasionGoals.AreaHeal(entity,
                         abilityValue("healRadius", 6.0),
-                        abilityValue("healAmount", 16.0),
+                        abilityValue("healAmount", 16.0) * statGrowth(entity),
+                        abilityValue("healMaxHealthRatio", 0.02),
                         (int) abilityValue("healCooldownTicks", 60.0),
                         (int) abilityValue("healRetryTicks", 10.0)));
             }
@@ -79,7 +80,6 @@ public final class InvasionSummon extends BasicIncomeSummon {
                         abilityValue("minionDamageRatio", 0.15)));
             }
             case "siege_golem" -> {
-                entity.setIgnoresDefenses(true);
                 entity.setAttackStyle(InvasionAttacks.single(hit,
                         InvasionAttacks.at(seed -> InvasionVfx.groundSlam(1.6, seed))));
             }
@@ -93,12 +93,17 @@ public final class InvasionSummon extends BasicIncomeSummon {
             case "creaking" -> entity.setAttackStyle(InvasionAttacks.single(hit, null));
             case "ogre_champion" -> {
                 double splash = abilityValue("splashRadius", 2.8);
-                entity.setAttackStyle(InvasionAttacks.area(hit, splash,
+                entity.setAttackStyle(InvasionAttacks.area(hit, splash, abilityInt("maxTargets", 5),
                         InvasionAttacks.at(seed -> InvasionVfx.groundSlam(splash, seed))));
             }
             default -> {
             }
         }
         return List.of();
+    }
+
+    private double statGrowth(SemionMonsterEntity entity) {
+        Monster monster = entity.runtimeMonster();
+        return monster == null || maxHealth() <= 0.0 ? 1.0 : Math.max(1.0, monster.maxHealth() / maxHealth());
     }
 }

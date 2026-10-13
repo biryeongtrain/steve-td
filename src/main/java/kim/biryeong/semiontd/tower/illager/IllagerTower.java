@@ -22,7 +22,7 @@ import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.raid.Raid;
 
@@ -30,9 +30,9 @@ public class IllagerTower extends EntityBackedTower {
     private static final String OMEN = "job_illager_towers_s";
     public static final String NEXT_TARGET = "job_illager_towers_g2";
     private static final TowerDataKey<Boolean> OMEN_USED = TowerDataKey.of(raidSource("omen_used"), Boolean.class);
-    private static final ResourceLocation RAID_DAMAGE_SOURCE = raidSource("damage");
-    private static final ResourceLocation RAID_ATTACK_SPEED_SOURCE = raidSource("attack_speed");
-    private static final ResourceLocation RAID_DAMAGE_REDUCTION_SOURCE = raidSource("damage_reduction");
+    private static final Identifier RAID_DAMAGE_SOURCE = raidSource("damage");
+    private static final Identifier RAID_ATTACK_SPEED_SOURCE = raidSource("attack_speed");
+    private static final Identifier RAID_DAMAGE_REDUCTION_SOURCE = raidSource("damage_reduction");
 
     private final IllagerTargetPolicy targetPolicy;
 
@@ -246,7 +246,7 @@ public class IllagerTower extends EntityBackedTower {
     private void refreshTimedEffect(
             SemionTowerEntity towerEntity,
             TimedEffectType type,
-            ResourceLocation sourceId,
+            Identifier sourceId,
             double magnitude,
             int ticks
     ) {
@@ -279,7 +279,7 @@ public class IllagerTower extends EntityBackedTower {
         return monster != null && monster.runtimeMonster() != null;
     }
 
-    private static ResourceLocation raidSource(String path) {
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "illager_raid/" + path);
+    private static Identifier raidSource(String path) {
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "illager_raid/" + path);
     }
 }

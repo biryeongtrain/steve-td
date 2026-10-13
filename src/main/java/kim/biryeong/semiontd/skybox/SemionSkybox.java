@@ -1,11 +1,11 @@
 package kim.biryeong.semiontd.skybox;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public record SemionSkybox(
         String id,
         String displayName,
-        ResourceLocation itemModelId,
+        Identifier itemModelId,
         byte[] textureData
 ) {
     public SemionSkybox {

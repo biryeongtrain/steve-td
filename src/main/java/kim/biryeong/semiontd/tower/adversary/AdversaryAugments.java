@@ -13,13 +13,13 @@ import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class AdversaryAugments {
     static final String DARK_HERO = "job_adversary_towers_s";
     static final String ADAPTATION = "job_adversary_towers_g2";
     static final String FINALE = "job_adversary_towers_p";
-    private static final ResourceLocation CORPSE_EXPLOSION = ResourceLocation.fromNamespaceAndPath("semiontd", DARK_HERO);
+    private static final Identifier CORPSE_EXPLOSION = Identifier.fromNamespaceAndPath("semiontd", DARK_HERO);
     private static final MonsterDataKey<Boolean> EXPLODED = MonsterDataKey.of(CORPSE_EXPLOSION, Boolean.class);
 
     private AdversaryAugments() {}

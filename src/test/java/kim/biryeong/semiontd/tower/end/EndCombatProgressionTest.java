@@ -57,7 +57,7 @@ class EndCombatProgressionTest extends EndTestFixture {
         dragon.syncHealth(10.0);
         lane.addTower(shulker);
         dragon.tick(lane);
-        double rawPermanentHealth = 4.0;
+        double rawPermanentHealth = 6.0;
         double rawRoundHealth = 50.0;
         double expectedPermanentHealth = expectedHealthBonus(rawPermanentHealth);
         double expectedTotalHealth = expectedHealthBonus(rawPermanentHealth + rawRoundHealth);
@@ -84,13 +84,13 @@ class EndCombatProgressionTest extends EndTestFixture {
             lane.addTower(tower(EndTowers.T1_SHULKER_TOWER, index + 21));
         }
         tick(dragon, lane, 1);
-        double rawPermanentHealth = 80.0;
+        double rawPermanentHealth = 120.0;
         double rawRoundHealth = 1000.0;
         double rawTotalHealth = rawPermanentHealth + rawRoundHealth;
         double expectedPermanentHealth = expectedHealthBonus(rawPermanentHealth);
         double expectedTotalHealth = expectedHealthBonus(rawTotalHealth);
         double expectedRoundHealth = expectedTotalHealth - expectedPermanentHealth;
-        double rawPermanentDamage = 8.0;
+        double rawPermanentDamage = 12.0;
         double rawRoundDamage = 132.0;
         double rawTotalDamage = rawPermanentDamage + rawRoundDamage;
         double expectedPermanentDamage = expectedDamageBonus(rawPermanentDamage);
@@ -350,6 +350,56 @@ class EndCombatProgressionTest extends EndTestFixture {
         assertEquals(90.0, tower(EndTowers.T1_SHULKER_TOWER, 0).modifyIncomingDamage(null, null, 100.0), 0.0001);
         assertEquals(70.0, tower(EndTowers.T2_SHULKER_TOWER, 0).modifyIncomingDamage(null, null, 100.0), 0.0001);
         assertEquals(50.0, tower(EndTowers.T3_SHULKER_TOWER, 0).modifyIncomingDamage(null, null, 100.0), 0.0001);
+    }
+
+
+    @Test
+    void lifeStealKeepsAllTenStackStepsIndependentOfDamageEfficiency() {
+        EndCombat combat = new EndCombat(EndConfig.RUNTIME);
+        for (int step = 0; step <= 10; step++) {
+            double expected = step * .01;
+            var stacks = new EndTransferStacks(step * 30, 0, 0);
+            assertEquals(expected, combat.lifeStealRatio(stacks), .000001);
+            assertEquals(expected, combat.lifeStealRatio(new EndTransferStacks(step * 30 + 29, 0, 0)), .000001);
+            assertEquals(3 * step, combat.lifeStealHealing(300, stacks), .000001);
+            assertEquals(expected, combat.lifeStealRatio(stacks), .000001);
+        }
+        assertEquals(.1, combat.lifeStealRatio(new EndTransferStacks(1000, 0, 0)), .000001);
+    }
+
+
+    @Test
+    void normalizedLifeStealMatchesEveryRequestedStageAndDamageWithoutDisplayRounding() {
+        EndCombat combat = new EndCombat(EndConfig.RUNTIME);
+        for (int step : new int[] {0, 1, 6, 10}) {
+            EndTransferStacks stacks = new EndTransferStacks(step * 30, 0, 0);
+            for (double damage : new double[] {1, 30, 250, 251, 300, 600, 3000, 6000}) {
+                double expected = step / 10.0 * (damage < 30 ? damage : damage <= 3000 ? 30 : damage * .01);
+                assertEquals(expected, combat.lifeStealHealing(damage, stacks), .000001,
+                        "stage=" + step + ", damage=" + damage);
+            }
+            for (double invalid : new double[] {0, -1, Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY}) {
+                assertEquals(0, combat.lifeStealHealing(invalid, stacks));
+            }
+        }
+        assertEquals(30, combat.lifeStealHealing(30, new EndTransferStacks(1000, 0, 0)), .000001);
+        assertEquals(0, EndCombat.lifeStealProgress(.06, 0));
+    }
+
+
+    @Test
+    void splashUsesTheOutgoingAttackSnapshotBeforeItsOwnDamageReduction() {
+        EndCombat combat = new EndCombat(EndConfig.RUNTIME);
+        EndTransferStacks stacks = new EndTransferStacks(180, 0, 0);
+        assertEquals(18, combat.lifeStealHealing(250, stacks), .000001);
+        assertEquals(11.88, combat.lifeStealHealing(165, 250, stacks), .000001);
+        assertEquals(5.94, combat.lifeStealHealing(82.5, 250, stacks), .000001);
+        assertEquals(.72, combat.lifeStealHealing(10, 250, stacks), .000001);
+        assertEquals(0, combat.lifeStealHealing(0, 250, stacks));
+        for (double invalid : new double[] {0, -1, Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY}) {
+            assertEquals(0, combat.lifeStealHealing(165, invalid, stacks));
+            assertEquals(0, combat.lifeStealHealing(invalid, 250, stacks));
+        }
     }
 
 }

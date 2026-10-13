@@ -1,6 +1,7 @@
 package kim.biryeong.semiontd.entity.monster.goal;
 
 import java.util.EnumSet;
+import kim.biryeong.semiontd.entity.goal.EntityGoalStraightPath;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.visual.SemionAnimationState;
 import kim.biryeong.semiontd.tower.succubus.SuccubusDreams;
@@ -10,6 +11,7 @@ import net.minecraft.world.entity.ai.goal.Goal;
 public final class MonsterAttackTargetGoal extends Goal {
     private final SemionMonsterEntity monster;
     private final double speedModifier;
+    private final EntityGoalStraightPath chasePath = new EntityGoalStraightPath();
     private int cooldownTicks;
 
     public MonsterAttackTargetGoal(SemionMonsterEntity monster, double speedModifier) {
@@ -20,7 +22,8 @@ public final class MonsterAttackTargetGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return monster.isAlive() && monster.getTarget() != null && monster.getTarget().isAlive();
+        return monster.isAlive() && (monster.schoolSpells().controlled()
+                || monster.getTarget() != null && monster.getTarget().isAlive());
     }
 
     @Override
@@ -44,12 +47,13 @@ public final class MonsterAttackTargetGoal extends Goal {
             return;
         }
 
-        LivingEntity target = monster.getTarget();
+        boolean controlled = monster.schoolSpells().controlled();
+        LivingEntity target = controlled ? monster.schoolSpells().controlTarget() : monster.getTarget();
         if (target == null || !target.isAlive()) {
             monster.playAnimation(SemionAnimationState.IDLE);
             return;
         }
-        if (!monster.canTargetDefense(target)) {
+        if (!controlled && !monster.canTargetDefense(target)) {
             monster.setTarget(null);
             monster.getNavigation().stop();
             monster.playAnimation(SemionAnimationState.WALK);
@@ -63,19 +67,22 @@ public final class MonsterAttackTargetGoal extends Goal {
         if (distanceSqr > attackRangeSqr) {
             monster.playAnimation(SemionAnimationState.WALK);
             double adjustedSpeed = speedModifier * monster.movementSpeedMultiplier();
-            monster.getNavigation().moveTo(target, adjustedSpeed);
+            chasePath.moveTo(monster, target.getX(), target.getY(), target.getZ(), adjustedSpeed);
             monster.getMoveControl().setWantedPosition(target.getX(), target.getY(), target.getZ(), adjustedSpeed);
             return;
         }
 
         monster.getNavigation().stop();
-        if (cooldownTicks > 0) {
+        if (cooldownTicks > 0 || monster.isDisarmed()) {
             monster.playAnimation(SemionAnimationState.IDLE);
             return;
         }
 
-        // 공격 방식이 있는 몬스터는 애니메이션에서 무기가 닿는 틱에 피해가 들어갑니다(startAttack).
-        monster.startAttack(target);
+        if (controlled && target instanceof SemionMonsterEntity ally) {
+            monster.schoolSpells().attackControlled(ally);
+        } else {
+            monster.startAttack(target);
+        }
         cooldownTicks = monster.attackIntervalTicks();
     }
 }

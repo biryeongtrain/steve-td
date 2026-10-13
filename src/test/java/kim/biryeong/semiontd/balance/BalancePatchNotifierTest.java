@@ -98,7 +98,7 @@ class BalancePatchNotifierTest {
         assertEquals("본문 없는 밸런스 패치", patch.title());
         assertTrue(patch.changes().isEmpty());
         assertEquals(
-                URI.create("https://github.com/biryeongtrain/semiontd-balance/commit/" + SECOND_SHA),
+                URI.create("https://github.com/Kyarurung/semiontd-balance/commit/" + SECOND_SHA),
                 patch.commitUrl()
         );
     }
@@ -148,7 +148,7 @@ class BalancePatchNotifierTest {
         return """
                 {
                   "sha": "%s",
-                  "html_url": "https://github.com/biryeongtrain/semiontd-balance/commit/%s",
+                  "html_url": "https://github.com/Kyarurung/semiontd-balance/commit/%s",
                   "commit": {
                     "message": "%s"
                   }

@@ -52,6 +52,6 @@ public final class CosmeticItemSupport {
             return "";
         }
         CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
-        return customData == null ? "" : customData.getUnsafe().getStringOr(COSMETIC_ID_KEY, "");
+        return customData == null ? "" : customData.copyTag().getStringOr(COSMETIC_ID_KEY, "");
     }
 }

@@ -98,6 +98,7 @@ public final class TeamLaneGroup {
         for (PlayerLane lane : lanes) {
             lane.tick(server, economyService, players, monsterScalingConfig, roundElapsedTicks);
             if (lane.clearedThisRound()) {
+                kim.biryeong.semiontd.tower.magicschool.MagicSchoolBroomsticks.beforeFinalDefense(this, lane, players);
                 lane.moveTowersToFinalDefense();
                 List<DefenderEntity> defenders = lane.releaseDefendersToFinalDefense();
                 for (DefenderEntity defender : defenders) {
@@ -234,7 +235,7 @@ public final class TeamLaneGroup {
 
         forceBossChunk();
         ChunkPos chunkPos = new ChunkPos((int) Math.floor(bossPosition.x) >> 4, (int) Math.floor(bossPosition.z) >> 4);
-        bossWorld.getChunk(chunkPos.x, chunkPos.z);
+        bossWorld.getChunk(chunkPos.x(), chunkPos.z());
         SemionBossEntity entity = new SemionBossEntity(SemionEntityTypes.BOSS, bossWorld);
         entity.configure(teamId, boss);
         entity.setCurrentRound(currentRound);
@@ -268,14 +269,14 @@ public final class TeamLaneGroup {
             return;
         }
         unforceBossChunk();
-        if (bossWorld.setChunkForced(chunkPos.x, chunkPos.z, true)) {
+        if (bossWorld.setChunkForced(chunkPos.x(), chunkPos.z(), true)) {
             forcedBossChunk = chunkPos;
         }
     }
 
     private void unforceBossChunk() {
         if (bossWorld != null && forcedBossChunk != null) {
-            bossWorld.setChunkForced(forcedBossChunk.x, forcedBossChunk.z, false);
+            bossWorld.setChunkForced(forcedBossChunk.x(), forcedBossChunk.z(), false);
         }
         forcedBossChunk = null;
     }

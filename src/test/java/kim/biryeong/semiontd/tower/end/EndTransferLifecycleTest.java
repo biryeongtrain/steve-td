@@ -46,7 +46,7 @@ class EndTransferLifecycleTest extends EndTestFixture {
         dragon.tick(lane);
         dragon.syncHealth(200.2);
         dragon.refreshType(dragon.type(), lane);
-        double expectedMaxHealth = 200.0 + expectedHealthBonus(54.0);
+        double expectedMaxHealth = 200.0 + expectedHealthBonus(56.0);
         assertEquals(expectedMaxHealth, dragon.currentMaxHealth(), 0.0001);
         assertEquals(200.2, dragon.health(), 0.0001);
     }
@@ -121,8 +121,8 @@ class EndTransferLifecycleTest extends EndTestFixture {
         core.tick(lane);
         lane.addTower(shulker);
         core.tick(lane);
-        double expectedPermanentHealth = expectedHealthBonus(4.0);
-        double expectedRoundTotalHealth = expectedHealthBonus(54.0);
+        double expectedPermanentHealth = expectedHealthBonus(6.0);
+        double expectedRoundTotalHealth = expectedHealthBonus(56.0);
         assertEquals(expectedPermanentHealth, core.transferStats().permanentHealthBonus(), 0.0001);
         assertEquals(200.0 + expectedRoundTotalHealth, core.currentMaxHealth(), 0.0001);
         core.resetForRound(null);

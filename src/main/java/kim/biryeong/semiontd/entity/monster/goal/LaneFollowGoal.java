@@ -4,6 +4,7 @@ import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
 import kim.biryeong.semiontd.entity.boss.SemionBossEntity;
+import kim.biryeong.semiontd.entity.goal.EntityGoalStraightPath;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.visual.SemionAnimationState;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -16,6 +17,7 @@ public final class LaneFollowGoal extends Goal {
 
     private final SemionMonsterEntity monster;
     private final double speedModifier;
+    private final EntityGoalStraightPath lanePath = new EntityGoalStraightPath();
     private int waypointIndex;
 
     public LaneFollowGoal(SemionMonsterEntity monster, double speedModifier) {
@@ -85,7 +87,7 @@ public final class LaneFollowGoal extends Goal {
 
         monster.playAnimation(SemionAnimationState.WALK);
         double adjustedSpeed = speedModifier * monster.movementSpeedMultiplier();
-        monster.getNavigation().moveTo(targetPoint.x, targetPoint.y, targetPoint.z, adjustedSpeed);
+        lanePath.moveTo(monster, targetPoint.x, targetPoint.y, targetPoint.z, adjustedSpeed);
         monster.getMoveControl().setWantedPosition(targetPoint.x, targetPoint.y, targetPoint.z, adjustedSpeed);
         monster.getLookControl().setLookAt(targetPoint.x, targetPoint.y, targetPoint.z);
     }

@@ -30,7 +30,7 @@ class AnimalTowerBalanceConfigTest {
         TowerBalanceConfig config = TowerBalanceConfig.defaultConfig();
 
         assertEquals(new TowerStats(40L, 80.0, 2.0, 5.0, 20, 40), stats(config, AnimalTowers.T1_PIG_TOWER));
-        assertEquals(new TowerStats(180L, 150.0, 2.0, 7.0, 20, 55), stats(config, AnimalTowers.T2_PIG_TOWER));
+        assertEquals(new TowerStats(180L, 150.0, 2.0, 7.0, 20, 56), stats(config, AnimalTowers.T2_PIG_TOWER));
         assertEquals(new TowerStats(300L, 400.0, 2.0, 15.0, 20, 60), stats(config, AnimalTowers.T3_PIG_TOWER));
         assertEquals(new TowerStats(50L, 50.0, 6.0, 5.0, 20, 5), stats(config, AnimalTowers.T1_WOLF_TOWER));
         assertEquals(new TowerStats(110L, 70.0, 6.0, 10.0, 20, 5), stats(config, AnimalTowers.T2_WOLF_DPS_TOWER));

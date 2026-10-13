@@ -123,9 +123,16 @@ class BalanceChangeServiceTest {
     @Test
     void allAugmentAndTraitParametersAreEditableAtNextMatchWithValidatedUnits() {
         try (var service = service(new FakeRuntime())) {
+            String migrationVersion = "augment:/parameters/semiontd:job_magic_school_g2/balanceVersion";
+            var version = service.fields().stream().filter(field -> field.id().equals(migrationVersion)).findFirst().orElseThrow();
+            assertFalse(version.editable());
+            assertTrue(version.modes().isEmpty());
             var fields = service.fields().stream().filter(field ->
-                    field.id().startsWith("augment:/parameters/") || field.domain().equals("trait")).toList();
-            assertEquals(437, fields.stream().filter(field -> field.domain().equals("augment")).count());
+                    field.id().startsWith("augment:/parameters/") || field.domain().equals("trait"))
+                    .filter(field -> !field.id().equals(migrationVersion)).toList();
+            assertEquals(447, fields.stream().filter(field -> field.domain().equals("augment")).count());
+            assertTrue(fields.stream().noneMatch(field -> field.id().equals(
+                    "augment:/parameters/semiontd:job_warlock_towers_g1/growthBonus")));
             assertEquals(32, fields.stream().filter(field -> field.domain().equals("trait")).count());
             var changes = fields.stream().map(field -> {
                 assertTrue(field.editable(), field.id());

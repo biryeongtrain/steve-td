@@ -30,8 +30,8 @@ public final class SemionPlayerLimitBypassGameTest {
             throw new AssertionError("Expected /semiontd playerlimit list to be registered");
         }
 
-        CommandSourceStack nonOp = context.getLevel().getServer().createCommandSourceStack().withPermission(0);
-        CommandSourceStack op = context.getLevel().getServer().createCommandSourceStack().withPermission(2);
+        CommandSourceStack nonOp = context.getLevel().getServer().createCommandSourceStack().withPermission(net.minecraft.server.permissions.LevelBasedPermissionSet.forLevel(net.minecraft.server.permissions.PermissionLevel.byId(0)));
+        CommandSourceStack op = context.getLevel().getServer().createCommandSourceStack().withPermission(net.minecraft.server.permissions.LevelBasedPermissionSet.forLevel(net.minecraft.server.permissions.PermissionLevel.byId(2)));
         if (playerLimit.canUse(nonOp)) {
             throw new AssertionError("Expected /semiontd playerlimit to require OP permission");
         }
@@ -54,7 +54,7 @@ public final class SemionPlayerLimitBypassGameTest {
             if (SemionPlayerLimitBypassService.canBypassPlayerLimit(profile)) {
                 throw new AssertionError("Expected service to start without capacity bypass");
             }
-            if (!gameManager.addPlayerLimitBypass(playerId, profile.getName())) {
+            if (!gameManager.addPlayerLimitBypass(playerId, profile.name())) {
                 throw new AssertionError("Expected first add to report a new capacity bypass");
             }
             if (!gameManager.canBypassPlayerLimit(playerId)) {

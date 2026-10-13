@@ -11,7 +11,7 @@ import kim.biryeong.semiontd.SemionTd;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -25,10 +25,10 @@ import java.util.Map;
  * copied from PolyFactory by Patbox
  */
 public class ImageHandler {
-    private static final Map<ResourceLocation, TextWidth> IMAGES = Maps.newHashMap();
+    private static final Map<Identifier, TextWidth> IMAGES = Maps.newHashMap();
     private static final TextWidth MISSING = new TextWidth(Component.literal("<NO IMAGE>").withStyle(ChatFormatting.DARK_RED), 300);
 
-    public static TextWidth getImage(ResourceLocation id) {
+    public static TextWidth getImage(Identifier id) {
         return IMAGES.getOrDefault(id, MISSING);
     }
 
@@ -37,8 +37,8 @@ public class ImageHandler {
     }
 
     private static void createImage(ResourcePackBuilder builder) {
-        ResourceLocation fontId = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "image_hack");
-        Style style = Style.EMPTY.withColor(0xFFFFFF).withFont(fontId).withShadowColor(0);
+        Identifier fontId = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "image_hack");
+        Style style = Style.EMPTY.withColor(0xFFFFFF).withFont(new net.minecraft.network.chat.FontDescription.Resource(fontId)).withShadowColor(0);
         char[] character = new char[]{'\u0100'};
         var fontBuilder = FontAsset.builder();
         IMAGES.clear();
@@ -47,7 +47,7 @@ public class ImageHandler {
         fontBuilder.add(SpaceProvider.builder().add(n1, -1));
         fontBuilder.add(SpaceProvider.builder().add('b', 1));
 
-        builder.forEachFile((path, resource) -> {
+        builder.forEachResource((path, resource) -> {
             String ogPath = path;
             if (!path.startsWith("assets/")) {
                 return;
@@ -64,12 +64,12 @@ public class ImageHandler {
             if (!path.startsWith("textures/guide/image/") || !path.endsWith(".png")) {
                 return;
             }
-            ResourceLocation id = ResourceLocation.fromNamespaceAndPath(namespace, path.substring("textures/guide/image/".length(), path.length() - ".png".length()));
+            Identifier id = Identifier.fromNamespaceAndPath(namespace, path.substring("textures/guide/image/".length(), path.length() - ".png".length()));
             StringBuilder imageString = new StringBuilder();
-            var b = BitmapProvider.builder(ResourceLocation.fromNamespaceAndPath(namespace, path.substring("textures/".length())));
+            var b = BitmapProvider.builder(Identifier.fromNamespaceAndPath(namespace, path.substring("textures/".length())));
             BufferedImage image;
-            try {
-                image = ImageIO.read(new ByteArrayInputStream(resource));
+            try (var input = resource.getStream()) {
+                image = ImageIO.read(input);
             } catch (IOException e) {
                 SemionTd.LOGGER.warn("Can not read image from {}!", path);
                 return;
@@ -134,7 +134,7 @@ public class ImageHandler {
             }
         });
 
-        builder.addData("assets/ttt/font/image_hack.json", fontBuilder.build());
+        builder.addData("assets/" + fontId.getNamespace() + "/font/" + fontId.getPath() + ".json", fontBuilder.build());
     }
 
     public record TextWidth(Component text, int width) {

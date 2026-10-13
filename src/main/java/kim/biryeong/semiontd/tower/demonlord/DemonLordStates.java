@@ -39,6 +39,10 @@ public final class DemonLordStates {
     private DemonLordStates() {
     }
 
+    public static boolean none() {
+        return STATES.isEmpty();
+    }
+
     public static DemonLordState get(UUID playerId) {
         return playerId == null ? null : STATES.get(playerId);
     }

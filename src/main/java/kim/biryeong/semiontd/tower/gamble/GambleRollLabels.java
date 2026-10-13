@@ -13,7 +13,7 @@ import kim.biryeong.semiontd.tower.Tower;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.decoration.ArmorStand;
 
@@ -25,21 +25,21 @@ final class GambleRollLabels {
     }
 
     static synchronized void show(
-            PlayerLane lane, UUID owner, Tower target, ResourceLocation sourceId, int face
+            PlayerLane lane, UUID owner, Tower target, Identifier sourceId, int face
     ) {
         if (face < 1 || face > 6) return;
         showResult(lane, owner, target, sourceId, Component.literal("[" + face + "]")
                 .withStyle(face <= 2 ? ChatFormatting.RED : ChatFormatting.GREEN));
     }
 
-    static synchronized void showSymbols(PlayerLane lane, UUID owner, Tower target, ResourceLocation sourceId,
+    static synchronized void showSymbols(PlayerLane lane, UUID owner, Tower target, Identifier sourceId,
                                          List<GambleSlots.Symbol> symbols) {
         MutableComponent text = Component.empty();
         for (var symbol : symbols) text.append(GambleGlyphs.slot(symbol.ordinal())).append(" ");
         showResult(lane, owner, target, sourceId, text);
     }
 
-    private static void showResult(PlayerLane lane, UUID owner, Tower target, ResourceLocation sourceId, Component text) {
+    private static void showResult(PlayerLane lane, UUID owner, Tower target, Identifier sourceId, Component text) {
         if (lane == null || owner == null || target == null || sourceId == null) return;
         SemionTowerEntity targetEntity = GambleRoundEffects.towerEntity(target, lane).orElse(null);
         if (targetEntity == null || !(targetEntity.level() instanceof ServerLevel level)) {
@@ -61,7 +61,7 @@ final class GambleRollLabels {
     }
 
     static synchronized void clearSource(
-            PlayerLane lane, UUID owner, ResourceLocation sourceId
+            PlayerLane lane, UUID owner, Identifier sourceId
     ) {
         Map<Tower, Label> byTarget = LABELS.getOrDefault(lane, Map.of()).get(owner);
         if (byTarget == null) {
@@ -126,7 +126,7 @@ final class GambleRollLabels {
     private static ArmorStand create(ServerLevel level, SemionTowerEntity target) {
         ArmorStand visual = new ArmorStand(level, target.getX(), target.getY(), target.getZ());
         visual.setInvisible(true);
-        visual.setInvulnerable(true);
+        visual.setPermanentlyInvulnerable(true);
         visual.setNoGravity(true);
         visual.setSilent(true);
         visual.setNoBasePlate(true);
@@ -145,7 +145,7 @@ final class GambleRollLabels {
         visual.teleportTo(target.getX(), target.getY(), target.getZ());
     }
 
-    private static Component component(Map<ResourceLocation, Component> faces) {
+    private static Component component(Map<Identifier, Component> faces) {
         MutableComponent result = Component.empty();
         boolean first = true;
         for (Component face : faces.values()) {
@@ -179,7 +179,7 @@ final class GambleRollLabels {
     }
 
     private static final class Label {
-        private final Map<ResourceLocation, Component> faces = new LinkedHashMap<>();
+        private final Map<Identifier, Component> faces = new LinkedHashMap<>();
         private ArmorStand visual;
     }
 }

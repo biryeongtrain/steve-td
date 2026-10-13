@@ -71,8 +71,8 @@ class WarlockConfigTest {
                 -1
         ));
 
-        assertEquals(140.0, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "damageThreshold", -1.0), 0.0001);
-        assertEquals(20.0, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "damageScale", -1.0), 0.0001);
+        assertEquals(160.0, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "damageThreshold", -1.0), 0.0001);
+        assertEquals(40.0, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "damageScale", -1.0), 0.0001);
         assertEquals(2000.0, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "healthThreshold", -1.0), 0.0001);
         assertEquals(500.0, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "healthScale", -1.0), 0.0001);
         assertEquals(200.0, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "damageThreshold", -1.0), 0.0001);
@@ -82,7 +82,7 @@ class WarlockConfigTest {
         assertEquals(0.07, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "lifeCap", -1.0), 0.0001);
         assertEquals(0.30, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "incomeDebuffResistance", -1.0), 0.0001);
         assertEquals(10.0, config.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "lifeEvery", -1.0), 0.0001);
-        assertEquals(0.13, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "lifeCap", -1.0), 0.0001);
+        assertEquals(0.12, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "lifeCap", -1.0), 0.0001);
         assertEquals(0.40, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "incomeDebuffResistance", -1.0), 0.0001);
         assertEquals(0.30, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "defenseCap", -1.0), 0.0001);
         assertEquals(10.0, config.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "defenseEvery", -1.0), 0.0001);
@@ -169,8 +169,8 @@ class WarlockConfigTest {
                 defaults.upgradeCosts(),
                 partialAbilities
         ).withMissingDefaults(defaults);
-        assertEquals(140.0, merged.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "damageThreshold", -1.0), 0.0001);
-        assertEquals(20.0, merged.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "damageScale", -1.0), 0.0001);
+        assertEquals(160.0, merged.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "damageThreshold", -1.0), 0.0001);
+        assertEquals(40.0, merged.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "damageScale", -1.0), 0.0001);
         assertEquals(2000.0, merged.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "healthThreshold", -1.0), 0.0001);
         assertEquals(500.0, merged.ability(WarlockTowers.RANGED_WARLOCK_TOWER.id(), "healthScale", -1.0), 0.0001);
         assertEquals(200.0, merged.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "damageThreshold", -1.0), 0.0001);
@@ -178,7 +178,7 @@ class WarlockConfigTest {
         assertEquals(3500.0, merged.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "healthThreshold", -1.0), 0.0001);
         assertEquals(500.0, merged.ability(WarlockTowers.MELEE_WARLOCK_TOWER.id(), "healthScale", -1.0), 0.0001);
         TowerBalanceRuntime.apply(merged);
-        assertEquals(203.5611, WarlockConfig.RUNTIME.path(WarlockPath.RANGED).damageScaling().value(600.0), 0.0001);
+        assertEquals(259.3963, WarlockConfig.RUNTIME.path(WarlockPath.RANGED).damageScaling().value(600.0), 0.0001);
     }
 
     @Test

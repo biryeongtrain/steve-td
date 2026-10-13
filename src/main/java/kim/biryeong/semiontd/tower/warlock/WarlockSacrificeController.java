@@ -43,10 +43,6 @@ final class WarlockSacrificeController {
         WarlockSacrifice.Snapshot snapshot = WarlockSacrifice.snapshot(target);
         Vec3 center = sacrificedCenter(lane, target);
         WarlockSacrifice.Gain gain = sacrificeGain(warlock, snapshot);
-        if (AugmentCombat.allowsTriggers() && warlock.augmentSnapshot().has(WarlockAugments.EXPLOSIVE)) {
-            gain = gain.withPermanentMultiplier(1.0 + warlock.augmentSnapshot().parameter(
-                    WarlockAugments.EXPLOSIVE, "growthBonus", .25));
-        }
         boolean killed = lane.killTower(target);
         if (!killed) {
             return false;
@@ -102,7 +98,7 @@ final class WarlockSacrificeController {
                 .filter(tower -> tower != warlock)
                 .filter(tower -> tower.health() > 0.0)
                 .filter(tower -> sameOwner(warlock, tower))
-                .filter(tower -> warlock.path().acceptsSacrificeTower(tower.type()))
+                .filter(tower -> warlock.path().acceptsPassiveTower(tower.type()))
                 .count();
     }
 

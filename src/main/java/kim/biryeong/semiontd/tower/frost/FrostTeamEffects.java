@@ -49,13 +49,24 @@ public final class FrostTeamEffects {
                 continue;
             }
             UUID laneOwner = lane.ownerPlayer();
-            List<Tower> ownedTowers = List.copyOf(lane.towers()).stream()
-                    .filter(tower -> laneOwner.equals(tower.ownerPlayer()))
-                    .toList();
-            total += stacksForFamily(ownedTowers, FrostFamily.VANGUARD);
-            total += stacksForFamily(ownedTowers, FrostFamily.ICE_BREAKER);
-            total += stacksForFamily(ownedTowers, FrostFamily.FROZEN_DUMPLING);
-            total += stacksForFamily(ownedTowers, FrostFamily.ICEBOX);
+            int vanguards = 0;
+            int breakers = 0;
+            int dumplings = 0;
+            int iceboxes = 0;
+            for (Tower tower : List.copyOf(lane.towers())) {
+                if (!laneOwner.equals(tower.ownerPlayer())) {
+                    continue;
+                }
+                var type = tower.type();
+                if (FrostTowers.isVanguard(type)) vanguards++;
+                if (FrostTowers.isIceBreaker(type)) breakers++;
+                if (FrostTowers.isFrozenDumpling(type)) dumplings++;
+                if (FrostTowers.isIcebox(type)) iceboxes++;
+            }
+            total += FrostBalance.eruptionStacksForFamilyCount(vanguards);
+            total += FrostBalance.eruptionStacksForFamilyCount(breakers);
+            total += FrostBalance.eruptionStacksForFamilyCount(dumplings);
+            total += FrostBalance.eruptionStacksForFamilyCount(iceboxes);
         }
         return FrostBalance.clampEruptionStacks(total);
     }
@@ -114,19 +125,6 @@ public final class FrostTeamEffects {
         entity.applyTimedEffect(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION, attackSpeedReduction, duration);
     }
 
-    private static int stacksForFamily(List<Tower> towers, FrostFamily family) {
-        int familyCount = (int) towers.stream()
-                .map(Tower::type)
-                .filter(type -> switch (family) {
-                    case VANGUARD -> FrostTowers.isVanguard(type);
-                    case ICE_BREAKER -> FrostTowers.isIceBreaker(type);
-                    case FROZEN_DUMPLING -> FrostTowers.isFrozenDumpling(type);
-                    case ICEBOX -> FrostTowers.isIcebox(type);
-                })
-                .count();
-        return FrostBalance.eruptionStacksForFamilyCount(familyCount);
-    }
-
     private static SemionMonsterEntity monsterEntity(Monster monster, ServerLevel level) {
         if (monster == null || !monster.hasMinecraftEntity()) {
             return null;
@@ -139,10 +137,4 @@ public final class FrostTeamEffects {
                 : null;
     }
 
-    private enum FrostFamily {
-        VANGUARD,
-        ICE_BREAKER,
-        FROZEN_DUMPLING,
-        ICEBOX
-    }
 }

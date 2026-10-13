@@ -19,7 +19,7 @@ public final class InsectTowers {
             EntityVisual.builder("minecraft:endermite").scale(1.20).build(), 3, UnitLine.SILVERFISH);
 
     public static final TowerType CAVE_SPIDER = unit(
-            "insect_cave_spider_t1", "동굴거미", 40, 150, 2.4, 4, 20, 80,
+            "insect_cave_spider_t1", "동굴거미", 50, 150, 2.4, 4, 20, 80,
             EntityVisual.vanilla("minecraft:cave_spider"), 1, UnitLine.SPIDER);
     public static final TowerType SPIDER = unit(
             "insect_spider_t2", "거미", 0, 300, 2.5, 7, 18, 100,

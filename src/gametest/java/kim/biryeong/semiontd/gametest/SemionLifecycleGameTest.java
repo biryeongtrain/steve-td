@@ -49,7 +49,7 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.block.Blocks;
@@ -57,7 +57,7 @@ import net.minecraft.world.phys.Vec3;
 
 public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
     private static final SemionJob TEST_RICH_JOB = JobRegistry.register(new SemionJob(
-            ResourceLocation.fromNamespaceAndPath("semion-td-test", "rich"),
+            Identifier.fromNamespaceAndPath("semion-td-test", "rich"),
             Component.literal("Rich Test Job"),
             List.of(Component.literal("Adds starting resources for tests."))
     ) {
@@ -114,105 +114,159 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
         }
     }
 
-    @GameTest(maxTicks = 900)
+    @GameTest(maxTicks = 1200, environment = "semion-td-gametest:arena_convergence")
     public void defaultArenaLaneMonstersConvergeNearBoss(GameTestHelper context) {
         GameArena arena;
+        List<RuntimePlayerFixture> observers = new ArrayList<>();
         try {
             arena = GameArenaLoader.load(context.getLevel().getServer(), MapConfig.defaultConfig());
+            var participants = java.util.stream.IntStream.rangeClosed(1, 5)
+                    .mapToObj(laneId -> new AssignedParticipant(playerId("arena-converge-" + laneId),
+                            "arena-converge-" + laneId, TeamId.RED, laneId)).toList();
+            SemionGame setup = new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(), arena);
+            if (!setup.preloadWorldsForStart(new ParticipantSelectionPlan(MatchMode.NORMAL, participants, Set.of(), 1))) {
+                observers.forEach(RuntimePlayerFixture::close);
+                arena.unload();
+                context.fail(Component.literal("The normal start preload must prepare every convergence lane."));
+                return;
+            }
+            var red = arena.teamArena(TeamId.RED).orElseThrow();
+            for (var participant : participants) {
+                observers.add(RuntimePlayerFixture.connect(context, red.world(),
+                        StartPlacement.activePlayerSpawn(red.layout(), participant.laneId()),
+                        net.minecraft.world.level.GameType.ADVENTURE, participant.uuid(), "lane-viewer-" + participant.laneId()));
+            }
         } catch (Exception exception) {
+            observers.forEach(RuntimePlayerFixture::close);
             context.fail(Component.literal("Default arena map template should load for convergence test: " + exception.getMessage()));
             return;
         }
 
-        List<PlayerLane> lanes = new ArrayList<>();
-        List<SemionMonsterEntity> monsters = new ArrayList<>();
-        try {
-            var redArena = arena.teamArena(TeamId.RED).orElseThrow();
-            for (int laneId = 1; laneId <= 5; laneId++) {
-                PlayerLane lane = new PlayerLane(
-                        TeamId.RED,
-                        laneId,
-                        playerId("arena-converge-" + laneId),
-                        redArena.world(),
-                        redArena.layout().lane(laneId).orElseThrow()
-                );
-                lane.enqueueWaveMonster(new WaveMonsterEntry(
-                        "arena-converge-" + laneId,
-                        1000.0,
-                        0.0,
-                        0.0,
-                        AttackKind.MELEE,
-                        "minecraft:zombie",
-                        null,
-                        0,
-                        1
-                ));
-                lane.tick(context.getLevel().getServer());
-                if (!assertEquals(context, 1, lane.activeMonsters().size(), "Lane " + laneId + " should spawn one test monster.")) {
-                    arena.unload();
-                    return;
+        context.runAfterDelay(2, () -> {
+            try {
+                var red = arena.teamArena(TeamId.RED).orElseThrow();
+                for (int index = 0; index < observers.size(); index++) {
+                    observers.get(index).enterWorld(red.world(), StartPlacement.activePlayerSpawn(red.layout(), index + 1));
                 }
-                if (!(redArena.world().getEntity(lane.activeMonsters().getFirst().minecraftEntityId()) instanceof SemionMonsterEntity monsterEntity)) {
-                    arena.unload();
-                    context.fail(Component.literal("Lane " + laneId + " monster entity should exist."));
-                    return;
-                }
-                monsterEntity.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.5);
-                lanes.add(lane);
-                monsters.add(monsterEntity);
+            } catch (Throwable failure) {
+                observers.forEach(RuntimePlayerFixture::close);
+                arena.unload();
+                context.fail(Component.literal("Convergence arena entry failed: " + failure));
+                return;
             }
-
-            Vec3 commonFinalWaypoint = null;
-            Vec3 commonBossPoint = null;
-            for (int i = 0; i < monsters.size(); i++) {
-                List<Vec3> path = monsters.get(i).pathPoints();
-                if (!assertTrue(context, path.size() >= 2, "Lane " + (i + 1) + " should have final waypoint and boss path points.")) {
-                    arena.unload();
-                    return;
-                }
-                Vec3 finalWaypoint = path.get(path.size() - 2);
-                Vec3 bossPoint = path.getLast();
-                if (commonFinalWaypoint == null) {
-                    commonFinalWaypoint = finalWaypoint;
-                    commonBossPoint = bossPoint;
-                } else {
-                    if (!assertEquals(context, commonFinalWaypoint, finalWaypoint, "Every lane should share the same final waypoint.")) {
-                        arena.unload();
-                        return;
-                    }
-                    if (!assertEquals(context, commonBossPoint, bossPoint, "Every lane should path to the same boss point.")) {
-                        arena.unload();
-                        return;
-                    }
-                }
+            var red = arena.teamArena(TeamId.RED).orElseThrow();
+            var pathPoints = java.util.stream.IntStream.rangeClosed(1, 5)
+                    .mapToObj(laneId -> red.layout().lane(laneId).orElseThrow())
+                    .flatMap(lane -> lane.pathPoints().stream()).distinct().toList();
+            for (var position : pathPoints) {
+                var chunk = new net.minecraft.world.level.ChunkPos((int) Math.floor(position.x) >> 4, (int) Math.floor(position.z) >> 4);
+                red.world().setChunkForced(chunk.x(), chunk.z(), true);
             }
+            RuntimePlayerFixture.whenChunksTrackEntities(context, red.world(), pathPoints, () -> {
+                    List<PlayerLane> lanes = new ArrayList<>();
+                    List<SemionMonsterEntity> monsters = new ArrayList<>();
+                    try {
+                        var redArena = arena.teamArena(TeamId.RED).orElseThrow();
+                        for (int laneId = 1; laneId <= 5; laneId++) {
+                            PlayerLane lane = new PlayerLane(
+                                    TeamId.RED,
+                                    laneId,
+                                    playerId("arena-converge-" + laneId),
+                                    redArena.world(),
+                                    redArena.layout().lane(laneId).orElseThrow()
+                            );
+                            lane.enqueueWaveMonster(new WaveMonsterEntry(
+                                    "arena-converge-" + laneId,
+                                    1000.0,
+                                    0.0,
+                                    0.0,
+                                    AttackKind.MELEE,
+                                    "minecraft:zombie",
+                                    null,
+                                    0,
+                                    1
+                            ));
+                            lane.tick(context.getLevel().getServer());
+                            if (!assertEquals(context, 1, lane.activeMonsters().size(), "Lane " + laneId + " should spawn one test monster.")) {
+                                observers.forEach(RuntimePlayerFixture::close);
+                                arena.unload();
+                                return;
+                            }
+                            if (!(redArena.world().getEntity(lane.activeMonsters().getFirst().minecraftEntityId()) instanceof SemionMonsterEntity monsterEntity)) {
+                                observers.forEach(RuntimePlayerFixture::close);
+                                arena.unload();
+                                context.fail(Component.literal("Lane " + laneId + " monster entity should exist."));
+                                return;
+                            }
+                            monsterEntity.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.5);
+                            lanes.add(lane);
+                            monsters.add(monsterEntity);
+                        }
 
-            Vec3 bossPoint = commonBossPoint;
-            context.runAfterDelay(700, () -> {
-                try {
-                    for (int i = 0; i < lanes.size(); i++) {
-                        lanes.get(i).tick(context.getLevel().getServer());
-                        SemionMonsterEntity monster = monsters.get(i);
-                        if (!assertTrue(context, monster.isAlive(), "Lane " + (i + 1) + " monster should remain alive while converging.")) {
-                            return;
+                        Vec3 commonFinalWaypoint = null;
+                        Vec3 commonBossPoint = null;
+                        for (int i = 0; i < monsters.size(); i++) {
+                            List<Vec3> path = monsters.get(i).pathPoints();
+                            if (!assertTrue(context, path.size() >= 2, "Lane " + (i + 1) + " should have final waypoint and boss path points.")) {
+                                observers.forEach(RuntimePlayerFixture::close);
+                                arena.unload();
+                                return;
+                            }
+                            Vec3 finalWaypoint = path.get(path.size() - 2);
+                            Vec3 bossPoint = path.getLast();
+                            if (commonFinalWaypoint == null) {
+                                commonFinalWaypoint = finalWaypoint;
+                                commonBossPoint = bossPoint;
+                            } else {
+                                if (!assertEquals(context, commonFinalWaypoint, finalWaypoint, "Every lane should share the same final waypoint.")) {
+                                    observers.forEach(RuntimePlayerFixture::close);
+                                    arena.unload();
+                                    return;
+                                }
+                                if (!assertEquals(context, commonBossPoint, bossPoint, "Every lane should path to the same boss point.")) {
+                                    observers.forEach(RuntimePlayerFixture::close);
+                                    arena.unload();
+                                    return;
+                                }
+                            }
                         }
-                        if (!assertTrue(
-                                context,
-                                monster.position().distanceTo(bossPoint) < 8.0,
-                                "Lane " + (i + 1) + " monster should converge near the shared boss side."
-                        )) {
-                            return;
-                        }
+
+                        Vec3 bossPoint = commonBossPoint;
+                        context.runAfterDelay(700, () -> {
+                            try {
+                                for (int i = 0; i < lanes.size(); i++) {
+                                    lanes.get(i).tick(context.getLevel().getServer());
+                                    SemionMonsterEntity monster = monsters.get(i);
+                                    if (!assertTrue(context, monster.isAlive(), "Lane " + (i + 1) + " monster should remain alive while converging.")) {
+                                        return;
+                                    }
+                                    if (!assertTrue(
+                                            context,
+                                            monster.position().distanceTo(bossPoint) < 8.0,
+                                            "Lane " + (i + 1) + " monster should converge near the shared boss side; position="
+                                                    + monster.position() + ", boss=" + bossPoint + ", entityTicks=" + monster.tickCount
+                                                    + ", target=" + monster.getTarget() + ", nextWaypoint=" + monster.nextPathPointIndex()
+                                                    + ", chunk=" + redArena.world().getChunkAt(monster.blockPosition()).getFullStatus()
+                                    )) {
+                                        return;
+                                    }
+                                }
+                                context.succeed();
+                            } finally {
+                                observers.forEach(RuntimePlayerFixture::close);
+                                arena.unload();
+                            }
+                        });
+                    } catch (RuntimeException exception) {
+                        observers.forEach(RuntimePlayerFixture::close);
+                        arena.unload();
+                        context.fail(Component.literal("Default arena convergence test failed: " + exception.getMessage()));
                     }
-                    context.succeed();
-                } finally {
-                    arena.unload();
-                }
+            }, () -> {
+                observers.forEach(RuntimePlayerFixture::close);
+                arena.unload();
             });
-        } catch (RuntimeException exception) {
-            arena.unload();
-            context.fail(Component.literal("Default arena convergence test failed: " + exception.getMessage()));
-        }
+        });
     }
 
     @GameTest
@@ -371,6 +425,24 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
             return;
         }
 
+        if (!assertTrue(context, manager.traitSelectionActive(), "Default trait selection must run before the start countdown.")) {
+            return;
+        }
+        int selectionTicks = kim.biryeong.semiontd.trait.TraitSelectionConfig.defaultConfig().selectionDurationTicks();
+        for (int selectionTick = 0; selectionTick < selectionTicks; selectionTick++) {
+            manager.tick(server);
+            if (selectionTick + 1 < selectionTicks
+                    && !assertTrue(context, manager.traitSelectionActive(), "Trait selection must remain active for its complete configured duration.")) {
+                return;
+            }
+        }
+        if (!assertTrue(context, !manager.traitSelectionActive() && manager.startCountdownActive(), "Trait timeout must schedule the start countdown.")) {
+            return;
+        }
+        if (!assertEquals(context, RoundPhase.WAITING, game.phase(), "Trait timeout must keep the game waiting until the countdown completes.")) {
+            return;
+        }
+
         for (int i = 0; i < SemionGameManager.START_COUNTDOWN_TICKS; i++) {
             manager.tick(server);
         }
@@ -429,6 +501,24 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
             return;
         }
         if (!assertEquals(context, SemionGameManager.MidLanePreferenceResult.NO_MID_LANE, manager.requestMidLane(blueId), "Non-five-player team should have no mid lane.")) {
+            return;
+        }
+
+        if (!assertTrue(context, manager.traitSelectionActive(), "Default trait selection must run before the start countdown.")) {
+            return;
+        }
+        int selectionTicks = kim.biryeong.semiontd.trait.TraitSelectionConfig.defaultConfig().selectionDurationTicks();
+        for (int selectionTick = 0; selectionTick < selectionTicks; selectionTick++) {
+            manager.tick(server);
+            if (selectionTick + 1 < selectionTicks
+                    && !assertTrue(context, manager.traitSelectionActive(), "Trait selection must remain active for its complete configured duration.")) {
+                return;
+            }
+        }
+        if (!assertTrue(context, !manager.traitSelectionActive() && manager.startCountdownActive(), "Trait timeout must schedule the start countdown.")) {
+            return;
+        }
+        if (!assertEquals(context, RoundPhase.WAITING, game.phase(), "Trait timeout must keep the game waiting until the countdown completes.")) {
             return;
         }
 
@@ -601,7 +691,10 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
                 return;
             }
 
-            for (int i = 0; i < SemionGame.DEFAULT_PREPARE_TICKS + 1; i++) {
+            for (int i = 0; i < SemionGame.DEFAULT_PREPARE_TICKS; i++) {
+                if (!assertEquals(context, RoundPhase.PREPARE_AND_SUMMON, game.phase(), "Every prepare tick must precede the wave boundary.")) {
+                    return;
+                }
                 manager.tick(server);
             }
             if (!assertEquals(context, RoundPhase.LANE_WAVE, game.phase(), "Prepare should advance into wave phase.")) {
@@ -737,7 +830,12 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
 
         game.players().get(redId).matchStats().recordMonsterKill(12);
         game.players().get(redId).matchStats().recordSummonedMonster();
+        long startingIncome = game.players().get(redId).economy().income();
         game.players().get(redId).economy().addIncome(5);
+        long finalIncome = game.players().get(redId).economy().income();
+        if (!assertEquals(context, 5L, finalIncome - startingIncome, "The fixture must add exactly five income.")) {
+            return;
+        }
 
         if (!assertTrue(context, game.killBoss(TeamId.BLUE), "Blue boss should die to finish the stat snapshot test.")) {
             return;
@@ -756,7 +854,10 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
         if (!assertEquals(context, 1L, redResult.stats().summonedMonsters(), "Match result should preserve summoned monster count.")) {
             return;
         }
-        if (!assertEquals(context, 5L, redResult.stats().finalIncome(), "Match result should preserve final income.")) {
+        if (!assertEquals(context, 5L, redResult.stats().finalIncome() - startingIncome, "Match result should preserve the five-income increase.")) {
+            return;
+        }
+        if (!assertEquals(context, finalIncome, redResult.stats().finalIncome(), "The saved snapshot must exactly match the complete final economy.")) {
             return;
         }
         context.succeed();
@@ -764,9 +865,24 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
 
     @GameTest
     public void selectedJobAppliesStartingEconomyModifiers(GameTestHelper context) {
+        EconomyConfig economy = new EconomyConfig(200, 50, 0,
+                EconomyConfig.GasCapConfig.defaultConfig(), EconomyConfig.GasProductionConfig.defaultConfig());
+        verifyStartingEconomyModifiers(context, economy, 277L, 53L, 4L, 3L);
+    }
+
+    @GameTest
+    public void selectedJobAlsoPreservesBundledStartingEconomy(GameTestHelper context) {
+        EconomyConfig economy = EconomyConfig.defaultConfig();
+        verifyStartingEconomyModifiers(context, economy, economy.startingMineral() + 77L,
+                economy.startingGas() + 3L, economy.startingIncome() + 4L,
+                economy.gasProduction().initialGasPerSec() + 2L);
+    }
+
+    private void verifyStartingEconomyModifiers(GameTestHelper context, EconomyConfig economy,
+            long expectedMineral, long expectedGas, long expectedIncome, long expectedGasPerSec) {
         UUID redId = playerId("job-red");
         UUID blueId = playerId("job-blue");
-        SemionGame game = new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(), SyntheticArenaFactory.create(
+        SemionGame game = new SemionGame(economy, WaveConfig.defaultConfig(), SyntheticArenaFactory.create(
                 context.getLevel(),
                 context.absolutePos(BlockPos.ZERO)
         ));
@@ -794,16 +910,16 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
         if (!assertEquals(context, JobRegistry.defaultJob().id(), blue.job().orElseThrow().id(), "Unselected player should receive the default job.")) {
             return;
         }
-        if (!assertEquals(context, 277L, red.economy().mineral(), "Job should modify starting mineral.")) {
+        if (!assertEquals(context, expectedMineral, red.economy().mineral(), "Job should modify starting mineral.")) {
             return;
         }
-        if (!assertEquals(context, 53L, red.economy().gas(), "Job should modify starting gas.")) {
+        if (!assertEquals(context, expectedGas, red.economy().gas(), "Job should modify starting gas.")) {
             return;
         }
-        if (!assertEquals(context, 4L, red.economy().income(), "Job should modify starting income.")) {
+        if (!assertEquals(context, expectedIncome, red.economy().income(), "Job should modify starting income.")) {
             return;
         }
-        if (!assertEquals(context, 3L, red.economy().gasPerSec(), "Job should modify starting gas per second.")) {
+        if (!assertEquals(context, expectedGasPerSec, red.economy().gasPerSec(), "Job should modify starting gas per second.")) {
             return;
         }
         context.succeed();
@@ -867,7 +983,7 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
     public void selectedJobPersistsAndAppliesToNewLobby(GameTestHelper context) {
         var player = context.makeMockServerPlayerInLevel();
         MinecraftServer server = context.getLevel().getServer();
-        ResourceLocation jobId = JobRegistry.defaultJob().id();
+        Identifier jobId = JobRegistry.defaultJob().id();
         Path storePath;
         try {
             storePath = Files.createTempDirectory("semion-selected-job-test").resolve("profiles.json");
@@ -877,12 +993,12 @@ public final class SemionLifecycleGameTest implements CustomTestMethodInvoker {
         }
 
         ProgressionService progressionService = new ProgressionService(ProgressionConfig.defaultConfig(), storePath);
-        progressionService.saveSelectedJob(server, player.getUUID(), player.getGameProfile().getName(), jobId);
+        progressionService.saveSelectedJob(server, player.getUUID(), player.getGameProfile().name(), jobId);
         ProgressionService reloaded = new ProgressionService(ProgressionConfig.defaultConfig(), storePath);
         if (!assertEquals(
                 context,
                 jobId,
-                reloaded.profile(server, player.getUUID(), player.getGameProfile().getName()).selectedJobResource().orElse(null),
+                reloaded.profile(server, player.getUUID(), player.getGameProfile().name()).selectedJobResource().orElse(null),
                 "Selected job should survive progression store reload."
         )) {
             return;

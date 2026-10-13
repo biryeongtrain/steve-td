@@ -13,13 +13,13 @@ import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.gamble.GambleDiceVisuals;
 import kim.biryeong.semiontd.tower.gamble.GambleTowers;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 import org.slf4j.Logger;
 
 public final class SemionPolymerEntityDataWarmup {
-    private static final Set<ResourceLocation> KNOWN_POLYMER_OVERLAY_ENTITY_TYPES = Set.of(
-            ResourceLocation.fromNamespaceAndPath("friendsandfoes", "moobloom")
+    private static final Set<Identifier> KNOWN_POLYMER_OVERLAY_ENTITY_TYPES = Set.of(
+            Identifier.fromNamespaceAndPath("friendsandfoes", "moobloom")
     );
 
     private SemionPolymerEntityDataWarmup() {
@@ -36,7 +36,7 @@ public final class SemionPolymerEntityDataWarmup {
         int warmed = 0;
         int skippedPolymerOverlays = 0;
         for (EntityType<?> entityType : entityTypes) {
-            ResourceLocation entityTypeId = BuiltInRegistries.ENTITY_TYPE.getKey(entityType);
+            Identifier entityTypeId = BuiltInRegistries.ENTITY_TYPE.getKey(entityType);
             if (KNOWN_POLYMER_OVERLAY_ENTITY_TYPES.contains(entityTypeId) || PolymerEntityUtils.isPolymerEntityType(entityType)) {
                 skippedPolymerOverlays++;
                 continue;
@@ -69,15 +69,15 @@ public final class SemionPolymerEntityDataWarmup {
     }
 
     private static void addBaseEntityTypes(Set<EntityType<?>> entityTypes) {
-        entityTypes.add(EntityType.ARMOR_STAND);
-        entityTypes.add(EntityType.ENDER_DRAGON);
-        entityTypes.add(EntityType.HUSK);
-        entityTypes.add(EntityType.IRON_GOLEM);
-        entityTypes.add(EntityType.PHANTOM);
-        entityTypes.add(EntityType.SKELETON);
-        entityTypes.add(EntityType.VILLAGER);
-        entityTypes.add(EntityType.ZOMBIE);
-        entityTypes.add(EntityType.ZOMBIE_VILLAGER);
+        entityTypes.add(net.minecraft.world.entity.EntityTypes.ARMOR_STAND);
+        entityTypes.add(net.minecraft.world.entity.EntityTypes.ENDER_DRAGON);
+        entityTypes.add(net.minecraft.world.entity.EntityTypes.HUSK);
+        entityTypes.add(net.minecraft.world.entity.EntityTypes.IRON_GOLEM);
+        entityTypes.add(net.minecraft.world.entity.EntityTypes.PHANTOM);
+        entityTypes.add(net.minecraft.world.entity.EntityTypes.SKELETON);
+        entityTypes.add(net.minecraft.world.entity.EntityTypes.VILLAGER);
+        entityTypes.add(net.minecraft.world.entity.EntityTypes.ZOMBIE);
+        entityTypes.add(net.minecraft.world.entity.EntityTypes.ZOMBIE_VILLAGER);
     }
 
     private static void addConfiguredWaveEntityTypes(Set<EntityType<?>> entityTypes, LoadedConfigs configs) {
@@ -124,7 +124,7 @@ public final class SemionPolymerEntityDataWarmup {
         if (entityTypeId == null || entityTypeId.isBlank()) {
             return;
         }
-        ResourceLocation id = ResourceLocation.tryParse(entityTypeId);
+        Identifier id = Identifier.tryParse(entityTypeId);
         if (id == null) {
             return;
         }

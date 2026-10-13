@@ -5,12 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import kim.biryeong.semiontd.SemionTd;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.junit.jupiter.api.Test;
 
 final class TraitLoadoutTest {
-    private static final ResourceLocation MINER = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "starter_mineral_training");
-    private static final ResourceLocation OTHER = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "other");
+    private static final Identifier MINER = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "starter_mineral_training");
+    private static final Identifier OTHER = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "other");
 
     @Test
     void traitSlotScalesPrimaryAndSecondaryEffects() {

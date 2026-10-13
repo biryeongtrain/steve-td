@@ -23,6 +23,32 @@ class WarlockSacrificeTest {
     }
 
     @Test
+    void requestedPermanentGrowthSurvivesRoundResetWithoutChangingRoundGrowth() {
+        kim.biryeong.semiontd.config.TowerBalanceRuntime.apply(
+                kim.biryeong.semiontd.config.TowerBalanceConfig.defaultConfig());
+        WarlockPath[] paths = {WarlockPath.BASE, WarlockPath.RANGED, WarlockPath.MELEE};
+        double[] health = {20.0, 40.0, 70.0};
+        double[] damage = {2.0, 7.0, 4.0};
+        double[] roundHealth = {0.0, 500.0, 600.0};
+        double[] roundDamage = {0.0, 50.0, 60.0};
+        for (int index = 0; index < paths.length; index++) {
+            WarlockState state = new WarlockState();
+            state.recordSacrifice(WarlockSacrifice.calculate(paths[index],
+                    new WarlockSacrifice.Snapshot(1000.0, 100.0, 12),
+                    WarlockConfig.RUNTIME.path(paths[index]), WarlockConfig.RUNTIME.combat(), 20));
+            assertEquals(health[index], state.permanentHealthBonus(), .0001);
+            assertEquals(damage[index], state.permanentDamageBonus(), .0001);
+            assertEquals(roundHealth[index], state.roundHealthBonus(), .0001);
+            assertEquals(roundDamage[index], state.roundDamageBonus(), .0001);
+            state.resetRound();
+            assertEquals(health[index], state.permanentHealthBonus(), .0001);
+            assertEquals(damage[index], state.permanentDamageBonus(), .0001);
+            assertEquals(0, state.roundHealthBonus(), .0001);
+            assertEquals(0, state.roundDamageBonus(), .0001);
+        }
+    }
+
+    @Test
     void baseSacrificeRecordsProgressAndPermanentStatsAtomically() {
         WarlockConfig config = WarlockConfig.RUNTIME;
         WarlockSacrifice.Snapshot snapshot = new WarlockSacrifice.Snapshot(100.0, 20.0, 12);

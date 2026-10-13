@@ -1,5 +1,5 @@
 plugins {
-    id 'fabric-loom' version '1.15-SNAPSHOT'
+    id 'net.fabricmc.fabric-loom' version '1.17.21'
     id 'maven-publish'
 }
 
@@ -12,6 +12,20 @@ base {
 
 
 repositories {
+    // Local JARs for mods without a Minecraft 26.3 release; see README.md.
+    exclusiveContent {
+        forRepository {
+            flatDir {
+                dirs 'libs'
+            }
+        }
+
+        filter {
+            includeModule 'kim.biryeong', 'danta-shader'
+            includeModule 'com.flechazo.nightlights', 'nightlights-fabric'
+            includeModule 'com.phoen1x.nightlightspatch', 'night-lights-patch'
+        }
+    }
     // Serves Polymer modules
     maven {
         url 'https://maven.nucleoid.xyz'
@@ -63,55 +77,56 @@ repositories {
 dependencies {
     // To change the versions see the gradle.properties file
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings loom.officialMojangMappings()
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    // Minecraft 26.3 is unobfuscated; no remapping or mappings dependency.
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
     // Polymer
-    modImplementation("eu.pb4:polymer-core:${project.polymer_version}")
-    modImplementation("eu.pb4:polymer-virtual-entity:${project.polymer_version}")
-    modImplementation("eu.pb4:polymer-resource-pack:${project.polymer_version}")
-    modImplementation("eu.pb4:polymer-resource-pack-extras:${project.polymer_version}")
-    modImplementation("eu.pb4:polymer-autohost:${project.polymer_version}")
-    modImplementation("eu.pb4:polymer-blocks:${project.polymer_version}")
+    implementation("eu.pb4:polymer-core:${project.polymer_version}")
+    implementation("eu.pb4:polymer-virtual-entity:${project.polymer_version}")
+    implementation("eu.pb4:polymer-resource-pack:${project.polymer_version}")
+    implementation("eu.pb4:polymer-resource-pack-extras:${project.polymer_version}")
+    implementation("eu.pb4:polymer-autohost:${project.polymer_version}")
+    implementation("eu.pb4:polymer-blocks:${project.polymer_version}")
 
     // Server-Translations
-    modImplementation include("xyz.nucleoid:server-translations-api:${project.server_translations_version}")
-    modImplementation include("xyz.nucleoid:stimuli:${project.stimuli_version}")
-    modImplementation include("de.tomalbrc:DialogUtils:${project.dialogutils_version}")
-    modImplementation include("eu.pb4:sgui:${project.sgui_version}")
+    implementation include("xyz.nucleoid:server-translations-api:${project.server_translations_version}")
+    implementation include("xyz.nucleoid:stimuli:${project.stimuli_version}")
+    implementation include("de.tomalbrc:DialogUtils:${project.dialogutils_version}")
+    implementation include("eu.pb4:sgui:${project.sgui_version}")
 
-    modImplementation include("net.kyori:adventure-platform-fabric:${project.adventure_platform_version}")
+    implementation include("net.kyori:adventure-platform-fabric:${project.adventure_platform_version}")
     implementation "net.kyori:adventure-text-minimessage:${project.adventure_api_version}"
     implementation "net.kyori:adventure-api:${project.adventure_api_version}"
 
 
-    modImplementation include("xyz.nucleoid:fantasy:${project.fantasy_version}")
-    modImplementation include("xyz.nucleoid:map-templates:${project.map_templates}")
-    modImplementation include("eu.pb4:sidebar-api:${project.sidebar_api_version}")
-    modImplementation include("de.tomalbrc:avatar-renderer:${project.avatar_renderer_version}")
-    modImplementation include("eu.pb4:map-canvas-api:${project.map_canvas_api_version}")
-    modImplementation include("de.tomalbrc:blockbench-import-library:${project.bli_version}")
-    modImplementation include("eu.pb4:placeholder-api:2.7.2+1.21.8")
+    implementation include("xyz.nucleoid:fantasy:${project.fantasy_version}")
+    implementation include("xyz.nucleoid:map-templates:${project.map_templates}")
+    implementation include("eu.pb4:sidebar-api:${project.sidebar_api_version}")
+    implementation include("de.tomalbrc:avatar-renderer:${project.avatar_renderer_version}")
+    implementation include("eu.pb4:map-canvas-api:${project.map_canvas_api_version}")
+    implementation include("maven.modrinth:blockbench-import-library:${project.bli_version}")
+    implementation include("eu.pb4:placeholder-api:${project.papi_version}")
+    // BIL uses this API for its existing permission predicates.
+    implementation include('me.lucko:fabric-permissions-api:0.7.0')
 
-    modImplementation include("kim.biryeong:danta-shader:1.0.2+1.21.8")
-    modImplementation include("kim.biryeong:GCB-server:1.0.1+1.21.8")
-    modImplementation include("eu.pb4:player-data-api:0.8.0+1.21.6")
-    modImplementation("com.teamresourceful.resourcefullib:resourcefullib-fabric-1.21.6:${project.resourceful_lib_version}") {
+    implementation include("kim.biryeong:danta-shader:${project.danta_shader_version}")
+    implementation include("kim.biryeong:GCB-server:1.2.0+26.3")
+    implementation include("eu.pb4:player-data-api:0.11.0+26.2")
+    implementation("maven.modrinth:resourceful-lib:${project.resourceful_lib_version_id}") {
         transitive = false
     }
-    modImplementation "eu.pb4:factorytools:${project.factorytools_version}"
-    modImplementation "dev.isxander:yet-another-config-lib:${project.yacl_version}"
-    modImplementation "maven.modrinth:friends-and-foes:${project.friends_and_foes_version}"
-    modImplementation "maven.modrinth:friends-and-foes-flowery-mooblooms-fabric:${project.flowery_mooblooms_version}"
-    modImplementation "maven.modrinth:apel:${project.apel_maven_version}"
-    modLocalRuntime files(fileTree("run/mods") {
-        include "friends-and-foes-patch-*.jar"
-        include "flowery-mooblooms-polymer-patch-*.jar"
-    })
+    implementation "eu.pb4:factorytools:${project.factorytools_version}"
+    implementation "maven.modrinth:yacl:${project.yacl_version}"
+    implementation include("maven.modrinth:friends-and-foes:${project.friends_and_foes_version}")
+    implementation "maven.modrinth:friends-and-foes-flowery-mooblooms-fabric:${project.flowery_mooblooms_version}"
+    implementation include("maven.modrinth:friends-and-foes-polymer:${project.friends_and_foes_polymer_version}")
+    implementation include("com.flechazo.nightlights:nightlights-fabric:${project.nightlights_version}")
+    implementation include("com.phoen1x.nightlightspatch:night-lights-patch:${project.nightlights_patch_version}")
+    // This upstream Polymer patch includes Flowery assets and every adult/baby variant.
 
-    modLocalRuntime("maven.modrinth:carpet:1.4.177")
+localRuntime("maven.modrinth:carpet:26.3")
 
     implementation include("io.hypersistence:hypersistence-tsid:2.1.4")
     implementation include("org.xerial:sqlite-jdbc:3.46.1.0")
@@ -129,7 +144,9 @@ fabricApi {
         createSourceSet = true
         modId = "semion-td-gametest"
         enableGameTests = true
-        enableClientGameTests = false
+        enableClientGameTests = true
+        clearRunDirectory = false
+        username = "SemionCapture"
         eula = true
     }
 }
@@ -147,7 +164,7 @@ processResources {
     }
 }
 
-def targetJavaVersion = 21
+def targetJavaVersion = 25
 tasks.withType(JavaCompile).configureEach {
     // ensure that the encoding is set to UTF-8, no matter what the system default is
     // this fixes some edge cases with special characters not displaying correctly
@@ -191,5 +208,124 @@ publishing {
         // Notice: This block does NOT have the same function as the block in the top level.
         // The repositories here will be used for publishing your artifact, not for
         // retrieving dependencies.
+    }
+}
+
+// Preserve the documented release command on unobfuscated Minecraft.
+// Non-remapping Loom includes nested dependencies in the normal jar task.
+tasks.register('remapJar') {
+    group = 'build'
+    description = 'Builds the distributable JAR for unobfuscated Minecraft 26.3.'
+    dependsOn tasks.named('jar')
+}
+// A new run directory for every server-backed test invocation prevents accidental
+// reuse or conversion of any prior developer/test/operating world.
+def isolatedGameTestDirectory = layout.buildDirectory.dir('run/gameTest-26.3-' + java.util.UUID.randomUUID())
+loom.runConfigs.named('gameTest') {
+    runDirectory.set(isolatedGameTestDirectory)
+}
+tasks.named('runGameTest') {
+    if (providers.gradleProperty('semiontd.matchProfile').getOrElse('false').toBoolean()) {
+        systemProperty 'semiontd.matchProfile', 'true'
+        systemProperty 'fabric-api.gametest.filter',
+                'semion-td-gametest:game_match_performance_test_measures_match_combat'
+        systemProperty 'spark.backgroundProfiler', 'false'
+        minHeapSize = '4g'
+        maxHeapSize = '4g'
+        jvmArgs '-XX:+UseG1GC', '-XX:ActiveProcessorCount=4'
+        ['profileVariant', 'matchSpark', 'matchRound', 'matchSummons', 'matchTicks', 'matchBuilders'].each { key ->
+            def value = providers.gradleProperty('semiontd.' + key).orNull
+            if (value != null) systemProperty 'semiontd.' + key, value
+        }
+        def sparkJar = providers.gradleProperty('semiontd.sparkJar').orNull
+        if (sparkJar != null) classpath = classpath + files(sparkJar)
+    }
+    doFirst {
+        File isolatedRun = isolatedGameTestDirectory.get().asFile
+        if (new File(isolatedRun, 'world').exists()) {
+            throw new GradleException('Refusing to reuse an existing GameTest world: ' + isolatedRun)
+        }
+        isolatedRun.mkdirs()
+        new File(isolatedRun, 'server.properties').setText('', 'UTF-8')
+        // Retain the explicitly accepted configureTests EULA setting for the new directory.
+        new File(isolatedRun, 'eula.txt').setText('eula=true\n', 'UTF-8')
+        layout.buildDirectory.file('26.3-gametest-run-dir.txt').get().asFile.setText(isolatedRun.absolutePath, 'UTF-8')
+        logger.lifecycle('Isolated 26.3 GameTest directory: ' + isolatedRun)
+    }
+}
+
+
+def capturePort = providers.gradleProperty('capturePort').getOrElse('25643')
+def captureMode = providers.gradleProperty('captureMode').getOrElse('dialog')
+def captureClientExcludedPrefixes = ['DialogUtils-', 'friends-and-foes-polymer-']
+def isolatedCaptureClientDirectory = layout.buildDirectory.dir('run/capture-client-' + java.util.UUID.randomUUID())
+def isolatedCaptureServerDirectory = layout.buildDirectory.dir('run/capture-server-' + java.util.UUID.randomUUID())
+loom.runConfigs.named('clientGameTest') {
+    runDirectory.set(isolatedCaptureClientDirectory)
+    systemProperties.put('semiontd.capture.port', capturePort)
+    systemProperties.put('semiontd.capture.mode', captureMode)
+    systemProperties.put('fabric.client.gametest.disableNetworkSynchronizer', 'true')
+    programArguments.addAll('--width', '1600', '--height', captureMode == 'dialog' ? '1000' : '900')
+}
+loom.runConfigs.create('captureServer') {
+    inherit(loom.runConfigs.getByName('server'))
+    sourceSet.set('gametest')
+    runDirectory.set(isolatedCaptureServerDirectory)
+    systemProperties.put('semiontd.capture', 'true')
+    systemProperties.put('semiontd.capture.mode', captureMode)
+}
+def prepareCaptureServer = {
+        File isolatedRun = isolatedCaptureServerDirectory.get().asFile
+        if (isolatedRun.exists()) throw new GradleException('Refusing to reuse capture server directory: ' + isolatedRun)
+        isolatedRun.mkdirs()
+        new File(isolatedRun, 'eula.txt').setText('eula=true\n', 'UTF-8')
+        new File(isolatedRun, 'server.properties').setText(
+                'server-ip=127.0.0.1\nserver-port=' + capturePort + '\nonline-mode=false\nmax-players=1\n' +
+                'motd=Semion isolated capture\nlevel-name=capture-world\nview-distance=16\nsimulation-distance=5\n' +
+                'spawn-protection=0\nwhite-list=false\n', 'UTF-8')
+        layout.buildDirectory.file('26.3-capture-server-dir.txt').get().asFile.setText(isolatedRun.absolutePath, 'UTF-8')
+        logger.lifecycle('Isolated capture server: ' + isolatedRun)
+}
+tasks.named('runCaptureServer') {
+    doFirst(prepareCaptureServer)
+}
+tasks.named('runClientGameTest') {
+    dependsOn tasks.named('gametestClasses')
+    classpath = files(classpath.files.findAll { file ->
+        !captureClientExcludedPrefixes.any { prefix -> file.name.startsWith(prefix) }
+    })
+    doFirst {
+        layout.buildDirectory.file('26.3-capture-client-dir.txt').get().asFile.setText(
+                isolatedCaptureClientDirectory.get().asFile.absolutePath, 'UTF-8')
+        logger.lifecycle('Isolated capture client: ' + isolatedCaptureClientDirectory.get().asFile)
+    }
+}
+
+tasks.register('prepareCaptureLaunch') {
+    dependsOn {
+        ['runCaptureServer', 'runClientGameTest'].collectMany { name ->
+            def run = tasks.named(name).get()
+            run.taskDependencies.getDependencies(run).toList()
+        }
+    }
+    doLast {
+        prepareCaptureServer()
+        def launches = [:]
+        ['runCaptureServer', 'runClientGameTest'].each { name ->
+            def run = tasks.named(name).get()
+            def arguments = new ArrayList(run.allJvmArgs)
+            arguments.add(run.mainClass.get())
+            arguments.addAll(run.args)
+            run.argumentProviders.each { provider -> arguments.addAll(provider.asArguments()) }
+            launches[name] = [args: arguments, workingDirectory: (name == 'runCaptureServer'
+                    ? isolatedCaptureServerDirectory : isolatedCaptureClientDirectory).get().asFile.absolutePath]
+        }
+        def output = layout.buildDirectory.file('capture-launch.json').get().asFile
+        output.setText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(launches)), 'UTF-8')
+        layout.buildDirectory.file('capture-scope.json').get().asFile.setText(
+                groovy.json.JsonOutput.toJson([mode: captureMode,
+                        clientExcludedJarPrefixes: captureClientExcludedPrefixes]), 'UTF-8')
+        logger.lifecycle('Capture scope: mode=' + captureMode)
+        logger.lifecycle('Capture JVM launch descriptions: ' + output)
     }
 }

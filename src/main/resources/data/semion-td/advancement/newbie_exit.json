@@ -10,7 +10,6 @@
   },
   "display": {
     "announce_to_chat": true,
-    "background": "minecraft:gui/advancements/backgrounds/stone",
     "description": {
       "text": "일반 경기를 10판 플레이하세요."
     },

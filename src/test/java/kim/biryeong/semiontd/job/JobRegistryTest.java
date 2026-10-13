@@ -42,6 +42,18 @@ class JobRegistryTest {
     }
 
     @Test
+    void hyperCarryClassificationContainsExactlyThreeBuildersAndPreservesHeroException() {
+        assertEquals(Set.of(EndTowerJob.ID, WarlockTowerJob.ID, DemonLordTowerJob.ID),
+                JobRegistry.all().stream().filter(SemionJob::isHyperCarry).map(SemionJob::id)
+                        .collect(java.util.stream.Collectors.toSet()));
+        assertFalse(new HeroPartyTowerJob().isHyperCarry());
+        assertTrue(HyperCarryBuilders.isCore(kim.biryeong.semiontd.tower.warlock.WarlockTowers.BASE_WARLOCK_TOWER));
+        assertFalse(HyperCarryBuilders.includes(OceanTowers.T1_WATER));
+        assertTrue(kim.biryeong.semiontd.tower.demonlord.DemonLordTowers.all().stream()
+                .allMatch(HyperCarryBuilders::includes));
+    }
+
+    @Test
     void disablingAJobKeepsItRegisteredButBlocksSelection() {
         JobAvailabilityConfig disabled = JobAvailabilityConfig.defaultConfig()
                 .withEnabled(NetherTowerJob.ID, false)
@@ -50,7 +62,7 @@ class JobRegistryTest {
         JobRegistry.configureAvailability(disabled);
 
         assertTrue(JobRegistry.find(NetherTowerJob.ID).isPresent());
-        assertEquals(33, JobRegistry.all().size());
+        assertEquals(34, JobRegistry.all().size());
         assertTrue(JobRegistry.officialBuilders().stream().anyMatch(job -> job.id().equals(NetherTowerJob.ID)));
         assertTrue(JobRegistry.isEnabled(JobRegistry.defaultJob()));
         assertFalse(JobRegistry.isEnabled(NetherTowerJob.ID));
@@ -92,9 +104,10 @@ class JobRegistryTest {
                 DeveloperTowerJob.ID,
                 FrostTowerJob.ID,
                 PirateTowerJob.ID,
-                BlueprintTowerJob.ID
+                BlueprintTowerJob.ID,
+                MagicSchoolTowerJob.ID
         ), JobRegistry.creativeBuilders().stream().map(SemionJob::id).toList());
-        assertEquals(33, JobRegistry.all().size());
+        assertEquals(34, JobRegistry.all().size());
         assertTrue(JobRegistry.officialBuilders().stream().noneMatch(JobRegistry.defaultJob()::equals));
         assertTrue(JobRegistry.creativeBuilders().stream().noneMatch(JobRegistry.defaultJob()::equals));
         var player = new SemionPlayer(UUID.randomUUID(), "pirate-origin-test", TeamId.RED, 0,
@@ -111,12 +124,21 @@ class JobRegistryTest {
         ).toList();
         Set<String> optionalLabels = Set.of("주의 ", "연계 ", "성장 ");
 
-        assertEquals(32, builders.size());
+        assertEquals(33, builders.size());
         for (SemionJob builder : builders) {
             List<String> lines = builder.description().stream().map(line -> line.getString()).toList();
-            int maximumLines = FrostTowerJob.ID.equals(builder.id()) ? 4 : 3;
+            int maximumLines = MagicSchoolTowerJob.ID.equals(builder.id()) ? 5 : FrostTowerJob.ID.equals(builder.id()) ? 4 : 3;
             assertTrue(lines.size() >= 2 && lines.size() <= maximumLines,
                     builder.id() + " 설명 줄 수가 허용 범위를 벗어났습니다.");
+            if (MagicSchoolTowerJob.ID.equals(builder.id())) {
+                assertEquals(5, lines.size());
+                assertTrue(lines.get(0).startsWith("운영 ") && lines.get(0).contains("커리큘럼"));
+                assertTrue(lines.get(1).contains("주문을 직접 지정"));
+                assertTrue(lines.get(2).contains("최대 숙련도에서 다음 티어"));
+                assertTrue(lines.get(3).startsWith("주의 ") && lines.get(3).contains("라운드당 한 번"));
+                assertTrue(lines.get(4).contains("기숙사 배정 모자") && lines.get(4).contains("T2"));
+                continue;
+            }
             assertTrue(lines.get(0).startsWith("시작 "), builder.id() + " 설명은 시작 행동부터 알려야 합니다.");
             assertTrue(lines.get(1).startsWith("운영 "), builder.id() + " 설명은 운영 방법을 이어서 알려야 합니다.");
             assertTrue(lines.stream().noneMatch(String::isBlank), builder.id() + " 설명에 빈 줄이 없어야 합니다.");

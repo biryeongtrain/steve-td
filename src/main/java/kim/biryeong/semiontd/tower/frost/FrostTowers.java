@@ -11,6 +11,8 @@ import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
 import net.minecraft.world.entity.animal.axolotl.Axolotl;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 
 /** 혹한 빌더의 현재 공개 타워와 계열 분류. */
 public final class FrostTowers {
@@ -220,7 +222,7 @@ public final class FrostTowers {
 
     public static final TowerType ICEBOX_T1 = healingTower(
             "frost_icebox_t1", "얼음 구호병 타워", 45,
-            Blocks.WHITE_SHULKER_BOX, 0.80,
+            BuiltInRegistries.BLOCK.getOptional(Identifier.withDefaultNamespace("white_shulker_box")).orElseThrow(), 0.80,
             List.of(
                     "<gray>{ability.healIntervalTicks:seconds}마다 반경 {ability.healRadius:blocks}의 부상당한 아군 타워를 치료합니다.</gray>",
                     "<green>치료파동의 회복량은 {ability.healAmount:health}입니다.</green>",
@@ -232,7 +234,7 @@ public final class FrostTowers {
 
     public static final TowerType ICEBOX_T2 = healingTower(
             "frost_icebox_t2", "혹한 의무관 타워", 0,
-            Blocks.LIGHT_BLUE_SHULKER_BOX, 0.95,
+            BuiltInRegistries.BLOCK.getOptional(Identifier.withDefaultNamespace("light_blue_shulker_box")).orElseThrow(), 0.95,
             List.of(
                     "<gray>{ability.healIntervalTicks:seconds}마다 반경 {ability.healRadius:blocks}의 부상당한 아군 타워를 치료합니다.</gray>",
                     "<green>치료파동의 회복량은 {ability.healAmount:health}입니다.</green>",

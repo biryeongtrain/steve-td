@@ -23,7 +23,7 @@ public final class DemonLordKitItems {
             return false;
         }
         CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-        return data != null && data.getUnsafe().getBooleanOr(KIT_KEY, false);
+        return data != null && data.copyTag().getBooleanOr(KIT_KEY, false);
     }
 
     public static void clear(Container inventory) {

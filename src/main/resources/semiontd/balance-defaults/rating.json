@@ -1,5 +1,5 @@
 {
-  "enabled": false,
+  "enabled": true,
   "teamEloMatchmakingEnabled": false,
   "eloKFactor": 64.0,
   "initialDisplayElo": 1500,

@@ -31,8 +31,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
-public final class InsectGameTest {
-    @GameTest
+public final class InsectGameTest implements kim.biryeong.semiontd.gametest.RuntimeArenaFixture {
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void augmentHatchingKeepsLifePenaltiesAndBlocksOnlyOneRevivedHit(GameTestHelper context) {
         UUID owner = UUID.randomUUID();
         PlayerLane lane = testLane(context, owner);
@@ -79,7 +79,7 @@ public final class InsectGameTest {
         } finally {lane.clearTowers(); InsectAugments.clear(owner);}
     }
 
-    @GameTest
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void colonyUsesLivingOriginalAnchorsAndCancelsWhenAllDisappear(GameTestHelper context) {
         UUID owner = UUID.randomUUID();
         PlayerLane lane = testLane(context, owner);
@@ -102,7 +102,7 @@ public final class InsectGameTest {
         } finally {lane.clearTowers(); InsectAugments.clear(owner);}
     }
 
-    @GameTest
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void larvaeReuseEightConcurrentSlotsOnEveryOriginalDeath(GameTestHelper context) {
         UUID owner = UUID.randomUUID();
         PlayerLane lane = testLane(context, owner);
@@ -183,7 +183,7 @@ public final class InsectGameTest {
                         kim.biryeong.semiontd.augment.AugmentChoice.none())).toList());
     }
 
-    @GameTest
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void freshUnitRevivesAtDeathPositionAndSpawnerLossCancelsNextRevival(GameTestHelper context) {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
         UUID owner = UUID.nameUUIDFromBytes("insect-revival".getBytes(StandardCharsets.UTF_8));
@@ -224,7 +224,7 @@ public final class InsectGameTest {
         }
     }
 
-    @GameTest
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void linkedSpawnersSurviveFinalDefenseWithoutSpeedingRevival(GameTestHelper context) {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
         UUID owner = UUID.nameUUIDFromBytes("insect-final-defense".getBytes(StandardCharsets.UTF_8));
@@ -276,7 +276,7 @@ public final class InsectGameTest {
         }
     }
 
-    @GameTest
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void spawnersAreIsolatedByOwner(GameTestHelper context) {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
         UUID owner = UUID.nameUUIDFromBytes("insect-owner-a".getBytes(StandardCharsets.UTF_8));
@@ -303,7 +303,7 @@ public final class InsectGameTest {
         }
     }
 
-    @GameTest
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void repeatedExplosionsUseDeathHealthMagicResistanceAndExactRadius(GameTestHelper context) {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
         UUID owner = UUID.nameUUIDFromBytes("insect-explosion".getBytes(StandardCharsets.UTF_8));
@@ -370,7 +370,7 @@ public final class InsectGameTest {
         }
     }
 
-    @GameTest
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void removalAndSpawnerDeathDoNotExplodeButUnlinkedUnitDeathDoes(GameTestHelper context) {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
         UUID owner = UUID.nameUUIDFromBytes("insect-removal".getBytes(StandardCharsets.UTF_8));
@@ -409,7 +409,7 @@ public final class InsectGameTest {
         }
     }
 
-    @GameTest(maxTicks = 140)
+    @GameTest(structure = "semion-td-gametest:combat_arena", maxTicks = 140)
     public void beeActuallyApproachesAndDetonatesWithoutRangedAttacks(GameTestHelper context) {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
         UUID owner = UUID.nameUUIDFromBytes("insect-contact".getBytes(StandardCharsets.UTF_8));
@@ -459,7 +459,7 @@ public final class InsectGameTest {
         });
     }
 
-    @GameTest
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void finalDefenseBeeWaitsForContactAndRevivesAtItsAssignedSlot(GameTestHelper context) {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
         UUID owner = UUID.nameUUIDFromBytes("insect-contact-final".getBytes(StandardCharsets.UTF_8));
@@ -501,7 +501,7 @@ public final class InsectGameTest {
         }
     }
 
-    @GameTest
+    @GameTest(structure = "semion-td-gametest:combat_arena")
     public void allNineUnitsUseTieredExplosionDamageAndRadius(GameTestHelper context) {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
         for (TowerType type : InsectTowers.all().stream().filter(InsectTowers::isCombatUnit).toList()) {
@@ -556,16 +556,25 @@ public final class InsectGameTest {
         entity.setNoGravity(true);
         entity.setPos(position);
         require(context.getLevel().addFreshEntity(entity), "Test monster must spawn.");
+        require(context.getLevel().getEntity(entity.getId()) == entity
+                        && context.getLevel().areEntitiesActuallyLoadedAndTicking(entity.chunkPosition()),
+                "Test monster must be indexed in a ticking entity section before combat queries.");
         runtime.markMinecraftEntitySpawned(entity.getId(), position.x, position.y, position.z);
         lane.activeMonsters().add(runtime);
         return entity;
     }
 
     private static SemionTowerEntity towerEntity(GameTestHelper context, kim.biryeong.semiontd.tower.EntityBackedTower tower) {
-        return (SemionTowerEntity) context.getLevel().getEntity(tower.entityId().orElseThrow());
+        var entity = context.getLevel().getEntity(tower.entityId().orElseThrow());
+        require(entity instanceof SemionTowerEntity
+                        && context.getLevel().areEntitiesActuallyLoadedAndTicking(entity.chunkPosition()),
+                "Test tower must be indexed in a ticking entity section before combat queries.");
+        return (SemionTowerEntity) entity;
     }
 
     private static PlayerLane testLane(GameTestHelper context, UUID owner) {
+        context.assertTrue(context.getBounds().contains(Vec3.atCenterOf(context.absolutePos(new BlockPos(14, 6, 14)))),
+                "The declared structure must contain the entire insect arena.");
         BlockPos min = context.absolutePos(new BlockPos(0, 1, 0));
         BlockPos max = context.absolutePos(new BlockPos(14, 6, 14));
         LaneRegionLayout layout = new LaneRegionLayout(

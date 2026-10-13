@@ -2,7 +2,7 @@ package kim.biryeong.semiontd.tower.animaladv;
 
 import kim.biryeong.semiontd.entity.visual.FoxVisual;
 import kim.biryeong.semiontd.tower.TowerType;
-import net.minecraft.world.entity.animal.Fox;
+import net.minecraft.world.entity.animal.fox.Fox;
 
 import java.util.List;
 

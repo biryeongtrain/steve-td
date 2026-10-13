@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.junit.jupiter.api.Test;
 
 class SemionMusicServiceTest {
@@ -69,8 +69,8 @@ class SemionMusicServiceTest {
         return new SemionMusicTrack(
                 id,
                 Path.of(id + ".ogg"),
-                ResourceLocation.fromNamespaceAndPath("semion-td", "music." + id),
-                ResourceLocation.fromNamespaceAndPath("semion-td", "music/" + id),
+                Identifier.fromNamespaceAndPath("semion-td", "music." + id),
+                Identifier.fromNamespaceAndPath("semion-td", "music/" + id),
                 durationTicks
         );
     }

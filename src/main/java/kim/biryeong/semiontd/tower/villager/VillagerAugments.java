@@ -10,7 +10,7 @@ import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerDataKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /** Survival augments use the original growth counter; inherited stacks never become permanent. */
 public final class VillagerAugments {
@@ -24,7 +24,7 @@ public final class VillagerAugments {
     private VillagerAugments() {}
 
     private static <T> TowerDataKey<T> key(String name, Class<T> type) {
-        return TowerDataKey.of(ResourceLocation.fromNamespaceAndPath("semiontd", "villager_augment/" + name), type);
+        return TowerDataKey.of(Identifier.fromNamespaceAndPath("semiontd", "villager_augment/" + name), type);
     }
 
     public static boolean grows(Tower tower) {

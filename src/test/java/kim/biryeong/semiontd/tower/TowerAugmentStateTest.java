@@ -11,7 +11,7 @@ import kim.biryeong.semiontd.augment.PlayerAugmentState;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.TeamId;
 import net.minecraft.SharedConstants;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.Bootstrap;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -42,7 +42,7 @@ class TowerAugmentStateTest {
     void copyGetsIndependentIdentityAndKeepsFrozenTypeAcrossReload() {
         ProductionTower original = tower(type(100, 20));
         ProductionTower copy = tower(type(40, 8));
-        TowerDataKey<Integer> marker = TowerDataKey.of(ResourceLocation.parse("semiontd:copy_test_marker"), Integer.class);
+        TowerDataKey<Integer> marker = TowerDataKey.of(Identifier.parse("semiontd:copy_test_marker"), Integer.class);
         original.setData(marker, 7);
         copy.copyFrom(original, 0);
         assertEquals(original.logicalId(), copy.logicalId());

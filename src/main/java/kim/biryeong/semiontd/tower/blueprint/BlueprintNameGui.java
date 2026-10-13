@@ -24,7 +24,7 @@ public final class BlueprintNameGui extends AnvilInputGui {
         setDefaultInputValue(BlueprintDraft.of(player.getUUID()).name);
         setSlot(1, new GuiElementBuilder(Items.ARROW)
                 .setName(text("편집 창으로", ChatFormatting.YELLOW))
-                .setCallback((slot, type, action) -> new BlueprintEditorGui(player, gameManager).open()));
+                .setCallback((slot, type, action, clickedGui) -> new BlueprintEditorGui(player, gameManager).open()));
         refreshConfirm();
     }
 
@@ -36,10 +36,10 @@ public final class BlueprintNameGui extends AnvilInputGui {
     private void refreshConfirm() {
         String name = BlueprintStates.sanitizeName(getInput());
         boolean valid = !name.isEmpty();
-        GuiElementBuilder confirm = new GuiElementBuilder(valid ? Items.LIME_DYE : Items.BARRIER)
+        GuiElementBuilder confirm = new GuiElementBuilder(valid ? Items.DYE.lime() : Items.BARRIER)
                 .setName(text(valid ? "'" + name + "'(으)로 정하기" : "1~16자로 입력하세요", valid ? ChatFormatting.GREEN : ChatFormatting.RED));
         if (valid) {
-            confirm.setCallback((slot, type, action) -> {
+            confirm.setCallback((slot, type, action, clickedGui) -> {
                 BlueprintDraft.of(player.getUUID()).name = name;
                 new BlueprintEditorGui(player, gameManager).open();
             });

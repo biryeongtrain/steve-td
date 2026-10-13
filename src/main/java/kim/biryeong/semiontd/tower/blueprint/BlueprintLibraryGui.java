@@ -58,7 +58,7 @@ public final class BlueprintLibraryGui extends SimpleGui {
                     builder.addLoreLineRaw(text(module.displayName() + " " + level + "단계: " + BlueprintTexts.effect(module, level), ChatFormatting.GRAY)));
             invalid.ifPresent(reason -> builder.addLoreLineRaw(text("지금은 못 씀: " + reason, ChatFormatting.RED)));
             builder.addLoreLineRaw(text("쉬프트+우클릭: 지우기", ChatFormatting.DARK_GRAY));
-            builder.setCallback((slot, type, action) -> {
+            builder.setCallback((slot, type, action, clickedGui) -> {
                 if (type.shift && type.isRight) {
                     BlueprintService.Outcome outcome = BlueprintService.delete(player, gameManager, index);
                     outcome.messages().forEach(message -> player.sendSystemMessage(
@@ -72,13 +72,13 @@ public final class BlueprintLibraryGui extends SimpleGui {
         setSlot(49, new GuiElementBuilder(full ? Items.BARRIER : Items.WRITABLE_BOOK)
                 .setName(text(full ? "설계도가 가득 찼습니다" : "새로 설계하기", full ? ChatFormatting.RED : ChatFormatting.GREEN))
                 .addLoreLineRaw(text(designs.size() + "/" + BlueprintPricing.maxBlueprints() + "장", ChatFormatting.GRAY))
-                .setCallback((slot, type, action) -> {
+                .setCallback((slot, type, action, clickedGui) -> {
                     if (!full) {
                         new BlueprintEditorGui(player, gameManager).open();
                     }
                 }));
         setSlot(45, new GuiElementBuilder(Items.BARRIER)
                 .setName(text("닫기", ChatFormatting.RED))
-                .setCallback((slot, type, action) -> close()));
+                .setCallback((slot, type, action, clickedGui) -> close()));
     }
 }

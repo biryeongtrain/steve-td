@@ -62,7 +62,7 @@ public enum DeveloperBug {
             List.of("<gray>가장 가까운 적 대신 <yellow>가장 먼 적</yellow>부터 노립니다.</gray>")),
 
     /** Refuses to switch. Cancels 캐시 미스 entirely, which is the tidiest pair in the list. */
-    INFINITE_LOOP("infinite_loop", "무한 루프", Category.TARGETING, Items.CHAIN, 0.0, 0.0,
+    INFINITE_LOOP("infinite_loop", "무한 루프", Category.TARGETING, Items.IRON_CHAIN, 0.0, 0.0,
             List.of("<gray>한 대상을 처치할 때까지 타겟을 바꾸지 않습니다.</gray>")),
 
     /** The first monster it ever hits decides what this tower is good at for the rest of the match. */

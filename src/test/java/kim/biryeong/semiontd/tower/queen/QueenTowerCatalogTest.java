@@ -266,7 +266,7 @@ final class QueenTowerCatalogTest {
         assertEquals(70, merged.towers().get(QueenTowers.QUEEN.id()).mineralCost());
         assertEquals(4.0, merged.ability(QueenBalance.GLOBAL_ID, "queenShrinkPoints", -1), 0.0001);
         assertEquals(0.20, merged.ability(QueenBalance.GLOBAL_ID, "minimumStatScale", -1), 0.0001);
-        assertEquals(400, merged.abilityInt(QueenBalance.GLOBAL_ID, "giantChargeTicks", -1));
+        assertEquals(300, merged.abilityInt(QueenBalance.GLOBAL_ID, "giantChargeTicks", -1));
         assertEquals(5.0, merged.ability(QueenBalance.GLOBAL_ID,
                 "giantInitialExecutionHealth", -1), 0.0001);
         assertEquals(0.05, merged.ability(QueenBalance.GLOBAL_ID,

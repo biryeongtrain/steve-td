@@ -23,7 +23,7 @@ import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.TowerUpgradeOption;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class VillagerAdvStates {
     public static final TowerDataKey<Double> EXPERIENCE = TowerDataKey.of(id("experience"), Double.class);
@@ -37,14 +37,14 @@ public final class VillagerAdvStates {
         thread.setDaemon(true);
         return thread;
     });
-    private static final ResourceLocation DAMAGE_SOURCE = source("damage");
-    private static final ResourceLocation ATTACK_SPEED_SOURCE = source("attack_speed");
-    private static final ResourceLocation DAMAGE_REDUCTION_SOURCE = source("damage_reduction");
-    private static final ResourceLocation MAX_HEALTH_SOURCE = source("max_health");
-    private static final ResourceLocation INCOME_DAMAGE_SOURCE = source("income_damage");
-    private static final ResourceLocation WAVE_DAMAGE_SOURCE = source("wave_damage");
-    private static final ResourceLocation HEAL_AMOUNT_SOURCE = source("heal_amount");
-    private static final ResourceLocation ABILITY_INTERVAL_SOURCE = source("ability_interval");
+    private static final Identifier DAMAGE_SOURCE = source("damage");
+    private static final Identifier ATTACK_SPEED_SOURCE = source("attack_speed");
+    private static final Identifier DAMAGE_REDUCTION_SOURCE = source("damage_reduction");
+    private static final Identifier MAX_HEALTH_SOURCE = source("max_health");
+    private static final Identifier INCOME_DAMAGE_SOURCE = source("income_damage");
+    private static final Identifier WAVE_DAMAGE_SOURCE = source("wave_damage");
+    private static final Identifier HEAL_AMOUNT_SOURCE = source("heal_amount");
+    private static final Identifier ABILITY_INTERVAL_SOURCE = source("ability_interval");
 
     private VillagerAdvStates() {
     }
@@ -298,7 +298,7 @@ public final class VillagerAdvStates {
     private static void refresh(
             SemionTowerEntity entity,
             TimedEffectType type,
-            ResourceLocation source,
+            Identifier source,
             double magnitude,
             int durationTicks
     ) {
@@ -381,12 +381,12 @@ public final class VillagerAdvStates {
         return 1;
     }
 
-    private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "villager_adv/" + path);
+    private static Identifier id(String path) {
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "villager_adv/" + path);
     }
 
-    private static ResourceLocation source(String path) {
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "villager_adv/effect/" + path);
+    private static Identifier source(String path) {
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "villager_adv/effect/" + path);
     }
 
     record ExperienceGainSnapshot(UUID ownerPlayer, PlayerLane lane, Tower tower, int tier, double currentExperience,

@@ -42,7 +42,7 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
 import net.minecraft.world.phys.AABB;
@@ -919,7 +919,7 @@ public final class SemionWaveGameTest {
         assertClose(2400, lane.waveSupportMetrics().effectiveHealing(), "five first casts in lane metrics");
         targets.forEach(target -> assertClose(1200, target.runtimeMonster().health(), "five first casts on shared targets"));
 
-        ResourceLocation stun = ResourceLocation.fromNamespaceAndPath("semiontd", "multi_healer_test_stun");
+        Identifier stun = Identifier.fromNamespaceAndPath("semiontd", "multi_healer_test_stun");
         casters.getFirst().setPersistentEffect(TimedEffectType.MONSTER_STUN, stun, 1);
         for (int tick = 0; tick < 160; tick++) { goals.forEach(NaturalWaveHealGoal::tick); }
         assertClose(4320, lane.waveSupportMetrics().effectiveHealing(), "other healers cast independently during stun");
@@ -1045,7 +1045,7 @@ public final class SemionWaveGameTest {
         restored.setPos(origin);
         context.getLevel().addFreshEntity(restored);
         NaturalWaveHealGoal goal = new NaturalWaveHealGoal(restored);
-        ResourceLocation stunSource = ResourceLocation.fromNamespaceAndPath("semiontd", "healer_test_stun");
+        Identifier stunSource = Identifier.fromNamespaceAndPath("semiontd", "healer_test_stun");
         restored.setPersistentEffect(TimedEffectType.MONSTER_STUN, stunSource, 1);
         for (int tick = 0; tick < 200; tick++) {goal.tick();}
         assertClose(580, first.runtimeMonster().health(), "cooldown survives recreation");

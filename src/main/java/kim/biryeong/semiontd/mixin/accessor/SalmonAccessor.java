@@ -1,7 +1,7 @@
 package kim.biryeong.semiontd.mixin.accessor;
 
 import net.minecraft.network.syncher.EntityDataAccessor;
-import net.minecraft.world.entity.animal.Salmon;
+import net.minecraft.world.entity.animal.fish.Salmon;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 

@@ -82,9 +82,9 @@ public final class SemionSkyboxService {
             return false;
         }
         gameManager.saveSelectedSkybox(
-                player.getServer(),
+                player.level().getServer(),
                 player.getUUID(),
-                player.getGameProfile().getName(),
+                player.getGameProfile().name(),
                 normalized
         );
         selections.put(player.getUUID(), normalized);
@@ -147,9 +147,9 @@ public final class SemionSkyboxService {
     private String selection(ServerPlayer player) {
         return selections.computeIfAbsent(player.getUUID(), ignored -> {
             SemionPlayerProfile profile = gameManager.profile(
-                    player.getServer(),
+                    player.level().getServer(),
                     player.getUUID(),
-                    player.getGameProfile().getName()
+                    player.getGameProfile().name()
             );
             return profile.selectedSkyboxId();
         });

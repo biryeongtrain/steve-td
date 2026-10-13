@@ -7,10 +7,10 @@ import kim.biryeong.semiontd.tower.illager.IllagerRaidStates;
 import kim.biryeong.semiontd.tower.illager.IllagerTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class IllagerTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "illager_towers");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "illager_towers");
 
     public IllagerTowerJob() {
         super(
@@ -46,6 +46,11 @@ public final class IllagerTowerJob extends SemionJob {
 
     @Override
     public void onEliminated(JobContext context) {
+        IllagerRaidStates.clear(context.player().uuid());
+    }
+
+    @Override
+    public void onMatchClosed(JobContext context) {
         IllagerRaidStates.clear(context.player().uuid());
     }
 }

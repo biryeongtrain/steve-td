@@ -15,6 +15,8 @@ import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.magicschool.FreshmanTower;
+import kim.biryeong.semiontd.tower.magicschool.MagicSchoolTowers;
 import kim.biryeong.semiontd.tower.adversary.AdversaryFoxTower;
 import kim.biryeong.semiontd.tower.adversary.AdversaryTowers;
 import kim.biryeong.semiontd.tower.adversary.FoxForm;
@@ -55,9 +57,9 @@ class TowerRuntimeDetailsTest {
 
     @Test
     void towerDetailsConvertDividerTokensWithoutActionButtons() {
-        List<DialogBody> bodies = SemionDialogService.actionDialogBodies(
+        List<DialogBody> bodies = UiDialogBodyRenderer.actionDialogBodies(
                 "\nStats\n<divider>\nOther owner's tower",
-                () -> Component.literal("----------").withStyle(style -> style.withStrikethrough(true))
+                256
         );
 
         PlainMessage message = assertInstanceOf(PlainMessage.class, bodies.getFirst());
@@ -159,6 +161,19 @@ class TowerRuntimeDetailsTest {
             );
         }
         assertEquals(5.0, SemionDialogService.currentTowerPrimaryDamage(configuredSpell, null), 0.0001);
+    }
+
+    @Test
+    void wizardMagicDamageAndGrowthDetailsReflectReducedProficiencyWithoutAnEntity() {
+        var student = new FreshmanTower(MagicSchoolTowers.FRESHMAN, OWNER, TeamId.RED, 1, POSITION, POSITION);
+        student.gainProficiency(100, null);
+        double damage = SemionDialogService.currentTowerPrimaryDamage(student, null);
+        assertEquals(27.6, damage, 1e-8);
+        String formatted = SemionDialogService.formatTowerDamageStats(student, null, damage);
+        assertTrue(formatted.contains("🔥"), formatted);
+        assertTrue(formatted.contains("27.6"), formatted);
+        assertTrue(student.runtimeDetailLines().stream().anyMatch(line -> line.contains("공격력 +15%") && line.contains("체력 +15%")));
+        assertFalse(formatted.contains("🪓"), formatted);
     }
 
     private static final class ModifiedMagicTower extends Tower {

@@ -1,0 +1,931 @@
+{
+  "source": "https://semiontd.biryeong.kim/patches",
+  "catalogVersion": "5e3a47fbdf1be38258b3a86ed48dcbd36792e2219f771886f3eda1fb623feab3",
+  "values": [
+    {
+      "path": "tower:/towers/t2_pig_tower/aggroPriority",
+      "value": 56,
+      "source": "https://semiontd.biryeong.kim/patches/dfaea869-31c1-4f5d-8450-a01a951302a9"
+    },
+    {
+      "path": "augment:/parameters/semiontd:winning_barrage/damageBonus",
+      "value": 0.6,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:wartime_economy/maxHealthBonus",
+      "value": 0.4,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:wartime_economy/damageBonus",
+      "value": 0.65,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:twin_squadron/damageBonus",
+      "value": 0.3,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:triangle_formation/damageReduction",
+      "value": 0.15,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:triangle_formation/damageBonus",
+      "value": 0.2,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:tactical_designation_3/damageReduction",
+      "value": 0.4,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:tactical_designation_3/damageBonus",
+      "value": 1,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:tactical_designation_2/damageReduction",
+      "value": 0.3,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:tactical_designation_2/damageBonus",
+      "value": 0.65,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:tactical_designation_1/damageReduction",
+      "value": 0.2,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:tactical_designation_1/damageBonus",
+      "value": 0.35,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:support_performance/matchIncomeCap",
+      "value": 50,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:support_performance/incomeBonus",
+      "value": 10,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:starlight_cocoon_call/hatchedHealth",
+      "value": 1000,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:starlight_cocoon_call/hatchedDamage",
+      "value": 200,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:starlight_cocoon_call/hatchWaves",
+      "value": 1,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:pulse_relay_blueprint/chargedDamageRatio",
+      "value": 2,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:overheat_core/damageBonus",
+      "value": 1,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:ordnance_factory_call/shellTargets",
+      "value": 8,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:ordnance_factory_call/shellDamage",
+      "value": 300,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:one_man_show/maxHealthBonus",
+      "value": 1,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:one_man_show/damageBonus",
+      "value": 2,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:low_pressure_high_yield/roundBonusCap",
+      "value": 20,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:low_pressure_high_yield/bonusRatio",
+      "value": 0.4,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:independent_position/damageReduction",
+      "value": 0.15,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:independent_position/damageBonus",
+      "value": 0.3,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:giant_hunter_call/maxHealthDamageRatio",
+      "value": 0.12,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:giant_hunter_call/bossMaxHealthDamageRatio",
+      "value": 0.03,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:frontline_specialization/vanguardDamageReduction",
+      "value": 0.5,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:frontline_specialization/artilleryDamageBonus",
+      "value": 1,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:forecast_offensive/echoRatio",
+      "value": 0.5,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:forbidden_blueprint/ticketValue",
+      "value": 450,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:finishing_fire_3/damageBonus",
+      "value": 1.1,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:finishing_fire_2/damageBonus",
+      "value": 0.7,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:finishing_fire_1/damageBonus",
+      "value": 0.4,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:engagement_plan/quickDamageBonus",
+      "value": 0.35,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:engagement_plan/longDamageReduction",
+      "value": 0.15,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:engagement_plan/longDamageBonus",
+      "value": 0.25,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:emergency_bell_blueprint/healRatio",
+      "value": 0.4,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:emergency_bell_blueprint/healCap",
+      "value": 150,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:domino_fire/overkillRatio",
+      "value": 0.9,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:domino_fire/damageCapRatio",
+      "value": 0.75,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:cash_settlement/diamondMultiplier",
+      "value": 5,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:capacitor_post_blueprint/chargeDamage",
+      "value": 110,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:biased_armor/selectedMultiplier",
+      "value": 0.55,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:battlefield_mastery/damageThreshold",
+      "value": 0.2,
+      "source": "https://semiontd.biryeong.kim/patches/ecfd57b7-4cb0-4462-8e17-a24a207e2959"
+    },
+    {
+      "path": "augment:/parameters/semiontd:battlefield_mastery/bonusPerStack",
+      "value": 0.15,
+      "source": "https://semiontd.biryeong.kim/patches/ecfd57b7-4cb0-4462-8e17-a24a207e2959"
+    },
+    {
+      "path": "augment:/parameters/semiontd:barrier_core_call/redirectRatio",
+      "value": 0.35,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:ambush_workshop_blueprint/mineTargets",
+      "value": 4,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:ambush_workshop_blueprint/mineDamage",
+      "value": 240,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:additional_payload/supportMultiplier",
+      "value": 1.65,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "augment:/parameters/semiontd:additional_payload/healthMultiplier",
+      "value": 1.65,
+      "source": "https://semiontd.biryeong.kim/patches/6d8efdfe-5952-4854-bc8a-99af937644b2"
+    },
+    {
+      "path": "tower:/abilities/pirate_first_navigator/spendStep",
+      "value": 75,
+      "source": "https://semiontd.biryeong.kim/patches/691d31dd-e417-43d7-abf5-200a4a164ec4"
+    },
+    {
+      "path": "tower:/abilities/pirate_admiral/spendThreshold",
+      "value": 200,
+      "source": "https://semiontd.biryeong.kim/patches/3862486e-92f0-4b13-89c9-02d71b809c06"
+    },
+    {
+      "path": "tower:/abilities/frost_global/refrigerantDamageReduction",
+      "value": 0.15,
+      "source": "https://semiontd.biryeong.kim/patches/691d31dd-e417-43d7-abf5-200a4a164ec4"
+    },
+    {
+      "path": "tower:/abilities/frost_global/refrigerantAttackSpeedReduction",
+      "value": 0.15,
+      "source": "https://semiontd.biryeong.kim/patches/691d31dd-e417-43d7-abf5-200a4a164ec4"
+    },
+    {
+      "path": "tower:/abilities/frost_global/chillPerHit",
+      "value": 0.15,
+      "source": "https://semiontd.biryeong.kim/patches/691d31dd-e417-43d7-abf5-200a4a164ec4"
+    },
+    {
+      "path": "augment:/parameters/semiontd:job_pirate_p/diamondReward",
+      "value": 100,
+      "source": "https://semiontd.biryeong.kim/patches/d9cee071-064e-4dfa-946e-391de43e1536"
+    },
+    {
+      "path": "augment:/parameters/semiontd:job_pirate_p/damageRatio",
+      "value": 1.6,
+      "source": "https://semiontd.biryeong.kim/patches/d9cee071-064e-4dfa-946e-391de43e1536"
+    },
+    {
+      "path": "augment:/parameters/semiontd:job_pirate_g2/damageRatio",
+      "value": 0.8,
+      "source": "https://semiontd.biryeong.kim/patches/d9cee071-064e-4dfa-946e-391de43e1536"
+    },
+    {
+      "path": "tower:/upgradeCosts/developer_deploy_server->developer_ops_center",
+      "value": 155,
+      "source": "https://semiontd.biryeong.kim/patches/6cd0c2a7-723a-4699-a878-629bf2a2d364"
+    },
+    {
+      "path": "tower:/towers/queen_random_card_soldier/mineralCost",
+      "value": 30,
+      "source": "https://semiontd.biryeong.kim/patches/cb5f4bee-eb69-47f0-99d1-7e8157f2e4a3"
+    },
+    {
+      "path": "tower:/towers/queen_random_card_soldier/maxHealth",
+      "value": 80,
+      "source": "https://semiontd.biryeong.kim/patches/cb5f4bee-eb69-47f0-99d1-7e8157f2e4a3"
+    },
+    {
+      "path": "tower:/towers/queen_joker/maxHealth",
+      "value": 80,
+      "source": "https://semiontd.biryeong.kim/patches/cb5f4bee-eb69-47f0-99d1-7e8157f2e4a3"
+    },
+    {
+      "path": "tower:/towers/queen/attackIntervalTicks",
+      "value": 20,
+      "source": "https://semiontd.biryeong.kim/patches/cb5f4bee-eb69-47f0-99d1-7e8157f2e4a3"
+    },
+    {
+      "path": "augment:/parameters/semiontd:starlight_cocoon_call/hatchedRange",
+      "value": 15,
+      "source": "https://semiontd.biryeong.kim/patches/cb5f4bee-eb69-47f0-99d1-7e8157f2e4a3"
+    },
+    {
+      "path": "augment:/parameters/semiontd:starlight_cocoon_call/hatchedIntervalTicks",
+      "value": 10,
+      "source": "https://semiontd.biryeong.kim/patches/cb5f4bee-eb69-47f0-99d1-7e8157f2e4a3"
+    },
+    {
+      "path": "wave:/rounds/9/lanes/default/0/attackDamage",
+      "value": 4.083333,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/8/lanes/default/0/attackDamage",
+      "value": 3.093333,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/7/lanes/default/1/attackDamage",
+      "value": 2.19,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/7/lanes/default/0/attackDamage",
+      "value": 1.46,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/6/lanes/default/0/attackDamage",
+      "value": 2.746667,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/5/lanes/default/0/attackDamage",
+      "value": 1.608333,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/4/lanes/default/0/attackDamage",
+      "value": 0.6,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/18/lanes/default/2/attackDamage",
+      "value": 4.826667,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/18/lanes/default/1/attackDamage",
+      "value": 24.133333,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/18/lanes/default/0/attackDamage",
+      "value": 14.48,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/17/lanes/default/3/attackDamage",
+      "value": 4.653333,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/17/lanes/default/2/attackDamage",
+      "value": 20.94,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/17/lanes/default/1/attackDamage",
+      "value": 16.286667,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/17/lanes/default/0/attackDamage",
+      "value": 11.633333,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/16/lanes/default/2/attackDamage",
+      "value": 4.48,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/16/lanes/default/1/attackDamage",
+      "value": 11.2,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/16/lanes/default/0/attackDamage",
+      "value": 6.72,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/15/lanes/default/3/attackDamage",
+      "value": 4.306667,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/15/lanes/default/2/attackDamage",
+      "value": 10.766667,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/15/lanes/default/1/attackDamage",
+      "value": 12.92,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/15/lanes/default/0/attackDamage",
+      "value": 8.613333,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/14/lanes/default/0/attackDamage",
+      "value": 62,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/13/lanes/default/1/attackDamage",
+      "value": 7.92,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/13/lanes/default/0/attackDamage",
+      "value": 4.95,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/12/lanes/default/0/attackDamage",
+      "value": 5.68,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/11/lanes/default/0/attackDamage",
+      "value": 4.516667,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/10/lanes/default/1/attackDamage",
+      "value": 4.3,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/rounds/10/lanes/default/0/attackDamage",
+      "value": 3.44,
+      "source": "https://semiontd.biryeong.kim/patches/a724a99a-61ea-4be2-9982-be972ace05d2"
+    },
+    {
+      "path": "wave:/infiniteTemplates/2/lanes/default/3/attackDamage",
+      "value": 4,
+      "source": "https://semiontd.biryeong.kim/patches/918856fc-a16a-4e50-94ed-06cecd210da3"
+    },
+    {
+      "path": "wave:/infiniteTemplates/2/lanes/default/2/attackDamage",
+      "value": 36,
+      "source": "https://semiontd.biryeong.kim/patches/918856fc-a16a-4e50-94ed-06cecd210da3"
+    },
+    {
+      "path": "wave:/infiniteTemplates/2/lanes/default/1/attackDamage",
+      "value": 20,
+      "source": "https://semiontd.biryeong.kim/patches/918856fc-a16a-4e50-94ed-06cecd210da3"
+    },
+    {
+      "path": "wave:/infiniteTemplates/2/lanes/default/0/attackDamage",
+      "value": 20,
+      "source": "https://semiontd.biryeong.kim/patches/918856fc-a16a-4e50-94ed-06cecd210da3"
+    },
+    {
+      "path": "wave:/infiniteTemplates/1/lanes/default/3/attackDamage",
+      "value": 4,
+      "source": "https://semiontd.biryeong.kim/patches/918856fc-a16a-4e50-94ed-06cecd210da3"
+    },
+    {
+      "path": "wave:/infiniteTemplates/1/lanes/default/2/attackDamage",
+      "value": 36,
+      "source": "https://semiontd.biryeong.kim/patches/918856fc-a16a-4e50-94ed-06cecd210da3"
+    },
+    {
+      "path": "wave:/infiniteTemplates/1/lanes/default/1/attackDamage",
+      "value": 20,
+      "source": "https://semiontd.biryeong.kim/patches/918856fc-a16a-4e50-94ed-06cecd210da3"
+    },
+    {
+      "path": "wave:/infiniteTemplates/1/lanes/default/0/attackDamage",
+      "value": 20,
+      "source": "https://semiontd.biryeong.kim/patches/918856fc-a16a-4e50-94ed-06cecd210da3"
+    },
+    {
+      "path": "wave:/infiniteTemplates/0/lanes/default/2/attackDamage",
+      "value": 4,
+      "source": "https://semiontd.biryeong.kim/patches/918856fc-a16a-4e50-94ed-06cecd210da3"
+    },
+    {
+      "path": "wave:/infiniteTemplates/0/lanes/default/1/attackDamage",
+      "value": 36,
+      "source": "https://semiontd.biryeong.kim/patches/918856fc-a16a-4e50-94ed-06cecd210da3"
+    },
+    {
+      "path": "wave:/infiniteTemplates/0/lanes/default/0/attackDamage",
+      "value": 20,
+      "source": "https://semiontd.biryeong.kim/patches/918856fc-a16a-4e50-94ed-06cecd210da3"
+    },
+    {
+      "path": "tower:/towers/augment_folding_barricade/aggroPriority",
+      "value": 500,
+      "source": "https://semiontd.biryeong.kim/patches/bbadd403-2a99-4ceb-92c6-ca1a5f75862c"
+    },
+    {
+      "path": "tower:/abilities/queen_global/giantChargeTicks",
+      "value": 300,
+      "source": "https://semiontd.biryeong.kim/patches/6cabdacb-7969-4764-b9ec-c5b3b06d3299"
+    },
+    {
+      "path": "tower:/upgradeCosts/frost_frozen_dumpling_t2->frost_frozen_dumpling_t3",
+      "value": 220,
+      "source": "https://semiontd.biryeong.kim/patches/06c53c19-aca7-48e9-a534-369a6fcf221e"
+    },
+    {
+      "path": "tower:/upgradeCosts/frost_frozen_dumpling_t1->frost_frozen_dumpling_t2",
+      "value": 120,
+      "source": "https://semiontd.biryeong.kim/patches/06c53c19-aca7-48e9-a534-369a6fcf221e"
+    },
+    {
+      "path": "tower:/towers/frost_frozen_dumpling_t3/range",
+      "value": 8,
+      "source": "https://semiontd.biryeong.kim/patches/06c53c19-aca7-48e9-a534-369a6fcf221e"
+    },
+    {
+      "path": "tower:/towers/frost_frozen_dumpling_t3/damage",
+      "value": 40,
+      "source": "https://semiontd.biryeong.kim/patches/06c53c19-aca7-48e9-a534-369a6fcf221e"
+    },
+    {
+      "path": "tower:/towers/frost_frozen_dumpling_t2/range",
+      "value": 7,
+      "source": "https://semiontd.biryeong.kim/patches/06c53c19-aca7-48e9-a534-369a6fcf221e"
+    },
+    {
+      "path": "tower:/towers/frost_frozen_dumpling_t2/damage",
+      "value": 20,
+      "source": "https://semiontd.biryeong.kim/patches/06c53c19-aca7-48e9-a534-369a6fcf221e"
+    },
+    {
+      "path": "tower:/towers/frost_frozen_dumpling_t1/damage",
+      "value": 10,
+      "source": "https://semiontd.biryeong.kim/patches/06c53c19-aca7-48e9-a534-369a6fcf221e"
+    },
+    {
+      "path": "tower:/abilities/frost_frozen_dumpling_t3/splashRadius",
+      "value": 1.7,
+      "source": "https://semiontd.biryeong.kim/patches/06c53c19-aca7-48e9-a534-369a6fcf221e"
+    },
+    {
+      "path": "tower:/abilities/frost_frozen_dumpling_t2/splashRadius",
+      "value": 1.25,
+      "source": "https://semiontd.biryeong.kim/patches/06c53c19-aca7-48e9-a534-369a6fcf221e"
+    },
+    {
+      "path": "tower:/abilities/illager_illusioner_low_t3/raidMarkDurationBonusTicks",
+      "value": 40,
+      "source": "https://semiontd.biryeong.kim/patches/2a41d1ce-3e60-4cac-9b3b-035b9fb32501"
+    },
+    {
+      "path": "tower:/abilities/illager_illusioner_low_t3/raidMarkDamageTakenBonus",
+      "value": 0.3,
+      "source": "https://semiontd.biryeong.kim/patches/2a41d1ce-3e60-4cac-9b3b-035b9fb32501"
+    },
+    {
+      "path": "tower:/abilities/illager_illusioner_low_t3/raidLowHealthMarkDamageTakenBonus",
+      "value": 0.5,
+      "source": "https://semiontd.biryeong.kim/patches/2a41d1ce-3e60-4cac-9b3b-035b9fb32501"
+    },
+    {
+      "path": "tower:/abilities/illager_illusioner_low_t3/raidForceTargetRadiusBonus",
+      "value": 0.25,
+      "source": "https://semiontd.biryeong.kim/patches/2a41d1ce-3e60-4cac-9b3b-035b9fb32501"
+    },
+    {
+      "path": "tower:/abilities/illager_illusioner_low_t3/markDurationTicks",
+      "value": 200,
+      "source": "https://semiontd.biryeong.kim/patches/2a41d1ce-3e60-4cac-9b3b-035b9fb32501"
+    },
+    {
+      "path": "tower:/abilities/illager_illusioner_low_t3/markDamageTakenBonus",
+      "value": 0.75,
+      "source": "https://semiontd.biryeong.kim/patches/2a41d1ce-3e60-4cac-9b3b-035b9fb32501"
+    },
+    {
+      "path": "tower:/abilities/illager_illusioner_high_t3/markDurationTicks",
+      "value": 180,
+      "source": "https://semiontd.biryeong.kim/patches/2a41d1ce-3e60-4cac-9b3b-035b9fb32501"
+    },
+    {
+      "path": "tower:/abilities/illager_illusioner_high_t3/markDamageTakenBonus",
+      "value": 0.75,
+      "source": "https://semiontd.biryeong.kim/patches/2a41d1ce-3e60-4cac-9b3b-035b9fb32501"
+    },
+    {
+      "path": "tower:/abilities/illager_evoker_splash_t3/splashDamageRatio",
+      "value": 0.65,
+      "source": "https://semiontd.biryeong.kim/patches/2a41d1ce-3e60-4cac-9b3b-035b9fb32501"
+    },
+    {
+      "path": "tower:/abilities/illager_evoker_splash_t3/raidSplashRadiusBonus",
+      "value": 1,
+      "source": "https://semiontd.biryeong.kim/patches/2a41d1ce-3e60-4cac-9b3b-035b9fb32501"
+    },
+    {
+      "path": "tower:/abilities/illager_evoker_single_t3/raidMarkedDamageBonus",
+      "value": 1.5,
+      "source": "https://semiontd.biryeong.kim/patches/2a41d1ce-3e60-4cac-9b3b-035b9fb32501"
+    },
+    {
+      "path": "tower:/abilities/illager_evoker_single_t3/raidMarkDurationBonusTicks",
+      "value": 60,
+      "source": "https://semiontd.biryeong.kim/patches/2a41d1ce-3e60-4cac-9b3b-035b9fb32501"
+    },
+    {
+      "path": "tower:/abilities/illager_evoker_single_t3/raidIncomeDamageBonus",
+      "value": 1.5,
+      "source": "https://semiontd.biryeong.kim/patches/2a41d1ce-3e60-4cac-9b3b-035b9fb32501"
+    },
+    {
+      "path": "tower:/abilities/illager_evoker_single_t3/markDurationTicks",
+      "value": 100,
+      "source": "https://semiontd.biryeong.kim/patches/2a41d1ce-3e60-4cac-9b3b-035b9fb32501"
+    },
+    {
+      "path": "tower:/abilities/illager_evoker_single_t3/markDamageTakenBonus",
+      "value": 0.15,
+      "source": "https://semiontd.biryeong.kim/patches/2a41d1ce-3e60-4cac-9b3b-035b9fb32501"
+    },
+    {
+      "path": "tower:/abilities/illager_evoker_single_t3/incomeDamageBonus",
+      "value": 2,
+      "source": "https://semiontd.biryeong.kim/patches/2a41d1ce-3e60-4cac-9b3b-035b9fb32501"
+    },
+    {
+      "path": "tower:/towers/t2_penguin_tower/range",
+      "value": 3,
+      "source": "https://semiontd.biryeong.kim/patches/22a9f53b-ef06-49f6-a126-773232ce3784"
+    },
+    {
+      "path": "tower:/towers/t2_penguin_tower/damage",
+      "value": 40,
+      "source": "https://semiontd.biryeong.kim/patches/22a9f53b-ef06-49f6-a126-773232ce3784"
+    },
+    {
+      "path": "tower:/towers/t2_parrot_tower/damage",
+      "value": 28,
+      "source": "https://semiontd.biryeong.kim/patches/22a9f53b-ef06-49f6-a126-773232ce3784"
+    },
+    {
+      "path": "tower:/towers/t2_parrot_tower/attackIntervalTicks",
+      "value": 18,
+      "source": "https://semiontd.biryeong.kim/patches/22a9f53b-ef06-49f6-a126-773232ce3784"
+    },
+    {
+      "path": "tower:/towers/t1_penguin/range",
+      "value": 3,
+      "source": "https://semiontd.biryeong.kim/patches/22a9f53b-ef06-49f6-a126-773232ce3784"
+    },
+    {
+      "path": "tower:/towers/t1_penguin/damage",
+      "value": 25,
+      "source": "https://semiontd.biryeong.kim/patches/22a9f53b-ef06-49f6-a126-773232ce3784"
+    },
+    {
+      "path": "tower:/towers/t1_parrot_tower/damage",
+      "value": 20,
+      "source": "https://semiontd.biryeong.kim/patches/22a9f53b-ef06-49f6-a126-773232ce3784"
+    },
+    {
+      "path": "tower:/abilities/t2_penguin_tower/cloneRangeRatio",
+      "value": 0.9,
+      "source": "https://semiontd.biryeong.kim/patches/22a9f53b-ef06-49f6-a126-773232ce3784"
+    },
+    {
+      "path": "tower:/abilities/t2_penguin_tower/cloneHealthRatio",
+      "value": 1.35,
+      "source": "https://semiontd.biryeong.kim/patches/22a9f53b-ef06-49f6-a126-773232ce3784"
+    },
+    {
+      "path": "tower:/abilities/t2_penguin_tower/cloneDamageRatio",
+      "value": 1.35,
+      "source": "https://semiontd.biryeong.kim/patches/22a9f53b-ef06-49f6-a126-773232ce3784"
+    },
+    {
+      "path": "tower:/abilities/t2_parrot_tower/maxAttackStacks",
+      "value": 5,
+      "source": "https://semiontd.biryeong.kim/patches/22a9f53b-ef06-49f6-a126-773232ce3784"
+    },
+    {
+      "path": "tower:/abilities/t2_parrot_tower/attackStackBonus",
+      "value": 0.45,
+      "source": "https://semiontd.biryeong.kim/patches/22a9f53b-ef06-49f6-a126-773232ce3784"
+    },
+    {
+      "path": "tower:/abilities/t1_penguin/cloneRangeRatio",
+      "value": 0.9,
+      "source": "https://semiontd.biryeong.kim/patches/22a9f53b-ef06-49f6-a126-773232ce3784"
+    },
+    {
+      "path": "tower:/abilities/t1_parrot_tower/maxAttackStacks",
+      "value": 3,
+      "source": "https://semiontd.biryeong.kim/patches/22a9f53b-ef06-49f6-a126-773232ce3784"
+    },
+    {
+      "path": "tower:/abilities/t1_parrot_tower/attackStackBonus",
+      "value": 0.4,
+      "source": "https://semiontd.biryeong.kim/patches/22a9f53b-ef06-49f6-a126-773232ce3784"
+    },
+    {
+      "path": "augment:/parameters/semiontd:forbidden_blueprint/payoutMultiplier",
+      "value": 0.95,
+      "source": "https://semiontd.biryeong.kim/patches/11f2754c-17ee-4206-b0a1-051e2e183e3a"
+    },
+    {
+      "path": "tower:/towers/pirate_soul_reaver_deckhand/maxHealth",
+      "value": 250,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/towers/pirate_shabby_chest/maxHealth",
+      "value": 250,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/towers/pirate_parrot/maxHealth",
+      "value": 60,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/towers/pirate_one_eyed_parrot/maxHealth",
+      "value": 120,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/towers/pirate_navigator/maxHealth",
+      "value": 350,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/towers/pirate_lookout_deckhand/range",
+      "value": 3,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/towers/pirate_lookout_deckhand/damage",
+      "value": 12,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/towers/pirate_lookout_deckhand/attackIntervalTicks",
+      "value": 16,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/towers/pirate_helmsman/maxHealth",
+      "value": 250,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/towers/pirate_first_navigator/maxHealth",
+      "value": 550,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/towers/pirate_deckhand/range",
+      "value": 3,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/towers/pirate_deckhand/maxHealth",
+      "value": 100,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/towers/pirate_deckhand/damage",
+      "value": 7,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/towers/pirate_deckhand/attackIntervalTicks",
+      "value": 16,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/towers/pirate_capablanca/maxHealth",
+      "value": 200,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_swordsman/positiveBuffMultiplier",
+      "value": 1.4,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_soul_reaver_deckhand/splashRatio",
+      "value": 0.4,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_navigator/healthPerStep",
+      "value": 2,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_lookout_deckhand/openingDamageBonus",
+      "value": 0.85,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_iron_swordsman/positiveBuffMultiplier",
+      "value": 1.8,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_iron_swordsman/firstAttackMultiplier",
+      "value": 1.75,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_helmsman/healthPerStep",
+      "value": 1,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_guide/lostHealthRatio",
+      "value": 0.03,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_guide/healthPerStep",
+      "value": 1.5,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_first_navigator/splashRatio",
+      "value": 0.5,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_first_navigator/healthPerStep",
+      "value": 3,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_fantasy_chest/saleHealthBonus",
+      "value": 8,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_deep_chest/saleHealthBonus",
+      "value": 8,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_deckhand/openingDamageTicks",
+      "value": 200,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_deckhand/openingDamageBonus",
+      "value": 0.8,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_capablanca/damagePerHundredDiamond",
+      "value": 0.01,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_capablanca/damageBonusCap",
+      "value": 4,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_admiral/maxHealthBonusLow",
+      "value": 1,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    },
+    {
+      "path": "tower:/abilities/pirate_admiral/maxHealthBonusHigh",
+      "value": 2,
+      "source": "https://semiontd.biryeong.kim/patches/68e7ee90-53f8-4abd-b804-4b3d07cf188b"
+    }
+  ]
+}

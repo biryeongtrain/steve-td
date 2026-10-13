@@ -36,17 +36,11 @@ import net.minecraft.world.phys.Vec3;
  * clearing the target, stopping navigation and dropping to the idle animation.
  */
 public class DeveloperTower extends ProductionTower {
-    /** Ticks the residual 오버킬 field keeps pulsing after a kill. */
-    private static final int OVERKILL_DURATION_TICKS = 40;
-
     /** How long 지연 로딩 stays in its weak phase. */
     private static final int LAZY_LOADING_WARMUP_TICKS = 200;
 
     /** Window 은신 uses to decide the tower has been left alone. */
     private static final int STEALTH_QUIET_TICKS = 60;
-
-    /** Extra ticks 캐시 미스 adds to the first attack after switching target. */
-    private static final int CACHE_MISS_PENALTY_TICKS = 10;
 
     private boolean waveActive;
     private int waveTicks;
@@ -768,46 +762,7 @@ public class DeveloperTower extends ProductionTower {
      * data so a patch keeps the value it shipped with.
      */
     public double patchEfficiency(PlayerLane lane) {
-        double scale = DeveloperBalance.patchScale(type());
-        if (hasBug(DeveloperBug.READ_ONLY)) {
-            scale *= 1.0 + DeveloperBug.READ_ONLY.primary();
-        }
-        scale *= 1.0 + testBuildAura(lane);
-        return scale;
-    }
-
-    private double testBuildAura(PlayerLane lane) {
-        if (lane == null) {
-            return 0.0;
-        }
-        double radius = DeveloperBalance.testBuildAuraRadius();
-        if (radius <= 0.0) {
-            return 0.0;
-        }
-        double radiusSqr = radius * radius;
-        double bonus = 0.0;
-        for (var tower : lane.towers()) {
-            if (tower == this || !DeveloperTowers.isTestBuild(tower.type())) {
-                continue;
-            }
-            if (!ownerPlayer().equals(tower.ownerPlayer())) {
-                continue;
-            }
-            if (distanceSqr(tower.position(), position()) <= radiusSqr) {
-                bonus += DeveloperBalance.testBuildAuraBonus();
-            }
-        }
-        return bonus;
-    }
-
-    private static double distanceSqr(GridPosition a, GridPosition b) {
-        if (a == null || b == null) {
-            return Double.MAX_VALUE;
-        }
-        double dx = a.x() - b.x();
-        double dy = a.y() - b.y();
-        double dz = a.z() - b.z();
-        return dx * dx + dy * dy + dz * dz;
+        return DeveloperTowerPatchEfficiency.resolve(this, lane);
     }
 
     private static String monsterId(SemionMonsterEntity target) {

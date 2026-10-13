@@ -33,7 +33,7 @@ public final class BlueprintModuleGui extends SimpleGui {
                     .addLoreLineRaw(text(BlueprintModule.MAX_LEVEL + "단계: " + BlueprintTexts.effect(module, BlueprintModule.MAX_LEVEL), ChatFormatting.WHITE))
                     .addLoreLineRaw(text(attached ? "이미 붙어 있습니다." : "클릭: 1단계로 붙이기", attached ? ChatFormatting.RED : ChatFormatting.GRAY));
             if (!attached) {
-                builder.setCallback((index, type, action) -> {
+                builder.setCallback((index, type, action, clickedGui) -> {
                     BlueprintDraft current = BlueprintDraft.of(player.getUUID());
                     if (current.modules.size() < BlueprintPricing.maxModules()) {
                         current.modules.put(module, 1);
@@ -45,7 +45,7 @@ public final class BlueprintModuleGui extends SimpleGui {
         }
         setSlot(31, new GuiElementBuilder(Items.ARROW)
                 .setName(text("편집 창으로", ChatFormatting.YELLOW))
-                .setCallback((index, type, action) -> new BlueprintEditorGui(player, gameManager).open()));
+                .setCallback((index, type, action, clickedGui) -> new BlueprintEditorGui(player, gameManager).open()));
     }
 
     private static String kindName(BlueprintModule.Kind kind) {

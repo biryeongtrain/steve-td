@@ -37,7 +37,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundStopSoundPacket;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.component.ItemLore;
@@ -60,6 +60,9 @@ class FrostTowerTest {
     static void bootstrapMinecraftRegistries() {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
+        net.minecraft.core.registries.BuiltInRegistries.DATA_COMPONENT_INITIALIZERS
+                .build(net.minecraft.data.registries.VanillaRegistries.createWorldLookup())
+                .forEach(net.minecraft.core.component.DataComponentInitializers.PendingComponents::apply);
     }
 
     @BeforeEach
@@ -153,8 +156,8 @@ class FrostTowerTest {
                 FrostTowers.EMISSION_COOLING_DEVICE_EXPANDED, 500);
         assertUpgrade(FrostTowers.ICE_BREAKER_T1, FrostTowers.ICE_BREAKER_T2, 100);
         assertUpgrade(FrostTowers.ICE_BREAKER_T2, FrostTowers.ICE_BREAKER_T3, 200);
-        assertUpgrade(FrostTowers.FROZEN_DUMPLING_T1, FrostTowers.FROZEN_DUMPLING_T2, 100);
-        assertUpgrade(FrostTowers.FROZEN_DUMPLING_T2, FrostTowers.FROZEN_DUMPLING_T3, 200);
+        assertUpgrade(FrostTowers.FROZEN_DUMPLING_T1, FrostTowers.FROZEN_DUMPLING_T2, 120);
+        assertUpgrade(FrostTowers.FROZEN_DUMPLING_T2, FrostTowers.FROZEN_DUMPLING_T3, 220);
         assertUpgrade(FrostTowers.ICEBOX_T1, FrostTowers.ICEBOX_T2, 145);
         assertUpgrade(FrostTowers.ICEBOX_T2, FrostTowers.ICEBOX_T3, 225);
 
@@ -202,9 +205,9 @@ class FrostTowerTest {
         assertStats(config, FrostTowers.ICE_BREAKER_T1, 55, 70.0, 10.0, 20);
         assertStats(config, FrostTowers.ICE_BREAKER_T2, 0, 70.0, 10.0, 17);
         assertStats(config, FrostTowers.ICE_BREAKER_T3, 0, 70.0, 20.0, 17);
-        assertStats(config, FrostTowers.FROZEN_DUMPLING_T1, 55, 70.0, 12.0, 20);
-        assertStats(config, FrostTowers.FROZEN_DUMPLING_T2, 0, 70.0, 30.0, 17);
-        assertStats(config, FrostTowers.FROZEN_DUMPLING_T3, 0, 70.0, 45.0, 14);
+        assertStats(config, FrostTowers.FROZEN_DUMPLING_T1, 55, 70.0, 10.0, 20);
+        assertStats(config, FrostTowers.FROZEN_DUMPLING_T2, 0, 70.0, 20.0, 17);
+        assertStats(config, FrostTowers.FROZEN_DUMPLING_T3, 0, 70.0, 40.0, 14);
         assertStats(config, FrostTowers.ICEBOX_T1, 45, 100.0, 0.0, 100);
         assertStats(config, FrostTowers.ICEBOX_T2, 0, 100.0, 0.0, 100);
         assertStats(config, FrostTowers.ICEBOX_T3, 0, 100.0, 0.0, 100);
@@ -224,8 +227,8 @@ class FrostTowerTest {
         assertEquals(2.5, config.ability(FrostTowers.ICE_BREAKER_T2.id(), "splashRadius", -1.0));
         assertEquals(3.0, config.ability(FrostTowers.ICE_BREAKER_T3.id(), "splashRadius", -1.0));
         assertEquals(0.8, config.ability(FrostTowers.FROZEN_DUMPLING_T1.id(), "splashRadius", -1.0));
-        assertEquals(1.5, config.ability(FrostTowers.FROZEN_DUMPLING_T2.id(), "splashRadius", -1.0));
-        assertEquals(3.0, config.ability(FrostTowers.FROZEN_DUMPLING_T3.id(), "splashRadius", -1.0));
+        assertEquals(1.25, config.ability(FrostTowers.FROZEN_DUMPLING_T2.id(), "splashRadius", -1.0));
+        assertEquals(1.7, config.ability(FrostTowers.FROZEN_DUMPLING_T3.id(), "splashRadius", -1.0));
         assertEquals(3.0, config.ability(
                 FrostTowers.FROZEN_DUMPLING_T1.id(), "frozenFoodDamageBonusAt3", -1.0));
         assertEquals(5.0, config.ability(
@@ -333,7 +336,7 @@ class FrostTowerTest {
     @Test
     void fullOperationGainsThreeStacksPerActivationCycleAndCapsEachFamilyAtThree() {
         FrostFullOperationService.clearPlayer(OWNER);
-        FrostFullOperationService.PlayerState state = FrostFullOperationService.stateForTest(OWNER);
+        FrostFullOperationState state = FrostFullOperationService.stateForTest(OWNER);
         state.beginWave();
 
         long[] cycleTicks = {100L, 200L, 300L};
@@ -359,7 +362,7 @@ class FrostTowerTest {
     @Test
     void fullOperationFixesOrdinaryDamageAtFiveAndIncomingDamageAtFivePercent() {
         FrostFullOperationService.clearPlayer(OWNER);
-        FrostFullOperationService.PlayerState state = FrostFullOperationService.stateForTest(OWNER);
+        FrostFullOperationState state = FrostFullOperationService.stateForTest(OWNER);
         state.beginWave();
         state.activate(100L);
 
@@ -482,7 +485,7 @@ class FrostTowerTest {
     void fullOperationStopsOnlyItsOwnAmbientSoundAtTheRequestedPitch() {
         ClientboundStopSoundPacket packet = FrostFullOperationService.fullOperationAmbientStopPacket();
 
-        assertEquals(ResourceLocation.withDefaultNamespace("ambient.soul_sand_valley.loop"), packet.getName());
+        assertEquals(Identifier.withDefaultNamespace("ambient.soul_sand_valley.loop"), packet.getName());
         assertEquals(SoundSource.AMBIENT, packet.getSource());
         assertFalse(packet.getSource() == SoundSource.RECORDS,
                 "Semion background music uses RECORDS and must remain untouched.");

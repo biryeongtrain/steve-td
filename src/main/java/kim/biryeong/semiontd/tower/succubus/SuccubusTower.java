@@ -25,12 +25,12 @@ import kim.biryeong.semiontd.tower.ProductionTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.hero.FakePlayerTowerVisuals;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.damagesource.DamageSource;
 
 public final class SuccubusTower extends ProductionTower {
-    private static final ResourceLocation LULLABY_MONSTERS = ResourceLocation.fromNamespaceAndPath("semion-td", "succubus_lullaby_monsters");
-    private static final ResourceLocation LULLABY_TOWERS = ResourceLocation.fromNamespaceAndPath("semion-td", "succubus_lullaby_towers");
+    private static final Identifier LULLABY_MONSTERS = Identifier.fromNamespaceAndPath("semion-td", "succubus_lullaby_monsters");
+    private static final Identifier LULLABY_TOWERS = Identifier.fromNamespaceAndPath("semion-td", "succubus_lullaby_towers");
     private final Map<UUID, Long> counterReadyAt = new HashMap<>();
     private PlayerLane lane;
     private int attackCount;

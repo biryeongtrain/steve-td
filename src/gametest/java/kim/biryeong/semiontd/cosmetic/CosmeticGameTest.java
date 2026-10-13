@@ -24,7 +24,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -67,11 +67,48 @@ public final class CosmeticGameTest {
     }
 
     @GameTest
+    public void missingCatalogLoadsEveryBundledEntryAndNightlight(GameTestHelper context) {
+        try {
+            Path path = Files.createTempDirectory("semion-cosmetic-defaults").resolve("cosmetics.json");
+            CosmeticCatalog catalog = new CosmeticCatalog(path);
+            assertTrue(catalog.load(context.getLevel().registryAccess()), "Bundled catalog should load with every dependency present.");
+            JsonObject bundled;
+            try (var input = CosmeticGameTest.class.getResourceAsStream("/semiontd/balance-defaults/cosmetics.json")) {
+                assertTrue(input != null, "Bundled cosmetic catalog must exist.");
+                bundled = JsonParser.parseString(new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+            }
+            var entries = bundled.getAsJsonArray("entries");
+            assertEquals(entries.size(), catalog.entries().size());
+            int nightlights = 0;
+            for (int index = 0; index < entries.size(); index++) {
+                var expected = entries.get(index).getAsJsonObject();
+                var actual = catalog.entries().get(index);
+                assertEquals(expected.get("id").getAsString(), actual.id());
+                assertEquals(expected.get("price").getAsLong(), actual.price());
+                String itemId = expected.getAsJsonObject("item").get("id").getAsString();
+                assertEquals(itemId, BuiltInRegistries.ITEM.getKey(actual.item().getItem()).toString());
+                if (itemId.startsWith("nightlights:")) {
+                    nightlights++;
+                    assertEquals(EquipmentSlot.HEAD, actual.item().get(DataComponents.EQUIPPABLE).slot());
+                }
+            }
+            assertEquals(48, nightlights);
+            byte[] firstLoad = Files.readAllBytes(path);
+            assertTrue(catalog.load(context.getLevel().registryAccess()));
+            assertTrue(java.util.Arrays.equals(firstLoad, Files.readAllBytes(path)), "Reload must preserve the saved catalog.");
+            context.succeed();
+        } catch (Throwable throwable) {
+            context.fail(Component.literal("Bundled cosmetic catalog failed: " + throwable.getMessage()));
+        }
+    }
+
+    @GameTest
     public void catalogRoundTripPreservesAllItemComponentsAndOrder(GameTestHelper context) {
         try {
             Path path = Files.createTempDirectory("semion-cosmetic-catalog").resolve("cosmetics.json");
+            Files.writeString(path, "{\"entries\":[]}");
             CosmeticCatalog catalog = new CosmeticCatalog(path);
-            catalog.load(context.getLevel().registryAccess());
+            assertTrue(catalog.load(context.getLevel().registryAccess()), "Explicit empty catalog should load.");
             ItemStack original = componentRichHelmet(context);
 
             assertEquals(CosmeticCatalog.MutationResult.SUCCESS,
@@ -119,8 +156,8 @@ public final class CosmeticGameTest {
             SemionProgressionStore seed = new SemionProgressionStore(profilesPath);
             seed.putProfile(
                     player.getUUID(),
-                    SemionPlayerProfile.fresh(player.getGameProfile().getName()).recordMatch(
-                            player.getGameProfile().getName(), true, 1_000
+                    SemionPlayerProfile.fresh(player.getGameProfile().name()).recordMatch(
+                            player.getGameProfile().name(), true, 1_000
                     )
             );
 
@@ -132,6 +169,7 @@ public final class CosmeticGameTest {
                     ProgressionConfig.defaultConfig(),
                     profilesPath
             );
+            Files.writeString(directory.resolve("cosmetics.json"), "{\"entries\":[]}");
             CosmeticService service = new CosmeticService(manager, directory.resolve("cosmetics.json"));
             service.load(context.getLevel().getServer());
             ItemStack crown = new ItemStack(Items.DIAMOND_HELMET);
@@ -140,13 +178,13 @@ public final class CosmeticGameTest {
                     service.add(context.getLevel().getServer(), "crown", 25, crown));
 
             CosmeticShopGui gui = new CosmeticShopGui(player, service);
-            gui.click(0, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ClickType.PICKUP);
+            gui.click(0, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ContainerInput.PICKUP);
             SemionPlayerProfile purchased = service.profile(player);
             assertTrue(purchased.ownsCosmetic("crown"), "First click should purchase the item.");
             assertEquals(975L, purchased.cosmeticCurrency());
             assertTrue(player.getItemBySlot(EquipmentSlot.HEAD).isEmpty(), "Purchase should not auto-equip.");
 
-            gui.click(0, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ClickType.PICKUP);
+            gui.click(0, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ContainerInput.PICKUP);
             assertEquals("crown", service.profile(player).selectedCosmeticId());
             assertEquals(List.of("crown"), service.profile(player).selectedCosmeticIds());
             assertEquals("crown", CosmeticItemSupport.cosmeticId(player.getItemBySlot(EquipmentSlot.HEAD)));
@@ -211,7 +249,7 @@ public final class CosmeticGameTest {
                     "Match inventory reset should preserve the head cosmetic at the same time.");
             int cosmeticSlot = cosmeticMenuSlot(player);
             player.inventoryMenu.clicked(
-                    cosmeticSlot, 0, net.minecraft.world.inventory.ClickType.PICKUP, player
+                    cosmeticSlot, 0, net.minecraft.world.inventory.ContainerInput.PICKUP, player
             );
             try (var invokers = Stimuli.select().forEntity(player)) {
                 assertEquals(EventResult.DENY,
@@ -236,16 +274,16 @@ public final class CosmeticGameTest {
             assertEquals("crown", CosmeticItemSupport.cosmeticId(player.getItemBySlot(EquipmentSlot.HEAD)));
             assertEquals(List.of("crown"), service.profile(player).selectedCosmeticIds());
 
-            gui.click(0, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ClickType.PICKUP);
+            gui.click(0, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ContainerInput.PICKUP);
             player.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
-            gui.click(0, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ClickType.PICKUP);
+            gui.click(0, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ContainerInput.PICKUP);
             assertTrue(service.profile(player).selectedCosmeticIds().isEmpty(), "Occupied head slot should reject equip.");
             assertTrue(player.getItemBySlot(EquipmentSlot.HEAD).is(Items.IRON_HELMET));
             SemionHotbarService.grantMatchTools(player);
             assertTrue(player.getItemBySlot(EquipmentSlot.HEAD).is(Items.IRON_HELMET),
                     "Match inventory reset should preserve the complete head slot.");
             player.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
-            gui.click(0, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ClickType.PICKUP);
+            gui.click(0, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ContainerInput.PICKUP);
 
             for (int index = 1; index <= 45; index++) {
                 ItemStack item = new ItemStack(Items.LEATHER_HELMET);
@@ -254,9 +292,14 @@ public final class CosmeticGameTest {
                         service.add(context.getLevel().getServer(), "extra_" + index, index, item));
             }
             gui.refresh();
-            assertTrue(gui.getSlot(53) != null, "A catalog over 45 items should show the next-page button.");
-            gui.click(53, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ClickType.PICKUP);
-            assertEquals("Cosmetic 45", gui.getSlot(0).getItemStack().getHoverName().getString());
+            assertTrue(gui.getGuiElement(53) != null, "A catalog over 45 items should show the next-page button.");
+            gui.click(53, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ContainerInput.PICKUP);
+            assertEquals("Cosmetic 44", gui.getGuiElement(0).getItemStack().getHoverName().getString());
+            assertEquals("Cosmetic 45", gui.getGuiElement(1).getItemStack().getHoverName().getString());
+            assertTrue(gui.getGuiElement(2) == null, "The last page must contain exactly the two remaining listings.");
+            assertTrue(gui.getGuiElement(53) == null, "The last page must not offer another page.");
+            gui.click(45, ClickType.MOUSE_LEFT, net.minecraft.world.inventory.ContainerInput.PICKUP);
+            assertEquals("Reloaded Crown", gui.getGuiElement(0).getItemStack().getHoverName().getString());
 
             CosmeticService.RemoveResult removed = service.remove(context.getLevel().getServer(), "crown");
             assertEquals(CosmeticCatalog.MutationResult.SUCCESS, removed.catalogResult());
@@ -277,8 +320,8 @@ public final class CosmeticGameTest {
         var cosmetic = semiontd == null ? null : semiontd.getChild("cosmetic");
         assertTrue(cosmetic != null, "Expected /semiontd cosmetic.");
         assertTrue(dispatcher.getRoot().getChild("치장") != null, "Expected /치장 alias.");
-        CommandSourceStack nonOp = context.getLevel().getServer().createCommandSourceStack().withPermission(0);
-        CommandSourceStack op = context.getLevel().getServer().createCommandSourceStack().withPermission(2);
+        CommandSourceStack nonOp = context.getLevel().getServer().createCommandSourceStack().withPermission(net.minecraft.server.permissions.LevelBasedPermissionSet.forLevel(net.minecraft.server.permissions.PermissionLevel.byId(0)));
+        CommandSourceStack op = context.getLevel().getServer().createCommandSourceStack().withPermission(net.minecraft.server.permissions.LevelBasedPermissionSet.forLevel(net.minecraft.server.permissions.PermissionLevel.byId(2)));
         assertTrue(cosmetic.canUse(nonOp), "Players should be able to open the shop.");
         for (String childName : List.of("points", "add", "update", "remove", "list", "reload")) {
             var child = cosmetic.getChild(childName);
@@ -302,7 +345,7 @@ public final class CosmeticGameTest {
         stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(
                 List.of(2.5F), List.of(true), List.of("crown"), List.of(0x55AAFF)
         ));
-        stack.set(DataComponents.ITEM_MODEL, ResourceLocation.fromNamespaceAndPath("semion-td", "component_crown"));
+        stack.set(DataComponents.ITEM_MODEL, Identifier.fromNamespaceAndPath("semion-td", "component_crown"));
         CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putString("original", "kept"));
         stack.enchant(
                 context.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.PROTECTION),

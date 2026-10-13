@@ -1,6 +1,6 @@
 package kim.biryeong.semiontd.entity.visual;
 
-import net.minecraft.world.entity.animal.Parrot;
+import net.minecraft.world.entity.animal.parrot.Parrot;
 
 public final class ParrotVisual {
     private ParrotVisual() {

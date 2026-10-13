@@ -55,6 +55,12 @@ public final class DemonLordState {
     private int roundMetricsTick;
     private final DemonLordAugments augments = new DemonLordAugments();
     private AugmentSnapshot augmentSnapshot = AugmentSnapshot.none();
+    private double fortitudeBonus;
+
+    public void syncTraits(kim.biryeong.semiontd.trait.TraitLoadout loadout) {
+        fortitudeBonus = kim.biryeong.semiontd.trait.TraitEffects.hyperCarryMaxHealthBonus(loadout);
+        health = Math.min(health, maxHealth());
+    }
     private DemonLordLoadout loadout = new DemonLordLoadout();
     /** 파멸의 계약을 건 뒤 시작된 웨이브 수. 0이면 아직 계약이 시작되지 않았습니다. */
     private int pactRoundsServed;
@@ -120,7 +126,7 @@ public final class DemonLordState {
                 global("healthBonusThreshold", 500.0),
                 global("healthBonusScale", 500.0)
         );
-        return Math.max(1.0, (base + scaledLevelBonus + allocated) * (1.0 + augments.maxHealthBonus(augmentSnapshot))
+        return Math.max(1.0, (base + scaledLevelBonus + allocated) * (1.0 + augments.maxHealthBonus(augmentSnapshot) + fortitudeBonus)
                 * pact("healthMultiplier", 2.5));
     }
 
@@ -159,6 +165,9 @@ public final class DemonLordState {
         double perPoint = global("statDefensePerPoint", 0.02);
         double cap = Math.min(0.9, Math.max(0.0, global("statDefenseCap", 0.6)));
         double reduction = Math.max(0.0, Math.min(cap, points(DemonLordStat.DEFENSE) * perPoint));
+        if (loadout.hasPassive(DemonLordPassive.DREAD)) {
+            reduction = Math.min(0.9, reduction + DemonLordPassive.DREAD.ability("defenseBonus", 0.1));
+        }
         return pactActive() ? Math.min(0.9, reduction + DemonLordPassive.DOOM_PACT.ability("defenseBonus", 0.3)) : reduction;
     }
 
@@ -355,7 +364,8 @@ public final class DemonLordState {
                 global("damageBonusScale", 0.5)
         );
         double allocated = points(DemonLordStat.ATTACK) * global("statAttackPerPoint", 0.04);
-        return (1.0 + scaledLevelBonus + allocated) * pact("damageMultiplier", 2.5);
+        double dread = loadout.hasPassive(DemonLordPassive.DREAD) ? DemonLordPassive.DREAD.ability("damageBonus", 0.1) : 0.0;
+        return (1.0 + scaledLevelBonus + allocated + dread) * pact("damageMultiplier", 2.5);
     }
 
     // ------------------------------------------------------------ 파멸의 계약
@@ -690,9 +700,6 @@ public final class DemonLordState {
         if (centralDefense) {
             return monster.inFinalDefenseCombat() && !monster.isRemoved() && monster.health() > 0.0;
         }
-        if (boundless() && teamId != null) {
-            return monster.isAlive() && monster.targetTeam() == teamId;
-        }
         return monster.isAlive() && monster.targetLaneId() == laneId;
     }
 
@@ -862,11 +869,6 @@ public final class DemonLordState {
 
     public void setTeamId(TeamId teamId) {
         this.teamId = teamId;
-    }
-
-    /** 경계 없는 마왕 패시브: 라인 밖으로 나가고 아군 라인의 적과도 싸웁니다. */
-    public boolean boundless() {
-        return loadout.hasPassive(DemonLordPassive.BOUNDLESS);
     }
 
     /** True while the hotbar is holding the combat kit instead of the normal match tools. */

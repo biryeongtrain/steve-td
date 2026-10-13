@@ -45,6 +45,9 @@ final class DemonLordTowerCatalogTest {
     static void bootstrapMinecraftRegistries() {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
+        net.minecraft.core.registries.BuiltInRegistries.DATA_COMPONENT_INITIALIZERS
+                .build(net.minecraft.data.registries.VanillaRegistries.createWorldLookup())
+                .forEach(net.minecraft.core.component.DataComponentInitializers.PendingComponents::apply);
     }
 
     @BeforeEach
@@ -546,6 +549,76 @@ final class DemonLordTowerCatalogTest {
                 bundled.ability(DemonLordTowers.GLOBAL_CONFIG_ID, "baseMaxHealth", -2), EPSILON);
         assertEquals(code.abilities().get(DemonLordTowers.GLOBAL_CONFIG_ID),
                 bundled.abilities().get(DemonLordTowers.GLOBAL_CONFIG_ID));
+    }
+
+    @Test
+    void damagePointCurvesMatchApprovedExamplesAndStayContinuous() {
+        double[][] examples = {
+                {19, 19, 19}, {100, 100, 100}, {150, 140.54651081081644, 134.65735902799727},
+                {200, 169.31471805599455, 154.93061443340548},
+                {300, 209.86122886681096, 180.47189562170502},
+                {500, 260.94379124341003, 209.86122886681096},
+                {1000, 330.2585092994046, 247.221948958322}
+        };
+        for (double[] row : examples) {
+            assertEquals(row[1], DemonLordDamageScaling.apply(row[0], DamageType.PHYSICAL), EPSILON);
+            assertEquals(row[2], DemonLordDamageScaling.apply(row[0], DamageType.MAGIC), EPSILON);
+            assertEquals(row[0], DemonLordDamageScaling.apply(row[0], DamageType.TRUE), EPSILON);
+        }
+        for (DamageType type : DamageType.values()) {
+            for (double invalid : new double[] {-1, 0, Double.NaN, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY}) {
+                assertEquals(0, DemonLordDamageScaling.apply(invalid, type));
+            }
+            double previous = 0;
+            for (int damage = 1; damage <= 10000; damage++) {
+                double scaled = DemonLordDamageScaling.apply(damage, type);
+                assertTrue(scaled > previous && scaled <= damage);
+                previous = scaled;
+            }
+            assertEquals(100, DemonLordDamageScaling.apply(100 - 1e-7, type), 1e-6);
+            assertEquals(100, DemonLordDamageScaling.apply(100 + 1e-7, type), 1e-6);
+        }
+        assertEquals(0, DemonLordDamageScaling.apply(200, DamageType.MAGIC, Double.NaN, 50));
+        assertEquals(0, DemonLordDamageScaling.apply(200, DamageType.MAGIC, 100, -1));
+    }
+
+    @Test
+    void damagePointSettingsBackfillValidateAndReloadWithoutChangingLevelScaling() {
+        var defaults = TowerBalanceConfig.defaultConfig();
+        String global = DemonLordTowers.GLOBAL_CONFIG_ID;
+        var keys = Map.of("physicalDamageThreshold", 100.0, "physicalDamageScale", 100.0,
+                "magicDamageThreshold", 100.0, "magicDamageScale", 50.0);
+        var old = new TowerBalanceConfig(Map.of(), Map.of(), Map.of(global, Map.of("magicDamageScale", 75.0)))
+                .withMissingDefaults(defaults);
+        for (var entry : keys.entrySet()) {
+            assertEquals(entry.getValue(), defaults.ability(global, entry.getKey(), -1), EPSILON);
+            assertEquals(entry.getKey().equals("magicDamageScale") ? 75.0 : entry.getValue(),
+                    old.ability(global, entry.getKey(), -1), EPSILON);
+            for (double bad : new double[] {0, -1, Double.NaN, Double.POSITIVE_INFINITY}) {
+                assertInvalidAbility(global, entry.getKey(), bad);
+            }
+        }
+        TowerBalanceRuntime.apply(old);
+        assertEquals(163.54733952904026, DemonLordDamageScaling.apply(200, DamageType.MAGIC), EPSILON);
+        assertEquals(0.5, old.ability(global, "damageBonusScale", -1), EPSILON);
+        TowerBalanceRuntime.apply(new TowerBalanceConfig(Map.of(), Map.of(), Map.of()));
+        assertEquals(154.93061443340548, DemonLordDamageScaling.apply(200, DamageType.MAGIC), EPSILON);
+        TowerBalanceRuntime.apply(defaults);
+    }
+
+    @Test
+    void damageDetailsDistinguishLevelRatioRawPointsAndScaledPreview() {
+        UUID owner = UUID.randomUUID();
+        var state = DemonLordStates.getOrCreate(owner);
+        state.addExperience(1e12);
+        assertEquals(30, state.level());
+        assertEquals(38.61475200142807, state.bladeDamage(), EPSILON);
+        var tower = new DemonLordSkillTower(DemonLordTowers.tower(DemonLordSkill.SOUL_DRAIN, 4),
+                owner, TeamId.RED, 1, new GridPosition(0, 0, 0));
+        var lines = String.join("\n", tower.runtimeDetailLines());
+        assertTrue(lines.contains("피해 포인트") && lines.contains("100.0/50.0"));
+        assertTrue(lines.contains("168.7") && lines.contains("143.2") && lines.contains("방어 전"));
+        assertTrue(tower.type().description().stream().anyMatch(line -> line.contains("점감 전")));
     }
 
     @Test

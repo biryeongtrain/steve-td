@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 abstract class EntityRuntimeSaveMixin {
     @Inject(method = "shouldBeSaved", at = @At("HEAD"), cancellable = true)
     private void semiontd$skipRuntimeVisualSave(CallbackInfoReturnable<Boolean> callback) {
-        if (((Entity) (Object) this).getTags().contains(SemionEntityTypes.RUNTIME_NO_SAVE_TAG)) {
+        if (((Entity) (Object) this).entityTags().contains(SemionEntityTypes.RUNTIME_NO_SAVE_TAG)) {
             callback.setReturnValue(false);
         }
     }

@@ -40,6 +40,7 @@ final class EndStatsAssembler {
                         transfer.permanentHealthBonus(),
                         combat.lifeStealRatio(stacks),
                         combat.maximumLifeSteal(),
+                        tower.lifeStealDisplayDamage(),
                         combat.damageReduction(stacks),
                         combat.maximumDamageReduction(),
                         combat.regenerationPerSecond(stacks),

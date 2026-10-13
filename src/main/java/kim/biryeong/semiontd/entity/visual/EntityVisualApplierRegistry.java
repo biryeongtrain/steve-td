@@ -37,27 +37,27 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.animal.Fox;
-import net.minecraft.world.entity.animal.MushroomCow;
-import net.minecraft.world.entity.animal.Panda;
-import net.minecraft.world.entity.animal.Parrot;
-import net.minecraft.world.entity.animal.Rabbit;
-import net.minecraft.world.entity.animal.Salmon;
-import net.minecraft.world.entity.animal.TropicalFish;
+import net.minecraft.world.entity.animal.fox.Fox;
+import net.minecraft.world.entity.animal.cow.MushroomCow;
+import net.minecraft.world.entity.animal.panda.Panda;
+import net.minecraft.world.entity.animal.parrot.Parrot;
+import net.minecraft.world.entity.animal.rabbit.Rabbit;
+import net.minecraft.world.entity.animal.fish.Salmon;
+import net.minecraft.world.entity.animal.fish.TropicalFish;
 import net.minecraft.world.entity.animal.axolotl.Axolotl;
-import net.minecraft.world.entity.animal.horse.Llama;
-import net.minecraft.world.entity.animal.horse.Markings;
-import net.minecraft.world.entity.animal.horse.Variant;
-import net.minecraft.world.entity.npc.VillagerData;
-import net.minecraft.world.entity.npc.VillagerProfession;
-import net.minecraft.world.entity.npc.VillagerType;
+import net.minecraft.world.entity.animal.equine.Llama;
+import net.minecraft.world.entity.animal.equine.Markings;
+import net.minecraft.world.entity.animal.equine.Variant;
+import net.minecraft.world.entity.npc.villager.VillagerData;
+import net.minecraft.world.entity.npc.villager.VillagerProfession;
+import net.minecraft.world.entity.npc.villager.VillagerType;
 import net.minecraft.world.item.DyeColor;
 
 public final class EntityVisualApplierRegistry {
-    private static final ResourceLocation FRIENDS_AND_FOES_MOOBLOOM = ResourceLocation.fromNamespaceAndPath("friendsandfoes", "moobloom");
+    private static final Identifier FRIENDS_AND_FOES_MOOBLOOM = Identifier.fromNamespaceAndPath("friendsandfoes", "moobloom");
 
     private EntityVisualApplierRegistry() {
     }
@@ -87,7 +87,7 @@ public final class EntityVisualApplierRegistry {
             EntityType<?> entityType,
             List<SynchedEntityData.DataValue<?>> data
     ) {
-        if (entityType != EntityType.SNOW_GOLEM) {
+        if (entityType != net.minecraft.world.entity.EntityTypes.SNOW_GOLEM) {
             return;
         }
         booleanProperty(visual, EntityVisualProperties.SNOW_GOLEM_HAS_PUMPKIN)
@@ -115,7 +115,7 @@ public final class EntityVisualApplierRegistry {
             EntityType<?> entityType,
             List<SynchedEntityData.DataValue<?>> data
     ) {
-        if (entityType != EntityType.PANDA) {
+        if (entityType != net.minecraft.world.entity.EntityTypes.PANDA) {
             return;
         }
         firstEnum(visual, Panda.Gene.class, EntityVisualProperties.PANDA_MAIN_GENE, "gene", "variant")
@@ -131,7 +131,7 @@ public final class EntityVisualApplierRegistry {
             EntityType<?> entityType,
             List<SynchedEntityData.DataValue<?>> data
     ) {
-        if (entityType != EntityType.SHULKER) {
+        if (entityType != net.minecraft.world.entity.EntityTypes.SHULKER) {
             return;
         }
         dyeColor(visual, EntityVisualProperties.SHULKER_COLOR)
@@ -160,7 +160,7 @@ public final class EntityVisualApplierRegistry {
             RegistryAccess registryAccess,
             List<SynchedEntityData.DataValue<?>> data
     ) {
-        if (entityType != EntityType.VILLAGER && entityType != EntityType.ZOMBIE_VILLAGER) {
+        if (entityType != net.minecraft.world.entity.EntityTypes.VILLAGER && entityType != net.minecraft.world.entity.EntityTypes.ZOMBIE_VILLAGER) {
             return;
         }
         if (!hasAnyProperty(
@@ -188,7 +188,7 @@ public final class EntityVisualApplierRegistry {
                 .map(value -> Math.max(1, Math.min(5, value)))
                 .orElse(1);
 
-        EntityDataAccessor<VillagerData> accessor = entityType == EntityType.ZOMBIE_VILLAGER
+        EntityDataAccessor<VillagerData> accessor = entityType == net.minecraft.world.entity.EntityTypes.ZOMBIE_VILLAGER
                 ? ZombieVillagerAccessor.semiontd$dataVillagerData()
                 : VillagerAccessor.semiontd$dataVillagerData();
         put(data, accessor, new VillagerData(type, profession, level));
@@ -200,18 +200,18 @@ public final class EntityVisualApplierRegistry {
             RegistryAccess registryAccess,
             List<SynchedEntityData.DataValue<?>> data
     ) {
-        if (entityType == EntityType.COW) {
+        if (entityType == net.minecraft.world.entity.EntityTypes.COW) {
             applyHolderVariant(visual, registryAccess, data, CowAccessor.semiontd$dataVariantId(), Registries.COW_VARIANT, EntityVisualProperties.COW_VARIANT, "variant");
-        } else if (entityType == EntityType.PIG) {
+        } else if (entityType == net.minecraft.world.entity.EntityTypes.PIG) {
             applyHolderVariant(visual, registryAccess, data, PigAccessor.semiontd$dataVariantId(), Registries.PIG_VARIANT, EntityVisualProperties.PIG_VARIANT, "variant");
-        } else if (entityType == EntityType.CHICKEN) {
+        } else if (entityType == net.minecraft.world.entity.EntityTypes.CHICKEN) {
             applyHolderVariant(visual, registryAccess, data, ChickenAccessor.semiontd$dataVariantId(), Registries.CHICKEN_VARIANT, EntityVisualProperties.CHICKEN_VARIANT, "variant");
-        } else if (entityType == EntityType.WOLF) {
+        } else if (entityType == net.minecraft.world.entity.EntityTypes.WOLF) {
             applyHolderVariant(visual, registryAccess, data, WolfAccessor.semiontd$dataVariantId(), Registries.WOLF_VARIANT, EntityVisualProperties.WOLF_VARIANT, "variant");
             applyHolderVariant(visual, registryAccess, data, WolfAccessor.semiontd$dataSoundVariantId(), Registries.WOLF_SOUND_VARIANT, EntityVisualProperties.WOLF_SOUND_VARIANT, "sound_variant");
-        } else if (entityType == EntityType.CAT) {
+        } else if (entityType == net.minecraft.world.entity.EntityTypes.CAT) {
             applyHolderVariant(visual, registryAccess, data, CatAccessor.semiontd$dataVariantId(), Registries.CAT_VARIANT, EntityVisualProperties.CAT_VARIANT, "variant");
-        } else if (entityType == EntityType.FROG) {
+        } else if (entityType == net.minecraft.world.entity.EntityTypes.FROG) {
             applyHolderVariant(visual, registryAccess, data, FrogAccessor.semiontd$dataVariantId(), Registries.FROG_VARIANT, EntityVisualProperties.FROG_VARIANT, "variant");
         }
     }
@@ -234,31 +234,31 @@ public final class EntityVisualApplierRegistry {
             EntityType<?> entityType,
             List<SynchedEntityData.DataValue<?>> data
     ) {
-        if (entityType == EntityType.HORSE) {
+        if (entityType == net.minecraft.world.entity.EntityTypes.HORSE) {
             applyHorse(visual, data);
-        } else if (entityType == EntityType.LLAMA || entityType == EntityType.TRADER_LLAMA) {
+        } else if (entityType == net.minecraft.world.entity.EntityTypes.LLAMA || entityType == net.minecraft.world.entity.EntityTypes.TRADER_LLAMA) {
             applyEnumInteger(visual, data, LlamaAccessor.semiontd$dataVariantId(), Llama.Variant.class, Llama.Variant::getId, EntityVisualProperties.LLAMA_VARIANT, "variant");
-        } else if (entityType == EntityType.FOX) {
+        } else if (entityType == net.minecraft.world.entity.EntityTypes.FOX) {
             applyEnumInteger(visual, data, FoxAccessor.semiontd$dataTypeId(), Fox.Variant.class, Fox.Variant::getId, EntityVisualProperties.FOX_VARIANT, "variant");
-        } else if (entityType == EntityType.RABBIT) {
+        } else if (entityType == net.minecraft.world.entity.EntityTypes.RABBIT) {
             applyEnumInteger(visual, data, RabbitAccessor.semiontd$dataTypeId(), Rabbit.Variant.class, Rabbit.Variant::id, EntityVisualProperties.RABBIT_VARIANT, "variant");
-        } else if (entityType == EntityType.PARROT) {
+        } else if (entityType == net.minecraft.world.entity.EntityTypes.PARROT) {
             applyEnumInteger(visual, data, ParrotAccessor.semiontd$dataVariantId(), Parrot.Variant.class, Parrot.Variant::getId, EntityVisualProperties.PARROT_VARIANT, "variant");
-        } else if (entityType == EntityType.AXOLOTL) {
+        } else if (entityType == net.minecraft.world.entity.EntityTypes.AXOLOTL) {
             applyEnumInteger(visual, data, AxolotlAccessor.semiontd$dataVariant(), Axolotl.Variant.class, Axolotl.Variant::getId, EntityVisualProperties.AXOLOTL_VARIANT, "variant");
-        } else if (entityType == EntityType.MOOSHROOM) {
+        } else if (entityType == net.minecraft.world.entity.EntityTypes.MOOSHROOM) {
             applyEnumInteger(visual, data, MushroomCowAccessor.semiontd$dataType(), MushroomCow.Variant.class, EntityVisualApplierRegistry::mooshroomVariantId, EntityVisualProperties.MOOSHROOM_VARIANT, "variant");
-        } else if (entityType == EntityType.SALMON) {
+        } else if (entityType == net.minecraft.world.entity.EntityTypes.SALMON) {
             applyEnumInteger(visual, data, SalmonAccessor.semiontd$dataType(), Salmon.Variant.class, EntityVisualApplierRegistry::salmonVariantId, EntityVisualProperties.SALMON_SIZE, "variant");
-        } else if (entityType == EntityType.TROPICAL_FISH) {
+        } else if (entityType == net.minecraft.world.entity.EntityTypes.TROPICAL_FISH) {
             applyTropicalFish(visual, data);
-        } else if (entityType == EntityType.SHEEP) {
+        } else if (entityType == net.minecraft.world.entity.EntityTypes.SHEEP) {
             applySheep(visual, data);
-        } else if (entityType == EntityType.SLIME) {
+        } else if (entityType == net.minecraft.world.entity.EntityTypes.SLIME) {
             applySlime(visual, data);
-        } else if (entityType == EntityType.CAT) {
+        } else if (entityType == net.minecraft.world.entity.EntityTypes.CAT) {
             applyDyeColor(visual, data, CatAccessor.semiontd$dataCollarColor(), EntityVisualProperties.COLLAR_COLOR);
-        } else if (entityType == EntityType.WOLF) {
+        } else if (entityType == net.minecraft.world.entity.EntityTypes.WOLF) {
             applyDyeColor(visual, data, WolfAccessor.semiontd$dataCollarColor(), EntityVisualProperties.COLLAR_COLOR);
         }
     }
@@ -340,7 +340,7 @@ public final class EntityVisualApplierRegistry {
             EntityType<?> entityType,
             List<SynchedEntityData.DataValue<?>> data
     ) {
-        if (entityType != EntityType.CAT && entityType != EntityType.WOLF) {
+        if (entityType != net.minecraft.world.entity.EntityTypes.CAT && entityType != net.minecraft.world.entity.EntityTypes.WOLF) {
             return;
         }
 
@@ -393,7 +393,7 @@ public final class EntityVisualApplierRegistry {
                 return Optional.of((ResourceKey<T>)resourceKey);
             }
             if (propertyValue instanceof String stringValue) {
-                ResourceLocation id = parseId(stringValue);
+                Identifier id = parseId(stringValue);
                 if (id != null) {
                     return Optional.of(ResourceKey.create(registryKey, id));
                 }
@@ -468,14 +468,14 @@ public final class EntityVisualApplierRegistry {
         return Optional.empty();
     }
 
-    private static ResourceLocation parseId(String value) {
+    private static Identifier parseId(String value) {
         if (value == null || value.isBlank()) {
             return null;
         }
         String trimmed = value.trim();
         return trimmed.indexOf(':') >= 0
-                ? ResourceLocation.tryParse(trimmed)
-                : ResourceLocation.fromNamespaceAndPath("minecraft", trimmed);
+                ? Identifier.tryParse(trimmed)
+                : Identifier.fromNamespaceAndPath("minecraft", trimmed);
     }
 
     private static Optional<DyeColor> dyeColor(String value) {

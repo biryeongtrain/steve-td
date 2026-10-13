@@ -5,15 +5,15 @@ import static kim.biryeong.semiontd.tower.description.TowerDescriptionTemplate.f
 import java.util.List;
 import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.tower.TowerType;
-import kim.biryeong.semiontd.tower.insect.InsectBalance;
 import kim.biryeong.semiontd.tower.insect.InsectAugments;
+import kim.biryeong.semiontd.tower.insect.InsectBalance;
 import kim.biryeong.semiontd.tower.insect.InsectTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class InsectTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "insect_towers");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "insect_towers");
 
     public InsectTowerJob() {
         super(ID, Component.literal("벌레 빌더"), List.of());
@@ -44,7 +44,10 @@ public final class InsectTowerJob extends SemionJob {
     }
 
     @Override public void onMatchStarted(JobContext context) {InsectAugments.clear(context.player().uuid());}
+
     @Override public void onRoundEnded(JobContext context, int round) {InsectAugments.clear(context.player().uuid());}
+
     @Override public void onEliminated(JobContext context) {InsectAugments.clear(context.player().uuid());}
+
     @Override public void onMatchClosed(JobContext context) {InsectAugments.clear(context.player().uuid());}
 }

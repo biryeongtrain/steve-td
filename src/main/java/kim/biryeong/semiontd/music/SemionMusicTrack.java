@@ -1,13 +1,13 @@
 package kim.biryeong.semiontd.music;
 
 import java.nio.file.Path;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public record SemionMusicTrack(
         String id,
         Path source,
-        ResourceLocation eventId,
-        ResourceLocation soundFileId,
+        Identifier eventId,
+        Identifier soundFileId,
         long durationTicks
 ) {
     public SemionMusicTrack {

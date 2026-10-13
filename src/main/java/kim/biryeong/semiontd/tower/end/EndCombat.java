@@ -6,6 +6,7 @@ import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
 import kim.biryeong.semiontd.entity.monster.SemionMonsterEntity;
 import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.tower.TowerType;
+import kim.biryeong.semiontd.tower.DamageLifeSteal;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
 
@@ -36,6 +37,20 @@ final class EndCombat {
 
     double lifeStealRatio(EndTransferStacks stacks) {
         return stacks.shulkerBonus(config.lifeSteal());
+    }
+
+    static double lifeStealProgress(double ratio, double maximum) {
+        if (!Double.isFinite(ratio) || !Double.isFinite(maximum) || maximum <= 0) {return 0;}
+        return Math.clamp(ratio / maximum, 0, 1);
+    }
+
+    double lifeStealHealing(double dealtDamage, EndTransferStacks stacks) {
+        return lifeStealHealing(dealtDamage, dealtDamage, stacks);
+    }
+
+    double lifeStealHealing(double dealtDamage, double referenceDamage, EndTransferStacks stacks) {
+        return DamageLifeSteal.healing(dealtDamage, referenceDamage,
+                lifeStealProgress(lifeStealRatio(stacks), maximumLifeSteal()), 30.0);
     }
 
     double maximumLifeSteal() {
@@ -109,7 +124,7 @@ final class EndCombat {
             EndTransferStacks stacks
     ) {
         List<SemionMonsterEntity> secondaries = applySplashDamage(tower, towerEntity, target, attemptedDamage, resolvedOutgoingDamage, stacks);
-        heal(towerEntity, dealtDamage * lifeStealRatio(stacks));
+        heal(towerEntity, lifeStealHealing(dealtDamage, stacks));
         return secondaries;
     }
 
@@ -146,7 +161,7 @@ final class EndCombat {
                 true,
                 (splashTarget, dealtSplashDamage, killed) -> {
                     secondaries.add(splashTarget);
-                    heal(towerEntity, dealtSplashDamage * lifeStealRatio(stacks));
+                    heal(towerEntity, lifeStealHealing(dealtSplashDamage, resolvedOutgoingDamage, stacks));
                     towerEntity.applyIgniteFromBasicAttack(
                             splashTarget,
                             igniteAttackDamage,

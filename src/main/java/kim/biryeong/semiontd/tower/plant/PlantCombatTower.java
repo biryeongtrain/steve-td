@@ -1,6 +1,5 @@
 package kim.biryeong.semiontd.tower.plant;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,13 +19,12 @@ import kim.biryeong.semiontd.entity.tower.SemionTowerEntity;
 import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
-import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.ProductionTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
@@ -210,7 +208,7 @@ public class PlantCombatTower extends ProductionTower {
         onStateChanged(lane);
     }
 
-    private double growthBonus() {
+    double growthBonus() {
         if (!standsOn(PlantSoil.MEADOW)) {
             return 0.0;
         }
@@ -602,53 +600,9 @@ public class PlantCombatTower extends ProductionTower {
         return max > 0.0 ? Math.min(max, radius) : radius;
     }
 
-    // ------------------------------------------------------------------
-    // UI
-    // ------------------------------------------------------------------
-
     @Override
     public List<String> runtimeDetailLines() {
-        PlantSoil soil = standingSoil();
-        List<String> lines = new ArrayList<>();
-        if (soil == null) {
-            lines.add("맨땅 위라 지형 효과가 없습니다.");
-            return lines;
-        }
-        lines.add(soil.displayName() + " 위 · 지형 " + PlantSoilStates.count(ownerPlayer(), soil) + "칸");
-        lines.add("개화 피해 +" + percentInteger(bloomBonus()));
-        switch (soil) {
-            case MEADOW -> {
-                lines.add("성장 최대 체력 +" + percentInteger(growthBonus())
-                        + " · " + growthRounds() + "라운드째");
-                // 툴팁은 지형 기본값을 보여 주므로, 여기서는 배율까지 곱한 실제 적용값을 보여 줍니다.
-                double healPercent = scaled(PlantSoil.MEADOW, "healPercentPerPulse");
-                if (healPercent > 0.0) {
-                    lines.add("회복 " + percentInteger(healPercent) + "/펄스 · 범위 "
-                            + oneDecimal(scaled(PlantSoil.MEADOW, "supportRadius")));
-                }
-                long diamondPerWave = diamondPerWave();
-                if (diamondPerWave > 0L) {
-                    lines.add("웨이브 정산 다이아 +" + diamondPerWave);
-                }
-                double novaRadius = TowerBalanceRuntime.ability(type().id(), "novaRadius", 0.0);
-                if (novaRadius > 0.0) {
-                    lines.add("광역 반경 " + oneDecimal(novaRadius)
-                            + " · 피해 " + percentInteger(TowerBalanceRuntime.ability(type().id(), "novaDamageRatio", 0.0)));
-                }
-            }
-            case MYCELIUM -> lines.add("균사 " + PlantSoilStates.count(ownerPlayer(), PlantSoil.MYCELIUM)
-                    + "칸 · 라인 전체 취약 +" + percentInteger(PlantSoilEnvironment.myceliumFieldFrailty(ownerPlayer())));
-            case DESERT -> lines.add("공속 감소 -" + percentInteger(scaled(soil, "attackSpeedReduction"))
-                    + ", 가시 반사 " + percentInteger(scaled(soil, "thornReflectRatio"))
-                    + " +" + oneDecimal(type().damage()));
-            case PODZOL -> {
-                lines.add("사거리 +" + oneDecimal(scaled(soil, "rangeBonus"))
-                        + ", 공격 속도 +" + percentInteger(scaled(soil, "attackSpeedBonus")));
-                lines.add("성장 피해 +" + percentInteger(damageGrowthBonus())
-                        + " · " + growthRounds() + "라운드째");
-            }
-        }
-        return lines;
+        return PlantTowerStatsView.create(this);
     }
 
     // ------------------------------------------------------------------
@@ -696,10 +650,6 @@ public class PlantCombatTower extends ProductionTower {
         return TowerBalanceRuntime.abilityTicks(soil.configId(), key);
     }
 
-    private int soilInt(PlantSoil soil, String key) {
-        return TowerBalanceRuntime.abilityInt(soil.configId(), key);
-    }
-
     protected double global(String key) {
         return TowerBalanceRuntime.ability(PlantTowers.GLOBAL_CONFIG_ID, key);
     }
@@ -717,7 +667,7 @@ public class PlantCombatTower extends ProductionTower {
                 .map(SemionTowerEntity.class::cast);
     }
 
-    private static ResourceLocation plantId(String path) {
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "plant/" + path);
+    private static Identifier plantId(String path) {
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "plant/" + path);
     }
 }

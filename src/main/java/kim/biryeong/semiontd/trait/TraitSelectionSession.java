@@ -8,7 +8,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import kim.biryeong.semiontd.game.AssignedParticipant;
 import kim.biryeong.semiontd.game.ParticipantSelectionPlan;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class TraitSelectionSession {
     private final ParticipantSelectionPlan plan;
@@ -52,16 +52,16 @@ public final class TraitSelectionSession {
         return Math.max(1, (remainingTicks + 19) / 20);
     }
 
-    public SelectionResult select(UUID playerId, TraitSlot slot, ResourceLocation traitId) {
+    public SelectionResult select(UUID playerId, TraitSlot slot, Identifier traitId) {
         if (!activeParticipantIds.contains(playerId)) {
             return SelectionResult.NOT_PARTICIPANT;
         }
-        ResourceLocation normalizedTraitId = traitId == null ? BuiltInTraits.NONE_ID : traitId;
+        Identifier normalizedTraitId = traitId == null ? BuiltInTraits.NONE_ID : traitId;
         if (TraitRegistry.find(normalizedTraitId).isEmpty()) {
             return SelectionResult.UNKNOWN_TRAIT;
         }
         MutableLoadout selection = selections.computeIfAbsent(playerId, ignored -> new MutableLoadout());
-        ResourceLocation other = selection.traitId(opposite(slot));
+        Identifier other = selection.traitId(opposite(slot));
         if (!TraitLoadout.isNone(normalizedTraitId) && normalizedTraitId.equals(other)) {
             return SelectionResult.DUPLICATE_TRAIT;
         }
@@ -101,8 +101,8 @@ public final class TraitSelectionSession {
     }
 
     private static final class MutableLoadout {
-        private ResourceLocation primary;
-        private ResourceLocation secondary;
+        private Identifier primary;
+        private Identifier secondary;
 
         static MutableLoadout complete(TraitLoadout loadout) {
             MutableLoadout mutable = new MutableLoadout();
@@ -111,11 +111,11 @@ public final class TraitSelectionSession {
             return mutable;
         }
 
-        ResourceLocation traitId(TraitSlot slot) {
+        Identifier traitId(TraitSlot slot) {
             return slot == TraitSlot.PRIMARY ? primary : secondary;
         }
 
-        void set(TraitSlot slot, ResourceLocation traitId) {
+        void set(TraitSlot slot, Identifier traitId) {
             if (slot == TraitSlot.PRIMARY) {
                 primary = traitId;
             } else {

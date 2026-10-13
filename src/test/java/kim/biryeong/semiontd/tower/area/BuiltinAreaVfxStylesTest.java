@@ -15,7 +15,7 @@ import kim.biryeong.semiontd.entity.tower.vfx.BuilderPalette;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.BeforeAll;
@@ -95,20 +95,20 @@ class BuiltinAreaVfxStylesTest {
         }
     }
 
-    private static AreaVfxContext context(ResourceLocation styleId, Vec3 target) {
+    private static AreaVfxContext context(Identifier styleId, Vec3 target) {
         return context(styleId, target, 3.0);
     }
 
-    private static AreaVfxContext context(ResourceLocation styleId, Vec3 target, double radius) {
+    private static AreaVfxContext context(Identifier styleId, Vec3 target, double radius) {
         AreaVfxParticle particle = new AreaVfxParticle(
                 ParticleTypes.CRIT,
-                ResourceLocation.fromNamespaceAndPath("minecraft", "crit")
+                Identifier.fromNamespaceAndPath("minecraft", "crit")
         );
         return new AreaVfxContext(
-                ResourceLocation.fromNamespaceAndPath("test", "effect"),
+                Identifier.fromNamespaceAndPath("test", "effect"),
                 styleId,
                 UUID.fromString("00000000-0000-0000-0000-000000000001"),
-                ResourceLocation.fromNamespaceAndPath("test", "tower"),
+                Identifier.fromNamespaceAndPath("test", "tower"),
                 styleId.equals(AreaVfxStyles.INSECT_EXPLOSION)
                         ? BuilderPalette.INSECT.areaPalette() : new AreaVfxPalette(particle, particle),
                 Vec3.ZERO,

@@ -179,7 +179,7 @@ public final class OffensiveAugmentTowerGameTest {
             require(fixture.tower.originalPosition().equals(original), "Hatching must preserve the original position.");
             requireClose(2000, fixture.tower.health(), "The hatched T2 body starts at full 2000 health.");
             requireClose(2000, fixture.source().getMaxHealth(), "Entity and logical maximum health must agree.");
-            requireClose(5, fixture.source().attackRange(), "The sentinel must gain its five-block range.");
+            requireClose(15, fixture.source().attackRange(), "The sentinel must gain its fifteen-block range.");
             requireClose(300, fixture.source().attackDamageAmount(null), "The sentinel must gain its T2 magic attack.");
             require(fixture.tower.primaryDamageType() == DamageType.MAGIC, "The sentinel must remain magical.");
             require(fixture.tower.visual().entityTypeId().equals("minecraft:iron_golem"), "Hatching must change the visible body.");

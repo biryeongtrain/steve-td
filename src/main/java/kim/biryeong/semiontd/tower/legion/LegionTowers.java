@@ -7,8 +7,8 @@ import kim.biryeong.semiontd.entity.visual.SlimeVisual;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.animal.ChickenVariants;
-import net.minecraft.world.entity.animal.Parrot;
+import net.minecraft.world.entity.animal.chicken.ChickenVariants;
+import net.minecraft.world.entity.animal.parrot.Parrot;
 
 import java.util.List;
 import java.util.Set;
@@ -112,7 +112,7 @@ public class LegionTowers {
             18,
             20,
             30,
-            EntityVisual.builder(byId(EntityType.SALMON))
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.SALMON))
                     .blockbenchModel("semion-td:tower/penguin")
                     .build(),
             List.of(
@@ -131,7 +131,7 @@ public class LegionTowers {
             25,
             15,
             30,
-            EntityVisual.builder(byId(EntityType.SALMON))
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.SALMON))
                     .blockbenchModel("semion-td:tower/penguin")
                     .build(),
             List.of(
@@ -282,7 +282,7 @@ public class LegionTowers {
             10,
             20,
             1557,
-            byId(EntityType.ILLUSIONER),
+            byId(net.minecraft.world.entity.EntityTypes.ILLUSIONER),
             List.of(
                     "<red><bold> 이 유닛은 최대 1기만 설치할 수 있습니다. </bold></red>",
                     "<green> 이 타워가 사망할 때, 플레이어의 모든 타워가 자신의 체력, 공격력을 65% 스텟을 가진 분신 1체를 소환합니다. </green>",

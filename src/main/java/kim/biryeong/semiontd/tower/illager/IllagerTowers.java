@@ -20,7 +20,7 @@ public final class IllagerTowers {
             7,
             18,
             45,
-            byId(EntityType.VINDICATOR),
+            byId(net.minecraft.world.entity.EntityTypes.VINDICATOR),
             List.of(
                     "<gray>우민 빌더의 기본 탱커 타워입니다.</gray>",
                     "<green>습격 중 받는 피해가 감소합니다.</green>"
@@ -36,7 +36,7 @@ public final class IllagerTowers {
             10,
             17,
             55,
-            byId(EntityType.VINDICATOR),
+            byId(net.minecraft.world.entity.EntityTypes.VINDICATOR),
             List.of(
                     "<gray>현수막을 든 변명자 대장입니다.</gray>",
                     "<green>습격 중 받는 피해가 더 크게 감소합니다.</green>"
@@ -52,7 +52,7 @@ public final class IllagerTowers {
             16,
             22,
             70,
-            EntityVisual.builder(byId(EntityType.RAVAGER)).scale(0.70).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.RAVAGER)).scale(0.70).build(),
             List.of(
                     "<gray>라인을 버티는 최종 탱커 타워입니다.</gray>",
                     "<green>습격 중 광역 충돌 피해를 가합니다.</green>"
@@ -68,7 +68,7 @@ public final class IllagerTowers {
             6,
             14,
             12,
-            byId(EntityType.PILLAGER),
+            byId(net.minecraft.world.entity.EntityTypes.PILLAGER),
             List.of(
                     "<gray>우민 빌더의 기본 원거리 타워입니다.</gray>",
                     "<green>단일 또는 광역 대장 트리로 업그레이드할 수 있습니다.</green>"
@@ -84,7 +84,7 @@ public final class IllagerTowers {
             11,
             13,
             15,
-            byId(EntityType.PILLAGER),
+            byId(net.minecraft.world.entity.EntityTypes.PILLAGER),
             List.of(
                     "<gray>인컴/소환 적 처리에 특화된 약탈자 대장입니다.</gray>",
                     "<green>습격 중 특수 적에게 추가 피해를 입힙니다.</green>"
@@ -100,7 +100,7 @@ public final class IllagerTowers {
             8,
             15,
             12,
-            byId(EntityType.PILLAGER),
+            byId(net.minecraft.world.entity.EntityTypes.PILLAGER),
             List.of(
                     "<gray>웨이브 정리에 특화된 약탈자 대장입니다.</gray>",
                     "<green>공격 대상 주변에 스플래시 피해를 입힙니다.</green>"
@@ -116,7 +116,7 @@ public final class IllagerTowers {
             18,
             12,
             18,
-            byId(EntityType.EVOKER),
+            byId(net.minecraft.world.entity.EntityTypes.EVOKER),
             List.of(
                     "<gray>특수 적을 끊어내는 단일 소환사 타워입니다.</gray>",
                     "<green>습격 중 표식 대상과 특수 적에게 큰 피해를 입힙니다.</green>"
@@ -132,7 +132,7 @@ public final class IllagerTowers {
             13,
             14,
             15,
-            byId(EntityType.EVOKER),
+            byId(net.minecraft.world.entity.EntityTypes.EVOKER),
             List.of(
                     "<gray>웨이브를 정리하는 광역 소환사 타워입니다.</gray>",
                     "<green>습격 중 더 넓은 스플래시 피해를 입힙니다.</green>"
@@ -148,7 +148,7 @@ public final class IllagerTowers {
             4,
             12,
             8,
-            byId(EntityType.VEX),
+            byId(net.minecraft.world.entity.EntityTypes.VEX),
             List.of(
                     "<gray>약한 표식을 생성하는 보조 타워입니다.</gray>",
                     "<green>표식 대상은 받는 피해가 증가합니다.</green>"
@@ -164,7 +164,7 @@ public final class IllagerTowers {
             5,
             14,
             10,
-            byId(EntityType.WITCH),
+            byId(net.minecraft.world.entity.EntityTypes.WITCH),
             List.of(
                     "<gray>체력이 가장 낮은 적에게 표식을 생성합니다.</gray>",
                     "<green>주변 우민 타워가 표식 대상을 우선 공격합니다.</green>"
@@ -180,7 +180,7 @@ public final class IllagerTowers {
             5,
             14,
             10,
-            byId(EntityType.WITCH),
+            byId(net.minecraft.world.entity.EntityTypes.WITCH),
             List.of(
                     "<gray>최대 체력이 가장 높은 적에게 표식을 생성합니다.</gray>",
                     "<green>주변 우민 타워가 표식 대상을 우선 공격합니다.</green>"
@@ -196,7 +196,7 @@ public final class IllagerTowers {
             9,
             12,
             12,
-            byId(EntityType.ILLUSIONER),
+            byId(net.minecraft.world.entity.EntityTypes.ILLUSIONER),
             List.of(
                     "<gray>낮은 체력 대상을 강하게 표식하는 환술사 타워입니다.</gray>",
                     "<green>습격 중 표식 피해 증폭이 증가합니다.</green>"
@@ -212,7 +212,7 @@ public final class IllagerTowers {
             9,
             12,
             12,
-            byId(EntityType.ILLUSIONER),
+            byId(net.minecraft.world.entity.EntityTypes.ILLUSIONER),
             List.of(
                     "<gray>높은 체력 대상을 강하게 표식하는 환술사 타워입니다.</gray>",
                     "<green>습격 중 표식 피해 증폭이 증가합니다.</green>"

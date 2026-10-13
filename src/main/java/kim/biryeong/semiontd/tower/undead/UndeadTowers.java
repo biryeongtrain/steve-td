@@ -20,7 +20,7 @@ public class UndeadTowers {
             5,
             15,
             40,
-            byId(EntityType.ZOMBIE),
+            byId(net.minecraft.world.entity.EntityTypes.ZOMBIE),
             List.of(
                     "<gray> 지속 교전을 통한 탱킹에 주력된 타워입니다.</gray>",
                     "<green> 입힌 피해의 20%를 회복합니다.",
@@ -38,7 +38,7 @@ public class UndeadTowers {
             8,
             15,
             50,
-            byId(EntityType.HUSK),
+            byId(net.minecraft.world.entity.EntityTypes.HUSK),
             List.of(
                     "<gray> 든든한 탱킹 타워입니다.</gray>",
                     "<green> 입힌 피해의 30%를 회복합니다. </green>",
@@ -58,7 +58,7 @@ public class UndeadTowers {
             10,
             15,
             50,
-            byId(EntityType.DROWNED),
+            byId(net.minecraft.world.entity.EntityTypes.DROWNED),
             List.of(
                     "<green> 매 라운드마다 단 한번, 치명적인 피해를 입을 경우 3초간 생존합니다.</green>",
                     "<green> 입힌 피해의 30%를 회복합니다. </green>",
@@ -79,7 +79,7 @@ public class UndeadTowers {
             5,
             12,
             10,
-            byId(EntityType.SKELETON),
+            byId(net.minecraft.world.entity.EntityTypes.SKELETON),
             List.of(
                     "<gray> 원거리 또는 근거리 특화 업그레이드가 가능한 타워입니다. </gray>",
                     "<gray> 근거리로 변환이 되는 업그레이드도 있으니 채용할거면 앞에 두는 거 추천 </gray>"
@@ -95,7 +95,7 @@ public class UndeadTowers {
             8,
             12,
             5,
-            byId(EntityType.BOGGED),
+            byId(net.minecraft.world.entity.EntityTypes.BOGGED),
             List.of(
                     "<gray> 원거리 특화 타워입니다. </gray>",
                     "<green> 공격 시 임의의 대상 1체를 추가로 공격합니다. </green>",
@@ -113,7 +113,7 @@ public class UndeadTowers {
             10,
             10,
             20,
-            byId(EntityType.WITHER_SKELETON),
+            byId(net.minecraft.world.entity.EntityTypes.WITHER_SKELETON),
             List.of(
                     "<gray> 근거리 특화 타워입니다. </gray>",
                     "<green> 스플래시가 존재합니다. 1.25 블록, 80% 피해 </green>",
@@ -130,7 +130,7 @@ public class UndeadTowers {
             12,
             12,
             5,
-            byId(EntityType.STRAY),
+            byId(net.minecraft.world.entity.EntityTypes.STRAY),
             List.of(
                     "<gray> 원거리 특화 타워입니다. </gray>",
                     "<green> 공격 시 사거리보다 2블록 넓은 범위에서 임의의 대상 2체를 추가로 공격합니다. </green>",
@@ -148,7 +148,7 @@ public class UndeadTowers {
             15,
             10,
             20,
-            byId(EntityType.WITHER_SKELETON),
+            byId(net.minecraft.world.entity.EntityTypes.WITHER_SKELETON),
             List.of(
                     "<gray> 근거리 특화 타워입니다. </gray>",
                     "<green> 스플래시가 존재합니다. 1.75 블록, 90% 피해 </green>",
@@ -167,7 +167,7 @@ public class UndeadTowers {
             5,
             15,
             5,
-            byId(EntityType.ZOMBIE_HORSE),
+            byId(net.minecraft.world.entity.EntityTypes.ZOMBIE_HORSE),
             List.of(
                     "<gray> 적에게 디버프를 주는 타워입니다.</gray>",
                     "<green> 5초마다 2초간 4블록 내의 적의 공격력을 10% 감소시킵니다.</green>",
@@ -184,7 +184,7 @@ public class UndeadTowers {
             5,
             15,
             5,
-            byId(EntityType.SKELETON_HORSE),
+            byId(net.minecraft.world.entity.EntityTypes.SKELETON_HORSE),
             List.of(
                     "<gray> 적에게 디버프를 주는 타워 입니다. </gray>",
                     "<green> 5초마다 2초간 4블록 내의 적의 공격력과 방어력을 10% 감소시킵니다. </green>",

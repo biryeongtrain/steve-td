@@ -12,11 +12,11 @@ import kim.biryeong.semiontd.SemionTd;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerDataKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 final class EndTransferController {
     private static final int HEALING_INTERVAL_TICKS = 20;
-    private static final TowerDataKey<Double> PROGRESS = TowerDataKey.of(ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "end_transfer_progress"), Double.class);
+    private static final TowerDataKey<Double> PROGRESS = TowerDataKey.of(Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "end_transfer_progress"), Double.class);
 
     private final EndTransferState state = new EndTransferState();
     private final EndTransferFactory progressFactory;

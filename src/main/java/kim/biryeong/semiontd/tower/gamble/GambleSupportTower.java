@@ -25,7 +25,7 @@ import kim.biryeong.semiontd.tower.TowerCategory;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 
 public final class GambleSupportTower extends ProductionTower {
@@ -132,7 +132,7 @@ public final class GambleSupportTower extends ProductionTower {
             return;
         }
 
-        ResourceLocation sourceId = GambleRoundEffects.sourceId(this);
+        Identifier sourceId = GambleRoundEffects.sourceId(this);
         GambleRoundEffects.rememberSource(lane, ownerPlayer(), sourceId);
         GambleRoundEffects.clearSource(lane, ownerPlayer(), sourceId);
         if (GambleTowers.isSpectator(type())) {
@@ -192,7 +192,7 @@ public final class GambleSupportTower extends ProductionTower {
 
     @Override
     public void onDeath(PlayerLane lane) {
-        ResourceLocation sourceId = GambleRoundEffects.sourceId(this);
+        Identifier sourceId = GambleRoundEffects.sourceId(this);
         GambleRoundEffects.clearSource(lane, ownerPlayer(), sourceId);
         linkedTargetPositions.clear();
         activeEffects = List.of();
@@ -308,7 +308,7 @@ public final class GambleSupportTower extends ProductionTower {
                 AreaVfxStyles.BUFF, source.position(), type().range(), List.of(), 0, 0, 0);
     }
 
-    private boolean applyActiveEffects(SemionTowerEntity entity, ResourceLocation sourceId) {
+    private boolean applyActiveEffects(SemionTowerEntity entity, Identifier sourceId) {
         boolean changed = false;
         for (GambleSupportEffect effect : activeEffects) {
             changed |= entity.setPersistentEffect(effect.type(), sourceId, effect.magnitude());
@@ -317,7 +317,7 @@ public final class GambleSupportTower extends ProductionTower {
     }
 
     private void restoreLinkedEffects(PlayerLane lane) {
-        ResourceLocation sourceId = GambleRoundEffects.sourceId(this);
+        Identifier sourceId = GambleRoundEffects.sourceId(this);
         linkedTargetPositions.forEach(position -> linkedTarget(lane, position)
                 .flatMap(target -> GambleRoundEffects.towerEntity(target, lane))
                 .ifPresent(entity -> applyActiveEffects(entity, sourceId)));

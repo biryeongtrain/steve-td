@@ -36,7 +36,7 @@ import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.server.dialog.body.PlainMessage;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -49,7 +49,7 @@ final class SemionDialogBodyTest {
 
     @Test
     void dividerMarkersBecomeRenderedComponentsEvenWithoutActionButtons() {
-        var bodies = SemionDialogService.actionDialogBodies("\n첫 항목\n<divider>\n둘째 항목");
+        var bodies = UiDialogBodyRenderer.actionDialogBodies("\n첫 항목\n<divider>\n둘째 항목", 256);
 
         assertEquals(1, bodies.size());
         PlainMessage body = assertInstanceOf(PlainMessage.class, bodies.getFirst());
@@ -154,13 +154,13 @@ final class SemionDialogBodyTest {
         assertEquals(List.of("팀", "플레이어", "직업", "다이아", "에메랄드", "수입", "타워"),
                 labels.stream().map(Component::getString).toList());
         assertEquals(List.of(
-                        ChatFormatting.WHITE.getColor(),
-                        ChatFormatting.WHITE.getColor(),
-                        ChatFormatting.WHITE.getColor(),
-                        ChatFormatting.AQUA.getColor(),
-                        ChatFormatting.GREEN.getColor(),
-                        ChatFormatting.YELLOW.getColor(),
-                        ChatFormatting.GOLD.getColor()
+                        net.minecraft.network.chat.TextColor.WHITE.getValue(),
+                        net.minecraft.network.chat.TextColor.WHITE.getValue(),
+                        net.minecraft.network.chat.TextColor.WHITE.getValue(),
+                        net.minecraft.network.chat.TextColor.AQUA.getValue(),
+                        net.minecraft.network.chat.TextColor.GREEN.getValue(),
+                        net.minecraft.network.chat.TextColor.YELLOW.getValue(),
+                        net.minecraft.network.chat.TextColor.GOLD.getValue()
                 ),
                 labels.stream().map(label -> label.getStyle().getColor().getValue()).toList());
     }
@@ -170,7 +170,7 @@ final class SemionDialogBodyTest {
         Component job = SemionDialogService.playerStatusJob("화이트직업");
 
         assertEquals("화이트직업", job.getString());
-        assertEquals(ChatFormatting.WHITE.getColor(), job.getStyle().getColor().getValue());
+        assertEquals(net.minecraft.network.chat.TextColor.WHITE.getValue(), job.getStyle().getColor().getValue());
     }
 
     @Test
@@ -184,19 +184,19 @@ final class SemionDialogBodyTest {
 
     @Test
     void jobStatisticsHeaderAndDividerUseRenderedWhiteLines() {
-        HeaderMessage header = SemionDialogService.jobStatisticsHeader(Component.literal("직업 통계"));
-        HeaderMessage detailHeader = SemionDialogService.jobStatisticsDetailHeader(Component.literal("주민 빌더 통계"));
-        PlainMessage divider = SemionDialogService.jobStatisticsDivider();
-        PlainMessage detailDivider = SemionDialogService.jobStatisticsDetailDivider();
+        HeaderMessage header = UiJobStatisticsView.jobStatisticsHeader(Component.literal("직업 통계"));
+        HeaderMessage detailHeader = UiJobStatisticsView.jobStatisticsDetailHeader(Component.literal("주민 빌더 통계"));
+        PlainMessage divider = UiJobStatisticsView.jobStatisticsDivider();
+        PlainMessage detailDivider = UiJobStatisticsView.jobStatisticsDetailDivider();
 
         assertEquals("직업 통계", header.contents().getString());
         assertEquals(460, header.width());
         assertEquals(420, detailHeader.width());
         assertFalse(header.contents().getString().contains("──────"));
-        assertEquals(ChatFormatting.WHITE.getColor(), divider.contents().getStyle().getColor().getValue());
-        assertEquals(ChatFormatting.WHITE.getColor(), detailDivider.contents().getStyle().getColor().getValue());
+        assertEquals(net.minecraft.network.chat.TextColor.WHITE.getValue(), divider.contents().getStyle().getColor().getValue());
+        assertEquals(net.minecraft.network.chat.TextColor.WHITE.getValue(), detailDivider.contents().getStyle().getColor().getValue());
         assertTrue(divider.contents().getStyle().isStrikethrough());
-        assertEquals("직업 목록", SemionDialogService.jobStatisticsListHeader().contents().getString());
+        assertEquals("직업 목록", UiJobStatisticsView.jobStatisticsListHeader().contents().getString());
     }
 
     @Test
@@ -205,19 +205,19 @@ final class SemionDialogBodyTest {
 
         assertEquals(
                 JobRegistry.officialBuilders().stream().map(job -> job.id().toString()).toList(),
-                SemionDialogService.jobStatisticsCategoryRows(snapshot, true).stream()
+                UiJobStatisticsView.jobStatisticsCategoryRows(snapshot, true).stream()
                         .map(SemionDialogService.JobStatisticsRow::jobId)
                         .toList()
         );
         assertEquals(
                 JobRegistry.creativeBuilders().stream().map(job -> job.id().toString()).toList(),
-                SemionDialogService.jobStatisticsCategoryRows(snapshot, false).stream()
+                UiJobStatisticsView.jobStatisticsCategoryRows(snapshot, false).stream()
                         .map(SemionDialogService.JobStatisticsRow::jobId)
                         .toList()
         );
-        assertFalse(SemionDialogService.jobStatisticsCategoryRows(snapshot, true).stream()
+        assertFalse(UiJobStatisticsView.jobStatisticsCategoryRows(snapshot, true).stream()
                 .anyMatch(row -> row.jobId().equals(JobRegistry.defaultJob().id().toString())));
-        assertFalse(SemionDialogService.jobStatisticsCategoryRows(snapshot, false).stream()
+        assertFalse(UiJobStatisticsView.jobStatisticsCategoryRows(snapshot, false).stream()
                 .anyMatch(row -> row.jobId().equals(JobRegistry.defaultJob().id().toString())));
     }
 
@@ -250,8 +250,8 @@ final class SemionDialogBodyTest {
                 true
         );
 
-        List<Component> headerCells = SemionDialogService.jobStatisticsSummaryHeaderCells();
-        List<Component> summaryCells = SemionDialogService.jobStatisticsSummaryCells(snapshot, row);
+        List<Component> headerCells = UiJobStatisticsView.jobStatisticsSummaryHeaderCells();
+        List<Component> summaryCells = UiJobStatisticsView.jobStatisticsSummaryCells(snapshot, row);
 
         assertEquals(List.of("직업", "선택 (선택률)", "경기 (승률)", "순위 (R)"),
                 headerCells.stream().map(Component::getString).toList());
@@ -263,18 +263,18 @@ final class SemionDialogBodyTest {
                 ),
                 summaryCells.stream().map(Component::getString).toList());
         assertFalse(summaryCells.stream().map(Component::getString).anyMatch(text -> text.contains("통과")));
-        assertEquals(ChatFormatting.AQUA.getColor(), headerCells.get(0).getStyle().getColor().getValue());
-        assertEquals(ChatFormatting.DARK_GRAY.getColor(),
+        assertEquals(net.minecraft.network.chat.TextColor.AQUA.getValue(), headerCells.get(0).getStyle().getColor().getValue());
+        assertEquals(net.minecraft.network.chat.TextColor.DARK_GRAY.getValue(),
                 headerCells.get(1).getSiblings().getFirst().getStyle().getColor().getValue());
-        assertEquals(ChatFormatting.GREEN.getColor(),
+        assertEquals(net.minecraft.network.chat.TextColor.GREEN.getValue(),
                 headerCells.get(2).getSiblings().getFirst().getStyle().getColor().getValue());
-        assertEquals(ChatFormatting.DARK_GRAY.getColor(),
+        assertEquals(net.minecraft.network.chat.TextColor.DARK_GRAY.getValue(),
                 headerCells.get(3).getSiblings().getFirst().getStyle().getColor().getValue());
     }
 
     @Test
     void jobStatisticsSummaryReservesSpaceForAverageRound() {
-        List<Integer> widths = SemionDialogService.jobStatisticsSummaryColumnWidths();
+        List<Integer> widths = UiJobStatisticsView.jobStatisticsSummaryColumnWidths();
 
         assertEquals(List.of(80, 100, 120, 120), widths);
         assertEquals(420, widths.stream().mapToInt(Integer::intValue).sum());
@@ -285,7 +285,7 @@ final class SemionDialogBodyTest {
     void jobStatisticsSummaryCentersHeaderAndBodyCells() {
         Component value = Component.literal("직업");
         int valueWidth = 12;
-        Component centered = SemionDialogService.centeredTableCell(value, 80, valueWidth);
+        Component centered = UiDialogTableLayout.centeredTableCell(value, 80, valueWidth);
         int remainingWidth = 80 - valueWidth;
         int leftPaddingWidth = remainingWidth / 2;
 
@@ -325,55 +325,55 @@ final class SemionDialogBodyTest {
 
         assertEquals(
                 List.of("선택(%)", "승리(%)", "평균 순위(R)"),
-                SemionDialogService.jobStatisticsSampleHeaderCells().stream().map(Component::getString).toList()
+                UiJobStatisticsView.jobStatisticsSampleHeaderCells().stream().map(Component::getString).toList()
         );
         assertEquals(
                 List.of("10회(100.0%)", "3승(30.0%)", "2.0위(R30.0)"),
-                SemionDialogService.jobStatisticsSampleCells(snapshot, entry).stream()
+                UiJobStatisticsView.jobStatisticsSampleCells(snapshot, entry).stream()
                         .map(Component::getString).toList()
         );
 
-        List<List<String>> roundRows = SemionDialogService.jobStatisticsRoundRows(entry).stream()
+        List<List<String>> roundRows = UiJobStatisticsView.jobStatisticsRoundRows(entry).stream()
                 .map(row -> row.stream().map(Component::getString).toList())
                 .toList();
         assertEquals(10, roundRows.size());
         assertEquals(List.of("R1 1.0%", "R11 11.0%", "R21 21.0%", "R31 31.0%"), roundRows.getFirst());
         assertEquals(List.of("R10 10.0%", "R20 20.0%", "R30 30.0%", "R40 40.0%"), roundRows.getLast());
 
-        int renderedWidth = SemionDialogService.jobStatisticsRoundColumnWidths().stream()
+        int renderedWidth = UiJobStatisticsView.jobStatisticsRoundColumnWidths().stream()
                 .mapToInt(Integer::intValue)
                 .sum() + 10 * 3;
         assertEquals(380, renderedWidth);
 
         for (int columnCount : List.of(2, 3, 4, 5, 6)) {
-            List<Integer> widths = SemionDialogService.statisticsEqualColumnWidths(columnCount);
+            List<Integer> widths = UiJobStatisticsView.statisticsEqualColumnWidths(columnCount);
             assertEquals(380, widths.stream().mapToInt(Integer::intValue).sum());
             assertTrue(widths.stream().mapToInt(Integer::intValue).max().orElseThrow()
                     - widths.stream().mapToInt(Integer::intValue).min().orElseThrow() <= 1);
         }
         assertEquals(List.of(76, 76, 76, 76, 76),
-                SemionDialogService.statisticsEqualColumnWidths(5));
+                UiJobStatisticsView.statisticsEqualColumnWidths(5));
         assertEquals(List.of(64, 64, 63, 63, 63, 63),
-                SemionDialogService.statisticsEqualColumnWidths(6));
+                UiJobStatisticsView.statisticsEqualColumnWidths(6));
     }
 
     @Test
     void jobStatisticsDetailUsesRequestedMetricAndTraitHeaders() {
         assertEquals(
                 List.of("특성", "선택(%)", "승리(%)", "평균 순위(R)"),
-                SemionDialogService.jobStatisticsTraitHeaderCells().stream().map(Component::getString).toList()
+                UiJobStatisticsView.jobStatisticsTraitHeaderCells().stream().map(Component::getString).toList()
         );
         assertEquals(
                 List.of("평균 처치", "평균 획득 다이아"),
-                SemionDialogService.jobStatisticsCombatHeaderCells().stream().map(Component::getString).toList()
+                UiJobStatisticsView.jobStatisticsCombatHeaderCells().stream().map(Component::getString).toList()
         );
         assertEquals(
                 List.of("평균 소환", "최종(생산)", "보낸 위협", "받은 위협", "성공 위협(%)"),
-                SemionDialogService.jobStatisticsIncomeHeaderCells().stream().map(Component::getString).toList()
+                UiJobStatisticsView.jobStatisticsIncomeHeaderCells().stream().map(Component::getString).toList()
         );
         assertEquals(
                 List.of("라인 위협", "누수 위협", "방어율", "라인 다이아", "지원 다이아", "정리 위협"),
-                SemionDialogService.jobStatisticsDefenseHeaderCells().stream().map(Component::getString).toList()
+                UiJobStatisticsView.jobStatisticsDefenseHeaderCells().stream().map(Component::getString).toList()
         );
 
     }
@@ -398,7 +398,7 @@ final class SemionDialogBodyTest {
 
         assertEquals(
                 "semion-td:unknown_primary·semion-td:unknown_secondary",
-                SemionDialogService.jobStatisticsTraitLabel(combination)
+                UiJobStatisticsView.jobStatisticsTraitLabel(combination)
         );
     }
 
@@ -412,7 +412,7 @@ final class SemionDialogBodyTest {
                 2_000L,
                 List.of()
         );
-        String overview = SemionDialogService.jobStatisticsCategoryOverview(snapshot).getString();
+        String overview = UiJobStatisticsView.jobStatisticsCategoryOverview(snapshot).getString();
 
         assertTrue(overview.startsWith("기록 기간 "));
         assertTrue(overview.contains(" ~ "));
@@ -449,7 +449,7 @@ final class SemionDialogBodyTest {
 
     @Test
     void traitSelectionSummaryUsesYellowForSelectedTrait() {
-        var selectedTrait = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
+        var selectedTrait = net.minecraft.resources.Identifier.fromNamespaceAndPath(
                 "semion-td-test",
                 "selected"
         );
@@ -526,7 +526,7 @@ final class SemionDialogBodyTest {
     @Test
     void traitTooltipUsesTraitAndSlotHeaderWithDividersAroundAbility() {
         SemionTrait trait = new SemionTrait(
-                ResourceLocation.fromNamespaceAndPath("semion-td-test", "ignite"),
+                Identifier.fromNamespaceAndPath("semion-td-test", "ignite"),
                 1,
                 Component.literal("점화"),
                 List.of(Component.literal("설명")),
@@ -538,9 +538,9 @@ final class SemionDialogBodyTest {
         Component tooltip = SemionDialogService.traitTooltip(trait, TraitSlot.SECONDARY);
         String[] lines = tooltip.getString().split("\n", -1);
 
-        assertEquals(ChatFormatting.YELLOW.getColor(), tooltip.getStyle().getColor().getValue());
-        assertEquals(ChatFormatting.DARK_GRAY.getColor(), tooltip.getSiblings().getFirst().getStyle().getColor().getValue());
-        assertEquals(ChatFormatting.WHITE.getColor(), tooltip.getSiblings().get(1).getStyle().getColor().getValue());
+        assertEquals(net.minecraft.network.chat.TextColor.YELLOW.getValue(), tooltip.getStyle().getColor().getValue());
+        assertEquals(net.minecraft.network.chat.TextColor.DARK_GRAY.getValue(), tooltip.getSiblings().getFirst().getStyle().getColor().getValue());
+        assertEquals(net.minecraft.network.chat.TextColor.WHITE.getValue(), tooltip.getSiblings().get(1).getStyle().getColor().getValue());
         assertEquals(5, lines.length);
         assertEquals("점화 | 부특성 50%", lines[0]);
         assertFalse(lines[1].isBlank());

@@ -20,7 +20,7 @@ public final class NetherTowers {
             5.0,
             10,
             8,
-            byId(EntityType.STRIDER),
+            byId(net.minecraft.world.entity.EntityTypes.STRIDER),
             List.of(
                     "<gray>빠르게 공격하며 흡혈로 체력 소모를 줄입니다.</gray>",
                     "<green>임계 체력에서 적중 시 체력 감소가 줄어듭니다.</green>"
@@ -36,7 +36,7 @@ public final class NetherTowers {
             13.0,
             12,
             12,
-            byId(EntityType.PIGLIN),
+            byId(net.minecraft.world.entity.EntityTypes.PIGLIN),
             List.of(
                     "<gray>인컴 몬스터에게 추가 피해를 줍니다.</gray>",
                     "<green>처치 시 짧게 공격력이 증가합니다.</green>"
@@ -52,7 +52,7 @@ public final class NetherTowers {
             26.0,
             14,
             35,
-            byId(EntityType.PIGLIN_BRUTE),
+            byId(net.minecraft.world.entity.EntityTypes.PIGLIN_BRUTE),
             List.of(
                     "<gray>높은 단일 피해와 흡혈을 가진 근접 캐리입니다.</gray>",
                     "<green>임계 체력에서 강한 대상에게 피해와 흡혈이 증가합니다.</green>"
@@ -68,7 +68,7 @@ public final class NetherTowers {
             8.0,
             18,
             45,
-            byId(EntityType.HOGLIN),
+            byId(net.minecraft.world.entity.EntityTypes.HOGLIN),
             List.of(
                     "<gray>전방에서 버티는 근접 광역 타워입니다.</gray>",
                     "<green>여러 적을 맞히면 흡혈 효율이 올라갑니다.</green>"
@@ -84,7 +84,7 @@ public final class NetherTowers {
             16.0,
             16,
             55,
-            byId(EntityType.ZOGLIN),
+            byId(net.minecraft.world.entity.EntityTypes.ZOGLIN),
             List.of(
                     "<gray>범위 피해가 늘어난 전방 타워입니다.</gray>",
                     "<green>체력이 낮을수록 공격 속도가 증가합니다.</green>"
@@ -100,7 +100,7 @@ public final class NetherTowers {
             24.0,
             13,
             60,
-            byId(EntityType.ZOMBIFIED_PIGLIN),
+            byId(net.minecraft.world.entity.EntityTypes.ZOMBIFIED_PIGLIN),
             List.of(
                     "<gray>좀비 상태에서 빠른 광역 공격으로 마무리합니다.</gray>",
                     "<green>네더 상태 사망 시 공격 준비가 초기화됩니다.</green>"
@@ -116,7 +116,7 @@ public final class NetherTowers {
             7.0,
             20,
             25,
-            byId(EntityType.MAGMA_CUBE),
+            byId(net.minecraft.world.entity.EntityTypes.MAGMA_CUBE),
             List.of(
                     "<gray>느린 폭발 공격을 가합니다.</gray>",
                     "<green>임계 체력에서 주변에 주기 피해를 줍니다.</green>"
@@ -132,7 +132,7 @@ public final class NetherTowers {
             15.0,
             12,
             8,
-            byId(EntityType.BLAZE),
+            byId(net.minecraft.world.entity.EntityTypes.BLAZE),
             List.of(
                     "<gray>중거리 투사체로 웨이브를 정리합니다.</gray>",
                     "<green>임계 체력에서 일정 공격마다 추가 공격합니다.</green>"
@@ -148,7 +148,7 @@ public final class NetherTowers {
             34.0,
             24,
             5,
-            EntityVisual.builder(byId(EntityType.GHAST)).scale(0.45).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.GHAST)).scale(0.45).build(),
             List.of(
                     "<gray>긴 사거리와 큰 폭발 범위를 가집니다.</gray>",
                     "<green>임계 체력에서 대상이 받는 타워 피해를 증가시킵니다.</green>"
@@ -164,7 +164,7 @@ public final class NetherTowers {
             8.0,
             14,
             5,
-            byId(EntityType.SKELETON),
+            byId(net.minecraft.world.entity.EntityTypes.SKELETON),
             List.of(
                     "<gray>긴 사거리로 낮은 체력 대상을 끊습니다.</gray>",
                     "<green>임계 체력에서 처치 흡혈이 증가합니다.</green>"
@@ -180,7 +180,7 @@ public final class NetherTowers {
             18.0,
             14,
             30,
-            byId(EntityType.WITHER_SKELETON),
+            byId(net.minecraft.world.entity.EntityTypes.WITHER_SKELETON),
             List.of(
                     "<gray>대상에게 받는 피해 증가 표식을 남깁니다.</gray>",
                     "<green>표식 대상 처치 시 자신을 회복합니다.</green>"
@@ -196,7 +196,7 @@ public final class NetherTowers {
             36.0,
             24,
             40,
-            EntityVisual.builder(byId(EntityType.WITHER)).scale(0.55).build(),
+            EntityVisual.builder(byId(net.minecraft.world.entity.EntityTypes.WITHER)).scale(0.55).build(),
             List.of(
                     "<gray>높은 체력의 몬스터에게 강한 피해를 줍니다.</gray>",
                     "<green>임계 체력에서 폭발 피해와 표식을 함께 적용합니다.</green>"

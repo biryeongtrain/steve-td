@@ -2,7 +2,9 @@ package kim.biryeong.semiontd.effect;
 
 public enum TimedEffectType {
     TOWER_ATTACK_SPEED_REDUCTION,
+    TOWER_ATTACK_SPEED_MULTIPLICATIVE_REDUCTION,
     TOWER_RANGE_REDUCTION,
+    TOWER_RANGE_MULTIPLICATIVE_REDUCTION,
     TOWER_FLAT_DAMAGE_BONUS,
     TOWER_FLAT_MAGIC_DAMAGE_BONUS,
     TOWER_FLAT_DAMAGE_REDUCTION,
@@ -16,6 +18,9 @@ public enum TimedEffectType {
     TOWER_ATTACK_SPEED_BONUS,
     TOWER_RANGE_BONUS,
     TOWER_DAMAGE_REDUCTION,
+    TOWER_PROTEGO,
+    TOWER_PROTEGO_MAXIMA_AURA,
+    TOWER_RENNERVATE_DAMAGE_BONUS,
     TOWER_MAX_HEALTH_BONUS,
     TOWER_INCOME_DAMAGE_BONUS,
     TOWER_WAVE_DAMAGE_BONUS,
@@ -38,6 +43,11 @@ public enum TimedEffectType {
     MONSTER_ATTACK_RANGE_REDUCTION,
     MONSTER_ARMOR_REDUCTION,
     MONSTER_STUN,
+    MONSTER_DISARM,
+    MONSTER_LUMOS,
+    MONSTER_CRUCIO_VULNERABILITY,
+    MONSTER_HEAL_REDUCTION,
+    MONSTER_IMPERIO,
     MONSTER_ROOT,
     MONSTER_STUN_IMMUNITY,
     MONSTER_POISONED,
@@ -53,10 +63,25 @@ public enum TimedEffectType {
                     MONSTER_ATTACK_RANGE_REDUCTION,
                     MONSTER_ARMOR_REDUCTION,
                     MONSTER_STUN,
+                    MONSTER_DISARM,
+                    MONSTER_LUMOS,
+                    MONSTER_CRUCIO_VULNERABILITY,
+                    MONSTER_HEAL_REDUCTION,
+                    MONSTER_IMPERIO,
                     MONSTER_ROOT,
                     MONSTER_POISONED,
                     MONSTER_MARKED,
                     MONSTER_IGNITED -> true;
+            default -> false;
+        };
+    }
+
+    public boolean isTowerDebuff() {
+        return switch (this) {
+            case TOWER_ATTACK_SPEED_REDUCTION, TOWER_ATTACK_SPEED_MULTIPLICATIVE_REDUCTION,
+                    TOWER_RANGE_REDUCTION, TOWER_RANGE_MULTIPLICATIVE_REDUCTION, TOWER_FLAT_DAMAGE_REDUCTION,
+                    TOWER_FLAT_RANGE_REDUCTION, TOWER_FLAT_MAX_HEALTH_REDUCTION,
+                    TOWER_HEALTH_LOSS_PER_SECOND, TOWER_DAMAGE_TAKEN_BONUS -> true;
             default -> false;
         };
     }

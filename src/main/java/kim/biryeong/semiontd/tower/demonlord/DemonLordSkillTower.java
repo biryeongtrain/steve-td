@@ -144,13 +144,23 @@ public class DemonLordSkillTower extends ProductionTower {
             return List.copyOf(lines);
         }
 
+        lines.add(DemonLordDamageScaling.description());
+        lines.add("임계값 이하 그대로 · 초과 로그 점감 · 처형·별도 소환수 제외");
         String damage = amplified("damage", state.damageMultiplier());
         if (damage != null) {
-            lines.add("피해 " + damage);
+            lines.add("피해(레벨 배율 반영·점감 전) " + damage);
+            if (skill != DemonLordSkill.SUMMON_FIEND) {
+                double raw = TowerBalanceRuntime.ability(type().id(), "damage", 0.0) * state.damageMultiplier();
+                var damageType = skill == DemonLordSkill.SKY_BREAKER
+                        ? kim.biryeong.semiontd.entity.monster.DamageType.PHYSICAL
+                        : kim.biryeong.semiontd.entity.monster.DamageType.MAGIC;
+                lines.add("점감 후 기준 피해(조건·증강 제외, 방어 전) "
+                        + String.format(java.util.Locale.ROOT, "%.1f", DemonLordDamageScaling.apply(raw, damageType)));
+            }
         }
         String area = amplified("areaDamage", state.damageMultiplier());
         if (area != null) {
-            lines.add("범위 피해 " + area);
+            lines.add("폭발 가산 피해(체력 비례 합산·점감 전) " + area);
         }
         for (String key : REACH_KEYS) {
             String reach = amplified(key, state.skillRangeMultiplier());

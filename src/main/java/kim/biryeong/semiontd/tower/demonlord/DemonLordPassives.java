@@ -303,8 +303,13 @@ public final class DemonLordPassives {
         return ProductionTowerCatalog.find(type.id()).isPresent();
     }
 
-    private static List<GridPosition> freePositions(PlayerLane lane) {
+    static List<GridPosition> freePositions(PlayerLane lane) {
         BlockBounds bounds = lane.laneLayout().laneArea();
+        Set<Long> occupiedColumns = new HashSet<>();
+        for (Tower tower : lane.towers()) {
+            GridPosition position = tower.position();
+            occupiedColumns.add(columnKey(position.x(), position.z()));
+        }
         List<GridPosition> free = new ArrayList<>();
         for (int x = bounds.min().getX(); x <= bounds.max().getX(); x++) {
             for (int z = bounds.min().getZ(); z <= bounds.max().getZ(); z++) {
@@ -314,12 +319,15 @@ public final class DemonLordPassives {
                     continue;
                 }
                 GridPosition grid = GridPosition.from(floor.get());
-                if (lane.towers().stream().noneMatch(tower ->
-                        tower.position().x() == grid.x() && tower.position().z() == grid.z())) {
+                if (!occupiedColumns.contains(columnKey(grid.x(), grid.z()))) {
                     free.add(grid);
                 }
             }
         }
         return free;
+    }
+
+    static long columnKey(int x, int z) {
+        return ((long) x << 32) | (z & 0xffffffffL);
     }
 }

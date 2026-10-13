@@ -1,7 +1,7 @@
 package kim.biryeong.semiontd.vfx;
 
 import kim.biryeong.semiontd.SemionTd;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /**
  * 연출 한 조각의 그림: 직접 그린 텍스처 한 장과 그것을 붙일 평면 모양.
@@ -56,8 +56,8 @@ public record DisplaySprite(String name, Shape shape, boolean billboard, String 
     }
 
     /** 아이템의 {@code item_model} 컴포넌트 값. 리소스팩의 {@code items/vfx/<name>.json}을 가리킵니다. */
-    public ResourceLocation itemModel() {
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "vfx/" + name);
+    public Identifier itemModel() {
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "vfx/" + name);
     }
 
     public String texturePath() {

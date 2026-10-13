@@ -8,10 +8,10 @@ import kim.biryeong.semiontd.tower.succubus.SuccubusDreams;
 import kim.biryeong.semiontd.tower.succubus.SuccubusTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class SuccubusTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "succubus");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "succubus");
 
     public SuccubusTowerJob() {
         super(ID, Component.literal("서큐버스 빌더"), List.of(
@@ -38,8 +38,10 @@ public final class SuccubusTowerJob extends SemionJob {
 
     @Override
     public void onMatchStarted(JobContext context) {clear(context);}
+
     @Override
     public void onEliminated(JobContext context) {clear(context);}
+
     @Override
     public void onMatchClosed(JobContext context) {clear(context);}
 

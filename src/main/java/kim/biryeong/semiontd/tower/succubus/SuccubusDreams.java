@@ -24,7 +24,7 @@ import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
 
@@ -33,10 +33,10 @@ public final class SuccubusDreams {
     public static final String LUCID = "job_succubus_g1";
     public static final String CONTAGION = "job_succubus_g2";
     public static final String SLEEPWALK = "job_succubus_p";
-    private static final ResourceLocation EFFECT_SOURCE = ResourceLocation.fromNamespaceAndPath("semion-td", "succubus_dream");
-    private static final ResourceLocation SPREAD_EFFECT = ResourceLocation.fromNamespaceAndPath("semion-td", "succubus_dream_spread");
-    private static final Map<TowerKey, DreamState> TOWERS = new HashMap<>();
-    private static final Map<UUID, DreamState> MONSTERS = new HashMap<>();
+    private static final Identifier EFFECT_SOURCE = Identifier.fromNamespaceAndPath("semion-td", "succubus_dream");
+    private static final Identifier SPREAD_EFFECT = Identifier.fromNamespaceAndPath("semion-td", "succubus_dream_spread");
+    private static final Map<TowerKey, SuccubusDreamState> TOWERS = new HashMap<>();
+    private static final Map<UUID, SuccubusDreamState> MONSTERS = new HashMap<>();
     private static final Map<TowerKey, Long> LULLABY_READY_AT = new HashMap<>();
     private static final int SLEEP_SMOKE_INTERVAL_TICKS = 10;
     private static boolean propagatingWake;
@@ -47,9 +47,9 @@ public final class SuccubusDreams {
     public static boolean add(Tower target, PlayerLane lane, Tower source, int amount) {
         if (target == null || lane == null || source == null || amount <= 0 || target.health() <= 0.0
                 || SuccubusTowers.isSuccubus(target.type())) return false;
-        DreamState state = TOWERS.computeIfAbsent(TowerKey.of(target), ignored -> new DreamState());
+        SuccubusDreamState state = TOWERS.computeIfAbsent(TowerKey.of(target), ignored -> new SuccubusDreamState());
         boolean wasAsleep = state.asleep;
-        boolean changed = add(state, lane, source, amount, SuccubusBalance.towerSleepDurationTicks(),
+        boolean changed = state.add(lane, source, amount, SuccubusBalance.towerSleepDurationTicks(),
                 !target.augmentSnapshot().has(LUCID));
         syncTowerEffects(target, lane, state);
         if (changed) {
@@ -65,10 +65,10 @@ public final class SuccubusDreams {
 
     public static boolean add(SemionMonsterEntity target, PlayerLane lane, Tower source, int amount) {
         if (target == null || lane == null || source == null || amount <= 0 || !target.isAlive()) return false;
-        DreamState state = MONSTERS.computeIfAbsent(target.getUUID(), ignored -> new DreamState());
+        SuccubusDreamState state = MONSTERS.computeIfAbsent(target.getUUID(), ignored -> new SuccubusDreamState());
         state.monster = target;
         boolean wasAsleep = state.asleep;
-        boolean changed = add(state, lane, source, amount, SuccubusBalance.sleepDurationTicks(), true);
+        boolean changed = state.add(lane, source, amount, SuccubusBalance.sleepDurationTicks(), true);
         syncMonsterEffects(target, state);
         if (changed) {
             SemionTowerEntity sourceEntity = sourceEntity(lane, source, source.ownerPlayer());
@@ -94,43 +94,23 @@ public final class SuccubusDreams {
         return true;
     }
 
-    private static boolean add(DreamState state, PlayerLane lane, Tower source, int amount, int sleepDurationTicks,
-                               boolean allowSleep) {
-        if (state.asleep || state.immunityTicks > 0) return false;
-        if (state.stacks == 0) state.sourceOwner = source.ownerPlayer();
-        int previous = state.stacks;
-        state.stacks = Math.min(SuccubusBalance.maxStacks(), state.stacks + amount);
-        state.remainingTicks = SuccubusBalance.stackDurationTicks();
-        state.lastSource = source;
-        state.lane = lane;
-        if (allowSleep && state.stacks >= SuccubusBalance.maxStacks()) {
-            state.asleep = true;
-            state.asleepTicks = sleepDurationTicks;
-            state.sleepLostHealth = 0.0;
-            state.sleepCount++;
-            state.sleepAttackTicks = 0;
-            state.contagionDepth = 0;
-        }
-        return state.stacks != previous || state.asleep;
-    }
-
     public static int stacks(Tower tower) {
-        DreamState state = tower == null ? null : TOWERS.get(TowerKey.of(tower));
+        SuccubusDreamState state = tower == null ? null : TOWERS.get(TowerKey.of(tower));
         return state == null ? 0 : state.stacks;
     }
 
     public static int stacks(SemionMonsterEntity monster) {
-        DreamState state = monster == null ? null : MONSTERS.get(monster.getUUID());
+        SuccubusDreamState state = monster == null ? null : MONSTERS.get(monster.getUUID());
         return state == null ? 0 : state.stacks;
     }
 
     public static int sleepCount(SemionMonsterEntity monster) {
-        DreamState state = monster == null ? null : MONSTERS.get(monster.getUUID());
+        SuccubusDreamState state = monster == null ? null : MONSTERS.get(monster.getUUID());
         return state == null ? 0 : state.sleepCount;
     }
 
     public static boolean isAsleep(Tower tower) {
-        DreamState state = tower == null ? null : TOWERS.get(TowerKey.of(tower));
+        SuccubusDreamState state = tower == null ? null : TOWERS.get(TowerKey.of(tower));
         return state != null && state.asleep;
     }
 
@@ -139,12 +119,12 @@ public final class SuccubusDreams {
     }
 
     public static boolean isAsleep(SemionMonsterEntity monster) {
-        DreamState state = monster == null ? null : MONSTERS.get(monster.getUUID());
+        SuccubusDreamState state = monster == null ? null : MONSTERS.get(monster.getUUID());
         return state != null && state.asleep;
     }
 
     public static void onMonsterDamaged(SemionMonsterEntity target, Tower source, double dealtDamage) {
-        DreamState state = target == null ? null : MONSTERS.get(target.getUUID());
+        SuccubusDreamState state = target == null ? null : MONSTERS.get(target.getUUID());
         if (state == null || !state.asleep || dealtDamage <= 0.0) return;
         state.lastSource = source == null ? state.lastSource : source;
         state.sleepLostHealth += dealtDamage;
@@ -163,7 +143,7 @@ public final class SuccubusDreams {
                                       double previousHealth, double currentHealth) {
         if (target == null || target.runtimeTower() == null
                 || source == null || !(source.getEntity() instanceof SemionMonsterEntity)) return;
-        DreamState state = TOWERS.get(TowerKey.of(target.runtimeTower()));
+        SuccubusDreamState state = TOWERS.get(TowerKey.of(target.runtimeTower()));
         double lost = Math.max(0.0, previousHealth - currentHealth);
         if (state == null || !state.asleep || lost <= 0.0) return;
         state.sleepLostHealth += lost;
@@ -179,8 +159,8 @@ public final class SuccubusDreams {
 
     public static void tick(PlayerLane lane) {
         if (lane == null) return;
-        for (Map.Entry<TowerKey, DreamState> entry : List.copyOf(TOWERS.entrySet())) {
-            DreamState state = entry.getValue();
+        for (Map.Entry<TowerKey, SuccubusDreamState> entry : List.copyOf(TOWERS.entrySet())) {
+            SuccubusDreamState state = entry.getValue();
             if (state.lane != lane) continue;
             Tower tower = lane.towers().stream().filter(candidate -> entry.getKey().equals(TowerKey.of(candidate))).findFirst().orElse(null);
             if (tower == null || tower.health() <= 0.0) {
@@ -192,9 +172,9 @@ public final class SuccubusDreams {
         }
 
         int sleepwalkers = 0;
-        for (Map.Entry<UUID, DreamState> entry : MONSTERS.entrySet().stream()
+        for (Map.Entry<UUID, SuccubusDreamState> entry : MONSTERS.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey()).toList()) {
-            DreamState state = entry.getValue();
+            SuccubusDreamState state = entry.getValue();
             if (state.lane != lane) continue;
             SemionMonsterEntity monster = monsterEntity(lane, entry.getKey());
             if (monster == null) monster = state.monster;
@@ -219,7 +199,7 @@ public final class SuccubusDreams {
         }
     }
 
-    private static void tickTower(Tower tower, PlayerLane lane, DreamState state) {
+    private static void tickTower(Tower tower, PlayerLane lane, SuccubusDreamState state) {
         if (state.asleep && tower.augmentSnapshot().has(LUCID)) {
             state.asleep = false;
             state.asleepTicks = 0;
@@ -241,7 +221,7 @@ public final class SuccubusDreams {
                 }
             }
         }
-        tickCounters(state);
+        state.tickCounters();
         if (state.asleep && state.asleepTicks <= 0) {
             SemionTowerEntity entity = towerEntity(tower, lane);
             if (entity != null) wakeTower(tower, entity, state);
@@ -250,33 +230,27 @@ public final class SuccubusDreams {
             SemionTowerEntity target = towerEntity(tower, lane);
             if (source != null && target != null) SuccubusVfx.showSleepSmoke(source, target);
         } else if (!state.asleep && state.stacks > 0 && state.remainingTicks <= 0) {
-            clearStacks(state);
+            state.clearStacks();
         }
         syncTowerEffects(tower, lane, state);
     }
 
-    private static void tickMonster(SemionMonsterEntity monster, DreamState state) {
-        tickCounters(state);
+    private static void tickMonster(SemionMonsterEntity monster, SuccubusDreamState state) {
+        state.tickCounters();
         if (state.asleep && state.asleepTicks <= 0) {
             wakeMonster(monster, state);
         } else if (state.asleep && state.asleepTicks % SLEEP_SMOKE_INTERVAL_TICKS == 0) {
             SemionTowerEntity source = sourceEntity(state.lane, state.lastSource, state.sourceOwner);
             if (source != null) SuccubusVfx.showSleepSmoke(source, monster);
-        } else if (!state.asleep && state.stacks > 0 && state.remainingTicks <= 0) clearStacks(state);
+        } else if (!state.asleep && state.stacks > 0 && state.remainingTicks <= 0) state.clearStacks();
         syncMonsterEffects(monster, state);
     }
 
-    private static void tickCounters(DreamState state) {
-        if (state.immunityTicks > 0) state.immunityTicks--;
-        if (state.asleep) state.asleepTicks--;
-        else if (state.stacks > 0) state.remainingTicks--;
-    }
-
-    private static void wakeMonster(SemionMonsterEntity monster, DreamState state) {
+    private static void wakeMonster(SemionMonsterEntity monster, SuccubusDreamState state) {
         PlayerLane lane = state.lane;
         Tower source = state.lastSource;
         double bonus = state.sleepLostHealth * SuccubusBalance.monsterWakeBonusDamage();
-        clearStacksForWake(state);
+        state.clearStacksForWake();
         SemionTowerEntity sourceEntity = sourceEntity(lane, source, state.sourceOwner);
         if (bonus > 0.0 && source != null && sourceEntity != null && monster.isAlive()) {
             source.damageResolvedTargetResult(sourceEntity, monster, bonus, DamageType.MAGIC);
@@ -284,10 +258,10 @@ public final class SuccubusDreams {
         if (monster.isAlive()) propagate(lane, source, sourceEntity, monster.position(), monster.getUUID(), null, bonus);
     }
 
-    private static void wakeTower(Tower tower, SemionTowerEntity entity, DreamState state) {
+    private static void wakeTower(Tower tower, SemionTowerEntity entity, SuccubusDreamState state) {
         PlayerLane lane = state.lane;
         double bonus = state.sleepLostHealth * SuccubusBalance.towerWakeBonusDamage();
-        clearStacksForWake(state);
+        state.clearStacksForWake();
         if (bonus > 0.0 && entity.isAlive()) {
             entity.hurt(entity.damageSources().magic(), (float) bonus);
         }
@@ -295,7 +269,7 @@ public final class SuccubusDreams {
                 entity.position(), null, tower, bonus);
     }
 
-    private static void execute(SemionMonsterEntity target, DreamState state) {
+    private static void execute(SemionMonsterEntity target, SuccubusDreamState state) {
         SuccubusTower source = livingSuccubus(state.lane, state.sourceOwner);
         SemionTowerEntity entity = source == null ? null : source.entity(state.lane);
         if (source != null && entity != null && target.runtimeMonster() != null) {
@@ -337,7 +311,7 @@ public final class SuccubusDreams {
         }
     }
 
-    private static void syncTowerEffects(Tower tower, PlayerLane lane, DreamState state) {
+    private static void syncTowerEffects(Tower tower, PlayerLane lane, SuccubusDreamState state) {
         SemionTowerEntity entity = towerEntity(tower, lane);
         if (entity == null) return;
         double multiplier = hasLivingSuccubus(lane, state.sourceOwner) ? 1.0 + SuccubusBalance.amplification() : 1.0;
@@ -350,7 +324,7 @@ public final class SuccubusDreams {
                 state.stacks * SuccubusBalance.allyAttackSpeedPerStack() * multiplier);
     }
 
-    private static void syncMonsterEffects(SemionMonsterEntity entity, DreamState state) {
+    private static void syncMonsterEffects(SemionMonsterEntity entity, SuccubusDreamState state) {
         double multiplier = hasLivingSuccubus(state.lane, state.sourceOwner) ? 1.0 + SuccubusBalance.amplification() : 1.0;
         entity.setPersistentEffect(TimedEffectType.MONSTER_ATTACK_SPEED_REDUCTION, EFFECT_SOURCE,
                 state.stacks * SuccubusBalance.enemyAttackSpeedPerStack() * multiplier);
@@ -358,17 +332,7 @@ public final class SuccubusDreams {
                 state.stacks * SuccubusBalance.enemyMoveSpeedPerStack() * multiplier);
     }
 
-    private static void clearStacks(DreamState state) {
-        state.stacks = 0;
-        state.remainingTicks = 0;
-        state.asleep = false;
-        state.asleepTicks = 0;
-        state.sleepLostHealth = 0.0;
-        state.sleepAttackTicks = 0;
-        state.contagionDepth = 0;
-    }
-
-    private static void spreadNightmare(SemionMonsterEntity dead, DreamState state) {
+    private static void spreadNightmare(SemionMonsterEntity dead, SuccubusDreamState state) {
         PlayerLane lane = state.lane;
         if (dead == null || !state.asleep || state.deathHandled || lane == null
                 || !lane.augmentSnapshot().has(CONTAGION)
@@ -379,12 +343,12 @@ public final class SuccubusDreams {
         if (sourceEntity == null) return;
         int[] remaining = {(int) lane.augmentSnapshot().parameter(CONTAGION, "maxTargets", 2)};
         MonsterAreaEffectRequest request = new MonsterAreaEffectRequest(
-                ResourceLocation.fromNamespaceAndPath("semion-td", "nightmare_contagion"), sourceEntity,
+                Identifier.fromNamespaceAndPath("semion-td", "nightmare_contagion"), sourceEntity,
                 dead.position(), lane.augmentSnapshot().parameter(CONTAGION, "radius", 3), Set.of(dead.getUUID()),
                 target -> !isAsleep(target), AreaVfxSpec.onChange(AreaVfxStyles.DEBUFF));
         SemionTdApi.areaEffects().applyToMonsters(request, target -> {
             if (remaining[0] <= 0) return AreaEffectOutcome.UNCHANGED;
-            DreamState next = MONSTERS.computeIfAbsent(target.getUUID(), ignored -> new DreamState());
+            SuccubusDreamState next = MONSTERS.computeIfAbsent(target.getUUID(), ignored -> new SuccubusDreamState());
             if (next.immunityTicks > 0) return AreaEffectOutcome.UNCHANGED;
             remaining[0]--;
             next.sourceOwner = state.sourceOwner;
@@ -403,7 +367,7 @@ public final class SuccubusDreams {
         });
     }
 
-    private static void sleepwalkAttack(SemionMonsterEntity sleeper, DreamState state) {
+    private static void sleepwalkAttack(SemionMonsterEntity sleeper, SuccubusDreamState state) {
         if (++state.sleepAttackTicks < state.lane.augmentSnapshot().parameter(SLEEPWALK, "intervalTicks", 20)) return;
         state.sleepAttackTicks = 0;
         if (sleeper.isStunned()) return;
@@ -428,11 +392,6 @@ public final class SuccubusDreams {
                 .filter(SemionMonsterEntity::isAlive).toList();
     }
 
-    private static void clearStacksForWake(DreamState state) {
-        clearStacks(state);
-        state.immunityTicks = SuccubusBalance.awakenedImmunityTicks();
-    }
-
     public static boolean hasLivingSuccubus(PlayerLane lane, UUID owner) {
         return livingSuccubus(lane, owner) != null;
     }
@@ -447,7 +406,7 @@ public final class SuccubusDreams {
     }
 
     public static List<String> detailLines(Tower tower) {
-        DreamState state = tower == null ? null : TOWERS.get(TowerKey.of(tower));
+        SuccubusDreamState state = tower == null ? null : TOWERS.get(TowerKey.of(tower));
         if (state == null || state.stacks <= 0 && state.immunityTicks <= 0) return List.of();
         ArrayList<String> lines = new ArrayList<>();
         lines.add("꿈: " + state.stacks + "/" + SuccubusBalance.maxStacks());
@@ -478,7 +437,7 @@ public final class SuccubusDreams {
     public static void clearPlayer(UUID playerId) {
         if (playerId == null) return;
         TOWERS.entrySet().removeIf(entry -> {
-            DreamState state = entry.getValue();
+            SuccubusDreamState state = entry.getValue();
             if (!playerId.equals(entry.getKey().owner) && !playerId.equals(state.sourceOwner)) return false;
             Tower tower = state.lane == null ? null : state.lane.towers().stream()
                     .filter(candidate -> entry.getKey().equals(TowerKey.of(candidate))).findFirst().orElse(null);
@@ -487,7 +446,7 @@ public final class SuccubusDreams {
         });
         LULLABY_READY_AT.keySet().removeIf(key -> playerId.equals(key.owner()));
         MONSTERS.entrySet().removeIf(entry -> {
-            DreamState state = entry.getValue();
+            SuccubusDreamState state = entry.getValue();
             if (!playerId.equals(state.sourceOwner)) return false;
             SemionMonsterEntity monster = monsterEntity(state.lane, entry.getKey());
             if (monster != null) removeMonsterEffects(monster);
@@ -551,22 +510,5 @@ public final class SuccubusDreams {
 
     private record TowerKey(UUID owner, GridPosition originalPosition) {
         private static TowerKey of(Tower tower) {return new TowerKey(tower.ownerPlayer(), tower.originalPosition());}
-    }
-
-    private static final class DreamState {
-        private UUID sourceOwner;
-        private Tower lastSource;
-        private SemionMonsterEntity monster;
-        private PlayerLane lane;
-        private int stacks;
-        private int remainingTicks;
-        private int asleepTicks;
-        private int immunityTicks;
-        private int sleepCount;
-        private int sleepAttackTicks;
-        private int contagionDepth;
-        private double sleepLostHealth;
-        private boolean asleep;
-        private boolean deathHandled;
     }
 }

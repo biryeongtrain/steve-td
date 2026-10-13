@@ -13,7 +13,7 @@ import kim.biryeong.semiontd.entity.visual.PandaVisual;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.entity.animal.Panda;
+import net.minecraft.world.entity.animal.panda.Panda;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DoublePlantBlock;
 import net.minecraft.world.level.block.state.BlockState;

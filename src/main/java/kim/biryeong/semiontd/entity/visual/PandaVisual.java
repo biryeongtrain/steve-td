@@ -1,6 +1,6 @@
 package kim.biryeong.semiontd.entity.visual;
 
-import net.minecraft.world.entity.animal.Panda;
+import net.minecraft.world.entity.animal.panda.Panda;
 
 /**
  * 판다의 겉모습. 판다는 크기가 아니라 <b>유전자</b>로 종류가 갈립니다 - 갈색 판다, 화난 판다,

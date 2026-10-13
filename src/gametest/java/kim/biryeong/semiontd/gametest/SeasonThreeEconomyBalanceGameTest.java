@@ -58,7 +58,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.GameTestServer;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
@@ -111,7 +111,7 @@ public final class SeasonThreeEconomyBalanceGameTest {
 
     private enum Group { CASH, ATTACK }
     private record Investment(int slot, String from, String upgradeId) {}
-    private record Board(String id, ResourceLocation job, List<String> towers, int assaultSlot, List<Investment> priority) {}
+    private record Board(String id, Identifier job, List<String> towers, int assaultSlot, List<Investment> priority) {}
     private record Balance(long diamonds, long emeralds, long income, long emeraldPerSecond) {}
     private record Purchase(String summonId, int round, long baseEmeraldCost, long actualEmeraldPaid,
             long normalIncomeGain, long actualIncomeGain, long instantDiamonds, long incomeForgone,
@@ -445,7 +445,7 @@ public final class SeasonThreeEconomyBalanceGameTest {
                 BlockPos base = teamBase(team);
                 for (int x = (base.getX() - FLOOR_MARGIN) >> 4; x <= (base.getX() + 46 + FLOOR_MARGIN) >> 4; x++) {
                     for (int z = (base.getZ() - FLOOR_MARGIN) >> 4; z <= (base.getZ() + 46 + FLOOR_MARGIN) >> 4; z++) {
-                        long key = ChunkPos.asLong(x, z);
+                        long key = ChunkPos.pack(x, z);
                         if (!level.getForceLoadedChunks().contains(key)) { level.setChunkForced(x, z, true); forcedChunks.add(key); }
                         level.getChunk(x, z);
                     }

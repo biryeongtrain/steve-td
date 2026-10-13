@@ -46,7 +46,7 @@ public class GameChunkGenerator extends TransientChunkGenerator {
     }
 
     @Override
-    public CompletableFuture<ChunkAccess> fillFromNoise(Blender blender, RandomState noiseConfig, StructureManager structureAccessor, ChunkAccess chunk) {
+    public CompletableFuture<ChunkAccess> buildTerrain(ChunkAccess chunk, Blender blender, RandomState noiseConfig, StructureManager structureAccessor, BiomeManager biomeManager, WorldGenRegion carverBiomeRegion, java.util.Set<net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome>> possibleBiomes) {
         return CompletableFuture.completedFuture(chunk);
     }
 
@@ -54,11 +54,7 @@ public class GameChunkGenerator extends TransientChunkGenerator {
     public void applyBiomeDecoration(WorldGenLevel world, ChunkAccess chunk, StructureManager structureAccessor) {
     }
 
-    @Override
-    public void buildSurface(WorldGenRegion region, StructureManager structures, RandomState noiseConfig, ChunkAccess chunk) {
-    }
-
-    @Override
+@Override
     public int getSeaLevel() {
         return 0;
     }
@@ -79,7 +75,7 @@ public class GameChunkGenerator extends TransientChunkGenerator {
     }
 
     @Override
-    public void addDebugScreenInfo(List<String> text, RandomState noiseConfig, BlockPos pos) {
+    public void addDebugScreenInfo(List<String> text, RandomState noiseConfig, BlockPos pos, net.minecraft.world.level.levelgen.densityfunction.SamplerContext samplerContext) {
     }
 
     @Override
@@ -91,7 +87,4 @@ public class GameChunkGenerator extends TransientChunkGenerator {
         return 0;
     }
 
-    @Override
-    public void applyCarvers(WorldGenRegion chunkRegion, long seed, RandomState noiseConfig, BiomeManager world, StructureManager structureAccessor, ChunkAccess chunk) {
-    }
 }

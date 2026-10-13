@@ -7,10 +7,10 @@ import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.undead.UndeadTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class UndeadTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "undead_towers");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "undead_towers");
     private static final Set<String> ALLOWED_TOWER_IDS = Set.of(
             UndeadTowers.T1_ZOMBIE_TOWER.id(),
             UndeadTowers.T2_ZOMBIE_TOWER.id(),

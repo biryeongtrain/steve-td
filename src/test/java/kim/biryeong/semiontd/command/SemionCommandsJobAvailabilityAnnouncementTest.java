@@ -33,7 +33,7 @@ final class SemionCommandsJobAvailabilityAnnouncementTest {
         assertTrue(disabled.getString().endsWith(" 직업이 비활성화되었습니다."));
         assertFalse(enabled.getString().contains(job.id().toString()));
         assertFalse(disabled.getString().contains(job.id().toString()));
-        assertEquals(ChatFormatting.RED.getColor(), enabled.getSiblings().getLast().getStyle().getColor().getValue());
-        assertEquals(ChatFormatting.RED.getColor(), disabled.getSiblings().getLast().getStyle().getColor().getValue());
+        assertEquals(net.minecraft.network.chat.TextColor.RED.getValue(), enabled.getSiblings().getLast().getStyle().getColor().getValue());
+        assertEquals(net.minecraft.network.chat.TextColor.RED.getValue(), disabled.getSiblings().getLast().getStyle().getColor().getValue());
     }
 }

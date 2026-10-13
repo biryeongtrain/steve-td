@@ -66,7 +66,7 @@ final class WebCatalogExporterTest {
         assertEquals(ProductionTowerCatalog.all().size(), first.towers().size());
         assertEquals(TraitRegistry.all().size(), first.traits().size());
         assertEquals(SummonRegistry.all().size(), first.summons().size());
-        assertEquals(126, first.augments().stream().filter(card -> card.requiredJobId() != null).count());
+        assertEquals(130, first.augments().stream().filter(card -> card.requiredJobId() != null).count());
         assertTrue(first.augments().stream().filter(card -> card.requiredJobId() != null)
                 .allMatch(card -> first.builders().stream().anyMatch(builder -> builder.id().equals(card.requiredJobId()))));
         assertTrue(first.traits().stream().allMatch(trait -> !trait.displayName().equals(trait.id())));
@@ -127,8 +127,8 @@ final class WebCatalogExporterTest {
         EconomyConfig economy = EconomyConfig.defaultConfig();
         AugmentConfig config = AugmentConfig.defaults();
         var document = WebCatalogExporter.snapshot(1, waves, economy, summons, config);
-        assertEquals(177, document.augments().size());
-        assertEquals(168, document.augments().stream().filter(augment -> !augment.reserve()).count());
+        assertEquals(181, document.augments().size());
+        assertEquals(172, document.augments().stream().filter(augment -> !augment.reserve()).count());
         assertTrue(document.augments().stream().noneMatch(card -> card.id().equals("semiontd:decisive_delivery")));
         assertEquals(3, document.augments().stream().filter(card -> card.id().startsWith("semiontd:beneficial_effect_")).count());
         assertEquals(9, document.augments().stream().filter(WebCatalogExporter.AugmentEntry::reserve).count());
@@ -220,7 +220,7 @@ final class WebCatalogExporterTest {
         IncomeSummons.reloadBuiltIns(SummonConfig.defaultConfig());
         var document = WebCatalogExporter.snapshot(1L);
         assertEquals(14, document.builders().stream().filter(builder -> "OFFICIAL".equals(builder.builderOrigin())).count());
-        assertEquals(18, document.builders().stream().filter(builder -> "CREATIVE".equals(builder.builderOrigin())).count());
+        assertEquals(19, document.builders().stream().filter(builder -> "CREATIVE".equals(builder.builderOrigin())).count());
         assertEquals("semion-td:pirate", PirateTowerJob.ID.toString());
         var pirate = document.builders().stream().filter(builder -> builder.id().equals(PirateTowerJob.ID.toString()))
                 .findFirst().orElseThrow();
@@ -321,6 +321,25 @@ final class WebCatalogExporterTest {
                         edge(WarlockTowers.T2_RANGED_SLAVE.id(), "t3_ranged_slave", WarlockTowers.T3_RANGED_SLAVE.id())
                 )
         );
+    }
+
+    @Test
+    void writesIdenticalCurrentAndVersionBytesWithoutOverwritingAnExistingVersion() throws Exception {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        IncomeSummons.reloadBuiltIns(SummonConfig.defaultConfig());
+        var first = WebCatalogExporter.snapshot(1L);
+        WebCatalogExporter.writeDocument(tempDir, first);
+        Path version = tempDir.resolve("web_catalog/versions/" + first.versionHash() + ".json");
+        Path current = tempDir.resolve("web_catalog/current.json");
+        String original = Files.readString(version);
+        assertEquals(original, Files.readString(current));
+        var second = WebCatalogExporter.snapshot(2L);
+        assertEquals(first.versionHash(), second.versionHash());
+        WebCatalogExporter.writeDocument(tempDir, second);
+        assertEquals(original, Files.readString(version));
+        assertEquals(2L, new Gson().fromJson(Files.readString(current),
+                WebCatalogExporter.CatalogDocument.class).generatedAtEpochMillis());
+        assertEquals(first.versionHash(), WebCatalogExporter.currentVersion().orElseThrow());
     }
 
     private static void assertExportedFamily(

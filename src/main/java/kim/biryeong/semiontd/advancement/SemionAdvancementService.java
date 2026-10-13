@@ -19,25 +19,25 @@ import kim.biryeong.semiontd.game.SemionPlayer;
 import kim.biryeong.semiontd.game.SemionTeam;
 import kim.biryeong.semiontd.game.TeamId;
 import net.minecraft.advancements.AdvancementHolder;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 public final class SemionAdvancementService {
-    public static final ResourceLocation ROOT = id("root");
-    public static final ResourceLocation TEAM_GAP_GG = id("team_gap_gg");
-    public static final ResourceLocation CLUTCH = id("clutch");
-    public static final ResourceLocation WHY_SO_FAST = id("why_so_fast");
-    public static final ResourceLocation BALANCE_BREAKING = id("balance_breaking");
-    public static final ResourceLocation BLOCK_20K_THREAT = id("block_20k_threat");
-    public static final ResourceLocation SEND_10K_THREAT = id("send_10k_threat");
-    public static final ResourceLocation PERFECT_DEFENSE_WIN = id("perfect_defense_win");
-    public static final ResourceLocation DREAM_TEAM = id("dream_team");
-    public static final ResourceLocation OH_LUCKY = id("oh_lucky");
-    public static final ResourceLocation UNDERDOG = id("underdog");
-    public static final ResourceLocation NEWBIE_EXIT = id("newbie_exit");
-    public static final ResourceLocation VETERAN_100 = id("veteran_100");
-    public static final Set<ResourceLocation> IDS = Set.of(
+    public static final Identifier ROOT = id("root");
+    public static final Identifier TEAM_GAP_GG = id("team_gap_gg");
+    public static final Identifier CLUTCH = id("clutch");
+    public static final Identifier WHY_SO_FAST = id("why_so_fast");
+    public static final Identifier BALANCE_BREAKING = id("balance_breaking");
+    public static final Identifier BLOCK_20K_THREAT = id("block_20k_threat");
+    public static final Identifier SEND_10K_THREAT = id("send_10k_threat");
+    public static final Identifier PERFECT_DEFENSE_WIN = id("perfect_defense_win");
+    public static final Identifier DREAM_TEAM = id("dream_team");
+    public static final Identifier OH_LUCKY = id("oh_lucky");
+    public static final Identifier UNDERDOG = id("underdog");
+    public static final Identifier NEWBIE_EXIT = id("newbie_exit");
+    public static final Identifier VETERAN_100 = id("veteran_100");
+    public static final Set<Identifier> IDS = Set.of(
             ROOT,
             TEAM_GAP_GG,
             CLUTCH,
@@ -167,18 +167,18 @@ public final class SemionAdvancementService {
     ) {
         Set<UUID> perfectDefensePlayers = new LinkedHashSet<>(attemptedDefensePlayers);
         perfectDefensePlayers.removeAll(failedDefensePlayers);
-        for (Map.Entry<UUID, Set<ResourceLocation>> entry : matchAwards(
+        for (Map.Entry<UUID, Set<Identifier>> entry : matchAwards(
                 matchResult,
                 gamesPlayed,
                 perfectDefensePlayers
         ).entrySet()) {
-            for (ResourceLocation advancementId : entry.getValue()) {
+            for (Identifier advancementId : entry.getValue()) {
                 award(server, entry.getKey(), advancementId);
             }
         }
     }
 
-    static Map<UUID, Set<ResourceLocation>> matchAwards(
+    static Map<UUID, Set<Identifier>> matchAwards(
             MatchResult matchResult,
             Map<UUID, Integer> gamesPlayed,
             Set<UUID> perfectDefensePlayers
@@ -209,9 +209,9 @@ public final class SemionAdvancementService {
             }
         }
 
-        Map<UUID, Set<ResourceLocation>> awards = new LinkedHashMap<>();
+        Map<UUID, Set<Identifier>> awards = new LinkedHashMap<>();
         for (MatchParticipantResult participant : matchResult.participants()) {
-            Set<ResourceLocation> playerAwards = new LinkedHashSet<>();
+            Set<Identifier> playerAwards = new LinkedHashSet<>();
             if (perfectDefensePlayers != null && perfectDefensePlayers.contains(participant.playerId())) {
                 playerAwards.add(participant.winner() ? PERFECT_DEFENSE_WIN : TEAM_GAP_GG);
             }
@@ -257,20 +257,20 @@ public final class SemionAdvancementService {
         return game != null && game.matchMode() == MatchMode.NORMAL;
     }
 
-    private static void awardAll(MinecraftServer server, SemionGame game, ResourceLocation advancementId) {
+    private static void awardAll(MinecraftServer server, SemionGame game, Identifier advancementId) {
         for (UUID playerId : game.players().keySet()) {
             award(server, playerId, advancementId);
         }
     }
 
-    private static void award(MinecraftServer server, UUID playerId, ResourceLocation advancementId) {
+    private static void award(MinecraftServer server, UUID playerId, Identifier advancementId) {
         award(server, playerId, advancementId, "complete");
     }
 
     private static void award(
             MinecraftServer server,
             UUID playerId,
-            ResourceLocation advancementId,
+            Identifier advancementId,
             String criterion
     ) {
         if (server == null || playerId == null) {
@@ -283,7 +283,7 @@ public final class SemionAdvancementService {
         }
     }
 
-    private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, path);
+    private static Identifier id(String path) {
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, path);
     }
 }

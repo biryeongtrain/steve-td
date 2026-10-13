@@ -28,13 +28,13 @@ import kim.biryeong.semiontd.tower.TowerCapacity;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 
 /** Attacking augment bodies. All consumable state belongs to the logical tower, not its entity. */
 public final class OffensiveAugmentTower extends AugmentTower {
-    private static final ResourceLocation CHARGE_SCAN = id("augment_capacitor_scan");
-    private static final ResourceLocation SHELL = id("augment_ordnance_shell");
+    private static final Identifier CHARGE_SCAN = id("augment_capacitor_scan");
+    private static final Identifier SHELL = id("augment_ordnance_shell");
     private static final TowerDataKey<BattleState> BATTLE = key("augment_offensive_battle", BattleState.class);
     private static final TowerDataKey<CapacitorState> CAPACITOR = key("augment_capacitor", CapacitorState.class);
     private static final TowerDataKey<CocoonState> COCOON = key("augment_cocoon", CocoonState.class);
@@ -313,7 +313,7 @@ public final class OffensiveAugmentTower extends AugmentTower {
     private CocoonState cocoon() { return getDataOrDefault(COCOON, CocoonState.EMPTY); }
     private OrdnanceState ordnance() { return getDataOrDefault(ORDNANCE, OrdnanceState.EMPTY); }
     private ActionCounts actionCounts() { return getDataOrDefault(ACTION_COUNTS, ActionCounts.EMPTY); }
-    private static ResourceLocation id(String path) { return ResourceLocation.fromNamespaceAndPath("semion-td", path); }
+    private static Identifier id(String path) { return Identifier.fromNamespaceAndPath("semion-td", path); }
     private static <T> TowerDataKey<T> key(String path, Class<T> type) { return TowerDataKey.of(id(path), type); }
     private static boolean validEnemy(SemionTowerEntity source, SemionMonsterEntity target) {
         return source != null && source.isValidAttackTarget(target)

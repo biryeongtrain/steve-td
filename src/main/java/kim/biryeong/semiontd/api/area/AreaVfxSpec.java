@@ -1,9 +1,9 @@
 package kim.biryeong.semiontd.api.area;
 
 import java.util.Objects;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
-public record AreaVfxSpec(ResourceLocation styleId, AreaVfxRenderPolicy renderPolicy) {
+public record AreaVfxSpec(Identifier styleId, AreaVfxRenderPolicy renderPolicy) {
     private static final AreaVfxSpec NONE = new AreaVfxSpec(AreaVfxStyles.NONE, AreaVfxRenderPolicy.ON_CHANGE);
 
     public AreaVfxSpec {
@@ -15,11 +15,11 @@ public record AreaVfxSpec(ResourceLocation styleId, AreaVfxRenderPolicy renderPo
         return NONE;
     }
 
-    public static AreaVfxSpec onTrigger(ResourceLocation styleId) {
+    public static AreaVfxSpec onTrigger(Identifier styleId) {
         return new AreaVfxSpec(styleId, AreaVfxRenderPolicy.ON_TRIGGER);
     }
 
-    public static AreaVfxSpec onChange(ResourceLocation styleId) {
+    public static AreaVfxSpec onChange(Identifier styleId) {
         return new AreaVfxSpec(styleId, AreaVfxRenderPolicy.ON_CHANGE);
     }
 }

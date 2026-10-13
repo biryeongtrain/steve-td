@@ -24,6 +24,7 @@ import kim.biryeong.semiontd.tower.insect.InsectTowerCatalogs;
 import kim.biryeong.semiontd.tower.hero.HeroPartyTowerCatalogs;
 import kim.biryeong.semiontd.tower.legion.LegionTowerCatalogs;
 import kim.biryeong.semiontd.tower.mage.MageTowerCatalogs;
+import kim.biryeong.semiontd.tower.magicschool.MagicSchoolTowerCatalogs;
 import kim.biryeong.semiontd.tower.succubus.SuccubusTowerCatalogs;
 import kim.biryeong.semiontd.tower.nether.NetherTowerCatalogs;
 import kim.biryeong.semiontd.tower.ocean.OceanTowerCatalogs;
@@ -77,6 +78,7 @@ public final class ProductionTowerCatalogs {
             PirateTowerCatalogs.register();
             // 경기 중에 만든 설계도는 카탈로그를 새로 지을 때 사라지므로 다시 올립니다.
             kim.biryeong.semiontd.tower.blueprint.BlueprintStates.reinstall();
+            MagicSchoolTowerCatalogs.register();
         }
     }
 }

@@ -1,6 +1,6 @@
 package kim.biryeong.semiontd.config;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class TraitBalanceRuntime {
     private static final TraitBalanceConfig DEFAULT_CONFIG = TraitBalanceConfig.defaultConfig();
@@ -17,7 +17,7 @@ public final class TraitBalanceRuntime {
         current = config == null ? DEFAULT_CONFIG : config.withMissingDefaults(DEFAULT_CONFIG);
     }
 
-    public static double value(ResourceLocation traitId, String key) {
+    public static double value(Identifier traitId, String key) {
         if (traitId == null || key == null) {
             return 0.0;
         }

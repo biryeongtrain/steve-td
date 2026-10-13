@@ -8,11 +8,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import kim.biryeong.semiontd.config.JobAvailabilityConfig;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class JobRegistry {
-    private static final Map<ResourceLocation, SemionJob> JOBS = new LinkedHashMap<>();
-    private static final Set<ResourceLocation> OFFICIAL_BUILDER_IDS = Set.of(
+    private static final Map<Identifier, SemionJob> JOBS = new LinkedHashMap<>();
+    private static final Set<Identifier> OFFICIAL_BUILDER_IDS = Set.of(
             VillagerTowerJob.ID,
             VillagerAdvTowerJob.ID,
             UndeadTowerJob.ID,
@@ -90,9 +90,10 @@ public final class JobRegistry {
         registerIfAbsent(new FrostTowerJob());
         registerIfAbsent(new PirateTowerJob());
         registerIfAbsent(new BlueprintTowerJob());
+        registerIfAbsent(new MagicSchoolTowerJob());
     }
 
-    public static synchronized Optional<SemionJob> find(ResourceLocation id) {
+    public static synchronized Optional<SemionJob> find(Identifier id) {
         return Optional.ofNullable(JOBS.get(id));
     }
 
@@ -100,7 +101,7 @@ public final class JobRegistry {
         availability = config == null ? JobAvailabilityConfig.defaultConfig() : config;
     }
 
-    public static synchronized boolean isEnabled(ResourceLocation id) {
+    public static synchronized boolean isEnabled(Identifier id) {
         return DEFAULT_JOB.id().equals(id) || availability.isEnabled(id);
     }
 

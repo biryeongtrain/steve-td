@@ -14,8 +14,13 @@ import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
 import kim.biryeong.semiontd.tower.Tower;
+import net.minecraft.world.phys.Vec3;
 
 final class MageTowerRuntime {
+    private static final Comparator<SemionMonsterEntity> TARGET_PRIORITY = Comparator
+            .comparing((SemionMonsterEntity entity) -> isIncome(entity.runtimeMonster()))
+            .thenComparingDouble(entity -> -entity.runtimeMonster().laneProgress());
+
     private MageTowerRuntime() {
     }
 
@@ -43,10 +48,15 @@ final class MageTowerRuntime {
     static List<SemionMonsterEntity> prioritizedMonsters(PlayerLane lane) {
         return liveMonsters(lane).stream()
                 .filter(entity -> !entity.isStealthed() && !entity.isDominated())
-                .sorted(Comparator
-                        .comparing((SemionMonsterEntity entity) -> isIncome(entity.runtimeMonster()))
-                        .thenComparingDouble(entity -> -entity.runtimeMonster().laneProgress()))
+                .sorted(TARGET_PRIORITY)
                 .toList();
+    }
+
+    static Optional<SemionMonsterEntity> firstPrioritizedInRange(PlayerLane lane, Vec3 center, double range) {
+        return liveMonsters(lane).stream()
+                .filter(entity -> !entity.isStealthed() && !entity.isDominated())
+                .filter(entity -> entity.position().distanceToSqr(center) <= range * range)
+                .min(TARGET_PRIORITY);
     }
 
     static boolean isIncome(Monster monster) {

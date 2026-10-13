@@ -12,7 +12,7 @@ import net.minecraft.server.dialog.Dialog;
 import net.minecraft.server.dialog.body.DialogBody;
 import net.minecraft.server.dialog.body.PlainMessage;
 import net.minecraft.util.StringRepresentable;
-import xyz.nucleoid.packettweaker.PacketContext;
+import net.fabricmc.fabric.api.networking.v1.context.PacketContext;
 
 import java.util.Locale;
 
@@ -37,9 +37,7 @@ public record AlignedMessage(Component contents, int width, Align align) impleme
     }
 
     public PlainMessage asVanillaBody(PacketContext context) {
-        String language = context.getClientOptions() != null
-                ? context.getClientOptions().language()
-                : "en_us";
+        String language = xyz.nucleoid.server.translations.api.LocalizationTarget.of(context).getLanguageCode();
         int textWidth = Math.max(0, this.width - 8);
 
         Component alignedText = switch (this.align) {

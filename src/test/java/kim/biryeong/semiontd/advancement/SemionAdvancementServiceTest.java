@@ -49,7 +49,7 @@ final class SemionAdvancementServiceTest {
                 20
         );
 
-        Map<UUID, Set<net.minecraft.resources.ResourceLocation>> awards = SemionAdvancementService.matchAwards(
+        Map<UUID, Set<net.minecraft.resources.Identifier>> awards = SemionAdvancementService.matchAwards(
                 result,
                 Map.of(redVeteran, 100, redPartner, 9, bluePerfect, 10),
                 Set.of(redVeteran, redPartner, bluePerfect)

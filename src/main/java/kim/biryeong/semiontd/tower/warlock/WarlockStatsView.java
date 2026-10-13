@@ -25,8 +25,8 @@ final class WarlockStatsView {
         }
         lines.add(formatPermanentHealth(defense.additionalHealth(), ""));
         if (progression.showDefenseStats()) {
-            lines.add(formatLifeSteal(
-                    defense.lifeSteal(),
+            lines.add(formatLifeStealEfficiency(
+                    WarlockCombat.lifeStealRate(defense.lifeStealDisplayDamage(), defense.lifeSteal()),
                     stackProgress(
                             progression.lifeStealSacrifices(),
                             progression.lifeStealEvery(),
@@ -159,6 +159,7 @@ final class WarlockStatsView {
             double additionalHealth,
             double lifeSteal,
             double maximumLifeSteal,
+            double lifeStealDisplayDamage,
             double damageReduction,
             double maximumDamageReduction,
             double incomeDebuffResistance

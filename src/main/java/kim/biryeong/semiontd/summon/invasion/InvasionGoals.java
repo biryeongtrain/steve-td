@@ -169,14 +169,16 @@ final class InvasionGoals {
     static final class AreaHeal extends Ability {
         private final double radius;
         private final double healAmount;
+        private final double maxHealthRatio;
         private final int cooldown;
         private final int retry;
         private int readyTick;
 
-        AreaHeal(SemionMonsterEntity caster, double radius, double healAmount, int cooldown, int retry) {
+        AreaHeal(SemionMonsterEntity caster, double radius, double healAmount, double maxHealthRatio, int cooldown, int retry) {
             super(caster);
             this.radius = radius;
             this.healAmount = healAmount;
+            this.maxHealthRatio = maxHealthRatio;
             this.cooldown = cooldown;
             this.retry = retry;
         }
@@ -193,7 +195,7 @@ final class InvasionGoals {
                     continue;
                 }
                 double before = monster.health();
-                ally.receiveHealing(healAmount);
+                ally.receiveHealing(healAmount + monster.maxHealth() * maxHealthRatio);
                 if (monster.health() > before) {
                     healed = true;
                     InvasionVfx.playAt(serverLevel(), InvasionVfx.priestHeal(seed() + ally.getId()), ally.position());

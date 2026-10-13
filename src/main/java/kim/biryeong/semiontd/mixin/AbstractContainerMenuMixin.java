@@ -4,7 +4,7 @@ import kim.biryeong.semiontd.cosmetic.CosmeticItemSupport;
 import kim.biryeong.semiontd.tower.frost.FrostFullOperationService;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -16,14 +16,14 @@ abstract class AbstractContainerMenuMixin {
     private void semionTd$preventLockedOffhandCosmeticClick(
             int slotId,
             int button,
-            ClickType clickType,
+            ContainerInput clickType,
             Player player,
             CallbackInfo ci
     ) {
         AbstractContainerMenu menu = (AbstractContainerMenu) (Object) this;
         if (CosmeticItemSupport.isLockedOffhandCosmetic(menu.getCarried())
                 || FrostFullOperationService.isActivationItem(menu.getCarried())
-                || menu.isValidSlotIndex(slotId)
+                || slotId >= 0 && slotId < menu.slots.size()
                 && (CosmeticItemSupport.isLockedOffhandCosmetic(menu.getSlot(slotId).getItem())
                         || FrostFullOperationService.isActivationItem(menu.getSlot(slotId).getItem()))) {
             ci.cancel();

@@ -110,8 +110,8 @@ final class InsectTowerCatalogTest {
         assertInstanceOf(InsectSpawnerTower.class, create(InsectTowers.SPAWNER));
         assertEquals(75, ProductionTowerCatalog.upgrades(InsectTowers.SILVERFISH).getFirst().mineralCost());
         assertEquals(140, ProductionTowerCatalog.upgrades(InsectTowers.ENDERMITE).getFirst().mineralCost());
-        assertEquals(90, ProductionTowerCatalog.upgrades(InsectTowers.CAVE_SPIDER).getFirst().mineralCost());
-        assertEquals(160, ProductionTowerCatalog.upgrades(InsectTowers.SPIDER).getFirst().mineralCost());
+        assertEquals(115, ProductionTowerCatalog.upgrades(InsectTowers.CAVE_SPIDER).getFirst().mineralCost());
+        assertEquals(185, ProductionTowerCatalog.upgrades(InsectTowers.SPIDER).getFirst().mineralCost());
         assertEquals(90, ProductionTowerCatalog.upgrades(InsectTowers.BEE).getFirst().mineralCost());
         assertEquals(170, ProductionTowerCatalog.upgrades(InsectTowers.ENHANCED_BEE).getFirst().mineralCost());
         assertTrue(ProductionTowerCatalog.upgrades(InsectTowers.SPAWNER).isEmpty());
@@ -124,6 +124,46 @@ final class InsectTowerCatalogTest {
         assertEquals(0.0, ProductionTowerCatalog.find(InsectTowers.BEE.id()).orElseThrow().type().damage());
         assertEquals(0.0, ProductionTowerCatalog.find(InsectTowers.ENHANCED_BEE.id()).orElseThrow().type().damage());
         assertEquals(0.0, ProductionTowerCatalog.find(InsectTowers.QUEEN_BEE.id()).orElseThrow().type().damage());
+    }
+
+    @Test
+    void spiderPricesUsePlacementThenDirectedUpgradeCosts() {
+        ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
+        var first = ProductionTowerCatalog.find(InsectTowers.CAVE_SPIDER.id()).orElseThrow();
+        var second = ProductionTowerCatalog.find(InsectTowers.SPIDER.id()).orElseThrow();
+        var third = ProductionTowerCatalog.find(InsectTowers.ENHANCED_SPIDER.id()).orElseThrow();
+        long placement = kim.biryeong.semiontd.tower.ProductionTowerService.placementCost(null, first.type());
+        long firstUpgrade = ProductionTowerCatalog.upgrades(first.type()).getFirst().mineralCost();
+        long secondUpgrade = ProductionTowerCatalog.upgrades(second.type()).getFirst().mineralCost();
+        assertEquals(50, InsectTowers.CAVE_SPIDER.mineralCost());
+        assertEquals(50, placement);
+        assertEquals(115, firstUpgrade);
+        assertEquals(185, secondUpgrade);
+        assertEquals(165, placement + firstUpgrade);
+        assertEquals(350, placement + firstUpgrade + secondUpgrade);
+        assertTrue(first.starter());
+        assertFalse(second.starter());
+        assertFalse(third.starter());
+        assertEquals(0, second.type().mineralCost());
+        assertEquals(0, third.type().mineralCost());
+    }
+
+    @Test
+    void spiderPriceDefaultsPreserveSavedAndCustomCosts() {
+        var defaults = TowerBalanceConfig.defaultConfig();
+        for (long[] costs : List.of(new long[]{40, 90, 160}, new long[]{65, 135, 210})) {
+            var configured = new TowerBalanceConfig(
+                    Map.of(InsectTowers.CAVE_SPIDER.id(), new TowerBalanceConfig.TowerStats(
+                            costs[0], null, null, null, null, null)),
+                    Map.of("insect_cave_spider_t1->insect_spider_t2", costs[1],
+                            "insect_spider_t2->insect_spider_t3", costs[2]), Map.of());
+            var merged = configured.withMissingDefaults(defaults);
+            assertEquals(merged, merged.withMissingDefaults(defaults));
+            ProductionTowerCatalogs.reloadBuiltIns(merged);
+            assertEquals(costs[0], ProductionTowerCatalog.find(InsectTowers.CAVE_SPIDER.id()).orElseThrow().type().mineralCost());
+            assertEquals(costs[1], ProductionTowerCatalog.upgrades(InsectTowers.CAVE_SPIDER).getFirst().mineralCost());
+            assertEquals(costs[2], ProductionTowerCatalog.upgrades(InsectTowers.SPIDER).getFirst().mineralCost());
+        }
     }
 
     @Test

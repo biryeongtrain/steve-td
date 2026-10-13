@@ -12,7 +12,7 @@ import kim.biryeong.semiontd.entity.visual.FoxVisual;
 import kim.biryeong.semiontd.tower.TowerCategory;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
-import net.minecraft.world.entity.animal.Fox;
+import net.minecraft.world.entity.animal.fox.Fox;
 
 public final class AdversaryTowers {
     public static final TowerType FOX = TowerType.builder("adversary_fox", "히어로 여우")

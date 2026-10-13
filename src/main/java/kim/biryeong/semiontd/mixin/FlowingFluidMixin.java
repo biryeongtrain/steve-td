@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import xyz.nucleoid.fantasy.RuntimeWorld;
+import xyz.nucleoid.fantasy.RuntimeLevel;
 
 @Mixin(FlowingFluid.class)
 abstract class FlowingFluidMixin {
@@ -22,7 +22,7 @@ abstract class FlowingFluidMixin {
             FluidState fluidState,
             CallbackInfo callback
     ) {
-        if (level instanceof RuntimeWorld && fluidState.is(FluidTags.WATER)) {
+        if (level instanceof RuntimeLevel && fluidState.is(FluidTags.WATER)) {
             callback.cancel();
         }
     }

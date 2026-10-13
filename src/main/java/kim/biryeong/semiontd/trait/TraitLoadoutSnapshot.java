@@ -1,6 +1,6 @@
 package kim.biryeong.semiontd.trait;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public record TraitLoadoutSnapshot(
         String primaryTraitId,
@@ -30,7 +30,7 @@ public record TraitLoadoutSnapshot(
         );
     }
 
-    private static int version(ResourceLocation traitId) {
+    private static int version(Identifier traitId) {
         if (TraitLoadout.isNone(traitId)) {
             return 0;
         }
@@ -38,7 +38,7 @@ public record TraitLoadoutSnapshot(
     }
 
     private static String normalizeId(String traitId) {
-        ResourceLocation parsed = traitId == null ? null : ResourceLocation.tryParse(traitId);
+        Identifier parsed = traitId == null ? null : Identifier.tryParse(traitId);
         return parsed == null ? BuiltInTraits.NONE_ID.toString() : parsed.toString();
     }
 }

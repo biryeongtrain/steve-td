@@ -351,7 +351,7 @@ public final class TutorialService {
 
     private static void sendNextNarrationLine(ServerPlayer player, Session session) {
         if (session.narrationIndex == 0) {
-            player.playNotifySound(SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.MUSIC, 1.0F, 1.2F);
+            kim.biryeong.semiontd.util.SemionPlayerPackets.playSound(player, SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.MUSIC, 1.0F, 1.2F);
         }
         NarrationLine line = session.narrationLines.get(session.narrationIndex++);
         if (line.highlightTarget != null) {
@@ -368,7 +368,7 @@ public final class TutorialService {
     private void updateBossBar(ServerPlayer player, Session session) {
         Component title = Component.literal(OBJECTIVES.get(session.stage));
         if (session.bossBar == null) {
-            session.bossBar = new ServerBossEvent(title, color(session.stage), BossEvent.BossBarOverlay.PROGRESS);
+            session.bossBar = new ServerBossEvent(java.util.UUID.randomUUID(), title, color(session.stage), BossEvent.BossBarOverlay.PROGRESS);
         }
         session.bossBar.setName(title);
         session.bossBar.setColor(color(session.stage));

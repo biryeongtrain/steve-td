@@ -21,7 +21,7 @@ public final class AugmentTargetTool {
 
     public static boolean isTool(ItemStack stack) {
         CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-        return stack.is(Items.STICK) && data != null && data.getUnsafe().getBooleanOr(MARKER, false);
+        return stack.is(Items.STICK) && data != null && data.copyTag().getBooleanOr(MARKER, false);
     }
 
     public static boolean grant(ServerPlayer online, PlayerAugmentState state, PlayerLane lane) {

@@ -11,8 +11,8 @@ import kim.biryeong.semiontd.entity.visual.EntityVisual;
 import kim.biryeong.semiontd.entity.visual.VillagerVisual;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
-import net.minecraft.world.entity.npc.VillagerProfession;
-import net.minecraft.world.entity.npc.VillagerType;
+import net.minecraft.world.entity.npc.villager.VillagerProfession;
+import net.minecraft.world.entity.npc.villager.VillagerType;
 import net.minecraft.world.level.block.Blocks;
 
 /**

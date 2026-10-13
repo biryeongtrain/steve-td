@@ -33,14 +33,14 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
-public final class AugmentTowerGameTest {
+public final class AugmentTowerGameTest implements kim.biryeong.semiontd.gametest.RuntimeArenaFixture {
     private static final UUID OWNER = UUID.fromString("00000000-0000-0000-0000-000000005309");
     private static final TowerType NORMAL_A = TowerType.builder("augment_test_normal_a", "검사 타워 A")
             .mineralCost(10).maxHealth(200).range(8).damage(20).attackIntervalTicks(20).build();
     private static final TowerType NORMAL_B = TowerType.builder("augment_test_normal_b", "검사 타워 B")
             .mineralCost(10).maxHealth(200).range(8).damage(40).attackIntervalTicks(20).build();
 
-    @GameTest public void roundGrowthRefreshesAllNineBodiesAndSurvivesEntityRestoration(GameTestHelper context) {
+    @GameTest(structure = "semion-td-gametest:combat_arena") public void roundGrowthRefreshesAllNineBodiesAndSurvivesEntityRestoration(GameTestHelper context) {
         PlayerLane lane = lane(context);
         int[] round = {5};
         AugmentTelemetry telemetry = new AugmentTelemetry();
@@ -79,7 +79,7 @@ public final class AugmentTowerGameTest {
         } finally { cleanup(lane); }
     }
 
-    @GameTest public void emergencyBellUsesThreeDistinctLogicalTargets(GameTestHelper context) {
+    @GameTest(structure = "semion-td-gametest:combat_arena") public void emergencyBellUsesThreeDistinctLogicalTargets(GameTestHelper context) {
         PlayerLane lane = lane(context);
         try {
             AugmentTower bell = augment(lane, AugmentTowers.EMERGENCY_BELL, pos(context, 5, 1, 8));
@@ -98,7 +98,7 @@ public final class AugmentTowerGameTest {
         } finally { cleanup(lane); }
     }
 
-    @GameTest public void barrierCoreRedirectsOnceAndNeverReturnsLethalOverflow(GameTestHelper context) {
+    @GameTest(structure = "semion-td-gametest:combat_arena") public void barrierCoreRedirectsOnceAndNeverReturnsLethalOverflow(GameTestHelper context) {
         PlayerLane lane = lane(context);
         try {
             AugmentTower core = augment(lane, AugmentTowers.BARRIER_CORE, pos(context, 5, 1, 8));
@@ -116,7 +116,7 @@ public final class AugmentTowerGameTest {
         } finally { cleanup(lane); }
     }
 
-    @GameTest public void relayChargesTheOtherTowerAndDisconnectsOnDeath(GameTestHelper context) {
+    @GameTest(structure = "semion-td-gametest:combat_arena") public void relayChargesTheOtherTowerAndDisconnectsOnDeath(GameTestHelper context) {
         PlayerLane lane = lane(context);
         try {
             AugmentTower relay = augment(lane, AugmentTowers.PULSE_RELAY, pos(context, 5, 1, 8));
@@ -170,7 +170,7 @@ public final class AugmentTowerGameTest {
         } finally { cleanup(lane); }
     }
 
-    @GameTest public void telemetryKeepsLogicalPlacementAndDeduplicatesRoundEnd(GameTestHelper context) {
+    @GameTest(structure = "semion-td-gametest:combat_arena") public void telemetryKeepsLogicalPlacementAndDeduplicatesRoundEnd(GameTestHelper context) {
         PlayerLane lane = lane(context);
         AugmentTelemetry telemetry = new AugmentTelemetry();
         long[] tick = {100};
@@ -218,7 +218,7 @@ public final class AugmentTowerGameTest {
         } finally { cleanup(lane); }
     }
 
-    @GameTest public void lowPressureCannotAdvanceOrTriggerRelay(GameTestHelper context) {
+    @GameTest(structure = "semion-td-gametest:combat_arena") public void lowPressureCannotAdvanceOrTriggerRelay(GameTestHelper context) {
         PlayerLane lane = lane(context);
         try {
             AugmentTower relay = augment(lane, AugmentTowers.PULSE_RELAY, pos(context, 5, 1, 8));
@@ -243,7 +243,7 @@ public final class AugmentTowerGameTest {
         } finally { cleanup(lane); }
     }
 
-    @GameTest public void lowPressureCannotTriggerMinesButTakesCollateralDamage(GameTestHelper context) {
+    @GameTest(structure = "semion-td-gametest:combat_arena") public void lowPressureCannotTriggerMinesButTakesCollateralDamage(GameTestHelper context) {
         PlayerLane lane = lane(context);
         try {
             for (int x = 0; x <= 12; x++) for (int z = 0; z <= 14; z++) {
@@ -271,7 +271,7 @@ public final class AugmentTowerGameTest {
         } finally { cleanup(lane); }
     }
 
-    @GameTest public void barricadeCapsEachHitAndRejectsHealingAfterGrowthAndRestoration(GameTestHelper context) {
+    @GameTest(structure = "semion-td-gametest:combat_arena") public void barricadeCapsEachHitAndRejectsHealingAfterGrowthAndRestoration(GameTestHelper context) {
         PlayerLane lane = lane(context);
         try {
             AugmentTower barricade = augment(lane, AugmentTowers.FOLDING_BARRICADE, pos(context, 3, 1, 5));
@@ -315,7 +315,7 @@ public final class AugmentTowerGameTest {
         } finally { cleanup(lane); }
     }
 
-    @GameTest public void barricadeOnlyOverridesTheExistingChoiceAtEqualDistance(GameTestHelper context) {
+    @GameTest(structure = "semion-td-gametest:combat_arena") public void barricadeOnlyOverridesTheExistingChoiceAtEqualDistance(GameTestHelper context) {
         PlayerLane lane = lane(context);
         try {
             TowerType high = TowerType.builder("augment_test_high_aggro", "우선 대상").mineralCost(1)
@@ -348,6 +348,8 @@ public final class AugmentTowerGameTest {
     }
 
     private static PlayerLane lane(GameTestHelper context) {
+        context.assertTrue(context.getBounds().contains(Vec3.atCenterOf(context.absolutePos(new BlockPos(12, 5, 14)))),
+                "The declared structure must contain the entire augment-tower arena.");
         ProductionTowerCatalogs.reloadBuiltIns(TowerBalanceConfig.defaultConfig());
         ProductionTowerCatalog.registerStarter(NORMAL_A);
         ProductionTowerCatalog.registerStarter(NORMAL_B);

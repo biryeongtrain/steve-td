@@ -13,13 +13,18 @@ import kim.biryeong.semiontd.tower.warlock.WarlockTower;
 import kim.biryeong.semiontd.tower.warlock.WarlockTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class WarlockTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "warlock_towers");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "warlock_towers");
 
     public WarlockTowerJob() {
         super(ID, Component.literal("흑마법사"), List.of());
+    }
+
+    @Override
+    public boolean isHyperCarry() {
+        return true;
     }
 
     @Override
@@ -52,6 +57,10 @@ public final class WarlockTowerJob extends SemionJob {
         return WarlockTowers.isWarlockTower(towerType);
     }
 
+    private static int awakeningKills() {
+        return WarlockConfig.RUNTIME.requiredAwakeningKills();
+    }
+
     @Override
     public void onMatchStarted(JobContext context) {
         clearProgress(context);
@@ -74,10 +83,6 @@ public final class WarlockTowerJob extends SemionJob {
     @Override
     public void onMatchClosed(JobContext context) {
         clearProgress(context);
-    }
-
-    private static int awakeningKills() {
-        return WarlockConfig.RUNTIME.requiredAwakeningKills();
     }
 
     private static void clearProgress(JobContext context) {

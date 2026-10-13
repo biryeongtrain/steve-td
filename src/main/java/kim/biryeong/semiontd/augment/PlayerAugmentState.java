@@ -83,7 +83,7 @@ public final class PlayerAugmentState {
     private final Map<Integer, Integer> lastConfiguredRounds = new HashMap<>();
     private Integer currentMilestone;
     private long nextOfferRevision;
-    private int rerollsUsed;
+    private final int[] rerollsUsedBySlot = new int[3];
     private boolean committing;
     private int preparedRound = -1;
     private long configurationRevision;
@@ -151,7 +151,19 @@ public final class PlayerAugmentState {
     public synchronized boolean initialized() {return !schedule.isEmpty();}
     public synchronized AugmentConfig config() {return config;}
     public synchronized List<AugmentRarity> raritySchedule() {return schedule;}
-    public synchronized int rerollsRemaining() {return MAX_REROLLS - rerollsUsed;}
+    public synchronized int rerollsRemaining() {
+        if (rerollsUsedBySlot == null || rerollsUsedBySlot.length != 3) return 0;
+        int used = 0;
+        for (int value : rerollsUsedBySlot) used = Math.max(used, value);
+        return Math.max(0, MAX_REROLLS - used);
+    }
+    public synchronized int rerollsRemaining(int slot) {
+        if (slot < 0 || slot >= 3) throw new IllegalArgumentException("Card slot must be 0..2.");
+        return rerollsRemaining();
+    }
+    public synchronized List<Integer> rerollsRemainingBySlot() {
+        return List.of(rerollsRemaining(), rerollsRemaining(), rerollsRemaining());
+    }
     public synchronized List<Selection> selections() {return List.copyOf(selections.values());}
     public synchronized List<OfferEvent> offerEvents() {return List.copyOf(offerEvents);}
     public synchronized AugmentSnapshot snapshot() {return new AugmentSnapshot(config, selections());}
@@ -255,27 +267,29 @@ public final class PlayerAugmentState {
 
     public synchronized boolean canReroll(int milestone, Predicate<AugmentDefinition> eligible) {
         Offer offer = offers.get(milestone);
-        return rerollsRemaining() > 0 && !selections.containsKey(milestone) && offer != null
-                && !replacements(offer, eligible).isEmpty();
+        return rerollsRemaining() > 0 && !committing
+                && Objects.equals(currentMilestone, milestone) && !selections.containsKey(milestone) && offer != null
+                && replacement(offer, eligible).isPresent();
     }
 
     public synchronized ActionResult reroll(int milestone, long offerRevision, UUID requestId,
                                             long now, Predicate<AugmentDefinition> eligible) {
         String fingerprint = "reroll:" + milestone + ":" + offerRevision;
-        ActionResult replay = replay(requestId, fingerprint);
-        if (replay != null) {return replay;}
+        if (replay(requestId, fingerprint) != null) return new ActionResult(Status.INVALID_REQUEST);
         Status invalid = validateOffer(milestone, offerRevision, now);
-        if (invalid != null) {return result(requestId, fingerprint, invalid);}
-        if (rerollsRemaining() == 0) {return result(requestId, fingerprint, Status.REROLL_SPENT);}
+        if (invalid != null) return result(requestId, fingerprint, invalid);
+        if (rerollsRemaining() == 0) return result(requestId, fingerprint, Status.REROLL_SPENT);
         Offer offer = offers.get(milestone);
-        List<String> ids = replacements(offer, eligible);
-        if (ids.isEmpty()) {return result(requestId, fingerprint, Status.NO_REPLACEMENT);}
+        var replacement = replacement(offer, eligible);
+        if (replacement.isEmpty()) return result(requestId, fingerprint, Status.NO_REPLACEMENT);
+        List<String> ids = replacement.get();
+        int used = MAX_REROLLS - rerollsRemaining() + 1;
         long revision = ++nextOfferRevision;
         offers.put(milestone, new Offer(milestone, offer.offeredRound(), offer.rarity(), ids, revision,
                 offer.deadlineTickExclusive(), offer.draftRevision() + 1, null));
         offerEvents.add(new OfferEvent(milestone, offer.rarity(), "REROLLED", revision, offer.cardIds(), ids));
         seen.get(milestone).addAll(ids);
-        rerollsUsed++;
+        java.util.Arrays.fill(rerollsUsedBySlot, used);
         return result(requestId, fingerprint, Status.SUCCESS);
     }
 
@@ -465,13 +479,40 @@ public final class PlayerAugmentState {
         return eligible.test(card);
     }
 
-    private List<String> replacements(Offer offer, Predicate<AugmentDefinition> eligible) {
-        Set<String> shown = seen.get(offer.milestoneRound());
+    private Optional<List<String>> replacement(Offer offer, Predicate<AugmentDefinition> eligible) {
+        Set<String> shown = Set.copyOf(offer.cardIds());
         List<AugmentDefinition> candidates = normalCandidates(offer.milestoneRound(), offer.rarity(), eligible);
+        boolean needsDiamonds = candidates.stream().noneMatch(AugmentDefinition::safe);
         candidates.removeIf(card -> shown.contains(card.id()));
-        List<String> ids = candidateCards(offer.milestoneRound(), offer.rarity(), candidates, 100 + rerollsUsed * 2);
-        // Reserves may repeat to keep three safe choices when the unseen normal pool is small.
-        return ids.stream().anyMatch(id -> !shown.contains(id)) ? ids : List.of();
+        shuffle(candidates, offer.milestoneRound(), 100 + (MAX_REROLLS - rerollsRemaining()) * 2);
+        candidates.addAll(AugmentCatalog.reserveDefinitions().stream()
+                .filter(card -> card.rarity() == offer.rarity() && !shown.contains(card.id())
+                        && isEligible(card, offer.milestoneRound(), eligible)).toList());
+        List<AugmentDefinition> selected = new ArrayList<>();
+        if (needsDiamonds) {
+            AugmentDefinition diamonds = diamondReserve(offer.rarity());
+            if (!candidates.contains(diamonds)) return Optional.empty();
+            selected.add(diamonds);
+        }
+        if (candidates.stream().noneMatch(AugmentDefinition::safe) || !completeReplacement(candidates, selected)) {
+            return Optional.empty();
+        }
+        shuffle(selected, offer.milestoneRound(), 101 + (MAX_REROLLS - rerollsRemaining()) * 2);
+        return Optional.of(selected.stream().map(AugmentDefinition::id).toList());
+    }
+
+    private static boolean completeReplacement(List<AugmentDefinition> candidates, List<AugmentDefinition> selected) {
+        if (selected.size() == 3) return selected.stream().anyMatch(AugmentDefinition::safe);
+        List<AugmentDefinition> ordered = new ArrayList<>(candidates);
+        ordered.sort(Comparator.comparingInt(card -> (card.reserve() ? 2 : 0)
+                + (selected.stream().anyMatch(previous -> previous.category() == card.category()) ? 1 : 0)));
+        for (AugmentDefinition card : ordered) {
+            if (!fits(card, selected)) continue;
+            selected.add(card);
+            if (completeReplacement(candidates, selected)) return true;
+            selected.removeLast();
+        }
+        return false;
     }
 
     private static boolean fits(AugmentDefinition card, List<AugmentDefinition> selected) {

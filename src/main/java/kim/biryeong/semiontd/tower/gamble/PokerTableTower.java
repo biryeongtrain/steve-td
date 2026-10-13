@@ -21,11 +21,11 @@ import kim.biryeong.semiontd.tower.TowerUpgradeOption;
 import kim.biryeong.semiontd.tower.area.AreaEffectIds;
 import kim.biryeong.semiontd.tower.area.TowerAreaDamage;
 import kim.biryeong.semiontd.ui.GambleRevealService;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class PokerTableTower extends ProductionTower {
     private static final TowerDataKey<BetResult> RESULT = TowerDataKey.of(
-            ResourceLocation.fromNamespaceAndPath("semion-td", "gamble/poker_result"), BetResult.class);
+            Identifier.fromNamespaceAndPath("semion-td", "gamble/poker_result"), BetResult.class);
     private final UUID betToken = UUID.randomUUID();
     // Retain the death source until notification, even if combat already discarded its entity.
     private SemionTowerEntity deathSource;
@@ -103,11 +103,11 @@ public final class PokerTableTower extends ProductionTower {
         if (!meetsUpgradeRequirements(lane, option) || !GamblePoker.validBet(option.mineralCost())) {
             return;
         }
-        resolveHand(lane, option.mineralCost(), GamblePoker.draw(lane.arenaWorld().random::nextInt));
+        resolveHand(lane, option.mineralCost(), GamblePoker.draw(lane.arenaWorld().getRandom()::nextInt));
     }
 
     void resolveHand(PlayerLane lane, long bet, GamblePoker.Hand hand) {
-        resolveHand(lane, bet, hand, lane.arenaWorld().random::nextInt);
+        resolveHand(lane, bet, hand, lane.arenaWorld().getRandom()::nextInt);
     }
 
     void resolveHand(PlayerLane lane, long bet, GamblePoker.Hand hand, IntUnaryOperator nextInt) {

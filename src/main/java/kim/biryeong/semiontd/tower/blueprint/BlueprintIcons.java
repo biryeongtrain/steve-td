@@ -13,7 +13,7 @@ final class BlueprintIcons {
             case MULTISHOT -> Items.SPECTRAL_ARROW;
             case SPLASH -> Items.FIRE_CHARGE;
             case LINE -> Items.BLAZE_ROD;
-            case CHAIN -> Items.LIGHTNING_ROD;
+            case CHAIN -> Items.LIGHTNING_ROD.weathering().unaffected();
             case SLOW -> Items.COBWEB;
             case STUN -> Items.ANVIL;
             case POISON -> Items.SPIDER_EYE;

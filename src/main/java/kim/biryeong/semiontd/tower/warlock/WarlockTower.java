@@ -67,6 +67,13 @@ public class WarlockTower extends EntityBackedTower {
         return applyTraitMaxHealth(maxHealth() * (1.0 + passiveHealthBonus()) + effectiveHealthBonus());
     }
 
+    double lifeStealDisplayDamage() {
+        SemionTowerEntity entity = runtimeEntity(attachedLane()).orElse(null);
+        return entity == null
+                ? modifyAttackDamage(null, null, type().damage())
+                : resolveBasicAttackOutgoingDamage(entity, null, entity.attackDamageAmount(null));
+    }
+
     @Override
     public double modifyAttackDamage(SemionTowerEntity towerEntity, SemionMonsterEntity target, double damageAmount) {
         return (damageAmount + effectiveDamageBonus() + awakening.attackDamageBonus()) * (1.0 + passiveDamageBonus());

@@ -3,26 +3,26 @@ package kim.biryeong.semiontd.trait;
 import java.util.List;
 import java.util.Objects;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public abstract class SemionTrait {
-    private final ResourceLocation id;
+    private final Identifier id;
     private final int version;
     private final Component displayName;
     private final List<Component> description;
     private final Component primaryEffectSummary;
     private final Component secondaryEffectSummary;
 
-    protected SemionTrait(ResourceLocation id, Component displayName, List<Component> description) {
+    protected SemionTrait(Identifier id, Component displayName, List<Component> description) {
         this(id, 1, displayName, description);
     }
 
-    protected SemionTrait(ResourceLocation id, int version, Component displayName, List<Component> description) {
+    protected SemionTrait(Identifier id, int version, Component displayName, List<Component> description) {
         this(id, version, displayName, description, Component.empty(), Component.empty());
     }
 
     protected SemionTrait(
-            ResourceLocation id,
+            Identifier id,
             int version,
             Component displayName,
             List<Component> description,
@@ -37,7 +37,7 @@ public abstract class SemionTrait {
         this.secondaryEffectSummary = Objects.requireNonNull(secondaryEffectSummary, "secondaryEffectSummary");
     }
 
-    public ResourceLocation id() {
+    public Identifier id() {
         return id;
     }
 

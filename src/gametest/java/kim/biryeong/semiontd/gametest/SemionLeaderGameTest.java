@@ -56,7 +56,8 @@ public final class SemionLeaderGameTest {
 
     @GameTest
     public void onlyTwoTeamsCanDesignateTheSameLeaderTarget(GameTestHelper context) {
-        SemionGame game = new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(), new GameArena(Map.of()));
+        SemionGame game = new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(),
+                kim.biryeong.semiontd.config.LeaderTargetingConfig.defaultConfig().withMaxTargetingTeams(2), new GameArena(Map.of()));
         UUID redLeader = addLeader(game, TeamId.RED);
         UUID blueLeader = addLeader(game, TeamId.BLUE);
         UUID greenLeader = addLeader(game, TeamId.GREEN);
@@ -77,6 +78,25 @@ public final class SemionLeaderGameTest {
         }
         if (!"해당 라인을 지정할 수 없습니다.".equals(blocked.message())) {
             context.fail(Component.literal("Blocked leader target message should match the requested red warning text."));
+            return;
+        }
+        context.succeed();
+    }
+
+    @GameTest
+    public void bundledLeaderTargetLimitAllowsOnlyOneAttackingTeam(GameTestHelper context) {
+        var config = kim.biryeong.semiontd.config.LeaderTargetingConfig.defaultConfig();
+        if (config.maxTargetingTeamsPerTarget() != 1) {
+            context.fail(Component.literal("The bundled leader-target limit must remain one attacking team."));
+            return;
+        }
+        SemionGame game = new SemionGame(EconomyConfig.defaultConfig(), WaveConfig.defaultConfig(), new GameArena(Map.of()));
+        UUID redLeader = addLeader(game, TeamId.RED);
+        UUID blueLeader = addLeader(game, TeamId.BLUE);
+        addLeader(game, TeamId.YELLOW);
+        if (game.setLeaderTarget(redLeader, TeamId.YELLOW) != LeaderTargetResult.SUCCESS
+                || game.setLeaderTarget(blueLeader, TeamId.YELLOW) != LeaderTargetResult.TARGET_TEAM_ALREADY_DESIGNATED) {
+            context.fail(Component.literal("The bundled one-team limit must reject a second attacker without changing the custom two-team behavior."));
             return;
         }
         context.succeed();

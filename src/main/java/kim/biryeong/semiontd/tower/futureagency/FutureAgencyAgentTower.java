@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 import kim.biryeong.semiontd.api.area.AreaVfxSpec;
 import kim.biryeong.semiontd.api.area.AreaVfxStyles;
 import kim.biryeong.semiontd.api.area.MonsterAreaEffectRequest;
@@ -290,8 +291,8 @@ public final class FutureAgencyAgentTower extends ProductionTower {
             if (target.runtimeMonster().health() <= target.runtimeMonster().maxHealth() * 0.30) bonus += FutureAgencyBalance.stacked(state, FutureAgencyPolicy.EXECUTION_AUTHORITY);
             if (target.runtimeMonster().maxHealth() >= 500.0) bonus += FutureAgencyBalance.stacked(state, FutureAgencyPolicy.HIGH_VALUE_TARGET);
             if (role == FutureAgencyRole.SUPPRESSION && state.stacks(FutureAgencyPolicy.DENSE_CONTROL) > 0) {
-                long nearby = targets(lane, target.position(), FutureAgencyBalance.suppressionDenseRadius())
-                        .stream().filter(other -> other != target).count();
+                long nearby = nearbyTargetCount(lane, target.position(),
+                        FutureAgencyBalance.suppressionDenseRadius(), target);
                 bonus += Math.min(FutureAgencyBalance.suppressionDenseCap(),
                         nearby * FutureAgencyBalance.policy(FutureAgencyPolicy.DENSE_CONTROL));
             }
@@ -370,9 +371,7 @@ public final class FutureAgencyAgentTower extends ProductionTower {
     @Override
     public void onAttackResolved(SemionTowerEntity source, SemionMonsterEntity primary, double attempted,
                                  double outgoing, double dealt, boolean killed) {
-        if (dealt > 0 && primary != null && AugmentCombat.allowsTriggers() && augmentSnapshot().has(CROSSFIRE)) {
-            registerCrossfire(primary);
-        }
+        registerCrossfire(primary, dealt);
         if (dealt <= 0.0 || FutureAgencyTowers.role(type()) != FutureAgencyRole.SUPPRESSION || lane == null) return;
         int grade = FutureAgencyTowers.grade(type());
         FutureAgencyStates.PlayerState state = FutureAgencyStates.state(ownerPlayer());
@@ -398,11 +397,16 @@ public final class FutureAgencyAgentTower extends ProductionTower {
                 AreaEffectIds.tower(this, "future_suppression"), source, primary, radius,
                 AreaVfxSpec.onTrigger(AreaVfxStyles.DEBUFF)).withFilter(target -> selected.contains(target.getUUID()));
         TowerAreaDamage.applyResolved(this, source, request, ignored -> outgoing * Math.min(1.0, ratio), true,
-                (target, amount, secondaryKilled) -> {applySuppression(target, slow); TowerVfxService.showSecondaryAttack(source, target);});
+                (target, amount, secondaryKilled) -> {
+                    registerCrossfire(target, amount);
+                    applySuppression(target, slow);
+                    TowerVfxService.showSecondaryAttack(source, target);
+                });
     }
 
-    private void registerCrossfire(SemionMonsterEntity target) {
-        if (!waveActive || lane == null) return;
+    private void registerCrossfire(SemionMonsterEntity target, double dealt) {
+        if (!(dealt > 0) || target == null || !AugmentCombat.allowsTriggers() || !augmentSnapshot().has(CROSSFIRE)
+                || !waveActive || lane == null) return;
         FutureAgencyAgentTower original = carriedCopy ? lane.towers().stream()
                 .filter(FutureAgencyAgentTower.class::isInstance).map(FutureAgencyAgentTower.class::cast)
                 .filter(agent -> !agent.carriedCopy && ownerPlayer().equals(agent.ownerPlayer())
@@ -534,13 +538,21 @@ public final class FutureAgencyAgentTower extends ProductionTower {
     }
 
     private static List<SemionMonsterEntity> targets(PlayerLane lane, Vec3 center, double radius) {
-        if (lane == null || center == null) return List.of();
+        return nearbyTargets(lane, center, radius)
+                .sorted(Comparator.comparingDouble((SemionMonsterEntity entity) -> -entity.runtimeMonster().laneProgress())
+                        .thenComparing(entity -> entity.getUUID().toString())).toList();
+    }
+
+    static long nearbyTargetCount(PlayerLane lane, Vec3 center, double radius, SemionMonsterEntity excluded) {
+        return nearbyTargets(lane, center, radius).filter(target -> target != excluded).count();
+    }
+
+    private static Stream<SemionMonsterEntity> nearbyTargets(PlayerLane lane, Vec3 center, double radius) {
+        if (lane == null || center == null) return Stream.empty();
         double radiusSquared = radius * radius;
         return lane.activeMonsters().stream().filter(monster -> monster.hasMinecraftEntity())
                 .map(monster -> lane.arenaWorld().getEntity(monster.minecraftEntityId()))
                 .filter(SemionMonsterEntity.class::isInstance).map(SemionMonsterEntity.class::cast)
-                .filter(entity -> entity.isAlive() && entity.position().distanceToSqr(center) <= radiusSquared)
-                .sorted(Comparator.comparingDouble((SemionMonsterEntity entity) -> -entity.runtimeMonster().laneProgress())
-                        .thenComparing(entity -> entity.getUUID().toString())).toList();
+                .filter(entity -> entity.isAlive() && entity.position().distanceToSqr(center) <= radiusSquared);
     }
 }

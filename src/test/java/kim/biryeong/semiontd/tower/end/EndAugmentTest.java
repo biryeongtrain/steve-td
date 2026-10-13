@@ -70,38 +70,34 @@ class EndAugmentTest extends EndTestFixture {
     }
 
     @Test
-    void twinKeepsHatchedFormAndHalfSnapshotWithoutGrowthOrAnotherTwin() {
-        applyTransferDuration(1);
+    void assaultReplacesTwinWithoutChangingStableCardId() {
         PlayerLane lane = lane();
-        lane.assignAugmentSnapshot(snapshot(EndAugments.TWIN, EndAugments.GROWTH));
+        lane.assignAugmentSnapshot(snapshot(EndAugments.ASSAULT));
         EndTower core = tower(EndTowers.BASE_END_TOWER, 0);
         lane.addTower(core);
         core.onWaveStarted(lane, 5);
-        EndTower twin = lane.towers().stream().filter(tower -> tower.isTemporaryCopy())
-                .map(EndTower.class::cast).findFirst().orElseThrow();
-        assertEquals(EndTowerState.PHANTOM, twin.state());
-        assertEquals(core.currentMaxHealth() * .5, twin.currentMaxHealth());
-        assertEquals(core.previewHatchedAttackDamage() * .5, twin.previewHatchedAttackDamage());
-        assertTrue(twin.augmentSnapshot().selections().isEmpty());
-        assertFalse(twin.canBeSold());
-        assertEquals(0, twin.slotWeight());
         core.onWaveStarted(lane, 5);
-        assertEquals(2, lane.towers().size());
-        double frozenHealth = twin.currentMaxHealth();
-        EndTower donor = tower(EndTowers.T1_SHULKER_TOWER, 2);
-        lane.addTower(donor);
-        twin.onWaveStarted(lane, 5);
-        twin.tick(lane);
-        assertTrue(donor.health() > 0);
-        assertEquals(3, lane.towers().size());
-        core.tick(lane);
-        assertEquals(0, donor.health());
-        assertEquals(frozenHealth, twin.currentMaxHealth());
-        lane.killTower(core);
-        assertTrue(twin.health() > 0);
-        assertTrue(lane.towers().contains(twin));
-        lane.removeTower(core);
-        assertFalse(lane.towers().contains(twin));
+        assertEquals("job_end_towers_p", EndAugments.ASSAULT);
+        assertEquals(1, lane.towers().size());
+        assertFalse(core.isTemporaryCopy());
+        assertTrue(core.runtimeDetailLines().stream().anyMatch(line -> line.contains("라운드당 1회")));
+    }
+
+    @Test
+    void legacyTwinConfigurationMigratesWithoutRejectingOrRetainingStatRatio() {
+        var json = com.google.gson.JsonParser.parseString("""
+                {"parameters":{"semiontd:job_end_towers_p":{"statRatio":0.5}}}
+                """).getAsJsonObject();
+        AugmentConfig config = AugmentConfig.fromJson(json);
+        assertFalse(config.parametersFor(EndAugments.ASSAULT).containsKey("statRatio"));
+        assertEquals(1.0, config.parameter(EndAugments.ASSAULT, "rushDamageRatio", 0));
+        assertEquals(.25, config.parameter(EndAugments.ASSAULT, "burnDamageRatio", 0));
+        assertEquals(60, config.parameter(EndAugments.ASSAULT, "chargeTicks", 0));
+        assertEquals(200, config.parameter(EndAugments.ASSAULT, "stunTicks", 0));
+        assertEquals(20, config.parameter(EndAugments.ASSAULT, "knockbackDistance", 0));
+        assertEquals(200, config.parameter(EndAugments.ASSAULT, "burnDurationTicks", 0));
+        assertEquals(20, config.parameter(EndAugments.ASSAULT, "burnIntervalTicks", 0));
+        assertEquals(10, config.parameter(EndAugments.ASSAULT, "flightHeight", 0));
     }
 
     @Test
@@ -122,4 +118,15 @@ class EndAugmentTest extends EndTestFixture {
         }
         return new AugmentSnapshot(AugmentConfig.defaults(), selections);
     }
+
+    @Test
+    void dimensionalGuardianKeepsTheSavedIdAndAssaultDamageRatios() {
+        var definition = kim.biryeong.semiontd.augment.AugmentCatalog.find(EndAugments.ASSAULT).orElseThrow();
+        assertEquals("semiontd:job_end_towers_p", definition.id());
+        assertEquals("차원의 수호자", definition.displayName());
+        AugmentSnapshot effects = snapshot(EndAugments.ASSAULT);
+        assertEquals(1.0, effects.parameter(EndAugments.ASSAULT, "rushDamageRatio", -1), .000001);
+        assertEquals(.25, effects.parameter(EndAugments.ASSAULT, "burnDamageRatio", -1), .000001);
+    }
+
 }

@@ -1,11 +1,9 @@
 package kim.biryeong.semiontd.music;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -16,7 +14,7 @@ import java.util.function.LongSupplier;
 import kim.biryeong.semiontd.game.RoundPhase;
 import kim.biryeong.semiontd.game.SemionGame;
 import net.minecraft.network.protocol.game.ClientboundStopSoundPacket;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -29,11 +27,8 @@ public final class SemionMusicService {
     private static final long NANOS_PER_MUSIC_TICK = 50_000_000L;
 
     private SemionMusicLibrary library;
-    private final LongSupplier interTrackGapTicks;
-    private final IntUnaryOperator nextTrackSelector;
+    private final MusicPlaybackSchedule playbackSchedule;
     private final Map<UUID, PlayerMusicState> playerStates = new HashMap<>();
-    private final List<ScheduleSegment> schedule = new ArrayList<>();
-    private final Set<Integer> playedTrackIndices = new HashSet<>();
     private long musicStartedAtNanos;
     private boolean active;
 
@@ -51,8 +46,7 @@ public final class SemionMusicService {
             IntUnaryOperator nextTrackSelector
     ) {
         this.library = library;
-        this.interTrackGapTicks = interTrackGapTicks;
-        this.nextTrackSelector = nextTrackSelector;
+        this.playbackSchedule = new MusicPlaybackSchedule(library, interTrackGapTicks, nextTrackSelector);
     }
 
     public static SemionMusicService disabled() {
@@ -76,8 +70,7 @@ public final class SemionMusicService {
         library = Objects.requireNonNull(replacement, "replacement");
         active = false;
         musicStartedAtNanos = 0L;
-        schedule.clear();
-        playedTrackIndices.clear();
+        playbackSchedule.replaceLibrary(replacement);
     }
 
     public void tick(MinecraftServer server, SemionGame activeGame, Collection<SemionGame> sandboxGames) {
@@ -86,7 +79,7 @@ public final class SemionMusicService {
             stopAll(server);
             active = false;
             musicStartedAtNanos = 0L;
-            schedule.clear();
+            playbackSchedule.resetTimeline();
             return;
         }
         long now = System.nanoTime();
@@ -94,14 +87,18 @@ public final class SemionMusicService {
             active = true;
             musicStartedAtNanos = now;
             playerStates.clear();
-            schedule.clear();
+            playbackSchedule.resetTimeline();
         }
 
         long currentTick = elapsedMusicTicks(musicStartedAtNanos, now);
+        java.util.Optional<SemionMusicLibrary.TrackWindow> window = null;
         for (UUID playerId : targetPlayers) {
             ServerPlayer player = server.getPlayerList().getPlayer(playerId);
             if (player != null) {
-                ensurePlayback(player, currentTick);
+                if (window == null) {
+                    window = playbackSchedule.trackAt(currentTick);
+                }
+                ensurePlayback(player, window);
             }
         }
         stopPlayersOutsideTargets(server, targetPlayers);
@@ -126,12 +123,12 @@ public final class SemionMusicService {
     public PlaybackDecision decisionFor(UUID playerId, long currentMusicTick, boolean clientStopped) {
         PlayerMusicState state = playerStates.computeIfAbsent(playerId, ignored -> new PlayerMusicState());
         state.clientStopped = clientStopped;
-        return decisionFor(state, currentMusicTick);
+        return decisionFor(state, playbackSchedule.trackAt(currentMusicTick));
     }
 
-    private void ensurePlayback(ServerPlayer player, long currentMusicTick) {
+    private void ensurePlayback(ServerPlayer player, java.util.Optional<SemionMusicLibrary.TrackWindow> window) {
         PlayerMusicState state = playerStates.computeIfAbsent(player.getUUID(), ignored -> new PlayerMusicState());
-        PlaybackDecision decision = decisionFor(state, currentMusicTick);
+        PlaybackDecision decision = decisionFor(state, window);
         if (decision.action() == PlaybackAction.WAIT_FOR_NEXT_TRACK || decision.track() == null) {
             return;
         }
@@ -144,8 +141,7 @@ public final class SemionMusicService {
         state.clientStopped = false;
     }
 
-    private PlaybackDecision decisionFor(PlayerMusicState state, long currentMusicTick) {
-        java.util.Optional<SemionMusicLibrary.TrackWindow> window = trackAt(currentMusicTick);
+    private PlaybackDecision decisionFor(PlayerMusicState state, java.util.Optional<SemionMusicLibrary.TrackWindow> window) {
         if (window.isEmpty()) {
             return new PlaybackDecision(PlaybackAction.WAIT_FOR_NEXT_TRACK, null, 0L);
         }
@@ -159,95 +155,6 @@ public final class SemionMusicService {
             return new PlaybackDecision(PlaybackAction.WAIT_FOR_NEXT_TRACK, track, window.get().startedAtTick());
         }
         return new PlaybackDecision(PlaybackAction.START_TRACK, track, window.get().startedAtTick());
-    }
-
-    private java.util.Optional<SemionMusicLibrary.TrackWindow> trackAt(long currentMusicTick) {
-        if (library.isEmpty()) {
-            return java.util.Optional.empty();
-        }
-        extendSchedule(currentMusicTick);
-        for (ScheduleSegment segment : schedule) {
-            if (currentMusicTick >= segment.startTick() && currentMusicTick < segment.endTick()) {
-                if (segment.track() == null) {
-                    return java.util.Optional.empty();
-                }
-                return java.util.Optional.of(new SemionMusicLibrary.TrackWindow(
-                        segment.track(),
-                        currentMusicTick - segment.startTick(),
-                        segment.startTick()
-                ));
-            }
-        }
-        return java.util.Optional.empty();
-    }
-
-    private void extendSchedule(long currentMusicTick) {
-        if (schedule.isEmpty()) {
-            int firstTrackIndex = firstTrackIndex();
-            SemionMusicTrack first = library.tracks().get(firstTrackIndex);
-            schedule.add(ScheduleSegment.track(firstTrackIndex, first, 0L));
-            markTrackPlayed(firstTrackIndex);
-        }
-        while (schedule.getLast().endTick() <= currentMusicTick) {
-            ScheduleSegment previous = schedule.getLast();
-            if (previous.track() != null) {
-                long gapTicks = clampInterTrackGap(interTrackGapTicks.getAsLong());
-                schedule.add(ScheduleSegment.gap(previous.trackIndex(), previous.endTick(), gapTicks));
-            } else {
-                int nextTrackIndex = nextTrackIndexAfter(previous.trackIndex());
-                SemionMusicTrack nextTrack = library.tracks().get(nextTrackIndex);
-                schedule.add(ScheduleSegment.track(nextTrackIndex, nextTrack, previous.endTick()));
-                markTrackPlayed(nextTrackIndex);
-            }
-        }
-    }
-
-    private int firstTrackIndex() {
-        int trackCount = library.tracks().size();
-        if (trackCount <= 1 || playedTrackIndices.isEmpty()) {
-            return 0;
-        }
-        List<Integer> candidates = unplayedTrackIndices();
-        if (candidates.isEmpty()) {
-            playedTrackIndices.clear();
-            candidates = unplayedTrackIndices();
-        }
-        int candidateIndex = Math.floorMod(nextTrackSelector.applyAsInt(candidates.size()), candidates.size());
-        return candidates.get(candidateIndex);
-    }
-
-    private int nextTrackIndexAfter(int previousTrackIndex) {
-        int trackCount = library.tracks().size();
-        if (trackCount <= 1) {
-            return 0;
-        }
-
-        List<Integer> candidates = unplayedTrackIndices();
-        if (candidates.isEmpty()) {
-            playedTrackIndices.clear();
-            candidates = unplayedTrackIndices();
-            candidates.remove(Integer.valueOf(previousTrackIndex));
-        }
-        int candidateIndex = Math.floorMod(nextTrackSelector.applyAsInt(candidates.size()), candidates.size());
-        return candidates.get(candidateIndex);
-    }
-
-    private List<Integer> unplayedTrackIndices() {
-        List<Integer> candidates = new ArrayList<>();
-        for (int trackIndex = 0; trackIndex < library.tracks().size(); trackIndex++) {
-            if (!playedTrackIndices.contains(trackIndex)) {
-                candidates.add(trackIndex);
-            }
-        }
-        return candidates;
-    }
-
-    private void markTrackPlayed(int trackIndex) {
-        playedTrackIndices.add(trackIndex);
-    }
-
-    private static long clampInterTrackGap(long requestedTicks) {
-        return Math.max(MIN_INTER_TRACK_GAP_TICKS, Math.min(MAX_INTER_TRACK_GAP_TICKS, requestedTicks));
     }
 
     private boolean isMusicActive(SemionGame game) {
@@ -304,10 +211,10 @@ public final class SemionMusicService {
     }
 
     private void playMusic(ServerPlayer player, SemionMusicTrack track) {
-        player.playNotifySound(SoundEvent.createVariableRangeEvent(track.eventId()), SoundSource.RECORDS, 1.0F, 1.0F);
+        kim.biryeong.semiontd.util.SemionPlayerPackets.playSound(player, SoundEvent.createVariableRangeEvent(track.eventId()), SoundSource.RECORDS, 1.0F, 1.0F);
     }
 
-    private void stopMusic(ServerPlayer player, ResourceLocation eventId) {
+    private void stopMusic(ServerPlayer player, Identifier eventId) {
         player.connection.send(new ClientboundStopSoundPacket(eventId, SoundSource.RECORDS));
     }
 
@@ -324,18 +231,9 @@ public final class SemionMusicService {
     }
 
     private static final class PlayerMusicState {
-        private ResourceLocation playingEventId;
+        private Identifier playingEventId;
         private long playingTrackStartedAtTick = -1L;
         private boolean clientStopped = true;
     }
 
-    private record ScheduleSegment(int trackIndex, SemionMusicTrack track, long startTick, long endTick) {
-        private static ScheduleSegment track(int trackIndex, SemionMusicTrack track, long startTick) {
-            return new ScheduleSegment(trackIndex, track, startTick, startTick + track.durationTicks());
-        }
-
-        private static ScheduleSegment gap(int previousTrackIndex, long startTick, long durationTicks) {
-            return new ScheduleSegment(previousTrackIndex, null, startTick, startTick + durationTicks);
-        }
-    }
 }

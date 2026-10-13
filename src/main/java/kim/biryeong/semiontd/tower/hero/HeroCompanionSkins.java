@@ -76,11 +76,11 @@ public final class HeroCompanionSkins {
             HeroCompanionSkinPreference skin
     ) {
         UUID profileId = visualProfileId(ownerId, role, skin);
-        GameProfile profile = new GameProfile(profileId, profileName(role, profileId));
-        if (skin != null) {
-            skin.textureProperty().ifPresent(property -> profile.getProperties().put("textures", property));
-        }
-        return profile;
+        var texture = skin == null ? Optional.<com.mojang.authlib.properties.Property>empty() : skin.textureProperty();
+        var properties = texture.map(property -> new com.mojang.authlib.properties.PropertyMap(
+                com.google.common.collect.ImmutableMultimap.of("textures", property)))
+                .orElse(com.mojang.authlib.properties.PropertyMap.EMPTY);
+        return new GameProfile(profileId, profileName(role, profileId), properties);
     }
 
     static UUID visualProfileId(

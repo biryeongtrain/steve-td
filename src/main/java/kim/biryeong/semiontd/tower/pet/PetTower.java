@@ -1,6 +1,5 @@
 package kim.biryeong.semiontd.tower.pet;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
@@ -94,6 +93,10 @@ public class PetTower extends ProductionTower {
     /** Dogs in this dog's connected pack, counting itself; 0 for other species. */
     public final int packSize() {
         return packSize;
+    }
+
+    int leaderHits() {
+        return leaderHits;
     }
 
     public final boolean isSoloCat() {
@@ -327,61 +330,7 @@ public class PetTower extends ProductionTower {
 
     @Override
     public List<String> runtimeDetailLines() {
-        List<String> lines = new ArrayList<>(super.runtimeDetailLines());
-        if (isOwner()) {
-            lines.add("마당 범위 " + yardRadius() + "칸");
-            return lines;
-        }
-        if (isLost()) {
-            lines.add("길잃음 주인이 없어 출력 " + percent(PetBalance.lostPetMultiplier()));
-            return lines;
-        }
-        lines.add("유대 " + oneDecimal(bond) + "/" + oneDecimal(bondCap())
-                + " (공격력 +" + percent(PetBalance.attackMultiplier(bond) - 1.0)
-                + ", 체력 +" + percent(PetBalance.healthMultiplier(bond) - 1.0) + ")");
-        double required = PetBalance.bondToUpgrade(type());
-        if (required > 0.0) {
-            lines.add("승급 자격 " + (isAdult() ? "충족 (성체)" : "유대 " + oneDecimal(required) + " 필요"));
-        }
-        lines.add("마당 반려 " + yardCompanions + "/" + ((yardRadius() * 2 + 1) * (yardRadius() * 2 + 1) - 1));
-        if (familyYard) {
-            lines.add("우리 가족 활성: 모든 종 무리 참여, 고양이 독립, 새 동시 회복");
-        }
-        if (augmentSnapshot().has(LEADER)
-                && logicalId().equals(augmentSnapshot().choice(LEADER).primaryTargetId())) {
-            lines.add("우리 동네 대장: 공동 공격 적중 " + leaderHits + "/"
-                    + (int) augmentSnapshot().parameter(LEADER, "hitsRequired", 3));
-        }
-        switch (role()) {
-            case DOG -> {
-                lines.add("무리 " + packSize + "마리, 공격력 +"
-                        + percent(PetBalance.packBonus(type(), packSize)) + ", 체력 +"
-                        + percent(PetBalance.packHealthBonus(type(), packSize)));
-                if (hasAdultCombatAbilities()) {
-                    lines.add("성체 효과 받는 피해 -" + percent(PetBalance.adultDamageReduction(type())));
-                }
-            }
-            case CAT -> {
-                lines.add("독립 " + (soloCat
-                        ? "활성, 공격력 +" + percent(PetBalance.soloBonus(type()))
-                        : "비활성 (같은 마당에 다른 고양이가 있습니다)"));
-                if (hasAdultCombatAbilities()) {
-                    lines.add("성체 효과 스플래시 " + oneDecimal(PetBalance.adultSplashRadius(type()))
-                            + "칸, 최대 " + PetBalance.adultSplashMaxTargets(type()) + "마리, 피해 "
-                            + percent(PetBalance.adultSplashDamageRatio(type())));
-                }
-            }
-            case BIRD -> {
-                int targets = familyYard ? (int) augmentSnapshot().parameter(FAMILY, "healTargets", 3)
-                        : (int) augmentSnapshot().parameter(GROWN_UP, "healTargets", 1);
-                lines.add("회복 입힌 피해의 " + percent(PetBalance.healRatio(type()))
-                        + ", " + (augmentSnapshot().has(GROWN_UP) ? "자신 + 다른 반려 " : "반려 ")
-                        + "최대 " + targets + "마리");
-            }
-            default -> {
-            }
-        }
-        return lines;
+        return PetTowerStatsView.create(this, super.runtimeDetailLines());
     }
 
     @Override

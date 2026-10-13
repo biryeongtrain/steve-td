@@ -2,21 +2,17 @@ package kim.biryeong.semiontd.job;
 
 import java.util.List;
 import kim.biryeong.semiontd.SemionTd;
-import kim.biryeong.semiontd.game.PlayerLane;
-import kim.biryeong.semiontd.tower.ProductionTowerCatalog;
-import kim.biryeong.semiontd.tower.Tower;
 import kim.biryeong.semiontd.tower.TowerType;
 import kim.biryeong.semiontd.tower.plant.PlantCombatTower;
-import kim.biryeong.semiontd.tower.plant.PlantMineTower;
 import kim.biryeong.semiontd.tower.plant.PlantSoil;
 import kim.biryeong.semiontd.tower.plant.PlantSoilStates;
 import kim.biryeong.semiontd.tower.plant.PlantTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class PlantTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "plant_towers");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "plant_towers");
 
     public PlantTowerJob() {
         super(

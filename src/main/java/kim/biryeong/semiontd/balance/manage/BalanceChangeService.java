@@ -54,7 +54,7 @@ public final class BalanceChangeService implements AutoCloseable {
         thread.setDaemon(true);
         return thread;
     });
-    private final Map<String, Receipt> receipts = new LinkedHashMap<>();
+    private final BalanceReceiptLedger receipts = new BalanceReceiptLedger();
     private final ArrayDeque<BalanceDeployment> announcements = new ArrayDeque<>();
     private final String fieldsEpoch = UUID.randomUUID().toString();
     private volatile FieldListing cachedFields;
@@ -309,11 +309,11 @@ public final class BalanceChangeService implements AutoCloseable {
             view = runtime.view();
             updatedAt = System.currentTimeMillis();
             runtimeWriteBlocked = runtime.writeBlocked();
-            if (blockedReason() != null || persistenceBusy) {return;}
+            if (blockedReason() != null || persistenceBusy || !receipts.hasScheduled()) {return;}
             List<Receipt> results = new ArrayList<>();
             List<BalanceBundle> revisions = new ArrayList<>();
             // Process every eligible reservation at this boundary before the match takes its snapshot.
-            for (Receipt receipt : List.copyOf(receipts.values())) {
+            for (Receipt receipt : receipts.scheduledSnapshot()) {
                 BalanceDeployment deployment = receipt.deployment();
                 if (deployment.state() != DeploymentState.SCHEDULED) {continue;}
                 if (deployment.applyMode() == ApplyMode.NEXT_MATCH
@@ -488,7 +488,7 @@ public final class BalanceChangeService implements AutoCloseable {
                             result.appliedAt(), result.scheduledFor(), catalogSync, result.error(), result.changes()));
                 }).toList();
                 Index snapshot = locked(() -> {
-                    Map<String, Receipt> journal = new LinkedHashMap<>(receipts);
+                    Map<String, Receipt> journal = receipts.copy();
                     durable.forEach(receipt -> journal.put(receipt.idempotencyKey(), receipt));
                     return new Index(1, activeRevision, List.copyOf(journal.values()), writeBlocked, legacyRevision);
                 });

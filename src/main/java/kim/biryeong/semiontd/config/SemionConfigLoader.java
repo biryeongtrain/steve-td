@@ -9,10 +9,12 @@ import com.google.gson.JsonParser;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
+import java.math.BigDecimal;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.Map;
 import kim.biryeong.semiontd.persistence.SemionPersistenceConfig;
 import kim.biryeong.semiontd.rating.RatingConfig;
 import kim.biryeong.semiontd.trait.TraitSelectionConfig;
@@ -215,12 +217,17 @@ public final class SemionConfigLoader {
             write(path, defaults.toJson(), logger);
             return defaults;
         }
-        try (Reader reader = Files.newBufferedReader(path)) {
-            JsonElement json = JsonParser.parseReader(reader);
+        try {
+            JsonElement json;
+            try (Reader reader = Files.newBufferedReader(path)) {
+                json = JsonParser.parseReader(reader);
+            }
             if (!json.isJsonObject()) {
                 throw new IllegalArgumentException("Augment config must be an object");
             }
+            MagicSchoolBalanceMigration.migrateAugments(json.getAsJsonObject());
             AugmentConfig value = AugmentConfig.fromJson(json.getAsJsonObject());
+            // Close the source before replacing it atomically on Windows.
             write(path, value.toJson(), logger);
             return value;
         } catch (IOException | RuntimeException exception) {
@@ -304,10 +311,11 @@ public final class SemionConfigLoader {
 
         try {
             String json = Files.readString(path);
+            ConfigJsonProperties properties = ConfigJsonProperties.parse(json);
             RatingConfig loaded = GSON.fromJson(json, RatingConfig.class);
             RatingConfig value = loaded == null ? defaults : loaded;
-            boolean teamEloMatchmakingMissing = !hasObjectProperty(json, "teamEloMatchmakingEnabled");
-            boolean perfectDefenseLossMultiplierMissing = !hasObjectProperty(json, "perfectDefenseLossMultiplier");
+            boolean teamEloMatchmakingMissing = !properties.has("teamEloMatchmakingEnabled");
+            boolean perfectDefenseLossMultiplierMissing = !properties.has("perfectDefenseLossMultiplier");
             if (teamEloMatchmakingMissing) {
                 value = value.withTeamEloMatchmakingEnabled(defaults.teamEloMatchmakingEnabled());
             }
@@ -332,30 +340,30 @@ public final class SemionConfigLoader {
 
         try {
             String json = Files.readString(path);
+            ConfigJsonProperties properties = ConfigJsonProperties.parse(json);
             EconomyConfig loaded = GSON.fromJson(json, EconomyConfig.class);
             EconomyConfig value = loaded == null ? defaults : loaded;
-            boolean towerLimitMissing = !hasObjectProperty(json, "towerLimit");
+            boolean towerLimitMissing = !properties.has("towerLimit");
             boolean towerLimitPurchaseMissing = !towerLimitMissing
-                    && !hasAllNestedObjectProperties(
-                    json,
+                    && !properties.hasAllNested(
                     "towerLimit",
                     "initialPurchaseDiamondCost",
                     "purchaseDiamondCostIncrease",
                     "initialPurchaseEmeraldCost",
                     "purchaseEmeraldCostIncrease"
             );
-            boolean teamTransferMissing = !hasObjectProperty(json, "teamTransfer");
+            boolean teamTransferMissing = !properties.has("teamTransfer");
             boolean teamTransferEnabledMissing = teamTransferMissing
-                    || !hasNestedObjectProperty(json, "teamTransfer", "enabled");
+                    || !properties.hasNested("teamTransfer", "enabled");
             boolean teamTransferCooldownMissing = teamTransferMissing
-                    || !hasNestedObjectProperty(json, "teamTransfer", "receiveCooldownRounds");
+                    || !properties.hasNested("teamTransfer", "receiveCooldownRounds");
             boolean teamTransferMaxMissing = teamTransferMissing
-                    || !hasNestedObjectProperty(json, "teamTransfer", "maxDiamondPerRound");
-            boolean emeraldIncomeBoostMissing = !hasObjectProperty(json, "emeraldIncomeBoost");
+                    || !properties.hasNested("teamTransfer", "maxDiamondPerRound");
+            boolean emeraldIncomeBoostMissing = !properties.has("emeraldIncomeBoost");
             boolean emeraldIncomeBoostEnabledMissing = emeraldIncomeBoostMissing
-                    || !hasNestedObjectProperty(json, "emeraldIncomeBoost", "enabled");
+                    || !properties.hasNested("emeraldIncomeBoost", "enabled");
             boolean emeraldIncomeBoostStartRoundMissing = emeraldIncomeBoostMissing
-                    || !hasNestedObjectProperty(json, "emeraldIncomeBoost", "startRound");
+                    || !properties.hasNested("emeraldIncomeBoost", "startRound");
             EconomyConfig.TeamTransferConfig teamTransfer = mergedTeamTransfer(
                     value.teamTransfer(),
                     defaults.teamTransfer(),
@@ -408,13 +416,14 @@ public final class SemionConfigLoader {
 
         try {
             String json = Files.readString(path);
+            ConfigJsonProperties properties = ConfigJsonProperties.parse(json);
             IncomeLaneRoutingConfig loaded = GSON.fromJson(json, IncomeLaneRoutingConfig.class);
             IncomeLaneRoutingConfig value = loaded == null ? defaults : loaded;
-            boolean enabledMissing = !hasObjectProperty(json, "enabled");
-            boolean modeMissing = !hasObjectProperty(json, "mode");
-            boolean queuedThreatWeightMissing = !hasObjectProperty(json, "queuedThreatWeight");
-            boolean nextRoundQueuedThreatWeightMissing = !hasObjectProperty(json, "nextRoundQueuedThreatWeight");
-            boolean tieBreakModeMissing = !hasObjectProperty(json, "tieBreakMode");
+            boolean enabledMissing = !properties.has("enabled");
+            boolean modeMissing = !properties.has("mode");
+            boolean queuedThreatWeightMissing = !properties.has("queuedThreatWeight");
+            boolean nextRoundQueuedThreatWeightMissing = !properties.has("nextRoundQueuedThreatWeight");
+            boolean tieBreakModeMissing = !properties.has("tieBreakMode");
             if (enabledMissing || modeMissing || queuedThreatWeightMissing || nextRoundQueuedThreatWeightMissing || tieBreakModeMissing) {
                 value = new IncomeLaneRoutingConfig(
                         enabledMissing ? defaults.enabled() : value.enabled(),
@@ -445,16 +454,17 @@ public final class SemionConfigLoader {
 
         try {
             String json = Files.readString(path);
+            ConfigJsonProperties properties = ConfigJsonProperties.parse(json);
             MonsterScalingConfig loaded = GSON.fromJson(json, MonsterScalingConfig.class);
             MonsterScalingConfig value = loaded == null ? defaults : loaded;
-            boolean enabledMissing = !hasObjectProperty(json, "enabled");
-            boolean survivalDelayMissing = !hasObjectProperty(json, "survivalDelayTicks");
-            boolean laneBreachDelayMissing = !hasObjectProperty(json, "laneBreachDelayTicks");
-            boolean intervalMissing = !hasObjectProperty(json, "intervalTicks");
-            boolean healthGrowthMissing = !hasObjectProperty(json, "healthGrowthPercentPerInterval");
-            boolean attackGrowthMissing = !hasObjectProperty(json, "attackDamageGrowthPercentPerInterval");
-            boolean waveMissing = !hasObjectProperty(json, "scaleWaveMonsters");
-            boolean incomeMissing = !hasObjectProperty(json, "scaleIncomeMonsters");
+            boolean enabledMissing = !properties.has("enabled");
+            boolean survivalDelayMissing = !properties.has("survivalDelayTicks");
+            boolean laneBreachDelayMissing = !properties.has("laneBreachDelayTicks");
+            boolean intervalMissing = !properties.has("intervalTicks");
+            boolean healthGrowthMissing = !properties.has("healthGrowthPercentPerInterval");
+            boolean attackGrowthMissing = !properties.has("attackDamageGrowthPercentPerInterval");
+            boolean waveMissing = !properties.has("scaleWaveMonsters");
+            boolean incomeMissing = !properties.has("scaleIncomeMonsters");
             if (enabledMissing || survivalDelayMissing || laneBreachDelayMissing || intervalMissing
                     || healthGrowthMissing || attackGrowthMissing || waveMissing || incomeMissing) {
                 value = new MonsterScalingConfig(
@@ -518,7 +528,21 @@ public final class SemionConfigLoader {
 
         try {
             String json = Files.readString(path);
+            ConfigJsonProperties properties = ConfigJsonProperties.parse(json);
             String migratedJson = migrateLegacyVillagerAdvBuffs(json, defaults);
+            migratedJson = migrateLegacyHogwartsHealth(migratedJson);
+            migratedJson = migrateLegacyMagicSchoolStudents(migratedJson);
+            migratedJson = migrateMagicSchoolBaseStats(migratedJson);
+            migratedJson = migrateMagicSchoolProficiency(migratedJson);
+            migratedJson = migrateFreeHogwarts(migratedJson);
+            migratedJson = migrateMagicSchoolCurriculumBalance(migratedJson);
+            migratedJson = migrateMagicSchoolCombatBalance(migratedJson, defaults);
+            migratedJson = migrateMagicSchoolImperio(migratedJson);
+            migratedJson = MagicSchoolBalanceMigration.migrate(migratedJson, defaults);
+            migratedJson = MagicSchoolBalanceMigration.migrateProtection(migratedJson);
+            ConfigJsonProperties migratedProperties = migratedJson.equals(json)
+                    ? properties
+                    : ConfigJsonProperties.parse(migratedJson);
             TowerBalanceConfig value = GSON.fromJson(migratedJson, TowerBalanceConfig.class);
             TowerBalanceConfig loaded = value == null ? defaults : value;
             TowerBalanceConfig merged = loaded.withMissingDefaults(defaults);
@@ -538,9 +562,9 @@ public final class SemionConfigLoader {
                 merged = repaired;
             }
             merged.validateForRuntime();
-            boolean schemaVersionMissing = !hasObjectProperty(json, "schemaVersion");
-            boolean illusionCloneQueueMissing = !hasObjectProperty(migratedJson, "illusionCloneQueue");
-            boolean villagerAdvMissing = !hasObjectProperty(migratedJson, "villagerAdv");
+            boolean schemaVersionMissing = !properties.has("schemaVersion");
+            boolean illusionCloneQueueMissing = !migratedProperties.has("illusionCloneQueue");
+            boolean villagerAdvMissing = !migratedProperties.has("villagerAdv");
             if (!migratedJson.equals(json)
                     || schemaVersionMissing
                     || illusionCloneQueueMissing
@@ -578,6 +602,269 @@ public final class SemionConfigLoader {
             write(path, merged, logger);
         }
         return merged;
+    }
+
+    private static String migrateLegacyMagicSchoolStudents(String json) {
+        JsonElement root = JsonParser.parseString(json);
+        if (!root.isJsonObject() || !root.getAsJsonObject().has("towers")
+                || !root.getAsJsonObject().get("towers").isJsonObject()) return json;
+        JsonObject towers = root.getAsJsonObject().getAsJsonObject("towers");
+        if (java.util.List.of("gryffindor", "hufflepuff", "ravenclaw", "slytherin").stream()
+                .anyMatch(house -> towers.has("magic_school_" + house + "_t2"))
+                || !towers.has("magic_school_freshman_t1")
+                || !towers.get("magic_school_freshman_t1").isJsonObject()) return json;
+        JsonObject student = towers.getAsJsonObject("magic_school_freshman_t1");
+        boolean changed = false;
+        for (String key : java.util.List.of("maxHealth", "damage", "attackIntervalTicks")) {
+            double previous = switch (key) { case "maxHealth" -> 80; case "damage" -> 12; default -> 20; };
+            JsonElement value = student.get(key);
+            if (value != null && value.isJsonPrimitive() && value.getAsJsonPrimitive().isNumber()
+                    && value.getAsDouble() == previous) {
+                student.addProperty(key, key.equals("maxHealth") ? 200 : 30);
+                changed = true;
+            }
+        }
+        return changed ? GSON.toJson(root) : json;
+    }
+
+    private static String migrateMagicSchoolBaseStats(String json) {
+        JsonElement root = JsonParser.parseString(json);
+        if (!root.isJsonObject()) return json;
+        JsonObject object = root.getAsJsonObject();
+        JsonObject abilities = legacySchoolObject(object, "abilities");
+        JsonObject global = legacySchoolObject(abilities, "magic_school_global");
+        if (global.has("baseStatsVersion")) return json;
+        JsonObject towers = legacySchoolObject(object, "towers");
+        for (String house : java.util.List.of("freshman", "gryffindor", "hufflepuff", "ravenclaw", "slytherin")) {
+            boolean freshman = house.equals("freshman");
+            String id = "magic_school_" + house + (freshman ? "_t1" : "_t2");
+            if (!towers.has(id) && !abilities.has(id)) continue;
+            JsonObject stats = legacySchoolObject(towers, id);
+            JsonObject values = legacySchoolObject(abilities, id);
+            double health = legacySchoolNumber(stats, "maxHealth", freshman ? 200 : 350);
+            double damage = legacySchoolNumber(stats, "damage", freshman ? 30 : 50);
+            double interval = legacySchoolNumber(stats, "attackIntervalTicks", freshman ? 30 : 18);
+            double healthBonus = legacySchoolNumber(values, "houseHealthBonus", house.equals("hufflepuff") ? .10 : 0);
+            double damageBonus = legacySchoolNumber(values, "houseDamageBonus", house.equals("slytherin") ? .10 : 0);
+            double reduction = legacySchoolNumber(values, "houseAttackIntervalReduction", house.equals("gryffindor") ? 1 : 0);
+            if (healthBonus > 1 || damageBonus > 1 || reduction != Math.rint(reduction) || interval != Math.rint(interval)) {
+                throw new IllegalArgumentException("Invalid legacy Magic School house stats: " + id);
+            }
+            if (freshman && interval == 30) interval = 24;
+            stats.addProperty("maxHealth", BigDecimal.valueOf(health).multiply(BigDecimal.ONE.add(BigDecimal.valueOf(healthBonus))));
+            stats.addProperty("damage", BigDecimal.valueOf(damage).multiply(BigDecimal.ONE.add(BigDecimal.valueOf(damageBonus))));
+            stats.addProperty("attackIntervalTicks", Math.max(1, (int) Math.round(interval - reduction)));
+            values.remove("houseHealthBonus");
+            values.remove("houseDamageBonus");
+            values.remove("houseAttackIntervalReduction");
+            towers.add(id, stats);
+            abilities.add(id, values);
+        }
+        global.addProperty("baseStatsVersion", 1);
+        abilities.add("magic_school_global", global);
+        object.add("abilities", abilities);
+        object.add("towers", towers);
+        return GSON.toJson(object);
+    }
+
+    private static String migrateMagicSchoolProficiency(String json) {
+        JsonElement root = JsonParser.parseString(json);
+        if (!root.isJsonObject()) return json;
+        JsonObject object = root.getAsJsonObject();
+        JsonObject abilities = legacySchoolObject(object, "abilities");
+        JsonObject global = legacySchoolObject(abilities, "magic_school_global");
+        double version = legacySchoolNumber(global, "proficiencyVersion", 0);
+        if (version >= 2) return json;
+        for (String house : java.util.List.of("gryffindor", "hufflepuff", "ravenclaw", "slytherin")) {
+            for (int tier : java.util.List.of(2, 3)) {
+                String id = "magic_school_" + house + "_t" + tier;
+                if (!abilities.has(id)) continue;
+                JsonObject values = legacySchoolObject(abilities, id);
+                double cap = legacySchoolNumber(values, "maxProficiency", -1);
+                if (cap == 300 || tier == 2 && version == 0 && cap == 200) {
+                    values.addProperty("maxProficiency", tier == 2 ? 250 : 400);
+                }
+            }
+        }
+        for (String key : java.util.List.of("proficiencyDamagePerPoint", "proficiencyHealthPerPoint")) {
+            if (legacySchoolNumber(global, key, -1) == .005) global.addProperty(key, .0015);
+        }
+        if (abilities.has("magic_school_spell_episkey")) {
+            JsonObject episkey = legacySchoolObject(abilities, "magic_school_spell_episkey");
+            if (legacySchoolNumber(episkey, "healingMultiplier", -1) == 2) episkey.addProperty("healingMultiplier", 1.5);
+        }
+        global.addProperty("proficiencyVersion", 2);
+        abilities.add("magic_school_global", global);
+        object.add("abilities", abilities);
+        return GSON.toJson(object);
+    }
+
+    private static String migrateFreeHogwarts(String json) {
+        JsonElement root = JsonParser.parseString(json);
+        if (!root.isJsonObject()) return json;
+        JsonObject object = root.getAsJsonObject();
+        JsonObject abilities = legacySchoolObject(object, "abilities");
+        JsonObject global = legacySchoolObject(abilities, "magic_school_global");
+        if (global.has("hogwartsVersion")) return json;
+        JsonObject towers = legacySchoolObject(object, "towers");
+        if (towers.has("magic_school_hogwarts_t1")) {
+            JsonObject school = legacySchoolObject(towers, "magic_school_hogwarts_t1");
+            if (legacySchoolNumber(school, "mineralCost", 0) == 300) school.addProperty("mineralCost", 0);
+        }
+        JsonObject costs = legacySchoolObject(object, "upgradeCosts");
+        for (String id : java.util.List.of("magic_school_hogwarts_t2", "magic_school_hogwarts_t3")) {
+            towers.remove(id);
+            abilities.remove(id);
+            costs.remove(id);
+        }
+        costs.remove("magic_school_hogwarts_t1->magic_school_hogwarts_t2");
+        costs.remove("magic_school_hogwarts_t2->magic_school_hogwarts_t3");
+        global.addProperty("hogwartsVersion", 1);
+        abilities.add("magic_school_global", global);
+        object.add("abilities", abilities);
+        object.add("towers", towers);
+        object.add("upgradeCosts", costs);
+        return GSON.toJson(object);
+    }
+
+    private static String migrateMagicSchoolCurriculumBalance(String json) {
+        JsonElement root = JsonParser.parseString(json);
+        if (!root.isJsonObject()) return json;
+        JsonObject object = root.getAsJsonObject();
+        JsonObject abilities = legacySchoolObject(object, "abilities");
+        JsonObject global = legacySchoolObject(abilities, "magic_school_global");
+        if (legacySchoolNumber(global, "curriculumBalanceVersion", 0) >= 2) return json;
+        Map<String, Double> formerDefaults = Map.of(
+                "spellPowerPerLevel", .10, "darkArtsDefensePerLevel", .10, "magicHistoryPerLevel", .25,
+                "magicHistoryMaxLevel", 4.0, "sortingHatCost", 150.0, "deathEaterCost", 100.0,
+                "duelingPracticeCost", 250.0);
+        var defaults = kim.biryeong.semiontd.tower.magicschool.MagicSchoolCurriculum.defaultAbilities();
+        formerDefaults.forEach((key, former) -> {
+            if (!global.has("curriculumBalanceVersion") && global.has(key) && legacySchoolNumber(global, key, -1) == former) {
+                global.addProperty(key, defaults.get(key));
+            }
+        });
+        Map.of("spellPowerPerLevel", .08, "darkArtsDefensePerLevel", .08,
+                "spellPowerMaxLevel", 5.0, "darkArtsDefenseMaxLevel", 5.0).forEach((key, former) -> {
+            if (global.has(key) && legacySchoolNumber(global, key, -1) == former) {
+                global.addProperty(key, defaults.get(key));
+            }
+        });
+        global.addProperty("curriculumBalanceVersion", 2);
+        abilities.add("magic_school_global", global);
+        object.add("abilities", abilities);
+        return GSON.toJson(object);
+    }
+
+    private static String migrateMagicSchoolCombatBalance(String json, TowerBalanceConfig defaults) {
+        JsonElement root = JsonParser.parseString(json);
+        if (!root.isJsonObject()) return json;
+        JsonObject object = root.getAsJsonObject();
+        JsonObject abilities = legacySchoolObject(object, "abilities");
+        JsonObject global = legacySchoolObject(abilities, "magic_school_global");
+        if (legacySchoolNumber(global, "combatBalanceVersion", 0) >= 1) return json;
+        Map.of("spellPowerCost", 100.0, "spellPowerCostIncrease", 75.0, "darkArtsDefenseCost", 90.0,
+                "spellTier2Cost", 200.0, "spellTier3Cost", 400.0, "spellTier4Cost", 700.0,
+                "spellTier5Cost", 1000.0).forEach((key, former) -> {
+            if (legacySchoolNumber(global, key, -1) == former) {
+                global.addProperty(key, defaults.ability("magic_school_global", key, former));
+            }
+        });
+        JsonObject towers = legacySchoolObject(object, "towers");
+        if (towers.has("magic_school_freshman_t1")) {
+            JsonObject student = legacySchoolObject(towers, "magic_school_freshman_t1");
+            if (legacySchoolNumber(student, "attackIntervalTicks", -1) == 24) {
+                student.addProperty("attackIntervalTicks", defaults.towers().get("magic_school_freshman_t1").attackIntervalTicks());
+            }
+        }
+        for (String house : java.util.List.of("gryffindor", "hufflepuff", "ravenclaw", "slytherin")) {
+            for (int tier : java.util.List.of(2, 3)) {
+                String id = "magic_school_" + house + "_t" + tier;
+                if (!towers.has(id)) continue;
+                JsonObject stats = legacySchoolObject(towers, id);
+                double formerHealth = tier == 2 ? (house.equals("hufflepuff") ? 385 : 350)
+                        : (house.equals("hufflepuff") ? 770 : 700);
+                double formerDamage = tier == 2 ? (house.equals("slytherin") ? 55 : 50)
+                        : (house.equals("slytherin") ? 132 : 120);
+                if (legacySchoolNumber(stats, "maxHealth", -1) == formerHealth) {
+                    stats.addProperty("maxHealth", defaults.towers().get(id).maxHealth());
+                }
+                if (legacySchoolNumber(stats, "damage", -1) == formerDamage) {
+                    stats.addProperty("damage", defaults.towers().get(id).damage());
+                }
+            }
+        }
+        String bombardaId = "magic_school_spell_bombarda";
+        if (abilities.has(bombardaId)) {
+            JsonObject spell = legacySchoolObject(abilities, bombardaId);
+            Map.of("damageMultiplier", .8, "radius", 1.5, "secondaryMultiplier", .5).forEach((key, former) -> {
+                if (legacySchoolNumber(spell, key, -1) == former) {
+                    spell.addProperty(key, defaults.ability(bombardaId, key, former));
+                }
+            });
+        }
+        global.addProperty("combatBalanceVersion", 1);
+        abilities.add("magic_school_global", global);
+        object.add("abilities", abilities);
+        object.add("towers", towers);
+        return GSON.toJson(object);
+    }
+
+    private static String migrateMagicSchoolImperio(String json) {
+        JsonElement root = JsonParser.parseString(json);
+        if (!root.isJsonObject()) return json;
+        JsonObject object = root.getAsJsonObject();
+        JsonObject abilities = legacySchoolObject(object, "abilities");
+        JsonObject spell = legacySchoolObject(abilities, "magic_school_spell_imperio");
+        if (legacySchoolNumber(spell, "controlVersion", 0) >= 1) return json;
+        if (legacySchoolNumber(spell, "controlTicks", -1) == 60) spell.addProperty("controlTicks", 40);
+        spell.remove("cooldownTicks");
+        spell.addProperty("controlVersion", 1);
+        abilities.add("magic_school_spell_imperio", spell);
+        object.add("abilities", abilities);
+        return GSON.toJson(object);
+    }
+
+    private static JsonObject legacySchoolObject(JsonObject object, String key) {
+        JsonElement value = object.get(key);
+        if (value == null || value.isJsonNull()) return new JsonObject();
+        if (!value.isJsonObject()) throw new IllegalArgumentException("Invalid legacy Magic School object: " + key);
+        return value.getAsJsonObject();
+    }
+
+    private static double legacySchoolNumber(JsonObject object, String key, double fallback) {
+        JsonElement value = object.get(key);
+        if (value == null || value.isJsonNull()) return fallback;
+        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()) {
+            throw new IllegalArgumentException("Invalid legacy Magic School number: " + key);
+        }
+        double number = value.getAsDouble();
+        if (!Double.isFinite(number) || number < 0) {
+            throw new IllegalArgumentException("Invalid legacy Magic School number: " + key);
+        }
+        return number;
+    }
+
+    private static String migrateLegacyHogwartsHealth(String json) {
+        JsonElement root = JsonParser.parseString(json);
+        if (!root.isJsonObject() || !root.getAsJsonObject().has("towers")
+                || !root.getAsJsonObject().get("towers").isJsonObject()) {
+            return json;
+        }
+        JsonObject towers = root.getAsJsonObject().getAsJsonObject("towers");
+        if (towers.has("magic_school_hogwarts_t2") || towers.has("magic_school_hogwarts_t3")
+                || !towers.has("magic_school_hogwarts_t1")
+                || !towers.get("magic_school_hogwarts_t1").isJsonObject()) {
+            return json;
+        }
+        JsonObject school = towers.getAsJsonObject("magic_school_hogwarts_t1");
+        JsonElement health = school.get("maxHealth");
+        if (health == null || !health.isJsonPrimitive() || !health.getAsJsonPrimitive().isNumber()
+                || health.getAsDouble() != 300.0) {
+            return json;
+        }
+        school.addProperty("maxHealth", 1.0);
+        return GSON.toJson(root);
     }
 
     private static String migrateLegacyVillagerAdvBuffs(String json, TowerBalanceConfig defaults) {
@@ -653,13 +940,14 @@ public final class SemionConfigLoader {
 
         try {
             String json = Files.readString(path);
+            ConfigJsonProperties properties = ConfigJsonProperties.parse(json);
             TipConfig loaded = GSON.fromJson(json, TipConfig.class);
             TipConfig safeLoaded = loaded == null ? defaults : loaded;
-            boolean enabledMissing = !hasObjectProperty(json, "enabled");
-            boolean joinEnabledMissing = !hasObjectProperty(json, "joinEnabled");
-            boolean joinMessageMissing = !hasObjectProperty(json, "joinMessage");
-            boolean intervalMissing = !hasObjectProperty(json, "intervalSeconds");
-            boolean messagesMissing = !hasObjectProperty(json, "messages");
+            boolean enabledMissing = !properties.has("enabled");
+            boolean joinEnabledMissing = !properties.has("joinEnabled");
+            boolean joinMessageMissing = !properties.has("joinMessage");
+            boolean intervalMissing = !properties.has("intervalSeconds");
+            boolean messagesMissing = !properties.has("messages");
             TipConfig value = new TipConfig(
                     enabledMissing ? defaults.enabled() : safeLoaded.enabled(),
                     joinEnabledMissing ? defaults.joinEnabled() : safeLoaded.joinEnabled(),
@@ -721,52 +1009,6 @@ public final class SemionConfigLoader {
                     logger.warn("Failed to remove temporary config file {}.", temporary, exception);
                 }
             }
-        }
-    }
-
-    private static boolean hasObjectProperty(String json, String key) {
-        try {
-            if (!(JsonParser.parseString(json) instanceof JsonObject object)) {
-                return false;
-            }
-            return object.has(key) && !object.get(key).isJsonNull();
-        } catch (JsonParseException exception) {
-            return false;
-        }
-    }
-
-    private static boolean hasNestedObjectProperty(String json, String parentKey, String childKey) {
-        try {
-            if (!(JsonParser.parseString(json) instanceof JsonObject object)) {
-                return false;
-            }
-            if (!object.has(parentKey) || !object.get(parentKey).isJsonObject()) {
-                return false;
-            }
-            JsonObject parent = object.getAsJsonObject(parentKey);
-            return parent.has(childKey) && !parent.get(childKey).isJsonNull();
-        } catch (JsonParseException exception) {
-            return false;
-        }
-    }
-
-    private static boolean hasAllNestedObjectProperties(String json, String parentKey, String... childKeys) {
-        try {
-            if (!(JsonParser.parseString(json) instanceof JsonObject object)) {
-                return false;
-            }
-            if (!object.has(parentKey) || !object.get(parentKey).isJsonObject()) {
-                return false;
-            }
-            JsonObject parent = object.getAsJsonObject(parentKey);
-            for (String childKey : childKeys) {
-                if (!parent.has(childKey) || parent.get(childKey).isJsonNull()) {
-                    return false;
-                }
-            }
-            return true;
-        } catch (JsonParseException exception) {
-            return false;
         }
     }
 

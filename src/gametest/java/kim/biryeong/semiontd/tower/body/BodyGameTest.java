@@ -24,13 +24,14 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
+import kim.biryeong.semiontd.gametest.RuntimeArenaFixture;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
-public final class BodyGameTest {
-    @GameTest(maxTicks = 120)
+public final class BodyGameTest implements RuntimeArenaFixture {
+    @GameTest(maxTicks = 120, structure = "semion-td-gametest:combat_arena")
     public void augmentNormalHeartbeatAddsExactlyOneNativeOrganAction(GameTestHelper context) {
         TestSetup setup = augmentSetup(context, "body-augment-beats");
         BodyTower heart = tower(BodyTowers.HEART_T1, setup.owner(), context, new BlockPos(3, 2, 3));
@@ -48,7 +49,7 @@ public final class BodyGameTest {
         } finally {cleanup(setup, List.of());}
     }
 
-    @GameTest(maxTicks = 120)
+    @GameTest(maxTicks = 120, structure = "semion-td-gametest:combat_arena")
     public void augmentEyeFacesNearestEnemyAndAdrenalineHealsOnce(GameTestHelper context) {
         TestSetup setup = augmentSetup(context, "body-augment-eye-heart");
         BodyTower heart = tower(BodyTowers.HEART_T1, setup.owner(), context, new BlockPos(1, 2, 1));
@@ -83,7 +84,7 @@ public final class BodyGameTest {
         } finally {cleanup(setup, targets);}
     }
 
-    @GameTest(maxTicks = 120)
+    @GameTest(maxTicks = 120, structure = "semion-td-gametest:combat_arena")
     public void augmentSkinIgnoresAbsorptionAndSelfDamageAndCapsEachLinkedHeart(GameTestHelper context) {
         TestSetup setup = augmentSetup(context, "body-augment-skin");
         BodyTower first = tower(BodyTowers.HEART_T1, setup.owner(), context, new BlockPos(2, 2, 2));
@@ -126,7 +127,7 @@ public final class BodyGameTest {
                         PlayerAugmentState.Outcome.SELECTED, null, AugmentChoice.none())).toList());
     }
 
-    @GameTest(maxTicks = 120)
+    @GameTest(maxTicks = 120, structure = "semion-td-gametest:combat_arena")
     public void heartPulseMakesSkinActAndGainArmor(GameTestHelper context) {
         TestSetup setup = setup(context, "body-heart-owner");
         BodyTower heart = tower(BodyTowers.HEART_T1, setup.owner(), context, new BlockPos(6, 2, 6));
@@ -151,7 +152,7 @@ public final class BodyGameTest {
         }
     }
 
-    @GameTest(maxTicks = 120)
+    @GameTest(maxTicks = 120, structure = "semion-td-gametest:combat_arena")
     public void heartDoesNotSignalDuringPreparation(GameTestHelper context) {
         TestSetup setup = setup(context, "body-heart-prepare-owner");
         BodyTower heart = tower(BodyTowers.HEART_T1, setup.owner(), context, new BlockPos(6, 2, 6));
@@ -184,7 +185,7 @@ public final class BodyGameTest {
         }
     }
 
-    @GameTest(maxTicks = 120)
+    @GameTest(maxTicks = 120, structure = "semion-td-gametest:combat_arena")
     public void heartGainsOnePermanentStackFromAnOwnedBodyTowerDeath(GameTestHelper context) {
         TestSetup setup = setup(context, "body-heart-death-stack-owner");
         BodyTower heart = tower(BodyTowers.HEART_T2, setup.owner(), context, new BlockPos(6, 2, 6));
@@ -209,7 +210,7 @@ public final class BodyGameTest {
         }
     }
 
-    @GameTest(maxTicks = 120)
+    @GameTest(maxTicks = 120, structure = "semion-td-gametest:combat_arena")
     public void brainDebuffDoesNotStack(GameTestHelper context) {
         TestSetup setup = setup(context, "body-brain-owner");
         BodyTower brain = tower(BodyTowers.BRAIN_T1, setup.owner(), context, new BlockPos(7, 2, 7));
@@ -235,7 +236,7 @@ public final class BodyGameTest {
         }
     }
 
-    @GameTest(maxTicks = 120)
+    @GameTest(maxTicks = 120, structure = "semion-td-gametest:combat_arena")
     public void genitalSecondHitDealsMagicDamageAndSlows(GameTestHelper context) {
         TestSetup setup = setup(context, "body-genital-owner");
         BodyTower genital = tower(BodyTowers.GENITAL_T1, setup.owner(), context, new BlockPos(7, 2, 7));
@@ -245,11 +246,16 @@ public final class BodyGameTest {
             target = spawnTarget(context, setup.lane(), towerEntity(context, genital).position().add(0.0, 0.0, 2.0),
                     "body-genital-target", 200.0);
 
+            require(context.getLevel().getEntity(target.entity().getId()) == target.entity(),
+                    "The target must be tracked before either hit.");
             genital.actOnHeartbeat(setup.lane());
+            require(target.runtime().health() < 200.0 && target.runtime().health() > 0.0,
+                    "The first physical hit must reach the living target.");
             requireClose(0.0, genital.roundMagicDamageDealt(), "The first hit must not trigger magic damage.");
             genital.actOnHeartbeat(setup.lane());
 
-            require(genital.roundMagicDamageDealt() > 0.0, "The second hit must trigger magic damage.");
+            requireClose(BodyBalance.genitalMagicDamage(genital.type()), genital.roundMagicDamageDealt(),
+                    "The second hit must trigger the configured magic damage exactly once.");
             require(target.entity().activeTimedEffectMagnitude(TimedEffectType.MONSTER_MOVE_SPEED_REDUCTION) > 0.0,
                     "The second hit must slow the target.");
             context.succeed();
@@ -258,7 +264,7 @@ public final class BodyGameTest {
         }
     }
 
-    @GameTest(maxTicks = 120)
+    @GameTest(maxTicks = 120, structure = "semion-td-gametest:combat_arena")
     public void genitalExtraAttackContinuesAfterPrimaryDies(GameTestHelper context) {
         TestSetup setup = setup(context, "body-genital-extra-owner");
         BodyTower genital = tower(BodyTowers.GENITAL_T2, setup.owner(), context, new BlockPos(7, 2, 7));
@@ -283,7 +289,7 @@ public final class BodyGameTest {
         }
     }
 
-    @GameTest(maxTicks = 120)
+    @GameTest(maxTicks = 120, structure = "semion-td-gametest:combat_arena")
     public void eyeOnlyHitsAgainstLaneTravelDirection(GameTestHelper context) {
         TestSetup setup = setup(context, "body-eye-owner");
         BodyTower eye = tower(BodyTowers.EYE_T1, setup.owner(), context, new BlockPos(10, 2, 4));
@@ -291,7 +297,7 @@ public final class BodyGameTest {
         try {
             setup.lane().addTower(eye);
             SemionTowerEntity source = towerEntity(context, eye);
-            Vec3 direction = BodyTower.eyeDirection(setup.lane().laneLayout());
+            Vec3 direction = BodyTowerTargetGeometry.eyeDirection(setup.lane().laneLayout());
             targets.add(spawnTarget(context, setup.lane(), source.position().add(direction.scale(3.0)),
                     "body-eye-front", 100.0));
             targets.add(spawnTarget(context, setup.lane(), source.position().subtract(direction.scale(3.0)),
@@ -309,8 +315,12 @@ public final class BodyGameTest {
         }
     }
 
-    @GameTest(maxTicks = 120)
+    @GameTest(maxTicks = 120, structure = "semion-td-gametest:combat_arena")
     public void eyeFacesIncomingEnemiesAtFinalDefense(GameTestHelper context) {
+        verifyEyeAtFinalDefense(context);
+    }
+
+    private static void verifyEyeAtFinalDefense(GameTestHelper context) {
         TestSetup setup = setup(context, "body-eye-final-defense-owner");
         BodyTower heart = tower(BodyTowers.HEART_T1, setup.owner(), context, new BlockPos(6, 2, 6));
         BodyTower eye = tower(BodyTowers.EYE_T1, setup.owner(), context, new BlockPos(10, 2, 4));
@@ -318,13 +328,17 @@ public final class BodyGameTest {
         try {
             setup.lane().addTower(heart);
             setup.lane().addTower(eye);
+            SemionTowerEntity originalHeart = towerEntity(context, heart);
+            SemionTowerEntity originalEye = towerEntity(context, eye);
             setup.lane().markWaveStarted(1);
             heart.onLaneCleared(setup.lane());
             eye.onLaneCleared(setup.lane());
             setup.lane().moveTowersToFinalDefense();
 
             SemionTowerEntity source = towerEntity(context, eye);
-            Vec3 direction = BodyTower.eyeDirection(setup.lane().laneLayout(), true);
+            require(source == originalEye && towerEntity(context, heart) == originalHeart,
+                    "Final-defense relocation must preserve both tracked tower entities.");
+            Vec3 direction = BodyTowerTargetGeometry.eyeDirection(setup.lane().laneLayout(), true);
             targets.add(spawnTarget(context, setup.lane(), source.position().add(direction.scale(3.0)),
                     "body-eye-final-front", 100.0));
             targets.add(spawnTarget(context, setup.lane(), source.position().subtract(direction.scale(3.0)),
@@ -407,7 +421,11 @@ public final class BodyGameTest {
     }
 
     private static SemionTowerEntity towerEntity(GameTestHelper context, BodyTower tower) {
-        return (SemionTowerEntity) context.getLevel().getEntity(tower.entityId().orElseThrow());
+        var entity = context.getLevel().getEntity(tower.entityId().orElseThrow());
+        require(entity instanceof SemionTowerEntity, "Tower must be tracked in the test world: "
+                + tower.type().id() + " at " + tower.position() + "; chunk="
+                + context.getLevel().getChunk(tower.position().x() >> 4, tower.position().z() >> 4).getFullStatus());
+        return (SemionTowerEntity) entity;
     }
 
     private static PlayerLane testLane(GameTestHelper context, UUID owner) {
@@ -432,6 +450,8 @@ public final class BodyGameTest {
     }
 
     private static void prepareFloor(GameTestHelper context, int max) {
+        context.assertTrue(context.getBounds().contains(Vec3.atCenterOf(context.absolutePos(new BlockPos(max, 2, max)))),
+                "The declared Body structure must contain the complete arena and final-defense targets.");
         for (int x = 0; x <= max; x++) {
             for (int z = 0; z <= max; z++) {
                 BlockPos floor = context.absolutePos(new BlockPos(x, 1, z));

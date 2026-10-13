@@ -7,6 +7,8 @@ import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import kim.biryeong.semiontd.config.TowerBalanceConfig;
 import kim.biryeong.semiontd.entity.visual.CatVisual;
@@ -16,9 +18,9 @@ import kim.biryeong.semiontd.tower.description.TowerDescriptionRegistry;
 import kim.biryeong.semiontd.tower.description.TowerDescriptionTemplate;
 import kim.biryeong.semiontd.util.EntityTypeUtil;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.animal.CatVariants;
-import net.minecraft.world.entity.npc.VillagerProfession;
-import net.minecraft.world.entity.npc.VillagerType;
+import net.minecraft.world.entity.animal.feline.CatVariants;
+import net.minecraft.world.entity.npc.villager.VillagerProfession;
+import net.minecraft.world.entity.npc.villager.VillagerType;
 
 public final class VillagerTowers {
     private static final DecimalFormat PERCENT_FORMAT = new DecimalFormat(
@@ -90,7 +92,7 @@ public final class VillagerTowers {
             5,
             20,
             35,
-            EntityTypeUtil.byId(EntityType.SNOW_GOLEM),
+            EntityTypeUtil.byId(net.minecraft.world.entity.EntityTypes.SNOW_GOLEM),
             List.of("<gray>주민 타워의 탱킹을 담당하는 트리입니다.</gray>")
     );
 
@@ -103,7 +105,7 @@ public final class VillagerTowers {
             8,
             20,
             50,
-            EntityTypeUtil.byId(EntityType.TRADER_LLAMA),
+            EntityTypeUtil.byId(net.minecraft.world.entity.EntityTypes.TRADER_LLAMA),
             List.of("<gray>구리 골렘이 있는 줄 알고 만들다가 없는거 알고 급하게 바꾼 타워입니다.</gray>",
                     "<green> + 피격 시 1 범위 적에게 10 데미지를 입힙니다. (쿨타임 : 2초)</green>",
                     "<green> + 생존한 라운드 마다 체력이 10% 증가합니다. (최대 : 50%)"
@@ -119,7 +121,7 @@ public final class VillagerTowers {
             10,
             20,
             80,
-            EntityTypeUtil.byId(EntityType.IRON_GOLEM),
+            EntityTypeUtil.byId(net.minecraft.world.entity.EntityTypes.IRON_GOLEM),
             List.of(
                     "<green> + 피격 시 2 범위 적에게 10 데미지를 입힙니다. ( 쿨타임 : 1.5초 ) </green>",
                     "<green> + 생존한 라운드 마다 체력이 20% 증가합니다. ( 최대 : 100 % ) "
@@ -137,7 +139,7 @@ public final class VillagerTowers {
             2,
             15,
             -5,
-            EntityTypeUtil.byId(EntityType.ALLAY),
+            EntityTypeUtil.byId(net.minecraft.world.entity.EntityTypes.ALLAY),
             List.of(
                     "<gray> 팀 지원형 타워입니다.</gray>",
                     "<green> + 5초마다 주위 2블록에 있는 타워의 체력을 20 회복시킵니다. (회복 받은 대상은 5초간 회복받지 않음)</green>"
@@ -153,7 +155,7 @@ public final class VillagerTowers {
             4,
             15,
             -5,
-            EntityTypeUtil.byId(EntityType.ALLAY),
+            EntityTypeUtil.byId(net.minecraft.world.entity.EntityTypes.ALLAY),
             List.of(
                     "<green> + 5초마다 주위 3블록에 있는 타워의 체력을 50 회복시킵니다. (회복 받은 대상은 5초간 회복받지 않음)"
             )
@@ -217,7 +219,7 @@ public final class VillagerTowers {
             10,
             15,
             5,
-            EntityTypeUtil.byId(EntityType.OCELOT),
+            EntityTypeUtil.byId(net.minecraft.world.entity.EntityTypes.OCELOT),
             List.of(
                     "<gray> 빠른 사거리 공격을 담당하는 고양이 타워입니다. </gray>"
             )
@@ -348,6 +350,10 @@ public final class VillagerTowers {
             ADV_T3_ANTI_TANKER_CAT_TOWER,
             ADV_T3_LANE_CLEAR_CAT_TOWER
     );
+    private static final Set<String> BASE_TOWER_IDS = BASE_TOWERS.stream().map(TowerType::id)
+            .collect(Collectors.toUnmodifiableSet());
+    private static final Set<String> ADV_TOWER_IDS = ADV_TOWERS.stream().map(TowerType::id)
+            .collect(Collectors.toUnmodifiableSet());
 
     static {
         registerAdvTemplate(ADV_T1_SPLASH_TOWER, T1_SPLASH_TOWER.description(), List.of(
@@ -472,11 +478,11 @@ public final class VillagerTowers {
     }
 
     public static boolean isBaseVillagerTower(TowerType type) {
-        return type != null && BASE_TOWERS.stream().anyMatch(base -> type.id().equals(base.id()));
+        return type != null && BASE_TOWER_IDS.contains(type.id());
     }
 
     public static boolean isAdvVillagerTower(TowerType type) {
-        return type != null && ADV_TOWERS.stream().anyMatch(adv -> type.id().equals(adv.id()));
+        return type != null && ADV_TOWER_IDS.contains(type.id());
     }
 
     public static boolean isVillagerTower(TowerType type) {

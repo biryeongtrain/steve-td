@@ -83,7 +83,7 @@ public final class BodyTowers {
             3.0,
             20,
             0,
-            BlockDisplayVisual.builder(Blocks.PINK_CONCRETE_POWDER.defaultBlockState()).scale(0.95).build(),
+            BlockDisplayVisual.builder(Blocks.CONCRETE_POWDER.pink().defaultBlockState()).scale(0.95).build(),
             List.of(
                     "<gray>공격 대상과 반경 {ability.splashRadius:blocks} 안의 적에게 광역 피해를 줍니다.</gray>",
                     "<aqua>맞은 적은 받는 피해가 {ability.damageTaken:percent} 증가하고 주는 피해가 {ability.attackReduction:percent} 감소합니다.</aqua>",
@@ -100,7 +100,7 @@ public final class BodyTowers {
             6.0,
             20,
             0,
-            BlockDisplayVisual.builder(Blocks.PINK_WOOL.defaultBlockState()).scale(0.95).build(),
+            BlockDisplayVisual.builder(Blocks.WOOL.pink().defaultBlockState()).scale(0.95).build(),
             List.of(
                     "<gray>공격 대상과 반경 {ability.splashRadius:blocks} 안의 적에게 광역 피해를 줍니다.</gray>",
                     "<aqua>맞은 적은 받는 피해가 {ability.damageTaken:percent} 증가하고 주는 피해가 {ability.attackReduction:percent} 감소합니다.</aqua>",
@@ -257,7 +257,7 @@ public final class BodyTowers {
             15.0,
             20,
             5,
-            BlockDisplayVisual.builder(Blocks.LIGHTNING_ROD.defaultBlockState()).scale(1.1).build(),
+            BlockDisplayVisual.builder(Blocks.LIGHTNING_ROD.weathering().unaffected().defaultBlockState()).scale(1.1).build(),
             List.of(
                     "<gray>단일 대상 특화 원거리 타워입니다.</gray>",
                     "<aqua>같은 적에게 두 번 적중하면 마법 피해 {ability.magicProcDamage:number}를 추가로 입히고 둔화시킵니다.</aqua>",

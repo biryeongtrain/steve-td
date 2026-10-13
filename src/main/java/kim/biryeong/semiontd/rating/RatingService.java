@@ -1,7 +1,6 @@
 package kim.biryeong.semiontd.rating;
 
 import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -169,16 +168,7 @@ public final class RatingService {
         if (limit <= 0) {
             return List.of();
         }
-        int boundedLimit = Math.min(100, limit);
-        return ratingRepository.findAllProfiles().values().stream()
-                .filter(profile -> profile.gamesPlayed() > 0)
-                .sorted(Comparator
-                        .comparingInt(PlayerRatingProfile::displayElo).reversed()
-                        .thenComparing(Comparator.comparingInt(PlayerRatingProfile::gamesPlayed).reversed())
-                        .thenComparing(Comparator.comparingLong(PlayerRatingProfile::updatedAtEpochMillis).reversed())
-                        .thenComparing(PlayerRatingProfile::lastKnownName, String.CASE_INSENSITIVE_ORDER))
-                .limit(boundedLimit)
-                .toList();
+        return RatingLeaderboardSelection.select(ratingRepository.findAllProfiles().values(), limit);
     }
 
     public RatingConfig ratingConfig() {

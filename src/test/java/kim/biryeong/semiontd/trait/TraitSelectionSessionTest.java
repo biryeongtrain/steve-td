@@ -13,13 +13,13 @@ import kim.biryeong.semiontd.game.MatchMode;
 import kim.biryeong.semiontd.game.ParticipantSelectionPlan;
 import kim.biryeong.semiontd.game.TeamId;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 final class TraitSelectionSessionTest {
-    private static final ResourceLocation TEST_TRAIT =
-            ResourceLocation.fromNamespaceAndPath("semion-td", "selection_session_test");
+    private static final Identifier TEST_TRAIT =
+            Identifier.fromNamespaceAndPath("semion-td", "selection_session_test");
     private static final UUID RED = UUID.nameUUIDFromBytes("trait-session-red".getBytes());
     private static final UUID BLUE = UUID.nameUUIDFromBytes("trait-session-blue".getBytes());
     private static final UUID SPECTATOR = UUID.nameUUIDFromBytes("trait-session-spectator".getBytes());

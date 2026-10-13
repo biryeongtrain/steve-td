@@ -16,7 +16,7 @@ import kim.biryeong.semiontd.tower.area.AreaVfxStyleRegistryImpl;
 import kim.biryeong.semiontd.tower.area.BuiltinAreaVfxStyles;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.particles.DustParticleOptions;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.BeforeAll;
@@ -71,17 +71,17 @@ class AtlantisVfxTest {
                 "every monster the burst reached must get a connecting line, got " + output.lines.size());
     }
 
-    private static RecordingOutput plan(ResourceLocation styleId, List<Vec3> applied) {
+    private static RecordingOutput plan(Identifier styleId, List<Vec3> applied) {
         AreaVfxStyleRegistryImpl registry = new AreaVfxStyleRegistryImpl();
         AtlantisVfx.register(registry);
         AreaVfxStylePlanner planner = registry.find(styleId).orElseThrow();
 
         Vec3 centre = new Vec3(0.0, 64.0, 0.0);
         AreaVfxContext context = new AreaVfxContext(
-                ResourceLocation.fromNamespaceAndPath("semion-td", "test_effect"),
+                Identifier.fromNamespaceAndPath("semion-td", "test_effect"),
                 styleId,
                 UUID.nameUUIDFromBytes("atlantis-vfx-source".getBytes()),
-                ResourceLocation.fromNamespaceAndPath("semion-td", "atlantis_turtle_t3"),
+                Identifier.fromNamespaceAndPath("semion-td", "atlantis_turtle_t3"),
                 testPalette(),
                 centre,
                 centre,
@@ -101,7 +101,7 @@ class AtlantisVfxTest {
     private static AreaVfxPalette testPalette() {
         AreaVfxParticle particle = new AreaVfxParticle(
                 new DustParticleOptions(0xFFFFFF, 1.0F),
-                ResourceLocation.fromNamespaceAndPath("minecraft", "bubble")
+                Identifier.fromNamespaceAndPath("minecraft", "bubble")
         );
         return new AreaVfxPalette(particle, particle);
     }

@@ -30,17 +30,17 @@ public final class UtilitySupportGoal extends CooldownAbilityGoal {
                 caster.getBoundingBox().inflate(profile.radius()), this::eligible);
         Comparator<SemionMonsterEntity> nearest = Comparator.<SemionMonsterEntity>comparingDouble(caster::distanceToSqr)
                 .thenComparingInt(SemionMonsterEntity::getId);
-        candidates.sort(switch (profile.priority()) {
+        var targets = EntityGoalTargetSelection.first(candidates, switch (profile.priority()) {
             case NEAREST -> nearest;
             case MISSING_HEALTH -> Comparator.comparingDouble(SemionMonsterEntity::missingHealingHealth).reversed().thenComparing(nearest);
             case HEALTH_RATIO -> Comparator.comparingDouble((SemionMonsterEntity target) ->
                     target.runtimeMonster().health() / target.runtimeMonster().maxHealth()).thenComparing(nearest);
-        });
+        }, profile.maxTargets());
         boolean changed = false;
         double supportMultiplier = AugmentEconomyService.supportMultiplier(source);
         long gameTime = caster.level().getGameTime();
-        for (int i = 0; i < Math.min(profile.maxTargets(), candidates.size()); i++) {
-            SemionMonsterEntity target = candidates.get(i);
+        for (int i = 0; i < targets.size(); i++) {
+            SemionMonsterEntity target = targets.get(i);
             boolean healed = profile.healing() > 0.0 && caster.healTarget(target, profile.healing());
             double shieldBefore = target.runtimeMonster().shieldRemaining(DamageType.PHYSICAL, gameTime)
                     + target.runtimeMonster().shieldRemaining(DamageType.MAGIC, gameTime);

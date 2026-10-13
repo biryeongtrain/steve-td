@@ -45,15 +45,18 @@ final class DemonLordPassiveTest {
         assertEquals(DemonLordSkillShop.Result.PASSIVE_ALREADY_SLOTTED, DemonLordSkillShop.buyPassive(
                 state, economy, DemonLordPassiveSlot.NINE, DemonLordPassive.BLOOD_CLEAVE));
         assertEquals(DemonLordSkillShop.Result.SLOT_OCCUPIED, DemonLordSkillShop.buyPassive(
-                state, economy, DemonLordPassiveSlot.EIGHT, DemonLordPassive.BOUNDLESS));
+                state, economy, DemonLordPassiveSlot.EIGHT, DemonLordPassive.DREAD));
+        double damageBefore = state.damageMultiplier();
+        double reductionBefore = state.damageReduction();
         assertEquals(DemonLordSkillShop.Result.SUCCESS, DemonLordSkillShop.buyPassive(
-                state, economy, DemonLordPassiveSlot.NINE, DemonLordPassive.BOUNDLESS));
-        assertTrue(state.boundless());
+                state, economy, DemonLordPassiveSlot.NINE, DemonLordPassive.DREAD));
+        assertTrue(state.damageMultiplier() > damageBefore, "Dread raises damage.");
+        assertTrue(state.damageReduction() > reductionBefore, "Dread raises damage reduction.");
 
         assertEquals(DemonLordSkillShop.Result.SUCCESS,
                 DemonLordSkillShop.removePassive(state, economy, DemonLordPassiveSlot.EIGHT));
         assertFalse(state.loadout().hasPassive(DemonLordPassive.BLOOD_CLEAVE));
-        assertEquals(1000 - DemonLordPassive.BOUNDLESS.cost(), economy.diamond(), "Removing refunds everything paid.");
+        assertEquals(1000 - DemonLordPassive.DREAD.cost(), economy.diamond(), "Removing refunds everything paid.");
     }
 
     @Test
@@ -157,6 +160,20 @@ final class DemonLordPassiveTest {
         assertTrue(DemonLordPassives.crosses(box, origin, new net.minecraft.world.phys.Vec3(10, 1, 0)));
         assertFalse(DemonLordPassives.crosses(box, origin, new net.minecraft.world.phys.Vec3(3, 1, 0)));
         assertTrue(DemonLordPassives.crosses(box, new net.minecraft.world.phys.Vec3(4.5, 1, 0), new net.minecraft.world.phys.Vec3(6, 1, 0)));
+    }
+
+    @Test
+    void occupiedColumnsKeepAllBitsOfBothCoordinates() {
+        int[] coordinates = {Integer.MIN_VALUE, Integer.MIN_VALUE + 1, -67_108_864, -1, 0, 1,
+                67_108_864, Integer.MAX_VALUE - 1, Integer.MAX_VALUE};
+        java.util.Set<Long> columns = new java.util.HashSet<>();
+        for (int x : coordinates) {
+            for (int z : coordinates) {
+                assertTrue(columns.add(DemonLordPassives.columnKey(x, z)),
+                        "Distinct signed x/z coordinates must never share a column key: " + x + ", " + z);
+            }
+        }
+        assertEquals(coordinates.length * coordinates.length, columns.size());
     }
 
     private static PlayerEconomy economy(long diamonds) {

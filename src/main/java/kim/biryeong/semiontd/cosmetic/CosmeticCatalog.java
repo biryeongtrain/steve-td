@@ -24,9 +24,14 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.equipment.Equippable;
 
 public final class CosmeticCatalog {
+    private static final com.mojang.serialization.Codec<ItemStack> COSMETIC_ITEM_CODEC = ItemStackTemplate.CODEC.xmap(
+            template -> template.create().copyWithCount(1),
+            stack -> ItemStackTemplate.fromNonEmptyStack(stack, 1)
+    );
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
     private final Path path;
@@ -66,7 +71,7 @@ public final class CosmeticCatalog {
                 EquipmentSlot slot = object.has("slot")
                         ? EquipmentSlot.byName(object.get("slot").getAsString())
                         : EquipmentSlot.HEAD;
-                ItemStack item = ItemStack.STRICT_SINGLE_ITEM_CODEC.parse(ops, object.get("item"))
+                ItemStack item = COSMETIC_ITEM_CODEC.parse(ops, object.get("item"))
                         .getOrThrow(IllegalArgumentException::new);
                 Entry entry = validatedEntry(id, price, slot, item);
                 if (loadedEntries.putIfAbsent(entry.id(), entry) != null) {
@@ -197,7 +202,7 @@ public final class CosmeticCatalog {
                 serializedEntry.addProperty("id", entry.id());
                 serializedEntry.addProperty("price", entry.price());
                 serializedEntry.addProperty("slot", entry.slot().getSerializedName());
-                serializedEntry.add("item", ItemStack.STRICT_SINGLE_ITEM_CODEC.encodeStart(ops, entry.item())
+                serializedEntry.add("item", COSMETIC_ITEM_CODEC.encodeStart(ops, entry.item())
                         .getOrThrow(IllegalArgumentException::new));
                 serializedEntries.add(serializedEntry);
             }

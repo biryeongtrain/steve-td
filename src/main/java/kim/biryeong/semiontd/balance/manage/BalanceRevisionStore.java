@@ -130,7 +130,14 @@ public class BalanceRevisionStore {
             }
             // A non-atomic fallback would make the active pointer unsafe after a crash.
             Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-            try (FileChannel directory = FileChannel.open(target.getParent(), StandardOpenOption.READ)) {directory.force(true);}
+            // Windows NIO does not support opening directories as FileChannels.
+            // Keep file flushing and atomic replacement; flush directory metadata
+            // on platforms that support it. Actual I/O failures still propagate.
+            if (!System.getProperty("os.name", "").startsWith("Windows")) {
+                try (FileChannel parent = FileChannel.open(target.getParent(), StandardOpenOption.READ)) {
+                    parent.force(true);
+                }
+            }
         } finally {
             Files.deleteIfExists(temporary);
         }

@@ -8,10 +8,10 @@ import kim.biryeong.semiontd.tower.atlantis.AtlantisStates;
 import kim.biryeong.semiontd.tower.atlantis.AtlantisTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class AtlantisTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "atlantis");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "atlantis");
 
     public AtlantisTowerJob() {
         super(

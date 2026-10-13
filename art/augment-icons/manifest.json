@@ -1,0 +1,293 @@
+{
+  "origin": "User-supplied SemionTD-augment-art-originals.zip; original built-in image generation artwork",
+  "originalPixelsPreserved": true,
+  "normalization": "Alpha >= 128 bounds centered at 76% of 256px canvas; premultiplied-alpha bicubic resampling",
+  "images": [
+    {
+      "category": "DAMAGE",
+      "file": "attack.png",
+      "originalSHA256": "178c5e4d23dcecd00193ae796865da286759651754e7aa507782e78e7a712265",
+      "textureSHA256": "d114e4f5bce5aa74134df1ffbc25525a980b997c54b6e823d3d5ae2dd58f019d",
+      "sourceBoundsAlpha128": [
+        142,
+        113,
+        1170,
+        1149
+      ],
+      "normalizedSize": [
+        256,
+        256
+      ],
+      "normalizedBoundsAlpha128": [
+        31,
+        31,
+        224,
+        225
+      ]
+    },
+    {
+      "category": "GUARD",
+      "file": "protection.png",
+      "originalSHA256": "9c298bb78cf265632a254013557da6a6be4ed74d107e61ecfd1ce5b66f01d255",
+      "textureSHA256": "a0ab77f57fcdc6ecfd8b40ea3a6e45bc1ac6ee9281a209e417d70a8756334b99",
+      "sourceBoundsAlpha128": [
+        166,
+        84,
+        1088,
+        1162
+      ],
+      "normalizedSize": [
+        256,
+        256
+      ],
+      "normalizedBoundsAlpha128": [
+        45,
+        31,
+        211,
+        225
+      ]
+    },
+    {
+      "category": "VITALITY",
+      "file": "health.png",
+      "originalSHA256": "32b6e7a1c3f8da51c3fdd70e71c8bfe9cacb4fcbadac75331c754e6ad76bdd74",
+      "textureSHA256": "407b2895e6dc89a70e03ccf5bab1c71dda98ceba723c7e266f9b69d7b0c2f0ba",
+      "sourceBoundsAlpha128": [
+        123,
+        160,
+        1132,
+        1101
+      ],
+      "normalizedSize": [
+        256,
+        256
+      ],
+      "normalizedBoundsAlpha128": [
+        31,
+        37,
+        225,
+        219
+      ]
+    },
+    {
+      "category": "REVIVAL",
+      "file": "revival.png",
+      "originalSHA256": "29b82b7d731dc2bd435bcb8d71aefb7ce926483d896f08a61fd8f66fce16fce6",
+      "textureSHA256": "9ffb674c49313ba6c64996678c4138bcb17bb6b216f4a8155567b41893fc60bd",
+      "sourceBoundsAlpha128": [
+        163,
+        97,
+        1091,
+        1171
+      ],
+      "normalizedSize": [
+        256,
+        256
+      ],
+      "normalizedBoundsAlpha128": [
+        44,
+        31,
+        212,
+        225
+      ]
+    },
+    {
+      "category": "TEMPO",
+      "file": "speed.png",
+      "originalSHA256": "40f79b96c1c244866004353a0c795d987951801a85265649aa6bf1070af15fb3",
+      "textureSHA256": "7175da01537dbf5b670a8f2e208fdc86dadcb18ef879f2e339eab54601a7d075",
+      "sourceBoundsAlpha128": [
+        92,
+        117,
+        1162,
+        1110
+      ],
+      "normalizedSize": [
+        256,
+        256
+      ],
+      "normalizedBoundsAlpha128": [
+        31,
+        38,
+        225,
+        218
+      ]
+    },
+    {
+      "category": "REACH",
+      "file": "aim.png",
+      "originalSHA256": "a85801c038aefb36dd3df9fc668ce81951a1edb695df59a89f15e38182842323",
+      "textureSHA256": "cdc3900696ffbc5fc0f7af2c1ffe00eb6abf94feefd4c38c8601403f18b16941",
+      "sourceBoundsAlpha128": [
+        105,
+        97,
+        1147,
+        1140
+      ],
+      "normalizedSize": [
+        256,
+        256
+      ],
+      "normalizedBoundsAlpha128": [
+        31,
+        31,
+        225,
+        225
+      ]
+    },
+    {
+      "category": "CONTROL",
+      "file": "control.png",
+      "originalSHA256": "dad5629fcac1707c98331e2c126f5e2e1a0061e449da91b254a9d6bb5d2074cb",
+      "textureSHA256": "e284b9bf6b36453036bbb582a45760b8ee04c4f71584e20a1ed6d866115cf8bf",
+      "sourceBoundsAlpha128": [
+        114,
+        145,
+        1139,
+        1109
+      ],
+      "normalizedSize": [
+        256,
+        256
+      ],
+      "normalizedBoundsAlpha128": [
+        31,
+        37,
+        225,
+        219
+      ]
+    },
+    {
+      "category": "GROWTH",
+      "file": "growth.png",
+      "originalSHA256": "5505f18f58467b88014a8ff6e568737be4141a60b9af665a4a69f240190a452a",
+      "textureSHA256": "f21dbcd34a41d5974392fda01e666b2d2dc7db9de3d659f49acda739169226f7",
+      "sourceBoundsAlpha128": [
+        133,
+        139,
+        1146,
+        1120
+      ],
+      "normalizedSize": [
+        256,
+        256
+      ],
+      "normalizedBoundsAlpha128": [
+        31,
+        34,
+        225,
+        222
+      ]
+    },
+    {
+      "category": "RESOURCE",
+      "file": "resources.png",
+      "originalSHA256": "539200fcdc5f8460c9b3326ba403b5d56a305729de293d2fc6db784d976eb852",
+      "textureSHA256": "9c00d5d059c3b216f4f9f69c3377b4b98576643a5806c0c52ed5080b1cc82a81",
+      "sourceBoundsAlpha128": [
+        139,
+        174,
+        1139,
+        1094
+      ],
+      "normalizedSize": [
+        256,
+        256
+      ],
+      "normalizedBoundsAlpha128": [
+        31,
+        39,
+        225,
+        217
+      ]
+    },
+    {
+      "category": "DEPLOY",
+      "file": "summon.png",
+      "originalSHA256": "247cfe2bc51806de6065c945d1f5bf6698328dcf7f4cbbdeb053c250491aa79d",
+      "textureSHA256": "7e1514439abc768f95d3f7457ee8b0b5587ccfbdc4a85f1e6f1208b67ddd356f",
+      "sourceBoundsAlpha128": [
+        269,
+        87,
+        1026,
+        1134
+      ],
+      "normalizedSize": [
+        256,
+        256
+      ],
+      "normalizedBoundsAlpha128": [
+        58,
+        31,
+        198,
+        225
+      ]
+    },
+    {
+      "category": "SYNERGY",
+      "file": "synergy.png",
+      "originalSHA256": "b17b46f6d6ee73361e461338861691591a7ea813f60fe03077c380efed046324",
+      "textureSHA256": "ce266bccece2d26980f85e6a1b22a76c8d510fa8a752368bbe15d5174959f3c8",
+      "sourceBoundsAlpha128": [
+        130,
+        115,
+        1123,
+        1059
+      ],
+      "normalizedSize": [
+        256,
+        256
+      ],
+      "normalizedBoundsAlpha128": [
+        31,
+        36,
+        225,
+        220
+      ]
+    },
+    {
+      "category": "ENHANCEMENT",
+      "file": "enhancement.png",
+      "originalSHA256": "1bc030a00aeb81a974f29a4f531f01c8b7b96ad4c98a0c39793c41148534f1c4",
+      "textureSHA256": "2940482766251b10da5be4294f7f672f2269f38a74350f8176f3decfe69df786",
+      "sourceBoundsAlpha128": [
+        188,
+        111,
+        1057,
+        1152
+      ],
+      "normalizedSize": [
+        256,
+        256
+      ],
+      "normalizedBoundsAlpha128": [
+        47,
+        31,
+        209,
+        225
+      ]
+    },
+    {
+      "category": "FORTUNE",
+      "file": "chance.png",
+      "originalSHA256": "5e36d1beafcac131c1020f1332e27e0cad425c9a94c66ea7c8f707fb59d4e12d",
+      "textureSHA256": "0cc8c5f2a964e4f1c8e9d440d7d7af5fa9b36377798c89a0b5e0beb8153b1308",
+      "sourceBoundsAlpha128": [
+        164,
+        132,
+        1090,
+        1121
+      ],
+      "normalizedSize": [
+        256,
+        256
+      ],
+      "normalizedBoundsAlpha128": [
+        37,
+        31,
+        219,
+        225
+      ]
+    }
+  ]
+}

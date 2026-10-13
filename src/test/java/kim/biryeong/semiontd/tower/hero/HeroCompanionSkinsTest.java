@@ -54,7 +54,9 @@ final class HeroCompanionSkinsTest {
                 "texture-signature"
         );
         GameProfile customProfile = HeroCompanionSkins.profile(owner, HeroCompanionRole.MAGE, custom);
-        assertEquals("texture-value", customProfile.getProperties().get("textures").iterator().next().value());
+        assertEquals("texture-value", customProfile.properties().get("textures").iterator().next().value());
+        assertEquals("texture-signature", customProfile.properties().get("textures").iterator().next().signature());
+        assertEquals(customProfile.name(), HeroCompanionSkinPreference.fromProfile(customProfile).orElseThrow().sourceName());
 
         HeroCompanionSkinPreference vanilla = new HeroCompanionSkinPreference(
                 "Vanilla",

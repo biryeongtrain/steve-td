@@ -61,13 +61,13 @@ class EndTowerCatalogTest {
         assertEquals(30.0, config.ability(EndTower.CONFIG_ID, "transferHeal", -1.0), 0.0001);
         assertEquals(0.05, config.ability(EndTower.CONFIG_ID, "transferHealRatio", -1.0), 0.0001);
         assertEquals(0.50, config.ability(EndTower.CONFIG_ID, "roundHealthRatio", -1.0), 0.0001);
-        assertEquals(0.04, config.ability(EndTower.CONFIG_ID, "permanentHealthRatio", -1.0), 0.0001);
+        assertEquals(0.06, config.ability(EndTower.CONFIG_ID, "permanentHealthRatio", -1.0), 0.0001);
         assertEquals(3000.0, config.ability(EndTower.CONFIG_ID, "healthThreshold", -1.0), 0.0001);
         assertEquals(500.0, config.ability(EndTower.CONFIG_ID, "healthScale", -1.0), 0.0001);
         assertEquals(0.66, config.ability(EndTower.CONFIG_ID, "roundDamageRatio", -1.0), 0.0001);
-        assertEquals(0.04, config.ability(EndTower.CONFIG_ID, "permanentDamageRatio", -1.0), 0.0001);
-        assertEquals(150.0, config.ability(EndTower.CONFIG_ID, "damageThreshold", -1.0), 0.0001);
-        assertEquals(25.0, config.ability(EndTower.CONFIG_ID, "damageScale", -1.0), 0.0001);
+        assertEquals(0.06, config.ability(EndTower.CONFIG_ID, "permanentDamageRatio", -1.0), 0.0001);
+        assertEquals(175.0, config.ability(EndTower.CONFIG_ID, "damageThreshold", -1.0), 0.0001);
+        assertEquals(50.0, config.ability(EndTower.CONFIG_ID, "damageScale", -1.0), 0.0001);
         assertEquals(30.0, config.ability(EndTower.CONFIG_ID, "lifeStealStacks", -1.0), 0.0001);
         assertEquals(0.01, config.ability(EndTower.CONFIG_ID, "lifeStealStep", -1.0), 0.0001);
         assertEquals(0.10, config.ability(EndTower.CONFIG_ID, "lifeStealCap", -1.0), 0.0001);

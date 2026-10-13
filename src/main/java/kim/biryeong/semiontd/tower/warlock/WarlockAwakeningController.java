@@ -39,7 +39,7 @@ public final class WarlockAwakeningController {
         regenerationTicks = 0;
         vfxTicks = 0;
         towerEntity.setGlowingTag(true);
-        TowerVfxService.showWarlockAwakening(towerEntity);
+        TowerVfxService.showWarlockAwakeningCharge(towerEntity, 0.0);
         tower.heal(towerEntity, rule.bonus().healing());
         tower.onStateChanged(lane);
         return true;
@@ -101,10 +101,14 @@ public final class WarlockAwakeningController {
             if (!(entity instanceof SemionTowerEntity towerEntity) || !towerEntity.isAlive()) {
                 return;
             }
-            if (vfxTicks % 2 == 0) {
+            if (vfxTicks < 16 && vfxTicks % 4 == 0) {
+                TowerVfxService.showWarlockAwakeningCharge(towerEntity, vfxTicks / 16.0);
+            } else if (vfxTicks == 16) {
+                TowerVfxService.showWarlockAwakening(towerEntity);
+            } else if (vfxTicks > 16 && vfxTicks % 8 == 0) {
                 TowerVfxService.showWarlockAwakeningAura(towerEntity);
             }
-            if (vfxTicks % 10 == 0) {
+            if (vfxTicks > 16 && vfxTicks % 20 == 0) {
                 TowerVfxService.showWarlockAwakeningSparkBurst(towerEntity);
             }
         });

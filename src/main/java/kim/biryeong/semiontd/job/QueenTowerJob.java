@@ -9,10 +9,10 @@ import kim.biryeong.semiontd.tower.queen.QueenStates;
 import kim.biryeong.semiontd.tower.queen.QueenTowers;
 import kim.biryeong.semiontd.ui.SemionText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class QueenTowerJob extends SemionJob {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "queen_towers");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "queen_towers");
 
     public QueenTowerJob() {
         super(ID, Component.literal("붉은 여왕 빌더"), List.of(

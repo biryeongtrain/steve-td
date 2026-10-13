@@ -45,7 +45,7 @@ public final class MageTowers {
             .damage(0.0)
             .attackIntervalTicks(20)
             .aggroPriority(80)
-            .visual(EntityVisual.vanilla(byId(EntityType.END_CRYSTAL)))
+            .visual(EntityVisual.vanilla(byId(net.minecraft.world.entity.EntityTypes.END_CRYSTAL)))
             .description(List.of(
                     "<gray><aqua>마나</aqua>를 최대 {ability.mage_global.manaCapacity:integer}까지 저장하며 플레이어당 하나만 설치할 수 있습니다.</gray>",
                     "<green>최초 설치 시 마나 {ability.mage_global.startingMana:integer}을 얻습니다.</green>",
@@ -166,7 +166,7 @@ public final class MageTowers {
                 .damage(0.0)
                 .attackIntervalTicks(20)
                 .aggroPriority(5)
-                .visual(EntityVisual.vanilla(byId(EntityType.WITCH)))
+                .visual(EntityVisual.vanilla(byId(net.minecraft.world.entity.EntityTypes.WITCH)))
                 .description(description)
                 .build();
     }

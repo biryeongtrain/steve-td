@@ -23,17 +23,18 @@ import kim.biryeong.semiontd.game.GridPosition;
 import kim.biryeong.semiontd.game.PlayerLane;
 import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.map.LaneRegionLayout;
+import kim.biryeong.semiontd.gametest.RuntimeArenaFixture;
 import kim.biryeong.semiontd.tower.area.AreaEffectLaneIndex;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import xyz.nucleoid.map_templates.BlockBounds;
 
-public final class ThunderGameTest {
+public final class ThunderGameTest implements RuntimeArenaFixture {
     @GameTest(maxTicks = 120)
     public void augmentBatteryStoresThreeShotsAndDischargesOnlyOnce(GameTestHelper context) {
         TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
@@ -59,6 +60,55 @@ public final class ThunderGameTest {
             context.succeed();
         } finally {
             if (target != null) {target.entity().discard();}
+            lane.clearTowers();
+            AreaEffectLaneIndex.unregister(lane);
+        }
+    }
+
+    @GameTest(structure = "semion-td-gametest:combat_arena", maxTicks = 120)
+    public void batteryPresenceQueryKeepsLaneRadiusAndEntityLifecycleFilters(GameTestHelper context) {
+        TowerBalanceRuntime.apply(TowerBalanceConfig.defaultConfig());
+        UUID owner = stableUuid("thunder-battery-filters");
+        PlayerLane lane = augmentLane(context, owner);
+        ThunderTower squirrel = tower(ThunderTowers.SQUIRREL_T1, owner, context, new BlockPos(4, 2, 4));
+        List<SpawnedTarget> targets = new ArrayList<>();
+        SemionMonsterEntity unbound = null;
+        AreaEffectLaneIndex.register(lane);
+        prepareFloor(context, 7);
+        try {
+            lane.addTower(squirrel);
+            SemionTowerEntity source = towerEntity(context, squirrel);
+            require(!ThunderTower.hasNearbyEnemies(source), "An empty lane must allow battery charging.");
+            double range = source.attackRange();
+            Vec3 center = source.position();
+            targets.add(spawnTarget(context, lane, center.add(1, 0, 0), "battery-other-lane", 1000, 2));
+            targets.add(spawnTarget(context, lane, center.add(0, 0, range + 0.01), "battery-outside", 1000));
+            SpawnedTarget dead = spawnTarget(context, lane, center.add(0, 0, 1), "battery-dead", 1000);
+            targets.add(dead);
+            dead.entity().setHealth(0.0F);
+            SpawnedTarget removed = spawnTarget(context, lane, center.add(0, 0, 1), "battery-removed", 1000);
+            targets.add(removed);
+            removed.entity().discard();
+            unbound = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());
+            unbound.setNoAi(true);
+            unbound.setPos(center.x, center.y, center.z);
+            require(context.getLevel().addFreshEntity(unbound), "Unbound target must spawn for filtering.");
+            require(!ThunderTower.hasNearbyEnemies(source),
+                    "Other lanes, outside radius, dead, removed and unbound entities must not block charging.");
+            SpawnedTarget boundary = spawnTarget(context, lane, center.add(0, 0, range), "battery-boundary", 1000);
+            targets.add(boundary);
+            require(ThunderTower.hasNearbyEnemies(source), "The exact spherical radius boundary must block charging.");
+            boundary.entity().discard();
+            require(!ThunderTower.hasNearbyEnemies(source), "Removing the only eligible entity must clear presence immediately.");
+            SpawnedTarget replacement = spawnTarget(context, lane, center.add(0, 0, 1), "battery-replacement", 1000);
+            targets.add(replacement);
+            require(ThunderTower.hasNearbyEnemies(source), "A newly spawned eligible entity must be visible immediately.");
+            AreaEffectLaneIndex.unregister(lane);
+            require(!ThunderTower.hasNearbyEnemies(source), "An unregistered lane must not retain cached enemy presence.");
+            context.succeed();
+        } finally {
+            targets.forEach(target -> target.entity().discard());
+            if (unbound != null) unbound.discard();
             lane.clearTowers();
             AreaEffectLaneIndex.unregister(lane);
         }
@@ -212,7 +262,7 @@ public final class ThunderGameTest {
                     "thunder-stun-target", 500.0);
 
             first.onAttackResolved(towerEntity(context, first), target.entity(), 1.0, 1.0, 1.0, false);
-            ResourceLocation ownerImmunity = immunitySource(owner);
+            Identifier ownerImmunity = immunitySource(owner);
             require(target.entity().hasTimedEffectSource(TimedEffectType.MONSTER_STUN_IMMUNITY, ownerImmunity),
                     "The first stun must add the owner's shared immunity.");
             require(target.entity().isStunned(), "Electric shock must apply the shared stun state.");
@@ -342,8 +392,8 @@ public final class ThunderGameTest {
         }
     }
 
-    private static ResourceLocation immunitySource(UUID owner) {
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "thunder_stun/" + owner);
+    private static Identifier immunitySource(UUID owner) {
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "thunder_stun/" + owner);
     }
 
     private static ThunderTower tower(
@@ -363,8 +413,19 @@ public final class ThunderGameTest {
             String id,
             double health
     ) {
+        return spawnTarget(context, lane, position, id, health, 1);
+    }
+
+    private static SpawnedTarget spawnTarget(
+            GameTestHelper context,
+            PlayerLane lane,
+            Vec3 position,
+            String id,
+            double health,
+            int targetLane
+    ) {
         Monster runtime = new Monster(
-                id, TeamId.RED, 1, Optional.empty(), Optional.empty(), health, 0.0, 1.0,
+                id, TeamId.RED, targetLane, Optional.empty(), Optional.empty(), health, 0.0, 1.0,
                 AttackKind.MELEE, "minecraft:zombie", 0L
         );
         SemionMonsterEntity entity = new SemionMonsterEntity(SemionEntityTypes.MONSTER, context.getLevel());

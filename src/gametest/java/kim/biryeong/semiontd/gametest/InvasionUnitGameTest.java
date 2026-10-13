@@ -81,7 +81,7 @@ public final class InvasionUnitGameTest {
     }
 
     @GameTest(maxTicks = 60)
-    public void elfHidesUnlessAttackingAndGolemIgnoresEveryDefender(GameTestHelper context) {
+    public void elfHidesUnlessAttackingAndGolemTargetsDefenders(GameTestHelper context) {
         guard(context, () -> {
             Fixture fixture = Fixture.start(context);
             try {
@@ -91,8 +91,8 @@ public final class InvasionUnitGameTest {
                 require(!elf.isStealthed(), "The elf is revealed while attacking.");
 
                 SemionMonsterEntity golem = fixture.spawn("siege_golem", fixture.combatEntity.position());
-                require(golem.ignoresDefenses() && !golem.canTargetDefense(fixture.combatEntity),
-                        "The siege golem ignores towers and walks to the boss.");
+                require(!golem.ignoresDefenses() && golem.canTargetDefense(fixture.combatEntity),
+                        "The siege golem can acquire and attack lane defenders.");
                 SemionMonsterEntity orc = fixture.spawn("orc_warrior", fixture.combatEntity.position());
                 require(orc.canTargetDefense(fixture.combatEntity), "Ordinary units still fight towers.");
             } finally {

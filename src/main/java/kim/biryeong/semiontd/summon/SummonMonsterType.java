@@ -211,7 +211,7 @@ public abstract class SummonMonsterType {
         }
 
         this.id = id;
-        this.displayName = displayName == null || displayName.isBlank() ? id : displayName;
+        this.displayName = SummonDisplayNames.localize(id, displayName == null || displayName.isBlank() ? id : displayName);
         this.gasCost = gasCost;
         this.incomeGain = incomeGain;
         this.maxHealth = maxHealth;

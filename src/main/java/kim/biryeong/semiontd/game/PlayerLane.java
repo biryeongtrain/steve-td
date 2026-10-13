@@ -1,6 +1,9 @@
 package kim.biryeong.semiontd.game;
 
+
 import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.IdentityHashMap;
@@ -12,7 +15,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.StreamSupport;
-import kim.biryeong.semiontd.config.AttackKind;
 import kim.biryeong.semiontd.augment.AugmentCombat;
 import kim.biryeong.semiontd.augment.AugmentEconomyService;
 import kim.biryeong.semiontd.augment.AugmentSnapshot;
@@ -45,6 +47,7 @@ import kim.biryeong.semiontd.tower.resonance.ResonanceService;
 import kim.biryeong.semiontd.tower.villager.VillagerAdvStates;
 import kim.biryeong.semiontd.trait.BuiltInTraits;
 import kim.biryeong.semiontd.trait.TraitEffects;
+import kim.biryeong.semiontd.trait.TraitRoundTowerIndex;
 import kim.biryeong.semiontd.trait.TraitLoadout;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -64,8 +67,8 @@ public final class PlayerLane {
     private final LaneRegionLayout laneLayout;
     private final WaveSpawnPositionPolicy waveSpawnPositionPolicy;
     private final List<Monster> activeMonsters = new ArrayList<>();
-    private final List<Monster> waveMonsterSpawnQueue = new ArrayList<>();
-    private final List<Monster> summonedMonsterSpawnQueue = new ArrayList<>();
+    private final Deque<Monster> waveMonsterSpawnQueue = new ArrayDeque<>();
+    private final Deque<Monster> summonedMonsterSpawnQueue = new ArrayDeque<>();
     private final List<Monster> nextRoundSummonedMonsterSpawnQueue = new ArrayList<>();
     private final Map<UUID, Monster> roundMonsters = new LinkedHashMap<>();
     private String waveTemplateId;
@@ -73,6 +76,8 @@ public final class PlayerLane {
     private Double naturalWaveStartingHealth;
     private final List<Tower> towers = new ArrayList<>();
     private final List<Tower> towerView = Collections.unmodifiableList(towers);
+    private Tower[] towerSnapshot;
+    private int towerRevision;
     private final Set<Tower> towerMembership = Collections.newSetFromMap(new IdentityHashMap<>());
     private final Set<TowerRoundMetricsTracker> roundTowerTrackers =
             Collections.newSetFromMap(new IdentityHashMap<>());
@@ -148,6 +153,22 @@ public final class PlayerLane {
             }
         }
         return total;
+    }
+
+    Map<UUID, MonsterSupportMetrics.Snapshot> utilitySupportMetricsByPurchaser(Set<UUID> purchasers) {
+        Map<UUID, MonsterSupportMetrics.Snapshot> totals = new LinkedHashMap<>();
+        for (Monster monster : roundMonsters.values()) {
+            if (monster.origin() != MonsterOrigin.NORMAL_PAID) {
+                continue;
+            }
+            UUID purchaser = monster.ownerPlayer().orElse(null);
+            if (purchaser != null && purchasers.contains(purchaser)) {
+                MonsterSupportMetrics.Snapshot total = totals.computeIfAbsent(
+                        purchaser, ignored -> MonsterSupportMetrics.Snapshot.empty());
+                totals.put(purchaser, total.plus(monster.supportMetrics().snapshot()));
+            }
+        }
+        return totals;
     }
 
     public MonsterSupportMetrics.Snapshot naturalWaveSupportMetrics() {
@@ -231,6 +252,10 @@ public final class PlayerLane {
 
     public List<Tower> towers() {
         return towerView;
+    }
+
+    public int towerRevision() {
+        return towerRevision;
     }
 
     public AugmentSnapshot augmentSnapshot() {
@@ -321,7 +346,33 @@ public final class PlayerLane {
         return laneDefenseBroken;
     }
 
+    public boolean towersMovedToFinalDefense() {
+        return towersMovedToFinalDefense;
+    }
+
+    public boolean hasLaneCombatRemaining() {
+        return !clearedThisRound && !laneDefenseBroken
+                && (towers.stream().anyMatch(tower -> tower.countsForLaneDefense()
+                        && tower.reinforcementLane() == null && !tower.isDestroyed(this))
+                    || reinforcingTowers().stream().anyMatch(tower -> tower.countsForLaneDefense()
+                            && !tower.isDestroyed(tower.attachedLane())))
+                && (!waveMonsterSpawnQueue.isEmpty() || !summonedMonsterSpawnQueue.isEmpty()
+                || activeMonsters.stream().anyMatch(monster -> monster.health() > 0 && !monster.isRemoved()
+                        && !monster.inFinalDefenseCombat()));
+    }
+
+    public List<Tower> reinforcingTowers() {
+        return teamLaneGroup == null ? List.of() : teamLaneGroup.lanes().stream()
+                .flatMap(lane -> lane.towers().stream()).filter(tower -> tower.reinforcementLane() == this).toList();
+    }
+
     public void resetForRound() {
+        kim.biryeong.semiontd.tower.magicschool.MagicSchoolTransfiguration.clear(ownerPlayer);
+        for (var monster : activeMonsters()) {
+            if (arenaWorld().getEntity(monster.minecraftEntityId()) instanceof SemionMonsterEntity entity) {
+                entity.schoolSpells().clearRound();
+            }
+        }
         kim.biryeong.semiontd.tower.legion.LegionAugments.clear(this);
         kim.biryeong.semiontd.tower.undead.UndeadAugments.resetRound(this);
         kim.biryeong.semiontd.tower.villager.VillagerAdvAugments.resetWave(this);
@@ -377,61 +428,9 @@ public final class PlayerLane {
         beginNaturalWaveMetrics(templateId);
         waveMonsterSpawnIntervalTicks = Math.max(1, spawnIntervalTicks);
         waveMonsterSpawnCooldownTicks = 0;
-        for (WaveMonsterEntry entry : expandWaveEntries(entries, spawnMode, rewardBudget)) {
+        for (WaveMonsterEntry entry : GameLaneWaveOrder.expandWaveEntries(entries, spawnMode, rewardBudget)) {
             queueNaturalWaveMonster(entry);
         }
-    }
-
-    static List<WaveMonsterEntry> expandWaveEntries(List<WaveMonsterEntry> entries, WaveSpawnMode spawnMode) {
-        return expandWaveEntries(entries, spawnMode, null);
-    }
-
-    static List<WaveMonsterEntry> expandWaveEntries(List<WaveMonsterEntry> entries, WaveSpawnMode spawnMode, Long rewardBudget) {
-        if (entries == null || entries.isEmpty()) {
-            return List.of();
-        }
-        List<WaveMonsterEntry> expanded = new ArrayList<>();
-        List<WaveMonsterEntry> healers = entries.stream().filter(entry -> entry.healing() != null && entry.count() > 0).toList();
-        if (healers.size() > 1 || healers.stream().mapToInt(WaveMonsterEntry::count).sum() > 5) {
-            throw new IllegalArgumentException("A natural wave supports one healer type with at most five units.");
-        }
-        entries = entries.stream().filter(entry -> entry.healing() == null).toList();
-        if (spawnMode != WaveSpawnMode.ROUND_ROBIN) {
-            for (WaveMonsterEntry entry : entries) {
-                for (int i = 0; i < entry.count(); i++) {
-                    expanded.add(entry);
-                }
-            }
-        } else {
-            int maxCount = entries.stream().mapToInt(WaveMonsterEntry::count).max().orElse(0);
-            for (int index = 0; index < maxCount; index++) {
-                for (WaveMonsterEntry entry : entries) {
-                    if (index < entry.count()) {
-                        expanded.add(entry);
-                    }
-                }
-            }
-        }
-        if (!healers.isEmpty()) {
-            WaveMonsterEntry healer = healers.getFirst();
-            int combatCount = expanded.size();
-            int intervals = Math.max(1, healer.count() - 1);
-            for (int i = 0; i < healer.count(); i++) {
-                int combatIndex = (int) ((long) combatCount * (55L * intervals + 30L * i) / (100L * intervals));
-                expanded.add(combatIndex + i, healer);
-            }
-        }
-        if (rewardBudget != null) {
-            if (rewardBudget < 0) {throw new IllegalArgumentException("Wave reward budget cannot be negative.");}
-            int size = expanded.size();
-            for (int i = 0; i < size; i++) {
-                // Quotient/remainder form avoids overflowing i * rewardBudget.
-                long reward = rewardBudget / size + ((long) (i + 1) * (rewardBudget % size) / size)
-                        - ((long) i * (rewardBudget % size) / size);
-                expanded.set(i, expanded.get(i).withMineralReward(reward));
-            }
-        }
-        return expanded;
     }
 
     public void enqueueSummonedMonster(Monster monster) {
@@ -448,6 +447,8 @@ public final class PlayerLane {
         if (towerMembership.contains(tower)) {return;}
         tower.attachToLane(this, traitLoadout);
         towers.add(tower);
+        towerSnapshot = null;
+        towerRevision++;
         towerMembership.add(tower);
         trackTowerDuringWave(tower, false);
         tower.onPlaced(this);
@@ -488,6 +489,8 @@ public final class PlayerLane {
         existing.detachFromLane(this);
         replacement.attachToLane(this, traitLoadout);
         towers.set(index, replacement);
+        towerSnapshot = null;
+        towerRevision++;
         towerMembership.remove(existing);
         towerMembership.add(replacement);
         replacement.onPlaced(this);
@@ -499,6 +502,8 @@ public final class PlayerLane {
         if (!towers.remove(tower)) {
             return false;
         }
+        towerSnapshot = null;
+        towerRevision++;
         towerMembership.remove(tower);
         kim.biryeong.semiontd.tower.legion.LegionAugments.onRemoved(tower, this);
         kim.biryeong.semiontd.tower.undead.UndeadAugments.onRemoved(this, tower);
@@ -560,6 +565,7 @@ public final class PlayerLane {
         }
         applyRoundTraitEffects();
         applyOpeningAttackSpeed();
+        kim.biryeong.semiontd.tower.magicschool.MagicSchoolDeathEaters.onWaveStarted(this, currentRound);
         ResonanceService.captureWaveStart(this);
         AugmentCombat.captureWaveStartHealth(this);
         kim.biryeong.semiontd.tower.adversary.AdversaryAugments.captureWaveStart(this);
@@ -642,13 +648,15 @@ public final class PlayerLane {
                 tower.onLaneCleared(this);
             }
             clearedThisRound = true;
+            kim.biryeong.semiontd.tower.magicschool.MagicSchoolCurriculum.onLaneCleared(this, trackedRound, players);
+            kim.biryeong.semiontd.tower.magicschool.MagicSchoolTransfiguration.clear(ownerPlayer);
         }
         IllagerRaidStates.playPendingActivationEffects(server, this);
     }
 
     void tickTowers() {
-        for (Tower tower : List.copyOf(towers)) {
-            if (towers.contains(tower)) {
+        for (Tower tower : towerSnapshot()) {
+            if (towerMembership.contains(tower)) {
                 tower.tick(this);
             }
         }
@@ -661,7 +669,15 @@ public final class PlayerLane {
         kim.biryeong.semiontd.tower.insect.InsectAugments.flush(this);
     }
 
+    private Tower[] towerSnapshot() {
+        if (towerSnapshot == null) {
+            towerSnapshot = towers.toArray(new Tower[towers.size()]);
+        }
+        return towerSnapshot;
+    }
+
     public void clearTowers() {
+        kim.biryeong.semiontd.tower.magicschool.MagicSchoolTransfiguration.clear(ownerPlayer);
         kim.biryeong.semiontd.tower.legion.LegionAugments.clear(this);
         kim.biryeong.semiontd.tower.undead.UndeadAugments.resetRound(this);
         kim.biryeong.semiontd.tower.frost.FrostAugments.endWave(this);
@@ -676,6 +692,8 @@ public final class PlayerLane {
             tower.detachFromLane(this);
         }
         towers.clear();
+        towerSnapshot = null;
+        towerRevision++;
         towerMembership.clear();
     }
 
@@ -826,6 +844,7 @@ public final class PlayerLane {
     }
 
     private void applyRoundTraitEffects() {
+        TraitRoundTowerIndex roundTraits = TraitRoundTowerIndex.capture(towers);
         for (Tower tower : towers) {
             if (tower.health() <= 0.0 || !tower.receivesTraitEffects()) {
                 continue;
@@ -837,12 +856,12 @@ public final class PlayerLane {
             towerEntity.setPersistentEffect(
                     TimedEffectType.TOWER_TRAIT_DAMAGE_BONUS,
                     BuiltInTraits.STRENGTH_IN_NUMBERS_ID,
-                    TraitEffects.sameTypeDamageBonus(traitLoadout, this, tower)
+                    roundTraits.sameTypeDamageBonus(traitLoadout, tower)
             );
             towerEntity.setPersistentEffect(
                     TimedEffectType.TOWER_TRAIT_DAMAGE_BONUS,
                     BuiltInTraits.DIVERSITY_ID,
-                    TraitEffects.diversityDamageBonus(traitLoadout, this, tower)
+                    roundTraits.diversityDamageBonus(traitLoadout, tower)
             );
         }
     }
@@ -954,11 +973,18 @@ public final class PlayerLane {
     }
 
     public void moveTowersToFinalDefense() {
+        if (towersMovedToFinalDefense && reinforcingTowers().isEmpty()) return;
+        kim.biryeong.semiontd.tower.magicschool.MagicSchoolTransfiguration.clearCombatLane(this);
+        for (Tower visitor : reinforcingTowers()) {
+            PlayerLane ownerLane = visitor.attachedLane();
+            visitor.moveToFinalDefense(ownerLane, nextFinalDefenseTowerPosition(visitor));
+        }
         if (towersMovedToFinalDefense) {
             return;
         }
 
         for (Tower tower : List.copyOf(towers)) {
+            if (tower.reinforcementLane() != null) continue;
             if (!tower.participatesInFinalDefense()) {
                 tower.moveToFinalDefense(this, tower.position());
                 continue;
@@ -1023,6 +1049,10 @@ public final class PlayerLane {
                 allTowersDestroyed = false;
             }
         }
+        if (allTowersDestroyed && reinforcingTowers().stream().anyMatch(tower -> tower.countsForLaneDefense()
+                && !tower.isDestroyed(tower.attachedLane()))) {
+            allTowersDestroyed = false;
+        }
         if (!laneDefenseBroken && allTowersDestroyed
                 && !kim.biryeong.semiontd.tower.insect.InsectAugments.hasPendingDefender(this)) {
             laneDefenseBroken = true;
@@ -1034,6 +1064,7 @@ public final class PlayerLane {
 
     private void notifyNearbyMonsterDeath(Monster monster, Vec3 deathPosition) {
         for (PlayerLane recipientLane : notificationLanes()) {
+            kim.biryeong.semiontd.tower.magicschool.MagicSchoolDeathEaters.onMonsterDeath(recipientLane, monster);
             kim.biryeong.semiontd.tower.frost.FrostAugments.onMonsterDeath(recipientLane, monster, deathPosition);
             for (Tower tower : List.copyOf(recipientLane.towers)) {
                 if (recipientLane.towerMembership.contains(tower)) {
@@ -1086,7 +1117,7 @@ public final class PlayerLane {
         return laneLayout.positionAt(monster.laneProgress());
     }
 
-    private void spawnQueuedMonster(List<Monster> queue, Map<UUID, SemionPlayer> players, boolean distributeWaveSpawn) {
+    private void spawnQueuedMonster(Deque<Monster> queue, Map<UUID, SemionPlayer> players, boolean distributeWaveSpawn) {
         if (!queue.isEmpty()) {
             Monster monster = queue.removeFirst();
             spawnMinecraftEntity(monster, distributeWaveSpawn);
@@ -1108,7 +1139,7 @@ public final class PlayerLane {
         waveMonsterSpawnCooldownTicks = waveMonsterSpawnIntervalTicks - 1;
     }
 
-    private void spawnAllQueuedMonsters(List<Monster> queue) {
+    private void spawnAllQueuedMonsters(Deque<Monster> queue) {
         while (!queue.isEmpty()) {
             Monster monster = queue.removeFirst();
             spawnMinecraftEntity(monster, false);

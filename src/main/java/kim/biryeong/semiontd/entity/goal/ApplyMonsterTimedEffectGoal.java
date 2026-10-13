@@ -54,7 +54,7 @@ public final class ApplyMonsterTimedEffectGoal extends CooldownAbilityGoal {
         double radiusSqr = radius * radius;
         AABB searchBox = caster.getBoundingBox().inflate(radius);
         int applied = 0;
-        for (SemionMonsterEntity target : caster.level().getEntities(
+        for (SemionMonsterEntity target : EntityGoalTargetSelection.first(caster.level().getEntities(
                         caster,
                         searchBox,
                         entity -> entity instanceof SemionMonsterEntity monsterEntity && monsterEntity.isAlive()
@@ -63,8 +63,7 @@ public final class ApplyMonsterTimedEffectGoal extends CooldownAbilityGoal {
                 .map(SemionMonsterEntity.class::cast)
                 .filter(target -> caster.distanceToSqr(target) <= radiusSqr)
                 .filter(this::sameTargetLane)
-                .sorted(Comparator.comparingDouble(caster::distanceToSqr))
-                .toList()) {
+                .toList(), Comparator.comparingDouble(caster::distanceToSqr), maxTargets)) {
             double beforeMagnitude = target.activeTimedEffectMagnitude(effectType);
             target.applyTimedEffect(effectType, magnitude, durationTicks);
             double increase = target.activeTimedEffectMagnitude(effectType) - beforeMagnitude;

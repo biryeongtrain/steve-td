@@ -45,9 +45,8 @@ public final class NaturalWaveHealGoal extends Goal {
 
         var candidates = caster.level().getEntitiesOfClass(SemionMonsterEntity.class,
                 caster.getBoundingBox().inflate(config.radius()), this::eligible);
-        candidates.sort(Comparator.comparingDouble(SemionMonsterEntity::missingHealingHealth).reversed()
-                .thenComparingDouble(caster::distanceToSqr).thenComparingInt(SemionMonsterEntity::getId));
-        var targets = candidates.subList(0, Math.min(config.maxTargets(), candidates.size()));
+        var targets = EntityGoalTargetSelection.first(candidates, Comparator.comparingDouble(SemionMonsterEntity::missingHealingHealth).reversed()
+                .thenComparingDouble(caster::distanceToSqr).thenComparingInt(SemionMonsterEntity::getId), config.maxTargets());
         double injury = targets.stream().mapToDouble(target -> Math.min(config.amount(), target.missingHealingHealth())).sum();
         if (targets.isEmpty() || injury < config.minimumInjury()) {
             state.recordAttempt(config, candidates.size(), injury, 0, 0, targets.isEmpty()

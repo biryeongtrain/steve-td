@@ -18,8 +18,8 @@ public enum DemonLordPassive {
     BLOOD_CLEAVE("blood_cleave", "흡혈 참격", Items.REDSTONE),
     /** 웨이브마다 아군 타워 몇 개를 복제해 내 라인에 잠시 세웁니다. */
     LEGION_ECHO("legion_echo", "군단의 잔영", Items.ARMOR_STAND),
-    /** 내 라인과 전투 구역 밖으로 나가 아군 라인의 적과도 싸울 수 있습니다. */
-    BOUNDLESS("boundless", "경계 없는 마왕", Items.ENDER_PEARL),
+    /** 주는 피해가 늘고 받는 피해가 줄어듭니다. */
+    DREAD("dread", "마왕의 위압", Items.NETHERITE_SCRAP),
     /** 좌클릭이 근접 평타 대신 앞으로 날아가며 꿰뚫는 검기가 됩니다. */
     BLADE_WAVE("blade_wave", "검기", Items.PRISMARINE_SHARD),
     /** 전투 중에도 날 수 있습니다. */
@@ -79,9 +79,9 @@ public enum DemonLordPassive {
                     "한 플레이어에 하나뿐인 타워(흑마법사, 엔더 드래곤 등)와",
                     "싸우지 않는 타워는 복제하지 않습니다. 아군이 없으면 효과가 없습니다."
             );
-            case BOUNDLESS -> List.of(
-                    "내 라인과 전투 구역 밖으로 자유롭게 나갈 수 있습니다.",
-                    "같은 팀 아군 라인의 적도 공격하고, 그 적도 나를 노립니다."
+            case DREAD -> List.of(
+                    "주는 피해 +" + percent(ability("damageBonus", 0.1)) + ", 받는 피해 -"
+                            + percent(ability("defenseBonus", 0.1)) + "."
             );
             case BLADE_WAVE -> List.of(
                     "좌클릭이 근접 평타 대신 바라보는 방향으로 검기를 날립니다.",

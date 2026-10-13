@@ -17,7 +17,7 @@ import kim.biryeong.semiontd.game.TeamId;
 import kim.biryeong.semiontd.tower.EntityBackedTower;
 import kim.biryeong.semiontd.tower.TowerDataKey;
 import kim.biryeong.semiontd.tower.TowerType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -290,7 +290,7 @@ public final class AdversaryRivalTower extends EntityBackedTower implements Riva
                 && monster.getData(PROXY_RIVAL_ID).filter(rivalId::equals).isPresent();
     }
 
-    private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(SemionTd.MOD_ID, "adversary/" + path);
+    private static Identifier id(String path) {
+        return Identifier.fromNamespaceAndPath(SemionTd.MOD_ID, "adversary/" + path);
     }
 }

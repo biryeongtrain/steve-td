@@ -33,7 +33,7 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
@@ -236,7 +236,7 @@ public final class JobAugmentSelectionGameTest {
         setField(game, "phase", RoundPhase.ROUND_PAYOUT);
         game.tick(context.getLevel().getServer());
         require(game.currentRound() == 5 && game.phase() == RoundPhase.PREPARE_AND_SUMMON, "The fixture must enter R5 preparation.");
-        game.players().get(online.getUUID()).assignJob(JobRegistry.find(ResourceLocation.parse(card.requiredJobId())).orElseThrow());
+        game.players().get(online.getUUID()).assignJob(JobRegistry.find(Identifier.parse(card.requiredJobId())).orElseThrow());
         return game;
     }
 
@@ -245,7 +245,7 @@ public final class JobAugmentSelectionGameTest {
         require(game.augmentService().handle(game, online,
                 "force 5 " + cardId + " reserve_income_" + rarity + " reserve_production_" + rarity, true) == 1,
                 "The authorized force-offer fixture must succeed.");
-        for (int tick = 0; tick < 20; tick++) game.tick(online.getServer());
+        for (int tick = 0; tick < 20; tick++) game.tick(online.level().getServer());
         return game.players().get(online.getUUID()).augments().currentOffer().orElseThrow();
     }
 

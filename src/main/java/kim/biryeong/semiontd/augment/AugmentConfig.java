@@ -39,6 +39,8 @@ public record AugmentConfig(boolean enabled, boolean publicPoolEnabled,
                 values.forEach((key, value) -> {
                     // The retired per-round budget must not become a concurrent population limit.
                     if (normalized.equals("semiontd:job_insect_towers_g2") && key.equals("roundCap")) {return;}
+                    if (normalized.equals("semiontd:job_end_towers_p") && key.equals("statRatio")) {return;}
+                    if (normalized.equals("semiontd:job_warlock_towers_g1") && key.equals("growthBonus")) {return;}
                     if (!defaults.containsKey(key)) {throw new IllegalArgumentException("Unknown augment parameter: " + id + "." + key);}
                     validateParameter(key, value);
                     copy.get(normalized).put(key, value);
@@ -243,7 +245,7 @@ public record AugmentConfig(boolean enabled, boolean publicPoolEnabled,
                 "revivalCount", "roundCap", "activeCap", "roundReduction", "shots", "spawnCount", "stacks", "survivorCap",
                 "targets", "targetsPerRelay", "tickets", "transfersPerCharge", "waterPerCharge", "yardRadius", "gaugePerVolley").contains(key);
         boolean positive = Set.of("echoRatio", "bodyMultiplier", "healthMultiplier", "attackMultiplier", "costMultiplier", "damagePerHitCap").contains(key);
-        boolean integer = positiveInteger || Set.of("amount", "ticketValue", "advanceCap", "incomeBonus", "matchIncomeCap", "roundBonusCap", "neighborCount").contains(key);
+        boolean integer = positiveInteger || Set.of("amount", "ticketValue", "advanceCap", "incomeBonus", "matchIncomeCap", "roundBonusCap", "neighborCount", "proficiencyCapBonus").contains(key);
         double min = positiveInteger || key.equals("emeraldPerShell") ? 1 : positive ? Double.MIN_VALUE : 0;
         return new ParameterLimits(min, fraction ? 1 : 1_000_000, integer);
     }
@@ -258,7 +260,7 @@ public record AugmentConfig(boolean enabled, boolean publicPoolEnabled,
         put(cards, "tactical_designation_2", "damageBonus", .65, "damageReduction", .30);
         put(cards, "tactical_designation_3", "damageBonus", 1.0, "damageReduction", .40);
         put(cards, "triangle_formation", "damageBonus", .20, "damageReduction", .15, "radius", 4, "neighborCount", 2);
-        put(cards, "engagement_plan", "quickDamageBonus", .20, "longDamageBonus", .25, "longDamageReduction", .15, "transitionTicks", 160);
+        put(cards, "engagement_plan", "quickDamageBonus", .35, "longDamageBonus", .25, "longDamageReduction", .15, "transitionTicks", 160);
         put(cards, "emergency_loan", "advanceMultiplier", 3, "advanceCap", 300, "debtMultiplier", 4.0 / 3.0, "repaymentCount", 4);
         put(cards, "folding_barricade_blueprint", "damagePerHitCap", 15);
         put(cards, "additional_payload", "costMultiplier", 1.25, "healthMultiplier", 1.65, "supportMultiplier", 1.65);
@@ -268,10 +270,10 @@ public record AugmentConfig(boolean enabled, boolean publicPoolEnabled,
                 "artilleryDamageBonus", 1.0, "artilleryIncomingMultiplier", 1.25);
         put(cards, "forecast_offensive", "echoRatio", .50);
         put(cards, "support_performance", "targetCount", 3, "incomeBonus", 10, "matchIncomeCap", 50);
-        put(cards, "battlefield_mastery", "bonusPerStack", .20, "maxStacks", 4, "damageThreshold", .30);
+        put(cards, "battlefield_mastery", "bonusPerStack", .15, "maxStacks", 4, "damageThreshold", .20);
         put(cards, "biased_armor", "selectedMultiplier", .55, "oppositeMultiplier", 1.35);
         put(cards, "cash_settlement", "diamondMultiplier", 5);
-        put(cards, "forbidden_blueprint", "ticketCount", 2, "ticketValue", 450, "payoutMultiplier", .90);
+        put(cards, "forbidden_blueprint", "ticketCount", 2, "ticketValue", 450, "payoutMultiplier", .95);
         put(cards, "low_pressure_high_yield", "bonusRatio", .40, "roundBonusCap", 20, "bodyMultiplier", .70);
         put(cards, "finishing_fire_1", "damageBonus", .40);
         put(cards, "finishing_fire_2", "damageBonus", .70);
@@ -287,7 +289,7 @@ public record AugmentConfig(boolean enabled, boolean publicPoolEnabled,
         put(cards, "wartime_economy", "payoutMultiplier", .65, "damageBonus", .65, "maxHealthBonus", .40);
         put(cards, "giant_hunter_call", "minimumRange", 3, "maxHealthDamageRatio", .12, "bossMaxHealthDamageRatio", .03);
         put(cards, "capacitor_post_blueprint", "chargeTicks", 40, "maxCharges", 3, "chargeDamage", 110);
-        put(cards, "starlight_cocoon_call", "hatchWaves", 1, "hatchedHealth", 1000, "hatchedRange", 5, "hatchedDamage", 200, "hatchedIntervalTicks", 30);
+        put(cards, "starlight_cocoon_call", "hatchWaves", 1, "hatchedHealth", 1000, "hatchedRange", 15, "hatchedDamage", 200, "hatchedIntervalTicks", 10);
         put(cards, "ordnance_factory_call", "emeraldPerShell", 100, "maxShells", 4, "shellDamage", 300, "shellRadius", 3,
                 "shellTargets", 8, "shellIntervalTicks", 100);
         put(cards, "emergency_bell_blueprint", "healRatio", .40, "healCap", 150, "healthThreshold", .40, "maxHeals", 3, "checkTicks", 20);

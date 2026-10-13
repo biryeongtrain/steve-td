@@ -1,7 +1,7 @@
 package kim.biryeong.semiontd.entity.visual;
 
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.entity.animal.PigVariant;
+import net.minecraft.world.entity.animal.pig.PigVariant;
 
 public final class PigVisual {
     private PigVisual() {
